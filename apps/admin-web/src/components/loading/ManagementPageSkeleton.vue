@@ -25,9 +25,10 @@ const skeletonConfig = {
     tableHeaderWidths: ['140px', '220px', '120px', '120px', '150px'],
   },
   reports: {
-    filterCount: 5,
+    filterCount: 0,
     statCount: 4,
-    tableActionWidth: '17.5rem',
+    // Date range, grouping, search, and export now sit in the results header.
+    tableActionWidth: '50rem',
     tableHeaderWidths: ['180px', '140px', '140px'],
   },
 } as const;
@@ -44,7 +45,8 @@ const skeletonConfig = {
     <div class="flex flex-col gap-6">
       <div
         v-if="skeletonConfig[props.variant].filterCount > 0"
-        class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px_auto]"
+        class="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px_auto]"
+        :class="props.variant === 'reports' ? 'gap-4' : 'gap-3'"
       >
         <div
           v-for="index in skeletonConfig[props.variant].filterCount"
@@ -82,7 +84,7 @@ const skeletonConfig = {
       </div>
     </div>
 
-    <SurfaceCard padding-class="p-5">
+    <SurfaceCard padding-class="p-6">
       <div
         class="mb-4"
         :class="skeletonConfig[props.variant].tableActionWidth ? 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between' : undefined"
@@ -95,7 +97,7 @@ const skeletonConfig = {
         <Skeleton
           v-if="skeletonConfig[props.variant].tableActionWidth"
           :width="skeletonConfig[props.variant].tableActionWidth"
-          height="2.25rem"
+          :height="props.variant === 'reports' ? '2.375rem' : '2.25rem'"
           border-radius="6px"
         />
       </div>

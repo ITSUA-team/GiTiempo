@@ -8,7 +8,7 @@ withDefaults(
   {
     bodyClass: "",
     border: false,
-    paddingClass: "p-5",
+    paddingClass: "p-6",
   },
 );
 </script>

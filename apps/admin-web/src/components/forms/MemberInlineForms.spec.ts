@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { nextTick } from 'vue';
 import type {
   ProjectListResponse,
   WorkspaceMemberResponse,
@@ -154,21 +155,48 @@ describe('member inline forms', () => {
       expect.arrayContaining(['flex', 'flex-col', 'gap-1.5']),
     );
     expect(wrapper.get('[data-testid="member-edit-form-actions"]').classes()).toEqual(
-      expect.arrayContaining(['grid', 'grid-cols-1', 'sm:flex', 'sm:justify-end']),
+      expect.arrayContaining(['grid', 'grid-cols-1', 'sm:flex', 'sm:justify-between']),
     );
+    // Remove member sits in its own destructive group, apart from Cancel/Save.
+    expect(
+      wrapper.get('[data-footer-actions="destructive"]').text(),
+    ).toContain('Remove member');
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toContain('Cancel');
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toContain('Save changes');
     const projectSelect = wrapper.getComponent({ name: 'AutoComplete' });
 
     expect(projectSelect.props('multiple')).toBe(true);
     expect(projectSelect.props('dropdown')).toBe(true);
+    expect(projectSelect.props('dropdownMode')).toBe('blank');
     expect(projectSelect.props('forceSelection')).toBe(true);
     expect(projectSelect.props('completeOnFocus')).toBe(true);
     expect(projectSelect.props('minLength')).toBe(0);
     expect(projectSelect.props('placeholder')).toBe('Search projects...');
-    expect(projectSelect.props('pt')).toMatchObject({
-      inputMultiple: {
-        class: expect.stringContaining('min-h-[42px]'),
+    const projectSelectPt = projectSelect.props('pt');
+
+    expect(projectSelectPt?.inputMultiple?.class).toEqual(
+      expect.stringContaining('min-h-[38px]'),
+    );
+    expect(projectSelectPt?.root?.class).toEqual(
+      expect.stringContaining('border-divider'),
+    );
+    expect(projectSelectPt).toMatchObject({
+      pcChip: {
+        root: {
+          class: expect.stringContaining('bg-accent-tint'),
+        },
       },
     });
+    expect(projectSelect.props('suggestions')).toEqual(['project-1', 'project-2']);
+
+    projectSelect.vm.$emit('complete', { query: 'orion' });
+    await nextTick();
+
+    expect(projectSelect.props('suggestions')).toEqual(['project-1']);
+
+    projectSelect.vm.$emit('complete', { query: '' });
+    await nextTick();
+
     expect(projectSelect.props('suggestions')).toEqual(['project-1', 'project-2']);
     expect(wrapper.findAll('[name="projectIds"]')).toHaveLength(1);
     expect(wrapper.text()).toContain('Project Orion');
@@ -188,20 +216,8 @@ describe('member inline forms', () => {
       button.text() === 'Remove member',
     );
 
-    expect(removeButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-surface-primary',
-        'border-destructive',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-destructive',
-        'font-semibold',
-      ]),
-    );
+    expect(removeButton?.attributes('severity')).toBe('danger');
+    expect(removeButton?.attributes('variant')).toBe('outlined');
 
     const cancelButton = wrapper.findAll('button').find((button) =>
       button.text() === 'Cancel',
@@ -210,34 +226,11 @@ describe('member inline forms', () => {
       button.text() === 'Save changes',
     );
 
-    expect(cancelButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-surface-primary',
-        'border-divider',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-text-dark',
-        'font-medium',
-      ]),
-    );
-    expect(saveButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-brand',
-        'border-0',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-text-inverse',
-        'font-semibold',
-      ]),
-    );
+    expect(cancelButton?.attributes('severity')).toBe('secondary');
+    expect(cancelButton?.attributes('variant')).toBe('outlined');
+    // The save action stays the default primary button (no severity override).
+    expect(saveButton?.attributes('severity')).toBeUndefined();
+    expect(saveButton?.attributes('type')).toBe('submit');
 
     await wrapper.get('button').trigger('click');
 

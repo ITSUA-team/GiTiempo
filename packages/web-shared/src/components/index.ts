@@ -1,9 +1,12 @@
+export { default as AppDialog } from "./AppDialog.vue";
 export { default as AuthSignInForm } from "./AuthSignInForm.vue";
 export { default as BillableDefaultBackfillDialog } from "./BillableDefaultBackfillDialog.vue";
+export { default as DialogFooterActionGroups } from "./DialogFooterActionGroups.vue";
 export { default as StandaloneSplitPage } from "./StandaloneSplitPage.vue";
 export { default as EditFormPanel } from "./EditFormPanel.vue";
 export { default as EmptyStateBlock } from "./EmptyStateBlock.vue";
 export { default as EntryActionButton } from "./EntryActionButton.vue";
+export { default as FilterAutoComplete } from "./FilterAutoComplete.vue";
 export { default as InlineRequestMessage } from "./InlineRequestMessage.vue";
 export { default as LabeledCheckbox } from "./LabeledCheckbox.vue";
 export { default as AuthIntroPanel } from "./AuthIntroPanel.vue";
@@ -21,10 +24,7 @@ export {
   getManagementTableColumnStyle,
   managementTableBodyRowClass,
   managementTableColumnPt,
-  managementTableFilterAutoCompletePt,
-  managementTableFilterInputClass,
   managementTableFilterMultiSelectPt,
-  managementTableFilterSelectPt,
   managementTableHeaderCellClass,
   managementTableHeaderClass,
   managementTableShellClass,

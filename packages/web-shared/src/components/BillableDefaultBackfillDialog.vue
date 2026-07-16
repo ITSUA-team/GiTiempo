@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import Button from "primevue/button";
-import Dialog from "primevue/dialog";
 
+import AppDialog from "./AppDialog.vue";
 import LabeledCheckbox from "./LabeledCheckbox.vue";
 
 const props = defineProps<{
@@ -55,19 +55,16 @@ const timeEntriesModel = computed({
 </script>
 
 <template>
-  <Dialog
+  <AppDialog
     modal
     :closable="!props.isSubmitting"
     :dismissable-mask="!props.isSubmitting"
     :draggable="false"
     :pt="{
       root: 'w-[min(480px,calc(100vw-2rem))] rounded-lg border border-divider bg-surface-primary',
-      header: 'px-[18px] pt-[18px] pb-0',
-      content: 'px-[18px] pb-[18px] pt-3',
-      footer: 'px-[18px] pb-[18px] pt-0',
     }"
     :visible="props.isOpen"
-    @update:visible="(nextVisible) => {
+    @update:visible="(nextVisible: boolean) => {
       if (!nextVisible && !props.isSubmitting) {
         emit('close');
       }
@@ -116,5 +113,5 @@ const timeEntriesModel = computed({
         />
       </div>
     </template>
-  </Dialog>
+  </AppDialog>
 </template>

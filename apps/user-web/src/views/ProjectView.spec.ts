@@ -688,6 +688,21 @@ describe("ProjectView", () => {
 
     const options = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
 
+    expect(options).toMatchObject({
+      acceptLabel: "Delete task",
+      acceptProps: { severity: "danger", variant: "outlined" },
+      header: "Delete task?",
+      message: "This task will be permanently deleted.",
+      pt: {
+        footer: { class: "flex flex-row-reverse justify-between gap-2" },
+      },
+      rejectLabel: "Cancel",
+      rejectProps: {
+        severity: "secondary",
+        variant: "outlined",
+      },
+    });
+
     await options.accept();
     await flushPromises();
 

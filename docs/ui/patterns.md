@@ -50,7 +50,7 @@ Use `<ConfirmDialog>` and `useConfirm()`.
 - Required before destructive actions.
 - Title uses `text-lg font-semibold`.
 - Body uses `text-sm text-text-muted`.
-- Footer order: cancel then destructive accept on the right.
+- Footer order separates destructive and safe actions: destructive outlined accept on the left, secondary outlined cancel on the right.
 - Leaf components may emit events or call composables that use `useConfirm()`, but the rendered confirm host stays with the root app infrastructure.
 
 ```typescript
@@ -62,6 +62,14 @@ confirm.require({
   rejectLabel: 'Cancel',
   acceptProps: {
     severity: 'danger',
+    variant: 'outlined',
+  },
+  rejectProps: {
+    severity: 'secondary',
+    variant: 'outlined',
+  },
+  pt: {
+    footer: { class: 'flex flex-row-reverse justify-between gap-2' },
   },
   accept: () => handleDelete(entryId),
 })
@@ -232,20 +240,28 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - Starting from the compact timer always creates a fresh running time entry for the currently selected task context.
 - If `Start timer` receives a `409 Conflict`, refresh the authoritative current timer, render the running timer with workspace context, and preserve the user's selected active-workspace draft for retry after stop.
 
-## Multi-Select Filters
+## Multi-Select Assignment Filters
 
-Use `<MultiSelect>` with `filter` and `display="chip"`.
+Assignment filters (Members table `Projects Assigned`, Projects table
+`Assigned members`) are multi-select by product decision: admins can select
+several projects or members and see the OR-union of matching rows. The filter
+state carries `string[]`, and the state layer matches with `some(...)`.
+
+Use `<MultiSelect>` with `filter`, `display="chip"`, and the shared
+`managementTableFilterMultiSelectPt` pass-through.
 
 ```vue
 <MultiSelect
-  v-model="selectedProjects"
-  :options="projects"
-  optionLabel="name"
-  placeholder="All projects"
-  filter
+  :model-value="filters.projectIds"
+  :options="projectFilterOptions"
   display="chip"
-  :maxSelectedLabels="2"
-  class="w-full"
+  filter
+  option-label="label"
+  option-value="value"
+  placeholder="All projects"
+  show-clear
+  :pt="managementTableFilterMultiSelectPt"
+  @update:model-value="updateProjectIdsFilter"
 />
 ```
 

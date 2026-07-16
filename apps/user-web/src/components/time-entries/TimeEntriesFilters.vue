@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
-import type { DatePickerPassThroughOptions } from "primevue/datepicker";
 import type { ProjectResponse } from "@gitiempo/shared";
-import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
-import { SurfaceCard } from "@gitiempo/web-shared";
+import { giTiempoDatePickerPt } from "@gitiempo/web-config/theme";
+import { FilterAutoComplete, SurfaceCard } from "@gitiempo/web-shared";
 
 import type {
   TaskLookupOption,
@@ -35,13 +33,6 @@ const emit = defineEmits<{
   "update:taskValue": [value: TaskLookupValue];
 }>();
 
-const datePickerPt = {
-  panel: {
-    class:
-      "border-divider bg-surface-primary rounded-md border text-text-dark shadow-popover",
-  },
-} satisfies DatePickerPassThroughOptions;
-
 function emitProjectComplete(event: { query: string }): void {
   emit("projectComplete", event.query);
 }
@@ -68,7 +59,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
 <template>
   <SurfaceCard
     body-class="flex flex-col gap-3"
-    padding-class="p-4"
+    padding-class="p-6"
   >
     <div class="grid gap-3 xl:grid-cols-[220px_220px_minmax(0,1fr)]">
       <div class="flex flex-col gap-1">
@@ -80,6 +71,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
         </label>
         <DatePicker
           date-format="M d, yy"
+          icon-display="input"
           input-id="time-entries-date-range"
           :manual-input="false"
           :model-value="selectedDateRange"
@@ -87,8 +79,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           fluid
           show-button-bar
           show-icon
-          show-clear
-          :pt="datePickerPt"
+          :pt="giTiempoDatePickerPt"
           @update:model-value="updateDateRange"
         />
       </div>
@@ -100,23 +91,17 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
         >
           Project
         </label>
-        <AutoComplete
+        <FilterAutoComplete
           append-to="self"
           class="w-full max-w-full min-w-0"
           input-id="time-entries-project-filter"
           option-label="name"
           placeholder="All projects"
           :suggestions="projectSuggestions"
-          complete-on-focus
           :disabled="isLoadingProjects"
-          dropdown
-          dropdown-mode="blank"
           force-selection
           :loading="isLoadingProjects"
-          :min-length="0"
           :model-value="selectedProject"
-          :pt="giTiempoSelfAppendedAutoCompletePt"
-          fluid
           show-clear
           @complete="emitProjectComplete"
           @update:model-value="updateProjectValue"
@@ -130,7 +115,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
         >
           Task
         </label>
-        <AutoComplete
+        <FilterAutoComplete
           append-to="self"
           class="w-full max-w-full min-w-0"
           input-id="time-entries-task-filter"
@@ -138,12 +123,6 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           placeholder="Search tasks"
           :model-value="selectedTask"
           :suggestions="taskSuggestions"
-          complete-on-focus
-          dropdown
-          dropdown-mode="blank"
-          fluid
-          :min-length="0"
-          :pt="giTiempoSelfAppendedAutoCompletePt"
           @complete="emitTaskSearch"
           @update:model-value="updateTaskValue"
         />

@@ -9,7 +9,7 @@ withDefaults(
   }>(),
   {
     description: undefined,
-    paddingClass: 'p-5',
+    paddingClass: 'p-6',
     title: undefined,
   },
 );

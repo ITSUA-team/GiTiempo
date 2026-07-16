@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { WorkspaceRole } from '@gitiempo/shared';
-import { WORKSPACE_ROLE_OPTIONS, workspaceInviteFormSchema } from '@gitiempo/web-shared';
+import { AppDialog, WORKSPACE_ROLE_OPTIONS, workspaceInviteFormSchema } from '@gitiempo/web-shared';
 import type { WorkspaceInviteFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
+import { giTiempoSelectPt } from '@gitiempo/web-config/theme';
 import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Select from 'primevue/select';
@@ -80,7 +80,7 @@ function handleVisibleChange(nextVisible: boolean): void {
 </script>
 
 <template>
-  <Dialog
+  <AppDialog
     modal
     header="Invite Member"
     :closable="!submitting"
@@ -133,6 +133,7 @@ function handleVisibleChange(nextVisible: boolean): void {
             placeholder="Select a role"
             :invalid="role?.invalid"
             class="w-full"
+            :pt="giTiempoSelectPt"
           />
           <Message
             v-if="role?.invalid"
@@ -153,5 +154,5 @@ function handleVisibleChange(nextVisible: boolean): void {
         </div>
       </div>
     </Form>
-  </Dialog>
+  </AppDialog>
 </template>

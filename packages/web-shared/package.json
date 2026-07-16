@@ -61,6 +61,7 @@
   },
   "dependencies": {
     "@gitiempo/shared": "workspace:*",
+    "@gitiempo/web-config": "workspace:*",
     "@heroicons/vue": "^2.2.0",
     "@primevue/forms": "^4.5.5",
     "@tanstack/vue-query": "^5.100.14",

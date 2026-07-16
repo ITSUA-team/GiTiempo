@@ -3,10 +3,14 @@ export interface ConfirmLike {
   require(options: {
     accept: () => void | Promise<void>;
     acceptLabel: string;
-    acceptProps: { severity: "danger" };
+    acceptProps: { severity: "danger"; variant: "outlined" };
     header: string;
     message: string;
+    pt: {
+      footer: { class: string };
+    };
     rejectLabel: string;
+    rejectProps: { severity: "secondary"; variant: "outlined" };
   }): void;
 }
 
@@ -116,10 +120,17 @@ export function createAppConfirm(confirm: ConfirmLike) {
     confirm.require({
       accept,
       acceptLabel,
-      acceptProps: { severity: "danger" },
+      acceptProps: { severity: "danger", variant: "outlined" },
       header,
       message,
+      pt: {
+        footer: { class: "flex flex-row-reverse justify-between gap-2" },
+      },
       rejectLabel,
+      rejectProps: {
+        severity: "secondary",
+        variant: "outlined",
+      },
     });
   }
 

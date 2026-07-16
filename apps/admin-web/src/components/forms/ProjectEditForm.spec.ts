@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { nextTick } from 'vue';
 import type {
   ProjectResponse,
   WorkspaceMemberListResponse,
@@ -139,6 +140,7 @@ const stubs = {
       optionLabel: String,
       optionValue: String,
       options: Array,
+      pt: Object,
     },
     template:
       '<select :id="inputId" :name="name"><option v-for="option in options" :key="option.value">{{ option.label }}</option></select>',
@@ -150,7 +152,7 @@ describe('ProjectEditForm', () => {
     setActivePinia(createPinia());
   });
 
-  it('keeps project settings controls at the same edit-form height', () => {
+  it('keeps project settings controls at the same edit-form height', async () => {
     const wrapper = mount(ProjectEditForm, {
       props: { allMembers: members, project },
       global: { plugins: [createPinia()], stubs },
@@ -160,8 +162,14 @@ describe('ProjectEditForm', () => {
       expect.arrayContaining(['flex-col', 'sm:flex-row', 'sm:items-end']),
     );
     expect(wrapper.get('[data-testid="project-edit-form-actions"]').classes()).toEqual(
-      expect.arrayContaining(['grid', 'w-full', 'sm:flex', 'sm:w-auto']),
+      expect.arrayContaining(['grid', 'w-full', 'grid-cols-1', 'sm:flex', 'sm:justify-between']),
     );
+    // Archive sits in its own destructive group, apart from Cancel/Save.
+    expect(
+      wrapper.get('[data-footer-actions="destructive"]').text(),
+    ).toContain('Archive project');
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toContain('Cancel');
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toContain('Save');
     expect(wrapper.get('label[for="edit-members"]').text()).toBe('Select members');
     expect(wrapper.get('label[for="edit-visibility"]').text()).toBe('Visibility');
     expect(wrapper.text()).toContain('New task billable default');
@@ -176,17 +184,40 @@ describe('ProjectEditForm', () => {
 
     expect(memberInput.props('multiple')).toBe(true);
     expect(memberInput.props('dropdown')).toBe(true);
+    expect(memberInput.props('dropdownMode')).toBe('blank');
     expect(memberInput.props('forceSelection')).toBe(true);
     expect(memberInput.props('completeOnFocus')).toBe(true);
     expect(memberInput.props('minLength')).toBe(0);
     expect(memberInput.props('suggestions')).toEqual(['user-2', 'user-3']);
+
+    memberInput.vm.$emit('complete', { query: 'pat' });
+    await nextTick();
+
+    expect(memberInput.props('suggestions')).toEqual(['user-2']);
+
+    memberInput.vm.$emit('complete', { query: '' });
+    await nextTick();
+
+    expect(memberInput.props('suggestions')).toEqual(['user-2', 'user-3']);
     expect(memberInput.props('placeholder')).toBe('Search members...');
-    expect(memberInput.props('pt')).toMatchObject({
-      inputMultiple: {
-        class: expect.stringContaining('min-h-[42px]'),
+    const memberInputPt = memberInput.props('pt');
+
+    expect(memberInputPt?.inputMultiple?.class).toEqual(
+      expect.stringContaining('min-h-[38px]'),
+    );
+    expect(memberInputPt?.root?.class).toEqual(
+      expect.stringContaining('border-divider'),
+    );
+    expect(memberInputPt).toMatchObject({
+      pcChip: {
+        root: {
+          class: expect.stringContaining('bg-accent-tint'),
+        },
       },
     });
-    expect(visibilityInput.attributes('class')).toContain('h-[42px]');
+    expect(visibilityInput.props('pt')).toMatchObject({
+      root: { class: expect.stringContaining('h-[38px]') },
+    });
     expect(visibilityInput.props('optionLabel')).toBe('label');
     expect(visibilityInput.props('optionValue')).toBe('value');
     expect(visibilityInput.props('options')).toEqual([
@@ -210,48 +241,13 @@ describe('ProjectEditForm', () => {
       button.text() === 'Save',
     );
 
-    expect(archiveButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-surface-primary',
-        'border-destructive',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-destructive',
-        'font-semibold',
-      ]),
-    );
-    expect(cancelButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-surface-primary',
-        'border-divider',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-text-dark',
-        'font-medium',
-      ]),
-    );
-    expect(saveButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-brand',
-        'border-0',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-text-inverse',
-        'font-semibold',
-      ]),
-    );
+    expect(archiveButton?.attributes('severity')).toBe('danger');
+    expect(archiveButton?.attributes('variant')).toBe('outlined');
+    expect(cancelButton?.attributes('severity')).toBe('secondary');
+    expect(cancelButton?.attributes('variant')).toBe('outlined');
+    // The save action stays the default primary button (no severity override).
+    expect(saveButton?.attributes('severity')).toBeUndefined();
+    expect(saveButton?.attributes('type')).toBe('submit');
   });
 
   it('emits the status-specific action from the inline project settings panel', async () => {

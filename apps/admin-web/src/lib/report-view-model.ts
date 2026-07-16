@@ -31,10 +31,17 @@ import {
   type ReportTableRow,
 } from '@/validation/report-view-model';
 
+export {
+  defaultReportGrouping,
+  getReportExportBlockedReason,
+  reportGroupingApiValue,
+} from '@/validation/report-view-model';
+
 export type {
   ReportBillableFilter,
   ReportDateRange,
   ReportFilterOption,
+  ReportGrouping,
   ReportHoursFilter,
   ReportSetupFilters,
   ReportSummaryView,
@@ -240,14 +247,14 @@ function formatUserName(user: {
   return user.displayName?.trim() || user.email;
 }
 
+/**
+ * Identities the response does not carry are left null. A project row counts its
+ * contributors rather than naming one, so a placeholder label would be a lie.
+ */
 function getReportTableRowLabels(
   row: TimeReportRow,
   context: ReportRowContext,
 ): Pick<ReportTableRow, 'memberName' | 'projectName'> {
-  const selectedMemberLabel = getOptionLabel(
-    context.memberOptions,
-    context.selectedMemberId,
-  );
   const selectedProjectLabel = getOptionLabel(
     context.projectOptions,
     context.selectedProjectId,
@@ -256,19 +263,19 @@ function getReportTableRowLabels(
   if (row.groupBy === 'user') {
     return {
       memberName: formatUserName(row.user),
-      projectName: selectedProjectLabel ?? 'Project scope',
+      projectName: selectedProjectLabel,
     };
   }
 
   if (row.groupBy === 'task') {
     return {
-      memberName: selectedMemberLabel ?? 'Member scope',
+      memberName: null,
       projectName: `${row.project.name} / ${row.task.title}`,
     };
   }
 
   return {
-    memberName: selectedMemberLabel ?? 'Member scope',
+    memberName: null,
     projectName: row.project.name,
   };
 }
@@ -320,8 +327,8 @@ export function toReportTableRows(
     .parse(rows)
     .sort(
       (a, b) =>
-        a.projectName.localeCompare(b.projectName) ||
-        a.memberName.localeCompare(b.memberName),
+        (a.projectName ?? '').localeCompare(b.projectName ?? '') ||
+        (a.memberName ?? '').localeCompare(b.memberName ?? ''),
     );
 }
 
@@ -345,7 +352,7 @@ export function deriveReportSummaryView(
       memberIds.add(memberId);
     }
 
-    if (row.projectIds.length !== 1) {
+    if (row.projectIds.length !== 1 || row.projectName === null) {
       continue;
     }
 

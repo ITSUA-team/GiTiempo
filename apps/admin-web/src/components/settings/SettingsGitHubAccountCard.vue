@@ -37,7 +37,7 @@ const avatarLabel = computed(() => {
     <div
       v-if="isInitialLoading"
       data-testid="settings-github-account-loading"
-      class="border-divider bg-app-bg flex flex-col gap-3 rounded-lg border p-3.5"
+      class="border-divider bg-app-bg flex flex-col gap-3 rounded-lg border p-4"
     >
       <div class="flex items-center gap-3">
         <Skeleton
@@ -73,7 +73,7 @@ const avatarLabel = computed(() => {
     <section
       v-else-if="connectedAccount"
       data-testid="settings-github-account-connected"
-      class="border-divider bg-app-bg flex flex-col gap-3 rounded-lg border p-3.5 sm:flex-row sm:items-center sm:justify-between"
+      class="border-divider bg-app-bg flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
     >
       <div class="flex min-w-0 items-center gap-3">
         <Avatar
@@ -114,7 +114,7 @@ const avatarLabel = computed(() => {
     <section
       v-else
       data-testid="settings-github-account-disconnected"
-      class="border-divider bg-app-bg flex flex-col gap-3 rounded-lg border p-3.5 sm:flex-row sm:items-center sm:justify-between"
+      class="border-divider bg-app-bg flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
     >
       <div class="flex min-w-0 flex-col gap-1">
         <h3 class="text-text-dark text-sm font-semibold">

@@ -106,7 +106,7 @@ export function useProjectTaskActions({
           dialog.closeDialog();
         }
       },
-      acceptLabel: "Delete",
+      acceptLabel: "Delete task",
       header: "Delete task?",
       message: "This task will be permanently deleted.",
     });

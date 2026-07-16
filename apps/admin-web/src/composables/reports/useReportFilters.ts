@@ -1,39 +1,48 @@
 import { ref, shallowRef } from 'vue';
 
 import {
+  defaultReportGrouping,
   getDefaultReportDateRange,
   isReportDateRangeValid,
   type ReportDateRange,
+  type ReportGrouping,
   type ReportSetupFilters,
 } from '@/lib/report-view-model';
 
 export function useReportFilters() {
-  const selectedProjectId = ref<string | null>(null);
-  const selectedMemberId = ref<string | null>(null);
   const dateRange = shallowRef<ReportDateRange>(getDefaultReportDateRange());
-  const groupBy = ref<ReportSetupFilters['groupBy']>('project');
-  const appliedFilters = shallowRef<ReportSetupFilters>({
-    dateRange: dateRange.value,
-    groupBy: groupBy.value,
-    memberId: selectedMemberId.value,
-    projectId: selectedProjectId.value,
-  });
+  const grouping = ref<ReportGrouping>(defaultReportGrouping);
 
-  function getCurrentSetupFilters(): ReportSetupFilters {
+  /**
+   * What the table fetches. Always member granularity, and grouping is
+   * deliberately absent: both groupings are presented from these same rows, so
+   * grouping must not reach the query key or switching it would refetch
+   * identical data. Identity scope is absent too — the fetch always covers the
+   * visible-project loop, and export-time identity comes from the table's own
+   * filters, never from here.
+   */
+  function getCurrentFetchFilters(): ReportSetupFilters {
     return {
       dateRange: dateRange.value,
-      groupBy: groupBy.value,
-      memberId: selectedMemberId.value,
-      projectId: selectedProjectId.value,
+      groupBy: 'user',
+      memberId: null,
+      projectId: null,
+      // search is omitted: the table's global search filters loaded rows
+      // client-side, so sending it would narrow the fetch and desync the table
+      // from its own search box.
     };
   }
+
+  const appliedFilters = shallowRef<ReportSetupFilters>(
+    getCurrentFetchFilters(),
+  );
 
   function applyCurrentFilters(): boolean {
     if (!isReportDateRangeValid(dateRange.value)) {
       return false;
     }
 
-    appliedFilters.value = getCurrentSetupFilters();
+    appliedFilters.value = getCurrentFetchFilters();
     return true;
   }
 
@@ -41,10 +50,7 @@ export function useReportFilters() {
     appliedFilters,
     applyCurrentFilters,
     dateRange,
-    getCurrentSetupFilters,
-    groupBy,
-    selectedMemberId,
-    selectedProjectId,
+    grouping,
   };
 }
 

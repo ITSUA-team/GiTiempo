@@ -1,13 +1,13 @@
-import { computed, ref, shallowRef } from 'vue';
+import { computed, defineComponent, ref, shallowRef } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
-import type { TimeReportGroupBy } from '@gitiempo/shared';
 
 import type {
   ReportDateRange,
+  ReportGrouping,
   ReportSummaryView,
   ReportTableRow,
 } from '@/lib/report-view-model';
@@ -43,40 +43,42 @@ vi.mock('@/composables/reports/useReportsData', () => ({
 
 import ReportsView from './ReportsView.vue';
 
-const ReportsFilterFormStub = {
-  name: 'ReportsFilterForm',
-  props: [
-    'projectId',
-    'memberId',
-    'dateRange',
-    'groupBy',
-    'projectOptions',
-    'memberOptions',
-    'disabled',
-  ],
-  emits: [
-    'update:projectId',
-    'update:memberId',
-    'update:dateRange',
-    'update:groupBy',
-  ],
-  setup() {
+const ReportsTableStub = defineComponent({
+  name: 'ReportsTable',
+  props: {
+    dateRange: { default: null, type: Array },
+    filters: { required: true, type: Object },
+    grouping: { default: 'project', type: String },
+    loading: { default: false, type: Boolean },
+    memberOptions: { default: () => [], type: Array },
+    projectOptions: { default: () => [], type: Array },
+    rows: { default: () => [], type: Array },
+  },
+  emits: ['update:filters', 'update:dateRange', 'update:grouping'],
+  setup(props, { emit }) {
     return {
       invalidDateRange: [
         new Date('2026-05-03T12:00:00.000Z'),
         new Date('2026-05-02T12:00:00.000Z'),
       ],
+      setBillableFilter: () => {
+        emit('update:filters', { ...props.filters, billable: 'withBillable' });
+      },
+      setSearchFilter: () => {
+        emit('update:filters', { ...props.filters, global: 'orion' });
+      },
+      setTableFilters: () => {
+        emit('update:filters', {
+          ...props.filters,
+          memberId: 'member-1',
+          projectId: 'project-1',
+        });
+      },
     };
   },
   template:
-    '<div data-testid="reports-filter-form"><button data-testid="change-report-project" @click="$emit(\'update:projectId\', \'project-2\')">filters</button><button data-testid="change-report-member" @click="$emit(\'update:memberId\', \'member-2\')">member</button><button data-testid="change-report-group-by" @click="$emit(\'update:groupBy\', \'user\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><slot name="actions" /></div>',
-};
-
-const ReportsTableStub = {
-  name: 'ReportsTable',
-  props: ['rows', 'loading', 'projectOptions', 'memberOptions', 'filters'],
-  template: '<div data-testid="reports-table">{{ rows.length }} rows</div>',
-};
+    '<div data-testid="reports-table">{{ rows.length }} rows<button data-testid="change-report-grouping" @click="$emit(\'update:grouping\', \'member\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><button data-testid="set-table-filters" @click="setTableFilters">table filters</button><button data-testid="set-billable-filter" @click="setBillableFilter">billable filter</button><button data-testid="set-search-filter" @click="setSearchFilter">search filter</button><slot name="actions" /></div>',
+});
 
 const ManagementPageSkeletonStub = {
   name: 'ManagementPageSkeleton',
@@ -127,7 +129,7 @@ function createReportState({
     dateRange: shallowRef<ReportDateRange>(null),
     exportCurrentReport: reportMocks.exportCurrentReport,
     getFilteredRows: vi.fn(),
-    groupBy: ref<TimeReportGroupBy>('project'),
+    grouping: ref<ReportGrouping>('project'),
     initialLoaded: ref(!isInitialLoading),
     isEmpty: computed(() => reportRows.value.length === 0),
     isInitialLoading: ref(isInitialLoading),
@@ -139,8 +141,6 @@ function createReportState({
     refresh: reportMocks.refresh,
     reportResponse: ref(null),
     rows: reportRows,
-    selectedMemberId: ref<string | null>(null),
-    selectedProjectId: ref<string | null>(null),
     summary: computed(() => ({
       ...summary,
       totalSeconds: rows.reduce((total, row) => total + row.totalSeconds, 0),
@@ -160,7 +160,6 @@ function mountReportsView() {
       plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
         ManagementPageSkeleton: ManagementPageSkeletonStub,
-        ReportsFilterForm: ReportsFilterFormStub,
         ReportsTable: ReportsTableStub,
       },
     },
@@ -218,7 +217,7 @@ describe('ReportsView', () => {
     expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
     expect(
       wrapper
-        .get('[data-testid="reports-filter-form"]')
+        .get('[data-testid="reports-table"]')
         .find('[data-testid="export-reports-csv"]')
         .exists(),
     ).toBe(true);
@@ -304,19 +303,15 @@ describe('ReportsView', () => {
     });
   });
 
-  it('keeps header setup controls as export scope instead of table state', async () => {
+  it('feeds header grouping back into report state and export scope', async () => {
     const wrapper = mountReportsView();
     const state = reportMocks.state as ReturnType<typeof createReportState>;
     await flushPromises();
 
-    await wrapper.get('[data-testid="change-report-project"]').trigger('click');
-    await wrapper.get('[data-testid="change-report-member"]').trigger('click');
-    await wrapper.get('[data-testid="change-report-group-by"]').trigger('click');
+    await wrapper.get('[data-testid="change-report-grouping"]').trigger('click');
 
-    expect(state.selectedProjectId.value).toBeNull();
-    expect(state.selectedMemberId.value).toBeNull();
-    expect(state.groupBy.value).toBe('project');
-    expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
+    // The header control now drives report state rather than export-only scope.
+    expect(state.grouping.value).toBe('member');
 
     await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
     await flushPromises();
@@ -324,9 +319,85 @@ describe('ReportsView', () => {
     expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
       expect.objectContaining({
         groupBy: 'user',
-        memberId: 'member-2',
-        projectId: 'project-2',
+        memberId: null,
+        projectId: null,
       }),
     );
+  });
+
+  it('scopes the CSV export to the table project and member filters under member grouping', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    // Member grouping is the one where per-row sums are the member's own, so a
+    // member-scoped export matches the screen.
+    await wrapper.get('[data-testid="change-report-grouping"]').trigger('click');
+    await wrapper.get('[data-testid="set-table-filters"]').trigger('click');
+    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groupBy: 'user',
+        memberId: 'member-1',
+        projectId: 'project-1',
+      }),
+    );
+    expect(reportMocks.downloadReportExport).toHaveBeenCalled();
+  });
+
+  it('blocks CSV export for a member filter over folded project rows', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    // Under project grouping the table keeps whole folded rows with everyone's
+    // time, while a userId-scoped export would return only that member's
+    // entries — the file would silently show a fraction of the on-screen hours.
+    await wrapper.get('[data-testid="set-table-filters"]').trigger('click');
+
+    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
+
+    await exportButton.trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
+  });
+
+  it('blocks CSV export while the table search is active', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    // The table search matches formatted labels including durations, which the
+    // detailed CSV cannot express, and the backend's search means something
+    // else, so exporting would disagree with the table either way.
+    await wrapper.get('[data-testid="set-search-filter"]').trigger('click');
+
+    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
+
+    await exportButton.trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
+  });
+
+  it('blocks CSV export while an unexportable table filter is active', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    // Hours and billable filter aggregate totals the detailed CSV has no rows
+    // for, so exporting would hand back a file that ignores them.
+    await wrapper.get('[data-testid="set-billable-filter"]').trigger('click');
+
+    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
+
+    await exportButton.trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
   });
 });

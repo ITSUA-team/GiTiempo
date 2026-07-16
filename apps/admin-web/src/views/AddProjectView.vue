@@ -9,6 +9,7 @@ import {
   Form,
 } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
+import { giTiempoSelectPt } from '@gitiempo/web-config/theme';
 import {
   createProjectFormSchema,
   LabeledCheckbox,
@@ -131,7 +132,7 @@ onMounted(loadMembers);
 </script>
 
 <template>
-  <div class="flex min-w-0 flex-col gap-5">
+  <div class="flex min-w-0 flex-col gap-6">
     <div>
       <Button
         label="← Back to projects"
@@ -141,8 +142,8 @@ onMounted(loadMembers);
       />
     </div>
 
-    <div class="flex min-w-0 flex-col gap-5 md:flex-row">
-      <div class="bg-surface-primary flex min-w-0 flex-1 flex-col gap-3 rounded-lg p-4">
+    <div class="flex min-w-0 flex-col gap-6 md:flex-row">
+      <div class="bg-surface-primary flex min-w-0 flex-1 flex-col gap-4 rounded-lg p-6">
         <h2 class="text-text-dark text-lg font-semibold">
           Add Project Manually
         </h2>
@@ -153,7 +154,7 @@ onMounted(loadMembers);
           :initial-values="initialValues"
           @submit="handleSubmit"
         >
-          <div class="flex flex-col gap-2.5">
+          <div class="flex flex-col gap-3">
             <div class="flex flex-col gap-1.5">
               <label
                 for="project-name"
@@ -166,7 +167,7 @@ onMounted(loadMembers);
                 name="name"
                 :invalid="$form.name?.invalid"
                 :disabled="isSubmitting"
-                class="h-[34px] w-full rounded-[6px] px-3 text-[14px] font-medium"
+                class="h-[38px] w-full rounded-[6px] px-3 text-[14px] font-medium"
                 placeholder="Customer Portal"
               />
               <small
@@ -182,7 +183,7 @@ onMounted(loadMembers);
                 <label class="text-text-dark text-[13px] font-medium">
                   Source
                 </label>
-                <div class="border-divider text-text-dark bg-surface-primary flex h-[34px] items-center rounded-[6px] border px-3 text-[14px] font-medium">
+                <div class="border-divider text-text-dark bg-surface-primary flex h-[38px] items-center rounded-[6px] border px-3 text-[14px] font-medium">
                   Manual
                 </div>
               </div>
@@ -203,10 +204,7 @@ onMounted(loadMembers);
                   placeholder="Select"
                   :loading="membersLoading"
                   :disabled="isSubmitting || membersLoading"
-                  :pt="{
-                    root: { class: 'h-[34px] w-full rounded-[6px] text-[14px]' },
-                    label: { class: 'flex items-center py-0 text-[14px] font-medium' },
-                  }"
+                  :pt="giTiempoSelectPt"
                 />
                 <small
                   v-if="membersError"
@@ -231,10 +229,7 @@ onMounted(loadMembers);
                 option-label="label"
                 option-value="value"
                 :disabled="isSubmitting"
-                :pt="{
-                  root: { class: 'h-[34px] w-full rounded-[6px] text-[14px]' },
-                  label: { class: 'flex items-center py-0 text-[14px] font-medium' },
-                }"
+                :pt="giTiempoSelectPt"
               />
             </div>
 
@@ -247,7 +242,7 @@ onMounted(loadMembers);
                 label="Billable by default"
                 label-class="text-text-dark text-[14px] font-medium"
                 name="defaultBillableForTasks"
-                root-class="border-divider bg-surface-primary flex h-[34px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
+                root-class="border-divider bg-surface-primary flex h-[38px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
                 :disabled="isSubmitting"
               />
               <small class="text-text-muted text-xs">
@@ -256,7 +251,7 @@ onMounted(loadMembers);
             </div>
           </div>
 
-          <div class="mt-3 flex items-center justify-end gap-2.5">
+          <div class="mt-4 flex items-center justify-end gap-2">
             <Button
               label="Back"
               severity="secondary"
@@ -274,7 +269,7 @@ onMounted(loadMembers);
         </Form>
       </div>
 
-      <div class="shadow-card bg-surface-primary flex w-full flex-col gap-3.5 rounded-lg p-5 md:w-80 md:shrink-0">
+      <div class="shadow-card bg-surface-primary flex w-full flex-col gap-4 rounded-lg p-6 md:w-80 md:shrink-0">
         <h2 class="text-text-dark text-lg font-semibold">
           Project Source
         </h2>
@@ -283,7 +278,7 @@ onMounted(loadMembers);
           screen covers the manual path.
         </p>
 
-        <div class="border-brand bg-accent-tint flex flex-col gap-2 rounded-lg border p-3.5">
+        <div class="border-brand bg-accent-tint flex flex-col gap-2 rounded-lg border p-4">
           <span class="text-text-dark text-sm font-semibold">
             Manual project
           </span>
@@ -293,7 +288,7 @@ onMounted(loadMembers);
           </span>
         </div>
 
-        <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-3.5">
+        <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
           <span class="text-text-dark text-sm font-semibold">
             Workspace import
           </span>

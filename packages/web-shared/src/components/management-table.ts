@@ -1,6 +1,5 @@
-import type { AutoCompletePassThroughOptions } from 'primevue/autocomplete';
+import { giTiempoAnchorWidthOverlayClass } from '@gitiempo/web-config/theme';
 import type { MultiSelectPassThroughOptions } from 'primevue/multiselect';
-import type { SelectPassThroughOptions } from 'primevue/select';
 import type { CSSProperties } from 'vue';
 
 export interface ManagementTableColumn {
@@ -72,29 +71,12 @@ export const managementTableColumnPt = {
   },
 } as const;
 
-export const managementTableFilterInputClass = 'h-[34px] w-full rounded-[6px] text-[12px]';
-
-const managementTableFilterAutoCompleteInputClass =
-  'h-[34px] w-full rounded-l-[6px] rounded-r-none text-[12px]';
-
-export const managementTableFilterAutoCompletePt = {
-  root: { class: 'h-[34px]' },
-  pcInputText: {
-    root: { class: managementTableFilterAutoCompleteInputClass },
-  },
-  dropdown: { class: 'h-[34px] w-8 text-text-muted' },
-  option: { class: 'text-[12px]' },
-} satisfies AutoCompletePassThroughOptions;
-
 const managementTableFilterDropdownRootClass =
-  'h-[34px] w-full items-center rounded-[6px] font-sans text-[12px]';
+  'border-divider bg-surface-primary h-[38px] w-full items-center rounded-[6px] border font-sans text-[14px] font-medium text-text-dark shadow-none';
 const managementTableFilterDropdownLabelClass =
-  'flex h-full items-center py-0 font-sans text-[12px] font-normal leading-none text-text-muted';
-
-export const managementTableFilterSelectPt = {
-  root: { class: managementTableFilterDropdownRootClass },
-  label: { class: managementTableFilterDropdownLabelClass },
-} satisfies SelectPassThroughOptions;
+  'flex h-full items-center px-3 py-0 font-sans text-[14px] font-medium leading-none text-text-dark';
+const managementTableFilterDropdownTriggerClass =
+  'h-[38px] w-9 shrink-0 rounded-none rounded-r-[6px] border-0 bg-transparent p-0 text-text-muted shadow-none ring-0 hover:border-transparent hover:bg-transparent hover:text-text-dark focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none active:border-transparent active:bg-transparent';
 
 export const managementTableFilterMultiSelectPt = {
   root: { class: managementTableFilterDropdownRootClass },
@@ -102,4 +84,7 @@ export const managementTableFilterMultiSelectPt = {
   label: {
     class: managementTableFilterDropdownLabelClass,
   },
+  dropdown: { class: managementTableFilterDropdownTriggerClass },
+  overlay: { class: giTiempoAnchorWidthOverlayClass },
 } satisfies MultiSelectPassThroughOptions;
+

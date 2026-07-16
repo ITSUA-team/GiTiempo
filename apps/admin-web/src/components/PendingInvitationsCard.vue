@@ -84,7 +84,7 @@ function formatSentInviteTime(createdAt: string): string {
 </script>
 
 <template>
-  <SurfaceCard padding-class="p-5">
+  <SurfaceCard padding-class="p-6">
     <div class="flex flex-col gap-4">
       <div class="flex items-center justify-between gap-4">
         <div class="flex min-w-0 flex-col gap-1">
