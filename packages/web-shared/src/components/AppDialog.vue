@@ -14,11 +14,9 @@ const appDialogDefaultPt = {
 } as const;
 
 const attrs = useAttrs();
-const restAttrs = computed(() => {
-  const { pt: _pt, ...rest } = attrs;
-
-  return rest;
-});
+const restAttrs = computed(() =>
+  Object.fromEntries(Object.entries(attrs).filter(([key]) => key !== "pt")),
+);
 const mergedPt = computed(() => ({
   ...appDialogDefaultPt,
   ...((attrs.pt as Record<string, unknown> | undefined) ?? {}),
