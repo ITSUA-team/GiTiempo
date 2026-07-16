@@ -82,13 +82,13 @@ Under `project`, no single member owns a row. Rather than let `getReportTableRow
 
 The member filter survives `project` grouping even though no Member column does. Filtering by a member there answers "which projects did they contribute to", which no other control answers in place. The filter row simply follows the column order: project-then-member under `project`, member-then-project under `member`.
 
-The cost is that a member-filtered project row still shows the project's total hours, not that member's, because the row is a project total. That is inherent to grouping by project and is called out in the docs rather than papered over.
+The cost is that a member-filtered project row still shows the project's total hours, not that member's, because the row is a project total. That is inherent to grouping by project and is called out in the docs rather than papered over — and it is exactly why a member-scoped export is blocked under this grouping: the file would quantify a narrower thing than the screen.
 
 *Alternative rejected:* hide the member filter under `project` grouping, on the grounds that a derived count is not filterable. It is tidier but removes a real question the page could answer.
 
 ### Export carries every table filter the CSV can honour
 
-`Export CSV` sends the active date range, the grouping metadata, and the table's project and member filters, which `timeReportExportQuerySchema` accepts as `projectId` and `userId`. This reverses `spec.md:150` for identity filters: a table filtered by project or member now exports a matching file.
+`Export CSV` sends the active date range, the grouping metadata, the table's project filter, and — only under `Member` grouping — its member filter, which `timeReportExportQuerySchema` accepts as `projectId` and `userId`. This reverses `spec.md:150` for filters with a faithful CSV equivalent: a filtered table exports a file with the same rows and sums.
 
 The other three stop at the boundary. **Hours and billable** filter *aggregate row totals* (`filterReportRows` tests `row.totalSeconds >= 8h`), while the CSV is detailed project-task-user rows containing no such aggregate; "projects with 40h+" has nothing to match against.
 
@@ -96,7 +96,9 @@ The other three stop at the boundary. **Hours and billable** filter *aggregate r
 
 Narrowing the table's haystack to the API's fields was considered and rejected: it deletes duration search, a tested capability, and still leaves task titles matching only server-side.
 
-So the rule is identity filters export, label and aggregate filters do not. Rather than drop them silently — filter to 40h+, export, receive everything — `Export CSV` is disabled while any of the three is active, with a tooltip on a wrapper span, since a disabled button swallows hover. The user gets a file that matches the screen, or no file and a reason.
+**The member filter is grouping-dependent**, and this was the sharpest trap. Under `Member` grouping each row carries one member's own sums, so a `userId`-scoped export matches the screen exactly. Under `Project` grouping, `foldRowsByProject` keeps whole folded rows with every contributor's time, and `filterReportRows` selects rows without re-summing — so a member-filtered table still shows full project totals while a `userId`-scoped export would return only that member's entries. On the test fixture: Orion shows 10800s / "2 members" on screen; the file would say 3600s. Recomputing the fold under the filter was rejected because table filters select rows and never recompute them (the summary cards depend on that same rule), and silently dropping `userId` would ignore an active filter.
+
+So the rule is: filters export only where the table and CSV agree — project always, member only under `Member` grouping, label and aggregate filters never. Rather than drop anything silently, `Export CSV` is disabled with a reason. The rule and its wording live in one view-model function (`getReportExportBlockedReason`), grouping-aware, with the tooltip on a wrapper span since a disabled button swallows hover. The user gets a file that matches the screen, or no file and a reason — including the pointer to switch to `Member` grouping, which makes a member-scoped export valid.
 
 *Alternative rejected:* send what maps and ignore the rest. Simplest, but hands back a file that quietly disagrees with the table.
 

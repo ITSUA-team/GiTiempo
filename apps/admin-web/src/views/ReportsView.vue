@@ -15,7 +15,7 @@ import {
   filterReportRows,
   formatReportPercent,
   getReportDateRangeError,
-  isReportTableFilterExportable,
+  getReportExportBlockedReason,
   reportGroupingApiValue,
 } from '@/lib/report-view-model';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
@@ -57,24 +57,20 @@ const tableRows = computed(() =>
 const reportDateRangeError = computed(() =>
   getReportDateRangeError(dateRange.value),
 );
-// The CSV is detailed project-task-user rows, so it has nothing to match the
-// hours, billable, or search filters, which all work on aggregate totals and
-// formatted labels. Rather than hand back a file that quietly disagrees with
-// the table, block the export while any of them is active.
-const exportableTableFilters = computed(() =>
-  isReportTableFilterExportable(tableFilters.value),
-);
+// Rather than hand back a file that quietly disagrees with the table, block
+// the export whenever an active filter has no faithful CSV equivalent. The
+// rule and its wording live in the view model, and it is grouping-aware: a
+// member filter exports fine under member grouping but not over folded
+// project rows.
 const exportBlockedReason = computed(() =>
-  exportableTableFilters.value
-    ? undefined
-    : 'Search, hours, and billable filters cannot be exported. Clear them to export this report.',
+  getReportExportBlockedReason(tableFilters.value, grouping.value),
 );
 const exportDisabled = computed(
   () =>
     loading.value ||
     exporting.value ||
     reportDateRangeError.value !== null ||
-    !exportableTableFilters.value,
+    exportBlockedReason.value !== null,
 );
 
 const totalHoursLabel = computed(() =>
@@ -101,7 +97,11 @@ const topProjectDescription = computed(() => {
 });
 
 async function handleExport(): Promise<void> {
-  if (exporting.value || reportDateRangeError.value || !exportableTableFilters.value) {
+  if (
+    exporting.value ||
+    reportDateRangeError.value ||
+    exportBlockedReason.value !== null
+  ) {
     return;
   }
 

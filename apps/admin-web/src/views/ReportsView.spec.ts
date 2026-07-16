@@ -325,21 +325,44 @@ describe('ReportsView', () => {
     );
   });
 
-  it('scopes the CSV export to the table project and member filters', async () => {
+  it('scopes the CSV export to the table project and member filters under member grouping', async () => {
     const wrapper = mountReportsView();
     await flushPromises();
 
+    // Member grouping is the one where per-row sums are the member's own, so a
+    // member-scoped export matches the screen.
+    await wrapper.get('[data-testid="change-report-grouping"]').trigger('click');
     await wrapper.get('[data-testid="set-table-filters"]').trigger('click');
     await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
     await flushPromises();
 
     expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
       expect.objectContaining({
+        groupBy: 'user',
         memberId: 'member-1',
         projectId: 'project-1',
       }),
     );
     expect(reportMocks.downloadReportExport).toHaveBeenCalled();
+  });
+
+  it('blocks CSV export for a member filter over folded project rows', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    // Under project grouping the table keeps whole folded rows with everyone's
+    // time, while a userId-scoped export would return only that member's
+    // entries — the file would silently show a fraction of the on-screen hours.
+    await wrapper.get('[data-testid="set-table-filters"]').trigger('click');
+
+    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
+
+    await exportButton.trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
   });
 
   it('blocks CSV export while the table search is active', async () => {

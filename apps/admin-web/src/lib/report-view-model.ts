@@ -33,7 +33,7 @@ import {
 
 export {
   defaultReportGrouping,
-  isReportTableFilterExportable,
+  getReportExportBlockedReason,
   reportGroupingApiValue,
 } from '@/validation/report-view-model';
 

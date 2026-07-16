@@ -8,6 +8,7 @@ import {
 import {
   createDefaultReportTableFilters,
   filterReportRows,
+  getReportExportBlockedReason,
   toReportTableRows,
   toTimeReportExportQuery,
   toTimeReportQuery,
@@ -249,5 +250,42 @@ describe('report-view-model', () => {
     filters.global = '1h 00m';
 
     expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
+  });
+});
+
+describe('getReportExportBlockedReason', () => {
+  it('lets identity-only filters export under either grouping', () => {
+    const filters = createDefaultReportTableFilters();
+    filters.projectId = projectId;
+
+    expect(getReportExportBlockedReason(filters, 'project')).toBeNull();
+    expect(getReportExportBlockedReason(filters, 'member')).toBeNull();
+  });
+
+  it('blocks label and aggregate filters regardless of grouping', () => {
+    const searching = createDefaultReportTableFilters();
+    searching.global = '1h 00m';
+    const byHours = createDefaultReportTableFilters();
+    byHours.hours = 'gte8';
+
+    expect(getReportExportBlockedReason(searching, 'member')).toContain(
+      'cannot be exported',
+    );
+    expect(getReportExportBlockedReason(byHours, 'project')).toContain(
+      'cannot be exported',
+    );
+  });
+
+  it('blocks a member filter only over folded project rows', () => {
+    const filters = createDefaultReportTableFilters();
+    filters.memberId = userId;
+
+    // Folded project rows keep everyone's time on screen while a userId-scoped
+    // export would return only this member's entries.
+    expect(getReportExportBlockedReason(filters, 'project')).toContain(
+      'grouping by project',
+    );
+    // Member grouping rows carry the member's own sums, so the export matches.
+    expect(getReportExportBlockedReason(filters, 'member')).toBeNull();
   });
 });

@@ -94,8 +94,7 @@ The reports page MUST support a date range control that scopes both loaded repor
 
 - **WHEN** the user activates `Export CSV`
 - **THEN** the page requests `GET /reports/time/export` scoped to the active date range, carrying the selected grouping
-- **AND** the request also carries the table's project and member filters, so the CSV is scoped to the same projects and members the table is
-- **AND** a member-filtered export under `Project` grouping contains only that member's entries, while the table's Hours column keeps showing each project's total across everyone — the file is narrower than the numbers on screen, not equal to them
+- **AND** the request also carries the table's project filter, and its member filter when grouping by member, so the CSV is scoped to the same rows and sums the table shows
 - **AND** the browser downloads the CSV returned by the backend
 - **AND** the downloaded CSV contains backend-generated detailed project-task-user rows regardless of the selected grouping
 - **AND** the selected grouping is preserved as CSV metadata and does not collapse CSV row granularity
@@ -103,15 +102,16 @@ The reports page MUST support a date range control that scopes both loaded repor
 
 #### Scenario: Unexportable table filters block CSV export
 
-- **WHEN** a global search, hours, or billable table filter is active
-- **THEN** `Export CSV` is disabled and states that those filters cannot be exported
+- **WHEN** a global search, hours, or billable table filter is active, or a member filter is active while grouping by project
+- **THEN** `Export CSV` is disabled and states why that filter cannot be exported
 - **AND** activating it generates no CSV
-- **AND** clearing those filters restores export
+- **AND** clearing the filter, or switching a member-filtered table to `Member` grouping, restores export
 
-#### Scenario: Only identity filters are exportable
+#### Scenario: Only filters the table and CSV agree on are exportable
 
 - **WHEN** the system decides which table filters can scope the CSV
-- **THEN** project and member scope it, because they identify rows the export contract can select by
+- **THEN** the project filter scopes it under either grouping, because folded project totals and per-member rows both cover exactly that project's entries
+- **AND** the member filter scopes it only under `Member` grouping, where each row carries that member's own sums; over folded project rows the table keeps everyone's time while a member-scoped file would hold a fraction of it
 - **AND** hours and billable do not, because they filter aggregate row totals and the CSV holds detailed project-task-user rows with no such totals to match
 - **AND** global search does not, because it matches formatted labels including durations and percentages that the CSV cannot express, and the export endpoint's own search matches task titles the table never shows while ignoring those labels
 - **AND** the export never silently ignores an active filter, nor silently applies a different one
