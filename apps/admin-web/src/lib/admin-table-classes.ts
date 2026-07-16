@@ -19,6 +19,10 @@ export const adminTableBodyRowClass =
 // picking its own overflow point (previously 700–860px per table).
 export const adminTableMinWidthClass = 'min-w-[860px]';
 
-export const adminTableHeaderClass = `${managementTableHeaderClass} ${adminTableMinWidthClass}`;
+// The table's outer gutters: the first and last column get 24px on the
+// header and body text. Filter cells keep their own px-3 rhythm.
+export const adminTableHeaderClass = `${managementTableHeaderClass} ${adminTableMinWidthClass} [&>div:first-child]:pl-6 [&>div:last-child]:pr-6`;
 
-export const adminTableClass = `${adminTableMinWidthClass} w-full table-fixed border-collapse`;
+// :not(:only-child) skips the full-bleed expansion and empty-state cells,
+// which span the row as a single td and must stay p-0.
+export const adminTableClass = `${adminTableMinWidthClass} w-full table-fixed border-collapse [&_td:first-child:not(:only-child)]:pl-6 [&_td:last-child:not(:only-child)]:pr-6`;
