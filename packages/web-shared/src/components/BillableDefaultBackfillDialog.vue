@@ -62,9 +62,6 @@ const timeEntriesModel = computed({
     :draggable="false"
     :pt="{
       root: 'w-[min(480px,calc(100vw-2rem))] rounded-lg border border-divider bg-surface-primary',
-      header: 'px-[18px] pt-[18px] pb-0',
-      content: 'px-[18px] pb-[18px] pt-3',
-      footer: 'px-[18px] pb-[18px] pt-0',
     }"
     :visible="props.isOpen"
     @update:visible="(nextVisible: boolean) => {

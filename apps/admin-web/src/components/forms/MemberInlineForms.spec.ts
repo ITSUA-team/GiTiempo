@@ -155,8 +155,14 @@ describe('member inline forms', () => {
       expect.arrayContaining(['flex', 'flex-col', 'gap-1.5']),
     );
     expect(wrapper.get('[data-testid="member-edit-form-actions"]').classes()).toEqual(
-      expect.arrayContaining(['grid', 'grid-cols-1', 'sm:flex', 'sm:justify-end']),
+      expect.arrayContaining(['grid', 'grid-cols-1', 'sm:flex', 'sm:justify-between']),
     );
+    // Remove member sits in its own destructive group, apart from Cancel/Save.
+    expect(
+      wrapper.get('[data-footer-actions="destructive"]').text(),
+    ).toContain('Remove member');
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toContain('Cancel');
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toContain('Save changes');
     const projectSelect = wrapper.getComponent({ name: 'AutoComplete' });
 
     expect(projectSelect.props('multiple')).toBe(true);

@@ -14,7 +14,7 @@ import Skeleton from 'primevue/skeleton';
     <div class="flex w-full max-w-[620px] flex-col gap-2">
       <SurfaceCard
         class="w-full"
-        padding-class="p-5"
+        padding-class="p-6"
       >
         <div class="flex flex-col gap-5">
           <section class="flex flex-col gap-3">
@@ -146,7 +146,7 @@ import Skeleton from 'primevue/skeleton';
 
       <SurfaceCard
         class="w-full"
-        padding-class="p-5"
+        padding-class="p-6"
       >
         <div class="flex flex-col gap-4">
           <div class="flex flex-col gap-1.5">

@@ -2,7 +2,11 @@
 import { computed, ref, watch } from 'vue';
 import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
 import { giTiempoSelfAppendedMultiAutoCompleteDropdownPt } from '@gitiempo/web-config/theme';
-import { EditFormPanel, memberAssignFormSchema } from '@gitiempo/web-shared';
+import {
+  DialogFooterActionGroups,
+  EditFormPanel,
+  memberAssignFormSchema,
+} from '@gitiempo/web-shared';
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
@@ -143,20 +147,22 @@ function handleSave({
           Project assignments are available only for other non-admin members.
         </div>
 
-        <div
+        <DialogFooterActionGroups
           data-testid="member-edit-form-actions"
-          class="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:justify-end sm:gap-2.5"
+          :has-destructive-actions="props.canRemove"
+          stack-on-mobile
         >
-          <Button
-            v-if="props.canRemove"
-            type="button"
-            label="Remove member"
-            severity="danger"
-            variant="outlined"
-            class="w-full sm:w-auto"
-            :disabled="saving"
-            @click="emit('remove')"
-          />
+          <template #destructive>
+            <Button
+              type="button"
+              label="Remove member"
+              severity="danger"
+              variant="outlined"
+              class="w-full sm:w-auto"
+              :disabled="saving"
+              @click="emit('remove')"
+            />
+          </template>
           <Button
             type="button"
             label="Cancel"
@@ -173,7 +179,7 @@ function handleSave({
             :disabled="saving"
             :loading="saving"
           />
-        </div>
+        </DialogFooterActionGroups>
       </div>
     </Form>
   </EditFormPanel>

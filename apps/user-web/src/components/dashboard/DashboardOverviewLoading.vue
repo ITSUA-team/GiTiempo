@@ -10,7 +10,7 @@ import { SurfaceCard } from "@gitiempo/web-shared";
         v-for="index in 3"
         :key="index"
         body-class="flex min-h-[108px] flex-col gap-3"
-        padding-class="p-4"
+        padding-class="p-6"
       >
         <Skeleton
           width="5rem"

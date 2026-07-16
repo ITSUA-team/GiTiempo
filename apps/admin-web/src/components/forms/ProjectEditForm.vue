@@ -10,6 +10,7 @@ import {
   giTiempoSelfAppendedMultiAutoCompleteDropdownPt,
 } from '@gitiempo/web-config/theme';
 import {
+  DialogFooterActionGroups,
   EditFormPanel,
   LabeledCheckbox,
   projectEditFormSchema,
@@ -150,18 +151,20 @@ function handleSave({
           />
         </div>
 
-        <div
+        <DialogFooterActionGroups
           data-testid="project-edit-form-actions"
-          class="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-2.5"
+          has-destructive-actions
+          stack-on-mobile
         >
-          <Button
-            type="button"
-            severity="danger"
-            variant="outlined"
-            class="w-full gap-2 sm:w-auto"
-            :disabled="saving"
-            @click="project.isActive ? emit('archive') : emit('unarchive')"
-          >
+          <template #destructive>
+            <Button
+              type="button"
+              severity="danger"
+              variant="outlined"
+              class="w-full gap-2 sm:w-auto"
+              :disabled="saving"
+              @click="project.isActive ? emit('archive') : emit('unarchive')"
+            >
             <svg
               aria-hidden="true"
               class="h-4 w-4"
@@ -177,8 +180,9 @@ function handleSave({
               <path d="M8.25 7.5V5.75A2.25 2.25 0 0 1 10.5 3.5h3a2.25 2.25 0 0 1 2.25 2.25V7.5" />
               <path d="M9.75 12h4.5" />
             </svg>
-            {{ project.isActive ? 'Archive project' : 'Unarchive project' }}
-          </Button>
+              {{ project.isActive ? 'Archive project' : 'Unarchive project' }}
+            </Button>
+          </template>
           <Button
             type="button"
             label="Cancel"
@@ -194,7 +198,7 @@ function handleSave({
             :disabled="saving"
             :loading="saving"
           />
-        </div>
+        </DialogFooterActionGroups>
       </div>
     </Form>
   </EditFormPanel>

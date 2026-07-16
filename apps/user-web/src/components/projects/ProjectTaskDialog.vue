@@ -10,13 +10,13 @@ import {
 } from "@gitiempo/web-config/theme";
 import {
   AppDialog,
+  DialogFooterActionGroups,
   filterAutocompleteOptions,
   InlineRequestMessage,
   LabeledCheckbox,
 } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
-import DialogFooterActionGroups from "@/components/dialogs/DialogFooterActionGroups.vue";
 
 const props = defineProps<{
   errors: {
@@ -129,9 +129,6 @@ function handleProjectComplete(event: { query: string }): void {
     :draggable="false"
     :pt="{
       root: 'w-[min(480px,calc(100vw-2rem))] rounded-lg border border-divider',
-      header: 'px-6 pt-6 pb-0',
-      content: 'px-6 pb-6 pt-4',
-      footer: 'px-6 pb-6 pt-0',
     }"
     :visible="props.isOpen"
     @update:visible="(nextVisible: boolean) => {

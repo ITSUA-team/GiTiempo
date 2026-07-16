@@ -63,7 +63,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
 <template>
   <SurfaceCard
     body-class="flex flex-col gap-3"
-    padding-class="p-4"
+    padding-class="p-6"
   >
     <div class="grid gap-3 xl:grid-cols-[220px_220px_minmax(0,1fr)]">
       <div class="flex flex-col gap-1">

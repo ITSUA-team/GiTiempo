@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Skeleton from "primevue/skeleton";
 
-import SurfaceCard from "@/components/layout/SurfaceCard.vue";
+import { SurfaceCard } from "@gitiempo/web-shared";
 </script>
 
 <template>
@@ -9,7 +9,7 @@ import SurfaceCard from "@/components/layout/SurfaceCard.vue";
     class="flex max-w-[620px] flex-col gap-6"
     data-testid="profile-loading"
   >
-    <SurfaceCard
+    <SurfaceCard border
       body-class="flex flex-col gap-4"
       data-testid="profile-form-loading"
     >
@@ -56,7 +56,7 @@ import SurfaceCard from "@/components/layout/SurfaceCard.vue";
       </div>
     </SurfaceCard>
 
-    <SurfaceCard
+    <SurfaceCard border
       body-class="flex flex-col gap-4"
       data-testid="profile-github-loading"
     >

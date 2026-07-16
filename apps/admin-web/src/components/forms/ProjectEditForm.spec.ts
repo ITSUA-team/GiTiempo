@@ -162,8 +162,14 @@ describe('ProjectEditForm', () => {
       expect.arrayContaining(['flex-col', 'sm:flex-row', 'sm:items-end']),
     );
     expect(wrapper.get('[data-testid="project-edit-form-actions"]').classes()).toEqual(
-      expect.arrayContaining(['grid', 'w-full', 'sm:flex', 'sm:w-auto']),
+      expect.arrayContaining(['grid', 'w-full', 'grid-cols-1', 'sm:flex', 'sm:justify-between']),
     );
+    // Archive sits in its own destructive group, apart from Cancel/Save.
+    expect(
+      wrapper.get('[data-footer-actions="destructive"]').text(),
+    ).toContain('Archive project');
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toContain('Cancel');
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toContain('Save');
     expect(wrapper.get('label[for="edit-members"]').text()).toBe('Select members');
     expect(wrapper.get('label[for="edit-visibility"]').text()).toBe('Visibility');
     expect(wrapper.text()).toContain('New task billable default');

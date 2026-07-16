@@ -13,12 +13,12 @@ import {
 import {
   filterAutocompleteOptions,
   AppDialog,
+  DialogFooterActionGroups,
   InlineRequestMessage,
   LabeledCheckbox,
 } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
-import DialogFooterActionGroups from "@/components/dialogs/DialogFooterActionGroups.vue";
 import {
   isNewTaskLookupOption,
   type TaskLookupOption,
@@ -222,9 +222,6 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
     :draggable="false"
     :pt="{
       root: 'w-[min(560px,calc(100vw-2rem))] rounded-lg border border-divider',
-      header: 'px-6 pt-6 pb-0',
-      content: 'px-6 pb-6 pt-4',
-      footer: 'px-6 pb-6 pt-0',
     }"
     :visible="props.isOpen"
     @update:visible="emit('close')"

@@ -1,6 +1,7 @@
 export { default as AppDialog } from "./AppDialog.vue";
 export { default as AuthSignInForm } from "./AuthSignInForm.vue";
 export { default as BillableDefaultBackfillDialog } from "./BillableDefaultBackfillDialog.vue";
+export { default as DialogFooterActionGroups } from "./DialogFooterActionGroups.vue";
 export { default as StandaloneSplitPage } from "./StandaloneSplitPage.vue";
 export { default as EditFormPanel } from "./EditFormPanel.vue";
 export { default as EmptyStateBlock } from "./EmptyStateBlock.vue";

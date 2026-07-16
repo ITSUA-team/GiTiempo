@@ -25,7 +25,7 @@ const groupSkeletons = [
     <SurfaceCard
       body-class="grid gap-3 xl:grid-cols-[220px_220px_minmax(0,1fr)]"
       data-testid="time-entries-loading-filters"
-      padding-class="p-4"
+      padding-class="p-6"
     >
       <div
         v-for="width in filterSkeletons"
@@ -64,7 +64,7 @@ const groupSkeletons = [
         <SurfaceCard
           border
           body-class="flex flex-col gap-3"
-          padding-class="p-4"
+          padding-class="p-6"
         >
           <div
             class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px_96px] sm:items-center"
@@ -88,7 +88,7 @@ const groupSkeletons = [
       border
       body-class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
       data-testid="time-entries-loading-pagination"
-      padding-class="p-4"
+      padding-class="p-6"
     >
       <Skeleton
         width="9rem"
