@@ -75,6 +75,14 @@ export const giTiempoDropdownAutoCompletePt = {
   option: { class: "font-sans text-[14px]" },
 } satisfies GiTiempoAutoCompletePt;
 
+// The multi control grows with its chip rows, so its trigger stretches with
+// the field instead of pinning to the single-line 38px height.
+export const giTiempoMultiDropdownControlTriggerClass =
+  giTiempoDropdownControlTriggerClass.replace(
+    "h-[38px]",
+    "flex items-center justify-center self-stretch",
+  );
+
 export const giTiempoMultiAutoCompleteDropdownPt = {
   root: {
     class:
@@ -90,7 +98,7 @@ export const giTiempoMultiAutoCompleteDropdownPt = {
     class:
       "min-h-[38px] w-full flex-1 rounded-none border-0 bg-transparent px-2 py-1 font-sans text-[14px] font-medium text-text-dark shadow-none",
   },
-  dropdown: { class: giTiempoDropdownControlTriggerClass },
+  dropdown: { class: giTiempoMultiDropdownControlTriggerClass },
   pcChip: {
     root: {
       class: "bg-accent-tint text-brand font-sans text-[12px] font-semibold",

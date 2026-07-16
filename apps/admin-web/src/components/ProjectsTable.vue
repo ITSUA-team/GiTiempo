@@ -316,7 +316,7 @@ const columns: ManagementTableColumn[] = [
                 :pt="{
                   root: {
                     class: [
-                      'group inline-flex max-w-full items-center gap-1.5 rounded-none border-0 bg-transparent p-0 text-left text-[15px] font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                      'group flex w-full items-center justify-start gap-1.5 rounded-none border-0 bg-transparent p-0 text-left text-[15px] font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                       row.nameClass,
                     ],
                   },
@@ -488,7 +488,7 @@ const columns: ManagementTableColumn[] = [
           :pt="{
             root: {
               class: [
-                'group inline-flex max-w-full items-center gap-1.5 rounded-none border-0 bg-transparent p-0 text-left text-[14px] leading-none font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                'group flex w-full items-center justify-start gap-1.5 rounded-none border-0 bg-transparent p-0 text-left text-[14px] leading-none font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                 data.nameClass,
               ],
             },

@@ -94,9 +94,9 @@ function handleSave({
     >
       <div
         data-testid="project-edit-form-layout"
-        class="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2.5"
+        class="flex flex-col gap-3"
       >
-        <div class="flex min-w-0 flex-col gap-1.5 sm:flex-1">
+        <div class="flex min-w-0 flex-col gap-1.5">
           <label
             for="edit-members"
             class="text-text-dark font-sans text-[12px] leading-none font-medium"
@@ -121,6 +121,7 @@ function handleSave({
           />
         </div>
 
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2.5">
         <div class="flex min-w-0 flex-col gap-1.5 sm:w-[180px] sm:shrink-0">
           <label
             for="edit-visibility"
@@ -149,6 +150,8 @@ function handleSave({
             root-class="border-divider bg-surface-primary flex h-[42px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
             :disabled="saving"
           />
+        </div>
+
         </div>
 
         <DialogFooterActionGroups
