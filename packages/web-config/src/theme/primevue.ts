@@ -57,6 +57,9 @@ export const giTiempoDatePickerPt = {
     root: { class: giTiempoDropdownControlInputClass },
   },
   dropdown: { class: giTiempoDropdownControlTriggerClass },
+  // The clear icon overlays the input text, so back it with the surface
+  // color and keep it clear of the input-mode calendar icon at the end.
+  clearIcon: { class: "box-content bg-surface-primary end-10" },
   panel: {
     class:
       "border-divider bg-surface-primary rounded-md border text-text-dark shadow-popover",

@@ -19,6 +19,7 @@ const props = withDefaults(
     disabled?: boolean;
     forceSelection?: boolean;
     inputId?: string;
+    loading?: boolean;
     name?: string;
     optionLabel?: string | ((option: TOption) => string);
     placeholder: string;
@@ -31,6 +32,7 @@ const props = withDefaults(
     disabled: false,
     forceSelection: false,
     inputId: undefined,
+    loading: false,
     name: undefined,
     optionLabel: undefined,
     showClear: false,
@@ -112,6 +114,7 @@ const mutableSuggestions = computed(() => [...props.suggestions]);
     dropdown-mode="blank"
     :force-selection="forceSelection"
     :input-id="inputId"
+    :loading="loading"
     :min-length="0"
     :name="name"
     :option-label="optionLabel"
