@@ -14,7 +14,6 @@ import {
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteStrings,
-  managementTableColumnPt,
   managementTableFilterMultiSelectPt,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
@@ -30,6 +29,7 @@ import Skeleton from 'primevue/skeleton';
 
 import {
   adminTableBodyRowClass,
+  adminTableColumnPt,
   adminTableClass,
   adminTableHeaderClass,
   adminTableMinWidthClass,
@@ -412,7 +412,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[120px] pr-3">
+        <div class="w-[120px] pr-3 [&_.p-select-label]:pl-6">
           <Select
             :model-value="filters.role"
             :options="roleFilterOptions"
@@ -426,7 +426,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[220px] pr-3">
+        <div class="w-[220px] pr-3 [&_.p-multiselect-label]:pl-6">
           <MultiSelect
             :model-value="filters.projectIds"
             :options="projectFilterOptions"
@@ -442,7 +442,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[140px] pr-3">
+        <div class="w-[140px] pr-3 [&_.p-select-label]:pl-6">
           <Select
             :model-value="filters.lastActive"
             :options="lastActiveFilterOptions"
@@ -457,7 +457,7 @@ function getRoleClass(role: WorkspaceRole): string {
     </template>
 
     <!-- Member: avatar + name + email -->
-    <Column :pt="managementTableColumnPt">
+    <Column :pt="adminTableColumnPt">
       <template #body="{ data }">
         <div class="flex items-center gap-3">
           <Avatar
@@ -515,7 +515,7 @@ function getRoleClass(role: WorkspaceRole): string {
     <!-- Role -->
     <Column
       style="width: 120px"
-      :pt="managementTableColumnPt"
+      :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
         <span
@@ -530,7 +530,7 @@ function getRoleClass(role: WorkspaceRole): string {
     <!-- Projects Assigned -->
     <Column
       style="width: 220px"
-      :pt="managementTableColumnPt"
+      :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
@@ -542,7 +542,7 @@ function getRoleClass(role: WorkspaceRole): string {
     <!-- Last Active -->
     <Column
       style="width: 140px"
-      :pt="managementTableColumnPt"
+      :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{

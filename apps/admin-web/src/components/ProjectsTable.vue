@@ -11,7 +11,6 @@ import {
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteStrings,
-  managementTableColumnPt,
   managementTableFilterMultiSelectPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
@@ -27,6 +26,7 @@ import Tag from 'primevue/tag';
 
 import {
   adminTableBodyRowClass,
+  adminTableColumnPt,
   adminTableClass,
   adminTableHeaderClass,
   adminTableMinWidthClass,
@@ -419,7 +419,7 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[140px] pr-3">
+        <div class="w-[140px] pr-3 [&_.p-select-label]:pl-6">
           <Select
             :model-value="filters.source"
             :options="sourceFilterOptions"
@@ -433,7 +433,7 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[220px] pr-3">
+        <div class="w-[220px] pr-3 [&_.p-multiselect-label]:pl-6">
           <MultiSelect
             :model-value="filters.memberIds"
             :options="memberFilterOptions"
@@ -449,7 +449,7 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[120px] pr-3 text-right">
+        <div class="w-[120px] pr-3 text-right [&_.p-select-label]:pl-6">
           <Select
             :model-value="filters.hours"
             :options="hoursFilterOptions"
@@ -461,7 +461,7 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[120px] pr-3">
+        <div class="w-[120px] pr-3 [&_.p-select-label]:pl-6">
           <Select
             :model-value="filters.visibility"
             :options="visibilityFilterOptions"
@@ -477,7 +477,7 @@ const columns: ManagementTableColumn[] = [
       </div>
     </template>
 
-    <Column :pt="managementTableColumnPt">
+    <Column :pt="adminTableColumnPt">
       <template #body="{ data }">
         <Button
           type="button"
@@ -512,7 +512,7 @@ const columns: ManagementTableColumn[] = [
 
     <Column
       style="width: 140px"
-      :pt="managementTableColumnPt"
+      :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
@@ -523,7 +523,7 @@ const columns: ManagementTableColumn[] = [
 
     <Column
       style="width: 220px"
-      :pt="managementTableColumnPt"
+      :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{ data.assignedMembersLabel }}</span>
@@ -532,7 +532,7 @@ const columns: ManagementTableColumn[] = [
 
     <Column
       style="width: 120px"
-      :pt="managementTableColumnPt"
+      :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
         <span class="text-text-dark text-[13px] font-semibold">{{ data.hoursLabel }}</span>
@@ -541,7 +541,7 @@ const columns: ManagementTableColumn[] = [
 
     <Column
       style="width: 120px"
-      :pt="managementTableColumnPt"
+      :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
         <template v-if="data.isActive">

@@ -10,7 +10,6 @@ import {
   MobileRecordCard,
   SurfaceCard,
   formatWorkspaceRole,
-  managementTableColumnPt,
   managementTableHeaderCellClass,
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
@@ -22,6 +21,7 @@ import {
 import Column from 'primevue/column';
 import {
   adminTableBodyRowClass,
+  adminTableColumnPt,
   adminTableClass,
   adminTableHeaderClass,
   adminTableMinWidthClass,
@@ -209,7 +209,7 @@ function formatSentInviteTime(createdAt: string): string {
         table-container-class="overflow-visible rounded-none border-none"
         :value="props.pendingInvites"
       >
-        <Column :pt="managementTableColumnPt">
+        <Column :pt="adminTableColumnPt">
           <template #body="{ data }">
             <div class="flex min-w-0 flex-col">
               <span class="text-text-dark truncate text-[14px] font-semibold">
@@ -224,7 +224,7 @@ function formatSentInviteTime(createdAt: string): string {
 
         <Column
           style="width: 140px"
-          :pt="managementTableColumnPt"
+          :pt="adminTableColumnPt"
         >
           <template #body="{ data }">
             <span class="text-text-dark text-[13px] font-medium">
@@ -235,7 +235,7 @@ function formatSentInviteTime(createdAt: string): string {
 
         <Column
           style="width: 180px"
-          :pt="managementTableColumnPt"
+          :pt="adminTableColumnPt"
         >
           <template #body="{ data }">
             <span class="text-text-muted text-[13px] font-normal">
@@ -246,7 +246,7 @@ function formatSentInviteTime(createdAt: string): string {
 
         <Column
           style="width: 140px"
-          :pt="managementTableColumnPt"
+          :pt="adminTableColumnPt"
         >
           <template #body="{ data }">
             <div class="flex items-center justify-end gap-2">

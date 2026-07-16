@@ -11,7 +11,6 @@ import {
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteOptions,
-  managementTableColumnPt,
   normalizeReportDateRangeValue,
   useIsMobileViewport,
   type ManagementTableColumn,
@@ -29,6 +28,7 @@ import Select from 'primevue/select';
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
 import {
   adminTableBodyRowClass,
+  adminTableColumnPt,
   adminTableClass,
   adminTableHeaderClass,
   adminTableMinWidthClass,
@@ -407,7 +407,7 @@ function handleMemberFilterUpdate(
             v-for="(key, index) in filterOrder"
             :key="key"
             class="pr-3"
-            :class="index === 0 ? 'min-w-0 flex-1 pl-3' : 'w-[180px]'"
+            :class="index === 0 ? 'min-w-0 flex-1 pl-3' : 'w-[180px] [&_.p-autocomplete-input]:pl-6'"
           >
             <FilterAutoComplete
               v-if="key === 'project'"
@@ -435,7 +435,7 @@ function handleMemberFilterUpdate(
             />
           </div>
 
-          <div class="w-[140px] pr-3 text-right">
+          <div class="w-[140px] pr-3 [&_.p-select-label]:pl-6">
             <Select
               v-model="filters.hours"
               :options="hoursFilterOptions"
@@ -445,7 +445,7 @@ function handleMemberFilterUpdate(
               :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
-          <div class="w-[140px] pr-3 text-right">
+          <div class="w-[140px] pr-3 [&_.p-select-label]:pl-6">
             <Select
               v-model="filters.billable"
               :options="billableFilterOptions"
@@ -458,7 +458,7 @@ function handleMemberFilterUpdate(
         </div>
       </template>
 
-      <Column :pt="managementTableColumnPt">
+      <Column :pt="adminTableColumnPt">
         <template #body="{ data }">
           <span class="text-text-dark text-[14px] leading-none font-semibold">{{ memberLeads ? data.memberName : data.projectName }}</span>
         </template>
@@ -466,7 +466,7 @@ function handleMemberFilterUpdate(
 
       <Column
         style="width: 180px"
-        :pt="managementTableColumnPt"
+        :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
           <span class="text-text-muted text-[13px] font-normal">{{ memberLeads ? data.projectName : formatMemberCount(data.memberIds.length) }}</span>
@@ -475,7 +475,7 @@ function handleMemberFilterUpdate(
 
       <Column
         style="width: 140px"
-        :pt="managementTableColumnPt"
+        :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
           <div class="text-right">
@@ -486,7 +486,7 @@ function handleMemberFilterUpdate(
 
       <Column
         style="width: 140px"
-        :pt="managementTableColumnPt"
+        :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
           <div class="text-right">
