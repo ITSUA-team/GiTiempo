@@ -21,6 +21,7 @@ import InputText from 'primevue/inputtext';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
+import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
   type ReportBillableFilter,
@@ -303,11 +304,14 @@ function handleMemberFilterUpdate(
       </div>
     </template>
 
+    <!-- Loading renders skeleton rows through #empty instead of the DataTable
+         spinner overlay, and refreshes keep the loaded rows visible — the same
+         treatment the mobile cards above already get. -->
     <ManagementTableShell
       v-else
       :columns="columns"
       :value="rows"
-      :loading="loading"
+      :loading="false"
       data-key="id"
       :header-class="reportTableHeaderClass"
       shell-class="border-divider overflow-x-auto rounded-[6px] border"
@@ -406,7 +410,17 @@ function handleMemberFilterUpdate(
       </Column>
 
       <template #empty>
+        <template v-if="loading">
+          <ManagementDesktopRowSkeleton
+            v-for="index in 6"
+            :key="index"
+            data-testid="reports-desktop-loading-row"
+            variant="reports"
+          />
+        </template>
+
         <EmptyStateBlock
+          v-else
           title="No report rows found"
           description="No matching report rows are available for the current filters."
         />
