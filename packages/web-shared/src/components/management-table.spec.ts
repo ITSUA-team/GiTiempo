@@ -12,6 +12,10 @@ describe('management table filter styles', () => {
   it('keeps the assignment multiselect aligned with the shared filter height', () => {
     expect(managementTableFilterMultiSelectPt.root?.class).toContain('h-[38px]');
     expect(managementTableFilterMultiSelectPt.root?.class).toContain('border-divider');
+    // The trigger is clipped inside the box so the control matches the height
+    // of the Select and AutoComplete filters beside it.
+    expect(managementTableFilterMultiSelectPt.root?.class).toContain('flex');
+    expect(managementTableFilterMultiSelectPt.root?.class).toContain('overflow-hidden');
     expect(managementTableFilterMultiSelectPt.labelContainer?.class).toContain('h-full');
     expect(managementTableFilterMultiSelectPt.label?.class).toContain('text-[14px]');
     expect(managementTableFilterMultiSelectPt.dropdown?.class).toContain('w-9');

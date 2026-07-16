@@ -13,7 +13,6 @@ import {
   filterAutocompleteStrings,
   managementTableColumnPt,
   managementTableFilterMultiSelectPt,
-  managementTableHeaderClass,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
@@ -26,6 +25,12 @@ import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
+import {
+  adminTableBodyRowClass,
+  adminTableClass,
+  adminTableHeaderClass,
+  adminTableMinWidthClass,
+} from '@/lib/admin-table-classes';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import type {
   ProjectHoursFilter,
@@ -117,9 +122,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'visibility', label: 'Visibility', width: 120 },
 ];
 
-const projectsTableBodyRowClass =
-  'border-divider h-[56px] border-b transition-colors last:border-b-0 hover:bg-app-bg';
-const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
 </script>
 
 <template>
@@ -381,17 +383,20 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
     :columns="columns"
     :value="rows"
     :loading="loading"
-    :body-row-class="projectsTableBodyRowClass"
+    :body-row-class="adminTableBodyRowClass"
     data-key="id"
-    :header-class="projectsTableHeaderClass"
+    :header-class="adminTableHeaderClass"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     single-scroll
-    table-class="min-w-[860px] w-full table-fixed border-collapse"
+    :table-class="adminTableClass"
     table-container-class="overflow-visible rounded-none border-none"
     @update:expanded-rows="updateExpandedRows"
   >
     <template #filters>
-      <div class="flex min-w-[860px] flex-1 items-center">
+      <div
+          class="flex flex-1 items-center"
+          :class="adminTableMinWidthClass"
+        >
         <div class="min-w-0 flex-1 px-3">
           <FilterAutoComplete
             :model-value="filters.projectQuery"
@@ -403,7 +408,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           />
         </div>
 
-        <div class="w-[140px] px-3">
+        <div class="w-[140px] pr-3">
           <Select
             :model-value="filters.source"
             :options="sourceFilterOptions"
@@ -417,7 +422,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           />
         </div>
 
-        <div class="w-[220px] px-3">
+        <div class="w-[220px] pr-3">
           <MultiSelect
             :model-value="filters.memberIds"
             :options="memberFilterOptions"
@@ -433,7 +438,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           />
         </div>
 
-        <div class="w-[120px] px-3 text-right">
+        <div class="w-[120px] pr-3 text-right">
           <Select
             :model-value="filters.hours"
             :options="hoursFilterOptions"
@@ -445,7 +450,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           />
         </div>
 
-        <div class="w-[120px] px-3">
+        <div class="w-[120px] pr-3">
           <Select
             :model-value="filters.visibility"
             :options="visibilityFilterOptions"

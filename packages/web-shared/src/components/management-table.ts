@@ -71,8 +71,12 @@ export const managementTableColumnPt = {
   },
 } as const;
 
+// flex + overflow-hidden keep the 38px dropdown trigger clipped inside the
+// bordered 38px box, exactly like the Select and AutoComplete filter roots —
+// without them the chevron pokes out and the control renders taller than its
+// row neighbors.
 const managementTableFilterDropdownRootClass =
-  'border-divider bg-surface-primary h-[38px] w-full items-center rounded-[6px] border font-sans text-[14px] font-medium text-text-dark shadow-none';
+  'border-divider bg-surface-primary flex h-[38px] w-full items-center overflow-hidden rounded-[6px] border font-sans text-[14px] font-medium text-text-dark shadow-none';
 const managementTableFilterDropdownLabelClass =
   'flex h-full items-center px-3 py-0 font-sans text-[14px] font-medium leading-none text-text-dark';
 const managementTableFilterDropdownTriggerClass =

@@ -16,7 +16,6 @@ import {
   filterAutocompleteStrings,
   managementTableColumnPt,
   managementTableFilterMultiSelectPt,
-  managementTableHeaderClass,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
@@ -29,6 +28,12 @@ import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
 
+import {
+  adminTableBodyRowClass,
+  adminTableClass,
+  adminTableHeaderClass,
+  adminTableMinWidthClass,
+} from '@/lib/admin-table-classes';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import type {
   MemberLastActiveFilter,
@@ -117,9 +122,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'lastActive', label: 'Last Active', width: 140 },
 ];
 
-const membersTableBodyRowClass =
-  'border-divider h-[56px] border-b transition-colors last:border-b-0 hover:bg-app-bg';
-const membersTableHeaderClass = `${managementTableHeaderClass} min-w-[780px]`;
 
 function getRoleClass(role: WorkspaceRole): string {
   return role === 'pm'
@@ -374,17 +376,20 @@ function getRoleClass(role: WorkspaceRole): string {
     :columns="columns"
     :value="rows"
     :loading="loading"
-    :body-row-class="membersTableBodyRowClass"
+    :body-row-class="adminTableBodyRowClass"
     data-key="id"
-    :header-class="membersTableHeaderClass"
+    :header-class="adminTableHeaderClass"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     single-scroll
-    table-class="min-w-[780px] w-full table-fixed border-collapse"
+    :table-class="adminTableClass"
     table-container-class="overflow-visible rounded-none border-none"
     @update:expanded-rows="updateExpandedRows"
   >
     <template #filters>
-      <div class="flex min-w-[780px] flex-1 items-center">
+      <div
+          class="flex flex-1 items-center"
+          :class="adminTableMinWidthClass"
+        >
         <div class="min-w-0 flex-1 px-3">
           <FilterAutoComplete
             :model-value="filters.memberQuery"
@@ -396,7 +401,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[120px] px-3">
+        <div class="w-[120px] pr-3">
           <Select
             :model-value="filters.role"
             :options="roleFilterOptions"
@@ -410,7 +415,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[220px] px-3">
+        <div class="w-[220px] pr-3">
           <MultiSelect
             :model-value="filters.projectIds"
             :options="projectFilterOptions"
@@ -426,7 +431,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[140px] px-3">
+        <div class="w-[140px] pr-3">
           <Select
             :model-value="filters.lastActive"
             :options="lastActiveFilterOptions"

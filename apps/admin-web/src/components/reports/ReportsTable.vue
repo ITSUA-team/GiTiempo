@@ -12,7 +12,6 @@ import {
   SectionHeader,
   filterAutocompleteOptions,
   managementTableColumnPt,
-  managementTableHeaderClass,
   normalizeReportDateRangeValue,
   useIsMobileViewport,
   type ManagementTableColumn,
@@ -28,6 +27,12 @@ import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
+import {
+  adminTableBodyRowClass,
+  adminTableClass,
+  adminTableHeaderClass,
+  adminTableMinWidthClass,
+} from '@/lib/admin-table-classes';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
   type ReportBillableFilter,
@@ -108,7 +113,6 @@ function formatMemberCount(count: number): string {
   return `${count} ${count === 1 ? 'member' : 'members'}`;
 }
 
-const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[720px]`;
 
 const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
   { label: 'Any', value: 'any' },
@@ -387,19 +391,23 @@ function handleMemberFilterUpdate(
       :value="rows"
       :loading="false"
       data-key="id"
-      :header-class="reportTableHeaderClass"
+      :body-row-class="adminTableBodyRowClass"
+      :header-class="adminTableHeaderClass"
       shell-class="border-divider overflow-x-auto rounded-[6px] border"
       single-scroll
-      table-class="min-w-[720px] w-full table-fixed border-collapse"
+      :table-class="adminTableClass"
       table-container-class="overflow-visible rounded-none border-none"
     >
       <template #filters>
-        <div class="flex min-w-[720px] flex-1 items-center">
+        <div
+          class="flex flex-1 items-center"
+          :class="adminTableMinWidthClass"
+        >
           <div
             v-for="(key, index) in filterOrder"
             :key="key"
-            class="px-3"
-            :class="index === 0 ? 'min-w-0 flex-1' : 'w-[180px]'"
+            class="pr-3"
+            :class="index === 0 ? 'min-w-0 flex-1 pl-3' : 'w-[180px]'"
           >
             <FilterAutoComplete
               v-if="key === 'project'"
@@ -427,7 +435,7 @@ function handleMemberFilterUpdate(
             />
           </div>
 
-          <div class="w-[140px] px-3 text-right">
+          <div class="w-[140px] pr-3 text-right">
             <Select
               v-model="filters.hours"
               :options="hoursFilterOptions"
@@ -437,7 +445,7 @@ function handleMemberFilterUpdate(
               :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
-          <div class="w-[140px] px-3 text-right">
+          <div class="w-[140px] pr-3 text-right">
             <Select
               v-model="filters.billable"
               :options="billableFilterOptions"
