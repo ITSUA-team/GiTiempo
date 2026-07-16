@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef } from 'vue';
-import type { TimeReportGroupBy } from '@gitiempo/shared';
+import { computed, ref } from 'vue';
 import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Button from 'primevue/button';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import ReportsFilterForm from '@/components/reports/ReportsFilterForm.vue';
 import ReportsTable from '@/components/reports/ReportsTable.vue';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useReportsData } from '@/composables/reports/useReportsData';
@@ -17,7 +15,8 @@ import {
   filterReportRows,
   formatReportPercent,
   getReportDateRangeError,
-  type ReportDateRange,
+  getReportExportBlockedReason,
+  reportGroupingApiValue,
 } from '@/lib/report-view-model';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
@@ -30,7 +29,7 @@ const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 const {
   dateRange,
   exportCurrentReport,
-  groupBy,
+  grouping,
   isInitialLoading,
   loadError,
   loading,
@@ -38,8 +37,6 @@ const {
   projectOptions,
   refresh,
   rows,
-  selectedMemberId,
-  selectedProjectId,
   summary,
 } = useReportsData({
   enabled: isAuthenticated,
@@ -53,19 +50,27 @@ const {
 });
 
 const tableFilters = ref(createDefaultReportTableFilters());
-const reportProjectId = ref<string | null>(selectedProjectId.value);
-const reportMemberId = ref<string | null>(selectedMemberId.value);
-const reportDateRange = shallowRef<ReportDateRange>(dateRange.value);
-const reportGroupBy = ref<TimeReportGroupBy>(groupBy.value);
 const exporting = ref(false);
 const tableRows = computed(() =>
   filterReportRows(rows.value, tableFilters.value),
 );
 const reportDateRangeError = computed(() =>
-  getReportDateRangeError(reportDateRange.value),
+  getReportDateRangeError(dateRange.value),
+);
+// Rather than hand back a file that quietly disagrees with the table, block
+// the export whenever an active filter has no faithful CSV equivalent. The
+// rule and its wording live in the view model, and it is grouping-aware: a
+// member filter exports fine under member grouping but not over folded
+// project rows.
+const exportBlockedReason = computed(() =>
+  getReportExportBlockedReason(tableFilters.value, grouping.value),
 );
 const exportDisabled = computed(
-  () => loading.value || exporting.value || reportDateRangeError.value !== null,
+  () =>
+    loading.value ||
+    exporting.value ||
+    reportDateRangeError.value !== null ||
+    exportBlockedReason.value !== null,
 );
 
 const totalHoursLabel = computed(() =>
@@ -92,7 +97,11 @@ const topProjectDescription = computed(() => {
 });
 
 async function handleExport(): Promise<void> {
-  if (exporting.value || reportDateRangeError.value) {
+  if (
+    exporting.value ||
+    reportDateRangeError.value ||
+    exportBlockedReason.value !== null
+  ) {
     return;
   }
 
@@ -100,10 +109,10 @@ async function handleExport(): Promise<void> {
 
   try {
     const exportResult = await exportCurrentReport({
-      dateRange: reportDateRange.value,
-      groupBy: reportGroupBy.value,
-      memberId: reportMemberId.value,
-      projectId: reportProjectId.value,
+      dateRange: dateRange.value,
+      groupBy: reportGroupingApiValue[grouping.value],
+      memberId: tableFilters.value.memberId,
+      projectId: tableFilters.value.projectId,
     });
 
     if (!exportResult) {
@@ -139,27 +148,6 @@ async function handleExport(): Promise<void> {
     </template>
 
     <template v-else>
-      <ReportsFilterForm
-        v-model:project-id="reportProjectId"
-        v-model:member-id="reportMemberId"
-        v-model:date-range="reportDateRange"
-        v-model:group-by="reportGroupBy"
-        :project-options="projectOptions"
-        :member-options="memberOptions"
-        :disabled="loading"
-      >
-        <template #actions>
-          <Button
-            label="Export CSV"
-            data-testid="export-reports-csv"
-            class="h-[38px] w-full lg:w-auto"
-            :disabled="exportDisabled"
-            :loading="exporting"
-            @click="handleExport"
-          />
-        </template>
-      </ReportsFilterForm>
-
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Tracked Hours"
@@ -186,11 +174,31 @@ async function handleExport(): Promise<void> {
       <SurfaceCard padding-class="p-6">
         <ReportsTable
           v-model:filters="tableFilters"
+          v-model:date-range="dateRange"
+          v-model:grouping="grouping"
           :rows="tableRows"
           :loading="loading"
           :project-options="projectOptions"
           :member-options="memberOptions"
-        />
+        >
+          <template #actions>
+            <!-- A disabled button swallows hover, so the reason lives on a wrapper. -->
+            <span
+              v-tooltip.top="exportBlockedReason ?? ''"
+              class="w-full sm:w-auto"
+            >
+              <Button
+                label="Export CSV"
+                data-testid="export-reports-csv"
+                class="h-[38px] w-full sm:w-auto"
+                :aria-description="exportBlockedReason"
+                :disabled="exportDisabled"
+                :loading="exporting"
+                @click="handleExport"
+              />
+            </span>
+          </template>
+        </ReportsTable>
       </SurfaceCard>
     </template>
   </div>

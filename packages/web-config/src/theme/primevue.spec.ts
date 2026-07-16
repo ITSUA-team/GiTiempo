@@ -86,6 +86,10 @@ describe("giTiempoPrimeVueOptions", () => {
     expect(giTiempoDatePickerPt.pcInputText.root.class).toBe(
       giTiempoDropdownControlInputClass,
     );
+    // The clear icon needs an opaque backing so it stays readable over long
+    // values, offset past the input-mode calendar icon.
+    expect(giTiempoDatePickerPt.clearIcon.class).toContain("bg-surface-primary");
+    expect(giTiempoDatePickerPt.clearIcon.class).toContain("end-10");
     expect(giTiempoAutoCompleteDropdownPt.root?.class).toContain("border-divider");
     expect(giTiempoAutoCompleteDropdownPt.pcInputText?.root?.class).toContain(
       "border-0",

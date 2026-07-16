@@ -8,6 +8,7 @@ import {
   toReportTableRows,
   toTimeReportQuery,
   type ReportFilterOption,
+  type ReportGrouping,
   type ReportSetupFilters,
   type ReportTableRow,
 } from '@/lib/report-view-model';
@@ -29,6 +30,7 @@ interface QueryStateRefs {
 interface UseReportRowsDataOptions {
   appliedFilters: Ref<ReportSetupFilters> | ComputedRef<ReportSetupFilters>;
   enabled: Ref<boolean> | ComputedRef<boolean>;
+  grouping: Ref<ReportGrouping>;
   isAdminScope: ComputedRef<boolean>;
   memberOptions: ComputedRef<ReportFilterOption[]>;
   membersLoaded: ComputedRef<boolean>;
@@ -43,6 +45,7 @@ interface UseReportRowsDataOptions {
 export function useReportRowsData({
   appliedFilters,
   enabled,
+  grouping,
   isAdminScope,
   memberOptions,
   membersLoaded,
@@ -53,6 +56,68 @@ export function useReportRowsData({
   reportsClient,
   scope,
 }: UseReportRowsDataOptions) {
+  /**
+   * The member grouping answers "how did each member spend time on projects", so
+   * it keeps the per-project rows and only leads with the member instead.
+   */
+  function sortRowsByMember(rows: ReportTableRow[]): ReportTableRow[] {
+    return [...rows].sort(
+      (a, b) =>
+        (a.memberName ?? '').localeCompare(b.memberName ?? '') ||
+        (a.projectName ?? '').localeCompare(b.projectName ?? ''),
+    );
+  }
+
+  /**
+   * Fold member rows into one row per project. Done client-side because
+   * `groupBy: 'project'` returns `user: null` and carries no member count, so
+   * the count of contributors can only come from member-level rows.
+   */
+  function foldRowsByProject(rows: ReportTableRow[]): ReportTableRow[] {
+    const byProject = new Map<string, ReportTableRow>();
+
+    for (const row of rows) {
+      const projectKey = row.projectIds[0] ?? row.projectName ?? row.id;
+      const folded = byProject.get(projectKey);
+
+      if (!folded) {
+        byProject.set(projectKey, {
+          ...row,
+          groupBy: 'project',
+          id: `project:${projectKey}`,
+          memberIds: [...row.memberIds],
+          memberName: null,
+        });
+        continue;
+      }
+
+      for (const memberId of row.memberIds) {
+        if (!folded.memberIds.includes(memberId)) {
+          folded.memberIds.push(memberId);
+        }
+      }
+
+      folded.billableSeconds += row.billableSeconds;
+      folded.entryCount += row.entryCount;
+      folded.nonBillableSeconds += row.nonBillableSeconds;
+      folded.totalSeconds += row.totalSeconds;
+      folded.billableShare =
+        folded.totalSeconds > 0
+          ? folded.billableSeconds / folded.totalSeconds
+          : null;
+    }
+
+    return [...byProject.values()].sort((a, b) =>
+      (a.projectName ?? '').localeCompare(b.projectName ?? ''),
+    );
+  }
+
+  /**
+   * Both groupings loop the same visible projects so they share one scope. The
+   * backend only filters inactive projects for PMs, so a single unscoped request
+   * would let admins see time the loop hides, and summary totals would shift
+   * purely from switching grouping.
+   */
   async function fetchReportRowsForScope(
     visibleProjects: ProjectListResponse,
     filters: ReportSetupFilters,
@@ -72,6 +137,8 @@ export function useReportRowsData({
           toTimeReportQuery(
             {
               dateRange: filters.dateRange,
+              // Always the finest granularity the API offers: `member` orders
+              // these rows, `project` folds them and counts contributors.
               groupBy: 'user',
               memberId: null,
               projectId: project.id,
@@ -114,7 +181,15 @@ export function useReportRowsData({
     ),
     queryFn: () => fetchReportRowsForScope(projects.value, appliedFilters.value),
   });
-  const rows = computed(() => reportRowsQuery.data.value ?? []);
+  // Grouping is presentation over the loaded member rows, so switching it
+  // regroups instantly instead of refetching the same data.
+  const rows = computed(() => {
+    const memberRows = reportRowsQuery.data.value ?? [];
+
+    return grouping.value === 'member'
+      ? sortRowsByMember(memberRows)
+      : foldRowsByProject(memberRows);
+  });
   const summary = computed(() => deriveReportSummaryView(rows.value));
   const loading = computed(
     () =>

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
+import {
+  giTiempoDatePickerPt,
+  giTiempoFieldWidthSelectPt,
+} from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   FilterAutoComplete,
@@ -10,11 +13,14 @@ import {
   filterAutocompleteOptions,
   managementTableColumnPt,
   managementTableHeaderClass,
+  normalizeReportDateRangeValue,
   useIsMobileViewport,
   type ManagementTableColumn,
+  type ReportDatePickerRangeValue,
 } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Column from 'primevue/column';
+import DatePicker from 'primevue/datepicker';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
@@ -25,7 +31,9 @@ import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktop
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
   type ReportBillableFilter,
+  type ReportDateRange,
   type ReportFilterOption,
+  type ReportGrouping,
   type ReportHoursFilter,
   type ReportTableRow,
   type ReportTableFilters,
@@ -35,6 +43,8 @@ interface AutoCompleteCompleteEvent {
   query: string;
 }
 
+type ReportIdentityColumn = 'project' | 'member';
+
 const props = defineProps<{
   loading: boolean;
   memberOptions: ReportFilterOption[];
@@ -43,6 +53,8 @@ const props = defineProps<{
 }>();
 
 const filters = defineModel<ReportTableFilters>('filters', { required: true });
+const dateRange = defineModel<ReportDateRange>('dateRange', { required: true });
+const grouping = defineModel<ReportGrouping>('grouping', { required: true });
 const isMobileViewport = useIsMobileViewport();
 const projectFilterSuggestions = ref<ReportFilterOption[]>([]);
 const memberFilterSuggestions = ref<ReportFilterOption[]>([]);
@@ -61,12 +73,40 @@ const selectedMemberFilterOption = computed(
     ) ?? null,
 );
 
-const columns: ManagementTableColumn[] = [
-  { key: 'project', label: 'Project', width: 'fill' },
-  { key: 'member', label: 'Member', width: 180 },
-  { key: 'hours', label: 'Hours', width: 140, align: 'end' },
-  { key: 'billable', label: 'Billable', width: 140, align: 'end' },
+const groupingOptions: { label: string; value: ReportGrouping }[] = [
+  { label: 'Group by: Project', value: 'project' },
+  { label: 'Group by: Member', value: 'member' },
 ];
+
+const memberLeads = computed(() => grouping.value === 'member');
+
+// Filters follow the columns, and both filters stay for every grouping: under
+// project grouping the member filter answers which projects someone worked on.
+const filterOrder = computed<ReportIdentityColumn[]>(() =>
+  memberLeads.value ? ['member', 'project'] : ['project', 'member'],
+);
+
+// Grouping by project totals a project across everyone, so no single member owns
+// the row; it reports how many contributed instead.
+const columns = computed<ManagementTableColumn[]>(() =>
+  memberLeads.value
+    ? [
+        { key: 'member', label: 'Member', width: 'fill' },
+        { key: 'project', label: 'Project', width: 180 },
+        { key: 'hours', label: 'Hours', width: 140, align: 'end' },
+        { key: 'billable', label: 'Billable', width: 140, align: 'end' },
+      ]
+    : [
+        { key: 'project', label: 'Project', width: 'fill' },
+        { key: 'members', label: 'Members', width: 180 },
+        { key: 'hours', label: 'Hours', width: 140, align: 'end' },
+        { key: 'billable', label: 'Billable', width: 140, align: 'end' },
+      ],
+);
+
+function formatMemberCount(count: number): string {
+  return `${count} ${count === 1 ? 'member' : 'members'}`;
+}
 
 const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[720px]`;
 
@@ -85,6 +125,10 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
 
 function handleGlobalSearchUpdate(value: string | null | undefined): void {
   filters.value.global = value ?? '';
+}
+
+function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
+  dateRange.value = normalizeReportDateRangeValue(value);
 }
 
 function handleProjectFilterComplete(event: AutoCompleteCompleteEvent): void {
@@ -137,16 +181,46 @@ function handleMemberFilterUpdate(
     <div>
       <SectionHeader title="Results">
         <template #actions>
-          <IconField class="w-full sm:w-[280px]">
-            <InputIcon class="pi pi-search text-text-muted" />
-            <InputText
-              :model-value="filters.global"
-              aria-label="Search report rows"
-              class="h-[38px] w-full rounded-[6px] text-[14px]"
-              placeholder="Search report rows"
-              @update:model-value="handleGlobalSearchUpdate"
+          <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <DatePicker
+              :model-value="dateRange"
+              aria-label="Report date range"
+              class="w-full sm:w-[240px]"
+              date-format="M d, yy"
+              icon-display="input"
+              :manual-input="false"
+              placeholder="All dates"
+              :pt="giTiempoDatePickerPt"
+              selection-mode="range"
+              show-button-bar
+              show-clear
+              show-icon
+              @update:model-value="handleDateRangeUpdate"
             />
-          </IconField>
+
+            <Select
+              v-model="grouping"
+              aria-label="Group report rows"
+              class="w-full sm:w-[200px]"
+              :options="groupingOptions"
+              option-label="label"
+              option-value="value"
+              :pt="giTiempoFieldWidthSelectPt"
+            />
+
+            <IconField class="w-full sm:w-[280px]">
+              <InputIcon class="pi pi-search text-text-muted" />
+              <InputText
+                :model-value="filters.global"
+                aria-label="Search report rows"
+                class="h-[38px] w-full rounded-[6px] text-[14px]"
+                placeholder="Search report rows"
+                @update:model-value="handleGlobalSearchUpdate"
+              />
+            </IconField>
+
+            <slot name="actions" />
+          </div>
         </template>
       </SectionHeader>
     </div>
@@ -274,10 +348,10 @@ function handleMemberFilterUpdate(
           >
             <div class="min-w-0">
               <h3 class="text-text-dark truncate text-[15px] font-semibold">
-                {{ row.projectName }}
+                {{ memberLeads ? row.memberName : row.projectName }}
               </h3>
               <p class="text-text-muted truncate text-[13px]">
-                {{ row.memberName }}
+                {{ memberLeads ? row.projectName : formatMemberCount(row.memberIds.length) }}
               </p>
             </div>
 
@@ -321,8 +395,14 @@ function handleMemberFilterUpdate(
     >
       <template #filters>
         <div class="flex min-w-[720px] flex-1 items-center">
-          <div class="min-w-0 flex-1 px-3">
+          <div
+            v-for="(key, index) in filterOrder"
+            :key="key"
+            class="px-3"
+            :class="index === 0 ? 'min-w-0 flex-1' : 'w-[180px]'"
+          >
             <FilterAutoComplete
+              v-if="key === 'project'"
               :model-value="selectedProjectFilterOption"
               aria-label="Filter report rows by project"
               force-selection
@@ -333,10 +413,8 @@ function handleMemberFilterUpdate(
               @complete="handleProjectFilterComplete"
               @update:model-value="handleProjectFilterUpdate"
             />
-          </div>
-
-          <div class="w-[180px] px-3">
             <FilterAutoComplete
+              v-else
               :model-value="selectedMemberFilterOption"
               aria-label="Filter report rows by member"
               force-selection
@@ -374,7 +452,7 @@ function handleMemberFilterUpdate(
 
       <Column :pt="managementTableColumnPt">
         <template #body="{ data }">
-          <span class="text-text-dark text-[14px] leading-none font-semibold">{{ data.projectName }}</span>
+          <span class="text-text-dark text-[14px] leading-none font-semibold">{{ memberLeads ? data.memberName : data.projectName }}</span>
         </template>
       </Column>
 
@@ -383,7 +461,7 @@ function handleMemberFilterUpdate(
         :pt="managementTableColumnPt"
       >
         <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{ data.memberName }}</span>
+          <span class="text-text-muted text-[13px] font-normal">{{ memberLeads ? data.projectName : formatMemberCount(data.memberIds.length) }}</span>
         </template>
       </Column>
 

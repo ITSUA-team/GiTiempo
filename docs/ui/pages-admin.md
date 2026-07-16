@@ -18,16 +18,23 @@
 
 ## Reports Page
 
-- Initial report load uses a skeleton matching the reports header, setup controls, summary cards, and results table.
-- Report setup bar: project, member, date range, group-by, and `Export CSV` in the same row.
-- Project and member use PrimeVue `<AutoComplete dropdown forceSelection>` single-select inputs in that setup row; group-by uses PrimeVue `<Select>` for the fixed Project/Member choice. Date range keeps the existing `<DatePicker>` treatment.
-- Report setup controls define the backend CSV export scope and do not change the loaded table rows or summary cards by themselves.
+- Initial report load uses a skeleton matching the reports header, summary cards, and results table with its header controls. There is no separate setup bar to reserve space for.
+- The page has no report setup bar. The results table header carries every reporting control: date range, group-by, global search, and a single `Export CSV` action, in that order.
+- Date range uses the existing `<DatePicker selectionMode="range" :manualInput="false">` treatment; group-by uses PrimeVue `<Select>`. Both sit at `h-[38px]` with the search field and export button.
+- Group-by labels its value inline (`Group by: Project`) because header controls carry no field labels, and a control reading only `Project` beside the search box would read as the project filter.
+- Group-by options are `Project` (default) and `Member`. There is no combined project-and-member option: the API groups by project, task, or user, and none of those expresses grouping by both.
+- Date range and group-by both act on the loaded report, not just the export. Editing the date range refetches; changing group-by regroups the rows already loaded without calling report data endpoints.
+- Results columns follow the grouping. `Project` totals each project across everyone and shows project, members, hours, and billable, with the members cell reading `4 members`. `Member` keeps the project breakdown so a row still shows which project the time went to, leading with the member column and ordering member-major.
+- Both groupings keep the project and member column filters, ordered to follow the columns. Filtering by a member under `Project` grouping answers which projects that member contributed to; note the Hours on those rows stay the project's total across everyone rather than that member's, because the row is a project total.
+- Every grouping covers the same visible projects, so switching grouping regroups the loaded report without moving summary totals. The backend only filters inactive projects for PMs, so this scope is enforced frontend-side. Both groupings request member rows per project: the members count exists only in those rows, since `groupBy: 'project'` returns no user data.
 - Invalid date ranges show validation feedback and cannot generate CSV or call report data endpoints.
-- Summary totals row above the results table reflects the loaded backend-generated project-member report data.
+- Summary totals row above the results table reflects the loaded backend-generated report data.
 - Results table is searchable, column-filterable, uses stable default ordering, and supports CSV export.
 - Results table header includes global search with placeholder `Search report rows`.
-- Results table column filters use the existing management-table filter-row treatment for project, member, hours, and billable columns. Hours and billable filters may be omitted only when the implementation does not yet provide a matching numeric/status control.
-- CSV export downloads backend-generated detailed project-task-user rows for the current report setup controls; table-only search and column filters do not change export scope.
+- Results table column filters use the existing management-table filter-row treatment for the project and member filters plus the hours and billable columns; under `Project` grouping the member filter sits beneath the `Members` count column rather than a member-name column. Hours and billable filters may be omitted only when the implementation does not yet provide a matching numeric/status control.
+- CSV export downloads backend-generated detailed project-task-user rows for the current date range, and also carries the table's project filter — plus its member filter when grouping by member — so the file holds the same rows and sums as the table.
+- Search, hours, and billable filters cannot scope the export, nor can a member filter while grouping by project. Hours and billable filter aggregate row totals, and the global search matches formatted labels including durations and percentages; the CSV is detailed project-task-user rows holding none of those. The export endpoint's own `search` is not an equivalent either: it matches task titles the table never shows and ignores the duration labels the table does. A member filter over folded project rows keeps everyone's time on screen while the file would hold only that member's entries. While any of these is active, `Export CSV` is disabled with a tooltip saying why; switching a member-filtered table to `Member` grouping makes the export valid again.
+- Group-by regroups the table but only labels the CSV. The export endpoint always emits detailed project-task-user rows and carries `groupBy` as metadata. This is deliberate - see the archived `2026-07-09-clarify-detailed-report-csv-export` change - so do not "fix" the export to collapse rows to match the table grouping.
 - PM users cannot widen filters beyond active projects visible through their report scope, including active public projects plus active private projects assigned to that PM.
 
 ## Invoices Page
