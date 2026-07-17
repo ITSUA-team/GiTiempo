@@ -30378,7 +30378,7 @@
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "XT1jU",
+                                  "id": "FMHir",
                                   "name": "fEntriesText",
                                   "fill": "$color-text-muted",
                                   "content": "Any",
@@ -30388,7 +30388,7 @@
                                 },
                                 {
                                   "type": "icon",
-                                  "id": "qy4mM",
+                                  "id": "JpaAU",
                                   "name": "fEntriesChevron",
                                   "width": 12,
                                   "height": 12,
@@ -36642,7 +36642,7 @@
       "name": "Column filter options",
       "width": 560,
       "height": 230,
-      "content": "Reports column filters — every column gets a filter in the filter row:\n• Project / Member: existing autocomplete selects (All projects / All members)\n• Entries: Any · 1+ · 10+ · 50+\n• Hours: Any · Tracked · 8h+ · 40h+ (existing)\n• Billable: Any · Billable · Non-billable (existing)\n• Billable %: Any · Below 50% · 50%+ · 90%+\n• Last activity: Any time · Today · Last 7 days · Last 30 days\nAll filters are table-only (filter loaded leaf rows, rebuild tree + subtotals, never refetch). Group-row subtotals recompute from surviving leaves; the Total row follows the filtered set."
+      "content": "Reports column filters — every column gets a filter in the filter row:\n• Project / Member: existing autocomplete selects (All projects / All members)\n• Entries: Any · 1+ · 10+ · 50+\n• Hours: Any · Tracked · 8h+ · 40h+ (existing)\n• Billable: Any · Billable · Non-billable (existing)\n• Billable %: Any · Below 50% · 50%+ · 90%+\n• Last activity: Any time · Today · Last 7 days · Last 30 days\nAggregate filters compare the displayed totals of top-level groups and keep qualifying subtrees; the Total row follows the visible groups. All filters are table-only and never refetch."
     },
     {
       "type": "frame",
@@ -36674,7 +36674,7 @@
             },
             {
               "type": "frame",
-              "id": "l351m",
+              "id": "Bq5g1",
               "name": "filterMenu0",
               "width": 150,
               "fill": "$color-surface",
@@ -36698,7 +36698,7 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "qxE8s",
+                  "id": "cZDoW",
                   "name": "filterMenu0Opt0",
                   "width": "fill_container",
                   "fill": "$color-app-bg",
@@ -36711,7 +36711,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "nnuKU",
+                      "id": "sgVdm",
                       "name": "filterMenu0Opt0Text",
                       "fill": "$color-text-dark",
                       "content": "Any",
@@ -36723,7 +36723,7 @@
                 },
                 {
                   "type": "frame",
-                  "id": "xlK62",
+                  "id": "tkrgB",
                   "name": "filterMenu0Opt1",
                   "width": "fill_container",
                   "fill": "$color-surface",
@@ -36736,7 +36736,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "fpPMW",
+                      "id": "jTObe",
                       "name": "filterMenu0Opt1Text",
                       "fill": "$color-text-muted",
                       "content": "1+",
@@ -36748,7 +36748,7 @@
                 },
                 {
                   "type": "frame",
-                  "id": "py9tr",
+                  "id": "EVbuX",
                   "name": "filterMenu0Opt2",
                   "width": "fill_container",
                   "fill": "$color-surface",
@@ -36761,7 +36761,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "uIocL",
+                      "id": "gl7gy",
                       "name": "filterMenu0Opt2Text",
                       "fill": "$color-text-muted",
                       "content": "10+",
@@ -36773,7 +36773,7 @@
                 },
                 {
                   "type": "frame",
-                  "id": "dW9ae",
+                  "id": "Cn795",
                   "name": "filterMenu0Opt3",
                   "width": "fill_container",
                   "fill": "$color-surface",
@@ -36786,7 +36786,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "bIaVA",
+                      "id": "nh9QS",
                       "name": "filterMenu0Opt3Text",
                       "fill": "$color-text-muted",
                       "content": "50+",
