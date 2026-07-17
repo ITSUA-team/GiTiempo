@@ -790,7 +790,7 @@ function handleMemberFilterUpdate(
         :class="adminTableMinWidthClass"
         data-testid="report-total-row"
       >
-        <div class="flex min-w-0 flex-1 items-center gap-2 pl-6 pr-3">
+        <div class="flex min-w-0 flex-1 items-center gap-2 pr-3 pl-6">
           <span class="text-text-dark text-[14px] leading-none font-semibold">Total</span>
         </div>
         <div class="w-[120px] px-3">
@@ -802,7 +802,7 @@ function handleMemberFilterUpdate(
         <div class="w-[110px] px-3">
           <span class="text-text-muted text-[13px] font-normal">{{ formatReportPercent(totals.billableShare) }}</span>
         </div>
-        <div class="w-[130px] pl-3 pr-6">
+        <div class="w-[130px] pr-6 pl-3">
           <span class="text-text-muted text-[13px] font-normal">{{ formatRowActivity(totals.lastStartedAt) }}</span>
         </div>
       </div>
