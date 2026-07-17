@@ -14,6 +14,7 @@ import { invites } from '../invites/schemas/invites.schema';
 import { projects } from '../projects/schemas/projects.schema';
 import { projectAssignments } from '../projects/schemas/project-assignments.schema';
 import { tasks } from '../tasks/schemas/tasks.schema';
+import { timeEntries } from '../time-entries/schemas/time-entries.schema';
 import { workspaceGitHubOrganizations } from '../github/schemas/workspace-github-organizations.schema';
 
 interface SeedUser {
@@ -37,6 +38,172 @@ const CLIENT_ONBOARDING_TASK_ID = '00000000-0000-4000-8000-000000000103';
 const ARCHIVED_TASK_ID = '00000000-0000-4000-8000-000000000104';
 const DEV_INVITE_EMAIL = 'new.member@example.com';
 const DEV_INVITE_TOKEN = 'dev-invite-token';
+
+interface SeedTimeEntry {
+  id: string;
+  taskId: string;
+  userUid: string;
+  daysAgo: number;
+  startHourUtc: number;
+  durationSeconds: number;
+  isBillable: boolean;
+  source: 'web' | 'extension' | 'manual';
+  description: string;
+}
+
+/**
+ * Completed dev time entries so the reports page has rows to group. Dated
+ * relative to "now" (clamped into the current UTC month) because reports
+ * default to the current calendar month; reseeding refreshes the dates.
+ */
+const DEV_SEED_TIME_ENTRIES: SeedTimeEntry[] = [
+  {
+    id: '00000000-0000-4000-8000-000000000201',
+    taskId: PLATFORM_API_TASK_ID,
+    userUid: 'seed-user-2',
+    daysAgo: 6,
+    startHourUtc: 9,
+    durationSeconds: 2 * 3600,
+    isBillable: true,
+    source: 'web',
+    description: 'API scaffolding and module wiring',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000202',
+    taskId: PLATFORM_API_TASK_ID,
+    userUid: 'seed-user-2',
+    daysAgo: 4,
+    startHourUtc: 10,
+    durationSeconds: 90 * 60,
+    isBillable: true,
+    source: 'extension',
+    description: 'Issue-linked implementation session',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000203',
+    taskId: PLATFORM_API_TASK_ID,
+    userUid: 'seed-user-1',
+    daysAgo: 5,
+    startHourUtc: 11,
+    durationSeconds: 3600,
+    isBillable: false,
+    source: 'web',
+    description: 'Planning and code review',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000204',
+    taskId: PLATFORM_AUTH_TASK_ID,
+    userUid: 'seed-user-1',
+    daysAgo: 3,
+    startHourUtc: 9,
+    durationSeconds: 150 * 60,
+    isBillable: true,
+    source: 'web',
+    description: 'Authorization flow review',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000205',
+    taskId: PLATFORM_AUTH_TASK_ID,
+    userUid: 'seed-user-2',
+    daysAgo: 2,
+    startHourUtc: 14,
+    durationSeconds: 45 * 60,
+    isBillable: true,
+    source: 'manual',
+    description: 'Guard regression fixes',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000206',
+    taskId: PLATFORM_AUTH_TASK_ID,
+    userUid: 'admin-uid',
+    daysAgo: 1,
+    startHourUtc: 15,
+    durationSeconds: 75 * 60,
+    isBillable: false,
+    source: 'manual',
+    description: 'Security walkthrough notes',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000207',
+    taskId: CLIENT_ONBOARDING_TASK_ID,
+    userUid: 'seed-user-3',
+    daysAgo: 5,
+    startHourUtc: 9,
+    durationSeconds: 2 * 3600,
+    isBillable: true,
+    source: 'web',
+    description: 'Onboarding checklist draft',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000208',
+    taskId: CLIENT_ONBOARDING_TASK_ID,
+    userUid: 'seed-user-3',
+    daysAgo: 2,
+    startHourUtc: 10,
+    durationSeconds: 105 * 60,
+    isBillable: true,
+    source: 'web',
+    description: 'Checklist review round',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000209',
+    taskId: CLIENT_ONBOARDING_TASK_ID,
+    userUid: 'seed-user-1',
+    daysAgo: 1,
+    startHourUtc: 13,
+    durationSeconds: 3600,
+    isBillable: true,
+    source: 'manual',
+    description: 'Client onboarding sync',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000210',
+    taskId: CLIENT_ONBOARDING_TASK_ID,
+    userUid: 'seed-user-3',
+    daysAgo: 0,
+    startHourUtc: 8,
+    durationSeconds: 30 * 60,
+    isBillable: false,
+    source: 'extension',
+    description: 'Follow-up questions triage',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000211',
+    taskId: ARCHIVED_TASK_ID,
+    userUid: 'seed-user-2',
+    daysAgo: 6,
+    startHourUtc: 16,
+    durationSeconds: 3600,
+    isBillable: false,
+    source: 'manual',
+    description: 'Archived initiative retrospective',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000212',
+    taskId: PLATFORM_API_TASK_ID,
+    userUid: 'admin-uid',
+    daysAgo: 0,
+    startHourUtc: 7,
+    durationSeconds: 3600,
+    isBillable: true,
+    source: 'web',
+    description: 'Morning focus block',
+  },
+];
+
+function seedEntryStartDate(daysAgo: number, startHourUtc: number): Date {
+  const now = new Date();
+  const start = new Date(now);
+  start.setUTCDate(start.getUTCDate() - daysAgo);
+  start.setUTCHours(startHourUtc, 0, 0, 0);
+  const monthStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, startHourUtc),
+  );
+
+  // Keep every entry inside the current UTC month so the reports page's
+  // default date window always shows the seeded rows.
+  return start < monthStart ? monthStart : start;
+}
 
 const DEV_SEED_USERS: SeedUser[] = [
   {
@@ -377,6 +544,44 @@ async function main(): Promise<void> {
         },
       });
 
+    const seedTimeEntryRows = DEV_SEED_TIME_ENTRIES.map((entry) => {
+      const userId = userIdsByFirebaseUid.get(entry.userUid);
+      if (!userId) {
+        throw new Error(`Seed time entry user ${entry.userUid} was not created`);
+      }
+
+      const startedAt = seedEntryStartDate(entry.daysAgo, entry.startHourUtc);
+
+      return {
+        id: entry.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        taskId: entry.taskId,
+        userId,
+        startedAt,
+        endedAt: new Date(startedAt.getTime() + entry.durationSeconds * 1000),
+        durationSeconds: entry.durationSeconds,
+        description: entry.description,
+        isBillable: entry.isBillable,
+        source: entry.source,
+      };
+    });
+
+    await db
+      .insert(timeEntries)
+      .values(seedTimeEntryRows)
+      .onConflictDoUpdate({
+        target: timeEntries.id,
+        set: {
+          startedAt: sql`excluded.started_at`,
+          endedAt: sql`excluded.ended_at`,
+          durationSeconds: sql`excluded.duration_seconds`,
+          description: sql`excluded.description`,
+          isBillable: sql`excluded.is_billable`,
+          source: sql`excluded.source`,
+          updatedAt: new Date(),
+        },
+      });
+
     await db
       .insert(invites)
       .values({
@@ -401,7 +606,7 @@ async function main(): Promise<void> {
       });
 
     console.log(
-      `Seeded default workspace, settings, ${seedUsers.length} users, memberships, projects, tasks, and 1 dev invite.`,
+      `Seeded default workspace, settings, ${seedUsers.length} users, memberships, projects, tasks, ${DEV_SEED_TIME_ENTRIES.length} time entries, and 1 dev invite.`,
     );
   } finally {
     await pool.end();
