@@ -30,8 +30,6 @@ export interface AdminReportsClient {
 }
 
 
-const fallbackExportFilename = 'time-report.csv';
-
 function setIfDefined(
   searchParams: URLSearchParams,
   key: string,
@@ -81,13 +79,35 @@ export function buildTimeReportExportQuery(
   return searchParams.toString();
 }
 
-function getFilenameFromContentDisposition(value: string | null): string {
-  if (!value) {
-    return fallbackExportFilename;
+/**
+ * The download name must never depend on response headers: cross-origin
+ * responses can hide Content-Disposition entirely, and a hardcoded .csv
+ * fallback used to relabel real PDF documents as CSV files. Prefer the
+ * server-sent name when readable, otherwise rebuild the same
+ * `time-report-<from>_<to>.<ext>` convention from the request dates and the
+ * actual content type of the downloaded blob.
+ */
+function getExportFilename(
+  contentDisposition: string | null,
+  query: Pick<TimeReportExportQuery, 'dateFrom' | 'dateTo' | 'format'>,
+  blobType: string,
+): string {
+  const filenameMatch = contentDisposition
+    ? /filename="?([^";]+)"?/i.exec(contentDisposition)
+    : null;
+  const serverFilename = filenameMatch?.[1]?.trim();
+  if (serverFilename) {
+    return serverFilename;
   }
 
-  const filenameMatch = /filename="?([^";]+)"?/i.exec(value);
-  return filenameMatch?.[1]?.trim() || fallbackExportFilename;
+  const extension =
+    blobType.includes('pdf') || query.format === 'pdf' ? 'pdf' : 'csv';
+  const dates =
+    query.dateFrom && query.dateTo
+      ? `-${query.dateFrom.slice(0, 10)}_${query.dateTo.slice(0, 10)}`
+      : '';
+
+  return `time-report${dates}.${extension}`;
 }
 
 export function createAdminReportsClient({
@@ -95,16 +115,20 @@ export function createAdminReportsClient({
 }: AdminReportsClientOptions): AdminReportsClient {
   return {
     async exportTimeReport(query) {
-      const search = buildTimeReportExportQuery(query);
+      const parsed = timeReportExportQuerySchema.parse(query ?? {});
+      const search = buildTimeReportExportQuery(parsed);
       const response = await apiClient.request({
         method: 'GET',
         path: `/reports/time/export?${search}`,
       });
+      const blob = await response.blob();
 
       return {
-        blob: await response.blob(),
-        filename: getFilenameFromContentDisposition(
+        blob,
+        filename: getExportFilename(
           response.headers.get('Content-Disposition'),
+          parsed,
+          blob.type,
         ),
       };
     },

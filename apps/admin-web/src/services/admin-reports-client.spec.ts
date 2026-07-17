@@ -107,6 +107,36 @@ describe('createAdminReportsClient', () => {
     expect(result.items[0]?.project?.name).toBe('Project Orion');
   });
 
+  it('names a PDF download correctly even without Content-Disposition', async () => {
+    // Cross-origin responses can hide the filename header; the name must be
+    // rebuilt from the request dates and the actual blob type.
+    fetchFn.mockResolvedValueOnce(
+      new Response(new Blob(['%PDF-1.3'], { type: 'application/pdf' }), {
+        headers: { 'Content-Type': 'application/pdf' },
+        status: 200,
+      }),
+    );
+
+    const pdfResult = await client.exportTimeReport({
+      dateFrom: '2026-07-01T00:00:00.000Z',
+      dateTo: '2026-08-01T00:00:00.000Z',
+      format: 'pdf',
+    });
+
+    expect(pdfResult.filename).toBe('time-report-2026-07-01_2026-08-01.pdf');
+
+    fetchFn.mockResolvedValueOnce(
+      new Response(new Blob(['Group By\n'], { type: 'text/csv' }), {
+        headers: { 'Content-Type': 'text/csv; charset=utf-8' },
+        status: 200,
+      }),
+    );
+
+    const csvResult = await client.exportTimeReport({});
+
+    expect(csvResult.filename).toBe('time-report.csv');
+  });
+
   it('exports time reports as CSV using backend filename metadata', async () => {
     fetchFn.mockResolvedValue(
       new Response('Group By,Project\nproject,Project Orion\n', {

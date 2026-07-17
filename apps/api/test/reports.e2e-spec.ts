@@ -411,6 +411,21 @@ describe('Reports (e2e)', () => {
     expect(res.status).toBe(400);
   });
 
+  it('exposes the export filename header to cross-origin callers', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/reports/time/export')
+      .set('Authorization', bearer(adminToken))
+      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO });
+
+    expect(res.status).toBe(200);
+    // Without this, browsers cannot read Content-Disposition on cross-origin
+    // downloads and the file loses its real .csv/.pdf name.
+    expect(res.headers['access-control-expose-headers']).toContain(
+      'Content-Disposition',
+    );
+    expect(res.headers['content-disposition']).toContain('.csv');
+  });
+
   it('rejects member report access', async () => {
     const report = await getReport(memberToken, {});
     expect(report.status).toBe(403);

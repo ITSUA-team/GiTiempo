@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Query,
@@ -43,6 +44,9 @@ export class ReportsController {
 
   @Get('time/export')
   @HttpCode(HttpStatus.OK)
+  // Browsers hide Content-Disposition on cross-origin responses unless it is
+  // exposed, and without it the download loses the real .csv/.pdf filename.
+  @Header('Access-Control-Expose-Headers', 'Content-Disposition')
   @ApiOperation({ summary: 'Export aggregated time report as CSV or PDF' })
   @ApiProduces('text/csv', 'application/pdf')
   @ApiOkResponse({
