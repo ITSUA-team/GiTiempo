@@ -34,13 +34,17 @@ import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktop
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
   buildReportTree,
+  filterReportTreeGroups,
   flattenReportTree,
   formatReportPercent,
   maxReportGroupingLevels,
-  sumReportRows,
+  sumReportTreeTotals,
+  type ReportActivityFilter,
   type ReportBillableFilter,
+  type ReportBillableShareFilter,
   type ReportDateRange,
   type ReportDisplayRow,
+  type ReportEntriesFilter,
   type ReportFilterOption,
   type ReportGrouping,
   type ReportGroupingDimension,
@@ -157,11 +161,19 @@ watch(grouping, () => {
   collapsedIds.value = new Set();
 });
 
-const reportTree = computed(() => buildReportTree(props.rows, grouping.value));
+// Aggregate filters (entries, hours, billable, billable %, activity) act on
+// the tree's top-level groups so they compare the totals the rows display.
+const reportTree = computed(() =>
+  filterReportTreeGroups(
+    buildReportTree(props.rows, grouping.value),
+    filters.value,
+    new Date(),
+  ),
+);
 const displayRows = computed(() =>
   flattenReportTree(reportTree.value, collapsedIds.value),
 );
-const totals = computed(() => sumReportRows(props.rows));
+const totals = computed(() => sumReportTreeTotals(reportTree.value));
 
 function toggleRowExpansion(row: ReportDisplayRow): void {
   const next = new Set(collapsedIds.value);
@@ -221,6 +233,33 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
   { label: 'Any', value: 'any' },
   { label: 'Billable', value: 'withBillable' },
   { label: 'Non-billable', value: 'withoutBillable' },
+];
+
+const entriesFilterOptions: { label: string; value: ReportEntriesFilter }[] = [
+  { label: 'Any', value: 'any' },
+  { label: '1+', value: 'gte1' },
+  { label: '10+', value: 'gte10' },
+  { label: '50+', value: 'gte50' },
+];
+
+const billableShareFilterOptions: {
+  label: string;
+  value: ReportBillableShareFilter;
+}[] = [
+  { label: 'Any', value: 'any' },
+  { label: 'Below 50%', value: 'below50' },
+  { label: '50%+', value: 'gte50' },
+  { label: '90%+', value: 'gte90' },
+];
+
+const activityFilterOptions: {
+  label: string;
+  value: ReportActivityFilter;
+}[] = [
+  { label: 'Any time', value: 'any' },
+  { label: 'Today', value: 'today' },
+  { label: 'Last 7 days', value: 'last7' },
+  { label: 'Last 30 days', value: 'last30' },
 ];
 
 function handleGlobalSearchUpdate(value: string | null | undefined): void {
@@ -448,6 +487,51 @@ function handleMemberFilterUpdate(
               :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label
+              for="mobile-report-entries-filter"
+              class="text-text-muted text-[12px] font-medium"
+            >Entries</label>
+            <Select
+              id="mobile-report-entries-filter"
+              v-model="filters.entries"
+              :options="entriesFilterOptions"
+              option-label="label"
+              option-value="value"
+              :pt="giTiempoFieldWidthSelectPt"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label
+              for="mobile-report-billable-share-filter"
+              class="text-text-muted text-[12px] font-medium"
+            >Billable %</label>
+            <Select
+              id="mobile-report-billable-share-filter"
+              v-model="filters.billableShare"
+              :options="billableShareFilterOptions"
+              option-label="label"
+              option-value="value"
+              :pt="giTiempoFieldWidthSelectPt"
+            />
+          </div>
+
+          <div class="col-span-2 flex flex-col gap-1.5">
+            <label
+              for="mobile-report-activity-filter"
+              class="text-text-muted text-[12px] font-medium"
+            >Last activity</label>
+            <Select
+              id="mobile-report-activity-filter"
+              v-model="filters.activity"
+              :options="activityFilterOptions"
+              option-label="label"
+              option-value="value"
+              :pt="giTiempoFieldWidthSelectPt"
+            />
+          </div>
         </div>
       </div>
 
@@ -584,7 +668,16 @@ function handleMemberFilterUpdate(
               />
             </div>
 
-            <div class="w-[90px] px-3" />
+            <div class="w-[90px] px-3 text-right">
+              <Select
+                v-model="filters.entries"
+                :options="entriesFilterOptions"
+                aria-label="Filter report rows by entry count"
+                option-label="label"
+                option-value="value"
+                :pt="giTiempoFieldWidthSelectPt"
+              />
+            </div>
             <div class="w-[120px] px-3 text-right">
               <Select
                 v-model="filters.hours"
@@ -605,8 +698,26 @@ function handleMemberFilterUpdate(
                 :pt="giTiempoFieldWidthSelectPt"
               />
             </div>
-            <div class="w-[110px] px-3" />
-            <div class="w-[130px] px-3" />
+            <div class="w-[110px] px-3 text-right">
+              <Select
+                v-model="filters.billableShare"
+                :options="billableShareFilterOptions"
+                aria-label="Filter report rows by billable share"
+                option-label="label"
+                option-value="value"
+                :pt="giTiempoFieldWidthSelectPt"
+              />
+            </div>
+            <div class="w-[130px] px-3 text-right">
+              <Select
+                v-model="filters.activity"
+                :options="activityFilterOptions"
+                aria-label="Filter report rows by last activity"
+                option-label="label"
+                option-value="value"
+                :pt="giTiempoFieldWidthSelectPt"
+              />
+            </div>
           </div>
         </template>
 

@@ -30,6 +30,32 @@ export const reportBillableFilterSchema = z.enum([
 ]);
 export type ReportBillableFilter = z.infer<typeof reportBillableFilterSchema>;
 
+export const reportEntriesFilterSchema = z.enum([
+  'any',
+  'gte1',
+  'gte10',
+  'gte50',
+]);
+export type ReportEntriesFilter = z.infer<typeof reportEntriesFilterSchema>;
+
+export const reportBillableShareFilterSchema = z.enum([
+  'any',
+  'below50',
+  'gte50',
+  'gte90',
+]);
+export type ReportBillableShareFilter = z.infer<
+  typeof reportBillableShareFilterSchema
+>;
+
+export const reportActivityFilterSchema = z.enum([
+  'any',
+  'today',
+  'last7',
+  'last30',
+]);
+export type ReportActivityFilter = z.infer<typeof reportActivityFilterSchema>;
+
 export const reportFilterOptionSchema = z.object({
   label: z.string(),
   value: z.string(),
@@ -105,15 +131,27 @@ export type ReportSetupFilters = z.infer<typeof reportSetupFiltersSchema>;
  * of the on-screen hours.
  */
 export function getReportExportBlockedReason(
-  filters: Pick<ReportTableFilters, 'billable' | 'global' | 'hours' | 'memberId'>,
+  filters: Pick<
+    ReportTableFilters,
+    | 'activity'
+    | 'billable'
+    | 'billableShare'
+    | 'entries'
+    | 'global'
+    | 'hours'
+    | 'memberId'
+  >,
   grouping: ReportGrouping,
 ): string | null {
   if (
     filters.hours !== 'any' ||
     filters.billable !== 'any' ||
+    filters.entries !== 'any' ||
+    filters.billableShare !== 'any' ||
+    filters.activity !== 'any' ||
     filters.global.trim() !== ''
   ) {
-    return 'Search, hours, and billable filters cannot be exported. Clear them to export this report.';
+    return 'Search and column filters over aggregates cannot be exported. Clear them to export this report.';
   }
 
   if (!grouping.includes('member') && filters.memberId !== null) {
@@ -151,7 +189,10 @@ export const reportSummaryViewSchema = timeReportTotalsSchema.extend({
 export type ReportSummaryView = z.infer<typeof reportSummaryViewSchema>;
 
 export const reportTableFiltersSchema = z.object({
+  activity: reportActivityFilterSchema,
   billable: reportBillableFilterSchema,
+  billableShare: reportBillableShareFilterSchema,
+  entries: reportEntriesFilterSchema,
   global: z.string(),
   hours: reportHoursFilterSchema,
   memberId: z.string().nullable(),

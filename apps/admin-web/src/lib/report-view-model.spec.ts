@@ -9,9 +9,11 @@ import {
   buildReportTree,
   createDefaultReportTableFilters,
   filterReportRows,
+  filterReportTreeGroups,
   flattenReportTree,
   getReportExportBlockedReason,
   sumReportRows,
+  sumReportTreeTotals,
   toReportTableRows,
   toTimeReportExportQuery,
   toTimeReportQuery,
@@ -192,7 +194,7 @@ describe('report-view-model', () => {
     expect(() => filterReportRows([row], invalidFilters)).toThrow();
   });
 
-  it('filters non-billable rows without changing billable display values', () => {
+  it('filters non-billable groups without changing billable display values', () => {
     const filters = createDefaultReportTableFilters();
     filters.billable = 'withoutBillable';
     const rows: ReportTableRow[] = [
@@ -202,13 +204,19 @@ describe('report-view-model', () => {
         nonBillableSeconds: 1800,
       }),
       makeLeafRow({
-        id: `${projectId}:no-task:${otherUserId}`,
+        id: `${otherProjectId}:no-task:${otherUserId}`,
         memberIds: [otherUserId],
         memberName: 'Nina PM',
+        projectIds: [otherProjectId],
+        projectName: 'Billing API',
       }),
     ];
+    const tree = buildReportTree(rows, ['project']);
 
-    expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
+    const visible = filterReportTreeGroups(tree, filters);
+
+    expect(visible.map((node) => node.label)).toEqual(['Project Orion']);
+    expect(visible[0]!.billableSeconds).toBe(1800);
   });
 
   it('searches report rows using formatted duration labels', () => {
@@ -238,6 +246,136 @@ describe('report-view-model', () => {
     filters.global = '1h 00m';
 
     expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
+  });
+
+  it('filters groups by the entry count their rows display', () => {
+    const filters = createDefaultReportTableFilters();
+    filters.entries = 'gte10';
+    // Orion's 12 displayed entries come from two leaves of 6 — a leaf-level
+    // comparison would wrongly hide it.
+    const rows: ReportTableRow[] = [
+      makeLeafRow({ entryCount: 6 }),
+      makeLeafRow({
+        entryCount: 6,
+        id: `${projectId}:no-task:${otherUserId}`,
+        memberIds: [otherUserId],
+        memberName: 'Nina PM',
+      }),
+      makeLeafRow({
+        entryCount: 3,
+        id: `${otherProjectId}:no-task:${otherUserId}`,
+        memberIds: [otherUserId],
+        memberName: 'Nina PM',
+        projectIds: [otherProjectId],
+        projectName: 'Billing API',
+      }),
+    ];
+    const tree = buildReportTree(rows, ['project', 'member']);
+
+    const visible = filterReportTreeGroups(tree, filters);
+
+    expect(visible.map((node) => node.label)).toEqual(['Project Orion']);
+    // the qualifying group keeps its whole subtree
+    expect(visible[0]!.children).toHaveLength(2);
+
+    filters.entries = 'gte50';
+    expect(filterReportTreeGroups(tree, filters)).toEqual([]);
+  });
+
+  it('filters groups by their displayed billable share', () => {
+    const filters = createDefaultReportTableFilters();
+    const rows: ReportTableRow[] = [
+      makeLeafRow({ billableShare: 0.95, billableSeconds: 3420 }),
+      makeLeafRow({
+        billableSeconds: 1440,
+        billableShare: 0.4,
+        id: `${otherProjectId}:no-task:${otherUserId}`,
+        memberIds: [otherUserId],
+        nonBillableSeconds: 2160,
+        projectIds: [otherProjectId],
+        projectName: 'Billing API',
+      }),
+    ];
+    const tree = buildReportTree(rows, ['project']);
+
+    filters.billableShare = 'gte90';
+    expect(
+      filterReportTreeGroups(tree, filters).map((node) => node.label),
+    ).toEqual(['Project Orion']);
+
+    filters.billableShare = 'below50';
+    expect(
+      filterReportTreeGroups(tree, filters).map((node) => node.label),
+    ).toEqual(['Billing API']);
+
+    filters.billableShare = 'any';
+    expect(filterReportTreeGroups(tree, filters)).toHaveLength(2);
+  });
+
+  it('filters groups by last activity windows relative to now', () => {
+    const now = new Date('2026-05-20T12:00:00.000Z');
+    const filters = createDefaultReportTableFilters();
+    const rows: ReportTableRow[] = [
+      makeLeafRow({ lastStartedAt: '2026-05-20T08:00:00.000Z' }),
+      makeLeafRow({
+        id: `${otherProjectId}:no-task:${otherUserId}`,
+        lastStartedAt: '2026-05-16T08:00:00.000Z',
+        memberIds: [otherUserId],
+        projectIds: [otherProjectId],
+        projectName: 'Billing API',
+      }),
+      makeLeafRow({
+        id: `task-3:${userId}`,
+        lastStartedAt: '2026-04-25T08:00:00.000Z',
+        projectIds: ['project-3'],
+        projectName: 'Workspace Ops',
+      }),
+    ];
+    const tree = buildReportTree(rows, ['project']);
+
+    filters.activity = 'today';
+    expect(
+      filterReportTreeGroups(tree, filters, now).map((node) => node.label),
+    ).toEqual(['Project Orion']);
+
+    filters.activity = 'last7';
+    // equal totals fall back to alphabetical sibling order
+    expect(
+      filterReportTreeGroups(tree, filters, now).map((node) => node.label),
+    ).toEqual(['Billing API', 'Project Orion']);
+
+    filters.activity = 'last30';
+    expect(filterReportTreeGroups(tree, filters, now)).toHaveLength(3);
+  });
+
+  it('sums totals over the visible top-level groups', () => {
+    const rows: ReportTableRow[] = [
+      makeLeafRow({}),
+      makeLeafRow({
+        billableSeconds: 0,
+        billableShare: null,
+        id: `${otherProjectId}:no-task:${otherUserId}`,
+        lastStartedAt: '2026-05-09T10:00:00.000Z',
+        nonBillableSeconds: 1800,
+        projectIds: [otherProjectId],
+        projectName: 'Billing API',
+        totalSeconds: 1800,
+      }),
+    ];
+    const tree = buildReportTree(rows, ['project']);
+
+    expect(sumReportTreeTotals(tree)).toEqual({
+      billableSeconds: 3600,
+      billableShare: 3600 / 5400,
+      entryCount: 2,
+      lastStartedAt: '2026-05-09T10:00:00.000Z',
+      nonBillableSeconds: 1800,
+      totalSeconds: 5400,
+    });
+    expect(sumReportTreeTotals([])).toMatchObject({
+      totalSeconds: 0,
+      billableShare: null,
+    });
   });
 
   it('searches report rows by task title', () => {
@@ -450,11 +588,26 @@ describe('getReportExportBlockedReason', () => {
     searching.global = '1h 00m';
     const byHours = createDefaultReportTableFilters();
     byHours.hours = 'gte8';
+    const byEntries = createDefaultReportTableFilters();
+    byEntries.entries = 'gte10';
+    const byShare = createDefaultReportTableFilters();
+    byShare.billableShare = 'gte90';
+    const byActivity = createDefaultReportTableFilters();
+    byActivity.activity = 'last7';
 
     expect(getReportExportBlockedReason(searching, ['member'])).toContain(
       'cannot be exported',
     );
     expect(getReportExportBlockedReason(byHours, ['project'])).toContain(
+      'cannot be exported',
+    );
+    expect(getReportExportBlockedReason(byEntries, ['project'])).toContain(
+      'cannot be exported',
+    );
+    expect(getReportExportBlockedReason(byShare, ['project'])).toContain(
+      'cannot be exported',
+    );
+    expect(getReportExportBlockedReason(byActivity, ['project'])).toContain(
       'cannot be exported',
     );
   });

@@ -11,6 +11,7 @@ import {
 } from '@gitiempo/shared';
 import {
   formatPaddedHoursMinutesDuration,
+  getLocalDateKey,
   nextLocalDayStartIso,
   startOfLocalDayIso,
 } from '@gitiempo/web-shared/time';
@@ -42,8 +43,11 @@ export {
 } from '@/validation/report-view-model';
 
 export type {
+  ReportActivityFilter,
   ReportBillableFilter,
+  ReportBillableShareFilter,
   ReportDateRange,
+  ReportEntriesFilter,
   ReportFilterOption,
   ReportGrouping,
   ReportGroupingDimension,
@@ -82,7 +86,10 @@ export function getDefaultReportDateRange(now = new Date()): ReportDateRange {
 
 export function createDefaultReportTableFilters(): ReportTableFilters {
   return reportTableFiltersSchema.parse({
+    activity: 'any',
     billable: 'any',
+    billableShare: 'any',
+    entries: 'any',
     global: '',
     hours: 'any',
     memberId: null,
@@ -581,6 +588,143 @@ export function getReportRowBillableSeconds(
   return row.billableSeconds;
 }
 
+function matchesReportBillableShareFilter(
+  share: number | null,
+  filter: ReportTableFilters['billableShare'],
+): boolean {
+  if (filter === 'any') {
+    return true;
+  }
+  // A group with no tracked time has no share to compare.
+  if (share === null) {
+    return false;
+  }
+  if (filter === 'below50') {
+    return share < 0.5;
+  }
+
+  return share >= (filter === 'gte90' ? 0.9 : 0.5);
+}
+
+function matchesReportActivityFilter(
+  lastStartedAt: string | null,
+  filter: ReportTableFilters['activity'],
+  now: Date,
+): boolean {
+  if (filter === 'any') {
+    return true;
+  }
+  if (lastStartedAt === null) {
+    return false;
+  }
+  if (filter === 'today') {
+    return getLocalDateKey(lastStartedAt) === getLocalDateKey(now);
+  }
+
+  const windowDays = filter === 'last7' ? 7 : 30;
+  const windowStart = now.getTime() - windowDays * 24 * 60 * 60 * 1000;
+
+  return new Date(lastStartedAt).getTime() >= windowStart;
+}
+
+const reportEntriesFilterMinimums = {
+  gte1: 1,
+  gte10: 10,
+  gte50: 50,
+} as const;
+
+/**
+ * Aggregate filters compare what the primary rows display: the top-level
+ * group's own totals. Filtering leaves instead would test invisible numbers —
+ * a project showing "7 entries" is built from task-member leaves holding one
+ * or two entries each, so a leaf-level "10+" could never match the screen.
+ * Qualifying groups keep their whole subtree.
+ */
+export function filterReportTreeGroups(
+  nodes: ReportTreeNode[],
+  filters: ReportTableFilters,
+  now = new Date(),
+): ReportTreeNode[] {
+  const parsedFilters = reportTableFiltersSchema.parse(filters);
+
+  return nodes.filter((node) => {
+    if (parsedFilters.hours === 'gt0' && node.totalSeconds <= 0) {
+      return false;
+    }
+
+    if (parsedFilters.hours === 'gte8' && node.totalSeconds < 8 * 60 * 60) {
+      return false;
+    }
+
+    if (parsedFilters.hours === 'gte40' && node.totalSeconds < 40 * 60 * 60) {
+      return false;
+    }
+
+    if (parsedFilters.billable === 'withBillable' && node.billableSeconds <= 0) {
+      return false;
+    }
+
+    if (
+      parsedFilters.billable === 'withoutBillable' &&
+      node.totalSeconds - node.billableSeconds <= 0
+    ) {
+      return false;
+    }
+
+    if (
+      parsedFilters.entries !== 'any' &&
+      node.entryCount < reportEntriesFilterMinimums[parsedFilters.entries]
+    ) {
+      return false;
+    }
+
+    if (
+      !matchesReportBillableShareFilter(
+        node.billableShare,
+        parsedFilters.billableShare,
+      )
+    ) {
+      return false;
+    }
+
+    return matchesReportActivityFilter(
+      node.lastStartedAt,
+      parsedFilters.activity,
+      now,
+    );
+  });
+}
+
+export function sumReportTreeTotals(nodes: ReportTreeNode[]): ReportRowTotals {
+  let totalSeconds = 0;
+  let billableSeconds = 0;
+  let nonBillableSeconds = 0;
+  let entryCount = 0;
+  let lastStartedAt: string | null = null;
+
+  for (const node of nodes) {
+    totalSeconds += node.totalSeconds;
+    billableSeconds += node.billableSeconds;
+    nonBillableSeconds += node.nonBillableSeconds;
+    entryCount += node.entryCount;
+    lastStartedAt = maxIsoDate(lastStartedAt, node.lastStartedAt);
+  }
+
+  return {
+    billableSeconds,
+    billableShare: totalSeconds > 0 ? billableSeconds / totalSeconds : null,
+    entryCount,
+    lastStartedAt,
+    nonBillableSeconds,
+    totalSeconds,
+  };
+}
+
+/**
+ * Leaf-level filtering: identity and text search only. Aggregate thresholds
+ * live in filterReportTreeGroups because they must compare displayed group
+ * totals, not the invisible leaves underneath.
+ */
 export function filterReportRows(
   rows: ReportTableRow[],
   filters: ReportTableFilters,
@@ -599,29 +743,6 @@ export function filterReportRows(
     if (
       parsedFilters.memberId &&
       !row.memberIds.includes(parsedFilters.memberId)
-    ) {
-      return false;
-    }
-
-    if (parsedFilters.hours === 'gt0' && row.totalSeconds <= 0) {
-      return false;
-    }
-
-    if (parsedFilters.hours === 'gte8' && row.totalSeconds < 8 * 60 * 60) {
-      return false;
-    }
-
-    if (parsedFilters.hours === 'gte40' && row.totalSeconds < 40 * 60 * 60) {
-      return false;
-    }
-
-    if (parsedFilters.billable === 'withBillable' && row.billableSeconds <= 0) {
-      return false;
-    }
-
-    if (
-      parsedFilters.billable === 'withoutBillable' &&
-      getReportRowUnbillableSeconds(row) <= 0
     ) {
       return false;
     }

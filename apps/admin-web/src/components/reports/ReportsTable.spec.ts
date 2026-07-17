@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { defineComponent, nextTick } from 'vue';
+import { defineComponent, nextTick, reactive } from 'vue';
 import AutoComplete from 'primevue/autocomplete';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -174,8 +174,9 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
-    // hours + billable filters; the add-level control carries its own testid
-    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(2);
+    // entries/hours/billable/billable-share/activity filters; the add-level
+    // control carries its own testid
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(5);
     expect(
       wrapper.find('[data-testid="report-grouping-add-level"]').exists(),
     ).toBe(true);
@@ -407,8 +408,8 @@ describe('ReportsTable', () => {
 
     const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
 
-    // mobile hours + billable filters; add-level carries its own testid
-    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(2);
+    // all five mobile column filters; add-level carries its own testid
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(5);
     expect(autoCompleteControls).toHaveLength(2);
     for (const autoCompleteControl of autoCompleteControls) {
       expect(autoCompleteControl.props('appendTo')).toBe('self');
@@ -462,6 +463,89 @@ describe('ReportsTable', () => {
     expect(mobileCards[0]?.text()).toContain('2h 00m');
     expect(mobileCards[0]?.text()).toContain('1h 00m');
     expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
+  });
+
+  it('exposes entries, billable share, and activity column filters that update the filter model', async () => {
+    const filters = createDefaultReportTableFilters();
+    const wrapper = mountTable({ filters });
+
+    const selects = wrapper.findAllComponents(SelectStub);
+    const findByOption = (label: string) =>
+      selects.find((candidate) =>
+        (candidate.props('options') as { label: string }[]).some(
+          (option) => option.label === label,
+        ),
+      );
+
+    const entriesFilter = findByOption('10+');
+    const shareFilter = findByOption('90%+');
+    const activityFilter = findByOption('Last 7 days');
+
+    expect(entriesFilter).toBeDefined();
+    expect(shareFilter).toBeDefined();
+    expect(activityFilter).toBeDefined();
+
+    entriesFilter!.vm.$emit('update:modelValue', 'gte10');
+    shareFilter!.vm.$emit('update:modelValue', 'gte90');
+    activityFilter!.vm.$emit('update:modelValue', 'last7');
+    await nextTick();
+
+    expect(filters.entries).toBe('gte10');
+    expect(filters.billableShare).toBe('gte90');
+    expect(filters.activity).toBe('last7');
+  });
+
+  it('applies aggregate filters against displayed group totals, not leaves', async () => {
+    // reactive like the view's ref-wrapped filters, so mutations re-filter
+    const filters = reactive(createDefaultReportTableFilters());
+    // Orion displays 7 entries built from leaves of 4 and 3 — the group must
+    // survive a 1..7-range threshold even though no single leaf reaches it.
+    const tableRows = [
+      makeLeafRow({ entryCount: 4 }),
+      makeLeafRow({
+        entryCount: 3,
+        id: 'project-1:no-task:member-2',
+        memberIds: ['member-2'],
+        memberName: 'Nina PM',
+      }),
+      makeLeafRow({
+        entryCount: 2,
+        id: 'project-2:no-task:member-2',
+        memberIds: ['member-2'],
+        memberName: 'Nina PM',
+        projectIds: ['project-2'],
+        projectName: 'Billing API',
+      }),
+    ];
+    const wrapper = mountTable({
+      filters,
+      grouping: ['project', 'member'],
+      tableRows,
+    });
+
+    expect(wrapper.text()).toContain('Project Orion');
+    expect(wrapper.text()).toContain('Billing API');
+
+    filters.entries = 'gte1';
+    await nextTick();
+    expect(wrapper.text()).toContain('Project Orion');
+    expect(wrapper.text()).toContain('Billing API');
+
+    // both groups display fewer than 10 entries, so both fold away
+    filters.entries = 'gte10';
+    await nextTick();
+    expect(wrapper.text()).not.toContain('Project Orion');
+    expect(wrapper.text()).not.toContain('Billing API');
+
+    filters.entries = 'any';
+    filters.hours = 'gte8';
+    await nextTick();
+    // Orion totals 2h at the group level — under 8h, both groups hidden and
+    // the total row disappears with them
+    expect(wrapper.find('[data-testid="report-total-row"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.text()).toContain('No report rows found');
   });
 
   it('shows selected filter labels in the table filter row', () => {
