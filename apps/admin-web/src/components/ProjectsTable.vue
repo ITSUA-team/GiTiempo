@@ -405,9 +405,9 @@ const columns: ManagementTableColumn[] = [
   >
     <template #filters>
       <div
-          class="flex flex-1 items-center"
-          :class="adminTableMinWidthClass"
-        >
+        class="flex flex-1 items-center"
+        :class="adminTableMinWidthClass"
+      >
         <div class="min-w-0 flex-1 px-3">
           <FilterAutoComplete
             :model-value="filters.projectQuery"

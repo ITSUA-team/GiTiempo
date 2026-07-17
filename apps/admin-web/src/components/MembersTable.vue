@@ -325,7 +325,7 @@ function getRoleClass(role: WorkspaceRole): string {
             }"
           />
           <span class="min-w-0 flex-1">
-            <span class="inline-flex max-w-full items-center gap-1.5 font-sans text-[15px] font-semibold leading-none text-brand">
+            <span class="text-brand inline-flex max-w-full items-center gap-1.5 font-sans text-[15px] leading-none font-semibold">
               <span class="truncate">{{ row.primaryLabel }}</span>
               <span
                 aria-hidden="true"
@@ -415,9 +415,9 @@ function getRoleClass(role: WorkspaceRole): string {
   >
     <template #filters>
       <div
-          class="flex flex-1 items-center"
-          :class="adminTableMinWidthClass"
-        >
+        class="flex flex-1 items-center"
+        :class="adminTableMinWidthClass"
+      >
         <div class="min-w-0 flex-1 px-3">
           <FilterAutoComplete
             :model-value="filters.memberQuery"
@@ -501,7 +501,7 @@ function getRoleClass(role: WorkspaceRole): string {
             }"
           />
           <span class="flex min-w-0 flex-col">
-            <span class="inline-flex max-w-full items-center gap-1.5 font-sans text-[14px] font-semibold leading-none text-brand">
+            <span class="text-brand inline-flex max-w-full items-center gap-1.5 font-sans text-[14px] leading-none font-semibold">
               <span class="truncate">{{ data.primaryLabel }}</span>
               <span
                 aria-hidden="true"
