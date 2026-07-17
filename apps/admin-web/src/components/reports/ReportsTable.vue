@@ -11,8 +11,6 @@ import {
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteOptions,
-  managementTableColumnPt,
-  managementTableHeaderClass,
   normalizeReportDateRangeValue,
   useIsMobileViewport,
   type ManagementTableColumn,
@@ -31,6 +29,13 @@ import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
+import {
+  adminTableBodyRowClass,
+  adminTableColumnPt,
+  adminTableClass,
+  adminTableHeaderClass,
+  adminTableMinWidthClass,
+} from '@/lib/admin-table-classes';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
   buildReportTree,
@@ -192,10 +197,10 @@ const groupingColumnLabel = computed(() =>
 
 const columns = computed<ManagementTableColumn[]>(() => [
   { key: 'group', label: groupingColumnLabel.value, width: 'fill' },
-  { key: 'hours', label: 'Hours', width: 120, align: 'end' },
-  { key: 'billable', label: 'Billable', width: 120, align: 'end' },
-  { key: 'billableShare', label: 'Billable %', width: 110, align: 'end' },
-  { key: 'activity', label: 'Last activity', width: 130, align: 'end' },
+  { key: 'hours', label: 'Hours', width: 120 },
+  { key: 'billable', label: 'Billable', width: 120 },
+  { key: 'billableShare', label: 'Billable %', width: 110 },
+  { key: 'activity', label: 'Last activity', width: 130 },
 ]);
 
 function getRowLabelClass(row: ReportDisplayRow): string {
@@ -217,8 +222,6 @@ function getReportRowClass(data: ReportDisplayRow): string {
 function formatRowActivity(lastStartedAt: string | null): string {
   return lastStartedAt ? formatLocalCalendarDate(lastStartedAt) : '—';
 }
-
-const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[790px]`;
 
 const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
   { label: 'Any', value: 'any' },
@@ -608,15 +611,19 @@ function handleMemberFilterUpdate(
         :value="displayRows"
         :loading="false"
         data-key="id"
-        :header-class="reportTableHeaderClass"
+        :body-row-class="adminTableBodyRowClass"
+        :header-class="adminTableHeaderClass"
         :row-class="getReportRowClass"
         shell-class="bg-surface-primary w-full font-sans"
         single-scroll
-        table-class="min-w-[790px] w-full table-fixed border-collapse"
+        :table-class="adminTableClass"
         table-container-class="overflow-visible rounded-none border-none"
       >
         <template #filters>
-          <div class="flex min-w-[790px] flex-1 items-center">
+          <div
+            class="flex flex-1 items-center"
+            :class="adminTableMinWidthClass"
+          >
             <div class="flex min-w-0 flex-1 items-center gap-2 px-3">
               <FilterAutoComplete
                 class="w-[180px]"
@@ -644,7 +651,7 @@ function handleMemberFilterUpdate(
               />
             </div>
 
-            <div class="w-[120px] px-3 text-right">
+            <div class="w-[120px] pr-3">
               <Select
                 v-model="filters.hours"
                 :options="hoursFilterOptions"
@@ -654,7 +661,7 @@ function handleMemberFilterUpdate(
                 :pt="giTiempoFieldWidthSelectPt"
               />
             </div>
-            <div class="w-[120px] px-3 text-right">
+            <div class="w-[120px] pr-3">
               <Select
                 v-model="filters.billable"
                 :options="billableFilterOptions"
@@ -664,7 +671,7 @@ function handleMemberFilterUpdate(
                 :pt="giTiempoFieldWidthSelectPt"
               />
             </div>
-            <div class="w-[110px] px-3 text-right">
+            <div class="w-[110px] pr-3">
               <Select
                 v-model="filters.billableShare"
                 :options="billableShareFilterOptions"
@@ -674,7 +681,7 @@ function handleMemberFilterUpdate(
                 :pt="giTiempoFieldWidthSelectPt"
               />
             </div>
-            <div class="w-[130px] px-3 text-right">
+            <div class="w-[130px] pr-3">
               <Select
                 v-model="filters.activity"
                 :options="activityFilterOptions"
@@ -687,7 +694,7 @@ function handleMemberFilterUpdate(
           </div>
         </template>
 
-        <Column :pt="managementTableColumnPt">
+        <Column :pt="adminTableColumnPt">
           <template #body="{ data }">
             <div
               class="flex min-w-0 items-center gap-2"
@@ -725,45 +732,37 @@ function handleMemberFilterUpdate(
 
         <Column
           style="width: 120px"
-          :pt="managementTableColumnPt"
+          :pt="adminTableColumnPt"
         >
           <template #body="{ data }">
-            <div class="text-right">
-              <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.totalSeconds) }}</span>
-            </div>
+            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.totalSeconds) }}</span>
           </template>
         </Column>
 
         <Column
           style="width: 120px"
-          :pt="managementTableColumnPt"
+          :pt="adminTableColumnPt"
         >
           <template #body="{ data }">
-            <div class="text-right">
-              <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.billableSeconds) }}</span>
-            </div>
+            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.billableSeconds) }}</span>
           </template>
         </Column>
 
         <Column
           style="width: 110px"
-          :pt="managementTableColumnPt"
+          :pt="adminTableColumnPt"
         >
           <template #body="{ data }">
-            <div class="text-right">
-              <span class="text-text-muted text-[13px] font-normal">{{ formatReportPercent(data.billableShare) }}</span>
-            </div>
+            <span class="text-text-muted text-[13px] font-normal">{{ formatReportPercent(data.billableShare) }}</span>
           </template>
         </Column>
 
         <Column
           style="width: 130px"
-          :pt="managementTableColumnPt"
+          :pt="adminTableColumnPt"
         >
           <template #body="{ data }">
-            <div class="text-right">
-              <span class="text-text-muted text-[13px] font-normal">{{ formatRowActivity(data.lastStartedAt) }}</span>
-            </div>
+            <span class="text-text-muted text-[13px] font-normal">{{ formatRowActivity(data.lastStartedAt) }}</span>
           </template>
         </Column>
 
@@ -787,22 +786,23 @@ function handleMemberFilterUpdate(
 
       <div
         v-if="displayRows.length > 0"
-        class="border-divider bg-app-bg flex h-[44px] min-w-[790px] items-center border-t"
+        class="border-divider bg-app-bg flex h-[56px] items-center border-t"
+        :class="adminTableMinWidthClass"
         data-testid="report-total-row"
       >
-        <div class="flex min-w-0 flex-1 items-center gap-2 px-3">
+        <div class="flex min-w-0 flex-1 items-center gap-2 pl-6 pr-3">
           <span class="text-text-dark text-[14px] leading-none font-semibold">Total</span>
         </div>
-        <div class="w-[120px] px-3 text-right">
+        <div class="w-[120px] pr-3">
           <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(totals.totalSeconds) }}</span>
         </div>
-        <div class="w-[120px] px-3 text-right">
+        <div class="w-[120px] pr-3">
           <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(totals.billableSeconds) }}</span>
         </div>
-        <div class="w-[110px] px-3 text-right">
+        <div class="w-[110px] pr-3">
           <span class="text-text-muted text-[13px] font-normal">{{ formatReportPercent(totals.billableShare) }}</span>
         </div>
-        <div class="w-[130px] px-3 text-right">
+        <div class="w-[130px] pr-6">
           <span class="text-text-muted text-[13px] font-normal">{{ formatRowActivity(totals.lastStartedAt) }}</span>
         </div>
       </div>
