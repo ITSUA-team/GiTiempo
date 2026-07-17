@@ -102,11 +102,16 @@ const exportMenuRef = ref<InstanceType<typeof Menu> | null>(null);
 const exportMenuItems = [
   {
     command: () => void handleExport('csv'),
+    icon: 'pi pi-file',
+    iconClass: 'text-text-muted',
     label: 'Export as CSV',
   },
   {
     command: () => void handleExport('pdf'),
+    icon: 'pi pi-file-pdf',
+    iconClass: 'text-brand',
     label: 'Export as PDF',
+    subtitle: 'Styled summary & totals',
   },
 ];
 
@@ -209,25 +214,61 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
               class="w-full sm:w-auto"
             >
               <Button
-                label="Export"
-                icon="pi pi-chevron-down"
-                icon-pos="right"
                 data-testid="export-reports"
                 class="h-[38px] w-full sm:w-auto"
+                aria-label="Export report"
                 aria-haspopup="true"
                 aria-controls="report-export-menu"
                 :aria-description="exportBlockedReason"
                 :disabled="exportDisabled"
-                :loading="exporting"
                 @click="toggleExportMenu"
-              />
+              >
+                <span class="flex items-center gap-2">
+                  <i
+                    :class="[
+                      'text-[14px]',
+                      exporting ? 'pi pi-spin pi-spinner' : 'pi pi-download',
+                    ]"
+                    aria-hidden="true"
+                  />
+                  <span class="text-[14px] font-semibold">Export</span>
+                  <span
+                    class="mx-0.5 h-[18px] w-px bg-white/30"
+                    aria-hidden="true"
+                  />
+                  <i
+                    class="pi pi-chevron-down text-[12px]"
+                    aria-hidden="true"
+                  />
+                </span>
+              </Button>
             </span>
             <Menu
               id="report-export-menu"
               ref="exportMenuRef"
+              class="w-[224px]"
               :model="exportMenuItems"
               popup
-            />
+            >
+              <template #item="{ item, props: itemProps }">
+                <a
+                  v-bind="itemProps.action"
+                  class="flex items-start gap-2.5 px-2.5 py-2"
+                >
+                  <i
+                    :class="[item.icon, item.iconClass, 'mt-0.5 text-[14px]']"
+                    aria-hidden="true"
+                  />
+                  <span class="flex min-w-0 flex-col">
+                    <span class="text-text-dark text-[13px] font-medium">{{ item.label }}</span>
+                    <span
+                      v-if="item.subtitle"
+                      class="text-text-muted text-[11px]"
+                    >{{ item.subtitle }}</span>
+                  </span>
+                </a>
+              </template>
+            </Menu>
           </template>
         </ReportsTable>
       </SurfaceCard>
