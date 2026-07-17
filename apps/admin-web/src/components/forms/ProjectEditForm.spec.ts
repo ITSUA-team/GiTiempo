@@ -158,8 +158,10 @@ describe('ProjectEditForm', () => {
       global: { plugins: [createPinia()], stubs },
     });
 
+    // The members field gets the full panel width like Member settings; only
+    // visibility and the billable default share a row.
     expect(wrapper.get('[data-testid="project-edit-form-layout"]').classes()).toEqual(
-      expect.arrayContaining(['flex-col', 'sm:flex-row', 'sm:items-end']),
+      expect.arrayContaining(['flex', 'flex-col', 'gap-3']),
     );
     expect(wrapper.get('[data-testid="project-edit-form-actions"]').classes()).toEqual(
       expect.arrayContaining(['grid', 'w-full', 'grid-cols-1', 'sm:flex', 'sm:justify-between']),

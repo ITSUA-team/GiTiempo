@@ -246,7 +246,7 @@ function handleDocumentKeydown(event: KeyboardEvent): void {
 }
 
 function handleSettingsClick(
-  // eslint-disable-next-line no-unused-vars
+   
   navigate: (...args: [MouseEvent]) => void,
   event: MouseEvent,
 ): void {

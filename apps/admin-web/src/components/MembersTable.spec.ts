@@ -181,7 +181,10 @@ describe('MembersTable', () => {
 
     expect(nameButton.attributes('aria-label')).toBe('Edit member Pat PM');
     expect(nameButton.classes()).not.toContain('p-button-link');
-    expect(nameButton.classes()).toEqual(
+    // The whole identity field is the click target; the brand name styling
+    // lives on the inner label span.
+    expect(nameButton.classes()).toEqual(expect.arrayContaining(['flex', 'w-full']));
+    expect(nameButton.find('.leading-none').classes()).toEqual(
       expect.arrayContaining(['text-brand', 'text-[14px]', 'font-semibold', 'leading-none']),
     );
     expect(wrapper.get('[data-testid="member-role-member-1"]').classes()).toEqual(
@@ -364,7 +367,9 @@ describe('MembersTable', () => {
     const mobileNameButton = wrapper.get('[data-testid="member-mobile-name-member-1"]');
 
     expect(mobileNameButton.classes()).not.toContain('p-button-link');
-    expect(mobileNameButton.classes()).toEqual(
+    // Same on mobile: the card's identity block is the click target.
+    expect(mobileNameButton.classes()).toEqual(expect.arrayContaining(['flex', 'w-full']));
+    expect(mobileNameButton.find('.leading-none').classes()).toEqual(
       expect.arrayContaining(['text-brand', 'text-[15px]', 'font-semibold', 'leading-none']),
     );
 

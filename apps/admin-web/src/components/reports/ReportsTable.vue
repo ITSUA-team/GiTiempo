@@ -11,8 +11,6 @@ import {
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteOptions,
-  managementTableColumnPt,
-  managementTableHeaderClass,
   normalizeReportDateRangeValue,
   useIsMobileViewport,
   type ManagementTableColumn,
@@ -28,6 +26,13 @@ import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
+import {
+  adminTableBodyRowClass,
+  adminTableColumnPt,
+  adminTableClass,
+  adminTableHeaderClass,
+  adminTableMinWidthClass,
+} from '@/lib/admin-table-classes';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
   type ReportBillableFilter,
@@ -93,14 +98,14 @@ const columns = computed<ManagementTableColumn[]>(() =>
     ? [
         { key: 'member', label: 'Member', width: 'fill' },
         { key: 'project', label: 'Project', width: 180 },
-        { key: 'hours', label: 'Hours', width: 140, align: 'end' },
-        { key: 'billable', label: 'Billable', width: 140, align: 'end' },
+        { key: 'hours', label: 'Hours', width: 140 },
+        { key: 'billable', label: 'Billable', width: 140 },
       ]
     : [
         { key: 'project', label: 'Project', width: 'fill' },
         { key: 'members', label: 'Members', width: 180 },
-        { key: 'hours', label: 'Hours', width: 140, align: 'end' },
-        { key: 'billable', label: 'Billable', width: 140, align: 'end' },
+        { key: 'hours', label: 'Hours', width: 140 },
+        { key: 'billable', label: 'Billable', width: 140 },
       ],
 );
 
@@ -108,7 +113,6 @@ function formatMemberCount(count: number): string {
   return `${count} ${count === 1 ? 'member' : 'members'}`;
 }
 
-const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[720px]`;
 
 const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
   { label: 'Any', value: 'any' },
@@ -387,19 +391,23 @@ function handleMemberFilterUpdate(
       :value="rows"
       :loading="false"
       data-key="id"
-      :header-class="reportTableHeaderClass"
+      :body-row-class="adminTableBodyRowClass"
+      :header-class="adminTableHeaderClass"
       shell-class="border-divider overflow-x-auto rounded-[6px] border"
       single-scroll
-      table-class="min-w-[720px] w-full table-fixed border-collapse"
+      :table-class="adminTableClass"
       table-container-class="overflow-visible rounded-none border-none"
     >
       <template #filters>
-        <div class="flex min-w-[720px] flex-1 items-center">
+        <div
+          class="flex flex-1 items-center"
+          :class="adminTableMinWidthClass"
+        >
           <div
             v-for="(key, index) in filterOrder"
             :key="key"
-            class="px-3"
-            :class="index === 0 ? 'min-w-0 flex-1' : 'w-[180px]'"
+            class="pr-3"
+            :class="index === 0 ? 'min-w-0 flex-1 pl-3' : 'w-[180px]'"
           >
             <FilterAutoComplete
               v-if="key === 'project'"
@@ -427,7 +435,7 @@ function handleMemberFilterUpdate(
             />
           </div>
 
-          <div class="w-[140px] px-3 text-right">
+          <div class="w-[140px] pr-3">
             <Select
               v-model="filters.hours"
               :options="hoursFilterOptions"
@@ -437,7 +445,7 @@ function handleMemberFilterUpdate(
               :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
-          <div class="w-[140px] px-3 text-right">
+          <div class="w-[140px] pr-3">
             <Select
               v-model="filters.billable"
               :options="billableFilterOptions"
@@ -450,7 +458,7 @@ function handleMemberFilterUpdate(
         </div>
       </template>
 
-      <Column :pt="managementTableColumnPt">
+      <Column :pt="adminTableColumnPt">
         <template #body="{ data }">
           <span class="text-text-dark text-[14px] leading-none font-semibold">{{ memberLeads ? data.memberName : data.projectName }}</span>
         </template>
@@ -458,7 +466,7 @@ function handleMemberFilterUpdate(
 
       <Column
         style="width: 180px"
-        :pt="managementTableColumnPt"
+        :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
           <span class="text-text-muted text-[13px] font-normal">{{ memberLeads ? data.projectName : formatMemberCount(data.memberIds.length) }}</span>
@@ -467,23 +475,19 @@ function handleMemberFilterUpdate(
 
       <Column
         style="width: 140px"
-        :pt="managementTableColumnPt"
+        :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
-          <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.totalSeconds) }}</span>
-          </div>
+          <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.totalSeconds) }}</span>
         </template>
       </Column>
 
       <Column
         style="width: 140px"
-        :pt="managementTableColumnPt"
+        :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
-          <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.billableSeconds) }}</span>
-          </div>
+          <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.billableSeconds) }}</span>
         </template>
       </Column>
 

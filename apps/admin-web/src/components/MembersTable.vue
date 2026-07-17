@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { UserPlusIcon } from '@heroicons/vue/24/outline';
+import { ChevronDownIcon, UserPlusIcon } from '@heroicons/vue/24/outline';
 import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
@@ -14,9 +14,7 @@ import {
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteStrings,
-  managementTableColumnPt,
   managementTableFilterMultiSelectPt,
-  managementTableHeaderClass,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
@@ -29,6 +27,13 @@ import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
 
+import {
+  adminTableBodyRowClass,
+  adminTableColumnPt,
+  adminTableClass,
+  adminTableHeaderClass,
+  adminTableMinWidthClass,
+} from '@/lib/admin-table-classes';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import type {
   MemberLastActiveFilter,
@@ -117,9 +122,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'lastActive', label: 'Last Active', width: 140 },
 ];
 
-const membersTableBodyRowClass =
-  'border-divider h-[56px] border-b transition-colors last:border-b-0 hover:bg-app-bg';
-const membersTableHeaderClass = `${managementTableHeaderClass} min-w-[780px]`;
 
 function getRoleClass(role: WorkspaceRole): string {
   return role === 'pm'
@@ -298,7 +300,56 @@ function getRoleClass(role: WorkspaceRole): string {
         :key="row.id"
         data-testid="member-mobile-card"
       >
-        <div class="flex items-start gap-3">
+        <Button
+          v-if="row.canManage"
+          type="button"
+          unstyled
+          :aria-expanded="Boolean(expandedRows[row.id])"
+          :aria-label="`Edit member ${row.primaryLabel}`"
+          :data-testid="`member-mobile-name-${row.id}`"
+          :pt="{
+            root: {
+              class:
+                'group flex w-full cursor-pointer items-start gap-3 rounded-none border-0 bg-transparent p-0 text-left shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+            },
+          }"
+          @click="emit('edit-member', row.member)"
+        >
+          <Avatar
+            :image="row.avatarImage"
+            :label="row.avatarLabel"
+            shape="circle"
+            class="size-9 shrink-0"
+            :pt="{
+              root: 'bg-accent-tint text-brand text-[13px] font-semibold',
+            }"
+          />
+          <span class="min-w-0 flex-1">
+            <span class="text-brand inline-flex max-w-full items-center gap-1.5 font-sans text-[15px] leading-none font-semibold">
+              <span class="truncate">{{ row.primaryLabel }}</span>
+              <span
+                aria-hidden="true"
+                class="flex size-[18px] shrink-0 items-center justify-center rounded-full transition-colors duration-200"
+                :class="expandedRows[row.id] ? 'bg-accent-tint' : 'bg-app-bg group-hover:bg-accent-tint'"
+              >
+                <ChevronDownIcon
+                  class="size-[11px] stroke-[2.5] transition-all duration-200"
+                  :class="expandedRows[row.id] ? 'text-brand rotate-180' : 'text-text-muted group-hover:text-brand'"
+                />
+              </span>
+            </span>
+            <span
+              v-if="row.secondaryLabel"
+              class="text-text-muted block truncate text-[12px]"
+            >
+              {{ row.secondaryLabel }}
+            </span>
+          </span>
+        </Button>
+        <div
+          v-else
+          class="flex items-start gap-3"
+        >
           <Avatar
             :image="row.avatarImage"
             :label="row.avatarLabel"
@@ -309,29 +360,8 @@ function getRoleClass(role: WorkspaceRole): string {
             }"
           />
           <div class="min-w-0 flex-1">
-            <h3>
-              <Button
-                v-if="row.canManage"
-                type="button"
-                unstyled
-                :aria-label="`Edit member ${row.primaryLabel}`"
-                :data-testid="`member-mobile-name-${row.id}`"
-                :pt="{
-                  root: {
-                    class:
-                      'max-w-full cursor-pointer truncate rounded-none border-0 bg-transparent p-0 text-left font-sans text-[15px] font-semibold leading-none text-brand shadow-none transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
-                  },
-                }"
-                @click="emit('edit-member', row.member)"
-              >
-                {{ row.primaryLabel }}
-              </Button>
-              <span
-                v-else
-                class="text-brand block truncate text-[15px] font-semibold"
-              >
-                {{ row.primaryLabel }}
-              </span>
+            <h3 class="text-text-dark truncate text-[15px] font-semibold">
+              {{ row.primaryLabel }}
             </h3>
             <p
               v-if="row.secondaryLabel"
@@ -374,17 +404,20 @@ function getRoleClass(role: WorkspaceRole): string {
     :columns="columns"
     :value="rows"
     :loading="loading"
-    :body-row-class="membersTableBodyRowClass"
+    :body-row-class="adminTableBodyRowClass"
     data-key="id"
-    :header-class="membersTableHeaderClass"
+    :header-class="adminTableHeaderClass"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     single-scroll
-    table-class="min-w-[780px] w-full table-fixed border-collapse"
+    :table-class="adminTableClass"
     table-container-class="overflow-visible rounded-none border-none"
     @update:expanded-rows="updateExpandedRows"
   >
     <template #filters>
-      <div class="flex min-w-[780px] flex-1 items-center">
+      <div
+        class="flex flex-1 items-center"
+        :class="adminTableMinWidthClass"
+      >
         <div class="min-w-0 flex-1 px-3">
           <FilterAutoComplete
             :model-value="filters.memberQuery"
@@ -396,7 +429,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[120px] px-3">
+        <div class="w-[120px] pr-3">
           <Select
             :model-value="filters.role"
             :options="roleFilterOptions"
@@ -410,7 +443,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[220px] px-3">
+        <div class="w-[220px] pr-3">
           <MultiSelect
             :model-value="filters.projectIds"
             :options="projectFilterOptions"
@@ -426,7 +459,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[140px] px-3">
+        <div class="w-[140px] pr-3">
           <Select
             :model-value="filters.lastActive"
             :options="lastActiveFilterOptions"
@@ -441,41 +474,67 @@ function getRoleClass(role: WorkspaceRole): string {
     </template>
 
     <!-- Member: avatar + name + email -->
-    <Column :pt="managementTableColumnPt">
+    <Column :pt="adminTableColumnPt">
       <template #body="{ data }">
-        <div class="flex items-center gap-3">
+        <Button
+          v-if="data.canManage"
+          type="button"
+          unstyled
+          :aria-expanded="Boolean(expandedRows[data.id])"
+          :aria-label="`Edit member ${data.primaryLabel}`"
+          :data-testid="`member-name-${data.id}`"
+          :pt="{
+            root: {
+              class:
+                'group flex w-full cursor-pointer items-center gap-3 rounded-none border-0 bg-transparent p-0 text-left shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+            },
+          }"
+          @click="emit('edit-member', data.member)"
+        >
           <Avatar
             :image="data.avatarImage"
             :label="data.avatarLabel"
             shape="circle"
-            class="size-8"
+            class="size-8 shrink-0"
+            :pt="{
+              root: 'bg-accent-tint text-brand text-[13px] font-semibold',
+            }"
+          />
+          <span class="flex min-w-0 flex-col">
+            <span class="text-brand inline-flex max-w-full items-center gap-1.5 font-sans text-[14px] leading-none font-semibold">
+              <span class="truncate">{{ data.primaryLabel }}</span>
+              <span
+                aria-hidden="true"
+                class="flex size-[18px] shrink-0 items-center justify-center rounded-full transition-colors duration-200"
+                :class="expandedRows[data.id] ? 'bg-accent-tint' : 'bg-app-bg group-hover:bg-accent-tint'"
+              >
+                <ChevronDownIcon
+                  class="size-[11px] stroke-[2.5] transition-all duration-200"
+                  :class="expandedRows[data.id] ? 'text-brand rotate-180' : 'text-text-muted group-hover:text-brand'"
+                />
+              </span>
+            </span>
+            <span
+              v-if="data.secondaryLabel"
+              class="text-text-muted text-[12px]"
+            >{{ data.secondaryLabel }}</span>
+          </span>
+        </Button>
+        <div
+          v-else
+          class="flex items-center gap-3"
+        >
+          <Avatar
+            :image="data.avatarImage"
+            :label="data.avatarLabel"
+            shape="circle"
+            class="size-8 shrink-0"
             :pt="{
               root: 'bg-accent-tint text-brand text-[13px] font-semibold',
             }"
           />
           <div class="flex min-w-0 flex-col">
-            <Button
-              v-if="data.canManage"
-              type="button"
-              unstyled
-              :aria-label="`Edit member ${data.primaryLabel}`"
-              :data-testid="`member-name-${data.id}`"
-              :pt="{
-                root: {
-                  class:
-                    'max-w-full cursor-pointer truncate rounded-none border-0 bg-transparent p-0 text-left font-sans text-[14px] font-semibold leading-none text-brand shadow-none transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
-                },
-              }"
-              @click="emit('edit-member', data.member)"
-            >
-              {{ data.primaryLabel }}
-            </Button>
-            <span
-              v-else
-              class="text-brand truncate text-[14px] font-semibold"
-            >
-              {{ data.primaryLabel }}
-            </span>
+            <span class="text-text-dark truncate text-[14px] font-semibold">{{ data.primaryLabel }}</span>
             <span
               v-if="data.secondaryLabel"
               class="text-text-muted text-[12px]"
@@ -488,7 +547,7 @@ function getRoleClass(role: WorkspaceRole): string {
     <!-- Role -->
     <Column
       style="width: 120px"
-      :pt="managementTableColumnPt"
+      :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
         <span
@@ -503,7 +562,7 @@ function getRoleClass(role: WorkspaceRole): string {
     <!-- Projects Assigned -->
     <Column
       style="width: 220px"
-      :pt="managementTableColumnPt"
+      :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
@@ -515,7 +574,7 @@ function getRoleClass(role: WorkspaceRole): string {
     <!-- Last Active -->
     <Column
       style="width: 140px"
-      :pt="managementTableColumnPt"
+      :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
