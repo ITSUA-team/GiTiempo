@@ -67,7 +67,6 @@ export function useReportsData({
   const rowsData = useReportRowsData({
     appliedFilters: filters.appliedFilters,
     enabled,
-    grouping: filters.grouping,
     isAdminScope,
     memberOptions: reportOptions.memberOptions,
     membersLoaded,

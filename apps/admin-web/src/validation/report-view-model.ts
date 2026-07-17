@@ -36,22 +36,51 @@ export const reportFilterOptionSchema = z.object({
 });
 export type ReportFilterOption = z.infer<typeof reportFilterOptionSchema>;
 
-export const reportGroupingSchema = z
-  .enum(['project', 'member'])
-  .default('project');
+export const reportGroupingDimensionSchema = z.enum([
+  'project',
+  'member',
+  'task',
+]);
+export type ReportGroupingDimension = z.infer<
+  typeof reportGroupingDimensionSchema
+>;
+
+export const maxReportGroupingLevels = 4;
+
+// Ordered grouping path: the first dimension is the top table level.
+export const reportGroupingSchema = reportGroupingDimensionSchema
+  .array()
+  .min(1)
+  .max(maxReportGroupingLevels)
+  .refine((path) => new Set(path).size === path.length, {
+    message: 'Grouping levels must be unique',
+  });
 export type ReportGrouping = z.infer<typeof reportGroupingSchema>;
 
-export const defaultReportGrouping: ReportGrouping = 'project';
+export const defaultReportGrouping: ReportGrouping = ['project'];
 
-/** Export metadata only: the CSV always carries detailed project-task-user rows. */
-export const reportGroupingApiValue: Record<ReportGrouping, TimeReportGroupBy> = {
+/** UI dimension vocabulary mapped to the API grouping dimensions. */
+export const reportGroupingApiValue: Record<
+  ReportGroupingDimension,
+  TimeReportGroupBy
+> = {
   member: 'user',
   project: 'project',
+  task: 'task',
 };
+
+export function toReportGroupingApiPath(
+  grouping: ReportGrouping,
+): TimeReportGroupBy[] {
+  return grouping.map((dimension) => reportGroupingApiValue[dimension]);
+}
 
 export const reportSetupFiltersSchema = z.object({
   dateRange: reportDateRangeSchema,
-  groupBy: timeReportGroupBySchema,
+  groupBy: timeReportGroupBySchema
+    .array()
+    .min(1)
+    .max(maxReportGroupingLevels),
   memberId: z.string().nullable(),
   projectId: z.string().nullable(),
 });
@@ -67,12 +96,13 @@ export type ReportSetupFilters = z.infer<typeof reportSetupFiltersSchema>;
  * not an equivalent either: it matches task titles the table never shows and
  * ignores the duration labels the table does.
  *
- * The member filter is grouping-dependent. Under `member` grouping each row
- * carries one member's own sums, so a `userId`-scoped export matches the
- * screen. Under `project` grouping the table keeps whole folded rows with
- * every contributor's time (`filterReportRows` selects rows, it never
- * re-sums), while a `userId`-scoped export would return only that member's
- * entries — the file would silently show a fraction of the on-screen hours.
+ * The member filter is grouping-dependent. When `member` is one of the
+ * grouping levels, every visible leaf carries one member's own sums, so a
+ * `userId`-scoped export matches the screen. Without a member level the table
+ * keeps whole folded rows with every contributor's time (`filterReportRows`
+ * selects leaves, it never re-sums), while a `userId`-scoped export would
+ * return only that member's entries — the file would silently show a fraction
+ * of the on-screen hours.
  */
 export function getReportExportBlockedReason(
   filters: Pick<ReportTableFilters, 'billable' | 'global' | 'hours' | 'memberId'>,
@@ -86,24 +116,28 @@ export function getReportExportBlockedReason(
     return 'Search, hours, and billable filters cannot be exported. Clear them to export this report.';
   }
 
-  if (grouping === 'project' && filters.memberId !== null) {
-    return 'A member filter cannot be exported while grouping by project: rows on screen total everyone, but the file would hold only that member. Group by member or clear the filter.';
+  if (!grouping.includes('member') && filters.memberId !== null) {
+    return 'A member filter cannot be exported without a member grouping level: rows on screen total everyone, but the file would hold only that member. Add a member level or clear the filter.';
   }
 
   return null;
 }
 
+// Leaf row: one aggregate at the requested grouping-path granularity. The
+// tree and its subtotals are derived from these (see buildReportTree).
 export const reportTableRowSchema = z.object({
   billableSeconds: z.number().int().min(0),
   billableShare: z.number().min(0).max(1).nullable(),
   entryCount: z.number().int().min(0),
-  groupBy: timeReportGroupBySchema,
   id: z.string(),
+  lastStartedAt: z.string().nullable(),
   memberIds: z.array(z.string()),
   memberName: z.string().nullable(),
   nonBillableSeconds: z.number().int().min(0),
   projectIds: z.array(z.string()),
   projectName: z.string().nullable(),
+  taskId: z.string().nullable(),
+  taskName: z.string().nullable(),
   totalSeconds: z.number().int().min(0),
 });
 export type ReportTableRow = z.infer<typeof reportTableRowSchema>;

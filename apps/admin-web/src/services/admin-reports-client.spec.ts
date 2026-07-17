@@ -11,14 +11,14 @@ const reportResponse = {
     dateFrom: '2026-05-01T00:00:00.000Z',
     dateTo: '2026-06-01T00:00:00.000Z',
   },
-  groupBy: 'project',
+  groupBy: ['project'],
   items: [
     {
       billableSeconds: 3600,
       billableShare: 0.5,
       entryCount: 2,
       firstStartedAt: '2026-05-01T10:00:00.000Z',
-      groupBy: 'project',
+      groupBy: ['project'],
       lastStartedAt: '2026-05-02T10:00:00.000Z',
       nonBillableSeconds: 3600,
       project: { id: projectId, name: 'Project Orion' },
@@ -68,7 +68,7 @@ describe('createAdminReportsClient', () => {
     const result = await client.getTimeReport({
       dateFrom: '2026-05-01T00:00:00.000Z',
       dateTo: '2026-06-01T00:00:00.000Z',
-      groupBy: 'project',
+      groupBy: ['project'],
       limit: 20,
       page: 2,
       projectId,
@@ -121,7 +121,7 @@ describe('createAdminReportsClient', () => {
     const result = await client.exportTimeReport({
       dateFrom: '2026-05-01T00:00:00.000Z',
       dateTo: '2026-06-01T00:00:00.000Z',
-      groupBy: 'user',
+      groupBy: ['user'],
       projectId,
       sortBy: 'user',
       sortOrder: 'asc',

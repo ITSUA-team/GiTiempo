@@ -129,23 +129,37 @@ defineProps<{
           border-radius="4px"
         />
       </div>
-      <div class="w-[180px]">
+      <div class="w-[90px]">
+        <Skeleton
+          width="50%"
+          height="0.8rem"
+          border-radius="4px"
+        />
+      </div>
+      <div class="w-[120px]">
         <Skeleton
           width="55%"
           height="0.8rem"
           border-radius="4px"
         />
       </div>
-      <div class="w-[140px]">
+      <div class="w-[120px]">
+        <Skeleton
+          width="55%"
+          height="0.8rem"
+          border-radius="4px"
+        />
+      </div>
+      <div class="w-[110px]">
         <Skeleton
           width="50%"
           height="0.8rem"
           border-radius="4px"
         />
       </div>
-      <div class="w-[140px]">
+      <div class="w-[130px]">
         <Skeleton
-          width="50%"
+          width="55%"
           height="0.8rem"
           border-radius="4px"
         />

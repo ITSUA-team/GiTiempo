@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   isNotNull,
   lt,
   or,
@@ -16,6 +17,7 @@ import type {
   TimeReportEffectiveDateRange,
   TimeReportExportQuery,
   TimeReportGroupBy,
+  TimeReportGroupByPath,
   TimeReportQuery,
   TimeReportResponse,
   TimeReportRow,
@@ -59,7 +61,7 @@ interface AggregateRow {
 }
 
 interface QueryContext {
-  groupBy: TimeReportGroupBy;
+  groupBy: TimeReportGroupByPath;
   dateRange: TimeReportEffectiveDateRange;
   scopeUserId: string;
   conditions: SQL[];
@@ -199,10 +201,23 @@ export class ReportsService {
     return toTotals(row);
   }
 
+  // Pagination counts and pages top-level groups of the requested path, so a
+  // page always carries complete subtrees and client-derived subtotals are
+  // exact. Distinct first-dimension keys over the filtered join equal the
+  // grouped row count for single-level paths, so both cases share this count.
   private async countRows(context: QueryContext): Promise<number> {
+    const keyColumn = dimensionKeyColumn(context.groupBy[0]!);
     const [row] = await this.db
-      .select({ value: sql<number>`COUNT(*)` })
-      .from(this.groupedSubquery(context));
+      .select({ value: sql<number>`COUNT(DISTINCT ${keyColumn})` })
+      .from(timeEntries)
+      .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+      .innerJoin(projects, eq(projects.id, tasks.projectId))
+      .innerJoin(users, eq(users.id, timeEntries.userId))
+      .leftJoin(
+        projectAssignments,
+        this.scopeAssignmentJoinCondition(context.scopeUserId),
+      )
+      .where(and(...context.conditions));
 
     return toNumber(row?.value);
   }
@@ -214,13 +229,67 @@ export class ReportsService {
     page: number | undefined,
     limit: number | undefined,
   ): Promise<AggregateRow[]> {
-    const orderBy = getOrderBy(sortBy, sortOrder);
-    let query = this.groupedRowsQuery(context).orderBy(orderBy);
+    if (context.groupBy.length === 1) {
+      const orderBy = getOrderBy(sortBy, sortOrder);
+      let query = this.groupedRowsQuery(context).orderBy(orderBy);
+      if (page !== undefined && limit !== undefined) {
+        query = query.limit(limit).offset((page - 1) * limit) as typeof query;
+      }
+
+      return query;
+    }
+
+    const keys = await this.getTopLevelKeys(
+      context,
+      sortBy,
+      sortOrder,
+      page,
+      limit,
+    );
+    if (keys.length === 0) {
+      return [];
+    }
+
+    const keyColumn = dimensionKeyColumn(context.groupBy[0]!);
+
+    return this.groupedRowsQuery(context, inArray(keyColumn, keys)).orderBy(
+      ...leafOrderBy(context.groupBy, sortBy, sortOrder),
+    );
+  }
+
+  private async getTopLevelKeys(
+    context: QueryContext,
+    sortBy: TimeReportSortBy,
+    sortOrder: TimeReportSortOrder,
+    page: number | undefined,
+    limit: number | undefined,
+  ): Promise<string[]> {
+    const dimension = context.groupBy[0]!;
+    const keyColumn = dimensionKeyColumn(dimension);
+    const direction = sortOrder === 'asc' ? asc : desc;
+    let query = this.db
+      .select({ key: keyColumn })
+      .from(timeEntries)
+      .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+      .innerJoin(projects, eq(projects.id, tasks.projectId))
+      .innerJoin(users, eq(users.id, timeEntries.userId))
+      .leftJoin(
+        projectAssignments,
+        this.scopeAssignmentJoinCondition(context.scopeUserId),
+      )
+      .where(and(...context.conditions))
+      .groupBy(keyColumn)
+      .orderBy(
+        direction(topLevelOrderExpression(dimension, sortBy)),
+        asc(keyColumn),
+      );
     if (page !== undefined && limit !== undefined) {
       query = query.limit(limit).offset((page - 1) * limit) as typeof query;
     }
 
-    return query;
+    const rows = await query;
+
+    return rows.map((row) => row.key);
   }
 
   private async getDetailedRows(
@@ -233,8 +302,11 @@ export class ReportsService {
     );
   }
 
-  private groupedRowsQuery(context: QueryContext) {
+  private groupedRowsQuery(context: QueryContext, extraCondition?: SQL) {
     const selection = this.groupSelection(context.groupBy);
+    const conditions = extraCondition
+      ? [...context.conditions, extraCondition]
+      : context.conditions;
 
     return this.db
       .select(selection)
@@ -246,7 +318,7 @@ export class ReportsService {
         projectAssignments,
         this.scopeAssignmentJoinCondition(context.scopeUserId),
       )
-      .where(and(...context.conditions))
+      .where(and(...conditions))
       .groupBy(...this.groupByColumns(context.groupBy));
   }
 
@@ -263,10 +335,6 @@ export class ReportsService {
       )
       .where(and(...context.conditions))
       .groupBy(...this.detailedGroupByColumns());
-  }
-
-  private groupedSubquery(context: QueryContext) {
-    return this.groupedRowsQuery(context).as('report_rows');
   }
 
   private scopeAssignmentJoinCondition(userId: string): SQL {
@@ -318,56 +386,43 @@ export class ReportsService {
     };
   }
 
-  private groupSelection(groupBy: TimeReportGroupBy) {
-    const aggregateSelection = this.aggregateSelection();
-
-    if (groupBy === 'task') {
-      return {
-        groupId: tasks.id,
-        projectId: projects.id,
-        projectName: projects.name,
-        taskId: tasks.id,
-        taskTitle: tasks.title,
-        userId: sql<null>`NULL`,
-        userEmail: sql<null>`NULL`,
-        userDisplayName: sql<null>`NULL`,
-        userAvatarUrl: sql<null>`NULL`,
-        ...aggregateSelection,
-      };
-    }
-    if (groupBy === 'user') {
-      return {
-        groupId: users.id,
-        projectId: sql<null>`NULL`,
-        projectName: sql<null>`NULL`,
-        taskId: sql<null>`NULL`,
-        taskTitle: sql<null>`NULL`,
-        userId: users.id,
-        userEmail: users.email,
-        userDisplayName: users.displayName,
-        userAvatarUrl: users.avatarUrl,
-        ...aggregateSelection,
-      };
-    }
+  // Identity columns follow the requested path: dimensions on the path select
+  // their context (task always brings its project), everything else stays
+  // NULL so the unified row shape reports exactly what was grouped.
+  private groupSelection(groupBy: TimeReportGroupByPath) {
+    const withProject = groupBy.includes('project') || groupBy.includes('task');
+    const withTask = groupBy.includes('task');
+    const withUser = groupBy.includes('user');
+    const keyColumns = groupBy.map((dimension) =>
+      dimensionKeyColumn(dimension),
+    );
 
     return {
-      groupId: projects.id,
-      projectId: projects.id,
-      projectName: projects.name,
-      taskId: sql<null>`NULL`,
-      taskTitle: sql<null>`NULL`,
-      userId: sql<null>`NULL`,
-      userEmail: sql<null>`NULL`,
-      userDisplayName: sql<null>`NULL`,
-      userAvatarUrl: sql<null>`NULL`,
-      ...aggregateSelection,
+      groupId: sql<string>`CONCAT_WS(':', ${sql.join(keyColumns, sql`, `)})`.as(
+        'group_id',
+      ),
+      projectId: withProject ? projects.id : sql<null>`NULL`,
+      projectName: withProject ? projects.name : sql<null>`NULL`,
+      taskId: withTask ? tasks.id : sql<null>`NULL`,
+      taskTitle: withTask ? tasks.title : sql<null>`NULL`,
+      userId: withUser ? users.id : sql<null>`NULL`,
+      userEmail: withUser ? users.email : sql<null>`NULL`,
+      userDisplayName: withUser ? users.displayName : sql<null>`NULL`,
+      userAvatarUrl: withUser ? users.avatarUrl : sql<null>`NULL`,
+      ...this.aggregateSelection(),
     };
   }
 
-  private groupByColumns(groupBy: TimeReportGroupBy) {
-    if (groupBy === 'task') return [tasks.id, projects.id];
-    if (groupBy === 'user') return [users.id];
-    return [projects.id];
+  private groupByColumns(groupBy: TimeReportGroupByPath) {
+    const withProject = groupBy.includes('project') || groupBy.includes('task');
+
+    return [
+      ...(withProject ? [projects.id, projects.name] : []),
+      ...(groupBy.includes('task') ? [tasks.id, tasks.title] : []),
+      ...(groupBy.includes('user')
+        ? [users.id, users.email, users.displayName, users.avatarUrl]
+        : []),
+    ];
   }
 
   private detailedGroupByColumns() {
@@ -384,37 +439,71 @@ export class ReportsService {
   }
 
   private toReportRow(
-    groupBy: TimeReportGroupBy,
+    groupBy: TimeReportGroupByPath,
     row: AggregateRow,
   ): TimeReportRow {
-    const totals = toAggregateTiming(row);
-    if (groupBy === 'task') {
-      return {
-        groupBy,
-        project: requireProject(row),
-        task: requireTask(row),
-        user: null,
-        ...totals,
-      };
-    }
-    if (groupBy === 'user') {
-      return {
-        groupBy,
-        project: null,
-        task: null,
-        user: requireUser(row),
-        ...totals,
-      };
-    }
+    const withProject = groupBy.includes('project') || groupBy.includes('task');
 
     return {
-      groupBy,
-      project: requireProject(row),
-      task: null,
-      user: null,
-      ...totals,
+      project: withProject ? requireProject(row) : null,
+      task: groupBy.includes('task') ? requireTask(row) : null,
+      user: groupBy.includes('user') ? requireUser(row) : null,
+      ...toAggregateTiming(row),
     };
   }
+}
+
+function dimensionKeyColumn(dimension: TimeReportGroupBy) {
+  if (dimension === 'task') return tasks.id;
+  if (dimension === 'user') return users.id;
+  return projects.id;
+}
+
+// Orders the page of top-level groups. Metric sorts aggregate over the whole
+// group; identity sorts only make sense for the top dimension itself and fall
+// back to total time otherwise.
+function topLevelOrderExpression(
+  dimension: TimeReportGroupBy,
+  sortBy: TimeReportSortBy,
+): SQL {
+  const totalSeconds = sql`COALESCE(SUM(${timeEntries.durationSeconds}), 0)`;
+  if (sortBy === 'project' || sortBy === 'task' || sortBy === 'user') {
+    if (sortBy !== dimension) {
+      return totalSeconds;
+    }
+    if (dimension === 'task') return sql`${tasks.title}`;
+    if (dimension === 'user') return sql`${users.email}`;
+    return sql`${projects.name}`;
+  }
+
+  const metrics: Record<Exclude<TimeReportSortBy, TimeReportGroupBy>, SQL> = {
+    totalSeconds,
+    billableSeconds: sql`COALESCE(SUM(CASE WHEN ${timeEntries.isBillable} THEN ${timeEntries.durationSeconds} ELSE 0 END), 0)`,
+    entryCount: sql`COUNT(*)`,
+    firstStartedAt: sql`MIN(${timeEntries.startedAt})`,
+    lastStartedAt: sql`MAX(${timeEntries.startedAt})`,
+  };
+
+  return metrics[sortBy];
+}
+
+// Leaf rows come back in path order so subtrees read contiguously; the client
+// re-sorts siblings per level from subtotals (design D2/D3).
+function leafOrderBy(
+  groupBy: TimeReportGroupByPath,
+  sortBy: TimeReportSortBy,
+  sortOrder: TimeReportSortOrder,
+): SQL[] {
+  const identityColumns = {
+    project: projects.name,
+    task: tasks.title,
+    user: users.email,
+  };
+
+  return [
+    ...groupBy.map((dimension) => asc(identityColumns[dimension])),
+    getOrderBy(sortBy, sortOrder),
+  ];
 }
 
 function resolveDateRange(
@@ -518,7 +607,8 @@ function requireUser(row: AggregateRow) {
   };
 }
 
-function toCsv(groupBy: TimeReportGroupBy, rows: AggregateRow[]): string {
+function toCsv(groupBy: TimeReportGroupByPath, rows: AggregateRow[]): string {
+  const groupByPath = groupBy.join('>');
   const header = [
     'Group By',
     'Project ID',
@@ -539,7 +629,7 @@ function toCsv(groupBy: TimeReportGroupBy, rows: AggregateRow[]): string {
     const timing = toAggregateTiming(row);
 
     return [
-      groupBy,
+      groupByPath,
       row.projectId ?? '',
       row.projectName ?? '',
       row.taskId ?? '',

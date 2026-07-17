@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
   giTiempoDatePickerPt,
   giTiempoFieldWidthSelectPt,
@@ -18,7 +18,10 @@ import {
   type ManagementTableColumn,
   type ReportDatePickerRangeValue,
 } from '@gitiempo/web-shared';
-import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
+import {
+  formatLocalCalendarDate,
+  formatPaddedHoursMinutesDuration,
+} from '@gitiempo/web-shared/time';
 import Column from 'primevue/column';
 import DatePicker from 'primevue/datepicker';
 import IconField from 'primevue/iconfield';
@@ -30,10 +33,17 @@ import Select from 'primevue/select';
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
+  buildReportTree,
+  flattenReportTree,
+  formatReportPercent,
+  maxReportGroupingLevels,
+  sumReportRows,
   type ReportBillableFilter,
   type ReportDateRange,
+  type ReportDisplayRow,
   type ReportFilterOption,
   type ReportGrouping,
+  type ReportGroupingDimension,
   type ReportHoursFilter,
   type ReportTableRow,
   type ReportTableFilters,
@@ -42,8 +52,6 @@ import {
 interface AutoCompleteCompleteEvent {
   query: string;
 }
-
-type ReportIdentityColumn = 'project' | 'member';
 
 const props = defineProps<{
   loading: boolean;
@@ -73,42 +81,134 @@ const selectedMemberFilterOption = computed(
     ) ?? null,
 );
 
-const groupingOptions: { label: string; value: ReportGrouping }[] = [
-  { label: 'Group by: Project', value: 'project' },
-  { label: 'Group by: Member', value: 'member' },
+const groupingDimensionLabels: Record<ReportGroupingDimension, string> = {
+  member: 'Member',
+  project: 'Project',
+  task: 'Task',
+};
+const allGroupingDimensions: ReportGroupingDimension[] = [
+  'project',
+  'member',
+  'task',
 ];
 
-const memberLeads = computed(() => grouping.value === 'member');
-
-// Filters follow the columns, and both filters stay for every grouping: under
-// project grouping the member filter answers which projects someone worked on.
-const filterOrder = computed<ReportIdentityColumn[]>(() =>
-  memberLeads.value ? ['member', 'project'] : ['project', 'member'],
+const availableGroupingDimensions = computed(() =>
+  allGroupingDimensions.filter(
+    (dimension) => !grouping.value.includes(dimension),
+  ),
+);
+const addLevelOptions = computed(() =>
+  availableGroupingDimensions.value.map((dimension) => ({
+    label: groupingDimensionLabels[dimension],
+    value: dimension,
+  })),
+);
+const canAddGroupingLevel = computed(
+  () =>
+    grouping.value.length < maxReportGroupingLevels &&
+    availableGroupingDimensions.value.length > 0,
 );
 
-// Grouping by project totals a project across everyone, so no single member owns
-// the row; it reports how many contributed instead.
-const columns = computed<ManagementTableColumn[]>(() =>
-  memberLeads.value
-    ? [
-        { key: 'member', label: 'Member', width: 'fill' },
-        { key: 'project', label: 'Project', width: 180 },
-        { key: 'hours', label: 'Hours', width: 140, align: 'end' },
-        { key: 'billable', label: 'Billable', width: 140, align: 'end' },
-      ]
-    : [
-        { key: 'project', label: 'Project', width: 'fill' },
-        { key: 'members', label: 'Members', width: 180 },
-        { key: 'hours', label: 'Hours', width: 140, align: 'end' },
-        { key: 'billable', label: 'Billable', width: 140, align: 'end' },
-      ],
-);
+function addGroupingLevel(
+  dimension: ReportGroupingDimension | null | undefined,
+): void {
+  if (
+    !dimension ||
+    !canAddGroupingLevel.value ||
+    grouping.value.includes(dimension)
+  ) {
+    return;
+  }
 
-function formatMemberCount(count: number): string {
-  return `${count} ${count === 1 ? 'member' : 'members'}`;
+  grouping.value = [...grouping.value, dimension];
 }
 
-const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[720px]`;
+function removeGroupingLevel(index: number): void {
+  if (grouping.value.length <= 1) {
+    return;
+  }
+
+  grouping.value = grouping.value.filter((_, i) => i !== index);
+}
+
+const draggedGroupingIndex = ref<number | null>(null);
+
+function handleGroupingDragStart(index: number): void {
+  draggedGroupingIndex.value = index;
+}
+
+function handleGroupingDrop(targetIndex: number): void {
+  const from = draggedGroupingIndex.value;
+  draggedGroupingIndex.value = null;
+  if (from === null || from === targetIndex) {
+    return;
+  }
+
+  const next = [...grouping.value];
+  const [moved] = next.splice(from, 1);
+  next.splice(targetIndex, 0, moved!);
+  grouping.value = next;
+}
+
+// Collapsed group ids: everything renders expanded until a chevron folds it,
+// and a new grouping path invalidates the old node ids anyway.
+const collapsedIds = ref(new Set<string>());
+watch(grouping, () => {
+  collapsedIds.value = new Set();
+});
+
+const reportTree = computed(() => buildReportTree(props.rows, grouping.value));
+const displayRows = computed(() =>
+  flattenReportTree(reportTree.value, collapsedIds.value),
+);
+const totals = computed(() => sumReportRows(props.rows));
+
+function toggleRowExpansion(row: ReportDisplayRow): void {
+  const next = new Set(collapsedIds.value);
+  if (next.has(row.id)) {
+    next.delete(row.id);
+  } else {
+    next.add(row.id);
+  }
+  collapsedIds.value = next;
+}
+
+const groupingColumnLabel = computed(() =>
+  grouping.value
+    .map((dimension) => groupingDimensionLabels[dimension])
+    .join(' / '),
+);
+
+const columns = computed<ManagementTableColumn[]>(() => [
+  { key: 'group', label: groupingColumnLabel.value, width: 'fill' },
+  { key: 'entries', label: 'Entries', width: 90, align: 'end' },
+  { key: 'hours', label: 'Hours', width: 120, align: 'end' },
+  { key: 'billable', label: 'Billable', width: 120, align: 'end' },
+  { key: 'billableShare', label: 'Billable %', width: 110, align: 'end' },
+  { key: 'activity', label: 'Last activity', width: 130, align: 'end' },
+]);
+
+function getRowLabelClass(row: ReportDisplayRow): string {
+  if (row.level === 0) {
+    return 'text-text-dark text-[14px] leading-none font-semibold';
+  }
+  if (!row.isLeaf || row.level === 1) {
+    return 'text-text-dark text-[14px] leading-none font-medium';
+  }
+
+  return 'text-text-dark text-[13px] leading-none font-normal';
+}
+
+// Top-level group rows read as subtotal bands, like the approved design.
+function getReportRowClass(data: ReportDisplayRow): string {
+  return data.level === 0 && !data.isLeaf ? 'bg-app-bg/50' : '';
+}
+
+function formatRowActivity(lastStartedAt: string | null): string {
+  return lastStartedAt ? formatLocalCalendarDate(lastStartedAt) : '—';
+}
+
+const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[880px]`;
 
 const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
   { label: 'Any', value: 'any' },
@@ -198,16 +298,6 @@ function handleMemberFilterUpdate(
               @update:model-value="handleDateRangeUpdate"
             />
 
-            <Select
-              v-model="grouping"
-              aria-label="Group report rows"
-              class="w-full sm:w-[200px]"
-              :options="groupingOptions"
-              option-label="label"
-              option-value="value"
-              :pt="giTiempoFieldWidthSelectPt"
-            />
-
             <IconField class="w-full sm:w-[280px]">
               <InputIcon class="pi pi-search text-text-muted" />
               <InputText
@@ -223,6 +313,69 @@ function handleMemberFilterUpdate(
           </div>
         </template>
       </SectionHeader>
+    </div>
+
+    <div
+      class="flex flex-wrap items-center justify-between gap-3"
+      data-testid="report-grouping-builder"
+    >
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-text-muted text-[13px] font-medium">Group by</span>
+        <template
+          v-for="(dimension, index) in grouping"
+          :key="dimension"
+        >
+          <i
+            v-if="index > 0"
+            class="pi pi-chevron-right text-text-muted text-[11px]"
+            aria-hidden="true"
+          />
+          <div
+            :data-testid="`report-grouping-chip-${dimension}`"
+            class="bg-accent-tint flex h-[30px] cursor-grab items-center gap-1.5 rounded-full px-2.5"
+            draggable="true"
+            @dragstart="handleGroupingDragStart(index)"
+            @dragover.prevent
+            @drop.prevent="handleGroupingDrop(index)"
+          >
+            <i
+              class="pi pi-bars text-brand text-[10px]"
+              aria-hidden="true"
+            />
+            <span class="text-brand text-[13px] font-semibold">
+              {{ groupingDimensionLabels[dimension] }}
+            </span>
+            <button
+              v-if="grouping.length > 1"
+              type="button"
+              class="text-brand hover:bg-brand/10 flex h-4 w-4 items-center justify-center rounded-full border-none bg-transparent p-0"
+              :aria-label="`Remove ${groupingDimensionLabels[dimension]} grouping level`"
+              :data-testid="`report-grouping-remove-${dimension}`"
+              @click="removeGroupingLevel(index)"
+            >
+              <i class="pi pi-times text-[10px]" />
+            </button>
+          </div>
+        </template>
+
+        <Select
+          v-if="canAddGroupingLevel"
+          :model-value="null"
+          aria-label="Add grouping level"
+          class="h-[30px] w-[140px] rounded-full text-[13px]"
+          data-testid="report-grouping-add-level"
+          :options="addLevelOptions"
+          option-label="label"
+          option-value="value"
+          placeholder="+ Add level"
+          :pt="giTiempoFieldWidthSelectPt"
+          @update:model-value="addGroupingLevel"
+        />
+      </div>
+
+      <span class="text-text-muted hidden text-xs sm:inline">
+        Drag to reorder · up to {{ maxReportGroupingLevels }} levels
+      </span>
     </div>
 
     <template v-if="isMobileViewport">
@@ -340,34 +493,39 @@ function handleMemberFilterUpdate(
           </MobileRecordCard>
         </template>
 
-        <template v-else-if="rows.length > 0">
-          <MobileRecordCard
-            v-for="row in rows"
+        <template v-else-if="displayRows.length > 0">
+          <div
+            v-for="row in displayRows"
             :key="row.id"
-            data-testid="report-mobile-card"
+            :style="{ marginLeft: `${row.level * 12}px` }"
           >
-            <div class="min-w-0">
-              <h3 class="text-text-dark truncate text-[15px] font-semibold">
-                {{ memberLeads ? row.memberName : row.projectName }}
-              </h3>
-              <p class="text-text-muted truncate text-[13px]">
-                {{ memberLeads ? row.projectName : formatMemberCount(row.memberIds.length) }}
-              </p>
-            </div>
+            <MobileRecordCard data-testid="report-mobile-card">
+              <div class="min-w-0">
+                <h3 :class="['truncate', getRowLabelClass(row)]">
+                  {{ row.label }}
+                </h3>
+                <p
+                  v-if="row.childCountLabel"
+                  class="text-text-muted truncate text-[13px]"
+                >
+                  {{ row.childCountLabel }}
+                </p>
+              </div>
 
-            <MobileRecordMetadataList
-              :items="[
-                {
-                  label: 'Hours',
-                  value: formatPaddedHoursMinutesDuration(row.totalSeconds),
-                },
-                {
-                  label: 'Billable',
-                  value: formatPaddedHoursMinutesDuration(row.billableSeconds),
-                },
-              ]"
-            />
-          </MobileRecordCard>
+              <MobileRecordMetadataList
+                :items="[
+                  {
+                    label: 'Hours',
+                    value: formatPaddedHoursMinutesDuration(row.totalSeconds),
+                  },
+                  {
+                    label: 'Billable',
+                    value: formatPaddedHoursMinutesDuration(row.billableSeconds),
+                  },
+                ]"
+              />
+            </MobileRecordCard>
+          </div>
         </template>
 
         <EmptyStateBlock
@@ -381,128 +539,210 @@ function handleMemberFilterUpdate(
     <!-- Loading renders skeleton rows through #empty instead of the DataTable
          spinner overlay, and refreshes keep the loaded rows visible — the same
          treatment the mobile cards above already get. -->
-    <ManagementTableShell
+    <div
       v-else
-      :columns="columns"
-      :value="rows"
-      :loading="false"
-      data-key="id"
-      :header-class="reportTableHeaderClass"
-      shell-class="border-divider overflow-x-auto rounded-[6px] border"
-      single-scroll
-      table-class="min-w-[720px] w-full table-fixed border-collapse"
-      table-container-class="overflow-visible rounded-none border-none"
+      class="border-divider overflow-x-auto rounded-[6px] border"
     >
-      <template #filters>
-        <div class="flex min-w-[720px] flex-1 items-center">
-          <div
-            v-for="(key, index) in filterOrder"
-            :key="key"
-            class="px-3"
-            :class="index === 0 ? 'min-w-0 flex-1' : 'w-[180px]'"
-          >
-            <FilterAutoComplete
-              v-if="key === 'project'"
-              :model-value="selectedProjectFilterOption"
-              aria-label="Filter report rows by project"
-              force-selection
-              option-label="label"
-              placeholder="All projects"
-              show-clear
-              :suggestions="projectFilterSuggestions"
-              @complete="handleProjectFilterComplete"
-              @update:model-value="handleProjectFilterUpdate"
-            />
-            <FilterAutoComplete
-              v-else
-              :model-value="selectedMemberFilterOption"
-              aria-label="Filter report rows by member"
-              force-selection
-              option-label="label"
-              placeholder="All members"
-              show-clear
-              :suggestions="memberFilterSuggestions"
-              @complete="handleMemberFilterComplete"
-              @update:model-value="handleMemberFilterUpdate"
-            />
-          </div>
-
-          <div class="w-[140px] px-3 text-right">
-            <Select
-              v-model="filters.hours"
-              :options="hoursFilterOptions"
-              aria-label="Filter report rows by hours"
-              option-label="label"
-              option-value="value"
-              :pt="giTiempoFieldWidthSelectPt"
-            />
-          </div>
-          <div class="w-[140px] px-3 text-right">
-            <Select
-              v-model="filters.billable"
-              :options="billableFilterOptions"
-              aria-label="Filter report rows by billable hours"
-              option-label="label"
-              option-value="value"
-              :pt="giTiempoFieldWidthSelectPt"
-            />
-          </div>
-        </div>
-      </template>
-
-      <Column :pt="managementTableColumnPt">
-        <template #body="{ data }">
-          <span class="text-text-dark text-[14px] leading-none font-semibold">{{ memberLeads ? data.memberName : data.projectName }}</span>
-        </template>
-      </Column>
-
-      <Column
-        style="width: 180px"
-        :pt="managementTableColumnPt"
+      <ManagementTableShell
+        :columns="columns"
+        :value="displayRows"
+        :loading="false"
+        data-key="id"
+        :header-class="reportTableHeaderClass"
+        :row-class="getReportRowClass"
+        shell-class="bg-surface-primary w-full font-sans"
+        single-scroll
+        table-class="min-w-[880px] w-full table-fixed border-collapse"
+        table-container-class="overflow-visible rounded-none border-none"
       >
-        <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{ memberLeads ? data.projectName : formatMemberCount(data.memberIds.length) }}</span>
-        </template>
-      </Column>
+        <template #filters>
+          <div class="flex min-w-[880px] flex-1 items-center">
+            <div class="flex min-w-0 flex-1 items-center gap-2 px-3">
+              <FilterAutoComplete
+                class="w-[180px]"
+                :model-value="selectedProjectFilterOption"
+                aria-label="Filter report rows by project"
+                force-selection
+                option-label="label"
+                placeholder="All projects"
+                show-clear
+                :suggestions="projectFilterSuggestions"
+                @complete="handleProjectFilterComplete"
+                @update:model-value="handleProjectFilterUpdate"
+              />
+              <FilterAutoComplete
+                class="w-[180px]"
+                :model-value="selectedMemberFilterOption"
+                aria-label="Filter report rows by member"
+                force-selection
+                option-label="label"
+                placeholder="All members"
+                show-clear
+                :suggestions="memberFilterSuggestions"
+                @complete="handleMemberFilterComplete"
+                @update:model-value="handleMemberFilterUpdate"
+              />
+            </div>
 
-      <Column
-        style="width: 140px"
-        :pt="managementTableColumnPt"
-      >
-        <template #body="{ data }">
-          <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.totalSeconds) }}</span>
+            <div class="w-[90px] px-3" />
+            <div class="w-[120px] px-3 text-right">
+              <Select
+                v-model="filters.hours"
+                :options="hoursFilterOptions"
+                aria-label="Filter report rows by hours"
+                option-label="label"
+                option-value="value"
+                :pt="giTiempoFieldWidthSelectPt"
+              />
+            </div>
+            <div class="w-[120px] px-3 text-right">
+              <Select
+                v-model="filters.billable"
+                :options="billableFilterOptions"
+                aria-label="Filter report rows by billable hours"
+                option-label="label"
+                option-value="value"
+                :pt="giTiempoFieldWidthSelectPt"
+              />
+            </div>
+            <div class="w-[110px] px-3" />
+            <div class="w-[130px] px-3" />
           </div>
         </template>
-      </Column>
 
-      <Column
-        style="width: 140px"
-        :pt="managementTableColumnPt"
-      >
-        <template #body="{ data }">
-          <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.billableSeconds) }}</span>
-          </div>
-        </template>
-      </Column>
+        <Column :pt="managementTableColumnPt">
+          <template #body="{ data }">
+            <div
+              class="flex min-w-0 items-center gap-2"
+              :style="{ paddingLeft: `${data.level * 24}px` }"
+            >
+              <button
+                v-if="data.hasChildren"
+                type="button"
+                class="text-text-muted hover:bg-app-bg flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border-none bg-transparent p-0"
+                :aria-expanded="!collapsedIds.has(data.id)"
+                :aria-label="`Toggle ${data.label} group`"
+                data-testid="report-row-toggle"
+                @click="toggleRowExpansion(data)"
+              >
+                <i
+                  :class="[
+                    'pi text-[12px]',
+                    collapsedIds.has(data.id) ? 'pi-chevron-right' : 'pi-chevron-down',
+                  ]"
+                />
+              </button>
+              <i
+                v-else-if="data.level > 0"
+                class="pi pi-arrow-right text-text-muted shrink-0 text-[10px]"
+                aria-hidden="true"
+              />
+              <span :class="['truncate', getRowLabelClass(data)]">{{ data.label }}</span>
+              <span
+                v-if="data.childCountLabel"
+                class="text-text-muted shrink-0 text-[12px] font-normal"
+              >{{ data.childCountLabel }}</span>
+            </div>
+          </template>
+        </Column>
 
-      <template #empty>
-        <template v-if="loading">
-          <ManagementDesktopRowSkeleton
-            v-for="index in 6"
-            :key="index"
-            data-testid="reports-desktop-loading-row"
-            variant="reports"
+        <Column
+          style="width: 90px"
+          :pt="managementTableColumnPt"
+        >
+          <template #body="{ data }">
+            <div class="text-right">
+              <span class="text-text-muted text-[13px] font-normal">{{ data.entryCount }}</span>
+            </div>
+          </template>
+        </Column>
+
+        <Column
+          style="width: 120px"
+          :pt="managementTableColumnPt"
+        >
+          <template #body="{ data }">
+            <div class="text-right">
+              <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.totalSeconds) }}</span>
+            </div>
+          </template>
+        </Column>
+
+        <Column
+          style="width: 120px"
+          :pt="managementTableColumnPt"
+        >
+          <template #body="{ data }">
+            <div class="text-right">
+              <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.billableSeconds) }}</span>
+            </div>
+          </template>
+        </Column>
+
+        <Column
+          style="width: 110px"
+          :pt="managementTableColumnPt"
+        >
+          <template #body="{ data }">
+            <div class="text-right">
+              <span class="text-text-muted text-[13px] font-normal">{{ formatReportPercent(data.billableShare) }}</span>
+            </div>
+          </template>
+        </Column>
+
+        <Column
+          style="width: 130px"
+          :pt="managementTableColumnPt"
+        >
+          <template #body="{ data }">
+            <div class="text-right">
+              <span class="text-text-muted text-[13px] font-normal">{{ formatRowActivity(data.lastStartedAt) }}</span>
+            </div>
+          </template>
+        </Column>
+
+        <template #empty>
+          <template v-if="loading">
+            <ManagementDesktopRowSkeleton
+              v-for="index in 6"
+              :key="index"
+              data-testid="reports-desktop-loading-row"
+              variant="reports"
+            />
+          </template>
+
+          <EmptyStateBlock
+            v-else
+            title="No report rows found"
+            description="No matching report rows are available for the current filters."
           />
         </template>
+      </ManagementTableShell>
 
-        <EmptyStateBlock
-          v-else
-          title="No report rows found"
-          description="No matching report rows are available for the current filters."
-        />
-      </template>
-    </ManagementTableShell>
+      <div
+        v-if="displayRows.length > 0"
+        class="border-divider bg-app-bg flex h-[44px] min-w-[880px] items-center border-t"
+        data-testid="report-total-row"
+      >
+        <div class="flex min-w-0 flex-1 items-center gap-2 px-3">
+          <span class="text-text-dark text-[14px] leading-none font-semibold">Total</span>
+        </div>
+        <div class="w-[90px] px-3 text-right">
+          <span class="text-text-muted text-[13px] font-normal">{{ totals.entryCount }}</span>
+        </div>
+        <div class="w-[120px] px-3 text-right">
+          <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(totals.totalSeconds) }}</span>
+        </div>
+        <div class="w-[120px] px-3 text-right">
+          <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(totals.billableSeconds) }}</span>
+        </div>
+        <div class="w-[110px] px-3 text-right">
+          <span class="text-text-muted text-[13px] font-normal">{{ formatReportPercent(totals.billableShare) }}</span>
+        </div>
+        <div class="w-[130px] px-3 text-right">
+          <span class="text-text-muted text-[13px] font-normal">{{ formatRowActivity(totals.lastStartedAt) }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

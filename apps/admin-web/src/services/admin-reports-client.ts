@@ -50,7 +50,7 @@ export function buildTimeReportQuery(
 
   searchParams.set('page', String(parsed.page));
   searchParams.set('limit', String(parsed.limit));
-  searchParams.set('groupBy', parsed.groupBy);
+  searchParams.set('groupBy', parsed.groupBy.join(','));
   searchParams.set('sortBy', parsed.sortBy);
   searchParams.set('sortOrder', parsed.sortOrder);
   setIfDefined(searchParams, 'dateFrom', parsed.dateFrom);
@@ -68,7 +68,7 @@ export function buildTimeReportExportQuery(
   const parsed = timeReportExportQuerySchema.parse(query ?? {});
   const searchParams = new URLSearchParams();
 
-  searchParams.set('groupBy', parsed.groupBy);
+  searchParams.set('groupBy', parsed.groupBy.join(','));
   searchParams.set('sortBy', parsed.sortBy);
   searchParams.set('sortOrder', parsed.sortOrder);
   setIfDefined(searchParams, 'dateFrom', parsed.dateFrom);

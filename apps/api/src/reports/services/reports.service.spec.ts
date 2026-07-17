@@ -48,7 +48,7 @@ describe('ReportsService', () => {
   it('returns admin report rows with full filtered summary', async () => {
     const { service } = createService('admin');
     const context = {
-      groupBy: 'project' as const,
+      groupBy: ['project'] as ['project'],
       scopeUserId: adminUser.sub,
       dateRange: {
         dateFrom: '2026-05-01T00:00:00.000Z',
@@ -95,7 +95,7 @@ describe('ReportsService', () => {
     const report = await service.getTimeReport(adminUser, {
       page: 1,
       limit: 1,
-      groupBy: 'project',
+      groupBy: ['project'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
@@ -121,7 +121,7 @@ describe('ReportsService', () => {
     ).buildQueryContext(pmUser, {
       page: 1,
       limit: 20,
-      groupBy: 'project',
+      groupBy: ['project'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
@@ -142,7 +142,7 @@ describe('ReportsService', () => {
       service.getTimeReport(memberUser, {
         page: 1,
         limit: 20,
-        groupBy: 'project',
+        groupBy: ['project'],
         sortBy: 'totalSeconds',
         sortOrder: 'desc',
       }),
@@ -166,7 +166,7 @@ describe('ReportsService', () => {
     ).buildQueryContext(adminUser, {
       page: 1,
       limit: 20,
-      groupBy: 'project',
+      groupBy: ['project'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
@@ -194,7 +194,7 @@ describe('ReportsService', () => {
       limit: 20,
       dateFrom: '2026-04-01T00:00:00.000Z',
       dateTo: '2026-04-15T00:00:00.000Z',
-      groupBy: 'project',
+      groupBy: ['project'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
@@ -205,7 +205,7 @@ describe('ReportsService', () => {
     });
   });
 
-  it('maps project, task, and user aggregate rows', () => {
+  it('maps aggregate rows to the identities on the grouping path', () => {
     const { service } = createService('admin');
     const baseRow = {
       totalSeconds: '7200',
@@ -215,47 +215,135 @@ describe('ReportsService', () => {
       firstStartedAt: '2026-05-01T10:00:00.000Z',
       lastStartedAt: '2026-05-02T10:00:00.000Z',
     };
+    const fullRow = {
+      ...baseRow,
+      projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005',
+      projectName: 'Project Orion',
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9006',
+      taskTitle: 'Improve reports filters',
+      userId: pmUser.sub,
+      userEmail: pmUser.email,
+      userDisplayName: 'PM User',
+      userAvatarUrl: null,
+    };
     const mapper = service as never as {
       toReportRow: (
-        groupBy: 'project' | 'task' | 'user',
+        groupBy: ('project' | 'task' | 'user')[],
         row: unknown,
-      ) => unknown;
+      ) => Record<string, unknown>;
     };
 
     expect(
-      mapper.toReportRow('project', {
+      mapper.toReportRow(['project'], {
         ...baseRow,
-        projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005',
-        projectName: 'Project Orion',
-      }),
-    ).toMatchObject({ groupBy: 'project', totalSeconds: 7200 });
-    expect(
-      mapper.toReportRow('task', {
-        ...baseRow,
-        projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005',
-        projectName: 'Project Orion',
-        taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9006',
-        taskTitle: 'Improve reports filters',
+        projectId: fullRow.projectId,
+        projectName: fullRow.projectName,
       }),
     ).toMatchObject({
-      groupBy: 'task',
+      project: { name: 'Project Orion' },
+      task: null,
+      user: null,
+      totalSeconds: 7200,
+    });
+    expect(mapper.toReportRow(['task'], fullRow)).toMatchObject({
+      project: { name: 'Project Orion' },
       task: { title: 'Improve reports filters' },
+      user: null,
     });
     expect(
-      mapper.toReportRow('user', {
+      mapper.toReportRow(['user'], {
         ...baseRow,
         userId: pmUser.sub,
         userEmail: pmUser.email,
         userDisplayName: 'PM User',
         userAvatarUrl: null,
       }),
-    ).toMatchObject({ groupBy: 'user', user: { email: pmUser.email } });
+    ).toMatchObject({
+      project: null,
+      task: null,
+      user: { email: pmUser.email },
+    });
+    expect(
+      mapper.toReportRow(['project', 'user', 'task'], fullRow),
+    ).toMatchObject({
+      project: { name: 'Project Orion' },
+      task: { title: 'Improve reports filters' },
+      user: { email: pmUser.email },
+    });
+    expect(mapper.toReportRow(['project'], fullRow)).not.toHaveProperty(
+      'groupBy',
+    );
+  });
+
+  it('returns multi-level rows with the grouping path echoed', async () => {
+    const { service } = createService('admin');
+    const context = {
+      groupBy: ['project', 'user'] as ['project', 'user'],
+      scopeUserId: adminUser.sub,
+      dateRange: {
+        dateFrom: '2026-05-01T00:00:00.000Z',
+        dateTo: '2026-06-01T00:00:00.000Z',
+      },
+      conditions: [],
+    };
+    Object.defineProperty(service, 'buildQueryContext', {
+      value: vi.fn().mockResolvedValue(context),
+    });
+    Object.defineProperty(service, 'getSummary', {
+      value: vi.fn().mockResolvedValue({
+        totalSeconds: 3600,
+        billableSeconds: 3600,
+        nonBillableSeconds: 0,
+        entryCount: 1,
+        billableShare: 1,
+      }),
+    });
+    Object.defineProperty(service, 'countRows', {
+      value: vi.fn().mockResolvedValue(5),
+    });
+    Object.defineProperty(service, 'getRows', {
+      value: vi.fn().mockResolvedValue([
+        {
+          projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005',
+          projectName: 'Project Orion',
+          taskId: null,
+          taskTitle: null,
+          userId: pmUser.sub,
+          userEmail: pmUser.email,
+          userDisplayName: 'PM User',
+          userAvatarUrl: null,
+          totalSeconds: 3600,
+          billableSeconds: 3600,
+          nonBillableSeconds: 0,
+          entryCount: 1,
+          firstStartedAt: new Date('2026-05-01T10:00:00.000Z'),
+          lastStartedAt: new Date('2026-05-01T10:00:00.000Z'),
+        },
+      ]),
+    });
+
+    const report = await service.getTimeReport(adminUser, {
+      page: 1,
+      limit: 2,
+      groupBy: ['project', 'user'],
+      sortBy: 'totalSeconds',
+      sortOrder: 'desc',
+    });
+
+    expect(report.groupBy).toEqual(['project', 'user']);
+    expect(report.items[0]).toMatchObject({
+      project: { name: 'Project Orion' },
+      user: { email: pmUser.email },
+      task: null,
+    });
+    // meta counts top-level groups, not leaf rows
+    expect(report.meta).toEqual({ page: 1, limit: 2, total: 5, totalPages: 3 });
   });
 
   it('exports CSV using the same scoped context and filters', async () => {
     const { service } = createService('pm');
     const context = {
-      groupBy: 'user' as const,
+      groupBy: ['user'] as ['user'],
       scopeUserId: pmUser.sub,
       dateRange: {
         dateFrom: '2026-05-01T00:00:00.000Z',
@@ -290,13 +378,13 @@ describe('ReportsService', () => {
     });
 
     const result = await service.exportTimeReport(pmUser, {
-      groupBy: 'user',
+      groupBy: ['user'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
 
     expect(buildQueryContext).toHaveBeenCalledWith(pmUser, {
-      groupBy: 'user',
+      groupBy: ['user'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
@@ -320,7 +408,7 @@ describe('ReportsService', () => {
   it('exports project-group CSV rows with task and user context', async () => {
     const { service } = createService('admin');
     const context = {
-      groupBy: 'project' as const,
+      groupBy: ['project'] as ['project'],
       scopeUserId: adminUser.sub,
       dateRange: {
         dateFrom: '2026-05-01T00:00:00.000Z',
@@ -355,7 +443,7 @@ describe('ReportsService', () => {
     });
 
     const result = await service.exportTimeReport(adminUser, {
-      groupBy: 'project',
+      groupBy: ['project'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
@@ -367,5 +455,58 @@ describe('ReportsService', () => {
     expect(dataCells[3]).toBe('018f08cc-7f7f-7f7f-8f8f-9f9f9f9006');
     expect(dataCells[5]).toBe(adminUser.sub);
     expect(dataCells[6]).toBe(adminUser.email);
+  });
+
+  it('records the joined grouping path as CSV metadata without collapsing rows', async () => {
+    const { service } = createService('admin');
+    const context = {
+      groupBy: ['project', 'user'] as ['project', 'user'],
+      scopeUserId: adminUser.sub,
+      dateRange: {
+        dateFrom: '2026-05-01T00:00:00.000Z',
+        dateTo: '2026-06-01T00:00:00.000Z',
+      },
+      conditions: [],
+    };
+    const detailedRow = {
+      projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9005',
+      projectName: 'Project Orion',
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9006',
+      taskTitle: 'Improve reports filters',
+      userId: adminUser.sub,
+      userEmail: adminUser.email,
+      userDisplayName: 'Admin User',
+      userAvatarUrl: null,
+      totalSeconds: 3600,
+      billableSeconds: 1800,
+      nonBillableSeconds: 1800,
+      entryCount: 1,
+      firstStartedAt: new Date('2026-05-01T10:00:00.000Z'),
+      lastStartedAt: new Date('2026-05-01T10:00:00.000Z'),
+    };
+    Object.defineProperty(service, 'buildQueryContext', {
+      value: vi.fn().mockResolvedValue(context),
+    });
+    Object.defineProperty(service, 'getDetailedRows', {
+      value: vi
+        .fn()
+        .mockResolvedValue([
+          detailedRow,
+          { ...detailedRow, taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9007' },
+        ]),
+    });
+
+    const result = await service.exportTimeReport(adminUser, {
+      groupBy: ['project', 'user'],
+      sortBy: 'totalSeconds',
+      sortOrder: 'desc',
+    });
+
+    const csvRows = result.content.split('\n');
+
+    // header + one row per detailed project-task-user combination
+    expect(csvRows).toHaveLength(3);
+    expect(csvRows[1]!.split(',')[0]).toBe('project>user');
+    expect(csvRows[2]!.split(',')[0]).toBe('project>user');
   });
 });

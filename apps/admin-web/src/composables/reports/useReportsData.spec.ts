@@ -6,7 +6,7 @@ import type {
   ProjectListResponse,
   ProjectResponse,
   TimeReportResponse,
-  TimeReportUserRow,
+  TimeReportRow,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 
@@ -44,11 +44,12 @@ function createProject(
   };
 }
 
-function createUserReportRow({
+function createLeafReportRow({
   billableSeconds,
   displayName,
   email,
   entryCount,
+  project,
   totalSeconds,
   userId,
 }: {
@@ -56,18 +57,18 @@ function createUserReportRow({
   displayName: string;
   email: string;
   entryCount: number;
+  project: { id: string; name: string };
   totalSeconds: number;
   userId: string;
-}): TimeReportUserRow {
+}): TimeReportRow {
   return {
     billableSeconds,
     billableShare: totalSeconds > 0 ? billableSeconds / totalSeconds : null,
     entryCount,
     firstStartedAt: '2026-05-01T10:00:00.000Z',
-    groupBy: 'user',
     lastStartedAt: '2026-05-01T12:00:00.000Z',
     nonBillableSeconds: Math.max(0, totalSeconds - billableSeconds),
-    project: null,
+    project,
     task: null,
     totalSeconds,
     user: {
@@ -79,7 +80,7 @@ function createUserReportRow({
   };
 }
 
-function createReportResponse(items: TimeReportUserRow[]): TimeReportResponse {
+function createReportResponse(items: TimeReportRow[]): TimeReportResponse {
   const totalSeconds = items.reduce((total, item) => total + item.totalSeconds, 0);
   const billableSeconds = items.reduce(
     (total, item) => total + item.billableSeconds,
@@ -91,7 +92,7 @@ function createReportResponse(items: TimeReportUserRow[]): TimeReportResponse {
       dateFrom: '2026-05-01T00:00:00.000Z',
       dateTo: '2026-06-01T00:00:00.000Z',
     },
-    groupBy: 'user',
+    groupBy: ['project', 'user', 'task'],
     items,
     meta: { limit: 100, page: 1, total: items.length, totalPages: 1 },
     summary: {
@@ -171,23 +172,25 @@ const workspaceMembers: WorkspaceMemberListResponse = [
   },
 ];
 
-const reportRowsByProject = new Map<string, TimeReportUserRow[]>([
+const reportRowsByProject = new Map<string, TimeReportRow[]>([
   [
     projectOrionId,
     [
-      createUserReportRow({
+      createLeafReportRow({
         billableSeconds: 7200,
         displayName: 'Alex Admin',
         email: 'alex@example.com',
         entryCount: 1,
+        project: { id: projectOrionId, name: 'Project Orion' },
         totalSeconds: 7200,
         userId: alexId,
       }),
-      createUserReportRow({
+      createLeafReportRow({
         billableSeconds: 0,
         displayName: 'Nina PM',
         email: 'nina@example.com',
         entryCount: 1,
+        project: { id: projectOrionId, name: 'Project Orion' },
         totalSeconds: 3600,
         userId: ninaId,
       }),
@@ -196,11 +199,12 @@ const reportRowsByProject = new Map<string, TimeReportUserRow[]>([
   [
     projectBillingId,
     [
-      createUserReportRow({
+      createLeafReportRow({
         billableSeconds: 1800,
         displayName: 'Nina PM',
         email: 'nina@example.com',
         entryCount: 1,
+        project: { id: projectBillingId, name: 'Billing API' },
         totalSeconds: 1800,
         userId: ninaId,
       }),
@@ -249,7 +253,7 @@ describe('useReportsData', () => {
     });
   }
 
-  it('folds member rows into project rows carrying a contributor count', async () => {
+  it('loads finest-granularity leaf rows once for every grouping', async () => {
     const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
@@ -280,21 +284,27 @@ describe('useReportsData', () => {
       { label: 'Nina PM', value: ninaId },
       { label: 'Zoe Analyst', value: zoeId },
     ]);
-    // The default project grouping: one row per project, with the contributor
-    // count folded in from the member rows the API actually returns.
-    expect(reports.grouping.value).toBe('project');
+    // Rows are project-member-task leaves; the table folds them into the
+    // configured grouping tree, so every path presents from this one fetch.
+    expect(reports.grouping.value).toEqual(['project']);
     expect(reports.rows.value).toEqual([
       expect.objectContaining({
         memberIds: [ninaId],
-        memberName: null,
+        memberName: 'Nina PM',
         projectName: 'Billing API',
         totalSeconds: 1800,
       }),
       expect.objectContaining({
-        memberIds: [alexId, ninaId],
-        memberName: null,
+        memberIds: [alexId],
+        memberName: 'Alex Admin',
         projectName: 'Project Orion',
-        totalSeconds: 10800,
+        totalSeconds: 7200,
+      }),
+      expect.objectContaining({
+        memberIds: [ninaId],
+        memberName: 'Nina PM',
+        projectName: 'Project Orion',
+        totalSeconds: 3600,
       }),
     ]);
     expect(reports.summary.value.totalSeconds).toBe(12600);
@@ -415,7 +425,7 @@ describe('useReportsData', () => {
     // silently export an unfiltered report.
     await reports.exportCurrentReport({
       dateRange: reports.dateRange.value,
-      groupBy: 'project',
+      groupBy: ['project'],
       memberId: null,
       projectId: null,
     });
@@ -425,12 +435,12 @@ describe('useReportsData', () => {
       expect.objectContaining({
         dateFrom: new Date(2026, 4, 1).toISOString(),
         dateTo: new Date(2026, 4, 3).toISOString(),
-        groupBy: 'project',
+        groupBy: ['project'],
       }),
     );
   });
 
-  it('regroups loaded rows without refetching when grouping changes', async () => {
+  it('keeps loaded leaf rows without refetching when grouping changes', async () => {
     const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
@@ -456,30 +466,14 @@ describe('useReportsData', () => {
     const projectTotal = reports.summary.value.totalSeconds;
     reportsClient.getTimeReport.mockClear();
 
-    reports.grouping.value = 'member';
+    reports.grouping.value = ['member', 'project'];
     await vi.advanceTimersByTimeAsync(300);
     await flushPromises();
 
-    // Both groupings are presented from the same member rows, so switching must
-    // not re-walk the project loop for identical data.
+    // Every grouping path is presented from the same leaf rows, so changing it
+    // must not re-walk the project loop for identical data.
     expect(reportsClient.getTimeReport).not.toHaveBeenCalled();
-    expect(reports.rows.value).toEqual([
-      expect.objectContaining({
-        memberName: 'Alex Admin',
-        projectName: 'Project Orion',
-        totalSeconds: 7200,
-      }),
-      expect.objectContaining({
-        memberName: 'Nina PM',
-        projectName: 'Billing API',
-        totalSeconds: 1800,
-      }),
-      expect.objectContaining({
-        memberName: 'Nina PM',
-        projectName: 'Project Orion',
-        totalSeconds: 3600,
-      }),
-    ]);
+    expect(reports.rows.value).toHaveLength(3);
     // Regrouping must not move the totals.
     expect(reports.summary.value.totalSeconds).toBe(projectTotal);
   });
@@ -514,7 +508,7 @@ describe('useReportsData', () => {
 
     const result = await reports.exportCurrentReport({
       dateRange: null,
-      groupBy: 'user',
+      groupBy: ['user'],
       memberId: ninaId,
       projectId: projectBillingId,
     });
@@ -522,7 +516,7 @@ describe('useReportsData', () => {
     expect(result?.filename).toBe('time-report.csv');
     expect(reportsClient.exportTimeReport).toHaveBeenCalledWith(
       expect.objectContaining({
-        groupBy: 'user',
+        groupBy: ['user'],
         projectId: projectBillingId,
         sortBy: 'totalSeconds',
         sortOrder: 'desc',
@@ -568,7 +562,7 @@ describe('useReportsData', () => {
     await expect(
       reports.exportCurrentReport({
         dateRange: reports.dateRange.value,
-        groupBy: 'project',
+        groupBy: ['project'],
         memberId: null,
         projectId: null,
       }),

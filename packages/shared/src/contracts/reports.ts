@@ -10,6 +10,25 @@ const optionalSearchSchema = z
   .optional();
 
 export const timeReportGroupBySchema = z.enum(["project", "task", "user"]);
+
+// Accepts the query-string form ("project,user") and the array form, and
+// normalizes both to an ordered path of 1-4 unique dimensions.
+export const timeReportGroupByPathSchema = z
+  .union([timeReportGroupBySchema.array(), z.string()])
+  .transform((value) =>
+    typeof value === "string"
+      ? value.split(",").map((item) => item.trim())
+      : value,
+  )
+  .pipe(
+    timeReportGroupBySchema
+      .array()
+      .min(1)
+      .max(4)
+      .refine((path) => new Set(path).size === path.length, {
+        message: "groupBy dimensions must be unique",
+      }),
+  );
 export const timeReportSortBySchema = z.enum([
   "project",
   "task",
@@ -27,7 +46,7 @@ const timeReportFilterShape = {
   dateTo: dateTimeSchema.optional(),
   projectId: z.uuid().optional(),
   userId: z.uuid().optional(),
-  groupBy: timeReportGroupBySchema.default("project"),
+  groupBy: timeReportGroupByPathSchema.default(["project"]),
   search: optionalSearchSchema,
   sortBy: timeReportSortBySchema.default("totalSeconds"),
   sortOrder: timeReportSortOrderSchema.default("desc"),
@@ -91,32 +110,13 @@ const aggregateTimingSchema = timeReportTotalsSchema.extend({
   lastStartedAt: dateTimeSchema.nullable(),
 });
 
-export const timeReportProjectRowSchema = aggregateTimingSchema.extend({
-  groupBy: z.literal("project"),
-  project: timeReportProjectSummarySchema,
-  task: z.null(),
-  user: z.null(),
+// Unified row: identity objects are populated for exactly the dimensions on
+// the requested grouping path (task identity always brings its project).
+export const timeReportRowSchema = aggregateTimingSchema.extend({
+  project: timeReportProjectSummarySchema.nullable(),
+  task: timeReportTaskSummarySchema.nullable(),
+  user: timeReportUserSummarySchema.nullable(),
 });
-
-export const timeReportTaskRowSchema = aggregateTimingSchema.extend({
-  groupBy: z.literal("task"),
-  project: timeReportProjectSummarySchema,
-  task: timeReportTaskSummarySchema,
-  user: z.null(),
-});
-
-export const timeReportUserRowSchema = aggregateTimingSchema.extend({
-  groupBy: z.literal("user"),
-  project: z.null(),
-  task: z.null(),
-  user: timeReportUserSummarySchema,
-});
-
-export const timeReportRowSchema = z.discriminatedUnion("groupBy", [
-  timeReportProjectRowSchema,
-  timeReportTaskRowSchema,
-  timeReportUserRowSchema,
-]);
 
 export const timeReportListMetaSchema = z.object({
   page: z.number().int().min(1),
@@ -131,7 +131,7 @@ export const timeReportEffectiveDateRangeSchema = z.object({
 });
 
 export const timeReportResponseSchema = z.object({
-  groupBy: timeReportGroupBySchema,
+  groupBy: timeReportGroupBySchema.array(),
   dateRange: timeReportEffectiveDateRangeSchema,
   summary: timeReportTotalsSchema,
   items: z.array(timeReportRowSchema),
@@ -139,6 +139,7 @@ export const timeReportResponseSchema = z.object({
 });
 
 export type TimeReportGroupBy = z.infer<typeof timeReportGroupBySchema>;
+export type TimeReportGroupByPath = z.infer<typeof timeReportGroupByPathSchema>;
 export type TimeReportSortBy = z.infer<typeof timeReportSortBySchema>;
 export type TimeReportSortOrder = z.infer<typeof timeReportSortOrderSchema>;
 export type TimeReportQuery = z.infer<typeof timeReportQuerySchema>;
@@ -155,9 +156,6 @@ export type TimeReportUserSummary = z.infer<
   typeof timeReportUserSummarySchema
 >;
 export type TimeReportTotals = z.infer<typeof timeReportTotalsSchema>;
-export type TimeReportProjectRow = z.infer<typeof timeReportProjectRowSchema>;
-export type TimeReportTaskRow = z.infer<typeof timeReportTaskRowSchema>;
-export type TimeReportUserRow = z.infer<typeof timeReportUserRowSchema>;
 export type TimeReportRow = z.infer<typeof timeReportRowSchema>;
 export type TimeReportListMeta = z.infer<typeof timeReportListMetaSchema>;
 export type TimeReportEffectiveDateRange = z.infer<

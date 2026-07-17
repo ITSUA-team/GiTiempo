@@ -48,7 +48,7 @@ const ReportsTableStub = defineComponent({
   props: {
     dateRange: { default: null, type: Array },
     filters: { required: true, type: Object },
-    grouping: { default: 'project', type: String },
+    grouping: { default: () => ['project'], type: Array },
     loading: { default: false, type: Boolean },
     memberOptions: { default: () => [], type: Array },
     projectOptions: { default: () => [], type: Array },
@@ -77,7 +77,7 @@ const ReportsTableStub = defineComponent({
     };
   },
   template:
-    '<div data-testid="reports-table">{{ rows.length }} rows<button data-testid="change-report-grouping" @click="$emit(\'update:grouping\', \'member\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><button data-testid="set-table-filters" @click="setTableFilters">table filters</button><button data-testid="set-billable-filter" @click="setBillableFilter">billable filter</button><button data-testid="set-search-filter" @click="setSearchFilter">search filter</button><slot name="actions" /></div>',
+    '<div data-testid="reports-table">{{ rows.length }} rows<button data-testid="change-report-grouping" @click="$emit(\'update:grouping\', [\'member\'])">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><button data-testid="set-table-filters" @click="setTableFilters">table filters</button><button data-testid="set-billable-filter" @click="setBillableFilter">billable filter</button><button data-testid="set-search-filter" @click="setSearchFilter">search filter</button><slot name="actions" /></div>',
 });
 
 const ManagementPageSkeletonStub = {
@@ -90,13 +90,15 @@ const reportRow: ReportTableRow = {
   billableSeconds: 3600,
   billableShare: 0.5,
   entryCount: 2,
-  groupBy: 'project',
   id: 'project-1',
+  lastStartedAt: '2026-05-02T10:00:00.000Z',
   memberIds: ['member-1'],
   memberName: 'Alex Admin',
   nonBillableSeconds: 3600,
   projectIds: ['project-1'],
   projectName: 'Project Orion',
+  taskId: null,
+  taskName: null,
   totalSeconds: 7200,
 };
 
@@ -129,7 +131,7 @@ function createReportState({
     dateRange: shallowRef<ReportDateRange>(null),
     exportCurrentReport: reportMocks.exportCurrentReport,
     getFilteredRows: vi.fn(),
-    grouping: ref<ReportGrouping>('project'),
+    grouping: ref<ReportGrouping>(['project']),
     initialLoaded: ref(!isInitialLoading),
     isEmpty: computed(() => reportRows.value.length === 0),
     isInitialLoading: ref(isInitialLoading),
@@ -227,7 +229,7 @@ describe('ReportsView', () => {
 
     expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith({
       dateRange: null,
-      groupBy: 'project',
+      groupBy: ['project'],
       memberId: null,
       projectId: null,
     });
@@ -255,7 +257,7 @@ describe('ReportsView', () => {
 
     expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith({
       dateRange: null,
-      groupBy: 'project',
+      groupBy: ['project'],
       memberId: null,
       projectId: null,
     });
@@ -311,14 +313,14 @@ describe('ReportsView', () => {
     await wrapper.get('[data-testid="change-report-grouping"]').trigger('click');
 
     // The header control now drives report state rather than export-only scope.
-    expect(state.grouping.value).toBe('member');
+    expect(state.grouping.value).toEqual(['member']);
 
     await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
     await flushPromises();
 
     expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
       expect.objectContaining({
-        groupBy: 'user',
+        groupBy: ['user'],
         memberId: null,
         projectId: null,
       }),
@@ -338,7 +340,7 @@ describe('ReportsView', () => {
 
     expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
       expect.objectContaining({
-        groupBy: 'user',
+        groupBy: ['user'],
         memberId: 'member-1',
         projectId: 'project-1',
       }),

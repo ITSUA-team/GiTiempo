@@ -25,6 +25,8 @@ import {
   type ReportBillableFilter,
   type ReportDateRange,
   type ReportFilterOption,
+  type ReportGrouping,
+  type ReportGroupingDimension,
   type ReportSetupFilters,
   type ReportSummaryView,
   type ReportTableFilters,
@@ -34,7 +36,9 @@ import {
 export {
   defaultReportGrouping,
   getReportExportBlockedReason,
+  maxReportGroupingLevels,
   reportGroupingApiValue,
+  toReportGroupingApiPath,
 } from '@/validation/report-view-model';
 
 export type {
@@ -42,6 +46,7 @@ export type {
   ReportDateRange,
   ReportFilterOption,
   ReportGrouping,
+  ReportGroupingDimension,
   ReportHoursFilter,
   ReportSetupFilters,
   ReportSummaryView,
@@ -248,35 +253,24 @@ function formatUserName(user: {
 }
 
 /**
- * Identities the response does not carry are left null. A project row counts its
- * contributors rather than naming one, so a placeholder label would be a lie.
+ * Identities the response does not carry are left null. A row without member
+ * identity totals its contributors rather than naming one, so a placeholder
+ * label would be a lie. A project label can still come from the setup filter
+ * when the grouping path itself carries no project dimension.
  */
 function getReportTableRowLabels(
   row: TimeReportRow,
   context: ReportRowContext,
-): Pick<ReportTableRow, 'memberName' | 'projectName'> {
+): Pick<ReportTableRow, 'memberName' | 'projectName' | 'taskName'> {
   const selectedProjectLabel = getOptionLabel(
     context.projectOptions,
     context.selectedProjectId,
   );
 
-  if (row.groupBy === 'user') {
-    return {
-      memberName: formatUserName(row.user),
-      projectName: selectedProjectLabel,
-    };
-  }
-
-  if (row.groupBy === 'task') {
-    return {
-      memberName: null,
-      projectName: `${row.project.name} / ${row.task.title}`,
-    };
-  }
-
   return {
-    memberName: null,
-    projectName: row.project.name,
+    memberName: row.user ? formatUserName(row.user) : null,
+    projectName: row.project?.name ?? selectedProjectLabel,
+    taskName: row.task?.title ?? null,
   };
 }
 
@@ -289,7 +283,7 @@ function getReportTableRowId(
   const taskId = row.task?.id ?? 'no-task';
   const memberId = row.user?.id ?? context.selectedMemberId ?? 'all-members';
 
-  return `${row.groupBy}:${projectId}:${taskId}:${memberId}`;
+  return `${projectId}:${taskId}:${memberId}`;
 }
 
 export function toReportTableRows(
@@ -312,11 +306,12 @@ export function toReportTableRows(
       billableSeconds: row.billableSeconds,
       billableShare: row.billableShare,
       entryCount: row.entryCount,
-      groupBy: row.groupBy,
       id: getReportTableRowId(row, context),
+      lastStartedAt: row.lastStartedAt,
       memberIds,
       nonBillableSeconds: row.nonBillableSeconds,
       projectIds,
+      taskId: row.task?.id ?? null,
       totalSeconds: row.totalSeconds,
       ...getReportTableRowLabels(row, context),
     });
@@ -328,7 +323,8 @@ export function toReportTableRows(
     .sort(
       (a, b) =>
         (a.projectName ?? '').localeCompare(b.projectName ?? '') ||
-        (a.memberName ?? '').localeCompare(b.memberName ?? ''),
+        (a.memberName ?? '').localeCompare(b.memberName ?? '') ||
+        (a.taskName ?? '').localeCompare(b.taskName ?? ''),
     );
 }
 
@@ -381,6 +377,193 @@ export function deriveReportSummaryView(
     topProjectSeconds: topProject?.seconds ?? 0,
     totalSeconds,
   });
+}
+
+export interface ReportRowTotals {
+  billableSeconds: number;
+  billableShare: number | null;
+  entryCount: number;
+  lastStartedAt: string | null;
+  nonBillableSeconds: number;
+  totalSeconds: number;
+}
+
+export interface ReportTreeNode extends ReportRowTotals {
+  children: ReportTreeNode[];
+  childCountLabel: string | null;
+  dimension: ReportGroupingDimension;
+  id: string;
+  isLeaf: boolean;
+  label: string;
+  level: number;
+}
+
+export interface ReportDisplayRow extends ReportRowTotals {
+  childCountLabel: string | null;
+  dimension: ReportGroupingDimension;
+  hasChildren: boolean;
+  id: string;
+  isLeaf: boolean;
+  label: string;
+  level: number;
+}
+
+const reportDimensionNouns: Record<ReportGroupingDimension, string> = {
+  member: 'member',
+  project: 'project',
+  task: 'task',
+};
+
+const unknownDimensionLabel: Record<ReportGroupingDimension, string> = {
+  member: 'All members',
+  project: 'All projects',
+  task: 'No task',
+};
+
+function getRowDimensionKey(
+  row: ReportTableRow,
+  dimension: ReportGroupingDimension,
+): string {
+  if (dimension === 'project') return row.projectIds[0] ?? 'all-projects';
+  if (dimension === 'member') return row.memberIds[0] ?? 'all-members';
+  return row.taskId ?? 'no-task';
+}
+
+function getRowDimensionLabel(
+  row: ReportTableRow,
+  dimension: ReportGroupingDimension,
+): string {
+  const label =
+    dimension === 'project'
+      ? row.projectName
+      : dimension === 'member'
+        ? row.memberName
+        : row.taskName;
+
+  return label ?? unknownDimensionLabel[dimension];
+}
+
+function maxIsoDate(a: string | null, b: string | null): string | null {
+  if (a === null) return b;
+  if (b === null) return a;
+
+  return a >= b ? a : b;
+}
+
+export function sumReportRows(rows: ReportTableRow[]): ReportRowTotals {
+  let totalSeconds = 0;
+  let billableSeconds = 0;
+  let nonBillableSeconds = 0;
+  let entryCount = 0;
+  let lastStartedAt: string | null = null;
+
+  for (const row of rows) {
+    totalSeconds += row.totalSeconds;
+    billableSeconds += row.billableSeconds;
+    nonBillableSeconds += row.nonBillableSeconds;
+    entryCount += row.entryCount;
+    lastStartedAt = maxIsoDate(lastStartedAt, row.lastStartedAt);
+  }
+
+  return {
+    billableSeconds,
+    billableShare: totalSeconds > 0 ? billableSeconds / totalSeconds : null,
+    entryCount,
+    lastStartedAt,
+    nonBillableSeconds,
+    totalSeconds,
+  };
+}
+
+function formatChildCount(
+  count: number,
+  dimension: ReportGroupingDimension,
+): string {
+  const noun = reportDimensionNouns[dimension];
+
+  return `${count} ${count === 1 ? noun : `${noun}s`}`;
+}
+
+function buildReportTreeLevel(
+  rows: ReportTableRow[],
+  grouping: ReportGrouping,
+  level: number,
+  parentId: string,
+): ReportTreeNode[] {
+  const dimension = grouping[level]!;
+  const isLeafLevel = level === grouping.length - 1;
+  const groups = new Map<string, ReportTableRow[]>();
+  for (const row of rows) {
+    const key = getRowDimensionKey(row, dimension);
+    const bucket = groups.get(key);
+    if (bucket) {
+      bucket.push(row);
+    } else {
+      groups.set(key, [row]);
+    }
+  }
+
+  const nodes = [...groups.entries()].map(([key, groupRows]) => {
+    const id = `${parentId}/${dimension}:${key}`;
+    const children = isLeafLevel
+      ? []
+      : buildReportTreeLevel(groupRows, grouping, level + 1, id);
+    const childDimension = grouping[level + 1];
+
+    return {
+      ...sumReportRows(groupRows),
+      childCountLabel:
+        childDimension === undefined
+          ? null
+          : formatChildCount(children.length, childDimension),
+      children,
+      dimension,
+      id,
+      isLeaf: isLeafLevel,
+      label: getRowDimensionLabel(groupRows[0]!, dimension),
+      level,
+    };
+  });
+
+  // Siblings order by tracked time, heaviest first; labels break ties so the
+  // order is stable across refreshes.
+  return nodes.sort(
+    (a, b) =>
+      b.totalSeconds - a.totalSeconds || a.label.localeCompare(b.label),
+  );
+}
+
+export function buildReportTree(
+  rows: ReportTableRow[],
+  grouping: ReportGrouping,
+): ReportTreeNode[] {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  return buildReportTreeLevel(rows, grouping, 0, 'report');
+}
+
+/**
+ * Flattens the tree for the table. Nodes render in depth-first order and a
+ * collapsed node keeps its subtotals visible while hiding its subtree; the
+ * default (empty set) shows everything expanded.
+ */
+export function flattenReportTree(
+  nodes: ReportTreeNode[],
+  collapsedIds: ReadonlySet<string>,
+): ReportDisplayRow[] {
+  const rows: ReportDisplayRow[] = [];
+  const visit = (node: ReportTreeNode): void => {
+    const { children, ...display } = node;
+    rows.push({ ...display, hasChildren: children.length > 0 });
+    if (!collapsedIds.has(node.id)) {
+      children.forEach(visit);
+    }
+  };
+  nodes.forEach(visit);
+
+  return rows;
 }
 
 export function getReportRowUnbillableSeconds(row: ReportTableRow): number {
@@ -450,6 +633,7 @@ export function filterReportRows(
     const haystack = [
       row.projectName,
       row.memberName,
+      row.taskName,
       formatPaddedHoursMinutesDuration(row.totalSeconds),
       formatPaddedHoursMinutesDuration(
         getReportRowBillableSeconds(row, parsedFilters.billable),

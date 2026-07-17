@@ -81,7 +81,7 @@ export function useAdminDashboardData({
 
       const reportQuery: Partial<TimeReportQuery> = {
         ...weekRange.value,
-        groupBy: 'project',
+        groupBy: ['project'],
         limit: ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,
         page: 1,
         sortBy: 'lastStartedAt',

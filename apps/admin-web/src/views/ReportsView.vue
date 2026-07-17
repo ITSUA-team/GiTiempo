@@ -16,7 +16,7 @@ import {
   formatReportPercent,
   getReportDateRangeError,
   getReportExportBlockedReason,
-  reportGroupingApiValue,
+  toReportGroupingApiPath,
 } from '@/lib/report-view-model';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
@@ -110,7 +110,7 @@ async function handleExport(): Promise<void> {
   try {
     const exportResult = await exportCurrentReport({
       dateRange: dateRange.value,
-      groupBy: reportGroupingApiValue[grouping.value],
+      groupBy: toReportGroupingApiPath(grouping.value),
       memberId: tableFilters.value.memberId,
       projectId: tableFilters.value.projectId,
     });
