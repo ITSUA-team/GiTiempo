@@ -15,7 +15,6 @@ const nina = { key: 'u2', label: 'Nina PM' };
 function makeLeaf(overrides: Partial<ReportPdfLeaf>): ReportPdfLeaf {
   return {
     billableSeconds: 3600,
-    entryCount: 2,
     identity: { project: projectOrion, user: alex },
     lastStartedAt: '2026-05-02T10:00:00.000Z',
     totalSeconds: 3600,
@@ -32,7 +31,6 @@ const leaves: ReportPdfLeaf[] = [
   }),
   makeLeaf({
     billableSeconds: 900,
-    entryCount: 1,
     identity: { project: projectBilling, user: nina },
     totalSeconds: 900,
   }),

@@ -10,7 +10,7 @@ The reports page MUST support report setup controls for backend CSV export, a co
 - **THEN** the page shows a reports header with title, descriptive copy, and a primary `Export CSV` action
 - **AND** the page shows project, member, date range, and grouping-builder report setup controls
 - **AND** the page shows summary totals above the results table
-- **AND** the results table shows report rows with grouping identity, entries, hours, billable, billable share, and last activity columns
+- **AND** the results table shows report rows with grouping identity, hours, billable, billable share, and last activity columns
 
 #### Scenario: Grouping builder configures an ordered multi-level grouping
 
@@ -40,7 +40,7 @@ The reports page MUST support report setup controls for backend CSV export, a co
 - **THEN** those values are kept as report-generation setup state
 - **AND** currently loaded table rows and summary cards do not change solely because those setup controls changed
 - **AND** activating `Export CSV` requests backend CSV generation with the current setup state, including the ordered grouping path
-- **AND** `Export CSV` is disabled with an explanatory reason while any aggregate-level table filter (search, entries, hours, billable, billable share, or last activity) is active, because the detailed CSV cannot express those filters
+- **AND** `Export CSV` is disabled with an explanatory reason while any aggregate-level table filter (search, hours, billable, billable share, or last activity) is active, because the detailed CSV cannot express those filters
 
 #### Scenario: Results table keeps grouped identity breakdowns
 
@@ -79,15 +79,15 @@ The reports page MUST support report setup controls for backend CSV export, a co
 
 - **WHEN** report rows are rendered
 - **THEN** it exposes a global search control with placeholder `Search report rows`
-- **AND** it exposes a column filter for every table column: project, member, entries, hours, billable, billable share, and last activity
-- **AND** the entries filter offers Any, 1+, 10+, and 50+; the billable share filter offers Any, Below 50%, 50%+, and 90%+; the last activity filter offers Any time, Today, Last 7 days, and Last 30 days
+- **AND** it exposes a column filter for every table column: project, member, hours, billable, billable share, and last activity
+- **AND** the billable share filter offers Any, Below 50%, 50%+, and 90%+; the last activity filter offers Any time, Today, Last 7 days, and Last 30 days
 - **AND** table-only filters apply to leaf rows and the visible hierarchy with its subtotals is rebuilt from the surviving leaf rows
 - **AND** clearing global search or column filters restores the rows loaded for the current report data state and role scope
 - **AND** table-only search and column filters do not call report data endpoints
 
 #### Scenario: Aggregate column filters compare displayed group totals
 
-- **WHEN** the user sets the entries, hours, billable, billable share, or last activity filter
+- **WHEN** the user sets the hours, billable, billable share, or last activity filter
 - **THEN** top-level groups whose displayed totals satisfy the selected threshold remain, together with their whole subtree
 - **AND** the comparison uses the group subtotals shown in the rows, never the invisible leaf aggregates underneath
 - **AND** a group without a billable share only passes the Any option of the billable share filter

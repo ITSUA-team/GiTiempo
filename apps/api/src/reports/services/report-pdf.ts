@@ -24,7 +24,6 @@ const A4_WIDTH = 595.28;
 
 export interface ReportPdfLeaf {
   identity: Partial<Record<TimeReportGroupBy, { key: string; label: string }>>;
-  entryCount: number;
   totalSeconds: number;
   billableSeconds: number;
   lastStartedAt: string | null;
@@ -45,7 +44,6 @@ interface ReportPdfNode {
   level: number;
   isLeaf: boolean;
   childCountLabel: string | null;
-  entryCount: number;
   totalSeconds: number;
   billableSeconds: number;
 }
@@ -118,10 +116,9 @@ export function flattenReportPdfNodes(
     const totals = groupLeaves.reduce(
       (acc, leaf) => ({
         billableSeconds: acc.billableSeconds + leaf.billableSeconds,
-        entryCount: acc.entryCount + leaf.entryCount,
         totalSeconds: acc.totalSeconds + leaf.totalSeconds,
       }),
-      { billableSeconds: 0, entryCount: 0, totalSeconds: 0 },
+      { billableSeconds: 0, totalSeconds: 0 },
     );
     const children = isLeafLevel
       ? []
@@ -179,7 +176,6 @@ function buildSummaryStrip(input: ReportPdfInput): Record<string, unknown> {
         input.summary.totalSeconds,
       )}`,
     },
-    { label: 'ENTRIES', value: String(input.summary.entryCount) },
   ];
 
   return {
@@ -214,7 +210,6 @@ function buildTable(nodes: ReportPdfNode[]): Record<string, unknown> {
   const body: Record<string, unknown>[][] = [
     [
       headerCell('NAME', 'left'),
-      headerCell('ENTRIES', 'right'),
       headerCell('HOURS', 'right'),
       headerCell('BILLABLE', 'right'),
       headerCell('BILL %', 'right'),
@@ -250,7 +245,6 @@ function buildTable(nodes: ReportPdfNode[]): Record<string, unknown> {
 
     body.push([
       { fillColor, margin: [node.level * 12, 0, 0, 0], text: nameText },
-      numberCell(String(node.entryCount), true),
       numberCell(formatHoursMinutes(node.totalSeconds)),
       numberCell(formatHoursMinutes(node.billableSeconds)),
       numberCell(formatShare(node.billableSeconds, node.totalSeconds), true),
@@ -281,7 +275,7 @@ function buildTable(nodes: ReportPdfNode[]): Record<string, unknown> {
     table: {
       body,
       headerRows: 1,
-      widths: ['*', 55, 70, 70, 50],
+      widths: ['*', 70, 70, 50],
     },
   };
 }
@@ -309,7 +303,6 @@ function buildTotalRow(input: ReportPdfInput): Record<string, unknown> {
       body: [
         [
           cell('Total', { alignment: 'left' }),
-          cell(String(input.summary.entryCount), { color: TEXT_MUTED }),
           cell(formatHoursMinutes(input.summary.totalSeconds)),
           cell(formatHoursMinutes(input.summary.billableSeconds)),
           cell(
@@ -321,7 +314,7 @@ function buildTotalRow(input: ReportPdfInput): Record<string, unknown> {
           ),
         ],
       ],
-      widths: ['*', 55, 70, 70, 50],
+      widths: ['*', 70, 70, 50],
     },
   };
 }

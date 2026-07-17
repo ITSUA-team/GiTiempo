@@ -10,7 +10,7 @@ The reports page MUST support report setup controls for backend CSV export, a co
 - **THEN** the page shows a reports header with title, descriptive copy, and a primary `Export CSV` action
 - **AND** the page shows project, member, date range, and grouping-builder report setup controls
 - **AND** the page shows summary totals above the results table
-- **AND** the results table shows report rows with grouping identity, entries, hours, billable, billable share, and last activity columns
+- **AND** the results table shows report rows with grouping identity, hours, billable, billable share, and last activity columns
 
 #### Scenario: Grouping builder configures an ordered multi-level grouping
 

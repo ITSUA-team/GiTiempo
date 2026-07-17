@@ -163,7 +163,6 @@ describe('ReportsTable', () => {
 
     expect(wrapper.text()).toContain('Results');
     expect(wrapper.text()).toContain('Project / Member');
-    expect(wrapper.text()).toContain('Entries');
     expect(wrapper.text()).toContain('Hours');
     expect(wrapper.text()).toContain('Billable');
     expect(wrapper.text()).toContain('Billable %');
@@ -174,9 +173,9 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
-    // entries/hours/billable/billable-share/activity filters; the add-level
-    // control carries its own testid
-    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(5);
+    // hours/billable/billable-share/activity filters; the add-level control
+    // carries its own testid
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
     expect(
       wrapper.find('[data-testid="report-grouping-add-level"]').exists(),
     ).toBe(true);
@@ -257,7 +256,6 @@ describe('ReportsTable', () => {
         .map((header) => header.attributes('data-testid')),
     ).toEqual([
       'management-table-header-group',
-      'management-table-header-entries',
       'management-table-header-hours',
       'management-table-header-billable',
       'management-table-header-billableShare',
@@ -366,7 +364,6 @@ describe('ReportsTable', () => {
     expect(totalRow.text()).toContain('Total');
     expect(totalRow.text()).toContain('3h 30m');
     expect(totalRow.text()).toContain('1h 45m');
-    expect(totalRow.text()).toContain('6');
   });
 
   it('collapses a group subtree while keeping its subtotal row visible', async () => {
@@ -408,8 +405,9 @@ describe('ReportsTable', () => {
 
     const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
 
-    // all five mobile column filters; add-level carries its own testid
-    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(5);
+    // mobile hours/billable/billable-share/activity filters; add-level
+    // carries its own testid
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
     expect(autoCompleteControls).toHaveLength(2);
     for (const autoCompleteControl of autoCompleteControls) {
       expect(autoCompleteControl.props('appendTo')).toBe('self');
@@ -465,7 +463,7 @@ describe('ReportsTable', () => {
     expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
   });
 
-  it('exposes entries, billable share, and activity column filters that update the filter model', async () => {
+  it('exposes billable share and activity column filters that update the filter model', async () => {
     const filters = createDefaultReportTableFilters();
     const wrapper = mountTable({ filters });
 
@@ -477,20 +475,16 @@ describe('ReportsTable', () => {
         ),
       );
 
-    const entriesFilter = findByOption('10+');
     const shareFilter = findByOption('90%+');
     const activityFilter = findByOption('Last 7 days');
 
-    expect(entriesFilter).toBeDefined();
     expect(shareFilter).toBeDefined();
     expect(activityFilter).toBeDefined();
 
-    entriesFilter!.vm.$emit('update:modelValue', 'gte10');
     shareFilter!.vm.$emit('update:modelValue', 'gte90');
     activityFilter!.vm.$emit('update:modelValue', 'last7');
     await nextTick();
 
-    expect(filters.entries).toBe('gte10');
     expect(filters.billableShare).toBe('gte90');
     expect(filters.activity).toBe('last7');
   });
@@ -498,18 +492,14 @@ describe('ReportsTable', () => {
   it('applies aggregate filters against displayed group totals, not leaves', async () => {
     // reactive like the view's ref-wrapped filters, so mutations re-filter
     const filters = reactive(createDefaultReportTableFilters());
-    // Orion displays 7 entries built from leaves of 4 and 3 — the group must
-    // survive a 1..7-range threshold even though no single leaf reaches it.
     const tableRows = [
-      makeLeafRow({ entryCount: 4 }),
+      makeLeafRow({}),
       makeLeafRow({
-        entryCount: 3,
         id: 'project-1:no-task:member-2',
         memberIds: ['member-2'],
         memberName: 'Nina PM',
       }),
       makeLeafRow({
-        entryCount: 2,
         id: 'project-2:no-task:member-2',
         memberIds: ['member-2'],
         memberName: 'Nina PM',
@@ -526,22 +516,17 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('Project Orion');
     expect(wrapper.text()).toContain('Billing API');
 
-    filters.entries = 'gte1';
+    // groups keep showing while their displayed totals pass the threshold
+    filters.hours = 'gt0';
     await nextTick();
     expect(wrapper.text()).toContain('Project Orion');
     expect(wrapper.text()).toContain('Billing API');
 
-    // both groups display fewer than 10 entries, so both fold away
-    filters.entries = 'gte10';
-    await nextTick();
-    expect(wrapper.text()).not.toContain('Project Orion');
-    expect(wrapper.text()).not.toContain('Billing API');
-
-    filters.entries = 'any';
     filters.hours = 'gte8';
     await nextTick();
-    // Orion totals 2h at the group level — under 8h, both groups hidden and
+    // Orion totals 4h at the group level — under 8h, both groups hidden and
     // the total row disappears with them
+    expect(wrapper.text()).not.toContain('Project Orion');
     expect(wrapper.find('[data-testid="report-total-row"]').exists()).toBe(
       false,
     );

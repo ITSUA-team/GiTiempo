@@ -30,14 +30,6 @@ export const reportBillableFilterSchema = z.enum([
 ]);
 export type ReportBillableFilter = z.infer<typeof reportBillableFilterSchema>;
 
-export const reportEntriesFilterSchema = z.enum([
-  'any',
-  'gte1',
-  'gte10',
-  'gte50',
-]);
-export type ReportEntriesFilter = z.infer<typeof reportEntriesFilterSchema>;
-
 export const reportBillableShareFilterSchema = z.enum([
   'any',
   'below50',
@@ -136,7 +128,6 @@ export function getReportExportBlockedReason(
     | 'activity'
     | 'billable'
     | 'billableShare'
-    | 'entries'
     | 'global'
     | 'hours'
     | 'memberId'
@@ -146,7 +137,6 @@ export function getReportExportBlockedReason(
   if (
     filters.hours !== 'any' ||
     filters.billable !== 'any' ||
-    filters.entries !== 'any' ||
     filters.billableShare !== 'any' ||
     filters.activity !== 'any' ||
     filters.global.trim() !== ''
@@ -192,7 +182,6 @@ export const reportTableFiltersSchema = z.object({
   activity: reportActivityFilterSchema,
   billable: reportBillableFilterSchema,
   billableShare: reportBillableShareFilterSchema,
-  entries: reportEntriesFilterSchema,
   global: z.string(),
   hours: reportHoursFilterSchema,
   memberId: z.string().nullable(),

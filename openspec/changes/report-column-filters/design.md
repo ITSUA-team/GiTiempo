@@ -6,7 +6,7 @@
 
 **Goals:**
 
-- `entries` (`any | gte1 | gte10 | gte50`), `billableShare` (`any | below50 | gte50 | gte90`), and `activity` (`any | today | last7 | last30`) filters, desktop and mobile.
+- `billableShare` (`any | below50 | gte50 | gte90`) and `activity` (`any | today | last7 | last30`) filters, desktop and mobile. (Revised: the entries column and filter were removed at the user's request.)
 - Export blocking extends to the new filters (they have no CSV equivalent, same as hours/billable/search).
 
 **Non-Goals:**

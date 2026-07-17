@@ -4,10 +4,11 @@ The redesigned reports table shows Entries, Hours, Billable, Billable %, and Las
 
 ## What Changes
 
-- Add table-only filters for the remaining columns: Entries (Any · 1+ · 10+ · 50+), Billable % (Any · Below 50% · 50%+ · 90%+), and Last activity (Any time · Today · Last 7 days · Last 30 days).
+- Add table-only filters for the remaining columns: Billable % (Any · Below 50% · 50%+ · 90%+) and Last activity (Any time · Today · Last 7 days · Last 30 days). (Revised: the Entries column and its filter were removed from the reports table entirely.)
 - Keep the existing project, member, hours, and billable filters; all filters apply to loaded leaf rows, rebuild the visible tree with its subtotals, and never call report data endpoints.
 - Mobile filter section gains the same three controls.
 - CSV export stays blocked while any aggregate-level filter is active (the new filters join hours/billable/search in that rule).
+- The Entries column is removed from the table and the PDF export (revision requested after implementation).
 - No backend or contract changes.
 
 ## Capabilities

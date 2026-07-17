@@ -30133,31 +30133,6 @@
                             },
                             {
                               "type": "frame",
-                              "id": "cySKE",
-                              "name": "hEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "lI6YI",
-                                  "name": "hEntriesText",
-                                  "fill": "$color-text-dark",
-                                  "content": "Entries",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
                               "id": "rWWp1",
                               "name": "hHours",
                               "width": 120,
@@ -30359,42 +30334,6 @@
                                       "fill": "$color-text-muted"
                                     }
                                   ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "HHfBZ",
-                              "name": "fEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "gap": 4,
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "FMHir",
-                                  "name": "fEntriesText",
-                                  "fill": "$color-text-muted",
-                                  "content": "Any",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 12,
-                                  "fontWeight": "normal"
-                                },
-                                {
-                                  "type": "icon",
-                                  "id": "JpaAU",
-                                  "name": "fEntriesChevron",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "chevron-down",
-                                  "library": "lucide",
-                                  "fill": "$color-text-muted"
                                 }
                               ]
                             },
@@ -30604,31 +30543,6 @@
                             },
                             {
                               "type": "frame",
-                              "id": "uGQ3m",
-                              "name": "row0cEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "yju2P",
-                                  "name": "row0cEntriesText",
-                                  "fill": "$color-text-muted",
-                                  "content": "58",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
                               "id": "KSV38",
                               "name": "row0cHours",
                               "width": 120,
@@ -30791,31 +30705,6 @@
                             },
                             {
                               "type": "frame",
-                              "id": "XoNbO",
-                              "name": "row1cEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "xXj88",
-                                  "name": "row1cEntriesText",
-                                  "fill": "$color-text-muted",
-                                  "content": "24",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
                               "id": "twmIg",
                               "name": "row1cHours",
                               "width": 120,
@@ -30968,31 +30857,6 @@
                             },
                             {
                               "type": "frame",
-                              "id": "tolS7",
-                              "name": "row2cEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "DWIpl",
-                                  "name": "row2cEntriesText",
-                                  "fill": "$color-text-muted",
-                                  "content": "14",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
                               "id": "f3wBJt",
                               "name": "row2cHours",
                               "width": 120,
@@ -31137,31 +31001,6 @@
                                   "name": "row3Name",
                                   "fill": "#444444",
                                   "content": "Checkout revamp",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "S9BFO0",
-                              "name": "row3cEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "YuFkK",
-                                  "name": "row3cEntriesText",
-                                  "fill": "$color-text-muted",
-                                  "content": "10",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
@@ -31332,31 +31171,6 @@
                             },
                             {
                               "type": "frame",
-                              "id": "c1qopZ",
-                              "name": "row4cEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "aLyJz",
-                                  "name": "row4cEntriesText",
-                                  "fill": "$color-text-muted",
-                                  "content": "34",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
                               "id": "mR25v",
                               "name": "row4cHours",
                               "width": 120,
@@ -31511,31 +31325,6 @@
                                   "content": "2 members",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "oN6V7",
-                              "name": "row5cEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "rc1PH",
-                                  "name": "row5cEntriesText",
-                                  "fill": "$color-text-muted",
-                                  "content": "41",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -31702,31 +31491,6 @@
                             },
                             {
                               "type": "frame",
-                              "id": "xWOJu",
-                              "name": "row6cEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "Y0X9k9",
-                                  "name": "row6cEntriesText",
-                                  "fill": "$color-text-muted",
-                                  "content": "27",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
                               "id": "qAdeS",
                               "name": "row6cHours",
                               "width": 120,
@@ -31887,31 +31651,6 @@
                             },
                             {
                               "type": "frame",
-                              "id": "MS0dk",
-                              "name": "row7cEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "dBn3D",
-                                  "name": "row7cEntriesText",
-                                  "fill": "$color-text-muted",
-                                  "content": "63",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
                               "id": "V9gdJg",
                               "name": "row7cHours",
                               "width": 120,
@@ -32056,31 +31795,6 @@
                                   "content": "4 projects · 6 members",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "LoGz3",
-                              "name": "totalEntries",
-                              "width": 90,
-                              "height": "fill_container",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "n78z7S",
-                                  "name": "totalEntriesText",
-                                  "fill": "$color-text-muted",
-                                  "content": "189",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
                                   "fontWeight": "normal"
                                 }
                               ]
@@ -32680,32 +32394,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "B0L732",
-                      "name": "pdfHeadEntries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "KiNfQ",
-                          "name": "pdfHeadEntriesText",
-                          "fill": "$color-text-muted",
-                          "content": "ENTRIES",
-                          "fontFamily": "Inter",
-                          "fontSize": 9,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.8
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "TfWIm",
                       "name": "pdfHeadHours",
                       "width": 90,
@@ -32815,31 +32503,6 @@
                           "name": "pdfRow0NameText",
                           "fill": "$color-text-dark",
                           "content": "Project Orion",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "OoQjJ",
-                      "name": "pdfRow0Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "Z0dS5",
-                          "name": "pdfRow0EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "58",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "600"
@@ -32964,31 +32627,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "oWz5j",
-                      "name": "pdfRow1Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "cZafM",
-                          "name": "pdfRow1EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "24",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "ENjow",
                       "name": "pdfRow1Hours",
                       "width": 90,
@@ -33097,31 +32735,6 @@
                           "name": "pdfRow2NameText",
                           "fill": "#555555",
                           "content": "API integration",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "E1Srj",
-                      "name": "pdfRow2Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "iyi3R",
-                          "name": "pdfRow2EntriesText",
-                          "fill": "#555555",
-                          "content": "14",
                           "fontFamily": "Inter",
                           "fontSize": 10,
                           "fontWeight": "normal"
@@ -33246,31 +32859,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "lZQgJ",
-                      "name": "pdfRow3Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "gH1KI",
-                          "name": "pdfRow3EntriesText",
-                          "fill": "#555555",
-                          "content": "10",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "ySKI2",
                       "name": "pdfRow3Hours",
                       "width": 90,
@@ -33387,31 +32975,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "bFcN8",
-                      "name": "pdfRow4Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "uvEX0",
-                          "name": "pdfRow4EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "34",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "W434q",
                       "name": "pdfRow4Hours",
                       "width": 90,
@@ -33520,31 +33083,6 @@
                           "name": "pdfRow5NameText",
                           "fill": "#555555",
                           "content": "Infra migration",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "RyrKD",
-                      "name": "pdfRow5Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "mdHuj",
-                          "name": "pdfRow5EntriesText",
-                          "fill": "#555555",
-                          "content": "12",
                           "fontFamily": "Inter",
                           "fontSize": 10,
                           "fontWeight": "normal"
@@ -33669,31 +33207,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "r4GVrz",
-                      "name": "pdfRow6Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "a6y28M",
-                          "name": "pdfRow6EntriesText",
-                          "fill": "#555555",
-                          "content": "10",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "AmLRF",
                       "name": "pdfRow6Hours",
                       "width": 90,
@@ -33810,31 +33323,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "V9akp",
-                      "name": "pdfRow7Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "P7O2Ek",
-                          "name": "pdfRow7EntriesText",
-                          "fill": "#555555",
-                          "content": "12",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "q1MYo",
                       "name": "pdfRow7Hours",
                       "width": 90,
@@ -33941,31 +33429,6 @@
                           "name": "pdfRow8NameText",
                           "fill": "$color-text-dark",
                           "content": "Billing API",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "ibbaC",
-                      "name": "pdfRow8Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "J0CwS",
-                          "name": "pdfRow8EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "41",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "600"
@@ -34090,31 +33553,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "j3HMyR",
-                      "name": "pdfRow9Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "i67dby",
-                          "name": "pdfRow9EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "22",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "wWKCN",
                       "name": "pdfRow9Hours",
                       "width": 90,
@@ -34223,31 +33661,6 @@
                           "name": "pdfRow10NameText",
                           "fill": "#555555",
                           "content": "Invoice engine",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "aMaDA",
-                      "name": "pdfRow10Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "icvWc",
-                          "name": "pdfRow10EntriesText",
-                          "fill": "#555555",
-                          "content": "12",
                           "fontFamily": "Inter",
                           "fontSize": 10,
                           "fontWeight": "normal"
@@ -34372,31 +33785,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "v1M8I",
-                      "name": "pdfRow11Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "OvgiI",
-                          "name": "pdfRow11EntriesText",
-                          "fill": "#555555",
-                          "content": "10",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "FJbWr",
                       "name": "pdfRow11Hours",
                       "width": 90,
@@ -34508,31 +33896,6 @@
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "500"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "e8qeWZ",
-                      "name": "pdfRow12Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "KfTRD",
-                          "name": "pdfRow12EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "19",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -34654,31 +34017,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "TyYKO",
-                      "name": "pdfRow13Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "YMJOX",
-                          "name": "pdfRow13EntriesText",
-                          "fill": "#555555",
-                          "content": "19",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "c9BTr",
                       "name": "pdfRow13Hours",
                       "width": 90,
@@ -34785,31 +34123,6 @@
                           "name": "pdfRow14NameText",
                           "fill": "$color-text-dark",
                           "content": "Workspace Ops",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "p6eze9",
-                      "name": "pdfRow14Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "T7h1ZZ",
-                          "name": "pdfRow14EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "27",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "600"
@@ -34934,31 +34247,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "LCGXS",
-                      "name": "pdfRow15Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "T68pA9",
-                          "name": "pdfRow15EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "9",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "Ec3qF",
                       "name": "pdfRow15Hours",
                       "width": 90,
@@ -35067,31 +34355,6 @@
                           "name": "pdfRow16NameText",
                           "fill": "#555555",
                           "content": "Standups",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "g5QaF8",
-                      "name": "pdfRow16Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "P405rw",
-                          "name": "pdfRow16EntriesText",
-                          "fill": "#555555",
-                          "content": "9",
                           "fontFamily": "Inter",
                           "fontSize": 10,
                           "fontWeight": "normal"
@@ -35216,31 +34479,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "tYleP",
-                      "name": "pdfRow17Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "Zv12d",
-                          "name": "pdfRow17EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "18",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "Q9kNr",
                       "name": "pdfRow17Hours",
                       "width": 90,
@@ -35349,31 +34587,6 @@
                           "name": "pdfRow18NameText",
                           "fill": "#555555",
                           "content": "Onboarding",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "kPy6q",
-                      "name": "pdfRow18Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "Z9CYkF",
-                          "name": "pdfRow18EntriesText",
-                          "fill": "#555555",
-                          "content": "8",
                           "fontFamily": "Inter",
                           "fontSize": 10,
                           "fontWeight": "normal"
@@ -35498,31 +34711,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "vQyX6",
-                      "name": "pdfRow19Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "PAVlK",
-                          "name": "pdfRow19EntriesText",
-                          "fill": "#555555",
-                          "content": "10",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "iyBRG",
                       "name": "pdfRow19Hours",
                       "width": 90,
@@ -35629,31 +34817,6 @@
                           "name": "pdfRow20NameText",
                           "fill": "$color-text-dark",
                           "content": "Internal Tools",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "jYWHY",
-                      "name": "pdfRow20Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "a9xJiH",
-                          "name": "pdfRow20EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "63",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "600"
@@ -35778,31 +34941,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "uEMn4",
-                      "name": "pdfRow21Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "M8zwsj",
-                          "name": "pdfRow21EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "40",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "Awf0q",
                       "name": "pdfRow21Hours",
                       "width": 90,
@@ -35911,31 +35049,6 @@
                           "name": "pdfRow22NameText",
                           "fill": "#555555",
                           "content": "CLI tools",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "vd2zB",
-                      "name": "pdfRow22Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "b2k3qZ",
-                          "name": "pdfRow22EntriesText",
-                          "fill": "#555555",
-                          "content": "15",
                           "fontFamily": "Inter",
                           "fontSize": 10,
                           "fontWeight": "normal"
@@ -36060,31 +35173,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "NINI8",
-                      "name": "pdfRow23Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "pDsVg",
-                          "name": "pdfRow23EntriesText",
-                          "fill": "#555555",
-                          "content": "14",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "g7Eplx",
                       "name": "pdfRow23Hours",
                       "width": 90,
@@ -36193,31 +35281,6 @@
                           "name": "pdfRow24NameText",
                           "fill": "#555555",
                           "content": "Refactoring",
-                          "fontFamily": "Inter",
-                          "fontSize": 10,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "w02tHk",
-                      "name": "pdfRow24Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "h1Cif",
-                          "name": "pdfRow24EntriesText",
-                          "fill": "#555555",
-                          "content": "11",
                           "fontFamily": "Inter",
                           "fontSize": 10,
                           "fontWeight": "normal"
@@ -36342,31 +35405,6 @@
                     },
                     {
                       "type": "frame",
-                      "id": "Ivefq",
-                      "name": "pdfRow25Entries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "HOLnW",
-                          "name": "pdfRow25EntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "23",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "j8wDg2",
                       "name": "pdfRow25Hours",
                       "width": 90,
@@ -36472,31 +35510,6 @@
                           "name": "pdfTotalNameText",
                           "fill": "$color-text-dark",
                           "content": "Total",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "vgSlf",
-                      "name": "pdfTotalEntries",
-                      "width": 70,
-                      "height": "fill_container",
-                      "padding": [
-                        0,
-                        6
-                      ],
-                      "justifyContent": "end",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "z6S8h",
-                          "name": "pdfTotalEntriesText",
-                          "fill": "$color-text-dark",
-                          "content": "189",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "600"
@@ -36642,7 +35655,7 @@
       "name": "Column filter options",
       "width": 560,
       "height": 230,
-      "content": "Reports column filters — every column gets a filter in the filter row:\n• Project / Member: existing autocomplete selects (All projects / All members)\n• Entries: Any · 1+ · 10+ · 50+\n• Hours: Any · Tracked · 8h+ · 40h+ (existing)\n• Billable: Any · Billable · Non-billable (existing)\n• Billable %: Any · Below 50% · 50%+ · 90%+\n• Last activity: Any time · Today · Last 7 days · Last 30 days\nAggregate filters compare the displayed totals of top-level groups and keep qualifying subtrees; the Total row follows the visible groups. All filters are table-only and never refetch."
+      "content": "Reports column filters — every column gets a filter in the filter row:\n• Project / Member: existing autocomplete selects (All projects / All members)\n• Hours: Any · Tracked · 8h+ · 40h+ (existing)\n• Billable: Any · Billable · Non-billable (existing)\n• Billable %: Any · Below 50% · 50%+ · 90%+\n• Last activity: Any time · Today · Last 7 days · Last 30 days\nAggregate filters compare the displayed totals of top-level groups and keep qualifying subtrees; the Total row follows the visible groups. All filters are table-only and never refetch."
     },
     {
       "type": "frame",
@@ -36655,151 +35668,6 @@
       "gap": 24,
       "padding": 20,
       "children": [
-        {
-          "type": "frame",
-          "id": "LpocF",
-          "name": "filterMenuCol0",
-          "layout": "vertical",
-          "gap": 8,
-          "children": [
-            {
-              "type": "text",
-              "id": "fTfFc",
-              "name": "filterMenuTitle0",
-              "fill": "$color-text-muted",
-              "content": "Entries",
-              "fontFamily": "Inter",
-              "fontSize": 12,
-              "fontWeight": "600"
-            },
-            {
-              "type": "frame",
-              "id": "Bq5g1",
-              "name": "filterMenu0",
-              "width": 150,
-              "fill": "$color-surface",
-              "cornerRadius": "$radius-md",
-              "stroke": "$color-divider",
-              "strokeWidth": 1,
-              "strokeAlignment": "inner",
-              "effect": {
-                "type": "shadow",
-                "shadowType": "outer",
-                "color": "#00000022",
-                "offset": {
-                  "x": 0,
-                  "y": 4
-                },
-                "blur": 12
-              },
-              "layout": "vertical",
-              "gap": 1,
-              "padding": 4,
-              "children": [
-                {
-                  "type": "frame",
-                  "id": "cZDoW",
-                  "name": "filterMenu0Opt0",
-                  "width": "fill_container",
-                  "fill": "$color-app-bg",
-                  "cornerRadius": "$radius-sm",
-                  "padding": [
-                    7,
-                    10
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "sgVdm",
-                      "name": "filterMenu0Opt0Text",
-                      "fill": "$color-text-dark",
-                      "content": "Any",
-                      "fontFamily": "Inter",
-                      "fontSize": 13,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "tkrgB",
-                  "name": "filterMenu0Opt1",
-                  "width": "fill_container",
-                  "fill": "$color-surface",
-                  "cornerRadius": "$radius-sm",
-                  "padding": [
-                    7,
-                    10
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "jTObe",
-                      "name": "filterMenu0Opt1Text",
-                      "fill": "$color-text-muted",
-                      "content": "1+",
-                      "fontFamily": "Inter",
-                      "fontSize": 13,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "EVbuX",
-                  "name": "filterMenu0Opt2",
-                  "width": "fill_container",
-                  "fill": "$color-surface",
-                  "cornerRadius": "$radius-sm",
-                  "padding": [
-                    7,
-                    10
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "gl7gy",
-                      "name": "filterMenu0Opt2Text",
-                      "fill": "$color-text-muted",
-                      "content": "10+",
-                      "fontFamily": "Inter",
-                      "fontSize": 13,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "Cn795",
-                  "name": "filterMenu0Opt3",
-                  "width": "fill_container",
-                  "fill": "$color-surface",
-                  "cornerRadius": "$radius-sm",
-                  "padding": [
-                    7,
-                    10
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "nh9QS",
-                      "name": "filterMenu0Opt3Text",
-                      "fill": "$color-text-muted",
-                      "content": "50+",
-                      "fontFamily": "Inter",
-                      "fontSize": 13,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
         {
           "type": "frame",
           "id": "wsooe",

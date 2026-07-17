@@ -248,21 +248,21 @@ describe('report-view-model', () => {
     expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
   });
 
-  it('filters groups by the entry count their rows display', () => {
+  it('filters groups by the hours their rows display, keeping subtrees', () => {
     const filters = createDefaultReportTableFilters();
-    filters.entries = 'gte10';
-    // Orion's 12 displayed entries come from two leaves of 6 — a leaf-level
-    // comparison would wrongly hide it.
+    filters.hours = 'gte8';
+    // Orion's displayed 12h come from two 6h leaves — a leaf-level comparison
+    // would wrongly hide it.
     const rows: ReportTableRow[] = [
-      makeLeafRow({ entryCount: 6 }),
+      makeLeafRow({ totalSeconds: 6 * 3600, billableSeconds: 3600 }),
       makeLeafRow({
-        entryCount: 6,
+        billableSeconds: 3600,
         id: `${projectId}:no-task:${otherUserId}`,
         memberIds: [otherUserId],
         memberName: 'Nina PM',
+        totalSeconds: 6 * 3600,
       }),
       makeLeafRow({
-        entryCount: 3,
         id: `${otherProjectId}:no-task:${otherUserId}`,
         memberIds: [otherUserId],
         memberName: 'Nina PM',
@@ -278,7 +278,7 @@ describe('report-view-model', () => {
     // the qualifying group keeps its whole subtree
     expect(visible[0]!.children).toHaveLength(2);
 
-    filters.entries = 'gte50';
+    filters.hours = 'gte40';
     expect(filterReportTreeGroups(tree, filters)).toEqual([]);
   });
 
@@ -588,8 +588,6 @@ describe('getReportExportBlockedReason', () => {
     searching.global = '1h 00m';
     const byHours = createDefaultReportTableFilters();
     byHours.hours = 'gte8';
-    const byEntries = createDefaultReportTableFilters();
-    byEntries.entries = 'gte10';
     const byShare = createDefaultReportTableFilters();
     byShare.billableShare = 'gte90';
     const byActivity = createDefaultReportTableFilters();
@@ -599,9 +597,6 @@ describe('getReportExportBlockedReason', () => {
       'cannot be exported',
     );
     expect(getReportExportBlockedReason(byHours, ['project'])).toContain(
-      'cannot be exported',
-    );
-    expect(getReportExportBlockedReason(byEntries, ['project'])).toContain(
       'cannot be exported',
     );
     expect(getReportExportBlockedReason(byShare, ['project'])).toContain(

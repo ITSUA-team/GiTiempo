@@ -168,7 +168,6 @@ export class ReportsService {
 
     const leaves: ReportPdfLeaf[] = rows.map((row) => ({
       billableSeconds: Math.trunc(toNumber(row.billableSeconds)),
-      entryCount: Math.trunc(toNumber(row.entryCount)),
       identity: {
         ...(row.projectId
           ? {

@@ -44,7 +44,6 @@ import {
   type ReportBillableShareFilter,
   type ReportDateRange,
   type ReportDisplayRow,
-  type ReportEntriesFilter,
   type ReportFilterOption,
   type ReportGrouping,
   type ReportGroupingDimension,
@@ -161,7 +160,7 @@ watch(grouping, () => {
   collapsedIds.value = new Set();
 });
 
-// Aggregate filters (entries, hours, billable, billable %, activity) act on
+// Aggregate filters (hours, billable, billable %, activity) act on
 // the tree's top-level groups so they compare the totals the rows display.
 const reportTree = computed(() =>
   filterReportTreeGroups(
@@ -193,7 +192,6 @@ const groupingColumnLabel = computed(() =>
 
 const columns = computed<ManagementTableColumn[]>(() => [
   { key: 'group', label: groupingColumnLabel.value, width: 'fill' },
-  { key: 'entries', label: 'Entries', width: 90, align: 'end' },
   { key: 'hours', label: 'Hours', width: 120, align: 'end' },
   { key: 'billable', label: 'Billable', width: 120, align: 'end' },
   { key: 'billableShare', label: 'Billable %', width: 110, align: 'end' },
@@ -220,7 +218,7 @@ function formatRowActivity(lastStartedAt: string | null): string {
   return lastStartedAt ? formatLocalCalendarDate(lastStartedAt) : '—';
 }
 
-const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[880px]`;
+const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[790px]`;
 
 const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
   { label: 'Any', value: 'any' },
@@ -233,13 +231,6 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
   { label: 'Any', value: 'any' },
   { label: 'Billable', value: 'withBillable' },
   { label: 'Non-billable', value: 'withoutBillable' },
-];
-
-const entriesFilterOptions: { label: string; value: ReportEntriesFilter }[] = [
-  { label: 'Any', value: 'any' },
-  { label: '1+', value: 'gte1' },
-  { label: '10+', value: 'gte10' },
-  { label: '50+', value: 'gte50' },
 ];
 
 const billableShareFilterOptions: {
@@ -490,21 +481,6 @@ function handleMemberFilterUpdate(
 
           <div class="flex flex-col gap-1.5">
             <label
-              for="mobile-report-entries-filter"
-              class="text-text-muted text-[12px] font-medium"
-            >Entries</label>
-            <Select
-              id="mobile-report-entries-filter"
-              v-model="filters.entries"
-              :options="entriesFilterOptions"
-              option-label="label"
-              option-value="value"
-              :pt="giTiempoFieldWidthSelectPt"
-            />
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <label
               for="mobile-report-billable-share-filter"
               class="text-text-muted text-[12px] font-medium"
             >Billable %</label>
@@ -636,11 +612,11 @@ function handleMemberFilterUpdate(
         :row-class="getReportRowClass"
         shell-class="bg-surface-primary w-full font-sans"
         single-scroll
-        table-class="min-w-[880px] w-full table-fixed border-collapse"
+        table-class="min-w-[790px] w-full table-fixed border-collapse"
         table-container-class="overflow-visible rounded-none border-none"
       >
         <template #filters>
-          <div class="flex min-w-[880px] flex-1 items-center">
+          <div class="flex min-w-[790px] flex-1 items-center">
             <div class="flex min-w-0 flex-1 items-center gap-2 px-3">
               <FilterAutoComplete
                 class="w-[180px]"
@@ -668,16 +644,6 @@ function handleMemberFilterUpdate(
               />
             </div>
 
-            <div class="w-[90px] px-3 text-right">
-              <Select
-                v-model="filters.entries"
-                :options="entriesFilterOptions"
-                aria-label="Filter report rows by entry count"
-                option-label="label"
-                option-value="value"
-                :pt="giTiempoFieldWidthSelectPt"
-              />
-            </div>
             <div class="w-[120px] px-3 text-right">
               <Select
                 v-model="filters.hours"
@@ -758,17 +724,6 @@ function handleMemberFilterUpdate(
         </Column>
 
         <Column
-          style="width: 90px"
-          :pt="managementTableColumnPt"
-        >
-          <template #body="{ data }">
-            <div class="text-right">
-              <span class="text-text-muted text-[13px] font-normal">{{ data.entryCount }}</span>
-            </div>
-          </template>
-        </Column>
-
-        <Column
           style="width: 120px"
           :pt="managementTableColumnPt"
         >
@@ -832,14 +787,11 @@ function handleMemberFilterUpdate(
 
       <div
         v-if="displayRows.length > 0"
-        class="border-divider bg-app-bg flex h-[44px] min-w-[880px] items-center border-t"
+        class="border-divider bg-app-bg flex h-[44px] min-w-[790px] items-center border-t"
         data-testid="report-total-row"
       >
         <div class="flex min-w-0 flex-1 items-center gap-2 px-3">
           <span class="text-text-dark text-[14px] leading-none font-semibold">Total</span>
-        </div>
-        <div class="w-[90px] px-3 text-right">
-          <span class="text-text-muted text-[13px] font-normal">{{ totals.entryCount }}</span>
         </div>
         <div class="w-[120px] px-3 text-right">
           <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(totals.totalSeconds) }}</span>

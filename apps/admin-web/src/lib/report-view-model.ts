@@ -47,7 +47,6 @@ export type {
   ReportBillableFilter,
   ReportBillableShareFilter,
   ReportDateRange,
-  ReportEntriesFilter,
   ReportFilterOption,
   ReportGrouping,
   ReportGroupingDimension,
@@ -89,7 +88,6 @@ export function createDefaultReportTableFilters(): ReportTableFilters {
     activity: 'any',
     billable: 'any',
     billableShare: 'any',
-    entries: 'any',
     global: '',
     hours: 'any',
     memberId: null,
@@ -627,18 +625,12 @@ function matchesReportActivityFilter(
   return new Date(lastStartedAt).getTime() >= windowStart;
 }
 
-const reportEntriesFilterMinimums = {
-  gte1: 1,
-  gte10: 10,
-  gte50: 50,
-} as const;
-
 /**
  * Aggregate filters compare what the primary rows display: the top-level
  * group's own totals. Filtering leaves instead would test invisible numbers —
- * a project showing "7 entries" is built from task-member leaves holding one
- * or two entries each, so a leaf-level "10+" could never match the screen.
- * Qualifying groups keep their whole subtree.
+ * a project showing 8h is built from task-member leaves holding fractions of
+ * it, so a leaf-level threshold could never match the screen. Qualifying
+ * groups keep their whole subtree.
  */
 export function filterReportTreeGroups(
   nodes: ReportTreeNode[],
@@ -667,13 +659,6 @@ export function filterReportTreeGroups(
     if (
       parsedFilters.billable === 'withoutBillable' &&
       node.totalSeconds - node.billableSeconds <= 0
-    ) {
-      return false;
-    }
-
-    if (
-      parsedFilters.entries !== 'any' &&
-      node.entryCount < reportEntriesFilterMinimums[parsedFilters.entries]
     ) {
       return false;
     }
