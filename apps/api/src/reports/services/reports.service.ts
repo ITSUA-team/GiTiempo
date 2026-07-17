@@ -36,9 +36,12 @@ import { projects } from '../../projects/schemas/projects.schema';
 import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
+import { workspaces } from '../../workspaces/schemas/workspaces.schema';
+import { renderTimeReportPdf, type ReportPdfLeaf } from './report-pdf';
 
 interface ExportResult {
-  content: string;
+  content: string | Buffer;
+  contentType: string;
   filename: string;
 }
 
@@ -110,15 +113,126 @@ export class ReportsService {
     query: TimeReportExportQuery,
   ): Promise<ExportResult> {
     const context = await this.buildQueryContext(user, query);
+    const filenameBase = `time-report-${dateForFilename(context.dateRange.dateFrom)}_${dateForFilename(context.dateRange.dateTo)}`;
+
+    if (query.format === 'pdf') {
+      const content = await this.buildPdfExport(user, context, query);
+
+      return {
+        content,
+        contentType: 'application/pdf',
+        filename: `${filenameBase}.pdf`,
+      };
+    }
+
     const rows = await this.getDetailedRows(
       context,
       query.sortBy,
       query.sortOrder,
     );
-    const content = toCsv(context.groupBy, rows);
-    const filename = `time-report-${dateForFilename(context.dateRange.dateFrom)}_${dateForFilename(context.dateRange.dateTo)}.csv`;
 
-    return { content, filename };
+    return {
+      content: toCsv(context.groupBy, rows),
+      contentType: 'text/csv; charset=utf-8',
+      filename: `${filenameBase}.csv`,
+    };
+  }
+
+  /**
+   * The PDF renders the grouped report at the requested path, so it reads
+   * rows at grouped granularity (no pagination) rather than the CSV's
+   * detailed project-task-user rows.
+   */
+  private async buildPdfExport(
+    user: AuthUser,
+    context: QueryContext,
+    query: TimeReportExportQuery,
+  ): Promise<Buffer> {
+    const [summary, rows, workspaceRow, filterLabels] = await Promise.all([
+      this.getSummary(context),
+      this.getRows(
+        context,
+        query.sortBy,
+        query.sortOrder,
+        undefined,
+        undefined,
+      ),
+      this.db
+        .select({ name: workspaces.name })
+        .from(workspaces)
+        .where(eq(workspaces.id, user.workspaceId))
+        .limit(1)
+        .then(([row]) => row ?? null),
+      this.getExportFilterLabels(query),
+    ]);
+
+    const leaves: ReportPdfLeaf[] = rows.map((row) => ({
+      billableSeconds: Math.trunc(toNumber(row.billableSeconds)),
+      entryCount: Math.trunc(toNumber(row.entryCount)),
+      identity: {
+        ...(row.projectId
+          ? {
+              project: {
+                key: row.projectId,
+                label: row.projectName ?? '—',
+              },
+            }
+          : {}),
+        ...(row.taskId
+          ? { task: { key: row.taskId, label: row.taskTitle ?? '—' } }
+          : {}),
+        ...(row.userId
+          ? {
+              user: {
+                key: row.userId,
+                label: row.userDisplayName?.trim() || row.userEmail || '—',
+              },
+            }
+          : {}),
+      },
+      lastStartedAt: toIsoDateString(row.lastStartedAt),
+      totalSeconds: Math.trunc(toNumber(row.totalSeconds)),
+    }));
+
+    return renderTimeReportPdf({
+      dateRange: context.dateRange,
+      filters: filterLabels,
+      generatedAt: new Date(),
+      groupBy: context.groupBy,
+      leaves,
+      summary,
+      workspaceName: workspaceRow?.name ?? 'Workspace',
+    });
+  }
+
+  private async getExportFilterLabels(
+    query: TimeReportExportQuery,
+  ): Promise<{ memberLabel: string | null; projectLabel: string | null }> {
+    const [projectRow, userRow] = await Promise.all([
+      query.projectId !== undefined
+        ? this.db
+            .select({ name: projects.name })
+            .from(projects)
+            .where(eq(projects.id, query.projectId))
+            .limit(1)
+            .then(([row]) => row ?? null)
+        : Promise.resolve(null),
+      query.userId !== undefined
+        ? this.db
+            .select({ displayName: users.displayName, email: users.email })
+            .from(users)
+            .where(eq(users.id, query.userId))
+            .limit(1)
+            .then(([row]) => row ?? null)
+        : Promise.resolve(null),
+    ]);
+
+    return {
+      memberLabel: userRow
+        ? userRow.displayName?.trim() || userRow.email
+        : null,
+      projectLabel: projectRow?.name ?? null,
+    };
   }
 
   private async buildQueryContext(

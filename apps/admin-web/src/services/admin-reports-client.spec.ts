@@ -132,6 +132,8 @@ describe('createAdminReportsClient', () => {
     const requestUrl = new URL(String(url));
 
     expect(requestUrl.pathname).toBe('/reports/time/export');
+    // format defaults to csv so existing consumers keep the detailed CSV
+    expect(requestUrl.searchParams.get('format')).toBe('csv');
     expect(requestUrl.searchParams.get('groupBy')).toBe('user');
     expect(requestUrl.searchParams.get('projectId')).toBe(projectId);
     expect(requestUrl.searchParams.get('userId')).toBe(userId);

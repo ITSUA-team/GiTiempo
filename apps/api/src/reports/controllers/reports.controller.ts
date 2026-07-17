@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Header,
   HttpCode,
   HttpStatus,
   Query,
@@ -44,11 +43,10 @@ export class ReportsController {
 
   @Get('time/export')
   @HttpCode(HttpStatus.OK)
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @ApiOperation({ summary: 'Export aggregated time report as CSV' })
-  @ApiProduces('text/csv')
+  @ApiOperation({ summary: 'Export aggregated time report as CSV or PDF' })
+  @ApiProduces('text/csv', 'application/pdf')
   @ApiOkResponse({
-    description: 'CSV export of aggregate report rows',
+    description: 'CSV or PDF export of the report',
     schema: { type: 'string' },
   })
   @ApiForbiddenResponse({ description: 'Admin or PM role required' })
@@ -57,9 +55,13 @@ export class ReportsController {
     @Query() query: TimeReportExportQueryDto,
   ): Promise<StreamableFile> {
     const exportResult = await this.reports.exportTimeReport(user, query);
-    return new StreamableFile(Buffer.from(exportResult.content, 'utf8'), {
+    const content = Buffer.isBuffer(exportResult.content)
+      ? exportResult.content
+      : Buffer.from(exportResult.content, 'utf8');
+
+    return new StreamableFile(content, {
       disposition: `attachment; filename="${exportResult.filename}"`,
-      type: 'text/csv; charset=utf-8',
+      type: exportResult.contentType,
     });
   }
 }

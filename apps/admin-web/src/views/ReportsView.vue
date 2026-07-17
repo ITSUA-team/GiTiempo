@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import type { TimeReportExportFormat } from '@gitiempo/shared';
 import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Button from 'primevue/button';
+import Menu from 'primevue/menu';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
@@ -96,7 +98,23 @@ const topProjectDescription = computed(() => {
   return `${formatPaddedHoursMinutesDuration(seconds)} tracked this period`;
 });
 
-async function handleExport(): Promise<void> {
+const exportMenuRef = ref<InstanceType<typeof Menu> | null>(null);
+const exportMenuItems = [
+  {
+    command: () => void handleExport('csv'),
+    label: 'Export as CSV',
+  },
+  {
+    command: () => void handleExport('pdf'),
+    label: 'Export as PDF',
+  },
+];
+
+function toggleExportMenu(event: Event): void {
+  exportMenuRef.value?.toggle(event);
+}
+
+async function handleExport(format: TimeReportExportFormat): Promise<void> {
   if (
     exporting.value ||
     reportDateRangeError.value ||
@@ -108,12 +126,15 @@ async function handleExport(): Promise<void> {
   exporting.value = true;
 
   try {
-    const exportResult = await exportCurrentReport({
-      dateRange: dateRange.value,
-      groupBy: toReportGroupingApiPath(grouping.value),
-      memberId: tableFilters.value.memberId,
-      projectId: tableFilters.value.projectId,
-    });
+    const exportResult = await exportCurrentReport(
+      {
+        dateRange: dateRange.value,
+        groupBy: toReportGroupingApiPath(grouping.value),
+        memberId: tableFilters.value.memberId,
+        projectId: tableFilters.value.projectId,
+      },
+      format,
+    );
 
     if (!exportResult) {
       return;
@@ -188,15 +209,25 @@ async function handleExport(): Promise<void> {
               class="w-full sm:w-auto"
             >
               <Button
-                label="Export CSV"
-                data-testid="export-reports-csv"
+                label="Export"
+                icon="pi pi-chevron-down"
+                icon-pos="right"
+                data-testid="export-reports"
                 class="h-[38px] w-full sm:w-auto"
+                aria-haspopup="true"
+                aria-controls="report-export-menu"
                 :aria-description="exportBlockedReason"
                 :disabled="exportDisabled"
                 :loading="exporting"
-                @click="handleExport"
+                @click="toggleExportMenu"
               />
             </span>
+            <Menu
+              id="report-export-menu"
+              ref="exportMenuRef"
+              :model="exportMenuItems"
+              popup
+            />
           </template>
         </ReportsTable>
       </SurfaceCard>

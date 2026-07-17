@@ -354,6 +354,63 @@ describe('Reports (e2e)', () => {
     }
   });
 
+  it('exports a styled PDF report for admins', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/reports/time/export')
+      .set('Authorization', bearer(adminToken))
+      .query({
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        format: 'pdf',
+        groupBy: 'project,user',
+      })
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(res.headers['content-disposition']).toContain('.pdf');
+    const body = res.body as Buffer;
+    expect(body.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+    expect(body.length).toBeGreaterThan(1500);
+  });
+
+  it('keeps PDF export inside the PM report scope', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/reports/time/export')
+      .set('Authorization', bearer(pmToken))
+      .query({
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        format: 'pdf',
+        groupBy: 'project',
+      })
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.status).toBe(200);
+    expect((res.body as Buffer).subarray(0, 5).toString('latin1')).toBe(
+      '%PDF-',
+    );
+  });
+
+  it('rejects unknown export formats', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/reports/time/export')
+      .set('Authorization', bearer(adminToken))
+      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO, format: 'xlsx' });
+
+    expect(res.status).toBe(400);
+  });
+
   it('rejects member report access', async () => {
     const report = await getReport(memberToken, {});
     expect(report.status).toBe(403);

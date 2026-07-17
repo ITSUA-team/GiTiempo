@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  timeReportExportQuerySchema,
   timeReportQuerySchema,
   timeReportResponseSchema,
 } from "./reports.js";
@@ -110,6 +111,27 @@ describe("timeReportQuerySchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["dateTo"]);
+  });
+});
+
+describe("timeReportExportQuerySchema", () => {
+  it("defaults the export format to csv", () => {
+    const result = timeReportExportQuerySchema.parse({});
+
+    expect(result.format).toBe("csv");
+  });
+
+  it("accepts the pdf format", () => {
+    const result = timeReportExportQuerySchema.parse({ format: "pdf" });
+
+    expect(result.format).toBe("pdf");
+  });
+
+  it("rejects unknown export formats", () => {
+    const result = timeReportExportQuerySchema.safeParse({ format: "xlsx" });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["format"]);
   });
 });
 

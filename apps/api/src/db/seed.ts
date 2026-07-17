@@ -547,7 +547,9 @@ async function main(): Promise<void> {
     const seedTimeEntryRows = DEV_SEED_TIME_ENTRIES.map((entry) => {
       const userId = userIdsByFirebaseUid.get(entry.userUid);
       if (!userId) {
-        throw new Error(`Seed time entry user ${entry.userUid} was not created`);
+        throw new Error(
+          `Seed time entry user ${entry.userUid} was not created`,
+        );
       }
 
       const startedAt = seedEntryStartDate(entry.daysAgo, entry.startHourUtc);

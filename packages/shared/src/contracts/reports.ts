@@ -72,8 +72,13 @@ export const timeReportQuerySchema = z
     path: ["dateTo"],
   });
 
+export const timeReportExportFormatSchema = z.enum(["csv", "pdf"]);
+
 export const timeReportExportQuerySchema = z
-  .object(timeReportFilterShape)
+  .object({
+    ...timeReportFilterShape,
+    format: timeReportExportFormatSchema.default("csv"),
+  })
   .strict()
   .refine(isValidDateRange, {
     message: "dateTo must be later than dateFrom",
@@ -140,6 +145,9 @@ export const timeReportResponseSchema = z.object({
 
 export type TimeReportGroupBy = z.infer<typeof timeReportGroupBySchema>;
 export type TimeReportGroupByPath = z.infer<typeof timeReportGroupByPathSchema>;
+export type TimeReportExportFormat = z.infer<
+  typeof timeReportExportFormatSchema
+>;
 export type TimeReportSortBy = z.infer<typeof timeReportSortBySchema>;
 export type TimeReportSortOrder = z.infer<typeof timeReportSortOrderSchema>;
 export type TimeReportQuery = z.infer<typeof timeReportQuerySchema>;

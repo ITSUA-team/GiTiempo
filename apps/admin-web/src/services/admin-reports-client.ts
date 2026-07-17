@@ -68,6 +68,7 @@ export function buildTimeReportExportQuery(
   const parsed = timeReportExportQuerySchema.parse(query ?? {});
   const searchParams = new URLSearchParams();
 
+  searchParams.set('format', parsed.format);
   searchParams.set('groupBy', parsed.groupBy.join(','));
   searchParams.set('sortBy', parsed.sortBy);
   searchParams.set('sortOrder', parsed.sortOrder);

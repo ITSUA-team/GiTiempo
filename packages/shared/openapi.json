@@ -2935,13 +2935,32 @@
                 "desc"
               ]
             }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "default": "csv",
+              "type": "string",
+              "enum": [
+                "csv",
+                "pdf"
+              ]
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "CSV export of aggregate report rows",
+            "description": "CSV or PDF export of the report",
             "content": {
               "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/pdf": {
                 "schema": {
                   "type": "string"
                 }
@@ -2957,7 +2976,7 @@
             "bearer": []
           }
         ],
-        "summary": "Export aggregated time report as CSV",
+        "summary": "Export aggregated time report as CSV or PDF",
         "tags": [
           "reports"
         ]

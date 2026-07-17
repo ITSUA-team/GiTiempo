@@ -1,4 +1,5 @@
 import { type ComputedRef, type Ref } from 'vue';
+import type { TimeReportExportFormat } from '@gitiempo/shared';
 
 import { useExportTimeReportMutation } from '@/composables/query';
 import { toTimeReportExportQuery, type ReportSetupFilters } from '@/lib/report-view-model';
@@ -26,12 +27,16 @@ export function useReportExport({
 
   async function exportCurrentReport(
     filters: ReportSetupFilters,
+    format: TimeReportExportFormat = 'csv',
   ): Promise<ReportsCsvExport | null> {
     if (!enabled.value) {
       return null;
     }
 
-    return exportReportMutation.mutateAsync(toTimeReportExportQuery(filters));
+    return exportReportMutation.mutateAsync({
+      ...toTimeReportExportQuery(filters),
+      format,
+    });
   }
 
   return { exportCurrentReport };

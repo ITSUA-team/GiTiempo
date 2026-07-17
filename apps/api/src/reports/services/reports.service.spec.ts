@@ -378,12 +378,14 @@ describe('ReportsService', () => {
     });
 
     const result = await service.exportTimeReport(pmUser, {
+      format: 'csv',
       groupBy: ['user'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
 
     expect(buildQueryContext).toHaveBeenCalledWith(pmUser, {
+      format: 'csv',
       groupBy: ['user'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
@@ -394,7 +396,8 @@ describe('ReportsService', () => {
       'desc',
     );
     expect(result.filename).toBe('time-report-2026-05-01_2026-06-01.csv');
-    const csvRows = result.content.split('\n');
+    expect(result.contentType).toBe('text/csv; charset=utf-8');
+    const csvRows = String(result.content).split('\n');
     const dataCells = csvRows[1]!.split(',');
 
     expect(dataCells[0]).toBe('user');
@@ -443,18 +446,57 @@ describe('ReportsService', () => {
     });
 
     const result = await service.exportTimeReport(adminUser, {
+      format: 'csv',
       groupBy: ['project'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
 
-    const csvRows = result.content.split('\n');
+    const csvRows = String(result.content).split('\n');
     const dataCells = csvRows[1]!.split(',');
 
     expect(dataCells[0]).toBe('project');
     expect(dataCells[3]).toBe('018f08cc-7f7f-7f7f-8f8f-9f9f9f9006');
     expect(dataCells[5]).toBe(adminUser.sub);
     expect(dataCells[6]).toBe(adminUser.email);
+  });
+
+  it('exports PDF with a pdf content type and filename', async () => {
+    const { service } = createService('admin');
+    const context = {
+      groupBy: ['project', 'user'] as ['project', 'user'],
+      scopeUserId: adminUser.sub,
+      dateRange: {
+        dateFrom: '2026-05-01T00:00:00.000Z',
+        dateTo: '2026-06-01T00:00:00.000Z',
+      },
+      conditions: [],
+    };
+    const buildPdfExport = vi
+      .fn()
+      .mockResolvedValue(Buffer.from('%PDF-1.7 test'));
+    Object.defineProperty(service, 'buildQueryContext', {
+      value: vi.fn().mockResolvedValue(context),
+    });
+    Object.defineProperty(service, 'buildPdfExport', {
+      value: buildPdfExport,
+    });
+
+    const result = await service.exportTimeReport(adminUser, {
+      format: 'pdf',
+      groupBy: ['project', 'user'],
+      sortBy: 'totalSeconds',
+      sortOrder: 'desc',
+    });
+
+    expect(buildPdfExport).toHaveBeenCalledWith(
+      adminUser,
+      context,
+      expect.objectContaining({ format: 'pdf' }),
+    );
+    expect(result.contentType).toBe('application/pdf');
+    expect(result.filename).toBe('time-report-2026-05-01_2026-06-01.pdf');
+    expect(Buffer.isBuffer(result.content)).toBe(true);
   });
 
   it('records the joined grouping path as CSV metadata without collapsing rows', async () => {
@@ -497,12 +539,13 @@ describe('ReportsService', () => {
     });
 
     const result = await service.exportTimeReport(adminUser, {
+      format: 'csv',
       groupBy: ['project', 'user'],
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
 
-    const csvRows = result.content.split('\n');
+    const csvRows = String(result.content).split('\n');
 
     // header + one row per detailed project-task-user combination
     expect(csvRows).toHaveLength(3);
