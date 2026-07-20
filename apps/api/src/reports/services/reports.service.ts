@@ -36,6 +36,7 @@ import { projects } from '../../projects/schemas/projects.schema';
 import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
+import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { renderTimeReportPdf, type ReportPdfLeaf } from './report-pdf';
 
@@ -67,6 +68,9 @@ interface QueryContext {
   groupBy: TimeReportGroupByPath;
   dateRange: TimeReportEffectiveDateRange;
   scopeUserId: string;
+  workspaceId: string;
+  /** PMs see only active public projects plus those assigned to them. */
+  isProjectManager: boolean;
   conditions: SQL[];
 }
 
@@ -163,7 +167,7 @@ export class ReportsService {
         .where(eq(workspaces.id, user.workspaceId))
         .limit(1)
         .then(([row]) => row ?? null),
-      this.getExportFilterLabels(query),
+      this.getExportFilterLabels(context, query),
     ]);
 
     const leaves: ReportPdfLeaf[] = rows.map((row) => ({
@@ -204,15 +208,47 @@ export class ReportsService {
     });
   }
 
+  /**
+   * Resolves the filter names printed on the PDF.
+   *
+   * These lookups must carry the same scope as the report itself. Matching on
+   * id alone let a caller pass any project or user id in the database and read
+   * its name back off the PDF, even though the rows stayed empty — a
+   * cross-workspace disclosure, and for a PM a way to read the name of a
+   * private project they are not assigned to. An out-of-scope id now resolves
+   * to no row, so the filter prints as "All".
+   */
   private async getExportFilterLabels(
+    context: QueryContext,
     query: TimeReportExportRequest,
   ): Promise<{ memberLabel: string | null; projectLabel: string | null }> {
+    const projectConditions =
+      query.projectId === undefined
+        ? []
+        : [
+            eq(projects.id, query.projectId),
+            eq(projects.workspaceId, context.workspaceId),
+            ...(context.isProjectManager
+              ? [
+                  eq(projects.isActive, true),
+                  or(
+                    eq(projects.visibility, 'public'),
+                    eq(projectAssignments.userId, context.scopeUserId),
+                  )!,
+                ]
+              : []),
+          ];
+
     const [projectRow, userRow] = await Promise.all([
       query.projectId !== undefined
         ? this.db
             .select({ name: projects.name })
             .from(projects)
-            .where(eq(projects.id, query.projectId))
+            .leftJoin(
+              projectAssignments,
+              this.scopeAssignmentJoinCondition(context.scopeUserId),
+            )
+            .where(and(...projectConditions))
             .limit(1)
             .then(([row]) => row ?? null)
         : Promise.resolve(null),
@@ -220,6 +256,13 @@ export class ReportsService {
         ? this.db
             .select({ displayName: users.displayName, email: users.email })
             .from(users)
+            .innerJoin(
+              workspaceMembers,
+              and(
+                eq(workspaceMembers.userId, users.id),
+                eq(workspaceMembers.workspaceId, context.workspaceId),
+              )!,
+            )
             .where(eq(users.id, query.userId))
             .limit(1)
             .then(([row]) => row ?? null)
@@ -289,6 +332,8 @@ export class ReportsService {
       groupBy: query.groupBy,
       dateRange,
       scopeUserId: user.sub,
+      workspaceId: user.workspaceId,
+      isProjectManager: membership.role === 'pm',
       conditions,
     };
   }

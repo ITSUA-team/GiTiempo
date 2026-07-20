@@ -6,9 +6,16 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
-import { projects, tasks, timeEntries, users } from '../src/db/schema';
+import {
+  projects,
+  tasks,
+  timeEntries,
+  users,
+  workspaces,
+} from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
+import { ReportsService } from '../src/reports/services/reports.service';
 
 const DATE_FROM = '2027-03-01T00:00:00.000Z';
 const DATE_TO = '2027-04-01T00:00:00.000Z';
@@ -434,5 +441,118 @@ describe('Reports (e2e)', () => {
   it('rejects member report access', async () => {
     const report = await getReport(memberToken, {});
     expect(report.status).toBe(403);
+  });
+
+  // The PDF prints the names of the project and member filters. Those lookups
+  // are separate from the row query, so they need the same scope: matching on
+  // id alone let any id in the database be resolved to a name.
+  describe('PDF filter labels stay inside the caller scope', () => {
+    async function labelsFor(
+      token: string,
+      query: Record<string, unknown>,
+    ): Promise<{ memberLabel: string | null; projectLabel: string | null }> {
+      const service = app.get(ReportsService);
+      const user = { ...decode(token) };
+      const context = await (
+        service as unknown as {
+          buildQueryContext: (u: unknown, q: unknown) => Promise<unknown>;
+        }
+      ).buildQueryContext(user, {
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        format: 'pdf',
+        groupBy: ['project'],
+        sortBy: 'totalSeconds',
+        sortOrder: 'desc',
+        ...query,
+      });
+
+      return (
+        service as unknown as {
+          getExportFilterLabels: (
+            c: unknown,
+            q: unknown,
+          ) => Promise<{
+            memberLabel: string | null;
+            projectLabel: string | null;
+          }>;
+        }
+      ).getExportFilterLabels(context, { ...query });
+    }
+
+    function decode(token: string) {
+      const payload = JSON.parse(
+        Buffer.from(token.split('.')[1]!, 'base64url').toString('utf8'),
+      ) as Record<string, unknown>;
+
+      return payload;
+    }
+
+    it('resolves an in-scope project name for an admin', async () => {
+      const labels = await labelsFor(adminToken, {
+        projectId: platformProjectId,
+      });
+
+      expect(labels.projectLabel).toBe('Internal Platform');
+    });
+
+    it('hides a project belonging to another workspace', async () => {
+      const [otherWorkspace] = await db
+        .insert(workspaces)
+        .values({ name: 'Reports Foreign Workspace' })
+        .returning({ id: workspaces.id });
+      const [foreignProject] = await db
+        .insert(projects)
+        .values({
+          name: 'Foreign Secret Project',
+          visibility: 'public',
+          workspaceId: otherWorkspace!.id,
+        })
+        .returning({ id: projects.id });
+
+      try {
+        const labels = await labelsFor(adminToken, {
+          projectId: foreignProject!.id,
+        });
+
+        expect(labels.projectLabel).toBeNull();
+      } finally {
+        await db.delete(projects).where(eq(projects.id, foreignProject!.id));
+        await db
+          .delete(workspaces)
+          .where(eq(workspaces.id, otherWorkspace!.id));
+      }
+    });
+
+    it('hides a private project a PM is not assigned to', async () => {
+      const labels = await labelsFor(pmToken, { projectId: probeProjectId });
+
+      expect(labels.projectLabel).toBeNull();
+    });
+
+    it('hides a user who is not a member of this workspace', async () => {
+      const [outsider] = await db
+        .insert(users)
+        .values({
+          email: 'outsider@elsewhere.test',
+          displayName: 'Outsider Person',
+          firebaseUid: 'reports-outsider-uid',
+        })
+        .returning({ id: users.id });
+
+      try {
+        const labels = await labelsFor(adminToken, { userId: outsider!.id });
+
+        expect(labels.memberLabel).toBeNull();
+      } finally {
+        await db.delete(users).where(eq(users.id, outsider!.id));
+      }
+    });
+
+    it('resolves a member of this workspace', async () => {
+      const labels = await labelsFor(adminToken, { userId: bobUserId });
+
+      expect(labels.memberLabel).toBeTruthy();
+    });
   });
 });
