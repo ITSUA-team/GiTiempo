@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/vue-query';
 import { computed, ref, shallowRef, watch, type ComputedRef, type Ref } from 'vue';
-import type { TimeReportQuery, WorkspaceRole } from '@gitiempo/shared';
+import type { TimeReportRequest, WorkspaceRole } from '@gitiempo/shared';
 import { getLocalIsoWeekRange } from '@gitiempo/web-shared/time';
 
 import {
@@ -79,7 +79,7 @@ export function useAdminDashboardData({
         throw new Error(ADMIN_DASHBOARD_MISSING_ROLE_MESSAGE);
       }
 
-      const reportQuery: Partial<TimeReportQuery> = {
+      const reportQuery: Partial<TimeReportRequest> = {
         ...weekRange.value,
         groupBy: ['project'],
         limit: ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,

@@ -340,6 +340,89 @@ describe('ReportsService', () => {
     expect(report.meta).toEqual({ page: 1, limit: 2, total: 5, totalPages: 3 });
   });
 
+  it('skips the top-level key query when no page is requested', async () => {
+    // The PDF path reads every group, so filtering rows by "all keys that
+    // exist" is a no-op — it must not pay for the key scan or the IN clause.
+    const { service } = createService('admin');
+    const context = {
+      groupBy: ['project', 'user'] as ['project', 'user'],
+      scopeUserId: adminUser.sub,
+      workspaceId: adminUser.workspaceId,
+      isProjectManager: false,
+      dateRange: {
+        dateFrom: '2026-05-01T00:00:00.000Z',
+        dateTo: '2026-06-01T00:00:00.000Z',
+      },
+      conditions: [],
+    };
+    const getTopLevelKeys = vi.fn();
+    const groupedRowsQuery = vi.fn().mockReturnValue({
+      orderBy: vi.fn().mockResolvedValue([]),
+    });
+    Object.defineProperty(service, 'getTopLevelKeys', {
+      value: getTopLevelKeys,
+    });
+    Object.defineProperty(service, 'groupedRowsQuery', {
+      value: groupedRowsQuery,
+    });
+
+    await (
+      service as unknown as {
+        getRows: (
+          c: unknown,
+          s: string,
+          o: string,
+          p: number | undefined,
+          l: number | undefined,
+        ) => Promise<unknown>;
+      }
+    ).getRows(context, 'totalSeconds', 'desc', undefined, undefined);
+
+    expect(getTopLevelKeys).not.toHaveBeenCalled();
+    // No extra condition: the grouped query runs unfiltered.
+    expect(groupedRowsQuery).toHaveBeenCalledWith(context);
+  });
+
+  it('still pages by top-level key when a page is requested', async () => {
+    const { service } = createService('admin');
+    const context = {
+      groupBy: ['project', 'user'] as ['project', 'user'],
+      scopeUserId: adminUser.sub,
+      workspaceId: adminUser.workspaceId,
+      isProjectManager: false,
+      dateRange: {
+        dateFrom: '2026-05-01T00:00:00.000Z',
+        dateTo: '2026-06-01T00:00:00.000Z',
+      },
+      conditions: [],
+    };
+    const getTopLevelKeys = vi.fn().mockResolvedValue(['project-1']);
+    const groupedRowsQuery = vi.fn().mockReturnValue({
+      orderBy: vi.fn().mockResolvedValue([]),
+    });
+    Object.defineProperty(service, 'getTopLevelKeys', {
+      value: getTopLevelKeys,
+    });
+    Object.defineProperty(service, 'groupedRowsQuery', {
+      value: groupedRowsQuery,
+    });
+
+    await (
+      service as unknown as {
+        getRows: (
+          c: unknown,
+          s: string,
+          o: string,
+          p: number | undefined,
+          l: number | undefined,
+        ) => Promise<unknown>;
+      }
+    ).getRows(context, 'totalSeconds', 'desc', 1, 20);
+
+    expect(getTopLevelKeys).toHaveBeenCalled();
+    expect(groupedRowsQuery.mock.calls[0]?.length).toBe(2);
+  });
+
   it('exports CSV using the same scoped context and filters', async () => {
     const { service } = createService('pm');
     const context = {
@@ -400,12 +483,118 @@ describe('ReportsService', () => {
     const csvRows = String(result.content).split('\n');
     const dataCells = csvRows[1]!.split(',');
 
-    expect(dataCells[0]).toBe('user');
-    expect(dataCells[1]).toBe('018f08cc-7f7f-7f7f-8f8f-9f9f9f9005');
-    expect(dataCells[2]).toBe('Project Orion');
-    expect(dataCells[3]).toBe('018f08cc-7f7f-7f7f-8f8f-9f9f9f9006');
-    expect(dataCells[4]).toBe('Improve reports filters');
+    expect(dataCells[0]).toBe('"user"');
+    expect(dataCells[1]).toBe('"018f08cc-7f7f-7f7f-8f8f-9f9f9f9005"');
+    expect(dataCells[2]).toBe('"Project Orion"');
+    expect(dataCells[3]).toBe('"018f08cc-7f7f-7f7f-8f8f-9f9f9f9006"');
+    expect(dataCells[4]).toBe('"Improve reports filters"');
     expect(result.content).toContain(pmUser.email);
+  });
+
+  it('neutralises spreadsheet formulas in workspace-controlled CSV cells', async () => {
+    const { service } = createService('admin');
+    const context = {
+      groupBy: ['project'] as ['project'],
+      scopeUserId: adminUser.sub,
+      dateRange: {
+        dateFrom: '2026-05-01T00:00:00.000Z',
+        dateTo: '2026-06-01T00:00:00.000Z',
+      },
+      conditions: [],
+    };
+    Object.defineProperty(service, 'buildQueryContext', {
+      value: vi.fn().mockResolvedValue(context),
+    });
+    Object.defineProperty(service, 'getDetailedRows', {
+      value: vi.fn().mockResolvedValue([
+        {
+          projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9005',
+          projectName: "=cmd|'/c calc'!A1",
+          taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9006',
+          taskTitle: '=SUM(A1,B1)',
+          userId: adminUser.sub,
+          userEmail: '＝1+2',
+          userDisplayName: 'safe;=1+2',
+          userAvatarUrl: null,
+          totalSeconds: 3600,
+          billableSeconds: 0,
+          nonBillableSeconds: 3600,
+          entryCount: 1,
+          firstStartedAt: new Date('2026-05-01T10:00:00.000Z'),
+          lastStartedAt: new Date('2026-05-01T10:00:00.000Z'),
+        },
+      ]),
+    });
+
+    const result = await service.exportTimeReport(adminUser, {
+      format: 'csv',
+      groupBy: ['project'],
+      sortBy: 'totalSeconds',
+      sortOrder: 'desc',
+    });
+
+    const dataRow = String(result.content).split('\n')[1]!;
+
+    // ASCII trigger, defused inside its quotes.
+    expect(dataRow).toContain(`"'=cmd|'/c calc'!A1"`);
+    // Full-width variant, which some locales also evaluate as a formula.
+    expect(dataRow).toContain(`"'＝1+2"`);
+    // A formula carrying our own separator stays a single quoted field.
+    expect(dataRow).toContain(`"'=SUM(A1,B1)"`);
+    // A semicolon cannot open a new cell, because every field is quoted —
+    // Excel treats ';' as the separator in several locales.
+    expect(dataRow).toContain(`"safe;=1+2"`);
+    // No field in the row begins with a bare trigger character.
+    expect(/(^|,)[=+\-@\t\r\n＝＋－＠]/.test(dataRow)).toBe(false);
+  });
+
+  it('leaves ordinary CSV values untouched', async () => {
+    const { service } = createService('admin');
+    Object.defineProperty(service, 'buildQueryContext', {
+      value: vi.fn().mockResolvedValue({
+        groupBy: ['project'] as ['project'],
+        scopeUserId: adminUser.sub,
+        dateRange: {
+          dateFrom: '2026-05-01T00:00:00.000Z',
+          dateTo: '2026-06-01T00:00:00.000Z',
+        },
+        conditions: [],
+      }),
+    });
+    Object.defineProperty(service, 'getDetailedRows', {
+      value: vi.fn().mockResolvedValue([
+        {
+          projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9005',
+          projectName: 'Project Orion',
+          taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9006',
+          taskTitle: 'Improve reports, filters',
+          userId: adminUser.sub,
+          userEmail: 'admin@example.com',
+          userDisplayName: 'Admin User',
+          userAvatarUrl: null,
+          totalSeconds: 3600,
+          billableSeconds: 3600,
+          nonBillableSeconds: 0,
+          entryCount: 1,
+          firstStartedAt: new Date('2026-05-01T10:00:00.000Z'),
+          lastStartedAt: new Date('2026-05-01T10:00:00.000Z'),
+        },
+      ]),
+    });
+
+    const result = await service.exportTimeReport(adminUser, {
+      format: 'csv',
+      groupBy: ['project'],
+      sortBy: 'totalSeconds',
+      sortOrder: 'desc',
+    });
+    const dataRow = String(result.content).split('\n')[1]!;
+
+    // Quoted, but with no apostrophe prefix: nothing here is a formula.
+    expect(dataRow).toContain('"Project Orion"');
+    expect(dataRow).not.toContain("'Project Orion");
+    expect(dataRow).toContain('"Improve reports, filters"');
+    expect(dataRow).toContain('"3600"');
   });
 
   it('exports project-group CSV rows with task and user context', async () => {
@@ -455,10 +644,10 @@ describe('ReportsService', () => {
     const csvRows = String(result.content).split('\n');
     const dataCells = csvRows[1]!.split(',');
 
-    expect(dataCells[0]).toBe('project');
-    expect(dataCells[3]).toBe('018f08cc-7f7f-7f7f-8f8f-9f9f9f9006');
-    expect(dataCells[5]).toBe(adminUser.sub);
-    expect(dataCells[6]).toBe(adminUser.email);
+    expect(dataCells[0]).toBe('"project"');
+    expect(dataCells[3]).toBe('"018f08cc-7f7f-7f7f-8f8f-9f9f9f9006"');
+    expect(dataCells[5]).toBe(`"${adminUser.sub}"`);
+    expect(dataCells[6]).toBe(`"${adminUser.email}"`);
   });
 
   it('exports PDF with a pdf content type and filename', async () => {
@@ -549,7 +738,7 @@ describe('ReportsService', () => {
 
     // header + one row per detailed project-task-user combination
     expect(csvRows).toHaveLength(3);
-    expect(csvRows[1]!.split(',')[0]).toBe('project>user');
-    expect(csvRows[2]!.split(',')[0]).toBe('project>user');
+    expect(csvRows[1]!.split(',')[0]).toBe('"project>user"');
+    expect(csvRows[2]!.split(',')[0]).toBe('"project>user"');
   });
 });

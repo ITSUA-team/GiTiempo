@@ -15,10 +15,10 @@ import {
 } from 'drizzle-orm';
 import type {
   TimeReportEffectiveDateRange,
-  TimeReportExportQuery,
+  TimeReportExportRequest,
   TimeReportGroupBy,
   TimeReportGroupByPath,
-  TimeReportQuery,
+  TimeReportRequest,
   TimeReportResponse,
   TimeReportRow,
   TimeReportSortBy,
@@ -36,6 +36,7 @@ import { projects } from '../../projects/schemas/projects.schema';
 import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
+import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { renderTimeReportPdf, type ReportPdfLeaf } from './report-pdf';
 
@@ -67,6 +68,9 @@ interface QueryContext {
   groupBy: TimeReportGroupByPath;
   dateRange: TimeReportEffectiveDateRange;
   scopeUserId: string;
+  workspaceId: string;
+  /** PMs see only active public projects plus those assigned to them. */
+  isProjectManager: boolean;
   conditions: SQL[];
 }
 
@@ -79,7 +83,7 @@ export class ReportsService {
 
   async getTimeReport(
     user: AuthUser,
-    query: TimeReportQuery,
+    query: TimeReportRequest,
   ): Promise<TimeReportResponse> {
     const context = await this.buildQueryContext(user, query);
     const [summary, total, rows] = await Promise.all([
@@ -110,7 +114,7 @@ export class ReportsService {
 
   async exportTimeReport(
     user: AuthUser,
-    query: TimeReportExportQuery,
+    query: TimeReportExportRequest,
   ): Promise<ExportResult> {
     const context = await this.buildQueryContext(user, query);
     const filenameBase = `time-report-${dateForFilename(context.dateRange.dateFrom)}_${dateForFilename(context.dateRange.dateTo)}`;
@@ -146,7 +150,7 @@ export class ReportsService {
   private async buildPdfExport(
     user: AuthUser,
     context: QueryContext,
-    query: TimeReportExportQuery,
+    query: TimeReportExportRequest,
   ): Promise<Buffer> {
     const [summary, rows, workspaceRow, filterLabels] = await Promise.all([
       this.getSummary(context),
@@ -163,7 +167,7 @@ export class ReportsService {
         .where(eq(workspaces.id, user.workspaceId))
         .limit(1)
         .then(([row]) => row ?? null),
-      this.getExportFilterLabels(query),
+      this.getExportFilterLabels(context, query),
     ]);
 
     const leaves: ReportPdfLeaf[] = rows.map((row) => ({
@@ -204,15 +208,47 @@ export class ReportsService {
     });
   }
 
+  /**
+   * Resolves the filter names printed on the PDF.
+   *
+   * These lookups must carry the same scope as the report itself. Matching on
+   * id alone let a caller pass any project or user id in the database and read
+   * its name back off the PDF, even though the rows stayed empty — a
+   * cross-workspace disclosure, and for a PM a way to read the name of a
+   * private project they are not assigned to. An out-of-scope id now resolves
+   * to no row, so the filter prints as "All".
+   */
   private async getExportFilterLabels(
-    query: TimeReportExportQuery,
+    context: QueryContext,
+    query: TimeReportExportRequest,
   ): Promise<{ memberLabel: string | null; projectLabel: string | null }> {
+    const projectConditions =
+      query.projectId === undefined
+        ? []
+        : [
+            eq(projects.id, query.projectId),
+            eq(projects.workspaceId, context.workspaceId),
+            ...(context.isProjectManager
+              ? [
+                  eq(projects.isActive, true),
+                  or(
+                    eq(projects.visibility, 'public'),
+                    eq(projectAssignments.userId, context.scopeUserId),
+                  )!,
+                ]
+              : []),
+          ];
+
     const [projectRow, userRow] = await Promise.all([
       query.projectId !== undefined
         ? this.db
             .select({ name: projects.name })
             .from(projects)
-            .where(eq(projects.id, query.projectId))
+            .leftJoin(
+              projectAssignments,
+              this.scopeAssignmentJoinCondition(context.scopeUserId),
+            )
+            .where(and(...projectConditions))
             .limit(1)
             .then(([row]) => row ?? null)
         : Promise.resolve(null),
@@ -220,6 +256,13 @@ export class ReportsService {
         ? this.db
             .select({ displayName: users.displayName, email: users.email })
             .from(users)
+            .innerJoin(
+              workspaceMembers,
+              and(
+                eq(workspaceMembers.userId, users.id),
+                eq(workspaceMembers.workspaceId, context.workspaceId),
+              )!,
+            )
             .where(eq(users.id, query.userId))
             .limit(1)
             .then(([row]) => row ?? null)
@@ -236,7 +279,7 @@ export class ReportsService {
 
   private async buildQueryContext(
     user: AuthUser,
-    query: TimeReportQuery | TimeReportExportQuery,
+    query: TimeReportRequest | TimeReportExportRequest,
   ): Promise<QueryContext> {
     const membership = await this.members.requireRole(
       user.sub,
@@ -289,6 +332,8 @@ export class ReportsService {
       groupBy: query.groupBy,
       dateRange,
       scopeUserId: user.sub,
+      workspaceId: user.workspaceId,
+      isProjectManager: membership.role === 'pm',
       conditions,
     };
   }
@@ -352,6 +397,19 @@ export class ReportsService {
       return query;
     }
 
+    const leafOrder = leafOrderBy(context.groupBy, sortBy, sortOrder);
+
+    /**
+     * Unpaginated callers (the PDF) take every top-level group, so restricting
+     * rows to "all keys that exist" filters nothing. Reading the key list to
+     * build that IN clause cost an extra grouped scan, held every key in
+     * memory, and bound one query parameter per key — enough to hit Postgres'
+     * parameter ceiling on a large workspace. Skip straight to the rows.
+     */
+    if (page === undefined || limit === undefined) {
+      return this.groupedRowsQuery(context).orderBy(...leafOrder);
+    }
+
     const keys = await this.getTopLevelKeys(
       context,
       sortBy,
@@ -366,7 +424,7 @@ export class ReportsService {
     const keyColumn = dimensionKeyColumn(context.groupBy[0]!);
 
     return this.groupedRowsQuery(context, inArray(keyColumn, keys)).orderBy(
-      ...leafOrderBy(context.groupBy, sortBy, sortOrder),
+      ...leafOrder,
     );
   }
 
@@ -620,7 +678,7 @@ function leafOrderBy(
 }
 
 function resolveDateRange(
-  query: TimeReportQuery | TimeReportExportQuery,
+  query: TimeReportRequest | TimeReportExportRequest,
 ): TimeReportEffectiveDateRange {
   const now = new Date();
   const defaultFrom = startOfUtcMonth(now);
@@ -720,8 +778,21 @@ function requireUser(row: AggregateRow) {
   };
 }
 
+/**
+ * Fixed labels for the group-by column. The dimension is already a validated
+ * enum, but mapping through a constant keeps request input out of the exported
+ * file entirely rather than relying on validation upstream.
+ */
+const csvGroupByLabels: Record<TimeReportGroupBy, string> = {
+  project: 'project',
+  task: 'task',
+  user: 'user',
+};
+
 function toCsv(groupBy: TimeReportGroupByPath, rows: AggregateRow[]): string {
-  const groupByPath = groupBy.join('>');
+  const groupByPath = groupBy
+    .map((dimension) => csvGroupByLabels[dimension])
+    .join('>');
   const header = [
     'Group By',
     'Project ID',
@@ -764,9 +835,40 @@ function toCsv(groupBy: TimeReportGroupByPath, rows: AggregateRow[]): string {
     .join('\n');
 }
 
+/**
+ * Characters that make a spreadsheet treat a cell as a formula. Covers the
+ * ASCII set plus the full-width variants that some locales (notably Japanese
+ * input) also evaluate, and the whitespace controls that can shift content
+ * into a new cell.
+ */
+const csvFormulaTrigger = /^[=+\-@\t\r\n＝＋－＠]/;
+
+/**
+ * Renders one CSV field, defused against formula injection (CWE-1236).
+ *
+ * Project names, task titles and display names are workspace-controlled and
+ * land in this file, so a project named `=cmd|'/c calc'!A1` would otherwise
+ * execute when a colleague opens the export.
+ *
+ * Every field is quoted unconditionally, not only when it contains our comma.
+ * Excel uses `;` as the separator in several locales, so an unquoted value
+ * carrying `;` would split there and open a *new* cell whose content starts
+ * with a trigger character — defusing only the first character of the original
+ * value does not stop that.
+ *
+ * Known limitation: Excel may drop the quoting and apostrophe when the file is
+ * saved and re-opened, at which point a formula can reactivate. The
+ * Excel-proof alternative is a leading TAB instead of an apostrophe, which
+ * survives the round-trip but leaves a tab in the data for programmatic
+ * consumers. This export is read by both, so it takes the non-destructive
+ * option.
+ */
 function csvCell(value: string | number): string {
-  const text = String(value);
-  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  const raw = String(value);
+  // Neutralise before quoting so the apostrophe sits inside the quotes.
+  const guarded = csvFormulaTrigger.test(raw) ? `'${raw}` : raw;
+
+  return `"${guarded.replace(/"/g, '""')}"`;
 }
 
 function dateForFilename(value: string): string {

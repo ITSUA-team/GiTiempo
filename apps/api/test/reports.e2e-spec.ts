@@ -6,9 +6,16 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
-import { projects, tasks, timeEntries, users } from '../src/db/schema';
+import {
+  projects,
+  tasks,
+  timeEntries,
+  users,
+  workspaces,
+} from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
+import { ReportsService } from '../src/reports/services/reports.service';
 
 const DATE_FROM = '2027-03-01T00:00:00.000Z';
 const DATE_TO = '2027-04-01T00:00:00.000Z';
@@ -228,11 +235,11 @@ describe('Reports (e2e)', () => {
     return row.id;
   }
 
-  function getReport(token: string, query: Record<string, string>) {
+  function getReport(token: string, body: Record<string, unknown>) {
     return request(app.getHttpServer())
-      .get('/reports/time')
+      .post('/reports/time')
       .set('Authorization', bearer(token))
-      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO, ...query });
+      .send({ dateFrom: DATE_FROM, dateTo: DATE_TO, ...body });
   }
 
   it('keeps single-level project grouping behavior', async () => {
@@ -257,7 +264,9 @@ describe('Reports (e2e)', () => {
   });
 
   it('returns multi-level leaf rows carrying identity for the full path', async () => {
-    const res = await getReport(adminToken, { groupBy: 'project,user,task' });
+    const res = await getReport(adminToken, {
+      groupBy: ['project', 'user', 'task'],
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.groupBy).toEqual(['project', 'user', 'task']);
@@ -285,9 +294,9 @@ describe('Reports (e2e)', () => {
 
   it('paginates by top-level group and returns complete subtrees', async () => {
     const res = await getReport(adminToken, {
-      groupBy: 'project,user',
-      page: '1',
-      limit: '1',
+      groupBy: ['project', 'user'],
+      page: 1,
+      limit: 1,
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
@@ -312,7 +321,7 @@ describe('Reports (e2e)', () => {
   });
 
   it('keeps PM-scoped multi-level reports inside assigned projects', async () => {
-    const res = await getReport(pmToken, { groupBy: 'project,user' });
+    const res = await getReport(pmToken, { groupBy: ['project', 'user'] });
 
     expect(res.status).toBe(200);
     const projectIds = new Set(
@@ -327,9 +336,11 @@ describe('Reports (e2e)', () => {
 
   it('rejects invalid grouping paths', async () => {
     const duplicated = await getReport(adminToken, {
-      groupBy: 'project,project',
+      groupBy: ['project', 'project'],
     });
-    const unknown = await getReport(adminToken, { groupBy: 'project,week' });
+    const unknown = await getReport(adminToken, {
+      groupBy: ['project', 'week'],
+    });
 
     expect(duplicated.status).toBe(400);
     expect(unknown.status).toBe(400);
@@ -337,12 +348,12 @@ describe('Reports (e2e)', () => {
 
   it('exports detailed CSV rows recording the grouping path', async () => {
     const res = await request(app.getHttpServer())
-      .get('/reports/time/export')
+      .post('/reports/time/export')
       .set('Authorization', bearer(adminToken))
-      .query({
+      .send({
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
-        groupBy: 'project,user',
+        groupBy: ['project', 'user'],
       });
 
     expect(res.status).toBe(200);
@@ -350,19 +361,20 @@ describe('Reports (e2e)', () => {
     // header + one row per project-task-user combination (5 seeded combos)
     expect(lines).toHaveLength(6);
     for (const line of lines.slice(1)) {
-      expect(line.startsWith('project>user,')).toBe(true);
+      // Every field is quoted to defuse formula injection across locales.
+      expect(line.startsWith('"project>user",')).toBe(true);
     }
   });
 
   it('exports a styled PDF report for admins', async () => {
     const res = await request(app.getHttpServer())
-      .get('/reports/time/export')
+      .post('/reports/time/export')
       .set('Authorization', bearer(adminToken))
-      .query({
+      .send({
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
         format: 'pdf',
-        groupBy: 'project,user',
+        groupBy: ['project', 'user'],
       })
       .buffer(true)
       .parse((response, callback) => {
@@ -381,13 +393,13 @@ describe('Reports (e2e)', () => {
 
   it('keeps PDF export inside the PM report scope', async () => {
     const res = await request(app.getHttpServer())
-      .get('/reports/time/export')
+      .post('/reports/time/export')
       .set('Authorization', bearer(pmToken))
-      .query({
+      .send({
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
         format: 'pdf',
-        groupBy: 'project',
+        groupBy: ['project'],
       })
       .buffer(true)
       .parse((response, callback) => {
@@ -404,18 +416,18 @@ describe('Reports (e2e)', () => {
 
   it('rejects unknown export formats', async () => {
     const res = await request(app.getHttpServer())
-      .get('/reports/time/export')
+      .post('/reports/time/export')
       .set('Authorization', bearer(adminToken))
-      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO, format: 'xlsx' });
+      .send({ dateFrom: DATE_FROM, dateTo: DATE_TO, format: 'xlsx' });
 
     expect(res.status).toBe(400);
   });
 
   it('exposes the export filename header to cross-origin callers', async () => {
     const res = await request(app.getHttpServer())
-      .get('/reports/time/export')
+      .post('/reports/time/export')
       .set('Authorization', bearer(adminToken))
-      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO });
+      .send({ dateFrom: DATE_FROM, dateTo: DATE_TO });
 
     expect(res.status).toBe(200);
     // Without this, browsers cannot read Content-Disposition on cross-origin
@@ -429,5 +441,118 @@ describe('Reports (e2e)', () => {
   it('rejects member report access', async () => {
     const report = await getReport(memberToken, {});
     expect(report.status).toBe(403);
+  });
+
+  // The PDF prints the names of the project and member filters. Those lookups
+  // are separate from the row query, so they need the same scope: matching on
+  // id alone let any id in the database be resolved to a name.
+  describe('PDF filter labels stay inside the caller scope', () => {
+    async function labelsFor(
+      token: string,
+      query: Record<string, unknown>,
+    ): Promise<{ memberLabel: string | null; projectLabel: string | null }> {
+      const service = app.get(ReportsService);
+      const user = { ...decode(token) };
+      const context = await (
+        service as unknown as {
+          buildQueryContext: (u: unknown, q: unknown) => Promise<unknown>;
+        }
+      ).buildQueryContext(user, {
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        format: 'pdf',
+        groupBy: ['project'],
+        sortBy: 'totalSeconds',
+        sortOrder: 'desc',
+        ...query,
+      });
+
+      return (
+        service as unknown as {
+          getExportFilterLabels: (
+            c: unknown,
+            q: unknown,
+          ) => Promise<{
+            memberLabel: string | null;
+            projectLabel: string | null;
+          }>;
+        }
+      ).getExportFilterLabels(context, { ...query });
+    }
+
+    function decode(token: string) {
+      const payload = JSON.parse(
+        Buffer.from(token.split('.')[1]!, 'base64url').toString('utf8'),
+      ) as Record<string, unknown>;
+
+      return payload;
+    }
+
+    it('resolves an in-scope project name for an admin', async () => {
+      const labels = await labelsFor(adminToken, {
+        projectId: platformProjectId,
+      });
+
+      expect(labels.projectLabel).toBe('Internal Platform');
+    });
+
+    it('hides a project belonging to another workspace', async () => {
+      const [otherWorkspace] = await db
+        .insert(workspaces)
+        .values({ name: 'Reports Foreign Workspace' })
+        .returning({ id: workspaces.id });
+      const [foreignProject] = await db
+        .insert(projects)
+        .values({
+          name: 'Foreign Secret Project',
+          visibility: 'public',
+          workspaceId: otherWorkspace!.id,
+        })
+        .returning({ id: projects.id });
+
+      try {
+        const labels = await labelsFor(adminToken, {
+          projectId: foreignProject!.id,
+        });
+
+        expect(labels.projectLabel).toBeNull();
+      } finally {
+        await db.delete(projects).where(eq(projects.id, foreignProject!.id));
+        await db
+          .delete(workspaces)
+          .where(eq(workspaces.id, otherWorkspace!.id));
+      }
+    });
+
+    it('hides a private project a PM is not assigned to', async () => {
+      const labels = await labelsFor(pmToken, { projectId: probeProjectId });
+
+      expect(labels.projectLabel).toBeNull();
+    });
+
+    it('hides a user who is not a member of this workspace', async () => {
+      const [outsider] = await db
+        .insert(users)
+        .values({
+          email: 'outsider@elsewhere.test',
+          displayName: 'Outsider Person',
+          firebaseUid: 'reports-outsider-uid',
+        })
+        .returning({ id: users.id });
+
+      try {
+        const labels = await labelsFor(adminToken, { userId: outsider!.id });
+
+        expect(labels.memberLabel).toBeNull();
+      } finally {
+        await db.delete(users).where(eq(users.id, outsider!.id));
+      }
+    });
+
+    it('resolves a member of this workspace', async () => {
+      const labels = await labelsFor(adminToken, { userId: bobUserId });
+
+      expect(labels.memberLabel).toBeTruthy();
+    });
   });
 });

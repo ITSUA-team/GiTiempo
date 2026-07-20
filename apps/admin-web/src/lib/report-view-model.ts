@@ -1,10 +1,10 @@
 import {
-  timeReportExportQuerySchema,
-  timeReportQuerySchema,
+  timeReportExportRequestSchema,
+  timeReportRequestSchema,
   type ProjectListResponse,
   type ProjectMember,
-  type TimeReportExportQuery,
-  type TimeReportQuery,
+  type TimeReportExportRequest,
+  type TimeReportRequest,
   type TimeReportResponse,
   type TimeReportRow,
   type WorkspaceMemberListResponse,
@@ -200,10 +200,10 @@ export function deriveWorkspaceMemberOptions(
 
 function toReportDateQuery(
   dateRange: ReportDateRange,
-): Pick<TimeReportQuery, 'dateFrom' | 'dateTo'> {
+): Pick<TimeReportRequest, 'dateFrom' | 'dateTo'> {
   const parsedDateRange = parseReportDateRange(dateRange);
   const [dateFrom, dateTo] = parsedDateRange ?? [];
-  const query: Pick<TimeReportQuery, 'dateFrom' | 'dateTo'> = {};
+  const query: Pick<TimeReportRequest, 'dateFrom' | 'dateTo'> = {};
 
   if (dateFrom) {
     query.dateFrom = startOfLocalDayIso(dateFrom);
@@ -220,10 +220,10 @@ export function toTimeReportQuery(
   filters: ReportSetupFilters,
   page: number,
   limit: number,
-): TimeReportQuery {
+): TimeReportRequest {
   const parsedFilters = reportSetupFiltersSchema.parse(filters);
 
-  return timeReportQuerySchema.parse({
+  return timeReportRequestSchema.parse({
     ...toReportDateQuery(parsedFilters.dateRange),
     groupBy: parsedFilters.groupBy,
     limit,
@@ -235,12 +235,12 @@ export function toTimeReportQuery(
   });
 }
 
-export function toTimeReportExportQuery(
+export function toTimeReportExportRequest(
   filters: ReportSetupFilters,
-): TimeReportExportQuery {
+): TimeReportExportRequest {
   const parsedFilters = reportSetupFiltersSchema.parse(filters);
 
-  return timeReportExportQuerySchema.parse({
+  return timeReportExportRequestSchema.parse({
     ...toReportDateQuery(parsedFilters.dateRange),
     groupBy: parsedFilters.groupBy,
     projectId: parsedFilters.projectId ?? undefined,

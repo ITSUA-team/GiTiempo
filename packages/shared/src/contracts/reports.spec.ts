@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  timeReportExportQuerySchema,
-  timeReportQuerySchema,
+  timeReportExportRequestSchema,
+  timeReportRequestSchema,
   timeReportResponseSchema,
 } from "./reports.js";
 
@@ -10,9 +10,9 @@ const projectId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001";
 const taskId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002";
 const userId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003";
 
-describe("timeReportQuerySchema", () => {
+describe("timeReportRequestSchema", () => {
   it("accepts valid report filters and applies defaults", () => {
-    const result = timeReportQuerySchema.parse({
+    const result = timeReportRequestSchema.parse({
       projectId,
       userId,
       dateFrom: "2026-05-01T00:00:00.000Z",
@@ -30,22 +30,31 @@ describe("timeReportQuerySchema", () => {
     });
   });
 
-  it("parses a bare single groupBy value as a one-level path", () => {
-    const result = timeReportQuerySchema.parse({ groupBy: "user" });
+  it("parses a one-level groupBy path", () => {
+    const result = timeReportRequestSchema.parse({ groupBy: ["user"] });
 
     expect(result.groupBy).toEqual(["user"]);
   });
 
-  it("parses a comma-separated groupBy path preserving order", () => {
-    const result = timeReportQuerySchema.parse({
-      groupBy: "project,user,task",
+  it("rejects the comma-separated string form", () => {
+    // Requests carry JSON, so groupBy is an array and nothing else.
+    const result = timeReportRequestSchema.safeParse({
+      groupBy: "project,user",
     });
 
-    expect(result.groupBy).toEqual(["project", "user", "task"]);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a page or limit sent as a string", () => {
+    // No coercion: JSON carries real numbers.
+    expect(timeReportRequestSchema.safeParse({ page: "2" }).success).toBe(false);
+    expect(timeReportRequestSchema.safeParse({ limit: "50" }).success).toBe(
+      false,
+    );
   });
 
   it("parses an array groupBy path preserving order", () => {
-    const result = timeReportQuerySchema.parse({
+    const result = timeReportRequestSchema.parse({
       groupBy: ["user", "project"],
     });
 
@@ -53,14 +62,14 @@ describe("timeReportQuerySchema", () => {
   });
 
   it("rejects unknown grouping dimensions", () => {
-    const result = timeReportQuerySchema.safeParse({ groupBy: "member" });
+    const result = timeReportRequestSchema.safeParse({ groupBy: "member" });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path[0]).toBe("groupBy");
   });
 
   it("rejects unknown dimensions inside a path", () => {
-    const result = timeReportQuerySchema.safeParse({
+    const result = timeReportRequestSchema.safeParse({
       groupBy: "project,week",
     });
 
@@ -69,7 +78,7 @@ describe("timeReportQuerySchema", () => {
   });
 
   it("rejects duplicate grouping dimensions", () => {
-    const result = timeReportQuerySchema.safeParse({
+    const result = timeReportRequestSchema.safeParse({
       groupBy: "project,project",
     });
 
@@ -78,7 +87,7 @@ describe("timeReportQuerySchema", () => {
   });
 
   it("rejects an empty groupBy path", () => {
-    const result = timeReportQuerySchema.safeParse({ groupBy: "" });
+    const result = timeReportRequestSchema.safeParse({ groupBy: "" });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path[0]).toBe("groupBy");
@@ -88,7 +97,7 @@ describe("timeReportQuerySchema", () => {
     // The dimension enum has three members, so a fifth entry necessarily
     // duplicates; length is still checked first via a four-item unique path
     // plus one repeat.
-    const result = timeReportQuerySchema.safeParse({
+    const result = timeReportRequestSchema.safeParse({
       groupBy: "project,user,task,project,user",
     });
 
@@ -97,14 +106,14 @@ describe("timeReportQuerySchema", () => {
   });
 
   it("rejects invalid sort values", () => {
-    const result = timeReportQuerySchema.safeParse({ sortBy: "hours" });
+    const result = timeReportRequestSchema.safeParse({ sortBy: "hours" });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["sortBy"]);
   });
 
   it("rejects an inverted date range", () => {
-    const result = timeReportQuerySchema.safeParse({
+    const result = timeReportRequestSchema.safeParse({
       dateFrom: "2026-06-01T00:00:00.000Z",
       dateTo: "2026-05-01T00:00:00.000Z",
     });
@@ -114,21 +123,47 @@ describe("timeReportQuerySchema", () => {
   });
 });
 
-describe("timeReportExportQuerySchema", () => {
+describe("timeReportExportRequestSchema", () => {
   it("defaults the export format to csv", () => {
-    const result = timeReportExportQuerySchema.parse({});
+    const result = timeReportExportRequestSchema.parse({});
 
     expect(result.format).toBe("csv");
   });
 
   it("accepts the pdf format", () => {
-    const result = timeReportExportQuerySchema.parse({ format: "pdf" });
+    const result = timeReportExportRequestSchema.parse({ format: "pdf" });
 
     expect(result.format).toBe("pdf");
   });
 
+  it("rejects an unknown property instead of ignoring it", () => {
+    const result = timeReportExportRequestSchema.safeParse({
+      dryRun: true,
+      format: "csv",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a malformed project id", () => {
+    const result = timeReportExportRequestSchema.safeParse({
+      projectId: "not-a-uuid",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a date window that ends before it starts", () => {
+    const result = timeReportExportRequestSchema.safeParse({
+      dateFrom: "2026-06-01T00:00:00.000Z",
+      dateTo: "2026-05-01T00:00:00.000Z",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("rejects unknown export formats", () => {
-    const result = timeReportExportQuerySchema.safeParse({ format: "xlsx" });
+    const result = timeReportExportRequestSchema.safeParse({ format: "xlsx" });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["format"]);

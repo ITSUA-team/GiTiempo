@@ -1,15 +1,14 @@
 import {
-  timeReportExportQuerySchema,
-  timeReportQuerySchema,
+  timeReportExportRequestSchema,
+  timeReportRequestSchema,
   timeReportResponseSchema,
-  type TimeReportExportQuery,
-  type TimeReportQuery,
+  type TimeReportExportRequest,
+  type TimeReportRequest,
   type TimeReportResponse,
 } from '@gitiempo/shared';
 import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
 import { getAuthenticatedAppApiClient } from '@/services/api-client';
-
 
 interface AdminReportsClientOptions {
   apiClient: Pick<AuthenticatedApiClient, 'request' | 'requestJson'>;
@@ -22,61 +21,31 @@ export interface ReportsCsvExport {
 
 export interface AdminReportsClient {
   exportTimeReport(
-    query?: Partial<TimeReportExportQuery>,
+    query?: Partial<TimeReportExportRequest>,
   ): Promise<ReportsCsvExport>;
-  getTimeReport(
-    query?: Partial<TimeReportQuery>,
-  ): Promise<TimeReportResponse>;
+  getTimeReport(query?: Partial<TimeReportRequest>): Promise<TimeReportResponse>;
 }
 
-
-function setIfDefined(
-  searchParams: URLSearchParams,
-  key: string,
-  value: string | number | undefined,
-): void {
-  if (value !== undefined) {
-    searchParams.set(key, String(value));
-  }
+/**
+ * Builds the validated report request body. Reports are requested with JSON,
+ * so filters are named properties and the schema rejects anything not on the
+ * contract.
+ */
+export function buildTimeReportBody(
+  query: Partial<TimeReportRequest> | undefined,
+): TimeReportRequest {
+  return timeReportRequestSchema.parse(query ?? {});
 }
 
-export function buildTimeReportQuery(
-  query: Partial<TimeReportQuery> | undefined,
-): string {
-  const parsed = timeReportQuerySchema.parse(query ?? {});
-  const searchParams = new URLSearchParams();
-
-  searchParams.set('page', String(parsed.page));
-  searchParams.set('limit', String(parsed.limit));
-  searchParams.set('groupBy', parsed.groupBy.join(','));
-  searchParams.set('sortBy', parsed.sortBy);
-  searchParams.set('sortOrder', parsed.sortOrder);
-  setIfDefined(searchParams, 'dateFrom', parsed.dateFrom);
-  setIfDefined(searchParams, 'dateTo', parsed.dateTo);
-  setIfDefined(searchParams, 'projectId', parsed.projectId);
-  setIfDefined(searchParams, 'userId', parsed.userId);
-  setIfDefined(searchParams, 'search', parsed.search);
-
-  return searchParams.toString();
-}
-
-export function buildTimeReportExportQuery(
-  query: Partial<TimeReportExportQuery> | undefined,
-): string {
-  const parsed = timeReportExportQuerySchema.parse(query ?? {});
-  const searchParams = new URLSearchParams();
-
-  searchParams.set('format', parsed.format);
-  searchParams.set('groupBy', parsed.groupBy.join(','));
-  searchParams.set('sortBy', parsed.sortBy);
-  searchParams.set('sortOrder', parsed.sortOrder);
-  setIfDefined(searchParams, 'dateFrom', parsed.dateFrom);
-  setIfDefined(searchParams, 'dateTo', parsed.dateTo);
-  setIfDefined(searchParams, 'projectId', parsed.projectId);
-  setIfDefined(searchParams, 'userId', parsed.userId);
-  setIfDefined(searchParams, 'search', parsed.search);
-
-  return searchParams.toString();
+/**
+ * Builds the validated export request body. The export is a POST with JSON,
+ * so filters travel as named properties instead of a query string and the
+ * schema rejects anything not on the contract.
+ */
+export function buildTimeReportExportBody(
+  query: Partial<TimeReportExportRequest> | undefined,
+): TimeReportExportRequest {
+  return timeReportExportRequestSchema.parse(query ?? {});
 }
 
 /**
@@ -89,7 +58,7 @@ export function buildTimeReportExportQuery(
  */
 function getExportFilename(
   contentDisposition: string | null,
-  query: Pick<TimeReportExportQuery, 'dateFrom' | 'dateTo' | 'format'>,
+  query: Pick<TimeReportExportRequest, 'dateFrom' | 'dateTo' | 'format'>,
   blobType: string,
 ): string {
   const filenameMatch = contentDisposition
@@ -115,11 +84,11 @@ export function createAdminReportsClient({
 }: AdminReportsClientOptions): AdminReportsClient {
   return {
     async exportTimeReport(query) {
-      const parsed = timeReportExportQuerySchema.parse(query ?? {});
-      const search = buildTimeReportExportQuery(parsed);
+      const body = buildTimeReportExportBody(query);
       const response = await apiClient.request({
-        method: 'GET',
-        path: `/reports/time/export?${search}`,
+        body,
+        method: 'POST',
+        path: '/reports/time/export',
       });
       const blob = await response.blob();
 
@@ -127,17 +96,17 @@ export function createAdminReportsClient({
         blob,
         filename: getExportFilename(
           response.headers.get('Content-Disposition'),
-          parsed,
+          body,
           blob.type,
         ),
       };
     },
 
     getTimeReport(query) {
-      const search = buildTimeReportQuery(query);
-
       return apiClient.requestJson({
-        path: `/reports/time?${search}`,
+        body: buildTimeReportBody(query),
+        method: 'POST',
+        path: '/reports/time',
         responseSchema: timeReportResponseSchema,
       });
     },

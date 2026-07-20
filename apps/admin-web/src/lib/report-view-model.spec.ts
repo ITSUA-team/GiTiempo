@@ -15,7 +15,7 @@ import {
   sumReportRows,
   sumReportTreeTotals,
   toReportTableRows,
-  toTimeReportExportQuery,
+  toTimeReportExportRequest,
   toTimeReportQuery,
   type ReportTableFilters,
   type ReportTableRow,
@@ -125,7 +125,7 @@ describe('report-view-model', () => {
       page: 2,
       projectId,
     });
-    expect(toTimeReportExportQuery(filters)).toMatchObject({
+    expect(toTimeReportExportRequest(filters)).toMatchObject({
       ...expectedDateWindow,
       projectId,
     });

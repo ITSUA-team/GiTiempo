@@ -5,7 +5,7 @@ import {
   adminMutationInvalidationKeys,
   adminProjectsKeys,
   adminSettingsKeys,
-  normalizeTimeReportExportQuery,
+  normalizeTimeReportExportRequest,
   normalizeTimeReportQuery,
   reportsKeys,
   type AdminServerStateScope,
@@ -48,7 +48,7 @@ describe('admin-web query keys', () => {
 
   it('normalizes report export query scope separately from paginated data', () => {
     expect(
-      normalizeTimeReportExportQuery({
+      normalizeTimeReportExportRequest({
         groupBy: ['user'],
         projectId: 'project-1',
         sortBy: 'totalSeconds',
