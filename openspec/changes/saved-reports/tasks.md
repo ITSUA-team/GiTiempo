@@ -25,10 +25,10 @@
 
 ## 4. Admin web preset core
 
-- [ ] 4.1 Add `src/lib/saved-report-config.ts`: `buildConfigFromState`, `applyConfigToState`, `resolveRelativePeriod(period, now)` returning a concrete range, and `normaliseConfig` for comparison; keep it pure and take `now` as a parameter so tests are deterministic
-- [ ] 4.2 Implement dirty comparison per design D4: compare normalised stored shapes, never the resolved window, so a relative preset is not dirty the day after it was saved
-- [ ] 4.3 Resolve identities that no longer exist in the user's option scope to the unfiltered choice, reporting the fallback
-- [ ] 4.4 Cover all of the above in `saved-report-config.spec.ts` — this is the pure core and carries most of the test weight
+- [x] 4.1 Add `src/lib/saved-report-config.ts`: `buildConfigFromState`, `applyConfigToState`, `resolveRelativePeriod(period, now)` returning a concrete range, and `normaliseConfig` for comparison; keep it pure and take `now` as a parameter so tests are deterministic
+- [x] 4.2 Implement dirty comparison per design D4: compare normalised stored shapes, never the resolved window, so a relative preset is not dirty the day after it was saved
+- [x] 4.3 Resolve identities that no longer exist in the user's option scope to the unfiltered choice, reporting the fallback
+- [x] 4.4 Cover all of the above in `saved-report-config.spec.ts` — this is the pure core and carries most of the test weight
 
 ## 5. Admin web data layer
 
