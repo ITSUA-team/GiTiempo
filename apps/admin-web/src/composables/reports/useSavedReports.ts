@@ -54,6 +54,11 @@ export function useSavedReports({
 
   const canSave = computed(() => activeId.value !== null && isDirty.value);
 
+  /**
+   * Never rejects: presets are supplementary to the report, so a failed list
+   * surfaces as a message in the bar rather than taking the page down — and
+   * the mutation paths below await this without needing their own guard.
+   */
   async function refresh(): Promise<void> {
     isLoading.value = true;
     try {
@@ -62,6 +67,8 @@ export function useSavedReports({
       if (activeId.value !== null && activePreset.value === null) {
         clearActive();
       }
+    } catch (caught) {
+      error.value = toMessage(caught);
     } finally {
       isLoading.value = false;
     }

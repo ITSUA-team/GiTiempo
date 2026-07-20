@@ -476,7 +476,9 @@ describe('ReportsTable', () => {
       );
 
     const shareFilter = findByOption('90%+');
-    const activityFilter = findByOption('Last 7 days');
+    // 'Last 7 days' is also a report-period option, so match on 'Any time',
+    // which only the last-activity column filter offers.
+    const activityFilter = findByOption('Any time');
 
     expect(shareFilter).toBeDefined();
     expect(activityFilter).toBeDefined();

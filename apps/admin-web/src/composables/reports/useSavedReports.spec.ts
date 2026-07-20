@@ -282,3 +282,26 @@ describe('useSavedReports mutations', () => {
     expect(saved.isSaving.value).toBe(false);
   });
 });
+
+describe('useSavedReports failure handling', () => {
+  it('surfaces a failed list without rejecting', async () => {
+    const { client, saved } = setup();
+    client.listSavedReports.mockRejectedValueOnce(
+      new Error('Your session has expired. Please sign in again.'),
+    );
+
+    await expect(saved.refresh()).resolves.toBeUndefined();
+    expect(saved.error.value).toContain('session has expired');
+    expect(saved.isLoading.value).toBe(false);
+  });
+
+  it('keeps the previously loaded presets when a refresh fails', async () => {
+    const { client, saved } = setup();
+    await saved.refresh();
+    client.listSavedReports.mockRejectedValueOnce(new Error('offline'));
+
+    await saved.refresh();
+
+    expect(saved.presets.value).toHaveLength(1);
+  });
+});

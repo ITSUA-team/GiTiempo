@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import type { TimeReportExportFormat } from '@gitiempo/shared';
+import { computed, onMounted, ref } from 'vue';
+import type {
+  SavedReportPeriod,
+  TimeReportExportFormat,
+} from '@gitiempo/shared';
 import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Button from 'primevue/button';
@@ -9,11 +12,15 @@ import Menu from 'primevue/menu';
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import ReportsTable from '@/components/reports/ReportsTable.vue';
+import SavedReportsBar from '@/components/reports/SavedReportsBar.vue';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useReportsData } from '@/composables/reports/useReportsData';
+import { useSavedReports } from '@/composables/reports/useSavedReports';
+import { buildConfigFromState } from '@/lib/saved-report-config';
 import { downloadReportExport } from '@/lib/report-download';
 import {
   createDefaultReportTableFilters,
+  defaultReportGrouping,
   filterReportRows,
   formatReportPercent,
   getReportDateRangeError,
@@ -53,6 +60,71 @@ const {
 
 const tableFilters = ref(createDefaultReportTableFilters());
 const exporting = ref(false);
+const reportPeriod = ref<SavedReportPeriod | null>(null);
+
+const currentSavedReportConfig = computed(() =>
+  buildConfigFromState({
+    dateRange: dateRange.value,
+    filters: tableFilters.value,
+    grouping: grouping.value,
+    period: reportPeriod.value,
+  }),
+);
+
+const savedReports = useSavedReports({
+  currentConfig: currentSavedReportConfig,
+  onApply({ fallbacks, state }) {
+    dateRange.value = state.dateRange;
+    grouping.value = state.grouping;
+    reportPeriod.value = state.period;
+    tableFilters.value = state.filters;
+
+    if (fallbacks.length > 0) {
+      errorToast(
+        `This report referenced a ${fallbacks.join(' and ')} you can no longer see. Showing all instead.`,
+      );
+    }
+  },
+  resolveOptions: () => ({
+    availableMemberIds: memberOptions.value.map((option) => option.value),
+    availableProjectIds: projectOptions.value.map((option) => option.value),
+  }),
+});
+
+onMounted(() => {
+  void savedReports.refresh();
+});
+
+/**
+ * Clears the loaded preset and resets grouping, scope, and column filters.
+ * The date window is deliberately preserved — resetting it mid-analysis is
+ * more surprising than helpful, and the spec scenario lists only the three.
+ */
+function startNewReport(): void {
+  savedReports.clearActive();
+  grouping.value = [...defaultReportGrouping];
+  tableFilters.value = createDefaultReportTableFilters();
+}
+
+async function handleSaveReport(): Promise<void> {
+  const saved = await savedReports.save();
+  if (saved) successToast(`Saved "${saved.name}".`);
+}
+
+async function handleSaveReportAsNew(name: string): Promise<void> {
+  const created = await savedReports.saveAsNew(name);
+  if (created) successToast(`Saved "${created.name}".`);
+}
+
+async function handleRenameReport(id: string, name: string): Promise<void> {
+  const renamed = await savedReports.rename(id, name);
+  if (renamed) successToast(`Renamed to "${renamed.name}".`);
+}
+
+async function handleDeleteReport(id: string): Promise<void> {
+  const removed = await savedReports.remove(id);
+  if (removed) successToast('Report deleted.');
+}
 const tableRows = computed(() =>
   filterReportRows(rows.value, tableFilters.value),
 );
@@ -174,6 +246,20 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
     </template>
 
     <template v-else>
+      <SavedReportsBar
+        :active-id="savedReports.activeId.value"
+        :error="savedReports.error.value"
+        :is-dirty="savedReports.isDirty.value"
+        :is-saving="savedReports.isSaving.value"
+        :presets="savedReports.presets.value"
+        @delete="handleDeleteReport"
+        @new="startNewReport"
+        @rename="handleRenameReport"
+        @save="handleSaveReport"
+        @save-as-new="handleSaveReportAsNew"
+        @select="savedReports.selectPreset"
+      />
+
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Tracked Hours"
@@ -202,6 +288,7 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
           v-model:filters="tableFilters"
           v-model:date-range="dateRange"
           v-model:grouping="grouping"
+          v-model:period="reportPeriod"
           :rows="tableRows"
           :loading="loading"
           :project-options="projectOptions"

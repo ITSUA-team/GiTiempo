@@ -37,16 +37,16 @@
 
 ## 6. Admin web UI
 
-- [ ] 6.1 Add relative period options to the report date range control beside the existing custom range picker, per design D2
-- [ ] 6.2 Build `src/components/reports/SavedReportsBar.vue` to the approved `savedReportsBar` frame (node `kT0h1`): `Saved reports` label, 32px pill tabs with the active pill tinted and bookmark-marked, `+ New report` pill, unsaved-changes dot and label, `Save` button, `Save as new…` action
-- [ ] 6.3 Add the rename/delete overflow menu on the active tab and record it in the final review as a deliberate addition to the approved design (per `apps/admin-web/AGENTS.md`)
-- [ ] 6.4 Wire the bar into `ReportsView.vue` above the summary cards, threading apply/save/new through the reports composables
-- [ ] 6.5 Add the name prompt for `Save as new…` and surface the duplicate-name conflict inline
-- [ ] 6.6 Cover the bar and view wiring in `SavedReportsBar.spec.ts` and `ReportsView.spec.ts`: tab rendering and active state, apply restores state, dirty indicator appears and clears, save/save-as/new actions, duplicate-name error
+- [x] 6.1 Add relative period options to the report date range control beside the existing custom range picker, per design D2
+- [x] 6.2 Build `src/components/reports/SavedReportsBar.vue` to the approved `savedReportsBar` frame (node `kT0h1`): `Saved reports` label, 32px pill tabs with the active pill tinted and bookmark-marked, `+ New report` pill, unsaved-changes dot and label, `Save` button, `Save as new…` action
+- [x] 6.3 Add the rename/delete overflow menu on the active tab and record it in the final review as a deliberate addition to the approved design (per `apps/admin-web/AGENTS.md`)
+- [x] 6.4 Wire the bar into `ReportsView.vue` above the summary cards, threading apply/save/new through the reports composables
+- [x] 6.5 Add the name prompt for `Save as new…` and surface the duplicate-name conflict inline
+- [x] 6.6 Cover the bar and view wiring in `SavedReportsBar.spec.ts` and `ReportsView.spec.ts`: tab rendering and active state, apply restores state, dirty indicator appears and clears, save/save-as/new actions, duplicate-name error
 
 ## 7. Docs and verification
 
-- [ ] 7.1 Document the saved reports bar, preset semantics, and relative periods in `docs/ui/pages-admin.md`
-- [ ] 7.2 API: `pnpm --filter @gitiempo/api lint && typecheck && test`; run e2e after `db:migrate` + `db:seed`
-- [ ] 7.3 Admin web: `pnpm --filter admin-web lint && typecheck && test`
-- [ ] 7.4 State in the final review whether any PrimeVue constraint forced a deviation from the approved .pen design
+- [x] 7.1 Document the saved reports bar, preset semantics, and relative periods in `docs/ui/pages-admin.md`
+- [x] 7.2 API: `pnpm --filter @gitiempo/api lint && typecheck && test`; run e2e after `db:migrate` + `db:seed`
+- [x] 7.3 Admin web: `pnpm --filter admin-web lint && typecheck && test`
+- [x] 7.4 State in the final review whether any PrimeVue constraint forced a deviation from the approved .pen design
