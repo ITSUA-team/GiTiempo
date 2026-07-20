@@ -32,8 +32,8 @@
 
 ## 5. Admin web data layer
 
-- [ ] 5.1 Add `src/services/admin-saved-reports-client.ts` for list/create/update/delete; spec file
-- [ ] 5.2 Add `src/composables/reports/useSavedReports.ts`: preset list state, active preset, dirty flag, save/save-as/rename/delete actions with cache invalidation; spec file
+- [x] 5.1 Add `src/services/admin-saved-reports-client.ts` for list/create/update/delete; spec file
+- [x] 5.2 Add `src/composables/reports/useSavedReports.ts`: preset list state, active preset, dirty flag, save/save-as/rename/delete actions with cache invalidation; spec file
 
 ## 6. Admin web UI
 
