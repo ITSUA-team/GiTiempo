@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildTimeReportPdfDefinition,
-  flattenReportPdfNodes,
   renderTimeReportPdf,
   type ReportPdfInput,
   type ReportPdfLeaf,
@@ -55,33 +54,6 @@ const input: ReportPdfInput = {
   workspaceName: 'GI Tiempo',
 };
 
-describe('flattenReportPdfNodes', () => {
-  it('emits depth-first nodes with per-level subtotals, heaviest first', () => {
-    const nodes = flattenReportPdfNodes(leaves, ['project', 'user']);
-
-    expect(
-      nodes.map((node) => [node.level, node.label, node.totalSeconds]),
-    ).toEqual([
-      [0, 'Project Orion', 10800],
-      [1, 'Nina PM', 7200],
-      [1, 'Alex Admin', 3600],
-      [0, 'Billing API', 900],
-      [1, 'Nina PM', 900],
-    ]);
-    expect(nodes[0]!.childCountLabel).toBe('2 members');
-    expect(nodes[3]!.childCountLabel).toBe('1 member');
-    expect(nodes[1]!.isLeaf).toBe(true);
-  });
-
-  it('builds single-level nodes as leaves', () => {
-    const nodes = flattenReportPdfNodes(leaves, ['user']);
-
-    expect(nodes.map((node) => node.label)).toEqual(['Nina PM', 'Alex Admin']);
-    expect(nodes.every((node) => node.isLeaf)).toBe(true);
-    expect(nodes[0]!.totalSeconds).toBe(8100);
-  });
-});
-
 describe('buildTimeReportPdfDefinition', () => {
   it('describes the designed document sections', () => {
     const definition = buildTimeReportPdfDefinition(input) as {
@@ -101,6 +73,23 @@ describe('buildTimeReportPdfDefinition', () => {
     const footer = definition.footer(2, 3);
     expect(footer.columns[1]!.text).toBe('Page 2 of 3');
     expect(footer.columns[0]!.text).toContain('Generated with GiTiempo');
+  });
+
+  it('tints top-level group rows and indents nested rows', () => {
+    const definition = buildTimeReportPdfDefinition(input) as {
+      content: {
+        table?: { body: { fillColor?: string; margin?: number[] }[][] };
+      }[];
+    };
+    const table = definition.content.find(
+      (section) => section.table && section.table.body.length > 1,
+    );
+    const [, groupRow, nestedRow] = table!.table!.body;
+
+    expect(groupRow![0]!.fillColor).toBe('#F5F0FA');
+    expect(groupRow![0]!.margin).toEqual([0, 0, 0, 0]);
+    expect(nestedRow![0]!.fillColor).toBeUndefined();
+    expect(nestedRow![0]!.margin).toEqual([12, 0, 0, 0]);
   });
 });
 
