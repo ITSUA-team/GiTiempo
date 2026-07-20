@@ -53,7 +53,9 @@ const SelectStub = defineComponent({
         (option) => option?.[this.optionValue] === this.modelValue,
       );
 
-      return (match?.[this.optionLabel] as string | undefined) ?? this.placeholder;
+      return (
+        (match?.[this.optionLabel] as string | undefined) ?? this.placeholder
+      );
     },
   },
   template: '<div data-testid="select-stub">{{ resolvedLabel }}</div>',
@@ -179,7 +181,9 @@ describe('ReportsTable', () => {
     expect(
       wrapper.find('[data-testid="report-grouping-add-level"]').exists(),
     ).toBe(true);
-    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(
+      0,
+    );
 
     const search = wrapper.get('input[aria-label="Search report rows"]');
     const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
@@ -189,7 +193,9 @@ describe('ReportsTable', () => {
     expect(autoCompleteControls).toHaveLength(2);
     for (const autoCompleteControl of autoCompleteControls) {
       expect(autoCompleteControl.props('appendTo')).not.toBe('self');
-      expect((autoCompleteControl.props('pt') as AutoCompletePt).overlay).toEqual({
+      expect(
+        (autoCompleteControl.props('pt') as AutoCompletePt).overlay,
+      ).toEqual({
         class: 'overflow-hidden box-content max-w-0 pr-9',
       });
     }
@@ -328,6 +334,137 @@ describe('ReportsTable', () => {
     ]);
   });
 
+  it('exposes each grouping chip as a labelled sortable control', () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    expect(chip.attributes('role')).toBe('button');
+    expect(chip.attributes('tabindex')).toBe('0');
+    expect(chip.attributes('aria-roledescription')).toBe(
+      'sortable grouping level',
+    );
+    expect(chip.attributes('aria-label')).toBe('Project, level 1 of 2');
+  });
+
+  it('reorders with space to grab and arrow keys to move', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.space');
+    expect(chip.attributes('aria-grabbed')).toBe('true');
+    expect(
+      wrapper.find('[data-testid="report-grouping-announcement"]').text(),
+    ).toBe('Project, grabbed at position 1 of 2.');
+
+    await chip.trigger('keydown.right');
+
+    expect(wrapper.emitted('update:grouping')).toEqual([
+      [['member', 'project']],
+    ]);
+  });
+
+  it('grabs with enter as well as space', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.enter');
+    expect(chip.attributes('aria-grabbed')).toBe('true');
+
+    await chip.trigger('keydown.right');
+    expect(wrapper.emitted('update:grouping')).toEqual([
+      [['member', 'project']],
+    ]);
+  });
+
+  it('keeps the grab alive across consecutive arrow presses', async () => {
+    // Reordering moves the chip's DOM node; if focus is not restored the grab
+    // ends after one press and the second arrow does nothing.
+    const wrapper = mountTable({ grouping: ['project', 'member', 'task'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.enter');
+    await chip.trigger('keydown.right');
+    await chip.trigger('keydown.right');
+
+    const emitted = wrapper.emitted('update:grouping') as unknown[][];
+    expect(emitted.at(-1)).toEqual([['member', 'task', 'project']]);
+  });
+
+  it('keeps the move buttons out of the tab order', () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    expect(
+      wrapper
+        .find('[data-testid="report-grouping-move-later-project"]')
+        .attributes('tabindex'),
+    ).toBe('-1');
+  });
+
+  it('announces the move for screen readers', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.space');
+    await chip.trigger('keydown.right');
+
+    const live = wrapper.find('[data-testid="report-grouping-announcement"]');
+    expect(live.attributes('aria-live')).toBe('assertive');
+    expect(live.text()).toBe('Project, moved to position 2 of 2.');
+  });
+
+  it('does not move past either end of the path', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.space');
+    await chip.trigger('keydown.left');
+
+    expect(wrapper.emitted('update:grouping')).toBeUndefined();
+  });
+
+  it('restores the original order when the grab is cancelled', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.space');
+    await chip.trigger('keydown.right');
+    await chip.trigger('keydown.esc');
+
+    const emitted = wrapper.emitted('update:grouping') as unknown[][];
+    // Last emission puts the original order back.
+    expect(emitted.at(-1)).toEqual([['project', 'member']]);
+    expect(
+      wrapper.find('[data-testid="report-grouping-announcement"]').text(),
+    ).toBe('Reorder cancelled.');
+  });
+
+  it('offers a pointer alternative to dragging', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    await wrapper
+      .find('[data-testid="report-grouping-move-later-project"]')
+      .trigger('click');
+
+    expect(wrapper.emitted('update:grouping')).toEqual([
+      [['member', 'project']],
+    ]);
+  });
+
+  it('disables the move buttons at the ends of the path', () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    expect(
+      wrapper
+        .find('[data-testid="report-grouping-move-earlier-project"]')
+        .attributes('disabled'),
+    ).toBeDefined();
+    expect(
+      wrapper
+        .find('[data-testid="report-grouping-move-later-member"]')
+        .attributes('disabled'),
+    ).toBeDefined();
+  });
+
   it('renders the grouping hierarchy with derived subtotals and a total row', () => {
     const tableRows = [
       makeLeafRow({}),
@@ -411,12 +548,16 @@ describe('ReportsTable', () => {
     expect(autoCompleteControls).toHaveLength(2);
     for (const autoCompleteControl of autoCompleteControls) {
       expect(autoCompleteControl.props('appendTo')).toBe('self');
-      expect((autoCompleteControl.props('pt') as AutoCompletePt).overlay?.style).toEqual(
-        giTiempoSelfAppendedAutoCompleteOverlayStyle,
-      );
+      expect(
+        (autoCompleteControl.props('pt') as AutoCompletePt).overlay?.style,
+      ).toEqual(giTiempoSelfAppendedAutoCompleteOverlayStyle);
     }
-    expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(0);
-    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(1);
+    expect(
+      wrapper.findAll('[data-testid="reports-mobile-loading-card"]'),
+    ).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(
+      1,
+    );
     expect(wrapper.text()).toContain('2h 00m');
   });
 
@@ -425,15 +566,21 @@ describe('ReportsTable', () => {
 
     const wrapper = mountTable({ loading: true, tableRows: [] });
 
-    expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(3);
-    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
+    expect(
+      wrapper.findAll('[data-testid="reports-mobile-loading-card"]'),
+    ).toHaveLength(3);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(
+      0,
+    );
     expect(wrapper.text()).not.toContain('No report rows found');
   });
 
   it('renders desktop skeleton rows instead of a spinner when loading has no report rows yet', () => {
     const wrapper = mountTable({ loading: true, tableRows: [] });
 
-    expect(wrapper.findAll('[data-testid="reports-desktop-loading-row"]')).toHaveLength(6);
+    expect(
+      wrapper.findAll('[data-testid="reports-desktop-loading-row"]'),
+    ).toHaveLength(6);
     expect(wrapper.find('.p-datatable-mask').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('No report rows found');
   });
@@ -442,7 +589,9 @@ describe('ReportsTable', () => {
     const wrapper = mountTable({ loading: true });
 
     expect(wrapper.text()).toContain('Project Orion');
-    expect(wrapper.findAll('[data-testid="reports-desktop-loading-row"]')).toHaveLength(0);
+    expect(
+      wrapper.findAll('[data-testid="reports-desktop-loading-row"]'),
+    ).toHaveLength(0);
     expect(wrapper.find('.p-datatable-mask').exists()).toBe(false);
   });
 
