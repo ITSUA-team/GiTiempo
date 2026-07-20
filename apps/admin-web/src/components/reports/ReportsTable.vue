@@ -264,13 +264,33 @@ function cancelGroupingGrab(): void {
   groupingBeforeGrab.value = null;
 }
 
-/** Pointer path for 2.5.7: the same move without dragging. */
-function moveGroupingLevelByStep(index: number, delta: number): void {
+/**
+ * Pointer and Tab path: the same move without dragging or grabbing.
+ *
+ * Focus stays on the chevron so it can be pressed repeatedly, unless that
+ * press pushed the level to an end and disabled the button — a disabled
+ * element cannot hold focus, so the chip takes it instead.
+ */
+function moveGroupingLevelByStep(
+  index: number,
+  delta: number,
+  event?: Event,
+): void {
   const dimension = grouping.value[index];
+  const trigger = event?.currentTarget;
   if (!moveGroupingLevel(index, index + delta)) return;
 
   announceGroupingMove(index + delta, 'moved to');
-  if (dimension !== undefined) void refocusChip(dimension);
+  if (dimension === undefined) return;
+
+  void (async () => {
+    await nextTick();
+    if (trigger instanceof HTMLButtonElement && !trigger.disabled) {
+      trigger.focus();
+      return;
+    }
+    chipElements.get(dimension)?.focus();
+  })();
 }
 
 /** Only end the grab when focus leaves the builder, not on every reorder. */
@@ -531,9 +551,8 @@ function handleMemberFilterUpdate(
               class="text-brand hover:bg-brand/10 flex h-4 w-4 items-center justify-center rounded-full border-none bg-transparent p-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 disabled:opacity-30"
               :data-testid="`report-grouping-move-earlier-${dimension}`"
               :disabled="index === 0"
-              tabindex="-1"
               type="button"
-              @click="moveGroupingLevelByStep(index, -1)"
+              @click="moveGroupingLevelByStep(index, -1, $event)"
             >
               <i class="pi pi-chevron-left text-[9px]" />
             </button>
@@ -546,9 +565,8 @@ function handleMemberFilterUpdate(
               class="text-brand hover:bg-brand/10 flex h-4 w-4 items-center justify-center rounded-full border-none bg-transparent p-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 disabled:opacity-30"
               :data-testid="`report-grouping-move-later-${dimension}`"
               :disabled="index === grouping.length - 1"
-              tabindex="-1"
               type="button"
-              @click="moveGroupingLevelByStep(index, 1)"
+              @click="moveGroupingLevelByStep(index, 1, $event)"
             >
               <i class="pi pi-chevron-right text-[9px]" />
             </button>

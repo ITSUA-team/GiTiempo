@@ -390,14 +390,30 @@ describe('ReportsTable', () => {
     expect(emitted.at(-1)).toEqual([['member', 'task', 'project']]);
   });
 
-  it('keeps the move buttons out of the tab order', () => {
+  it('keeps the move buttons reachable by tab', () => {
+    // They are hidden until hover or focus, but focus reveals them, so they
+    // are a discoverable keyboard path alongside the grab model.
     const wrapper = mountTable({ grouping: ['project', 'member'] });
 
     expect(
       wrapper
         .find('[data-testid="report-grouping-move-later-project"]')
         .attributes('tabindex'),
-    ).toBe('-1');
+    ).toBeUndefined();
+  });
+
+  it('moves repeatedly from the same chevron', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member', 'task'] });
+
+    await wrapper
+      .find('[data-testid="report-grouping-move-later-project"]')
+      .trigger('click');
+    await wrapper
+      .find('[data-testid="report-grouping-move-later-project"]')
+      .trigger('click');
+
+    const emitted = wrapper.emitted('update:grouping') as unknown[][];
+    expect(emitted.at(-1)).toEqual([['member', 'task', 'project']]);
   });
 
   it('announces the move for screen readers', async () => {
