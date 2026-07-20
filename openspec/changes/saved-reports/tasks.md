@@ -1,27 +1,27 @@
 ## 1. Shared contract
 
-- [ ] 1.1 Add `packages/shared/src/contracts/saved-reports.ts`: `savedReportPeriodSchema` (`this_week | this_month | previous_month | last_7_days | last_30_days`), `savedReportDateRangeSchema` (discriminated union of relative period and absolute window), `savedReportConfigSchema` (dateRange, ordered grouping path reusing `timeReportGroupByPathSchema` vocabulary, `projectId`, `memberId`, column filters), `savedReportSchema`, create/update payloads, and list response
-- [ ] 1.2 Make the config schema tolerant per design D3: strip unknown keys, default missing filter keys, so older stored configs keep parsing
-- [ ] 1.3 Export the module from `packages/shared/src/contracts/index.ts`
-- [ ] 1.4 Cover parsing in `saved-reports.spec.ts`: both date-range shapes, unknown period rejected, unknown grouping dimension rejected, defaults applied to a minimal config
-- [ ] 1.5 Build shared and confirm dependents typecheck
+- [x] 1.1 Add `packages/shared/src/contracts/saved-reports.ts`: `savedReportPeriodSchema` (`this_week | this_month | previous_month | last_7_days | last_30_days`), `savedReportDateRangeSchema` (discriminated union of relative period and absolute window), `savedReportConfigSchema` (dateRange, ordered grouping path reusing `timeReportGroupByPathSchema` vocabulary, `projectId`, `memberId`, column filters), `savedReportSchema`, create/update payloads, and list response
+- [x] 1.2 Make the config schema tolerant per design D3: strip unknown keys, default missing filter keys, so older stored configs keep parsing
+- [x] 1.3 Export the module from `packages/shared/src/contracts/index.ts`
+- [x] 1.4 Cover parsing in `saved-reports.spec.ts`: both date-range shapes, unknown period rejected, unknown grouping dimension rejected, defaults applied to a minimal config
+- [x] 1.5 Build shared and confirm dependents typecheck
 
 ## 2. Database
 
-- [ ] 2.1 Add `apps/api/src/reports/schemas/saved-reports.schema.ts` (first `schemas/` folder in the reports module): `id` uuid pk, `workspace_id` fk restrict, `created_by` fk, `name` varchar(120), `config` jsonb, `created_at`/`updated_at`
-- [ ] 2.2 Add a case-insensitive unique index on (`workspace_id`, lower(`name`)) and an index on `workspace_id`
-- [ ] 2.3 Re-export the schema from `apps/api/src/db/schema.ts`
-- [ ] 2.4 Generate the Drizzle migration and verify the SQL matches the intended constraints
+- [x] 2.1 Add `apps/api/src/reports/schemas/saved-reports.schema.ts` (first `schemas/` folder in the reports module): `id` uuid pk, `workspace_id` fk restrict, `created_by` fk, `name` varchar(120), `config` jsonb, `created_at`/`updated_at`
+- [x] 2.2 Add a case-insensitive unique index on (`workspace_id`, lower(`name`)) and an index on `workspace_id`
+- [x] 2.3 Re-export the schema from `apps/api/src/db/schema.ts`
+- [x] 2.4 Generate the Drizzle migration and verify the SQL matches the intended constraints
 
 ## 3. Saved reports API
 
-- [ ] 3.1 Add DTOs re-wrapping the shared contracts
-- [ ] 3.2 Implement `SavedReportsService`: list by workspace, create, update (config and/or name), delete; parse `config` through the shared schema on read and write; map the unique-violation to a conflict via `postgres-errors.ts`
-- [ ] 3.3 Add `SavedReportsController` with `GET/POST /reports/saved` and `PATCH/DELETE /reports/saved/:id`, guarded to admin and PM exactly as the time-report endpoints are
-- [ ] 3.4 Register the service and controller in `reports.module.ts`
-- [ ] 3.5 Unit coverage in `saved-reports.service.spec.ts`: workspace scoping, duplicate-name conflict, config validation on read and write, update and delete paths
-- [ ] 3.6 Add `apps/api/test/saved-reports.e2e-spec.ts`: CRUD round-trip, workspace isolation (404 across workspaces), duplicate name 409, member 403 on read and write, invalid config 400, PM can edit an admin's preset
-- [ ] 3.7 Regenerate `packages/shared/openapi.json` via the build-based workflow (per `apps/api/AGENTS.md` gotcha)
+- [x] 3.1 Add DTOs re-wrapping the shared contracts
+- [x] 3.2 Implement `SavedReportsService`: list by workspace, create, update (config and/or name), delete; parse `config` through the shared schema on read and write; map the unique-violation to a conflict via `postgres-errors.ts`
+- [x] 3.3 Add `SavedReportsController` with `GET/POST /reports/saved` and `PATCH/DELETE /reports/saved/:id`, guarded to admin and PM exactly as the time-report endpoints are
+- [x] 3.4 Register the service and controller in `reports.module.ts`
+- [x] 3.5 Unit coverage in `saved-reports.service.spec.ts`: workspace scoping, duplicate-name conflict, config validation on read and write, update and delete paths
+- [x] 3.6 Add `apps/api/test/saved-reports.e2e-spec.ts`: CRUD round-trip, workspace isolation (404 across workspaces), duplicate name 409, member 403 on read and write, invalid config 400, PM can edit an admin's preset
+- [x] 3.7 Regenerate `packages/shared/openapi.json` via the build-based workflow (per `apps/api/AGENTS.md` gotcha)
 
 ## 4. Admin web preset core
 
