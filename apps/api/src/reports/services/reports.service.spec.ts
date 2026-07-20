@@ -340,6 +340,89 @@ describe('ReportsService', () => {
     expect(report.meta).toEqual({ page: 1, limit: 2, total: 5, totalPages: 3 });
   });
 
+  it('skips the top-level key query when no page is requested', async () => {
+    // The PDF path reads every group, so filtering rows by "all keys that
+    // exist" is a no-op — it must not pay for the key scan or the IN clause.
+    const { service } = createService('admin');
+    const context = {
+      groupBy: ['project', 'user'] as ['project', 'user'],
+      scopeUserId: adminUser.sub,
+      workspaceId: adminUser.workspaceId,
+      isProjectManager: false,
+      dateRange: {
+        dateFrom: '2026-05-01T00:00:00.000Z',
+        dateTo: '2026-06-01T00:00:00.000Z',
+      },
+      conditions: [],
+    };
+    const getTopLevelKeys = vi.fn();
+    const groupedRowsQuery = vi.fn().mockReturnValue({
+      orderBy: vi.fn().mockResolvedValue([]),
+    });
+    Object.defineProperty(service, 'getTopLevelKeys', {
+      value: getTopLevelKeys,
+    });
+    Object.defineProperty(service, 'groupedRowsQuery', {
+      value: groupedRowsQuery,
+    });
+
+    await (
+      service as unknown as {
+        getRows: (
+          c: unknown,
+          s: string,
+          o: string,
+          p: number | undefined,
+          l: number | undefined,
+        ) => Promise<unknown>;
+      }
+    ).getRows(context, 'totalSeconds', 'desc', undefined, undefined);
+
+    expect(getTopLevelKeys).not.toHaveBeenCalled();
+    // No extra condition: the grouped query runs unfiltered.
+    expect(groupedRowsQuery).toHaveBeenCalledWith(context);
+  });
+
+  it('still pages by top-level key when a page is requested', async () => {
+    const { service } = createService('admin');
+    const context = {
+      groupBy: ['project', 'user'] as ['project', 'user'],
+      scopeUserId: adminUser.sub,
+      workspaceId: adminUser.workspaceId,
+      isProjectManager: false,
+      dateRange: {
+        dateFrom: '2026-05-01T00:00:00.000Z',
+        dateTo: '2026-06-01T00:00:00.000Z',
+      },
+      conditions: [],
+    };
+    const getTopLevelKeys = vi.fn().mockResolvedValue(['project-1']);
+    const groupedRowsQuery = vi.fn().mockReturnValue({
+      orderBy: vi.fn().mockResolvedValue([]),
+    });
+    Object.defineProperty(service, 'getTopLevelKeys', {
+      value: getTopLevelKeys,
+    });
+    Object.defineProperty(service, 'groupedRowsQuery', {
+      value: groupedRowsQuery,
+    });
+
+    await (
+      service as unknown as {
+        getRows: (
+          c: unknown,
+          s: string,
+          o: string,
+          p: number | undefined,
+          l: number | undefined,
+        ) => Promise<unknown>;
+      }
+    ).getRows(context, 'totalSeconds', 'desc', 1, 20);
+
+    expect(getTopLevelKeys).toHaveBeenCalled();
+    expect(groupedRowsQuery.mock.calls[0]?.length).toBe(2);
+  });
+
   it('exports CSV using the same scoped context and filters', async () => {
     const { service } = createService('pm');
     const context = {

@@ -397,6 +397,19 @@ export class ReportsService {
       return query;
     }
 
+    const leafOrder = leafOrderBy(context.groupBy, sortBy, sortOrder);
+
+    /**
+     * Unpaginated callers (the PDF) take every top-level group, so restricting
+     * rows to "all keys that exist" filters nothing. Reading the key list to
+     * build that IN clause cost an extra grouped scan, held every key in
+     * memory, and bound one query parameter per key — enough to hit Postgres'
+     * parameter ceiling on a large workspace. Skip straight to the rows.
+     */
+    if (page === undefined || limit === undefined) {
+      return this.groupedRowsQuery(context).orderBy(...leafOrder);
+    }
+
     const keys = await this.getTopLevelKeys(
       context,
       sortBy,
@@ -411,7 +424,7 @@ export class ReportsService {
     const keyColumn = dimensionKeyColumn(context.groupBy[0]!);
 
     return this.groupedRowsQuery(context, inArray(keyColumn, keys)).orderBy(
-      ...leafOrderBy(context.groupBy, sortBy, sortOrder),
+      ...leafOrder,
     );
   }
 
