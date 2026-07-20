@@ -29,8 +29,6 @@ import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 import type { SavedReportPeriod } from '@gitiempo/shared';
 
-import { resolveRelativePeriod } from '@/lib/saved-report-config';
-
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
 import {
   adminTableBodyRowClass,
@@ -271,23 +269,6 @@ function handleGlobalSearchUpdate(value: string | null | undefined): void {
   filters.value.global = value ?? '';
 }
 
-const reportPeriodOptions: { label: string; value: SavedReportPeriod | null }[] =
-  [
-    { label: 'This week', value: 'this_week' },
-    { label: 'This month', value: 'this_month' },
-    { label: 'Previous month', value: 'previous_month' },
-    { label: 'Last 7 days', value: 'last_7_days' },
-    { label: 'Last 30 days', value: 'last_30_days' },
-    { label: 'Custom range', value: null },
-  ];
-
-function handlePeriodUpdate(value: SavedReportPeriod | null): void {
-  period.value = value;
-  if (value !== null) {
-    dateRange.value = resolveRelativePeriod(value);
-  }
-}
-
 function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
   // Picking dates by hand means the range is no longer a named period.
   period.value = null;
@@ -345,18 +326,6 @@ function handleMemberFilterUpdate(
       <SectionHeader title="Results">
         <template #actions>
           <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-            <Select
-              :model-value="period"
-              aria-label="Report period"
-              class="h-[38px] w-full text-[14px] sm:w-[160px]"
-              data-testid="report-period"
-              :options="reportPeriodOptions"
-              option-label="label"
-              option-value="value"
-              placeholder="Custom range"
-              @update:model-value="handlePeriodUpdate"
-            />
-
             <DatePicker
               :model-value="dateRange"
               aria-label="Report date range"
