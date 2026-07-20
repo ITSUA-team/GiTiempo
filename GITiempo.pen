@@ -10786,6 +10786,7 @@
                               "name": "r1c1",
                               "width": "fill_container",
                               "height": "fill_container",
+                              "gap": 6,
                               "padding": [
                                 0,
                                 12
@@ -10824,8 +10825,7 @@
                                     }
                                   ]
                                 }
-                              ],
-                              "gap": 6
+                              ]
                             },
                             {
                               "type": "frame",
@@ -11347,6 +11347,7 @@
                               "name": "r2c1",
                               "width": "fill_container",
                               "height": "fill_container",
+                              "gap": 6,
                               "padding": [
                                 0,
                                 12
@@ -11385,8 +11386,7 @@
                                     }
                                   ]
                                 }
-                              ],
-                              "gap": 6
+                              ]
                             },
                             {
                               "type": "frame",
@@ -11513,6 +11513,7 @@
                               "name": "r2c1",
                               "width": "fill_container",
                               "height": "fill_container",
+                              "gap": 6,
                               "padding": [
                                 0,
                                 12
@@ -11551,8 +11552,7 @@
                                     }
                                   ]
                                 }
-                              ],
-                              "gap": 6
+                              ]
                             },
                             {
                               "type": "frame",
@@ -30214,7 +30214,7 @@
                               "id": "Q7WOcL",
                               "name": "groupHint",
                               "fill": "$color-text-muted",
-                              "content": "Drag to reorder · up to 4 levels",
+                              "content": "Drag, or press Space to grab and ← → to move · up to 4 levels",
                               "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -36360,6 +36360,16 @@
           ]
         }
       ]
+    },
+    {
+      "type": "note",
+      "id": "b6OLi",
+      "x": 0,
+      "y": 4462,
+      "name": "Grouping reorder keyboard model",
+      "width": 700,
+      "height": 330,
+      "content": "Grouping reorder — keyboard model (chosen: Option B).\n\nChip becomes focusable: tabindex=0, role=\"button\", aria-roledescription=\"sortable grouping level\", aria-label=\"Project, level 1 of 3\". The grip icon stays aria-hidden — it is affordance only.\n\n• Space or Enter grabs the chip; Space or Enter again drops it.\n• ← → move the grabbed chip between positions.\n• Esc cancels and restores the order the chip started in.\n• Grabbed state: aria-grabbed=true, 2px #5D2B85 focus ring, lift shadow (0 3 10 #5D2B8555).\n• An aria-live=\"assertive\" region narrates each step: \"Project, grabbed. Position 1 of 3.\" → \"Project, moved to position 2 of 3.\" → \"Project, dropped.\"\n• Native drag stays available for pointer users; the two paths edit the same state.\n\nCAVEAT — do not ship this alone. Keyboard grab satisfies WCAG 2.1.1 (Keyboard, A) but NOT 2.5.7 (Dragging Movements, AA): a pointer user who cannot drag still has no alternative. Pair it with per-chip move buttons, or an equivalent click target, before release."
     }
   ],
   "variables": {
