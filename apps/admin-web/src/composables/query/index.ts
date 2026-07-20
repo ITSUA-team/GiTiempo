@@ -5,8 +5,8 @@ import type {
   GitHubOwnerListResponse,
   ManagementProjectSummaryResponse,
   ProjectListResponse,
-  TimeReportExportQuery,
-  TimeReportQuery,
+  TimeReportExportRequest,
+  TimeReportRequest,
   TimeReportResponse,
   UpdateWorkspaceInput,
   UpdateWorkspaceSettingsInput,
@@ -42,7 +42,7 @@ interface AdminProjectsClient {
 
 interface ExportTimeReportClient {
   exportTimeReport(
-    query?: Partial<TimeReportExportQuery>,
+    query?: Partial<TimeReportExportRequest>,
   ): Promise<ReportsCsvExport>;
 }
 
@@ -56,7 +56,7 @@ interface GitHubOrganizationsClient {
 
 interface TimeReportClient {
   getTimeReport(
-    query?: Partial<TimeReportQuery>,
+    query?: Partial<TimeReportRequest>,
   ): Promise<TimeReportResponse>;
 }
 
@@ -128,7 +128,7 @@ interface UseManagementProjectSummaryQueryOptions extends AdminScopedQueryOption
 
 interface UseTimeReportQueryOptions extends AdminScopedQueryOptions {
   client: TimeReportClient;
-  query: MaybeRefOrGetter<Partial<TimeReportQuery>>;
+  query: MaybeRefOrGetter<Partial<TimeReportRequest>>;
 }
 
 interface UseUpdateWorkspaceMutationOptions extends AdminScopedMutationOptions {
@@ -194,7 +194,7 @@ export const useExportTimeReportMutation = (
   options: UseExportTimeReportMutationOptions,
 ) =>
   useMutation({
-    mutationFn: (query: Partial<TimeReportExportQuery>) =>
+    mutationFn: (query: Partial<TimeReportExportRequest>) =>
       options.client.exportTimeReport(query),
   });
 

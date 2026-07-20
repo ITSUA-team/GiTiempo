@@ -11,24 +11,15 @@ const optionalSearchSchema = z
 
 export const timeReportGroupBySchema = z.enum(["project", "task", "user"]);
 
-// Accepts the query-string form ("project,user") and the array form, and
-// normalizes both to an ordered path of 1-4 unique dimensions.
-export const timeReportGroupByPathSchema = z
-  .union([timeReportGroupBySchema.array(), z.string()])
-  .transform((value) =>
-    typeof value === "string"
-      ? value.split(",").map((item) => item.trim())
-      : value,
-  )
-  .pipe(
-    timeReportGroupBySchema
-      .array()
-      .min(1)
-      .max(4)
-      .refine((path) => new Set(path).size === path.length, {
-        message: "groupBy dimensions must be unique",
-      }),
-  );
+// Ordered path of 1-4 unique dimensions. Requests carry JSON, so this is an
+// array — there is no comma-separated string form to normalize.
+export const timeReportGroupByPathSchema = timeReportGroupBySchema
+  .array()
+  .min(1)
+  .max(4)
+  .refine((path) => new Set(path).size === path.length, {
+    message: "groupBy dimensions must be unique",
+  });
 export const timeReportSortBySchema = z.enum([
   "project",
   "task",
@@ -60,10 +51,17 @@ function isValidDateRange(data: { dateFrom?: string; dateTo?: string }): boolean
   );
 }
 
-export const timeReportQuerySchema = z
+/**
+ * Report request body.
+ *
+ * Reports are requested with a JSON body of named properties, so numbers
+ * arrive as numbers (no string coercion) and `.strict()` rejects any property
+ * outside this contract instead of ignoring it.
+ */
+export const timeReportRequestSchema = z
   .object({
-    page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(20),
+    page: z.number().int().min(1).default(1),
+    limit: z.number().int().min(1).max(100).default(20),
     ...timeReportFilterShape,
   })
   .strict()
@@ -74,9 +72,25 @@ export const timeReportQuerySchema = z
 
 export const timeReportExportFormatSchema = z.enum(["csv", "pdf"]);
 
-export const timeReportExportQuerySchema = z
+/**
+ * Export request body.
+ *
+ * The export is a POST with a JSON body rather than a query string: the
+ * request is a structured set of named properties, each validated here, and
+ * `.strict()` rejects anything not on this list instead of silently ignoring
+ * it. It also keeps report filters out of URLs, proxy logs, and browser
+ * history.
+ */
+export const timeReportExportRequestSchema = z
   .object({
-    ...timeReportFilterShape,
+    dateFrom: dateTimeSchema.optional(),
+    dateTo: dateTimeSchema.optional(),
+    projectId: z.uuid().optional(),
+    userId: z.uuid().optional(),
+    groupBy: timeReportGroupByPathSchema.default(["project"]),
+    search: optionalSearchSchema,
+    sortBy: timeReportSortBySchema.default("totalSeconds"),
+    sortOrder: timeReportSortOrderSchema.default("desc"),
     format: timeReportExportFormatSchema.default("csv"),
   })
   .strict()
@@ -150,9 +164,9 @@ export type TimeReportExportFormat = z.infer<
 >;
 export type TimeReportSortBy = z.infer<typeof timeReportSortBySchema>;
 export type TimeReportSortOrder = z.infer<typeof timeReportSortOrderSchema>;
-export type TimeReportQuery = z.infer<typeof timeReportQuerySchema>;
-export type TimeReportExportQuery = z.infer<
-  typeof timeReportExportQuerySchema
+export type TimeReportRequest = z.infer<typeof timeReportRequestSchema>;
+export type TimeReportExportRequest = z.infer<
+  typeof timeReportExportRequestSchema
 >;
 export type TimeReportProjectSummary = z.infer<
   typeof timeReportProjectSummarySchema

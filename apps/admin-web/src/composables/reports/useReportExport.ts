@@ -2,7 +2,7 @@ import { type ComputedRef, type Ref } from 'vue';
 import type { TimeReportExportFormat } from '@gitiempo/shared';
 
 import { useExportTimeReportMutation } from '@/composables/query';
-import { toTimeReportExportQuery, type ReportSetupFilters } from '@/lib/report-view-model';
+import { toTimeReportExportRequest, type ReportSetupFilters } from '@/lib/report-view-model';
 import type { AdminServerStateScope } from '@/lib/query-keys';
 import type {
   AdminReportsClient,
@@ -34,7 +34,7 @@ export function useReportExport({
     }
 
     return exportReportMutation.mutateAsync({
-      ...toTimeReportExportQuery(filters),
+      ...toTimeReportExportRequest(filters),
       format,
     });
   }

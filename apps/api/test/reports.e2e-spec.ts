@@ -228,11 +228,11 @@ describe('Reports (e2e)', () => {
     return row.id;
   }
 
-  function getReport(token: string, query: Record<string, string>) {
+  function getReport(token: string, body: Record<string, unknown>) {
     return request(app.getHttpServer())
-      .get('/reports/time')
+      .post('/reports/time')
       .set('Authorization', bearer(token))
-      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO, ...query });
+      .send({ dateFrom: DATE_FROM, dateTo: DATE_TO, ...body });
   }
 
   it('keeps single-level project grouping behavior', async () => {
@@ -257,7 +257,9 @@ describe('Reports (e2e)', () => {
   });
 
   it('returns multi-level leaf rows carrying identity for the full path', async () => {
-    const res = await getReport(adminToken, { groupBy: 'project,user,task' });
+    const res = await getReport(adminToken, {
+      groupBy: ['project', 'user', 'task'],
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.groupBy).toEqual(['project', 'user', 'task']);
@@ -285,9 +287,9 @@ describe('Reports (e2e)', () => {
 
   it('paginates by top-level group and returns complete subtrees', async () => {
     const res = await getReport(adminToken, {
-      groupBy: 'project,user',
-      page: '1',
-      limit: '1',
+      groupBy: ['project', 'user'],
+      page: 1,
+      limit: 1,
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
@@ -312,7 +314,7 @@ describe('Reports (e2e)', () => {
   });
 
   it('keeps PM-scoped multi-level reports inside assigned projects', async () => {
-    const res = await getReport(pmToken, { groupBy: 'project,user' });
+    const res = await getReport(pmToken, { groupBy: ['project', 'user'] });
 
     expect(res.status).toBe(200);
     const projectIds = new Set(
@@ -327,9 +329,11 @@ describe('Reports (e2e)', () => {
 
   it('rejects invalid grouping paths', async () => {
     const duplicated = await getReport(adminToken, {
-      groupBy: 'project,project',
+      groupBy: ['project', 'project'],
     });
-    const unknown = await getReport(adminToken, { groupBy: 'project,week' });
+    const unknown = await getReport(adminToken, {
+      groupBy: ['project', 'week'],
+    });
 
     expect(duplicated.status).toBe(400);
     expect(unknown.status).toBe(400);
@@ -337,12 +341,12 @@ describe('Reports (e2e)', () => {
 
   it('exports detailed CSV rows recording the grouping path', async () => {
     const res = await request(app.getHttpServer())
-      .get('/reports/time/export')
+      .post('/reports/time/export')
       .set('Authorization', bearer(adminToken))
-      .query({
+      .send({
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
-        groupBy: 'project,user',
+        groupBy: ['project', 'user'],
       });
 
     expect(res.status).toBe(200);
@@ -350,19 +354,20 @@ describe('Reports (e2e)', () => {
     // header + one row per project-task-user combination (5 seeded combos)
     expect(lines).toHaveLength(6);
     for (const line of lines.slice(1)) {
-      expect(line.startsWith('project>user,')).toBe(true);
+      // Every field is quoted to defuse formula injection across locales.
+      expect(line.startsWith('"project>user",')).toBe(true);
     }
   });
 
   it('exports a styled PDF report for admins', async () => {
     const res = await request(app.getHttpServer())
-      .get('/reports/time/export')
+      .post('/reports/time/export')
       .set('Authorization', bearer(adminToken))
-      .query({
+      .send({
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
         format: 'pdf',
-        groupBy: 'project,user',
+        groupBy: ['project', 'user'],
       })
       .buffer(true)
       .parse((response, callback) => {
@@ -381,13 +386,13 @@ describe('Reports (e2e)', () => {
 
   it('keeps PDF export inside the PM report scope', async () => {
     const res = await request(app.getHttpServer())
-      .get('/reports/time/export')
+      .post('/reports/time/export')
       .set('Authorization', bearer(pmToken))
-      .query({
+      .send({
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
         format: 'pdf',
-        groupBy: 'project',
+        groupBy: ['project'],
       })
       .buffer(true)
       .parse((response, callback) => {
@@ -404,18 +409,18 @@ describe('Reports (e2e)', () => {
 
   it('rejects unknown export formats', async () => {
     const res = await request(app.getHttpServer())
-      .get('/reports/time/export')
+      .post('/reports/time/export')
       .set('Authorization', bearer(adminToken))
-      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO, format: 'xlsx' });
+      .send({ dateFrom: DATE_FROM, dateTo: DATE_TO, format: 'xlsx' });
 
     expect(res.status).toBe(400);
   });
 
   it('exposes the export filename header to cross-origin callers', async () => {
     const res = await request(app.getHttpServer())
-      .get('/reports/time/export')
+      .post('/reports/time/export')
       .set('Authorization', bearer(adminToken))
-      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO });
+      .send({ dateFrom: DATE_FROM, dateTo: DATE_TO });
 
     expect(res.status).toBe(200);
     // Without this, browsers cannot read Content-Disposition on cross-origin
