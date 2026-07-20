@@ -185,14 +185,14 @@ function pillClass(isActive: boolean): string {
           Save
         </Button>
 
-        <button
-          class="text-text-muted text-[13px] font-medium"
+        <Button
+          class="h-[32px] text-[13px]"
           data-testid="saved-report-save-as"
-          type="button"
+          label="Save as new…"
+          outlined
+          severity="secondary"
           @click="openCreateDialog"
-        >
-          Save as new…
-        </button>
+        />
       </div>
     </div>
 
@@ -231,7 +231,8 @@ function pillClass(isActive: boolean): string {
       <template #footer>
         <Button
           label="Cancel"
-          text
+          severity="secondary"
+          variant="outlined"
           @click="closeDialog"
         />
         <Button
