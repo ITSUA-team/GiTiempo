@@ -17,10 +17,34 @@ import type {
 const BRAND = '#5D2B85';
 const ACCENT_TINT = '#E8E1F5';
 const TEXT_DARK = '#1A1A1A';
+const TEXT_NESTED = '#555555';
 const TEXT_MUTED = '#666666';
 const DIVIDER = '#EEEEEE';
 const GROUP_FILL = '#F5F0FA';
+
+const FONT = {
+  caption: 8,
+  emphasis: 9.5,
+  micro: 7.5,
+  nested: 8.5,
+  number: 9,
+  stat: 14,
+  title: 20,
+  wordmark: 12,
+} as const;
+
 const A4_WIDTH = 595.28;
+const PAGE_MARGIN_X = 48;
+/** Name, hours, billable, bill % — shared by the body table and the total row. */
+const COLUMN_WIDTHS = ['*', 70, 70, 50];
+const INDENT_PER_LEVEL = 12;
+
+/** Bucket key for leaves missing identity on the grouped dimension. */
+const MISSING_KEY = '∅';
+const MISSING_LABEL = '—';
+
+/** pdfmake document nodes are untyped by the library. */
+type PdfContent = Record<string, unknown>;
 
 export interface ReportPdfLeaf {
   identity: Partial<Record<TimeReportGroupBy, { key: string; label: string }>>;
@@ -84,6 +108,79 @@ function formatChildCount(count: number, dimension: TimeReportGroupBy): string {
   return `${count} ${count === 1 ? noun : `${noun}s`}`;
 }
 
+// --- tree assembly -------------------------------------------------------
+
+interface ReportPdfLevel {
+  /** Distinct groups at this level — the direct child count of the parent. */
+  groupCount: number;
+  nodes: ReportPdfNode[];
+}
+
+function groupLeavesBy(
+  leaves: ReportPdfLeaf[],
+  dimension: TimeReportGroupBy,
+): Map<string, ReportPdfLeaf[]> {
+  const groups = new Map<string, ReportPdfLeaf[]>();
+  for (const leaf of leaves) {
+    const key = leaf.identity[dimension]?.key ?? MISSING_KEY;
+    const bucket = groups.get(key);
+    if (bucket) {
+      bucket.push(leaf);
+    } else {
+      groups.set(key, [leaf]);
+    }
+  }
+  return groups;
+}
+
+function sumSeconds(
+  leaves: ReportPdfLeaf[],
+  field: 'billableSeconds' | 'totalSeconds',
+): number {
+  return leaves.reduce((total, leaf) => total + leaf[field], 0);
+}
+
+function buildLevel(
+  leaves: ReportPdfLeaf[],
+  groupBy: TimeReportGroupByPath,
+  level: number,
+): ReportPdfLevel {
+  const dimension = groupBy[level];
+  if (dimension === undefined || leaves.length === 0) {
+    return { groupCount: 0, nodes: [] };
+  }
+
+  const childDimension = groupBy[level + 1];
+  const entries = [...groupLeavesBy(leaves, dimension).values()].map(
+    (groupLeaves) => {
+      const child = buildLevel(groupLeaves, groupBy, level + 1);
+      const node: ReportPdfNode = {
+        billableSeconds: sumSeconds(groupLeaves, 'billableSeconds'),
+        childCountLabel:
+          childDimension === undefined
+            ? null
+            : formatChildCount(child.groupCount, childDimension),
+        isLeaf: childDimension === undefined,
+        label: groupLeaves[0]!.identity[dimension]?.label ?? MISSING_LABEL,
+        level,
+        totalSeconds: sumSeconds(groupLeaves, 'totalSeconds'),
+      };
+      return { children: child.nodes, node };
+    },
+  );
+
+  entries.sort(
+    (a, b) =>
+      b.node.totalSeconds - a.node.totalSeconds ||
+      a.node.label.localeCompare(b.node.label),
+  );
+
+  return {
+    groupCount: entries.length,
+    nodes: entries.flatMap((entry) => [entry.node, ...entry.children]),
+  };
+}
+
 /**
  * Folds path-granularity leaves into a flattened, depth-first node list with
  * per-level subtotals — the same shape the reports table renders when fully
@@ -94,62 +191,72 @@ export function flattenReportPdfNodes(
   groupBy: TimeReportGroupByPath,
   level = 0,
 ): ReportPdfNode[] {
-  const dimension = groupBy[level];
-  if (dimension === undefined || leaves.length === 0) {
-    return [];
-  }
+  return buildLevel(leaves, groupBy, level).nodes;
+}
 
-  const isLeafLevel = level === groupBy.length - 1;
-  const groups = new Map<string, ReportPdfLeaf[]>();
-  for (const leaf of leaves) {
-    const key = leaf.identity[dimension]?.key ?? '∅';
-    const bucket = groups.get(key);
-    if (bucket) {
-      bucket.push(leaf);
-    } else {
-      groups.set(key, [leaf]);
-    }
-  }
+// --- document sections ---------------------------------------------------
 
-  const nodes = [...groups.values()].map((groupLeaves) => {
-    const first = groupLeaves[0]!;
-    const totals = groupLeaves.reduce(
-      (acc, leaf) => ({
-        billableSeconds: acc.billableSeconds + leaf.billableSeconds,
-        totalSeconds: acc.totalSeconds + leaf.totalSeconds,
-      }),
-      { billableSeconds: 0, totalSeconds: 0 },
-    );
-    const children = isLeafLevel
-      ? []
-      : flattenReportPdfNodes(groupLeaves, groupBy, level + 1);
-    const childDimension = groupBy[level + 1];
-    const directChildren = children.filter(
-      (child) => child.level === level + 1,
-    ).length;
+function mutedLine(text: string, fontSize: number, top: number): PdfContent {
+  return { color: TEXT_MUTED, fontSize, margin: [0, top, 0, 0], text };
+}
 
-    return {
-      children,
-      node: {
-        ...totals,
-        childCountLabel:
-          childDimension === undefined
-            ? null
-            : formatChildCount(directChildren, childDimension),
-        isLeaf: isLeafLevel,
-        label: first.identity[dimension]?.label ?? '—',
-        level,
+/** Shared cell metrics for the body table and the total row. */
+function cellLayout(paddingY: number): PdfContent {
+  return {
+    paddingBottom: () => paddingY,
+    paddingLeft: () => 6,
+    paddingRight: () => 6,
+    paddingTop: () => paddingY,
+    vLineWidth: () => 0,
+  };
+}
+
+function buildMasthead(): PdfContent {
+  return {
+    columns: [
+      {
+        columns: [
+          {
+            layout: 'noBorders',
+            table: {
+              body: [
+                [
+                  {
+                    alignment: 'center',
+                    bold: true,
+                    color: BRAND,
+                    fillColor: ACCENT_TINT,
+                    fontSize: FONT.number,
+                    margin: [0, 5, 0, 5],
+                    text: 'GT',
+                  },
+                ],
+              ],
+              widths: [24],
+            },
+            width: 'auto',
+          },
+          {
+            bold: true,
+            fontSize: FONT.wordmark,
+            margin: [8, 6, 0, 0],
+            text: 'GiTiempo',
+            width: 'auto',
+          },
+        ],
+        width: '*',
       },
-    };
-  });
-
-  return nodes
-    .sort(
-      (a, b) =>
-        b.node.totalSeconds - a.node.totalSeconds ||
-        a.node.label.localeCompare(b.node.label),
-    )
-    .flatMap((entry) => [entry.node, ...entry.children]);
+      {
+        alignment: 'right',
+        characterSpacing: 1.5,
+        color: TEXT_MUTED,
+        fontSize: FONT.caption,
+        margin: [0, 8, 0, 0],
+        text: 'TIME REPORT',
+        width: 'auto',
+      },
+    ],
+  };
 }
 
 function buildFiltersLine(input: ReportPdfInput): string {
@@ -163,7 +270,7 @@ function buildFiltersLine(input: ReportPdfInput): string {
   return parts.join(' · ');
 }
 
-function buildSummaryStrip(input: ReportPdfInput): Record<string, unknown> {
+function buildSummaryStrip(input: ReportPdfInput): PdfContent {
   const stats = [
     {
       label: 'TRACKED HOURS',
@@ -185,10 +292,15 @@ function buildSummaryStrip(input: ReportPdfInput): Record<string, unknown> {
         {
           characterSpacing: 0.8,
           color: TEXT_MUTED,
-          fontSize: 7.5,
+          fontSize: FONT.micro,
           text: stat.label,
         },
-        { bold: true, fontSize: 14, margin: [0, 3, 0, 0], text: stat.value },
+        {
+          bold: true,
+          fontSize: FONT.stat,
+          margin: [0, 3, 0, 0],
+          text: stat.value,
+        },
       ],
       width: 'auto',
     })),
@@ -196,67 +308,75 @@ function buildSummaryStrip(input: ReportPdfInput): Record<string, unknown> {
   };
 }
 
-function buildTable(nodes: ReportPdfNode[]): Record<string, unknown> {
+function buildHeaderRow(): PdfContent[] {
   const headerCell = (text: string, alignment: 'left' | 'right') => ({
     alignment,
     bold: true,
     characterSpacing: 0.6,
     color: TEXT_MUTED,
-    fontSize: 7.5,
+    fontSize: FONT.micro,
     margin: [0, 4, 0, 4],
     text,
   });
 
-  const body: Record<string, unknown>[][] = [
-    [
-      headerCell('NAME', 'left'),
-      headerCell('HOURS', 'right'),
-      headerCell('BILLABLE', 'right'),
-      headerCell('BILL %', 'right'),
-    ],
+  return [
+    headerCell('NAME', 'left'),
+    headerCell('HOURS', 'right'),
+    headerCell('BILLABLE', 'right'),
+    headerCell('BILL %', 'right'),
   ];
+}
 
-  for (const node of nodes) {
-    const isGroupRow = node.level === 0 && !node.isLeaf;
-    const fillColor = isGroupRow ? GROUP_FILL : undefined;
-    const nameText: Record<string, unknown>[] = [
-      {
-        bold: node.level === 0,
-        color: node.isLeaf && node.level > 0 ? '#555555' : TEXT_DARK,
-        fontSize: node.level > 1 ? 8.5 : 9.5,
-        text: node.label,
-      },
-    ];
-    if (node.childCountLabel) {
-      nameText.push({
-        color: TEXT_MUTED,
-        fontSize: 7.5,
-        text: `   ${node.childCountLabel}`,
-      });
-    }
-    const numberCell = (text: string, muted = false) => ({
-      alignment: 'right',
+function buildNodeRow(node: ReportPdfNode): PdfContent[] {
+  const isGroupRow = node.level === 0 && !node.isLeaf;
+  const fillColor = isGroupRow ? GROUP_FILL : undefined;
+
+  const label: PdfContent[] = [
+    {
       bold: node.level === 0,
-      color: muted ? TEXT_MUTED : TEXT_DARK,
-      fillColor,
-      fontSize: 9,
-      text,
+      color: node.isLeaf && node.level > 0 ? TEXT_NESTED : TEXT_DARK,
+      fontSize: node.level > 1 ? FONT.nested : FONT.emphasis,
+      text: node.label,
+    },
+  ];
+  if (node.childCountLabel) {
+    label.push({
+      color: TEXT_MUTED,
+      fontSize: FONT.micro,
+      text: `   ${node.childCountLabel}`,
     });
-
-    body.push([
-      { fillColor, margin: [node.level * 12, 0, 0, 0], text: nameText },
-      numberCell(formatHoursMinutes(node.totalSeconds)),
-      numberCell(formatHoursMinutes(node.billableSeconds)),
-      numberCell(formatShare(node.billableSeconds, node.totalSeconds), true),
-    ]);
   }
 
+  const numberCell = (text: string, muted = false): PdfContent => ({
+    alignment: 'right',
+    bold: node.level === 0,
+    color: muted ? TEXT_MUTED : TEXT_DARK,
+    fillColor,
+    fontSize: FONT.number,
+    text,
+  });
+
+  return [
+    {
+      fillColor,
+      margin: [node.level * INDENT_PER_LEVEL, 0, 0, 0],
+      text: label,
+    },
+    numberCell(formatHoursMinutes(node.totalSeconds)),
+    numberCell(formatHoursMinutes(node.billableSeconds)),
+    numberCell(formatShare(node.billableSeconds, node.totalSeconds), true),
+  ];
+}
+
+function buildTable(nodes: ReportPdfNode[]): PdfContent {
   return {
     layout: {
+      ...cellLayout(5),
       hLineColor: (index: number, tableNode: { table: { body: unknown[] } }) =>
         index <= 1 || index === tableNode.table.body.length
           ? TEXT_DARK
           : DIVIDER,
+      // Rule under the header; the total row supplies the closing rule.
       hLineWidth: (
         index: number,
         tableNode: { table: { body: unknown[] } },
@@ -265,39 +385,30 @@ function buildTable(nodes: ReportPdfNode[]): Record<string, unknown> {
         if (index === tableNode.table.body.length) return 0;
         return 0.5;
       },
-      paddingBottom: () => 5,
-      paddingLeft: () => 6,
-      paddingRight: () => 6,
-      paddingTop: () => 5,
-      vLineWidth: () => 0,
     },
     margin: [0, 18, 0, 0],
     table: {
-      body,
+      body: [buildHeaderRow(), ...nodes.map(buildNodeRow)],
       headerRows: 1,
-      widths: ['*', 70, 70, 50],
+      widths: COLUMN_WIDTHS,
     },
   };
 }
 
-function buildTotalRow(input: ReportPdfInput): Record<string, unknown> {
-  const cell = (text: string, options: Record<string, unknown> = {}) => ({
+function buildTotalRow(input: ReportPdfInput): PdfContent {
+  const cell = (text: string, options: PdfContent = {}) => ({
     alignment: 'right',
     bold: true,
-    fontSize: 9.5,
+    fontSize: FONT.emphasis,
     text,
     ...options,
   });
 
   return {
     layout: {
+      ...cellLayout(6),
       hLineColor: () => TEXT_DARK,
       hLineWidth: (index: number) => (index === 0 ? 1.2 : 0),
-      paddingBottom: () => 6,
-      paddingLeft: () => 6,
-      paddingRight: () => 6,
-      paddingTop: () => 6,
-      vLineWidth: () => 0,
     },
     table: {
       body: [
@@ -314,9 +425,30 @@ function buildTotalRow(input: ReportPdfInput): Record<string, unknown> {
           ),
         ],
       ],
-      widths: ['*', 70, 70, 50],
+      widths: COLUMN_WIDTHS,
     },
   };
+}
+
+function buildFooter(
+  input: ReportPdfInput,
+): (currentPage: number, pageCount: number) => PdfContent {
+  return (currentPage, pageCount) => ({
+    columns: [
+      {
+        color: TEXT_MUTED,
+        fontSize: FONT.micro,
+        text: `Generated with GiTiempo · ${formatDate(input.generatedAt)}`,
+      },
+      {
+        alignment: 'right',
+        color: TEXT_MUTED,
+        fontSize: FONT.micro,
+        text: `Page ${currentPage} of ${pageCount}`,
+      },
+    ],
+    margin: [PAGE_MARGIN_X, 12, PAGE_MARGIN_X, 0],
+  });
 }
 
 export function buildTimeReportPdfDefinition(
@@ -332,86 +464,22 @@ export function buildTimeReportPdfDefinition(
       canvas: [{ color: BRAND, h: 6, type: 'rect', w: A4_WIDTH, x: 0, y: 0 }],
     }),
     content: [
-      {
-        columns: [
-          {
-            columns: [
-              {
-                layout: 'noBorders',
-                table: {
-                  body: [
-                    [
-                      {
-                        alignment: 'center',
-                        bold: true,
-                        color: BRAND,
-                        fillColor: ACCENT_TINT,
-                        fontSize: 9,
-                        margin: [0, 5, 0, 5],
-                        text: 'GT',
-                      },
-                    ],
-                  ],
-                  widths: [24],
-                },
-                width: 'auto',
-              },
-              {
-                bold: true,
-                fontSize: 12,
-                margin: [8, 6, 0, 0],
-                text: 'GiTiempo',
-                width: 'auto',
-              },
-            ],
-            width: '*',
-          },
-          {
-            alignment: 'right',
-            characterSpacing: 1.5,
-            color: TEXT_MUTED,
-            fontSize: 8,
-            margin: [0, 8, 0, 0],
-            text: 'TIME REPORT',
-            width: 'auto',
-          },
-        ],
-      },
+      buildMasthead(),
       {
         bold: true,
-        fontSize: 20,
+        fontSize: FONT.title,
         margin: [0, 24, 0, 0],
         text: 'Time report',
       },
-      { color: TEXT_MUTED, fontSize: 9.5, margin: [0, 5, 0, 0], text: period },
-      {
-        color: TEXT_MUTED,
-        fontSize: 8,
-        margin: [0, 3, 0, 0],
-        text: buildFiltersLine(input),
-      },
+      mutedLine(period, FONT.emphasis, 5),
+      mutedLine(buildFiltersLine(input), FONT.caption, 3),
       buildSummaryStrip(input),
       buildTable(nodes),
       buildTotalRow(input),
     ],
     defaultStyle: { color: TEXT_DARK, font: 'Helvetica', fontSize: 10 },
-    footer: (currentPage: number, pageCount: number) => ({
-      columns: [
-        {
-          color: TEXT_MUTED,
-          fontSize: 7.5,
-          text: `Generated with GiTiempo · ${formatDate(input.generatedAt)}`,
-        },
-        {
-          alignment: 'right',
-          color: TEXT_MUTED,
-          fontSize: 7.5,
-          text: `Page ${currentPage} of ${pageCount}`,
-        },
-      ],
-      margin: [48, 12, 48, 0],
-    }),
-    pageMargins: [48, 42, 48, 48],
+    footer: buildFooter(input),
+    pageMargins: [PAGE_MARGIN_X, 42, PAGE_MARGIN_X, PAGE_MARGIN_X],
     pageSize: 'A4',
   };
 }
