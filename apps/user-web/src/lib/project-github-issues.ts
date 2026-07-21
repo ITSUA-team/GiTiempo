@@ -150,15 +150,20 @@ export async function appendUnsyncedProjectGitHubIssueOptions<TTaskOption>(
   };
 }
 
-// Case-sensitive: GitHub owner/repo casing is meaningful, so an issue already
-// synced under its canonical casing matches, while a differently-cased key is
-// surfaced as unsynced rather than silently treated as the same repo.
+// Case-insensitive: GitHub owner/repo identity ignores casing (github.com
+// treats "ITSUA-team" and "itsua-team" as the same owner), and the backend
+// dedupes GitHub refs the same way via lower(external_key). Comparing
+// case-sensitively here surfaced an already-synced issue as unsynced whenever
+// its stored casing differed from the casing GitHub's issue list returns;
+// re-selecting it then just returned the existing task without repairing the
+// ref, so it stayed "unsynced" forever. Only the comparison key is lowercased —
+// the issue's real casing is preserved for display and task creation.
 function toGitHubIssueKey(issue: SyncedGitHubIssue): string {
-  return `${issue.githubRepo}#${issue.issueNumber}`;
+  return `${issue.githubRepo}#${issue.issueNumber}`.toLowerCase();
 }
 
 function toRepositoryIssueKey(
   issue: GitHubRepositoryIssueListResponse["items"][number],
 ): string {
-  return `${issue.repository.fullName}#${issue.number}`;
+  return `${issue.repository.fullName}#${issue.number}`.toLowerCase();
 }

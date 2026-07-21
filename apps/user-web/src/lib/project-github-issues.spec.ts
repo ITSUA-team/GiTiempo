@@ -118,10 +118,11 @@ describe("loadUnsyncedProjectGitHubIssues", () => {
     });
   });
 
-  it("treats a differently-cased issue as unsynced", async () => {
-    // A task synced under lowercase owner does not match an issue GitHub
-    // returns under its canonical casing, so it surfaces rather than being
-    // silently hidden as the same repo.
+  it("hides a differently-cased issue that is already synced", async () => {
+    // GitHub owner/repo identity is case-insensitive and the backend dedupes
+    // the same way, so a task synced under one casing must match the issue
+    // GitHub returns under a different casing — otherwise it reappears as
+    // unsynced and re-selecting it never repairs the ref.
     const localTasks = [
       { githubIssue: { githubRepo: "octo-org/repo-name", issueNumber: 5 } },
     ] as TaskResponse[];
@@ -145,8 +146,7 @@ describe("loadUnsyncedProjectGitHubIssues", () => {
       projectId: PROJECT_ID,
     });
 
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0]?.githubIssue.githubRepo).toBe("Octo-Org/Repo-Name");
+    expect(result.issues).toHaveLength(0);
   });
 
   it("hides an issue already synced under the same casing", async () => {
