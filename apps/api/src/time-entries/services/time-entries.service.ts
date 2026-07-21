@@ -35,7 +35,10 @@ import {
 } from '../../db/postgres-errors';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
-import { normalizeGitHubRepoKey } from '../../github/github-repo-key';
+import {
+  buildGitHubRepoKey,
+  parseGitHubRepoKey,
+} from '../../github/github-repo-key';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
@@ -320,10 +323,15 @@ export class TimeEntriesService {
     user: AuthUser,
     input: StartTimerFromGitHubInput,
   ): Promise<TimeEntryResponse> {
-    const githubRepo = normalizeGitHubRepoKey(input.githubRepo);
-    if (!githubRepo) {
+    // Preserve GitHub's canonical casing (e.g. "ITSUA-team/Repo"). Lowercasing
+    // it here was the bug: the from-GitHub path stores the API's original
+    // casing, so a lowercased key looked like a different repo and the same
+    // issue became two tasks. Validate the shape without touching the case.
+    const repoParts = parseGitHubRepoKey(input.githubRepo);
+    if (!repoParts) {
       throw new UnprocessableEntityException('GitHub repository is invalid');
     }
+    const githubRepo = buildGitHubRepoKey(repoParts);
 
     const membership = await this.members.requireActiveMembership(
       user.sub,

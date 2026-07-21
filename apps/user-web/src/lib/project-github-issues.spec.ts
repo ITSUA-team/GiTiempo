@@ -118,6 +118,56 @@ describe("loadUnsyncedProjectGitHubIssues", () => {
     });
   });
 
+  it("treats a differently-cased issue as unsynced", async () => {
+    // A task synced under lowercase owner does not match an issue GitHub
+    // returns under its canonical casing, so it surfaces rather than being
+    // silently hidden as the same repo.
+    const localTasks = [
+      { githubIssue: { githubRepo: "octo-org/repo-name", issueNumber: 5 } },
+    ] as TaskResponse[];
+    const canonical = {
+      ...createIssue(5),
+      repository: {
+        fullName: "Octo-Org/Repo-Name",
+        name: "Repo-Name",
+        owner: "Octo-Org",
+      },
+    };
+    const client = createClientMock(
+      vi
+        .fn<TimeEntriesClient["listProjectGitHubIssues"]>()
+        .mockResolvedValue(createGitHubIssueResponse([canonical])),
+    );
+
+    const result = await loadUnsyncedProjectGitHubIssues({
+      client,
+      localTasks,
+      projectId: PROJECT_ID,
+    });
+
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]?.githubIssue.githubRepo).toBe("Octo-Org/Repo-Name");
+  });
+
+  it("hides an issue already synced under the same casing", async () => {
+    const localTasks = [
+      { githubIssue: { githubRepo: "octo-org/repo-name", issueNumber: 5 } },
+    ] as TaskResponse[];
+    const client = createClientMock(
+      vi
+        .fn<TimeEntriesClient["listProjectGitHubIssues"]>()
+        .mockResolvedValue(createGitHubIssueResponse([createIssue(5)])),
+    );
+
+    const result = await loadUnsyncedProjectGitHubIssues({
+      client,
+      localTasks,
+      projectId: PROJECT_ID,
+    });
+
+    expect(result.issues).toHaveLength(0);
+  });
+
   it("stops loading after the bounded GitHub issue page limit", async () => {
     const listProjectGitHubIssues = vi
       .fn<TimeEntriesClient["listProjectGitHubIssues"]>()

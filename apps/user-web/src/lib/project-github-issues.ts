@@ -150,12 +150,15 @@ export async function appendUnsyncedProjectGitHubIssueOptions<TTaskOption>(
   };
 }
 
+// Case-sensitive: GitHub owner/repo casing is meaningful, so an issue already
+// synced under its canonical casing matches, while a differently-cased key is
+// surfaced as unsynced rather than silently treated as the same repo.
 function toGitHubIssueKey(issue: SyncedGitHubIssue): string {
-  return `${issue.githubRepo.toLowerCase()}#${issue.issueNumber}`;
+  return `${issue.githubRepo}#${issue.issueNumber}`;
 }
 
 function toRepositoryIssueKey(
   issue: GitHubRepositoryIssueListResponse["items"][number],
 ): string {
-  return `${issue.repository.fullName.toLowerCase()}#${issue.number}`;
+  return `${issue.repository.fullName}#${issue.number}`;
 }
