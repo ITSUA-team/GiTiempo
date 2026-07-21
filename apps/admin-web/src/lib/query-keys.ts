@@ -1,4 +1,4 @@
-import type { TimeReportExportQuery, TimeReportQuery } from '@gitiempo/shared';
+import type { TimeReportExportRequest, TimeReportRequest } from '@gitiempo/shared';
 
 export interface AdminServerStateScope {
   role?: string | null;
@@ -33,7 +33,7 @@ function normalizeDashboardWindow(window: DashboardWeekWindow = {}) {
   };
 }
 
-export function normalizeTimeReportQuery(query: Partial<TimeReportQuery> = {}) {
+export function normalizeTimeReportQuery(query: Partial<TimeReportRequest> = {}) {
   return {
     dateFrom: query.dateFrom ?? null,
     dateTo: query.dateTo ?? null,
@@ -48,8 +48,8 @@ export function normalizeTimeReportQuery(query: Partial<TimeReportQuery> = {}) {
   };
 }
 
-export function normalizeTimeReportExportQuery(
-  query: Partial<TimeReportExportQuery> = {},
+export function normalizeTimeReportExportRequest(
+  query: Partial<TimeReportExportRequest> = {},
 ) {
   return {
     dateFrom: query.dateFrom ?? null,
@@ -79,14 +79,14 @@ export const reportsKeys = {
     ['admin-web', normalizeScope(scope), 'reports'] as const,
   export: (
     scope: AdminServerStateScope,
-    query?: Partial<TimeReportExportQuery>,
+    query?: Partial<TimeReportExportRequest>,
   ) =>
     [
       ...reportsKeys.all(scope),
       'export',
-      normalizeTimeReportExportQuery(query),
+      normalizeTimeReportExportRequest(query),
     ] as const,
-  time: (scope: AdminServerStateScope, query?: Partial<TimeReportQuery>) =>
+  time: (scope: AdminServerStateScope, query?: Partial<TimeReportRequest>) =>
     [
       ...reportsKeys.all(scope),
       'time',

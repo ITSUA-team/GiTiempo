@@ -14,17 +14,17 @@ export function useReportFilters() {
   const grouping = ref<ReportGrouping>(defaultReportGrouping);
 
   /**
-   * What the table fetches. Always member granularity, and grouping is
-   * deliberately absent: both groupings are presented from these same rows, so
-   * grouping must not reach the query key or switching it would refetch
-   * identical data. Identity scope is absent too — the fetch always covers the
-   * visible-project loop, and export-time identity comes from the table's own
-   * filters, never from here.
+   * What the table fetches. Always the finest project-member-task granularity,
+   * and the configured grouping path is deliberately absent: every grouping is
+   * presented from these same leaf rows, so grouping must not reach the query
+   * key or changing it would refetch identical data. Identity scope is absent
+   * too — the fetch always covers the visible-project loop, and export-time
+   * identity comes from the table's own filters, never from here.
    */
   function getCurrentFetchFilters(): ReportSetupFilters {
     return {
       dateRange: dateRange.value,
-      groupBy: 'user',
+      groupBy: ['project', 'user', 'task'],
       memberId: null,
       projectId: null,
       // search is omitted: the table's global search filters loaded rows

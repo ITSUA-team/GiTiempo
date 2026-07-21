@@ -10,6 +10,16 @@ const optionalSearchSchema = z
   .optional();
 
 export const timeReportGroupBySchema = z.enum(["project", "task", "user"]);
+
+// Ordered path of 1-4 unique dimensions. Requests carry JSON, so this is an
+// array — there is no comma-separated string form to normalize.
+export const timeReportGroupByPathSchema = timeReportGroupBySchema
+  .array()
+  .min(1)
+  .max(4)
+  .refine((path) => new Set(path).size === path.length, {
+    message: "groupBy dimensions must be unique",
+  });
 export const timeReportSortBySchema = z.enum([
   "project",
   "task",
@@ -27,7 +37,7 @@ const timeReportFilterShape = {
   dateTo: dateTimeSchema.optional(),
   projectId: z.uuid().optional(),
   userId: z.uuid().optional(),
-  groupBy: timeReportGroupBySchema.default("project"),
+  groupBy: timeReportGroupByPathSchema.default(["project"]),
   search: optionalSearchSchema,
   sortBy: timeReportSortBySchema.default("totalSeconds"),
   sortOrder: timeReportSortOrderSchema.default("desc"),
@@ -41,10 +51,17 @@ function isValidDateRange(data: { dateFrom?: string; dateTo?: string }): boolean
   );
 }
 
-export const timeReportQuerySchema = z
+/**
+ * Report request body.
+ *
+ * Reports are requested with a JSON body of named properties, so numbers
+ * arrive as numbers (no string coercion) and `.strict()` rejects any property
+ * outside this contract instead of ignoring it.
+ */
+export const timeReportRequestSchema = z
   .object({
-    page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(20),
+    page: z.number().int().min(1).default(1),
+    limit: z.number().int().min(1).max(100).default(20),
     ...timeReportFilterShape,
   })
   .strict()
@@ -53,8 +70,22 @@ export const timeReportQuerySchema = z
     path: ["dateTo"],
   });
 
-export const timeReportExportQuerySchema = z
-  .object(timeReportFilterShape)
+export const timeReportExportFormatSchema = z.enum(["csv", "pdf"]);
+
+/**
+ * Export request body.
+ *
+ * The export is a POST with a JSON body rather than a query string: the
+ * request is a structured set of named properties, each validated here, and
+ * `.strict()` rejects anything not on this list instead of silently ignoring
+ * it. It also keeps report filters out of URLs, proxy logs, and browser
+ * history.
+ */
+export const timeReportExportRequestSchema = z
+  .object({
+    ...timeReportFilterShape,
+    format: timeReportExportFormatSchema.default("csv"),
+  })
   .strict()
   .refine(isValidDateRange, {
     message: "dateTo must be later than dateFrom",
@@ -91,32 +122,13 @@ const aggregateTimingSchema = timeReportTotalsSchema.extend({
   lastStartedAt: dateTimeSchema.nullable(),
 });
 
-export const timeReportProjectRowSchema = aggregateTimingSchema.extend({
-  groupBy: z.literal("project"),
-  project: timeReportProjectSummarySchema,
-  task: z.null(),
-  user: z.null(),
+// Unified row: identity objects are populated for exactly the dimensions on
+// the requested grouping path (task identity always brings its project).
+export const timeReportRowSchema = aggregateTimingSchema.extend({
+  project: timeReportProjectSummarySchema.nullable(),
+  task: timeReportTaskSummarySchema.nullable(),
+  user: timeReportUserSummarySchema.nullable(),
 });
-
-export const timeReportTaskRowSchema = aggregateTimingSchema.extend({
-  groupBy: z.literal("task"),
-  project: timeReportProjectSummarySchema,
-  task: timeReportTaskSummarySchema,
-  user: z.null(),
-});
-
-export const timeReportUserRowSchema = aggregateTimingSchema.extend({
-  groupBy: z.literal("user"),
-  project: z.null(),
-  task: z.null(),
-  user: timeReportUserSummarySchema,
-});
-
-export const timeReportRowSchema = z.discriminatedUnion("groupBy", [
-  timeReportProjectRowSchema,
-  timeReportTaskRowSchema,
-  timeReportUserRowSchema,
-]);
 
 export const timeReportListMetaSchema = z.object({
   page: z.number().int().min(1),
@@ -131,7 +143,7 @@ export const timeReportEffectiveDateRangeSchema = z.object({
 });
 
 export const timeReportResponseSchema = z.object({
-  groupBy: timeReportGroupBySchema,
+  groupBy: timeReportGroupBySchema.array(),
   dateRange: timeReportEffectiveDateRangeSchema,
   summary: timeReportTotalsSchema,
   items: z.array(timeReportRowSchema),
@@ -139,11 +151,15 @@ export const timeReportResponseSchema = z.object({
 });
 
 export type TimeReportGroupBy = z.infer<typeof timeReportGroupBySchema>;
+export type TimeReportGroupByPath = z.infer<typeof timeReportGroupByPathSchema>;
+export type TimeReportExportFormat = z.infer<
+  typeof timeReportExportFormatSchema
+>;
 export type TimeReportSortBy = z.infer<typeof timeReportSortBySchema>;
 export type TimeReportSortOrder = z.infer<typeof timeReportSortOrderSchema>;
-export type TimeReportQuery = z.infer<typeof timeReportQuerySchema>;
-export type TimeReportExportQuery = z.infer<
-  typeof timeReportExportQuerySchema
+export type TimeReportRequest = z.infer<typeof timeReportRequestSchema>;
+export type TimeReportExportRequest = z.infer<
+  typeof timeReportExportRequestSchema
 >;
 export type TimeReportProjectSummary = z.infer<
   typeof timeReportProjectSummarySchema
@@ -155,9 +171,6 @@ export type TimeReportUserSummary = z.infer<
   typeof timeReportUserSummarySchema
 >;
 export type TimeReportTotals = z.infer<typeof timeReportTotalsSchema>;
-export type TimeReportProjectRow = z.infer<typeof timeReportProjectRowSchema>;
-export type TimeReportTaskRow = z.infer<typeof timeReportTaskRowSchema>;
-export type TimeReportUserRow = z.infer<typeof timeReportUserRowSchema>;
 export type TimeReportRow = z.infer<typeof timeReportRowSchema>;
 export type TimeReportListMeta = z.infer<typeof timeReportListMetaSchema>;
 export type TimeReportEffectiveDateRange = z.infer<

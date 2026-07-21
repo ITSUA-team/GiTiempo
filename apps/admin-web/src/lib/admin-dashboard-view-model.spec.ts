@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type {
   ManagementProjectSummaryResponse,
   ProjectResponse,
-  TimeReportProjectRow,
+  TimeReportRow,
   TimeReportResponse,
   WorkspaceInviteResponse,
   WorkspaceMemberResponse,
@@ -81,13 +81,12 @@ function createReportRow(
   name: string,
   lastStartedAt: string | null,
   totalSeconds = 7200,
-): TimeReportProjectRow {
+): TimeReportRow {
   return {
     billableSeconds: totalSeconds,
     billableShare: totalSeconds > 0 ? 1 : null,
     entryCount: totalSeconds > 0 ? 1 : 0,
     firstStartedAt: lastStartedAt,
-    groupBy: 'project',
     lastStartedAt,
     nonBillableSeconds: 0,
     project: { id: projectId, name },
@@ -97,7 +96,7 @@ function createReportRow(
   };
 }
 
-function createReport(items: TimeReportProjectRow[]): TimeReportResponse {
+function createReport(items: TimeReportRow[]): TimeReportResponse {
   const totalSeconds = items.reduce((total, item) => total + item.totalSeconds, 0);
 
   return {
@@ -105,7 +104,7 @@ function createReport(items: TimeReportProjectRow[]): TimeReportResponse {
       dateFrom: '2026-05-11T00:00:00.000Z',
       dateTo: '2026-05-13T12:00:00.000Z',
     },
-    groupBy: 'project',
+    groupBy: ['project'],
     items,
     meta: { limit: 100, page: 1, total: items.length, totalPages: 1 },
     summary: {

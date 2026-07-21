@@ -2,6 +2,7 @@ import { computed, defineComponent, ref, shallowRef } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
+import Menu from 'primevue/menu';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
@@ -48,7 +49,7 @@ const ReportsTableStub = defineComponent({
   props: {
     dateRange: { default: null, type: Array },
     filters: { required: true, type: Object },
-    grouping: { default: 'project', type: String },
+    grouping: { default: () => ['project'], type: Array },
     loading: { default: false, type: Boolean },
     memberOptions: { default: () => [], type: Array },
     projectOptions: { default: () => [], type: Array },
@@ -77,7 +78,7 @@ const ReportsTableStub = defineComponent({
     };
   },
   template:
-    '<div data-testid="reports-table">{{ rows.length }} rows<button data-testid="change-report-grouping" @click="$emit(\'update:grouping\', \'member\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><button data-testid="set-table-filters" @click="setTableFilters">table filters</button><button data-testid="set-billable-filter" @click="setBillableFilter">billable filter</button><button data-testid="set-search-filter" @click="setSearchFilter">search filter</button><slot name="actions" /></div>',
+    '<div data-testid="reports-table">{{ rows.length }} rows<button data-testid="change-report-grouping" @click="$emit(\'update:grouping\', [\'member\'])">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><button data-testid="set-table-filters" @click="setTableFilters">table filters</button><button data-testid="set-billable-filter" @click="setBillableFilter">billable filter</button><button data-testid="set-search-filter" @click="setSearchFilter">search filter</button><slot name="actions" /></div>',
 });
 
 const ManagementPageSkeletonStub = {
@@ -90,13 +91,15 @@ const reportRow: ReportTableRow = {
   billableSeconds: 3600,
   billableShare: 0.5,
   entryCount: 2,
-  groupBy: 'project',
   id: 'project-1',
+  lastStartedAt: '2026-05-02T10:00:00.000Z',
   memberIds: ['member-1'],
   memberName: 'Alex Admin',
   nonBillableSeconds: 3600,
   projectIds: ['project-1'],
   projectName: 'Project Orion',
+  taskId: null,
+  taskName: null,
   totalSeconds: 7200,
 };
 
@@ -129,7 +132,7 @@ function createReportState({
     dateRange: shallowRef<ReportDateRange>(null),
     exportCurrentReport: reportMocks.exportCurrentReport,
     getFilteredRows: vi.fn(),
-    grouping: ref<ReportGrouping>('project'),
+    grouping: ref<ReportGrouping>(['project']),
     initialLoaded: ref(!isInitialLoading),
     isEmpty: computed(() => reportRows.value.length === 0),
     isInitialLoading: ref(isInitialLoading),
@@ -146,6 +149,21 @@ function createReportState({
       totalSeconds: rows.reduce((total, row) => total + row.totalSeconds, 0),
     })),
   };
+}
+
+async function triggerExport(
+  wrapper: ReturnType<typeof mountReportsView>,
+  format: 'csv' | 'pdf' = 'csv',
+): Promise<void> {
+  const items = wrapper.findComponent(Menu).props('model') as {
+    command: () => void;
+    label: string;
+  }[];
+  const item = items.find((candidate) =>
+    candidate.label.toLowerCase().includes(format),
+  );
+  item!.command();
+  await flushPromises();
 }
 
 function mountReportsView() {
@@ -218,19 +236,21 @@ describe('ReportsView', () => {
     expect(
       wrapper
         .get('[data-testid="reports-table"]')
-        .find('[data-testid="export-reports-csv"]')
+        .find('[data-testid="export-reports"]')
         .exists(),
     ).toBe(true);
 
-    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
-    await flushPromises();
+    await triggerExport(wrapper, 'csv');
 
-    expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith({
-      dateRange: null,
-      groupBy: 'project',
-      memberId: null,
-      projectId: null,
-    });
+    expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
+      {
+        dateRange: null,
+        groupBy: ['project'],
+        memberId: null,
+        projectId: null,
+      },
+      'csv',
+    );
     expect(reportMocks.downloadReportExport).toHaveBeenCalledWith({
       blob: expect.any(Blob),
       filename: 'time-report-2026-05.csv',
@@ -250,15 +270,17 @@ describe('ReportsView', () => {
     const wrapper = mountReportsView();
     await flushPromises();
 
-    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
-    await flushPromises();
+    await triggerExport(wrapper, 'csv');
 
-    expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith({
-      dateRange: null,
-      groupBy: 'project',
-      memberId: null,
-      projectId: null,
-    });
+    expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
+      {
+        dateRange: null,
+        groupBy: ['project'],
+        memberId: null,
+        projectId: null,
+      },
+      'csv',
+    );
     expect(reportMocks.downloadReportExport).toHaveBeenCalledWith({
       blob: expect.any(Blob),
       filename: 'time-report-empty.csv',
@@ -275,11 +297,10 @@ describe('ReportsView', () => {
 
     await wrapper.get('[data-testid="set-invalid-report-date"]').trigger('click');
 
-    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    const exportButton = wrapper.get('[data-testid="export-reports"]');
     expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
 
-    await exportButton.trigger('click');
-    await flushPromises();
+    await triggerExport(wrapper, 'csv');
 
     expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
     expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
@@ -293,8 +314,7 @@ describe('ReportsView', () => {
     const wrapper = mountReportsView();
     await flushPromises();
 
-    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
-    await flushPromises();
+    await triggerExport(wrapper, 'csv');
 
     expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
     expect(reportMocks.errorToast).toHaveBeenCalledWith('CSV export failed', {
@@ -311,17 +331,17 @@ describe('ReportsView', () => {
     await wrapper.get('[data-testid="change-report-grouping"]').trigger('click');
 
     // The header control now drives report state rather than export-only scope.
-    expect(state.grouping.value).toBe('member');
+    expect(state.grouping.value).toEqual(['member']);
 
-    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
-    await flushPromises();
+    await triggerExport(wrapper, 'csv');
 
     expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
       expect.objectContaining({
-        groupBy: 'user',
+        groupBy: ['user'],
         memberId: null,
         projectId: null,
       }),
+      'csv',
     );
   });
 
@@ -333,15 +353,15 @@ describe('ReportsView', () => {
     // member-scoped export matches the screen.
     await wrapper.get('[data-testid="change-report-grouping"]').trigger('click');
     await wrapper.get('[data-testid="set-table-filters"]').trigger('click');
-    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
-    await flushPromises();
+    await triggerExport(wrapper, 'csv');
 
     expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
       expect.objectContaining({
-        groupBy: 'user',
+        groupBy: ['user'],
         memberId: 'member-1',
         projectId: 'project-1',
       }),
+      'csv',
     );
     expect(reportMocks.downloadReportExport).toHaveBeenCalled();
   });
@@ -355,11 +375,10 @@ describe('ReportsView', () => {
     // entries — the file would silently show a fraction of the on-screen hours.
     await wrapper.get('[data-testid="set-table-filters"]').trigger('click');
 
-    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    const exportButton = wrapper.get('[data-testid="export-reports"]');
     expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
 
-    await exportButton.trigger('click');
-    await flushPromises();
+    await triggerExport(wrapper, 'csv');
 
     expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
     expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
@@ -374,11 +393,10 @@ describe('ReportsView', () => {
     // else, so exporting would disagree with the table either way.
     await wrapper.get('[data-testid="set-search-filter"]').trigger('click');
 
-    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    const exportButton = wrapper.get('[data-testid="export-reports"]');
     expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
 
-    await exportButton.trigger('click');
-    await flushPromises();
+    await triggerExport(wrapper, 'csv');
 
     expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
   });
@@ -391,13 +409,41 @@ describe('ReportsView', () => {
     // for, so exporting would hand back a file that ignores them.
     await wrapper.get('[data-testid="set-billable-filter"]').trigger('click');
 
-    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    const exportButton = wrapper.get('[data-testid="export-reports"]');
     expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
 
-    await exportButton.trigger('click');
-    await flushPromises();
+    await triggerExport(wrapper, 'csv');
 
     expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
     expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
+  });
+
+  it('exports a PDF through the export menu', async () => {
+    reportMocks.exportCurrentReport.mockResolvedValueOnce({
+      blob: new Blob(['%PDF-'], { type: 'application/pdf' }),
+      filename: 'time-report-2026-05.pdf',
+    });
+
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    await triggerExport(wrapper, 'pdf');
+
+    expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
+      {
+        dateRange: null,
+        groupBy: ['project'],
+        memberId: null,
+        projectId: null,
+      },
+      'pdf',
+    );
+    expect(reportMocks.downloadReportExport).toHaveBeenCalledWith({
+      blob: expect.any(Blob),
+      filename: 'time-report-2026-05.pdf',
+    });
+    expect(reportMocks.successToast).toHaveBeenCalledWith(
+      'Exported time-report-2026-05.pdf.',
+    );
   });
 });
