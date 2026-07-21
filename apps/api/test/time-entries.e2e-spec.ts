@@ -15,6 +15,7 @@ import {
   tasks,
   timeEntries,
   users,
+  workspaceGitHubOrganizations,
   workspaces,
 } from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
@@ -727,6 +728,52 @@ describe('Time entries (e2e)', () => {
     expect(summary.body.visibleProjects).toBeGreaterThanOrEqual(1);
     expect(summary.body.trackedHoursWeek).toBeGreaterThan(0);
     expect(summary.body.trackedHoursMonth).toBeGreaterThan(0);
+  });
+
+  it('anchors the owner to the connected organization casing', async () => {
+    // Connected org's canonical login is mixed-case; the extension sends it
+    // lowercased. The stored task key must use the connected canonical form.
+    await db
+      .delete(workspaceGitHubOrganizations)
+      .where(eq(workspaceGitHubOrganizations.normalizedLogin, 'gitiempo-test'));
+    await db.insert(workspaceGitHubOrganizations).values({
+      workspaceId,
+      organizationLogin: 'Gitiempo-Test',
+      normalizedLogin: 'gitiempo-test',
+      createdByUserId: otherMemberUserId,
+    });
+
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/repo-${suffix}`;
+    const issueNumber = 88;
+
+    try {
+      const started = await request(app.getHttpServer())
+        .post('/time-entries/timer/start-from-github')
+        .set('Authorization', bearer(otherMemberToken))
+        .send({ githubRepo, issueNumber, issueTitle: 'Org anchored issue' });
+      expect(started.status).toBe(201);
+
+      await request(app.getHttpServer())
+        .post('/time-entries/timer/stop')
+        .set('Authorization', bearer(otherMemberToken));
+
+      const [taskRef] = await db
+        .select({ externalKey: taskExternalRefs.externalKey })
+        .from(taskExternalRefs)
+        .where(eq(taskExternalRefs.taskId, started.body.task.id))
+        .limit(1);
+      // Owner canonicalized to the connected org; repo/issue preserved.
+      expect(taskRef?.externalKey).toBe(
+        `Gitiempo-Test/repo-${suffix}#${issueNumber}`,
+      );
+    } finally {
+      await db
+        .delete(workspaceGitHubOrganizations)
+        .where(
+          eq(workspaceGitHubOrganizations.normalizedLogin, 'gitiempo-test'),
+        );
+    }
   });
 
   it('preserves the GitHub owner/repo casing from the extension', async () => {

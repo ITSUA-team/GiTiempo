@@ -219,6 +219,23 @@ export class WorkspaceGitHubOrganizationsService {
     return rows.map((row) => row.organizationLogin);
   }
 
+  /**
+   * The canonical login of a connected organization for any casing of its
+   * name, or null if the workspace has not connected it. This is the
+   * workspace's source of truth for owner casing: resolving through it means
+   * "ITSUA-team" and "itsua-team" collapse to the one connected form.
+   */
+  async resolveCanonicalOrganizationLogin(
+    workspaceId: string,
+    login: string,
+  ): Promise<string | null> {
+    const row = await this.findByNormalizedLogin(
+      workspaceId,
+      normalizeGitHubLogin(login),
+    );
+    return row?.organizationLogin ?? null;
+  }
+
   async isOrganizationAllowed(
     workspaceId: string,
     organizationLogin: string,
