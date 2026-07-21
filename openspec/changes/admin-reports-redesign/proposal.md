@@ -42,7 +42,7 @@ Summary cards and PM scope behavior are unchanged. Out of scope (separate change
 
 Affected layers: shared contracts, backend, and frontend. This change modifies contracts (`groupBy` list, unified row shape, export `format`); authentication behavior is unchanged.
 
-- `packages/shared/src/contracts/reports.ts` — `timeReportGroupBySchema`, query/export query schemas, row discriminated union becomes a unified path-keyed row shape (**BREAKING** for `TimeReportRow`; admin-web is the only consumer and migrates in this change), `timeReportExportFormatSchema`; OpenAPI regenerates from the updated contract.
-- `apps/api/src/reports/` — reports service aggregation SQL (Drizzle) with top-level-group pagination, controller query parsing and per-format response headers, CSV serializer, new PDF document builder (`report-pdf.ts`), `pdfmake` dependency, e2e/unit tests.
+- `packages/shared/src/contracts/reports.ts` — `timeReportGroupBySchema`, request/export-request body schemas, row discriminated union becomes a unified path-keyed row shape (**BREAKING** for `TimeReportRow`; admin-web is the only consumer and migrates in this change), `timeReportExportFormatSchema`; OpenAPI regenerates from the updated contract.
+- `apps/api/src/reports/` — reports service aggregation SQL (Drizzle) with top-level-group pagination, controller JSON-body parsing and per-format response headers, CSV serializer, new PDF document builder (`report-pdf.ts`), `pdfmake` dependency, e2e/unit tests.
 - `apps/admin-web/src/` — `ReportsTable.vue` (grouping builder, tree rendering, filter row), `ReportsView.vue` (export menu), `report-view-model.ts` (tree assembly, filters, export-blocked rules), reports composables and client (`format` passthrough), validation schemas, tests.
 - `docs/ui/pages-admin.md` — reports page documentation.

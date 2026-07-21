@@ -1,14 +1,14 @@
 ## 1. Shared contract
 
-- [x] 1.1 Change `timeReportGroupBySchema` usage in `packages/shared/src/contracts/reports.ts`: `groupBy` accepts a comma-separated ordered list (1–4 unique dimensions of `project`, `task`, `user`), transformed to a validated array; bare `groupBy=project` still parses (default `['project']`)
+- [x] 1.1 Change `timeReportGroupBySchema` usage in `packages/shared/src/contracts/reports.ts`: `groupBy` accepts an ordered JSON array (1–4 unique dimensions of `project`, `task`, `user`) validated by `timeReportGroupByPathSchema`; default `['project']`
 - [x] 1.2 Replace the `timeReportRowSchema` discriminated union with the unified row shape: nullable `project`, `task`, `user` identity objects populated per requested dimension (task rows always carry project), same aggregate fields; response `groupBy` echoes the ordered array
-- [x] 1.3 Add `timeReportExportFormatSchema` (`csv | pdf`, default `csv`) to the shared export query contract
+- [x] 1.3 Add `timeReportExportFormatSchema` (`csv | pdf`, default `csv`) to the shared export request contract (`timeReportExportRequestSchema`)
 - [x] 1.4 Update `packages/shared/src/contracts/reports.spec.ts`: list parsing (valid orders, duplicates rejected, >4 rejected, unknown dimension rejected, single-value compatibility), unified row validation, and export format parsing
 - [x] 1.5 Build shared package and confirm dependent typechecks surface all consumers of the old union (`pnpm --filter @gitiempo/shared build && pnpm --filter @gitiempo/shared test`)
 
 ## 2. Reports API — multi-level grouping
 
-- [x] 2.1 Update `apps/api/src/reports/dto/*.dto.ts` to re-wrap the updated query, export-query, and response contracts
+- [x] 2.1 Update `apps/api/src/reports/dto/*.dto.ts` to re-wrap the updated request, export-request, and response contracts
 - [x] 2.2 Rework `ReportsService.groupSelection`/`groupByColumns` to build selection and `GROUP BY` from the ordered dimension path; keep single-level requests on the existing one-step query path
 - [x] 2.3 Implement top-level-group pagination: subquery selecting the page of first-dimension keys ordered by the aggregated sort metric, main query returning all leaf rows for those keys; `meta.total` counts top-level groups
 - [x] 2.4 Update `toReportRow` for the unified row shape and echo the grouping array in the response
@@ -37,7 +37,7 @@
 ## 5. Admin web data layer
 
 - [x] 5.1 Update `src/services/admin-reports-client.ts` and `src/composables/reports/useReportsData.ts` to send the ordered `groupBy` list and consume unified rows
-- [x] 5.2 Pass `format` through `admin-reports-client` and `useReportExport`; export query building carries the grouping path; adjust `useReportOptions.ts` if option derivation touches row shape
+- [x] 5.2 Pass `format` through `admin-reports-client` and `useReportExport`; export request body building carries the grouping path; adjust `useReportOptions.ts` if option derivation touches row shape
 - [x] 5.3 Update composable and client spec files for the new query, row shapes, and format param
 
 ## 6. Admin web UI
