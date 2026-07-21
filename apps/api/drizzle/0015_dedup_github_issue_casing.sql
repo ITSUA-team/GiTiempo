@@ -3,8 +3,8 @@
 -- "itsua-team/repo#5" from the extension) and became two tasks. The extension
 -- no longer lowercases, so new writes agree; this collapses the historical
 -- duplicates, keeping the canonically-cased task (the one carrying uppercase
--- letters, i.e. GitHub's real casing) and merging the other's time entries and
--- assignees onto it. Casing is NOT normalized away — the canonical key stays.
+-- letters, i.e. GitHub's real casing) and merging the other's time entries onto
+-- it. Casing is NOT normalized away — the canonical key stays.
 DO $$
 BEGIN
   -- Canonical task per case-insensitive issue key: prefer the ref that carries
@@ -34,17 +34,6 @@ BEGIN
     SET task_id = m.canonical_task_id
     FROM _gh_case_dup m WHERE te.task_id = m.dup_task_id;
 
-  -- Move assignees the canonical task does not already have.
-  UPDATE task_assignees a
-    SET task_id = m.canonical_task_id
-    FROM _gh_case_dup m
-    WHERE a.task_id = m.dup_task_id
-      AND NOT EXISTS (
-        SELECT 1 FROM task_assignees a2
-        WHERE a2.task_id = m.canonical_task_id AND a2.user_id = a.user_id
-      );
-
-  DELETE FROM task_assignees    WHERE task_id IN (SELECT dup_task_id FROM _gh_case_dup);
   DELETE FROM task_external_refs WHERE task_id IN (SELECT dup_task_id FROM _gh_case_dup);
   DELETE FROM tasks             WHERE id      IN (SELECT dup_task_id FROM _gh_case_dup);
 
