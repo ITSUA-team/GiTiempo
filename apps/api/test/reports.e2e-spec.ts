@@ -11,6 +11,7 @@ import {
   tasks,
   timeEntries,
   users,
+  workspaceMembers,
   workspaces,
 } from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
@@ -553,6 +554,49 @@ describe('Reports (e2e)', () => {
       const labels = await labelsFor(adminToken, { userId: bobUserId });
 
       expect(labels.memberLabel).toBeTruthy();
+    });
+
+    it('hides a member whose time is only in a project the PM cannot see', async () => {
+      // A real workspace member whose sole entry is in the probe project,
+      // which the PM is not assigned to. The PM must not read their name off
+      // the PDF even though they share a workspace.
+      const [hidden] = await db
+        .insert(users)
+        .values({
+          email: 'hidden-worker@elsewhere.test',
+          displayName: 'Hidden Worker',
+          firebaseUid: 'reports-hidden-worker-uid',
+        })
+        .returning({ id: users.id });
+      await db.insert(workspaceMembers).values({
+        workspaceId,
+        userId: hidden!.id,
+        role: 'member',
+      });
+      await db.insert(timeEntries).values({
+        workspaceId,
+        taskId: probeTaskId,
+        userId: hidden!.id,
+        source: 'manual' as const,
+        startedAt: new Date('2027-03-07T10:00:00.000Z'),
+        endedAt: new Date('2027-03-07T11:00:00.000Z'),
+        durationSeconds: 3600,
+        isBillable: true,
+      });
+
+      try {
+        const pmLabels = await labelsFor(pmToken, { userId: hidden!.id });
+        const adminLabels = await labelsFor(adminToken, { userId: hidden!.id });
+
+        expect(pmLabels.memberLabel).toBeNull();
+        expect(adminLabels.memberLabel).toBe('Hidden Worker');
+      } finally {
+        await db.delete(timeEntries).where(eq(timeEntries.userId, hidden!.id));
+        await db
+          .delete(workspaceMembers)
+          .where(eq(workspaceMembers.userId, hidden!.id));
+        await db.delete(users).where(eq(users.id, hidden!.id));
+      }
     });
   });
 });

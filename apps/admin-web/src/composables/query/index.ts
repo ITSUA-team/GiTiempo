@@ -27,13 +27,9 @@ import {
   reportsKeys,
   type AdminServerStateScope,
 } from '@/lib/query-keys';
+import type { ReportExport } from '@/services/admin-reports-client';
 
 type QueryKey = readonly unknown[];
-
-interface ReportsCsvExport {
-  blob: Blob;
-  filename: string;
-}
 
 interface AdminProjectsClient {
   getManagementSummary(): Promise<ManagementProjectSummaryResponse>;
@@ -43,7 +39,7 @@ interface AdminProjectsClient {
 interface ExportTimeReportClient {
   exportTimeReport(
     query?: Partial<TimeReportExportRequest>,
-  ): Promise<ReportsCsvExport>;
+  ): Promise<ReportExport>;
 }
 
 interface GitHubConnectionStatusClient {

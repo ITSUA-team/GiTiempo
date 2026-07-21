@@ -57,6 +57,26 @@ export type {
   ReportTableRow,
 } from '@/validation/report-view-model';
 
+// Singular, title-cased dimension names for the grouping builder chips and the
+// grouped table's first column header. Distinct from `unknownDimensionLabel`,
+// which names *empty* groups ("All members").
+export const reportGroupingDimensionLabels: Record<
+  ReportGroupingDimension,
+  string
+> = {
+  member: 'Member',
+  project: 'Project',
+  task: 'Task',
+};
+
+// Every groupable dimension in display order; the builder offers the unused
+// ones as "Add level" options.
+export const reportGroupingDimensions: ReportGroupingDimension[] = [
+  'project',
+  'member',
+  'task',
+];
+
 interface ReportRowContext {
   memberOptions: ReportFilterOption[];
   projectOptions: ReportFilterOption[];

@@ -8,7 +8,7 @@ Per `apps/api/AGENTS.md`: contract-facing changes must update `packages/shared/s
 
 **Goals:**
 
-- Ordered multi-level `groupBy` (1–4 unique dimensions of `project`, `user`, `task`) accepted by `GET /reports/time` and `GET /reports/time/export`.
+- Ordered multi-level `groupBy` (1–4 unique dimensions of `project`, `user`, `task`) accepted by `POST /reports/time` and `POST /reports/time/export`.
 - Single-dimension requests keep today's semantics (backward-compatible degenerate case).
 - Admin reports page: grouping-builder chips (add, remove, reorder, max 4) and an expandable tree table with per-level subtotals, per the V2 design.
 - `billableShare` (`any | below50 | gte50 | gte90`) and `activity` (`any | today | last7 | last30`) filters, desktop and mobile. (Revised: the entries column and filter were removed at the user's request.)
@@ -27,12 +27,12 @@ Per `apps/api/AGENTS.md`: contract-facing changes must update `packages/shared/s
 
 ## Decisions
 
-### D1: `groupBy` is a comma-separated ordered list in the query string
+### D1: reports are a POST with a JSON body; `groupBy` is an ordered JSON array
 
-`groupBy=project,user,task`. The Zod contract parses the string into a validated array (`1–4` items, unique, each in the enum). A bare `groupBy=project` parses to `['project']`, so existing clients and bookmarks keep working, and the OpenAPI surface stays a single query parameter.
+Report and export requests are `POST /reports/time` and `POST /reports/time/export` carrying a JSON body of named properties, not a query string. `groupBy` is a JSON array — `{ "groupBy": ["project", "user", "task"] }` — validated by the Zod contract (`1–4` items, unique, each in the enum) with a default of `["project"]`. Because the body is JSON, numbers arrive as numbers (no string coercion) and the schema is `.strict()`, so any property outside the contract is rejected rather than ignored. Keeping filters in the body also keeps them out of URLs, proxy logs, and browser history.
 
-- Alternative — repeated params (`groupBy=a&groupBy=b`): rejected; NestJS/Zod handling of mixed single/array query params is messier and the OpenAPI diff is larger.
-- Alternative — new parameter (`groupPath`) alongside legacy `groupBy`: rejected; two overlapping parameters would need precedence rules forever, and admin-web is the only consumer.
+- Alternative — GET with a comma-separated `groupBy=project,user,task` query string: rejected; it forces string→array parsing and string→number coercion for every field, cannot `.strict()`-reject unknown params cleanly, and leaks report filters into URLs and logs.
+- Alternative — GET with repeated params (`groupBy=a&groupBy=b`): rejected; NestJS/Zod handling of mixed single/array query params is messier and shares the query-string leakage problem above.
 
 ### D2: Response returns leaf rows keyed by the full grouping path; pagination is by top-level group
 
@@ -74,7 +74,7 @@ Declarative table layout with automatic page breaks, repeatable header rows, per
 
 ### D8: One export endpoint, `format` parameter
 
-The PDF must share filters, PM scope, and date defaults with the CSV; a `format` enum on `timeReportExportQuerySchema` (default `csv`) keeps one code path for context building and keeps existing clients working unchanged.
+The PDF must share filters, PM scope, and date defaults with the CSV; a `format` enum on `timeReportExportRequestSchema` (default `csv`) keeps one code path for context building and keeps existing clients working unchanged.
 
 ### D9: Server-side tree assembly for the PDF
 
@@ -98,7 +98,7 @@ The PDF needs per-level subtotal rows, so the service groups the path-granularit
 
 **packages/shared**
 
-- `src/contracts/reports.ts`: `groupBy` list schema (comma-string → array transform), unified `timeReportRowSchema`, response `groupBy: array`, `timeReportExportFormatSchema` + export query `format` field, updated exports; `src/contracts/reports.spec.ts`.
+- `src/contracts/reports.ts`: `groupBy` ordered-array schema (`timeReportGroupByPathSchema`), unified `timeReportRowSchema`, response `groupBy: array`, `timeReportExportFormatSchema` + export body `format` field on `timeReportExportRequestSchema`, updated exports; `src/contracts/reports.spec.ts`.
 - `openapi.json`: regenerated (build-based workflow).
 
 **apps/api**
@@ -106,7 +106,7 @@ The PDF needs per-level subtotal rows, so the service groups the path-granularit
 - `package.json`: `pdfmake` dependency (lockfile diff scoped to the new package).
 - `src/reports/services/reports.service.ts`: path-based `groupByColumns`/`groupSelection`, two-step top-level pagination, `toReportRow` for unified shape, `toCsv` path metadata, `exportTimeReport` branching on format (PDF builds the grouped tree); `reports.service.spec.ts`.
 - `src/reports/services/report-pdf.ts` (new): PDF document builder per the "Report PDF Preview" frame; spec file.
-- `src/reports/dto/time-report-query.dto.ts`, `dto/time-report-export-query.dto.ts`, `dto/time-report-response.dto.ts`: re-wrap updated contracts.
+- `src/reports/dto/time-report-request.dto.ts`, `dto/time-report-export-request.dto.ts`, `dto/time-report-response.dto.ts`: re-wrap updated contracts.
 - `src/reports/controllers/reports.controller.ts`: per-format content type and disposition.
 - e2e coverage for multi-level grouping, scoped PM subtree correctness, and PDF export.
 
@@ -123,7 +123,7 @@ The PDF needs per-level subtotal rows, so the service groups the path-granularit
 
 ## Backend/frontend coordination
 
-The contract change lands first in `packages/shared` (single source for both layers); API and admin-web build against it in the same change so nothing ships against a stale row shape. Because `groupBy=project` still parses as a one-element list, `format` defaults to `csv`, and the response for single-level requests is shape-compatible after the union → unified-row migration, the API can deploy before the new UI without breaking existing clients — but admin-web must migrate its row parsing in the same release, hence one change, one PR. OpenAPI regeneration follows the API DTO update per `apps/api/AGENTS.md`.
+The contract change lands first in `packages/shared` (single source for both layers); API and admin-web build against it in the same change so nothing ships against a stale row shape. Because `groupBy` defaults to `["project"]`, `format` defaults to `csv`, and the response for single-level requests is shape-compatible after the union → unified-row migration, the API can deploy before the new UI without breaking existing clients — but admin-web must migrate its row parsing in the same release, hence one change, one PR. OpenAPI regeneration follows the API DTO update per `apps/api/AGENTS.md`.
 
 ## Open Questions
 

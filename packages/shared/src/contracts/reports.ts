@@ -83,14 +83,7 @@ export const timeReportExportFormatSchema = z.enum(["csv", "pdf"]);
  */
 export const timeReportExportRequestSchema = z
   .object({
-    dateFrom: dateTimeSchema.optional(),
-    dateTo: dateTimeSchema.optional(),
-    projectId: z.uuid().optional(),
-    userId: z.uuid().optional(),
-    groupBy: timeReportGroupByPathSchema.default(["project"]),
-    search: optionalSearchSchema,
-    sortBy: timeReportSortBySchema.default("totalSeconds"),
-    sortOrder: timeReportSortOrderSchema.default("desc"),
+    ...timeReportFilterShape,
     format: timeReportExportFormatSchema.default("csv"),
   })
   .strict()

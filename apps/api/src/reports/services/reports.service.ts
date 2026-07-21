@@ -36,7 +36,6 @@ import { projects } from '../../projects/schemas/projects.schema';
 import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
-import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { renderTimeReportPdf, type ReportPdfLeaf } from './report-pdf';
 
@@ -217,6 +216,12 @@ export class ReportsService {
    * cross-workspace disclosure, and for a PM a way to read the name of a
    * private project they are not assigned to. An out-of-scope id now resolves
    * to no row, so the filter prints as "All".
+   *
+   * The member lookup goes further and requires the user to actually appear in
+   * the caller's scoped results: a PM sees only members who tracked time in the
+   * projects visible to them, so a bare workspace-membership check would let a
+   * PM read the name and email of any colleague, including ones whose time is
+   * entirely in projects they cannot see.
    */
   private async getExportFilterLabels(
     context: QueryContext,
@@ -253,17 +258,20 @@ export class ReportsService {
             .then(([row]) => row ?? null)
         : Promise.resolve(null),
       query.userId !== undefined
-        ? this.db
+        ? // The report's conditions already filter to this userId (buildQuery
+          // context pushes it in), so the scoped join projected to user
+          // identity answers "does this member appear in a row I can see?".
+          this.db
             .select({ displayName: users.displayName, email: users.email })
-            .from(users)
-            .innerJoin(
-              workspaceMembers,
-              and(
-                eq(workspaceMembers.userId, users.id),
-                eq(workspaceMembers.workspaceId, context.workspaceId),
-              )!,
+            .from(timeEntries)
+            .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+            .innerJoin(projects, eq(projects.id, tasks.projectId))
+            .innerJoin(users, eq(users.id, timeEntries.userId))
+            .leftJoin(
+              projectAssignments,
+              this.scopeAssignmentJoinCondition(context.scopeUserId),
             )
-            .where(eq(users.id, query.userId))
+            .where(and(...context.conditions, eq(users.id, query.userId)))
             .limit(1)
             .then(([row]) => row ?? null)
         : Promise.resolve(null),

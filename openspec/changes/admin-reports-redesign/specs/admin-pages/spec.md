@@ -54,7 +54,7 @@ The reports page MUST support report setup controls for backend export, a config
 - **THEN** the page uses a PrimeVue range date picker with manual input disabled
 - **AND** the page shows a validation message if an end-before-start range is represented
 - **AND** an invalid date range does not trigger report fetch or CSV export generation
-- **AND** validation remains aligned with the shared report export query contract
+- **AND** validation remains aligned with the shared report export request contract
 
 #### Scenario: Summary totals reflect loaded report data
 
@@ -97,7 +97,7 @@ The reports page MUST support report setup controls for backend export, a config
 #### Scenario: CSV export uses backend report endpoint
 
 - **WHEN** the user activates "Export as CSV"
-- **THEN** the page requests `GET /reports/time/export` with the current report setup controls, including the ordered grouping path
+- **THEN** the page requests `POST /reports/time/export` with the current report setup controls, including the ordered grouping path
 - **AND** the browser downloads the CSV returned by the backend
 - **AND** the downloaded CSV contains backend-generated detailed project-task-user rows for the selected setup controls
 - **AND** table global search and column filters do not change the CSV export scope
@@ -106,7 +106,7 @@ The reports page MUST support report setup controls for backend export, a config
 #### Scenario: PDF export uses backend report endpoint
 
 - **WHEN** the user activates "Export as PDF"
-- **THEN** the page requests `GET /reports/time/export` with `format=pdf` and the current report setup controls, including the ordered grouping path
+- **THEN** the page requests `POST /reports/time/export` with `format=pdf` and the current report setup controls, including the ordered grouping path
 - **AND** the browser downloads the PDF returned by the backend
 - **AND** no browser-side PDF rendering is required
 

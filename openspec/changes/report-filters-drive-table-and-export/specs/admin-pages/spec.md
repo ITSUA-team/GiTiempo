@@ -2,13 +2,13 @@
 
 ### Requirement: Reports Generation And Export
 
-The reports page MUST support a date range control that scopes both loaded report data and backend CSV export, a grouping control that regroups loaded report data and travels to the CSV as metadata, scoped report summaries for loaded data, table discovery filters whose identity filters also scope the export, and backend CSV generation while preserving project-scope restrictions for PM users.
+The reports page MUST support a date range control that scopes both loaded report data and the backend export, a grouping control that regroups loaded report data and travels to the export as metadata, scoped report summaries for loaded data, table discovery filters whose identity filters also scope the export, and backend export generation (CSV or PDF) while preserving project-scope restrictions for PM users.
 
 #### Scenario: Reports page renders reporting surface
 
 - **WHEN** an admin or PM opens the reports page through the authenticated admin shell
 - **THEN** the page shows a reports header with title, descriptive copy, and summary totals above the results table
-- **AND** the results table header shows a date range control, a grouping control, a global search control, and a single primary `Export CSV` action
+- **AND** the results table header shows a date range control, a grouping control, a global search control, and a primary export action offering CSV and PDF
 - **AND** the page does not show a separate report setup bar, nor project or member setup controls
 - **AND** the results table shows report rows with hours and billable columns alongside the identity columns for the selected grouping
 
@@ -19,12 +19,12 @@ The reports page MUST support a date range control that scopes both loaded repor
 - **AND** the skeleton does not reserve space for a separate report setup bar
 - **AND** it does not render an empty report message before the initial request finishes
 
-#### Scenario: Date range scopes loaded report data and CSV export
+#### Scenario: Date range scopes loaded report data and export
 
 - **WHEN** the user changes the date range control in the results table header
 - **THEN** the page refetches report data for the new range
 - **AND** loaded table rows and summary totals update to reflect the new range
-- **AND** activating `Export CSV` requests backend CSV generation for that same range
+- **AND** activating an export requests backend generation for that same range
 
 #### Scenario: Grouping selects what a results row represents
 
@@ -66,8 +66,8 @@ The reports page MUST support a date range control that scopes both loaded repor
 - **WHEN** the user edits the report date range
 - **THEN** the page uses a PrimeVue range date picker with manual input disabled
 - **AND** the page shows a validation message if an end-before-start range is represented
-- **AND** an invalid date range does not trigger report fetch or CSV export generation
-- **AND** validation remains aligned with the shared report export query contract
+- **AND** an invalid date range does not trigger report fetch or export generation
+- **AND** validation remains aligned with the shared report export request contract
 
 #### Scenario: Summary totals reflect loaded report data
 
@@ -78,9 +78,9 @@ The reports page MUST support a date range control that scopes both loaded repor
 #### Scenario: PM stays inside visible report scope
 
 - **WHEN** a PM uses the reports page
-- **THEN** loaded report rows and CSV export are limited to active projects and users visible through the PM's existing report scope
+- **THEN** loaded report rows and the export are limited to active projects and users visible through the PM's existing report scope
 - **AND** the PM cannot widen that scope from the reports UI for any grouping
-- **AND** the existing scoped project and report APIs remain responsible for enforcing PM scope on loaded rows and CSV export
+- **AND** the existing scoped project and report APIs remain responsible for enforcing PM scope on loaded rows and the export
 
 #### Scenario: Results table supports discovery controls
 
@@ -90,21 +90,21 @@ The reports page MUST support a date range control that scopes both loaded repor
 - **AND** clearing global search or column filters restores the rows loaded for the current report data state and role scope
 - **AND** table search and column filters do not call report data endpoints
 
-#### Scenario: CSV export uses backend report endpoint
+#### Scenario: Export uses backend report endpoint
 
-- **WHEN** the user activates `Export CSV`
-- **THEN** the page requests `GET /reports/time/export` scoped to the active date range, carrying the selected grouping
-- **AND** the request also carries the table's project filter, and its member filter when grouping by member, so the CSV is scoped to the same rows and sums the table shows
-- **AND** the browser downloads the CSV returned by the backend
-- **AND** the downloaded CSV contains backend-generated detailed project-task-user rows regardless of the selected grouping
+- **WHEN** the user activates an export (CSV or PDF)
+- **THEN** the page requests `POST /reports/time/export` with a JSON body scoped to the active date range, carrying the selected grouping and the export format
+- **AND** the request also carries the table's project filter, and its member filter when grouping by member, so the export is scoped to the same rows and sums the table shows
+- **AND** the browser downloads the CSV or PDF returned by the backend
+- **AND** a downloaded CSV contains backend-generated detailed project-task-user rows regardless of the selected grouping
 - **AND** the selected grouping is preserved as CSV metadata and does not collapse CSV row granularity
-- **AND** no browser-side report row aggregation or CSV serialization is required
+- **AND** no browser-side report row aggregation or file serialization is required
 
-#### Scenario: Unexportable table filters block CSV export
+#### Scenario: Unexportable table filters block export
 
 - **WHEN** a global search, hours, or billable table filter is active, or a member filter is active while grouping by project
-- **THEN** `Export CSV` is disabled and states why that filter cannot be exported
-- **AND** activating it generates no CSV
+- **THEN** the export action is disabled and states why that filter cannot be exported
+- **AND** activating it generates no file
 - **AND** clearing the filter, or switching a member-filtered table to `Member` grouping, restores export
 
 #### Scenario: Only filters the table and CSV agree on are exportable

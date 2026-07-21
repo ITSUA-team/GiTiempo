@@ -162,7 +162,7 @@ The backend MUST support `format=pdf` on the report export endpoint, producing a
 - **THEN** the PDF includes only data within the PM report scope
 
 #### Scenario: Member cannot export PDF reports
-- **GIVEN** an authenticated member requests `GET /reports/time/export` with `format=pdf`
+- **GIVEN** an authenticated member requests `POST /reports/time/export` with `format=pdf`
 - **WHEN** the request is authorized
 - **THEN** the backend responds with 403 Forbidden
 
