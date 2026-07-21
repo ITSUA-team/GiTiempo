@@ -1,6 +1,6 @@
-import type { ReportsCsvExport } from '@/services/admin-reports-client';
+import type { ReportExport } from '@/services/admin-reports-client';
 
-export function downloadReportExport(exportResult: ReportsCsvExport): string {
+export function downloadReportExport(exportResult: ReportExport): string {
   const url = URL.createObjectURL(exportResult.blob);
   const link = document.createElement('a');
 

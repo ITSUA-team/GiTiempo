@@ -6,7 +6,7 @@ import { toTimeReportExportRequest, type ReportSetupFilters } from '@/lib/report
 import type { AdminServerStateScope } from '@/lib/query-keys';
 import type {
   AdminReportsClient,
-  ReportsCsvExport,
+  ReportExport,
 } from '@/services/admin-reports-client';
 
 interface UseReportExportOptions {
@@ -28,7 +28,7 @@ export function useReportExport({
   async function exportCurrentReport(
     filters: ReportSetupFilters,
     format: TimeReportExportFormat = 'csv',
-  ): Promise<ReportsCsvExport | null> {
+  ): Promise<ReportExport | null> {
     if (!enabled.value) {
       return null;
     }

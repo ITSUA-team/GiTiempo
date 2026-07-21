@@ -14,7 +14,9 @@ interface AdminReportsClientOptions {
   apiClient: Pick<AuthenticatedApiClient, 'request' | 'requestJson'>;
 }
 
-export interface ReportsCsvExport {
+// The export endpoint returns either CSV or PDF depending on the request
+// `format`, so this describes any downloaded report blob, not just CSV.
+export interface ReportExport {
   blob: Blob;
   filename: string;
 }
@@ -22,7 +24,7 @@ export interface ReportsCsvExport {
 export interface AdminReportsClient {
   exportTimeReport(
     query?: Partial<TimeReportExportRequest>,
-  ): Promise<ReportsCsvExport>;
+  ): Promise<ReportExport>;
   getTimeReport(query?: Partial<TimeReportRequest>): Promise<TimeReportResponse>;
 }
 
