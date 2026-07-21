@@ -2654,137 +2654,19 @@
       }
     },
     "/reports/time": {
-      "get": {
+      "post": {
         "operationId": "ReportsController_getTimeReport",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minimum": 1,
-              "maximum": 9007199254740991,
-              "default": 1,
-              "type": "integer"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "integer"
-            }
-          },
-          {
-            "name": "dateFrom",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "format": "date-time",
-              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "dateTo",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "format": "date-time",
-              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "groupBy",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "default": "project",
-              "type": "string",
-              "enum": [
-                "project",
-                "task",
-                "user"
-              ]
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "maxLength": 200,
-              "type": "string"
-            }
-          },
-          {
-            "name": "sortBy",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "default": "totalSeconds",
-              "type": "string",
-              "enum": [
-                "project",
-                "task",
-                "user",
-                "totalSeconds",
-                "billableSeconds",
-                "entryCount",
-                "firstStartedAt",
-                "lastStartedAt"
-              ]
-            }
-          },
-          {
-            "name": "sortOrder",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "default": "desc",
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TimeReportRequestDto"
+              }
             }
           }
-        ],
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2812,118 +2694,29 @@
       }
     },
     "/reports/time/export": {
-      "get": {
+      "post": {
         "operationId": "ReportsController_exportTimeReport",
-        "parameters": [
-          {
-            "name": "dateFrom",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "format": "date-time",
-              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "dateTo",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "format": "date-time",
-              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "groupBy",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "default": "project",
-              "type": "string",
-              "enum": [
-                "project",
-                "task",
-                "user"
-              ]
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "maxLength": 200,
-              "type": "string"
-            }
-          },
-          {
-            "name": "sortBy",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "default": "totalSeconds",
-              "type": "string",
-              "enum": [
-                "project",
-                "task",
-                "user",
-                "totalSeconds",
-                "billableSeconds",
-                "entryCount",
-                "firstStartedAt",
-                "lastStartedAt"
-              ]
-            }
-          },
-          {
-            "name": "sortOrder",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "default": "desc",
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TimeReportExportRequestDto"
+              }
             }
           }
-        ],
+        },
         "responses": {
           "200": {
-            "description": "CSV export of aggregate report rows",
+            "description": "CSV or PDF export of the report",
             "content": {
               "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/pdf": {
                 "schema": {
                   "type": "string"
                 }
@@ -2939,7 +2732,7 @@
             "bearer": []
           }
         ],
-        "summary": "Export aggregated time report as CSV",
+        "summary": "Export aggregated time report as CSV or PDF",
         "tags": [
           "reports"
         ]
@@ -5892,16 +5685,99 @@
         },
         "additionalProperties": false
       },
-      "TimeReportResponseDto": {
+      "TimeReportRequestDto": {
         "type": "object",
         "properties": {
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "default": 20,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "dateFrom": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "dateTo": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
           "groupBy": {
+            "default": [
+              "project"
+            ],
+            "minItems": 1,
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "project",
+                "task",
+                "user"
+              ]
+            }
+          },
+          "search": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "sortBy": {
+            "default": "totalSeconds",
             "type": "string",
             "enum": [
               "project",
               "task",
-              "user"
+              "user",
+              "totalSeconds",
+              "billableSeconds",
+              "entryCount",
+              "firstStartedAt",
+              "lastStartedAt"
             ]
+          },
+          "sortOrder": {
+            "default": "desc",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "groupBy": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "project",
+                "task",
+                "user"
+              ]
+            }
           },
           "dateRange": {
             "type": "object",
@@ -5963,288 +5839,124 @@
           "items": {
             "type": "array",
             "items": {
-              "oneOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "totalSeconds": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "billableSeconds": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "nonBillableSeconds": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "entryCount": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "billableShare": {
-                      "type": "number",
-                      "minimum": 0,
-                      "maximum": 1,
-                      "nullable": true
-                    },
-                    "firstStartedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                      "nullable": true
-                    },
-                    "lastStartedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                      "nullable": true
-                    },
-                    "groupBy": {
-                      "type": "string",
-                      "enum": [
-                        "project"
-                      ]
-                    },
-                    "project": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        },
-                        "name": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "name"
-                      ]
-                    },
-                    "task": {
-                      "type": "null"
-                    },
-                    "user": {
-                      "type": "null"
-                    }
-                  },
-                  "required": [
-                    "totalSeconds",
-                    "billableSeconds",
-                    "nonBillableSeconds",
-                    "entryCount",
-                    "billableShare",
-                    "firstStartedAt",
-                    "lastStartedAt",
-                    "groupBy",
-                    "project",
-                    "task",
-                    "user"
-                  ]
+              "type": "object",
+              "properties": {
+                "totalSeconds": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 },
-                {
-                  "type": "object",
-                  "properties": {
-                    "totalSeconds": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "billableSeconds": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "nonBillableSeconds": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "entryCount": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "billableShare": {
-                      "type": "number",
-                      "minimum": 0,
-                      "maximum": 1,
-                      "nullable": true
-                    },
-                    "firstStartedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                      "nullable": true
-                    },
-                    "lastStartedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                      "nullable": true
-                    },
-                    "groupBy": {
-                      "type": "string",
-                      "enum": [
-                        "task"
-                      ]
-                    },
-                    "project": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        },
-                        "name": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "name"
-                      ]
-                    },
-                    "task": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        },
-                        "title": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "title"
-                      ]
-                    },
-                    "user": {
-                      "type": "null"
-                    }
-                  },
-                  "required": [
-                    "totalSeconds",
-                    "billableSeconds",
-                    "nonBillableSeconds",
-                    "entryCount",
-                    "billableShare",
-                    "firstStartedAt",
-                    "lastStartedAt",
-                    "groupBy",
-                    "project",
-                    "task",
-                    "user"
-                  ]
+                "billableSeconds": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 },
-                {
+                "nonBillableSeconds": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "entryCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "billableShare": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "nullable": true
+                },
+                "firstStartedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "lastStartedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "project": {
                   "type": "object",
                   "properties": {
-                    "totalSeconds": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "billableSeconds": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "nonBillableSeconds": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "entryCount": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "billableShare": {
-                      "type": "number",
-                      "minimum": 0,
-                      "maximum": 1,
-                      "nullable": true
-                    },
-                    "firstStartedAt": {
+                    "id": {
                       "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                      "nullable": true
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     },
-                    "lastStartedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                      "nullable": true
-                    },
-                    "groupBy": {
-                      "type": "string",
-                      "enum": [
-                        "user"
-                      ]
-                    },
-                    "project": {
-                      "type": "null"
-                    },
-                    "task": {
-                      "type": "null"
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        },
-                        "email": {
-                          "type": "string",
-                          "format": "email",
-                          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                        },
-                        "displayName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "avatarUrl": {
-                          "type": "string",
-                          "nullable": true
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "email",
-                        "displayName",
-                        "avatarUrl"
-                      ]
+                    "name": {
+                      "type": "string"
                     }
                   },
                   "required": [
-                    "totalSeconds",
-                    "billableSeconds",
-                    "nonBillableSeconds",
-                    "entryCount",
-                    "billableShare",
-                    "firstStartedAt",
-                    "lastStartedAt",
-                    "groupBy",
-                    "project",
-                    "task",
-                    "user"
-                  ]
+                    "id",
+                    "name"
+                  ],
+                  "nullable": true
+                },
+                "task": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "title": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title"
+                  ],
+                  "nullable": true
+                },
+                "user": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "displayName",
+                    "avatarUrl"
+                  ],
+                  "nullable": true
                 }
+              },
+              "required": [
+                "totalSeconds",
+                "billableSeconds",
+                "nonBillableSeconds",
+                "entryCount",
+                "billableShare",
+                "firstStartedAt",
+                "lastStartedAt",
+                "project",
+                "task",
+                "user"
               ]
             }
           },
@@ -6287,6 +5999,82 @@
           "items",
           "meta"
         ]
+      },
+      "TimeReportExportRequestDto": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "dateTo": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "groupBy": {
+            "default": [
+              "project"
+            ],
+            "minItems": 1,
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "project",
+                "task",
+                "user"
+              ]
+            }
+          },
+          "search": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "sortBy": {
+            "default": "totalSeconds",
+            "type": "string",
+            "enum": [
+              "project",
+              "task",
+              "user",
+              "totalSeconds",
+              "billableSeconds",
+              "entryCount",
+              "firstStartedAt",
+              "lastStartedAt"
+            ]
+          },
+          "sortOrder": {
+            "default": "desc",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "format": {
+            "default": "csv",
+            "type": "string",
+            "enum": [
+              "csv",
+              "pdf"
+            ]
+          }
+        },
+        "additionalProperties": false
       }
     }
   }

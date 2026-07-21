@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { defineComponent, nextTick } from 'vue';
+import { defineComponent, nextTick, reactive } from 'vue';
 import AutoComplete from 'primevue/autocomplete';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -45,6 +45,7 @@ const SelectStub = defineComponent({
       type: String,
     },
   },
+  emits: ['update:modelValue'],
   computed: {
     resolvedLabel(): string | undefined {
       const options = this.options as Record<string, unknown>[];
@@ -52,7 +53,9 @@ const SelectStub = defineComponent({
         (option) => option?.[this.optionValue] === this.modelValue,
       );
 
-      return (match?.[this.optionLabel] as string | undefined) ?? this.placeholder;
+      return (
+        (match?.[this.optionLabel] as string | undefined) ?? this.placeholder
+      );
     },
   },
   template: '<div data-testid="select-stub">{{ resolvedLabel }}</div>',
@@ -76,78 +79,111 @@ function findFilter(
   return control;
 }
 
-const rows: ReportTableRow[] = [
-  {
+function makeLeafRow(overrides: Partial<ReportTableRow>): ReportTableRow {
+  return {
     billableSeconds: 3600,
     billableShare: 0.5,
     entryCount: 2,
-    groupBy: 'project',
-    id: 'project-1',
+    id: 'project-1:no-task:member-1',
+    lastStartedAt: '2026-05-02T10:00:00.000Z',
     memberIds: ['member-1'],
     memberName: 'Alex Admin',
     nonBillableSeconds: 3600,
     projectIds: ['project-1'],
     projectName: 'Project Orion',
+    taskId: null,
+    taskName: null,
     totalSeconds: 7200,
-  },
-];
+    ...overrides,
+  };
+}
+
+const rows: ReportTableRow[] = [makeLeafRow({})];
+
+function mountTable({
+  grouping = ['project'] as ReportGrouping,
+  filters = createDefaultReportTableFilters(),
+  loading = false,
+  tableRows = rows,
+  memberOptions = [{ label: 'Alex Admin', value: 'member-1' }],
+  projectOptions = [{ label: 'Project Orion', value: 'project-1' }],
+} = {}) {
+  return mount(ReportsTable, {
+    props: {
+      dateRange: null,
+      grouping,
+      filters,
+      loading,
+      memberOptions,
+      projectOptions,
+      rows: tableRows,
+    },
+    global: {
+      plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+      stubs: {
+        Select: SelectStub,
+      },
+    },
+  });
+}
+
+function setMobileViewport(matches: boolean) {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  });
+}
 
 describe('ReportsTable', () => {
   beforeEach(() => {
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
-        addEventListener: vi.fn(),
-        addListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-        matches: false,
-        media: query,
-        onchange: null,
-        removeEventListener: vi.fn(),
-        removeListener: vi.fn(),
-      })),
-    });
+    setMobileViewport(false);
   });
 
-  it('renders report rows and exposes the global report-row search control', async () => {
+  it('renders grouped report rows and exposes the global report-row search control', async () => {
     const filters = createDefaultReportTableFilters();
-    const wrapper = mount(ReportsTable, {
-      props: {
-        dateRange: null,
-        grouping: 'member' as const,
-        filters,
-        loading: false,
-        memberOptions: [
-          { label: 'Alex Admin', value: 'member-1' },
-          { label: 'Pat PM', value: 'member-2' },
-        ],
-        projectOptions: [
-          { label: 'Project Orion', value: 'project-1' },
-          { label: 'Billing API', value: 'project-2' },
-        ],
-        rows,
-      },
-      global: {
-        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          Select: SelectStub,
-        },
-      },
+    const wrapper = mountTable({
+      filters,
+      grouping: ['project', 'member'],
+      memberOptions: [
+        { label: 'Alex Admin', value: 'member-1' },
+        { label: 'Pat PM', value: 'member-2' },
+      ],
+      projectOptions: [
+        { label: 'Project Orion', value: 'project-1' },
+        { label: 'Billing API', value: 'project-2' },
+      ],
     });
 
     expect(wrapper.text()).toContain('Results');
-    expect(wrapper.text()).toContain('Project');
-    expect(wrapper.text()).toContain('Member');
+    expect(wrapper.text()).toContain('Project / Member');
     expect(wrapper.text()).toContain('Hours');
     expect(wrapper.text()).toContain('Billable');
+    expect(wrapper.text()).toContain('Billable %');
+    expect(wrapper.text()).toContain('Last activity');
     expect(wrapper.text()).toContain('Project Orion');
     expect(wrapper.text()).toContain('Alex Admin');
+    expect(wrapper.text()).toContain('1 member');
     expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
-    const filterControls = wrapper.findAll('[data-testid="select-stub"]');
-    expect(filterControls).toHaveLength(3);
-    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
+    // hours/billable/billable-share/activity filters; the add-level control
+    // carries its own testid
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
+    expect(
+      wrapper.find('[data-testid="report-grouping-add-level"]').exists(),
+    ).toBe(true);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(
+      0,
+    );
 
     const search = wrapper.get('input[aria-label="Search report rows"]');
     const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
@@ -157,7 +193,9 @@ describe('ReportsTable', () => {
     expect(autoCompleteControls).toHaveLength(2);
     for (const autoCompleteControl of autoCompleteControls) {
       expect(autoCompleteControl.props('appendTo')).not.toBe('self');
-      expect((autoCompleteControl.props('pt') as AutoCompletePt).overlay).toEqual({
+      expect(
+        (autoCompleteControl.props('pt') as AutoCompletePt).overlay,
+      ).toEqual({
         class: 'overflow-hidden box-content max-w-0 pr-9',
       });
     }
@@ -215,184 +253,449 @@ describe('ReportsTable', () => {
     expect(filters.memberId).toBe('member-1');
   });
 
-  it('renders mobile filters and keeps loaded report cards during refresh loading', () => {
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
-        addEventListener: vi.fn(),
-        addListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-        matches: true,
-        media: query,
-        onchange: null,
-        removeEventListener: vi.fn(),
-        removeListener: vi.fn(),
-      })),
+  it('exposes grouped columns following the configured grouping order', () => {
+    const wrapper = mountTable({ grouping: ['member', 'project', 'task'] });
+
+    expect(
+      wrapper
+        .findAll('[data-testid^="management-table-header-"]')
+        .map((header) => header.attributes('data-testid')),
+    ).toEqual([
+      'management-table-header-group',
+      'management-table-header-hours',
+      'management-table-header-billable',
+      'management-table-header-billableShare',
+      'management-table-header-activity',
+    ]);
+    expect(wrapper.text()).toContain('Member / Project / Task');
+  });
+
+  it('renders grouping chips in order and appends a level through the builder', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    const chips = wrapper.findAll('[data-testid^="report-grouping-chip-"]');
+    expect(chips.map((chip) => chip.attributes('data-testid'))).toEqual([
+      'report-grouping-chip-project',
+      'report-grouping-chip-member',
+    ]);
+
+    const addLevel = wrapper
+      .findAllComponents(SelectStub)
+      .find(
+        (candidate) =>
+          candidate.attributes('data-testid') === 'report-grouping-add-level',
+      );
+    expect(addLevel).toBeDefined();
+    // only the unused dimension is offered
+    expect(addLevel!.props('options')).toEqual([
+      { label: 'Task', value: 'task' },
+    ]);
+
+    addLevel!.vm.$emit('update:modelValue', 'task');
+    await nextTick();
+
+    expect(wrapper.emitted('update:grouping')).toEqual([
+      [['project', 'member', 'task']],
+    ]);
+  });
+
+  it('hides the add-level control when every dimension is grouped', () => {
+    const wrapper = mountTable({ grouping: ['project', 'member', 'task'] });
+
+    expect(
+      wrapper.find('[data-testid="report-grouping-add-level"]').exists(),
+    ).toBe(false);
+  });
+
+  it('removes a grouping level but never the last one', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    await wrapper
+      .get('[data-testid="report-grouping-remove-member"]')
+      .trigger('click');
+
+    expect(wrapper.emitted('update:grouping')).toEqual([[['project']]]);
+
+    const single = mountTable({ grouping: ['project'] });
+    expect(
+      single.find('[data-testid="report-grouping-remove-project"]').exists(),
+    ).toBe(false);
+  });
+
+  it('reorders grouping levels by dragging a chip onto another', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chips = wrapper.findAll('[data-testid^="report-grouping-chip-"]');
+
+    await chips[0]!.trigger('dragstart');
+    await chips[1]!.trigger('drop');
+
+    expect(wrapper.emitted('update:grouping')).toEqual([
+      [['member', 'project']],
+    ]);
+  });
+
+  it('exposes each grouping chip as a labelled sortable control', () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    expect(chip.attributes('role')).toBe('button');
+    expect(chip.attributes('tabindex')).toBe('0');
+    expect(chip.attributes('aria-roledescription')).toBe(
+      'sortable grouping level',
+    );
+    expect(chip.attributes('aria-label')).toBe('Project, level 1 of 2');
+  });
+
+  it('reorders with space to grab and arrow keys to move', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.space');
+    expect(chip.attributes('aria-grabbed')).toBe('true');
+    expect(
+      wrapper.find('[data-testid="report-grouping-announcement"]').text(),
+    ).toBe('Project, grabbed at position 1 of 2.');
+
+    await chip.trigger('keydown.right');
+
+    expect(wrapper.emitted('update:grouping')).toEqual([
+      [['member', 'project']],
+    ]);
+  });
+
+  it('grabs with enter as well as space', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.enter');
+    expect(chip.attributes('aria-grabbed')).toBe('true');
+
+    await chip.trigger('keydown.right');
+    expect(wrapper.emitted('update:grouping')).toEqual([
+      [['member', 'project']],
+    ]);
+  });
+
+  it('keeps the grab alive across consecutive arrow presses', async () => {
+    // Reordering moves the chip's DOM node; if focus is not restored the grab
+    // ends after one press and the second arrow does nothing.
+    const wrapper = mountTable({ grouping: ['project', 'member', 'task'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.enter');
+    await chip.trigger('keydown.right');
+    await chip.trigger('keydown.right');
+
+    const emitted = wrapper.emitted('update:grouping') as unknown[][];
+    expect(emitted.at(-1)).toEqual([['member', 'task', 'project']]);
+  });
+
+  it('keeps the move buttons reachable by tab', () => {
+    // They are hidden until hover or focus, but focus reveals them, so they
+    // are a discoverable keyboard path alongside the grab model.
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    expect(
+      wrapper
+        .find('[data-testid="report-grouping-move-later-project"]')
+        .attributes('tabindex'),
+    ).toBeUndefined();
+  });
+
+  it('moves repeatedly from the same chevron', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member', 'task'] });
+
+    await wrapper
+      .find('[data-testid="report-grouping-move-later-project"]')
+      .trigger('click');
+    await wrapper
+      .find('[data-testid="report-grouping-move-later-project"]')
+      .trigger('click');
+
+    const emitted = wrapper.emitted('update:grouping') as unknown[][];
+    expect(emitted.at(-1)).toEqual([['member', 'task', 'project']]);
+  });
+
+  it('announces the move for screen readers', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.space');
+    await chip.trigger('keydown.right');
+
+    const live = wrapper.find('[data-testid="report-grouping-announcement"]');
+    expect(live.attributes('aria-live')).toBe('assertive');
+    expect(live.text()).toBe('Project, moved to position 2 of 2.');
+  });
+
+  it('does not move past either end of the path', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.space');
+    await chip.trigger('keydown.left');
+
+    expect(wrapper.emitted('update:grouping')).toBeUndefined();
+  });
+
+  it('restores the original order when the grab is cancelled', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    await chip.trigger('keydown.space');
+    await chip.trigger('keydown.right');
+    await chip.trigger('keydown.esc');
+
+    const emitted = wrapper.emitted('update:grouping') as unknown[][];
+    // Last emission puts the original order back.
+    expect(emitted.at(-1)).toEqual([['project', 'member']]);
+    expect(
+      wrapper.find('[data-testid="report-grouping-announcement"]').text(),
+    ).toBe('Reorder cancelled.');
+  });
+
+  it('offers a pointer alternative to dragging', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    await wrapper
+      .find('[data-testid="report-grouping-move-later-project"]')
+      .trigger('click');
+
+    expect(wrapper.emitted('update:grouping')).toEqual([
+      [['member', 'project']],
+    ]);
+  });
+
+  it('disables the move buttons at the ends of the path', () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    expect(
+      wrapper
+        .find('[data-testid="report-grouping-move-earlier-project"]')
+        .attributes('disabled'),
+    ).toBeDefined();
+    expect(
+      wrapper
+        .find('[data-testid="report-grouping-move-later-member"]')
+        .attributes('disabled'),
+    ).toBeDefined();
+  });
+
+  it('renders the grouping hierarchy with derived subtotals and a total row', () => {
+    const tableRows = [
+      makeLeafRow({}),
+      makeLeafRow({
+        billableSeconds: 1800,
+        id: 'project-1:no-task:member-2',
+        memberIds: ['member-2'],
+        memberName: 'Nina PM',
+        nonBillableSeconds: 1800,
+        totalSeconds: 3600,
+      }),
+      makeLeafRow({
+        billableSeconds: 900,
+        id: 'project-2:no-task:member-2',
+        memberIds: ['member-2'],
+        memberName: 'Nina PM',
+        nonBillableSeconds: 900,
+        projectIds: ['project-2'],
+        projectName: 'Billing API',
+        totalSeconds: 1800,
+      }),
+    ];
+    const wrapper = mountTable({
+      grouping: ['project', 'member'],
+      tableRows,
     });
 
-    const filters = createDefaultReportTableFilters();
-    const wrapper = mount(ReportsTable, {
-      props: {
-        dateRange: null,
-        grouping: 'member' as const,
-        filters,
-        loading: true,
-        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
-        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
-        rows,
-      },
-      global: {
-        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          Select: SelectStub,
-        },
-      },
+    // Orion subtotal folds both members' leaves
+    expect(wrapper.text()).toContain('3h 00m');
+    expect(wrapper.text()).toContain('2 members');
+    expect(wrapper.text()).toContain('Billing API');
+    // grand totals over every leaf
+    const totalRow = wrapper.get('[data-testid="report-total-row"]');
+    expect(totalRow.text()).toContain('Total');
+    expect(totalRow.text()).toContain('3h 30m');
+    expect(totalRow.text()).toContain('1h 45m');
+  });
+
+  it('collapses a group subtree while keeping its subtotal row visible', async () => {
+    const tableRows = [
+      makeLeafRow({}),
+      makeLeafRow({
+        id: 'project-2:no-task:member-2',
+        memberIds: ['member-2'],
+        memberName: 'Nina PM',
+        projectIds: ['project-2'],
+        projectName: 'Billing API',
+      }),
+    ];
+    const wrapper = mountTable({
+      grouping: ['project', 'member'],
+      tableRows,
     });
+
+    expect(wrapper.text()).toContain('Alex Admin');
+
+    // Orion sorts first only on label ties; find its toggle by row order.
+    const toggles = wrapper.findAll('[data-testid="report-row-toggle"]');
+    expect(toggles).toHaveLength(2);
+
+    const orionToggle = toggles.find((toggle) =>
+      toggle.attributes('aria-label')?.includes('Project Orion'),
+    );
+    await orionToggle!.trigger('click');
+
+    expect(wrapper.text()).not.toContain('Alex Admin');
+    expect(wrapper.text()).toContain('Project Orion');
+    expect(wrapper.text()).toContain('Nina PM');
+  });
+
+  it('renders mobile filters and keeps loaded report cards during refresh loading', () => {
+    setMobileViewport(true);
+
+    const wrapper = mountTable({ loading: true });
 
     const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
 
-    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(3);
+    // mobile hours/billable/billable-share/activity filters; add-level
+    // carries its own testid
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
     expect(autoCompleteControls).toHaveLength(2);
     for (const autoCompleteControl of autoCompleteControls) {
       expect(autoCompleteControl.props('appendTo')).toBe('self');
-      expect((autoCompleteControl.props('pt') as AutoCompletePt).overlay?.style).toEqual(
-        giTiempoSelfAppendedAutoCompleteOverlayStyle,
-      );
+      expect(
+        (autoCompleteControl.props('pt') as AutoCompletePt).overlay?.style,
+      ).toEqual(giTiempoSelfAppendedAutoCompleteOverlayStyle);
     }
-    expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(0);
-    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(1);
+    expect(
+      wrapper.findAll('[data-testid="reports-mobile-loading-card"]'),
+    ).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(
+      1,
+    );
     expect(wrapper.text()).toContain('2h 00m');
   });
 
   it('renders mobile loading cards when loading has no report rows yet', () => {
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
-        addEventListener: vi.fn(),
-        addListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-        matches: true,
-        media: query,
-        onchange: null,
-        removeEventListener: vi.fn(),
-        removeListener: vi.fn(),
-      })),
-    });
+    setMobileViewport(true);
 
-    const wrapper = mount(ReportsTable, {
-      props: {
-        dateRange: null,
-        grouping: 'project' as const,
-        filters: createDefaultReportTableFilters(),
-        loading: true,
-        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
-        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
-        rows: [],
-      },
-      global: {
-        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          Select: SelectStub,
-        },
-      },
-    });
+    const wrapper = mountTable({ loading: true, tableRows: [] });
 
-    expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(3);
-    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
+    expect(
+      wrapper.findAll('[data-testid="reports-mobile-loading-card"]'),
+    ).toHaveLength(3);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(
+      0,
+    );
     expect(wrapper.text()).not.toContain('No report rows found');
   });
 
   it('renders desktop skeleton rows instead of a spinner when loading has no report rows yet', () => {
-    const wrapper = mount(ReportsTable, {
-      props: {
-        dateRange: null,
-        grouping: 'member' as const,
-        filters: createDefaultReportTableFilters(),
-        loading: true,
-        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
-        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
-        rows: [],
-      },
-      global: {
-        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          Select: SelectStub,
-        },
-      },
-    });
+    const wrapper = mountTable({ loading: true, tableRows: [] });
 
-    expect(wrapper.findAll('[data-testid="reports-desktop-loading-row"]')).toHaveLength(6);
+    expect(
+      wrapper.findAll('[data-testid="reports-desktop-loading-row"]'),
+    ).toHaveLength(6);
     expect(wrapper.find('.p-datatable-mask').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('No report rows found');
   });
 
   it('keeps loaded desktop report rows without a spinner overlay during refresh loading', () => {
-    const wrapper = mount(ReportsTable, {
-      props: {
-        dateRange: null,
-        grouping: 'member' as const,
-        filters: createDefaultReportTableFilters(),
-        loading: true,
-        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
-        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
-        rows,
-      },
-      global: {
-        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          Select: SelectStub,
-        },
-      },
-    });
+    const wrapper = mountTable({ loading: true });
 
     expect(wrapper.text()).toContain('Project Orion');
-    expect(wrapper.findAll('[data-testid="reports-desktop-loading-row"]')).toHaveLength(0);
+    expect(
+      wrapper.findAll('[data-testid="reports-desktop-loading-row"]'),
+    ).toHaveLength(0);
     expect(wrapper.find('.p-datatable-mask').exists()).toBe(false);
   });
 
-  it('renders non-loading mobile report cards with row values on small viewports', () => {
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
-        addEventListener: vi.fn(),
-        addListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-        matches: true,
-        media: query,
-        onchange: null,
-        removeEventListener: vi.fn(),
-        removeListener: vi.fn(),
-      })),
-    });
+  it('renders non-loading mobile report cards with grouped values on small viewports', () => {
+    setMobileViewport(true);
 
-    const filters = createDefaultReportTableFilters();
-    const wrapper = mount(ReportsTable, {
-      props: {
-        dateRange: null,
-        grouping: 'member' as const,
-        filters,
-        loading: false,
-        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
-        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
-        rows,
-      },
-      global: {
-        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          Select: SelectStub,
-        },
-      },
-    });
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
 
     const mobileCards = wrapper.findAll('[data-testid="report-mobile-card"]');
 
-    expect(mobileCards).toHaveLength(1);
+    // one card per visible tree row: the project subtotal and its member leaf
+    expect(mobileCards).toHaveLength(2);
     expect(mobileCards[0]?.text()).toContain('Project Orion');
-    expect(mobileCards[0]?.text()).toContain('Alex Admin');
+    expect(mobileCards[0]?.text()).toContain('1 member');
+    expect(mobileCards[1]?.text()).toContain('Alex Admin');
     expect(mobileCards[0]?.text()).toContain('2h 00m');
     expect(mobileCards[0]?.text()).toContain('1h 00m');
-    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(3);
     expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
+  });
+
+  it('exposes billable share and activity column filters that update the filter model', async () => {
+    const filters = createDefaultReportTableFilters();
+    const wrapper = mountTable({ filters });
+
+    const selects = wrapper.findAllComponents(SelectStub);
+    const findByOption = (label: string) =>
+      selects.find((candidate) =>
+        (candidate.props('options') as { label: string }[]).some(
+          (option) => option.label === label,
+        ),
+      );
+
+    const shareFilter = findByOption('90%+');
+    const activityFilter = findByOption('Last 7 days');
+
+    expect(shareFilter).toBeDefined();
+    expect(activityFilter).toBeDefined();
+
+    shareFilter!.vm.$emit('update:modelValue', 'gte90');
+    activityFilter!.vm.$emit('update:modelValue', 'last7');
+    await nextTick();
+
+    expect(filters.billableShare).toBe('gte90');
+    expect(filters.activity).toBe('last7');
+  });
+
+  it('applies aggregate filters against displayed group totals, not leaves', async () => {
+    // reactive like the view's ref-wrapped filters, so mutations re-filter
+    const filters = reactive(createDefaultReportTableFilters());
+    const tableRows = [
+      makeLeafRow({}),
+      makeLeafRow({
+        id: 'project-1:no-task:member-2',
+        memberIds: ['member-2'],
+        memberName: 'Nina PM',
+      }),
+      makeLeafRow({
+        id: 'project-2:no-task:member-2',
+        memberIds: ['member-2'],
+        memberName: 'Nina PM',
+        projectIds: ['project-2'],
+        projectName: 'Billing API',
+      }),
+    ];
+    const wrapper = mountTable({
+      filters,
+      grouping: ['project', 'member'],
+      tableRows,
+    });
+
+    expect(wrapper.text()).toContain('Project Orion');
+    expect(wrapper.text()).toContain('Billing API');
+
+    // groups keep showing while their displayed totals pass the threshold
+    filters.hours = 'gt0';
+    await nextTick();
+    expect(wrapper.text()).toContain('Project Orion');
+    expect(wrapper.text()).toContain('Billing API');
+
+    filters.hours = 'gte8';
+    await nextTick();
+    // Orion totals 4h at the group level — under 8h, both groups hidden and
+    // the total row disappears with them
+    expect(wrapper.text()).not.toContain('Project Orion');
+    expect(wrapper.find('[data-testid="report-total-row"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.text()).toContain('No report rows found');
   });
 
   it('shows selected filter labels in the table filter row', () => {
@@ -402,22 +705,11 @@ describe('ReportsTable', () => {
     filters.hours = 'gt0';
     filters.billable = 'withBillable';
 
-    const wrapper = mount(ReportsTable, {
-      props: {
-        dateRange: null,
-        grouping: 'project' as const,
-        filters,
-        loading: false,
-        memberOptions: [{ label: 'Selected Member', value: 'member-1' }],
-        projectOptions: [{ label: 'Selected Project', value: 'project-1' }],
-        rows: [],
-      },
-      global: {
-        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          Select: SelectStub,
-        },
-      },
+    const wrapper = mountTable({
+      filters,
+      memberOptions: [{ label: 'Selected Member', value: 'member-1' }],
+      projectOptions: [{ label: 'Selected Project', value: 'project-1' }],
+      tableRows: [],
     });
 
     expect(wrapper.text()).toContain('Tracked');
@@ -436,127 +728,18 @@ describe('ReportsTable', () => {
     const filters = createDefaultReportTableFilters();
     filters.billable = 'withoutBillable';
 
-    const wrapper = mount(ReportsTable, {
-      props: {
-        dateRange: null,
-        grouping: 'project' as const,
-        filters,
-        loading: false,
-        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
-        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
-        rows: [
-          {
-            ...rows[0]!,
-            billableSeconds: 2700,
-            totalSeconds: 7200,
-          },
-        ],
-      },
-      global: {
-        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          Select: SelectStub,
-        },
-      },
+    const wrapper = mountTable({
+      filters,
+      tableRows: [
+        makeLeafRow({
+          billableSeconds: 2700,
+          totalSeconds: 7200,
+        }),
+      ],
     });
 
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('45m');
     expect(wrapper.text()).not.toContain('1h 15m');
-  });
-
-  function mountWithGrouping(grouping: ReportGrouping, rows: ReportTableRow[]) {
-    return mount(ReportsTable, {
-      props: {
-        dateRange: null,
-        grouping,
-        filters: createDefaultReportTableFilters(),
-        loading: false,
-        memberOptions: [{ label: 'Nina PM', value: 'member-2' }],
-        projectOptions: [{ label: 'Billing API', value: 'project-2' }],
-        rows,
-      },
-      global: {
-        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: { Select: SelectStub },
-      },
-    });
-  }
-
-  const memberRow: ReportTableRow = {
-    billableSeconds: 1800,
-    billableShare: 0.5,
-    entryCount: 2,
-    groupBy: 'user',
-    id: 'user-1',
-    memberIds: ['member-2'],
-    memberName: 'Nina PM',
-    nonBillableSeconds: 1800,
-    projectIds: ['project-2'],
-    projectName: 'Billing API',
-    totalSeconds: 3600,
-  };
-
-  function headerKeys(wrapper: ReturnType<typeof mount>) {
-    return wrapper
-      .findAll('[data-testid^="management-table-header-"]')
-      .map((header) => header.attributes('data-testid'));
-  }
-
-  it('counts contributors instead of naming a member under project grouping', () => {
-    const wrapper = mountWithGrouping('project', [
-      {
-        ...memberRow,
-        groupBy: 'project',
-        id: 'project:project-2',
-        memberIds: ['member-2', 'member-3'],
-        memberName: null,
-      },
-    ]);
-
-    expect(headerKeys(wrapper)).toEqual([
-      'management-table-header-project',
-      'management-table-header-members',
-      'management-table-header-hours',
-      'management-table-header-billable',
-    ]);
-    expect(wrapper.text()).toContain('Billing API');
-    expect(wrapper.text()).toContain('2 members');
-  });
-
-  it('singularises a one-contributor project row', () => {
-    const wrapper = mountWithGrouping('project', [
-      { ...memberRow, groupBy: 'project', memberName: null },
-    ]);
-
-    expect(wrapper.text()).toContain('1 member');
-    expect(wrapper.text()).not.toContain('1 members');
-  });
-
-  it('keeps both filters under project grouping so members can be filtered', () => {
-    const wrapper = mountWithGrouping('project', [
-      { ...memberRow, groupBy: 'project', memberName: null },
-    ]);
-
-    // Filtering by a member answers which projects they contributed to, which
-    // no other control answers in place.
-    expect(
-      wrapper.find('[aria-label="Filter report rows by member"]').exists(),
-    ).toBe(true);
-    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
-  });
-
-  it('leads with member and keeps the project breakdown under member grouping', () => {
-    const wrapper = mountWithGrouping('member', [memberRow]);
-
-    expect(headerKeys(wrapper)).toEqual([
-      'management-table-header-member',
-      'management-table-header-project',
-      'management-table-header-hours',
-      'management-table-header-billable',
-    ]);
-    expect(wrapper.text()).toContain('Nina PM');
-    expect(wrapper.text()).toContain('Billing API');
-    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
   });
 });

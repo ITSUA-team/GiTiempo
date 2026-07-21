@@ -16,6 +16,7 @@ import {
   adminMembersClient,
   type AdminMembersClient,
 } from '@/services/admin-members-client';
+import type { TimeReportExportFormat } from '@gitiempo/shared';
 import type { AdminServerStateScope } from '@/lib/query-keys';
 import type { ReportSetupFilters } from '@/lib/report-view-model';
 
@@ -67,7 +68,6 @@ export function useReportsData({
   const rowsData = useReportRowsData({
     appliedFilters: filters.appliedFilters,
     enabled,
-    grouping: filters.grouping,
     isAdminScope,
     memberOptions: reportOptions.memberOptions,
     membersLoaded,
@@ -119,8 +119,11 @@ export function useReportsData({
    * Export scope is the caller's to state explicitly. A default here once read
    * dead setup state and would have exported an unfiltered report.
    */
-  async function exportCurrentReport(exportFilters: ReportSetupFilters) {
-    return reportExport.exportCurrentReport(exportFilters);
+  async function exportCurrentReport(
+    exportFilters: ReportSetupFilters,
+    format?: TimeReportExportFormat,
+  ) {
+    return reportExport.exportCurrentReport(exportFilters, format);
   }
 
   return {

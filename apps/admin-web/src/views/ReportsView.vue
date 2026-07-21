@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import type { TimeReportExportFormat } from '@gitiempo/shared';
 import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Button from 'primevue/button';
+import Menu from 'primevue/menu';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
@@ -16,7 +18,7 @@ import {
   formatReportPercent,
   getReportDateRangeError,
   getReportExportBlockedReason,
-  reportGroupingApiValue,
+  toReportGroupingApiPath,
 } from '@/lib/report-view-model';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
@@ -96,7 +98,28 @@ const topProjectDescription = computed(() => {
   return `${formatPaddedHoursMinutesDuration(seconds)} tracked this period`;
 });
 
-async function handleExport(): Promise<void> {
+const exportMenuRef = ref<InstanceType<typeof Menu> | null>(null);
+const exportMenuItems = [
+  {
+    command: () => void handleExport('csv'),
+    icon: 'pi pi-file',
+    iconClass: 'text-text-muted',
+    label: 'Export as CSV',
+  },
+  {
+    command: () => void handleExport('pdf'),
+    icon: 'pi pi-file-pdf',
+    iconClass: 'text-brand',
+    label: 'Export as PDF',
+    subtitle: 'Styled summary & totals',
+  },
+];
+
+function toggleExportMenu(event: Event): void {
+  exportMenuRef.value?.toggle(event);
+}
+
+async function handleExport(format: TimeReportExportFormat): Promise<void> {
   if (
     exporting.value ||
     reportDateRangeError.value ||
@@ -108,12 +131,15 @@ async function handleExport(): Promise<void> {
   exporting.value = true;
 
   try {
-    const exportResult = await exportCurrentReport({
-      dateRange: dateRange.value,
-      groupBy: reportGroupingApiValue[grouping.value],
-      memberId: tableFilters.value.memberId,
-      projectId: tableFilters.value.projectId,
-    });
+    const exportResult = await exportCurrentReport(
+      {
+        dateRange: dateRange.value,
+        groupBy: toReportGroupingApiPath(grouping.value),
+        memberId: tableFilters.value.memberId,
+        projectId: tableFilters.value.projectId,
+      },
+      format,
+    );
 
     if (!exportResult) {
       return;
@@ -188,15 +214,61 @@ async function handleExport(): Promise<void> {
               class="w-full sm:w-auto"
             >
               <Button
-                label="Export CSV"
-                data-testid="export-reports-csv"
+                data-testid="export-reports"
                 class="h-[38px] w-full sm:w-auto"
+                aria-label="Export report"
+                aria-haspopup="true"
+                aria-controls="report-export-menu"
                 :aria-description="exportBlockedReason"
                 :disabled="exportDisabled"
-                :loading="exporting"
-                @click="handleExport"
-              />
+                @click="toggleExportMenu"
+              >
+                <span class="flex items-center gap-2">
+                  <i
+                    :class="[
+                      'text-[14px]',
+                      exporting ? 'pi pi-spin pi-spinner' : 'pi pi-download',
+                    ]"
+                    aria-hidden="true"
+                  />
+                  <span class="text-[14px] font-semibold">Export</span>
+                  <span
+                    class="mx-0.5 h-[18px] w-px bg-white/30"
+                    aria-hidden="true"
+                  />
+                  <i
+                    class="pi pi-chevron-down text-[12px]"
+                    aria-hidden="true"
+                  />
+                </span>
+              </Button>
             </span>
+            <Menu
+              id="report-export-menu"
+              ref="exportMenuRef"
+              class="w-[224px]"
+              :model="exportMenuItems"
+              popup
+            >
+              <template #item="{ item, props: itemProps }">
+                <a
+                  v-bind="itemProps.action"
+                  class="flex items-start gap-2.5 px-2.5 py-2"
+                >
+                  <i
+                    :class="[item.icon, item.iconClass, 'mt-0.5 text-[14px]']"
+                    aria-hidden="true"
+                  />
+                  <span class="flex min-w-0 flex-col">
+                    <span class="text-text-dark text-[13px] font-medium">{{ item.label }}</span>
+                    <span
+                      v-if="item.subtitle"
+                      class="text-text-muted text-[11px]"
+                    >{{ item.subtitle }}</span>
+                  </span>
+                </a>
+              </template>
+            </Menu>
           </template>
         </ReportsTable>
       </SurfaceCard>

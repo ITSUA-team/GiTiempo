@@ -11,14 +11,14 @@ const reportResponse = {
     dateFrom: '2026-05-01T00:00:00.000Z',
     dateTo: '2026-06-01T00:00:00.000Z',
   },
-  groupBy: 'project',
+  groupBy: ['project'],
   items: [
     {
       billableSeconds: 3600,
       billableShare: 0.5,
       entryCount: 2,
       firstStartedAt: '2026-05-01T10:00:00.000Z',
-      groupBy: 'project',
+      groupBy: ['project'],
       lastStartedAt: '2026-05-02T10:00:00.000Z',
       nonBillableSeconds: 3600,
       project: { id: projectId, name: 'Project Orion' },
@@ -57,7 +57,7 @@ describe('createAdminReportsClient', () => {
     fetchFn.mockReset();
   });
 
-  it('gets time reports with auth headers and serialized shared filters', async () => {
+  it('gets time reports with auth headers and a validated JSON body', async () => {
     fetchFn.mockResolvedValue(
       new Response(JSON.stringify(reportResponse), {
         headers: { 'Content-Type': 'application/json' },
@@ -68,7 +68,7 @@ describe('createAdminReportsClient', () => {
     const result = await client.getTimeReport({
       dateFrom: '2026-05-01T00:00:00.000Z',
       dateTo: '2026-06-01T00:00:00.000Z',
-      groupBy: 'project',
+      groupBy: ['project'],
       limit: 20,
       page: 2,
       projectId,
@@ -83,35 +83,68 @@ describe('createAdminReportsClient', () => {
 
     expect(requestUrl.origin).toBe('https://api.example.test');
     expect(requestUrl.pathname).toBe('/reports/time');
-    expect(requestUrl.searchParams.get('page')).toBe('2');
-    expect(requestUrl.searchParams.get('limit')).toBe('20');
-    expect(requestUrl.searchParams.get('dateFrom')).toBe(
-      '2026-05-01T00:00:00.000Z',
-    );
-    expect(requestUrl.searchParams.get('dateTo')).toBe(
-      '2026-06-01T00:00:00.000Z',
-    );
-    expect(requestUrl.searchParams.get('groupBy')).toBe('project');
-    expect(requestUrl.searchParams.get('projectId')).toBe(projectId);
-    expect(requestUrl.searchParams.get('userId')).toBe(userId);
-    expect(requestUrl.searchParams.get('search')).toBe('orion');
-    expect(requestUrl.searchParams.get('sortBy')).toBe('project');
-    expect(requestUrl.searchParams.get('sortOrder')).toBe('asc');
+    // Filters travel as a validated JSON body, never in the URL.
+    expect(requestUrl.search).toBe('');
     expect(init).toEqual(
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: 'Bearer access-token' }),
-        method: 'GET',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer access-token',
+        }),
+        method: 'POST',
       }),
     );
+    expect(JSON.parse(String(init?.body))).toEqual({
+      dateFrom: '2026-05-01T00:00:00.000Z',
+      dateTo: '2026-06-01T00:00:00.000Z',
+      groupBy: ['project'],
+      limit: 20,
+      page: 2,
+      projectId,
+      search: 'orion',
+      sortBy: 'project',
+      sortOrder: 'asc',
+      userId,
+    });
     expect(result.summary.totalSeconds).toBe(7200);
     expect(result.items[0]?.project?.name).toBe('Project Orion');
+  });
+
+  it('names a PDF download correctly even without Content-Disposition', async () => {
+    // Cross-origin responses can hide the filename header; the name must be
+    // rebuilt from the request dates and the actual blob type.
+    fetchFn.mockResolvedValueOnce(
+      new Response(new Blob(['%PDF-1.3'], { type: 'application/pdf' }), {
+        headers: { 'Content-Type': 'application/pdf' },
+        status: 200,
+      }),
+    );
+
+    const pdfResult = await client.exportTimeReport({
+      dateFrom: '2026-07-01T00:00:00.000Z',
+      dateTo: '2026-08-01T00:00:00.000Z',
+      format: 'pdf',
+    });
+
+    expect(pdfResult.filename).toBe('time-report-2026-07-01_2026-08-01.pdf');
+
+    fetchFn.mockResolvedValueOnce(
+      new Response(new Blob(['Group By\n'], { type: 'text/csv' }), {
+        headers: { 'Content-Type': 'text/csv; charset=utf-8' },
+        status: 200,
+      }),
+    );
+
+    const csvResult = await client.exportTimeReport({});
+
+    expect(csvResult.filename).toBe('time-report.csv');
   });
 
   it('exports time reports as CSV using backend filename metadata', async () => {
     fetchFn.mockResolvedValue(
       new Response('Group By,Project\nproject,Project Orion\n', {
         headers: {
-          'Content-Disposition': 'attachment; filename="time-report-2026-05.csv"',
+          'Content-Disposition':
+            'attachment; filename="time-report-2026-05.csv"',
           'Content-Type': 'text/csv; charset=utf-8',
         },
         status: 200,
@@ -121,7 +154,7 @@ describe('createAdminReportsClient', () => {
     const result = await client.exportTimeReport({
       dateFrom: '2026-05-01T00:00:00.000Z',
       dateTo: '2026-06-01T00:00:00.000Z',
-      groupBy: 'user',
+      groupBy: ['user'],
       projectId,
       sortBy: 'user',
       sortOrder: 'asc',
@@ -131,18 +164,21 @@ describe('createAdminReportsClient', () => {
     const [url, init] = fetchFn.mock.calls[0] ?? [];
     const requestUrl = new URL(String(url));
 
+    // Filters travel as a validated JSON body, never in the URL.
     expect(requestUrl.pathname).toBe('/reports/time/export');
-    expect(requestUrl.searchParams.get('groupBy')).toBe('user');
-    expect(requestUrl.searchParams.get('projectId')).toBe(projectId);
-    expect(requestUrl.searchParams.get('userId')).toBe(userId);
-    expect(requestUrl.searchParams.get('sortBy')).toBe('user');
-    expect(requestUrl.searchParams.get('sortOrder')).toBe('asc');
-    expect(init).toEqual(
-      expect.objectContaining({
-        headers: { Authorization: 'Bearer access-token' },
-        method: 'GET',
-      }),
-    );
+    expect(requestUrl.search).toBe('');
+    expect(init).toEqual(expect.objectContaining({ method: 'POST' }));
+    expect(JSON.parse(String(init?.body))).toEqual({
+      dateFrom: '2026-05-01T00:00:00.000Z',
+      dateTo: '2026-06-01T00:00:00.000Z',
+      // format defaults to csv so existing consumers keep the detailed CSV
+      format: 'csv',
+      groupBy: ['user'],
+      projectId,
+      sortBy: 'user',
+      sortOrder: 'asc',
+      userId,
+    });
     expect(result.filename).toBe('time-report-2026-05.csv');
     expect(result.blob.type).toBe('text/csv;charset=utf-8');
     expect(result.blob.size).toBeGreaterThan(0);
@@ -163,9 +199,9 @@ describe('createAdminReportsClient', () => {
         }),
       );
 
-    await expect(
-      client.getTimeReport({ limit: 20, page: 1 }),
-    ).rejects.toThrow('Reports are forbidden');
+    await expect(client.getTimeReport({ limit: 20, page: 1 })).rejects.toThrow(
+      'Reports are forbidden',
+    );
 
     await expect(client.exportTimeReport()).rejects.toThrow(
       'Reports are forbidden',

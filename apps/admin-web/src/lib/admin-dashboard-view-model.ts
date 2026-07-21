@@ -92,21 +92,25 @@ function getProjectDescription(project: ProjectResponse): string {
 }
 
 function getReportActivityProjectLabel(row: TimeReportRow): string {
-  if (row.groupBy === 'task') {
+  if (row.project && row.task) {
     return `${row.project.name} / ${row.task.title}`;
   }
 
-  if (row.groupBy === 'project') {
+  if (row.project) {
     return row.project.name;
   }
 
-  return row.user.displayName?.trim() || row.user.email;
+  if (row.user) {
+    return row.user.displayName?.trim() || row.user.email;
+  }
+
+  return 'Workspace';
 }
 
 function getReportActivityText(row: TimeReportRow): string {
   const duration = formatTrimmedHoursMinutesDuration(row.totalSeconds);
 
-  if (row.groupBy === 'user') {
+  if (!row.project && row.user) {
     return `${getReportActivityProjectLabel(row)} tracked ${duration}`;
   }
 
@@ -304,7 +308,7 @@ export function deriveDashboardActivityRows(
     ...report.items.map((row) =>
       createActivityRow({
         activity: getReportActivityText(row),
-        id: `time:${row.groupBy}:${getReportActivityProjectLabel(row)}:${row.lastStartedAt ?? 'none'}`,
+        id: `time:${getReportActivityProjectLabel(row)}:${row.lastStartedAt ?? 'none'}`,
         now,
         occurredAt: row.lastStartedAt,
         type: 'time',
