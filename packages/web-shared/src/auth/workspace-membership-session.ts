@@ -20,7 +20,7 @@ interface CreateWorkspaceMembershipSessionOptions {
   accessToken: Ref<string | null>;
   getAuthRuntime(): Pick<AuthRuntime, "listCurrentUserWorkspaces">;
   initialWorkspaceName: string;
-  // eslint-disable-next-line no-unused-vars
+   
   switchWorkspace: (
     workspaceId: string,
   ) => Promise<WorkspaceSwitchSessionResult>;

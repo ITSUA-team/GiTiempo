@@ -10,9 +10,7 @@ import {
   MobileRecordCard,
   SurfaceCard,
   formatWorkspaceRole,
-  managementTableColumnPt,
   managementTableHeaderCellClass,
-  managementTableHeaderClass,
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
@@ -21,6 +19,13 @@ import {
   formatLocalCalendarDate,
 } from '@gitiempo/web-shared/time';
 import Column from 'primevue/column';
+import {
+  adminTableBodyRowClass,
+  adminTableColumnPt,
+  adminTableClass,
+  adminTableHeaderClass,
+  adminTableMinWidthClass,
+} from '@/lib/admin-table-classes';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import RequestErrorBlock from '@/components/RequestErrorBlock.vue';
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
@@ -56,9 +61,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'actions', label: 'Actions', width: 140, align: 'end' },
 ];
 
-const pendingInvitesBodyRowClass =
-  'border-divider h-[56px] border-b transition-colors last:border-b-0 hover:bg-app-bg';
-const pendingInvitesHeaderClass = `${managementTableHeaderClass} min-w-[700px]`;
 
 const pendingCountLabel = computed(() => {
   const count = props.pendingInvites.length;
@@ -124,7 +126,7 @@ function formatSentInviteTime(createdAt: string): string {
 
       <template v-else-if="props.loading">
         <div class="border-divider overflow-hidden rounded-[6px] border">
-          <div :class="pendingInvitesHeaderClass">
+          <div :class="adminTableHeaderClass">
             <div
               v-for="column in columns"
               :key="column.key"
@@ -138,7 +140,7 @@ function formatSentInviteTime(createdAt: string): string {
             </div>
           </div>
 
-          <div class="min-w-[700px]">
+          <div :class="adminTableMinWidthClass">
             <ManagementDesktopRowSkeleton
               v-for="index in 3"
               :key="index"
@@ -198,16 +200,16 @@ function formatSentInviteTime(createdAt: string): string {
         v-else-if="props.pendingInvites.length > 0"
         :columns="columns"
         data-key="id"
-        :body-row-class="pendingInvitesBodyRowClass"
-        :header-class="pendingInvitesHeaderClass"
+        :body-row-class="adminTableBodyRowClass"
+        :header-class="adminTableHeaderClass"
         :loading="false"
         shell-class="border-divider overflow-x-auto rounded-[6px] border"
         single-scroll
-        table-class="min-w-[700px] w-full table-fixed border-collapse"
+        :table-class="adminTableClass"
         table-container-class="overflow-visible rounded-none border-none"
         :value="props.pendingInvites"
       >
-        <Column :pt="managementTableColumnPt">
+        <Column :pt="adminTableColumnPt">
           <template #body="{ data }">
             <div class="flex min-w-0 flex-col">
               <span class="text-text-dark truncate text-[14px] font-semibold">
@@ -222,7 +224,7 @@ function formatSentInviteTime(createdAt: string): string {
 
         <Column
           style="width: 140px"
-          :pt="managementTableColumnPt"
+          :pt="adminTableColumnPt"
         >
           <template #body="{ data }">
             <span class="text-text-dark text-[13px] font-medium">
@@ -233,7 +235,7 @@ function formatSentInviteTime(createdAt: string): string {
 
         <Column
           style="width: 180px"
-          :pt="managementTableColumnPt"
+          :pt="adminTableColumnPt"
         >
           <template #body="{ data }">
             <span class="text-text-muted text-[13px] font-normal">
@@ -244,7 +246,7 @@ function formatSentInviteTime(createdAt: string): string {
 
         <Column
           style="width: 140px"
-          :pt="managementTableColumnPt"
+          :pt="adminTableColumnPt"
         >
           <template #body="{ data }">
             <div class="flex items-center justify-end gap-2">

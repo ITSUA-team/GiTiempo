@@ -75,7 +75,7 @@ describe('PendingInvitationsCard', () => {
     const resendButton = wrapper.get('[data-testid="pending-invite-resend-invite-1"]');
     const cancelButton = wrapper.get('[data-testid="pending-invite-cancel-invite-1"]');
 
-    expect(tableShell.props('headerClass')).toContain('min-w-[700px]');
+    expect(tableShell.props('headerClass')).toContain('min-w-[860px]');
     expect(tableShell.props('singleScroll')).toBe(true);
     expect(wrapper.text()).toContain('Pending Invitations');
     expect(wrapper.text()).toContain('maya@example.com');

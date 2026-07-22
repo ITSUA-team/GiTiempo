@@ -103,6 +103,7 @@ function getStatusPt(task: TaskResponse) {
             <TaskGitHubIssueLink
               v-if="task.githubIssue"
               :issue="task.githubIssue"
+              show-number
               :test-id="`project-task-mobile-github-${task.id}`"
             />
           </div>
@@ -159,6 +160,7 @@ function getStatusPt(task: TaskResponse) {
             <TaskGitHubIssueLink
               v-if="slotProps.data.githubIssue"
               :issue="slotProps.data.githubIssue"
+              show-number
               :test-id="`project-task-github-${slotProps.data.id}`"
             />
           </div>

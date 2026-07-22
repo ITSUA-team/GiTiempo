@@ -1,14 +1,15 @@
 import {
+  Body,
   Controller,
-  Get,
   Header,
   HttpCode,
   HttpStatus,
-  Query,
+  Post,
   StreamableFile,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
@@ -18,8 +19,8 @@ import {
 import { ZodSerializerDto } from 'nestjs-zod';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
-import { TimeReportExportQueryDto } from '../dto/time-report-export-query.dto';
-import { TimeReportQueryDto } from '../dto/time-report-query.dto';
+import { TimeReportExportRequestDto } from '../dto/time-report-export-request.dto';
+import { TimeReportRequestDto } from '../dto/time-report-request.dto';
 import { TimeReportResponseDto } from '../dto/time-report-response.dto';
 import { ReportsService } from '../services/reports.service';
 
@@ -29,37 +30,49 @@ import { ReportsService } from '../services/reports.service';
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
 
-  @Get('time')
+  // POST, not GET: report filters are a validated JSON body rather than a
+  // query string, so nothing about a report request travels in the URL.
+  @Post('time')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({ type: TimeReportRequestDto })
   @ApiOperation({ summary: 'Get aggregated time report' })
   @ApiOkResponse({ type: TimeReportResponseDto })
   @ApiForbiddenResponse({ description: 'Admin or PM role required' })
   @ZodSerializerDto(TimeReportResponseDto)
   getTimeReport(
     @CurrentUser() user: AuthUser,
-    @Query() query: TimeReportQueryDto,
+    @Body() body: TimeReportRequestDto,
   ): Promise<TimeReportResponseDto> {
-    return this.reports.getTimeReport(user, query);
+    return this.reports.getTimeReport(user, body);
   }
 
-  @Get('time/export')
+  // POST, not GET: the export request is a validated set of named properties
+  // in a JSON body, which keeps report filters out of URLs and proxy logs.
+  @Post('time/export')
   @HttpCode(HttpStatus.OK)
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @ApiOperation({ summary: 'Export aggregated time report as CSV' })
-  @ApiProduces('text/csv')
+  // Browsers hide Content-Disposition on cross-origin responses unless it is
+  // exposed, and without it the download loses the real .csv/.pdf filename.
+  @Header('Access-Control-Expose-Headers', 'Content-Disposition')
+  @ApiBody({ type: TimeReportExportRequestDto })
+  @ApiOperation({ summary: 'Export aggregated time report as CSV or PDF' })
+  @ApiProduces('text/csv', 'application/pdf')
   @ApiOkResponse({
-    description: 'CSV export of aggregate report rows',
+    description: 'CSV or PDF export of the report',
     schema: { type: 'string' },
   })
   @ApiForbiddenResponse({ description: 'Admin or PM role required' })
   async exportTimeReport(
     @CurrentUser() user: AuthUser,
-    @Query() query: TimeReportExportQueryDto,
+    @Body() body: TimeReportExportRequestDto,
   ): Promise<StreamableFile> {
-    const exportResult = await this.reports.exportTimeReport(user, query);
-    return new StreamableFile(Buffer.from(exportResult.content, 'utf8'), {
+    const exportResult = await this.reports.exportTimeReport(user, body);
+    const content = Buffer.isBuffer(exportResult.content)
+      ? exportResult.content
+      : Buffer.from(exportResult.content, 'utf8');
+
+    return new StreamableFile(content, {
       disposition: `attachment; filename="${exportResult.filename}"`,
-      type: 'text/csv; charset=utf-8',
+      type: exportResult.contentType,
     });
   }
 }

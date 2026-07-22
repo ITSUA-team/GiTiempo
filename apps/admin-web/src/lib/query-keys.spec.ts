@@ -5,7 +5,7 @@ import {
   adminMutationInvalidationKeys,
   adminProjectsKeys,
   adminSettingsKeys,
-  normalizeTimeReportExportQuery,
+  normalizeTimeReportExportRequest,
   normalizeTimeReportQuery,
   reportsKeys,
   type AdminServerStateScope,
@@ -23,7 +23,7 @@ describe('admin-web query keys', () => {
       normalizeTimeReportQuery({
         dateFrom: '2026-05-01T00:00:00.000Z',
         dateTo: '2026-05-08T00:00:00.000Z',
-        groupBy: 'project',
+        groupBy: ['project'],
         limit: 100,
         page: 2,
         projectId: 'project-1',
@@ -35,7 +35,7 @@ describe('admin-web query keys', () => {
     ).toEqual({
       dateFrom: '2026-05-01T00:00:00.000Z',
       dateTo: '2026-05-08T00:00:00.000Z',
-      groupBy: 'project',
+      groupBy: ['project'],
       limit: 100,
       page: 2,
       projectId: 'project-1',
@@ -48,8 +48,8 @@ describe('admin-web query keys', () => {
 
   it('normalizes report export query scope separately from paginated data', () => {
     expect(
-      normalizeTimeReportExportQuery({
-        groupBy: 'user',
+      normalizeTimeReportExportRequest({
+        groupBy: ['user'],
         projectId: 'project-1',
         sortBy: 'totalSeconds',
         sortOrder: 'asc',
@@ -57,7 +57,7 @@ describe('admin-web query keys', () => {
     ).toEqual({
       dateFrom: null,
       dateTo: null,
-      groupBy: 'user',
+      groupBy: ['user'],
       projectId: 'project-1',
       search: null,
       sortBy: 'totalSeconds',
@@ -67,7 +67,7 @@ describe('admin-web query keys', () => {
   });
 
   it('includes role/user/workspace scope and report filters in keys', () => {
-    expect(reportsKeys.time(scope, { groupBy: 'project', page: 1 })).toEqual([
+    expect(reportsKeys.time(scope, { groupBy: ['project'], page: 1 })).toEqual([
       'admin-web',
       { role: 'admin', userId: 'user-1', workspaceId: 'workspace-1' },
       'reports',
@@ -75,7 +75,7 @@ describe('admin-web query keys', () => {
       {
         dateFrom: null,
         dateTo: null,
-        groupBy: 'project',
+        groupBy: ['project'],
         limit: null,
         page: 1,
         projectId: null,

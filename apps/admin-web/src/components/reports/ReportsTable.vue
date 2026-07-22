@@ -11,14 +11,15 @@ import {
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteOptions,
-  managementTableColumnPt,
-  managementTableHeaderClass,
   normalizeReportDateRangeValue,
   useIsMobileViewport,
   type ManagementTableColumn,
   type ReportDatePickerRangeValue,
 } from '@gitiempo/web-shared';
-import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
+import {
+  formatLocalCalendarDate,
+  formatPaddedHoursMinutesDuration,
+} from '@gitiempo/web-shared/time';
 import Column from 'primevue/column';
 import DatePicker from 'primevue/datepicker';
 import IconField from 'primevue/iconfield';
@@ -28,10 +29,24 @@ import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
-import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
+  adminTableBodyRowClass,
+  adminTableColumnPt,
+  adminTableClass,
+  adminTableHeaderClass,
+  adminTableMinWidthClass,
+} from '@/lib/admin-table-classes';
+import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
+import ReportGroupingBuilder from '@/components/reports/ReportGroupingBuilder.vue';
+import { useReportTableTree } from '@/composables/reports/useReportTableTree';
+import {
+  formatReportPercent,
+  reportGroupingDimensionLabels,
+  type ReportActivityFilter,
   type ReportBillableFilter,
+  type ReportBillableShareFilter,
   type ReportDateRange,
+  type ReportDisplayRow,
   type ReportFilterOption,
   type ReportGrouping,
   type ReportHoursFilter,
@@ -42,8 +57,6 @@ import {
 interface AutoCompleteCompleteEvent {
   query: string;
 }
-
-type ReportIdentityColumn = 'project' | 'member';
 
 const props = defineProps<{
   loading: boolean;
@@ -73,42 +86,48 @@ const selectedMemberFilterOption = computed(
     ) ?? null,
 );
 
-const groupingOptions: { label: string; value: ReportGrouping }[] = [
-  { label: 'Group by: Project', value: 'project' },
-  { label: 'Group by: Member', value: 'member' },
-];
+// Tree assembly, collapse state, and totals live in the composable so this
+// component stays a composition shell; the grouping builder owns reordering.
+const { collapsedIds, displayRows, totals, toggleRowExpansion } =
+  useReportTableTree({
+    rows: () => props.rows,
+    grouping: () => grouping.value,
+    filters: () => filters.value,
+  });
 
-const memberLeads = computed(() => grouping.value === 'member');
-
-// Filters follow the columns, and both filters stay for every grouping: under
-// project grouping the member filter answers which projects someone worked on.
-const filterOrder = computed<ReportIdentityColumn[]>(() =>
-  memberLeads.value ? ['member', 'project'] : ['project', 'member'],
+const groupingColumnLabel = computed(() =>
+  grouping.value
+    .map((dimension) => reportGroupingDimensionLabels[dimension])
+    .join(' / '),
 );
 
-// Grouping by project totals a project across everyone, so no single member owns
-// the row; it reports how many contributed instead.
-const columns = computed<ManagementTableColumn[]>(() =>
-  memberLeads.value
-    ? [
-        { key: 'member', label: 'Member', width: 'fill' },
-        { key: 'project', label: 'Project', width: 180 },
-        { key: 'hours', label: 'Hours', width: 140, align: 'end' },
-        { key: 'billable', label: 'Billable', width: 140, align: 'end' },
-      ]
-    : [
-        { key: 'project', label: 'Project', width: 'fill' },
-        { key: 'members', label: 'Members', width: 180 },
-        { key: 'hours', label: 'Hours', width: 140, align: 'end' },
-        { key: 'billable', label: 'Billable', width: 140, align: 'end' },
-      ],
-);
+const columns = computed<ManagementTableColumn[]>(() => [
+  { key: 'group', label: groupingColumnLabel.value, width: 'fill' },
+  { key: 'hours', label: 'Hours', width: 120 },
+  { key: 'billable', label: 'Billable', width: 120 },
+  { key: 'billableShare', label: 'Billable %', width: 110 },
+  { key: 'activity', label: 'Last activity', width: 130 },
+]);
 
-function formatMemberCount(count: number): string {
-  return `${count} ${count === 1 ? 'member' : 'members'}`;
+function getRowLabelClass(row: ReportDisplayRow): string {
+  if (row.level === 0) {
+    return 'text-text-dark text-[14px] leading-none font-semibold';
+  }
+  if (!row.isLeaf || row.level === 1) {
+    return 'text-text-dark text-[14px] leading-none font-medium';
+  }
+
+  return 'text-text-dark text-[13px] leading-none font-normal';
 }
 
-const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[720px]`;
+// Top-level group rows read as subtotal bands, like the approved design.
+function getReportRowClass(data: ReportDisplayRow): string {
+  return data.level === 0 && !data.isLeaf ? 'bg-app-bg/50' : '';
+}
+
+function formatRowActivity(lastStartedAt: string | null): string {
+  return lastStartedAt ? formatLocalCalendarDate(lastStartedAt) : '—';
+}
 
 const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
   { label: 'Any', value: 'any' },
@@ -117,10 +136,31 @@ const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
   { label: '40h+', value: 'gte40' },
 ];
 
-const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = [
+const billableFilterOptions: { label: string; value: ReportBillableFilter }[] =
+  [
+    { label: 'Any', value: 'any' },
+    { label: 'Billable', value: 'withBillable' },
+    { label: 'Non-billable', value: 'withoutBillable' },
+  ];
+
+const billableShareFilterOptions: {
+  label: string;
+  value: ReportBillableShareFilter;
+}[] = [
   { label: 'Any', value: 'any' },
-  { label: 'Billable', value: 'withBillable' },
-  { label: 'Non-billable', value: 'withoutBillable' },
+  { label: 'Below 50%', value: 'below50' },
+  { label: '50%+', value: 'gte50' },
+  { label: '90%+', value: 'gte90' },
+];
+
+const activityFilterOptions: {
+  label: string;
+  value: ReportActivityFilter;
+}[] = [
+  { label: 'Any time', value: 'any' },
+  { label: 'Today', value: 'today' },
+  { label: 'Last 7 days', value: 'last7' },
+  { label: 'Last 30 days', value: 'last30' },
 ];
 
 function handleGlobalSearchUpdate(value: string | null | undefined): void {
@@ -181,7 +221,9 @@ function handleMemberFilterUpdate(
     <div>
       <SectionHeader title="Results">
         <template #actions>
-          <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+          <div
+            class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center"
+          >
             <DatePicker
               :model-value="dateRange"
               aria-label="Report date range"
@@ -196,16 +238,6 @@ function handleMemberFilterUpdate(
               show-clear
               show-icon
               @update:model-value="handleDateRangeUpdate"
-            />
-
-            <Select
-              v-model="grouping"
-              aria-label="Group report rows"
-              class="w-full sm:w-[200px]"
-              :options="groupingOptions"
-              option-label="label"
-              option-value="value"
-              :pt="giTiempoFieldWidthSelectPt"
             />
 
             <IconField class="w-full sm:w-[280px]">
@@ -224,6 +256,8 @@ function handleMemberFilterUpdate(
         </template>
       </SectionHeader>
     </div>
+
+    <ReportGroupingBuilder v-model:grouping="grouping" />
 
     <template v-if="isMobileViewport">
       <div class="grid gap-3">
@@ -295,6 +329,36 @@ function handleMemberFilterUpdate(
               :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label
+              for="mobile-report-billable-share-filter"
+              class="text-text-muted text-[12px] font-medium"
+            >Billable %</label>
+            <Select
+              id="mobile-report-billable-share-filter"
+              v-model="filters.billableShare"
+              :options="billableShareFilterOptions"
+              option-label="label"
+              option-value="value"
+              :pt="giTiempoFieldWidthSelectPt"
+            />
+          </div>
+
+          <div class="col-span-2 flex flex-col gap-1.5">
+            <label
+              for="mobile-report-activity-filter"
+              class="text-text-muted text-[12px] font-medium"
+            >Last activity</label>
+            <Select
+              id="mobile-report-activity-filter"
+              v-model="filters.activity"
+              :options="activityFilterOptions"
+              option-label="label"
+              option-value="value"
+              :pt="giTiempoFieldWidthSelectPt"
+            />
+          </div>
         </div>
       </div>
 
@@ -340,34 +404,41 @@ function handleMemberFilterUpdate(
           </MobileRecordCard>
         </template>
 
-        <template v-else-if="rows.length > 0">
-          <MobileRecordCard
-            v-for="row in rows"
+        <template v-else-if="displayRows.length > 0">
+          <div
+            v-for="row in displayRows"
             :key="row.id"
-            data-testid="report-mobile-card"
+            :style="{ marginLeft: `${row.level * 12}px` }"
           >
-            <div class="min-w-0">
-              <h3 class="text-text-dark truncate text-[15px] font-semibold">
-                {{ memberLeads ? row.memberName : row.projectName }}
-              </h3>
-              <p class="text-text-muted truncate text-[13px]">
-                {{ memberLeads ? row.projectName : formatMemberCount(row.memberIds.length) }}
-              </p>
-            </div>
+            <MobileRecordCard data-testid="report-mobile-card">
+              <div class="min-w-0">
+                <h3 :class="['truncate', getRowLabelClass(row)]">
+                  {{ row.label }}
+                </h3>
+                <p
+                  v-if="row.childCountLabel"
+                  class="text-text-muted truncate text-[13px]"
+                >
+                  {{ row.childCountLabel }}
+                </p>
+              </div>
 
-            <MobileRecordMetadataList
-              :items="[
-                {
-                  label: 'Hours',
-                  value: formatPaddedHoursMinutesDuration(row.totalSeconds),
-                },
-                {
-                  label: 'Billable',
-                  value: formatPaddedHoursMinutesDuration(row.billableSeconds),
-                },
-              ]"
-            />
-          </MobileRecordCard>
+              <MobileRecordMetadataList
+                :items="[
+                  {
+                    label: 'Hours',
+                    value: formatPaddedHoursMinutesDuration(row.totalSeconds),
+                  },
+                  {
+                    label: 'Billable',
+                    value: formatPaddedHoursMinutesDuration(
+                      row.billableSeconds,
+                    ),
+                  },
+                ]"
+              />
+            </MobileRecordCard>
+          </div>
         </template>
 
         <EmptyStateBlock
@@ -381,128 +452,230 @@ function handleMemberFilterUpdate(
     <!-- Loading renders skeleton rows through #empty instead of the DataTable
          spinner overlay, and refreshes keep the loaded rows visible — the same
          treatment the mobile cards above already get. -->
-    <ManagementTableShell
+    <div
       v-else
-      :columns="columns"
-      :value="rows"
-      :loading="false"
-      data-key="id"
-      :header-class="reportTableHeaderClass"
-      shell-class="border-divider overflow-x-auto rounded-[6px] border"
-      single-scroll
-      table-class="min-w-[720px] w-full table-fixed border-collapse"
-      table-container-class="overflow-visible rounded-none border-none"
+      class="border-divider overflow-x-auto rounded-[6px] border"
     >
-      <template #filters>
-        <div class="flex min-w-[720px] flex-1 items-center">
+      <ManagementTableShell
+        :columns="columns"
+        :value="displayRows"
+        :loading="false"
+        data-key="id"
+        :body-row-class="adminTableBodyRowClass"
+        :header-class="adminTableHeaderClass"
+        :row-class="getReportRowClass"
+        shell-class="bg-surface-primary w-full font-sans"
+        single-scroll
+        :table-class="adminTableClass"
+        table-container-class="overflow-visible rounded-none border-none"
+      >
+        <template #filters>
           <div
-            v-for="(key, index) in filterOrder"
-            :key="key"
-            class="px-3"
-            :class="index === 0 ? 'min-w-0 flex-1' : 'w-[180px]'"
+            class="flex flex-1 items-center"
+            :class="adminTableMinWidthClass"
           >
-            <FilterAutoComplete
-              v-if="key === 'project'"
-              :model-value="selectedProjectFilterOption"
-              aria-label="Filter report rows by project"
-              force-selection
-              option-label="label"
-              placeholder="All projects"
-              show-clear
-              :suggestions="projectFilterSuggestions"
-              @complete="handleProjectFilterComplete"
-              @update:model-value="handleProjectFilterUpdate"
-            />
-            <FilterAutoComplete
-              v-else
-              :model-value="selectedMemberFilterOption"
-              aria-label="Filter report rows by member"
-              force-selection
-              option-label="label"
-              placeholder="All members"
-              show-clear
-              :suggestions="memberFilterSuggestions"
-              @complete="handleMemberFilterComplete"
-              @update:model-value="handleMemberFilterUpdate"
-            />
-          </div>
+            <div class="flex min-w-0 flex-1 items-center gap-2 px-3">
+              <FilterAutoComplete
+                class="w-[180px]"
+                :model-value="selectedProjectFilterOption"
+                aria-label="Filter report rows by project"
+                force-selection
+                option-label="label"
+                placeholder="All projects"
+                show-clear
+                :suggestions="projectFilterSuggestions"
+                @complete="handleProjectFilterComplete"
+                @update:model-value="handleProjectFilterUpdate"
+              />
+              <FilterAutoComplete
+                class="w-[180px]"
+                :model-value="selectedMemberFilterOption"
+                aria-label="Filter report rows by member"
+                force-selection
+                option-label="label"
+                placeholder="All members"
+                show-clear
+                :suggestions="memberFilterSuggestions"
+                @complete="handleMemberFilterComplete"
+                @update:model-value="handleMemberFilterUpdate"
+              />
+            </div>
 
-          <div class="w-[140px] px-3 text-right">
-            <Select
-              v-model="filters.hours"
-              :options="hoursFilterOptions"
-              aria-label="Filter report rows by hours"
-              option-label="label"
-              option-value="value"
-              :pt="giTiempoFieldWidthSelectPt"
-            />
-          </div>
-          <div class="w-[140px] px-3 text-right">
-            <Select
-              v-model="filters.billable"
-              :options="billableFilterOptions"
-              aria-label="Filter report rows by billable hours"
-              option-label="label"
-              option-value="value"
-              :pt="giTiempoFieldWidthSelectPt"
-            />
-          </div>
-        </div>
-      </template>
-
-      <Column :pt="managementTableColumnPt">
-        <template #body="{ data }">
-          <span class="text-text-dark text-[14px] leading-none font-semibold">{{ memberLeads ? data.memberName : data.projectName }}</span>
-        </template>
-      </Column>
-
-      <Column
-        style="width: 180px"
-        :pt="managementTableColumnPt"
-      >
-        <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{ memberLeads ? data.projectName : formatMemberCount(data.memberIds.length) }}</span>
-        </template>
-      </Column>
-
-      <Column
-        style="width: 140px"
-        :pt="managementTableColumnPt"
-      >
-        <template #body="{ data }">
-          <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.totalSeconds) }}</span>
+            <div class="w-[120px] pr-3">
+              <Select
+                v-model="filters.hours"
+                :options="hoursFilterOptions"
+                aria-label="Filter report rows by hours"
+                option-label="label"
+                option-value="value"
+                :pt="giTiempoFieldWidthSelectPt"
+              />
+            </div>
+            <div class="w-[120px] pr-3">
+              <Select
+                v-model="filters.billable"
+                :options="billableFilterOptions"
+                aria-label="Filter report rows by billable hours"
+                option-label="label"
+                option-value="value"
+                :pt="giTiempoFieldWidthSelectPt"
+              />
+            </div>
+            <div class="w-[110px] pr-3">
+              <Select
+                v-model="filters.billableShare"
+                :options="billableShareFilterOptions"
+                aria-label="Filter report rows by billable share"
+                option-label="label"
+                option-value="value"
+                :pt="giTiempoFieldWidthSelectPt"
+              />
+            </div>
+            <div class="w-[130px] pr-3">
+              <Select
+                v-model="filters.activity"
+                :options="activityFilterOptions"
+                aria-label="Filter report rows by last activity"
+                option-label="label"
+                option-value="value"
+                :pt="giTiempoFieldWidthSelectPt"
+              />
+            </div>
           </div>
         </template>
-      </Column>
 
-      <Column
-        style="width: 140px"
-        :pt="managementTableColumnPt"
-      >
-        <template #body="{ data }">
-          <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.billableSeconds) }}</span>
-          </div>
-        </template>
-      </Column>
+        <Column :pt="adminTableColumnPt">
+          <template #body="{ data }">
+            <div
+              class="flex min-w-0 items-center gap-2"
+              :style="{ paddingLeft: `${data.level * 24}px` }"
+            >
+              <button
+                v-if="data.hasChildren"
+                type="button"
+                class="text-text-muted hover:bg-app-bg flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border-none bg-transparent p-0"
+                :aria-expanded="!collapsedIds.has(data.id)"
+                :aria-label="`Toggle ${data.label} group`"
+                data-testid="report-row-toggle"
+                @click="toggleRowExpansion(data)"
+              >
+                <i
+                  :class="[
+                    'pi text-[12px]',
+                    collapsedIds.has(data.id)
+                      ? 'pi-chevron-right'
+                      : 'pi-chevron-down',
+                  ]"
+                />
+              </button>
+              <i
+                v-else-if="data.level > 0"
+                class="pi pi-arrow-right text-text-muted shrink-0 text-[10px]"
+                aria-hidden="true"
+              />
+              <span :class="['truncate', getRowLabelClass(data)]">{{
+                data.label
+              }}</span>
+              <span
+                v-if="data.childCountLabel"
+                class="text-text-muted shrink-0 text-[12px] font-normal"
+              >{{ data.childCountLabel }}</span>
+            </div>
+          </template>
+        </Column>
 
-      <template #empty>
-        <template v-if="loading">
-          <ManagementDesktopRowSkeleton
-            v-for="index in 6"
-            :key="index"
-            data-testid="reports-desktop-loading-row"
-            variant="reports"
+        <Column
+          style="width: 120px"
+          :pt="adminTableColumnPt"
+        >
+          <template #body="{ data }">
+            <span class="text-text-dark text-[13px] font-semibold">{{
+              formatPaddedHoursMinutesDuration(data.totalSeconds)
+            }}</span>
+          </template>
+        </Column>
+
+        <Column
+          style="width: 120px"
+          :pt="adminTableColumnPt"
+        >
+          <template #body="{ data }">
+            <span class="text-text-dark text-[13px] font-semibold">{{
+              formatPaddedHoursMinutesDuration(data.billableSeconds)
+            }}</span>
+          </template>
+        </Column>
+
+        <Column
+          style="width: 110px"
+          :pt="adminTableColumnPt"
+        >
+          <template #body="{ data }">
+            <span class="text-text-muted text-[13px] font-normal">{{
+              formatReportPercent(data.billableShare)
+            }}</span>
+          </template>
+        </Column>
+
+        <Column
+          style="width: 130px"
+          :pt="adminTableColumnPt"
+        >
+          <template #body="{ data }">
+            <span class="text-text-muted text-[13px] font-normal">{{
+              formatRowActivity(data.lastStartedAt)
+            }}</span>
+          </template>
+        </Column>
+
+        <template #empty>
+          <template v-if="loading">
+            <ManagementDesktopRowSkeleton
+              v-for="index in 6"
+              :key="index"
+              data-testid="reports-desktop-loading-row"
+              variant="reports"
+            />
+          </template>
+
+          <EmptyStateBlock
+            v-else
+            title="No report rows found"
+            description="No matching report rows are available for the current filters."
           />
         </template>
+      </ManagementTableShell>
 
-        <EmptyStateBlock
-          v-else
-          title="No report rows found"
-          description="No matching report rows are available for the current filters."
-        />
-      </template>
-    </ManagementTableShell>
+      <div
+        v-if="displayRows.length > 0"
+        class="border-divider bg-app-bg flex h-[56px] items-center border-t"
+        :class="adminTableMinWidthClass"
+        data-testid="report-total-row"
+      >
+        <div class="flex min-w-0 flex-1 items-center gap-2 pr-3 pl-6">
+          <span class="text-text-dark text-[14px] leading-none font-semibold">Total</span>
+        </div>
+        <div class="w-[120px] px-3">
+          <span class="text-text-dark text-[13px] font-semibold">{{
+            formatPaddedHoursMinutesDuration(totals.totalSeconds)
+          }}</span>
+        </div>
+        <div class="w-[120px] px-3">
+          <span class="text-text-dark text-[13px] font-semibold">{{
+            formatPaddedHoursMinutesDuration(totals.billableSeconds)
+          }}</span>
+        </div>
+        <div class="w-[110px] px-3">
+          <span class="text-text-muted text-[13px] font-normal">{{
+            formatReportPercent(totals.billableShare)
+          }}</span>
+        </div>
+        <div class="w-[130px] pr-6 pl-3">
+          <span class="text-text-muted text-[13px] font-normal">{{
+            formatRowActivity(totals.lastStartedAt)
+          }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

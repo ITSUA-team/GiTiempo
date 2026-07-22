@@ -1,11 +1,12 @@
 import { type ComputedRef, type Ref } from 'vue';
+import type { TimeReportExportFormat } from '@gitiempo/shared';
 
 import { useExportTimeReportMutation } from '@/composables/query';
-import { toTimeReportExportQuery, type ReportSetupFilters } from '@/lib/report-view-model';
+import { toTimeReportExportRequest, type ReportSetupFilters } from '@/lib/report-view-model';
 import type { AdminServerStateScope } from '@/lib/query-keys';
 import type {
   AdminReportsClient,
-  ReportsCsvExport,
+  ReportExport,
 } from '@/services/admin-reports-client';
 
 interface UseReportExportOptions {
@@ -26,12 +27,16 @@ export function useReportExport({
 
   async function exportCurrentReport(
     filters: ReportSetupFilters,
-  ): Promise<ReportsCsvExport | null> {
+    format: TimeReportExportFormat = 'csv',
+  ): Promise<ReportExport | null> {
     if (!enabled.value) {
       return null;
     }
 
-    return exportReportMutation.mutateAsync(toTimeReportExportQuery(filters));
+    return exportReportMutation.mutateAsync({
+      ...toTimeReportExportRequest(filters),
+      format,
+    });
   }
 
   return { exportCurrentReport };

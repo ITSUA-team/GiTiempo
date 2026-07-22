@@ -84,7 +84,8 @@ describe('ManagementTableShell', () => {
       .parentElement
       ?.getAttribute('class') ?? '';
 
-    expect(filterRowClass).toContain('border-t');
+    expect(filterRowClass).toContain('border-b');
+    expect(filterRowClass).toContain('py-3');
     expect(filterRowClass).toContain('border-divider');
   });
 

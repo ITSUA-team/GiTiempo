@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   ManagementProjectSummaryResponse,
   ProjectResponse,
-  TimeReportProjectRow,
+  TimeReportRow,
   TimeReportResponse,
   WorkspaceRole,
   WorkspaceInviteResponse,
@@ -80,13 +80,12 @@ function createReportRow(
   projectId: string,
   name: string,
   lastStartedAt: string | null,
-): TimeReportProjectRow {
+): TimeReportRow {
   return {
     billableSeconds: 7200,
     billableShare: 1,
     entryCount: 1,
     firstStartedAt: lastStartedAt,
-    groupBy: 'project',
     lastStartedAt,
     nonBillableSeconds: 0,
     project: { id: projectId, name },
@@ -96,12 +95,12 @@ function createReportRow(
   };
 }
 
-function createReport(items: TimeReportProjectRow[]): TimeReportResponse {
+function createReport(items: TimeReportRow[]): TimeReportResponse {
   const totalSeconds = items.reduce((total, item) => total + item.totalSeconds, 0);
 
   return {
     dateRange: getLocalIsoWeekRange(now),
-    groupBy: 'project',
+    groupBy: ['project'],
     items,
     meta: {
       limit: ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,
@@ -198,7 +197,7 @@ describe('useAdminDashboardData', () => {
     expect(clients.reportsClient.getTimeReport).toHaveBeenCalledWith(
       expect.objectContaining({
         ...getLocalIsoWeekRange(now),
-        groupBy: 'project',
+        groupBy: ['project'],
         limit: ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,
         page: 1,
         sortBy: 'lastStartedAt',

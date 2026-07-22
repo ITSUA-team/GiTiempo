@@ -64,7 +64,7 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
 
     <div
       v-if="$slots.filters"
-      class="border-divider bg-surface-primary text-text-muted flex h-[44px] w-full shrink-0 items-center border-t font-sans text-[12px] font-normal"
+      class="border-divider bg-surface-primary text-text-muted flex w-full shrink-0 items-center border-b py-3 font-sans text-[12px] font-normal"
     >
       <slot
         name="filters"

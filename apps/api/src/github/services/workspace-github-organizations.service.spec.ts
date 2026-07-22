@@ -64,6 +64,8 @@ function createAddDb({
     : vi.fn().mockResolvedValue(insertedRows);
   const insertValues = vi.fn().mockReturnValue({ returning: insertReturning });
   const insertManyValues = vi.fn().mockResolvedValue(undefined);
+  const updateWhere = vi.fn().mockResolvedValue(undefined);
+  const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
   const select = vi.fn().mockImplementation(() => ({
     from: vi.fn((table) => {
       if (table === workspaceGitHubOrganizations) {
@@ -103,6 +105,12 @@ function createAddDb({
       }
       throw new Error('Unexpected insert table');
     }),
+    update: vi.fn((table) => {
+      if (table === taskExternalRefs) {
+        return { set: updateSet };
+      }
+      throw new Error('Unexpected update table');
+    }),
   };
 
   return {
@@ -112,6 +120,7 @@ function createAddDb({
     },
     insertValues,
     insertManyValues,
+    updateSet,
   };
 }
 
@@ -666,7 +675,7 @@ describe('WorkspaceGitHubOrganizationsService', () => {
   });
 
   it('backfills canonical GitHub refs for existing workspace records when an organization is allowed', async () => {
-    const { db, insertManyValues } = createAddDb({
+    const { db, insertManyValues, updateSet } = createAddDb({
       projectRows: [
         {
           id: 'project-ref-1',
@@ -735,8 +744,8 @@ describe('WorkspaceGitHubOrganizationsService', () => {
 
     await service.add(user, { organizationLogin: 'octo-org' });
 
-    expect(insertManyValues).toHaveBeenNthCalledWith(
-      1,
+    expect(insertManyValues).toHaveBeenCalledTimes(1);
+    expect(insertManyValues).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
           projectId: 'project-1',
@@ -744,14 +753,16 @@ describe('WorkspaceGitHubOrganizationsService', () => {
         }),
       ]),
     );
-    expect(insertManyValues).toHaveBeenNthCalledWith(
-      2,
-      expect.arrayContaining([
-        expect.objectContaining({
-          taskId: 'task-1',
-          externalKey: 'Octo-Org/repo-one#123',
+    expect(updateSet).toHaveBeenCalledTimes(1);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        externalKey: 'Octo-Org/repo-one#123',
+        externalUrl: 'https://github.com/Octo-Org/repo-one/issues/123',
+        metadata: expect.objectContaining({
+          githubRepo: 'Octo-Org/repo-one',
+          issueNumber: 123,
         }),
-      ]),
+      }),
     );
   });
 

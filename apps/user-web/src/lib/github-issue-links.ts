@@ -7,3 +7,8 @@ export function buildGitHubIssueUrl(issue: SyncedGitHubIssue): string {
 export function buildGitHubIssueLabel(issue: SyncedGitHubIssue): string {
   return `Open GitHub issue ${issue.githubRepo}#${issue.issueNumber}`;
 }
+
+/** Short badge form shown beside a task name, e.g. "#184". */
+export function buildGitHubIssueBadge(issue: SyncedGitHubIssue): string {
+  return `#${issue.issueNumber}`;
+}
