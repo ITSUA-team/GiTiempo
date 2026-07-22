@@ -628,6 +628,55 @@ describe('ReportsTable', () => {
     expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
   });
 
+  it('shows billable %, a proportional meter, dimension badges, and leaf context on mobile cards', () => {
+    setMobileViewport(true);
+
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const mobileCards = wrapper.findAll('[data-testid="report-mobile-card"]');
+
+    // billableShare 0.5 -> "50%" and a half-filled meter
+    expect(mobileCards[0]?.text()).toContain('50%');
+    const meterFill = mobileCards[0]?.find('.bg-brand');
+    expect(meterFill?.attributes('style')).toContain('width: 50%');
+
+    // grouping dimension is badged: project -> folder, member -> user
+    expect(mobileCards[0]?.find('.pi-folder').exists()).toBe(true);
+    expect(mobileCards[1]?.find('.pi-user').exists()).toBe(true);
+
+    // the leaf row falls back to its entry count for context
+    expect(mobileCards[1]?.text()).toContain('2 entries');
+  });
+
+  it('toggles a mobile group row through its expand control', async () => {
+    setMobileViewport(true);
+
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(
+      2,
+    );
+
+    const toggle = wrapper.find('[data-testid="report-mobile-toggle"]');
+    expect(toggle.exists()).toBe(true);
+    expect(toggle.attributes('aria-expanded')).toBe('true');
+    // only the parent group carries a toggle; the member leaf has none
+    expect(
+      wrapper.findAll('[data-testid="report-mobile-toggle"]'),
+    ).toHaveLength(1);
+
+    await toggle.trigger('click');
+
+    // collapsing the group drops its child card
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(
+      1,
+    );
+    expect(
+      wrapper
+        .find('[data-testid="report-mobile-toggle"]')
+        .attributes('aria-expanded'),
+    ).toBe('false');
+  });
+
   it('exposes billable share and activity column filters that update the filter model', async () => {
     const filters = createDefaultReportTableFilters();
     const wrapper = mountTable({ filters });
