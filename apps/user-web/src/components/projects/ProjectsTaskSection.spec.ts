@@ -74,10 +74,15 @@ describe("ProjectsTaskSection", () => {
     expect(titleButton.attributes("aria-label")).toBe("Edit task Improve reports filters");
     expect(titleButton.text()).toContain("Improve reports filters");
     expect(titleButton.find("svg").exists()).toBe(false);
-    expect(wrapper.get('[data-testid="project-task-github-task-1"]').attributes()).toMatchObject({
+    const desktopIssue = wrapper.get(
+      '[data-testid="project-task-github-task-1"]',
+    );
+    expect(desktopIssue.attributes()).toMatchObject({
       href: "https://github.com/octo/repo/issues/184",
       target: "_blank",
     });
+    // The issue number is visible beside the task name, not just an arrow.
+    expect(desktopIssue.text()).toContain("#184");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("1 active task");
     expect(wrapper.text()).not.toContain("Actions");
@@ -124,9 +129,13 @@ describe("ProjectsTaskSection", () => {
     expect(mobileCards[1]?.text()).toContain("Yesterday, 15:30");
     expect(mobileTitles[0]?.find("svg").exists()).toBe(false);
     expect(wrapper.find('[data-testid="project-task-mobile-github-task-1"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="project-task-mobile-github-task-2"]').attributes("href")).toBe(
+    const mobileIssue = wrapper.get(
+      '[data-testid="project-task-mobile-github-task-2"]',
+    );
+    expect(mobileIssue.attributes("href")).toBe(
       "https://github.com/octo/repo/issues/185",
     );
+    expect(mobileIssue.text()).toContain("#185");
     expect(wrapper.find('[data-testid="project-task-mobile-delete-task-1"]').exists()).toBe(false);
 
     await mobileTitles[0]!.trigger("click");
