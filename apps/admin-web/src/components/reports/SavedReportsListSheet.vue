@@ -13,7 +13,7 @@ import { describeSavedReportConfig } from '@/lib/saved-report-config';
  * bar's mobile layout; desktop manages presets through the pill row.
  */
 
-const props = defineProps<{
+defineProps<{
   visible: boolean;
   activeId: string | null;
   presets: SavedReport[];

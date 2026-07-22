@@ -3,9 +3,10 @@ import PrimeVue from 'primevue/config';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SavedReport } from '@gitiempo/shared';
 import SavedReportsBar from './SavedReportsBar.vue';
+import type * as WebShared from '@gitiempo/web-shared';
 
 vi.mock('@gitiempo/web-shared', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@gitiempo/web-shared')>();
+  const actual = await importOriginal<typeof WebShared>();
   const { ref } = await import('vue');
 
   return {
@@ -69,9 +70,9 @@ describe('SavedReportsBar mobile layout', () => {
     const wrapper = mountBar();
 
     const strip = wrapper.find('[data-testid="saved-reports-strip"]');
-    expect(strip.find('[data-testid="saved-report-tab-preset-1"]').exists()).toBe(
-      true,
-    );
+    expect(
+      strip.find('[data-testid="saved-report-tab-preset-1"]').exists(),
+    ).toBe(true);
     expect(wrapper.find('[data-testid="saved-reports-manage"]').exists()).toBe(
       true,
     );
