@@ -45,11 +45,16 @@ export const taskExternalRefs = pgTable(
   },
   (table) => [
     index('task_external_refs_task_id_idx').on(table.taskId),
+    // GitHub owner/repo identity ignores casing, and every runtime lookup
+    // compares via lower(external_key). A raw-key unique index let two casings
+    // of the same issue insert concurrently and become two tasks; keying the
+    // index on lower(external_key) makes that impossible at the DB level while
+    // the stored key keeps GitHub's real casing.
     uniqueIndex('task_external_refs_workspace_provider_key_unique').on(
       table.workspaceId,
       table.provider,
       table.externalType,
-      table.externalKey,
+      sql`lower(${table.externalKey})`,
     ),
     index('task_external_refs_workspace_provider_id_idx')
       .on(

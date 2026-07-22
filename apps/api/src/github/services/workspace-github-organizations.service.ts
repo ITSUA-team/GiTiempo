@@ -46,7 +46,7 @@ import { GithubConnectionsService } from './github-connections.service';
 
 type WorkspaceGitHubOrganizationRow =
   typeof workspaceGitHubOrganizations.$inferSelect;
-type QueryExecutor = Pick<DrizzleDB, 'select' | 'insert'>;
+type QueryExecutor = Pick<DrizzleDB, 'select' | 'insert' | 'update'>;
 type ProjectExternalRefRow = typeof projectExternalRefs.$inferSelect;
 type TaskExternalRefRow = typeof taskExternalRefs.$inferSelect;
 
@@ -370,11 +370,7 @@ export class WorkspaceGitHubOrganizationsService {
         ),
       );
 
-    const existingKeys = new Map(
-      rows.map((row) => [row.externalKey, row.taskId] as const),
-    );
     const normalizedTargets = new Map<string, string>();
-    const inserts: Array<typeof taskExternalRefs.$inferInsert> = [];
 
     for (const row of rows) {
       const normalizedKey = normalizeGitHubIssueExternalKey(row.externalKey);
@@ -394,26 +390,19 @@ export class WorkspaceGitHubOrganizationsService {
         row.externalKey,
         organizationLogin,
       );
-      if (!canonicalKey) {
+      if (!canonicalKey || canonicalKey === row.externalKey) {
         continue;
       }
 
-      const existingTaskId = existingKeys.get(canonicalKey);
-      if (existingTaskId) {
-        if (existingTaskId !== row.taskId) {
-          throw new ConflictException(
-            'Existing GitHub issue mappings for this organization are inconsistent',
-          );
-        }
-        continue;
-      }
-
-      existingKeys.set(canonicalKey, row.taskId);
-      inserts.push(this.toTaskRefAlias(row, canonicalKey));
-    }
-
-    if (inserts.length > 0) {
-      await db.insert(taskExternalRefs).values(inserts);
+      // Every selected row's owner equals the organization login modulo case,
+      // so canonicalKey only differs from the stored key by casing — and the
+      // unique index on lower(external_key) forbids a second row for the same
+      // issue. Repair the stored casing in place instead of inserting an
+      // alias row.
+      await db
+        .update(taskExternalRefs)
+        .set(this.toCanonicalTaskRefPatch(row, canonicalKey))
+        .where(eq(taskExternalRefs.id, row.id));
     }
   }
 
@@ -437,21 +426,15 @@ export class WorkspaceGitHubOrganizationsService {
     };
   }
 
-  private toTaskRefAlias(
+  private toCanonicalTaskRefPatch(
     row: TaskExternalRefRow,
     canonicalKey: string,
-  ): typeof taskExternalRefs.$inferInsert {
+  ): Partial<typeof taskExternalRefs.$inferInsert> {
     const separatorIndex = canonicalKey.lastIndexOf('#');
     const githubRepo = canonicalKey.slice(0, separatorIndex);
     const issueNumber = Number(canonicalKey.slice(separatorIndex + 1));
 
     return {
-      workspaceId: row.workspaceId,
-      projectId: row.projectId,
-      taskId: row.taskId,
-      provider: row.provider,
-      externalType: row.externalType,
-      externalId: row.externalId,
       externalKey: canonicalKey,
       externalUrl: `https://github.com/${githubRepo}/issues/${issueNumber}`,
       metadata: {
@@ -459,7 +442,7 @@ export class WorkspaceGitHubOrganizationsService {
         githubRepo,
         issueNumber,
       },
-      syncedAt: row.syncedAt,
+      updatedAt: new Date(),
     };
   }
 

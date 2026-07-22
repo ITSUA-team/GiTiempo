@@ -204,14 +204,11 @@ export class GithubTaskMaterializationService {
         metadata: { githubRepo, issueNumber },
         syncedAt: new Date(),
       })
-      .onConflictDoNothing({
-        target: [
-          taskExternalRefs.workspaceId,
-          taskExternalRefs.provider,
-          taskExternalRefs.externalType,
-          taskExternalRefs.externalKey,
-        ],
-      })
+      // The unique index guarding this insert is keyed on lower(external_key),
+      // an expression a column-list conflict target cannot reference — so any
+      // conflict (a concurrent insert of the same issue under any casing)
+      // funnels into the recovery path below.
+      .onConflictDoNothing()
       .returning({ taskId: taskExternalRefs.taskId });
 
     if (!createdRef) {

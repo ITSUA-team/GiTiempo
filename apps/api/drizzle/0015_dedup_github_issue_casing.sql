@@ -5,6 +5,11 @@
 -- duplicates, keeping the canonically-cased task (the one carrying uppercase
 -- letters, i.e. GitHub's real casing) and merging the other's time entries onto
 -- it. Casing is NOT normalized away — the canonical key stays.
+--
+-- Once deduped, the unique index is rebuilt on lower(external_key) so a
+-- concurrent pair of different-cased inserts can never recreate the split:
+-- GitHub owner/repo identity ignores casing, and every runtime lookup already
+-- compares via lower(). The stored key itself keeps GitHub's real casing.
 DO $$
 BEGIN
   -- Canonical task per case-insensitive issue key: prefer the ref that carries
@@ -38,15 +43,21 @@ BEGIN
   DELETE FROM tasks             WHERE id      IN (SELECT dup_task_id FROM _gh_case_dup);
 
   -- Same-task alias refs (e.g. org-owner canonicalization created a second row
-  -- for the same task): keep the canonically-cased one.
+  -- for the same task): rank the rows of each case-insensitive key and keep
+  -- only the first — canonical casing (has uppercase) wins, then the oldest
+  -- row. Ranking makes the outcome independent of how the random UUIDs
+  -- happened to compare, which the unique index below depends on.
   DELETE FROM task_external_refs r
-    USING task_external_refs keep
-    WHERE r.provider = 'github' AND r.external_type = 'issue'
-      AND keep.provider = 'github' AND keep.external_type = 'issue'
-      AND r.workspace_id = keep.workspace_id
-      AND lower(r.external_key) = lower(keep.external_key)
-      AND r.task_id = keep.task_id
-      AND (keep.external_key <> lower(keep.external_key)) >= (r.external_key <> lower(r.external_key))
-      AND r.id <> keep.id
-      AND r.id > keep.id;
+    USING (
+      SELECT id, row_number() OVER (
+        PARTITION BY workspace_id, provider, external_type, lower(external_key), task_id
+        ORDER BY (external_key <> lower(external_key)) DESC, created_at ASC, id ASC
+      ) AS rn
+      FROM task_external_refs
+      WHERE provider = 'github' AND external_type = 'issue'
+    ) ranked
+    WHERE r.id = ranked.id AND ranked.rn > 1;
 END $$;
+--> statement-breakpoint
+DROP INDEX IF EXISTS "task_external_refs_workspace_provider_key_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "task_external_refs_workspace_provider_key_unique" ON "task_external_refs" USING btree ("workspace_id","provider","external_type",lower("external_key"));

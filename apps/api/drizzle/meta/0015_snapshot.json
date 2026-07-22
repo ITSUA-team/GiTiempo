@@ -66,15 +66,15 @@
           "columns": [
             {
               "expression": "lower(btrim(\"email\"))",
-              "isExpression": true,
               "asc": true,
+              "isExpression": true,
               "nulls": "last"
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -82,10 +82,10 @@
       "uniqueConstraints": {
         "users_firebase_uid_unique": {
           "name": "users_firebase_uid_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "firebase_uid"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {},
@@ -171,9 +171,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "refresh_tokens_workspace_member_id_idx": {
           "name": "refresh_tokens_workspace_member_id_idx",
@@ -186,9 +186,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "refresh_tokens_workspace_id_idx": {
           "name": "refresh_tokens_workspace_id_idx",
@@ -201,9 +201,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "refresh_tokens_family_id_idx": {
           "name": "refresh_tokens_family_id_idx",
@@ -216,9 +216,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "refresh_tokens_token_hash_idx": {
           "name": "refresh_tokens_token_hash_idx",
@@ -231,73 +231,73 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "refresh_tokens_user_id_users_id_fk": {
           "name": "refresh_tokens_user_id_users_id_fk",
           "tableFrom": "refresh_tokens",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "refresh_tokens_workspace_member_id_workspace_members_id_fk": {
           "name": "refresh_tokens_workspace_member_id_workspace_members_id_fk",
           "tableFrom": "refresh_tokens",
+          "tableTo": "workspace_members",
           "columnsFrom": [
             "workspace_member_id"
           ],
-          "tableTo": "workspace_members",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "refresh_tokens_workspace_id_workspaces_id_fk": {
           "name": "refresh_tokens_workspace_id_workspaces_id_fk",
           "tableFrom": "refresh_tokens",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "refresh_tokens_replaced_by_refresh_tokens_id_fk": {
           "name": "refresh_tokens_replaced_by_refresh_tokens_id_fk",
           "tableFrom": "refresh_tokens",
+          "tableTo": "refresh_tokens",
           "columnsFrom": [
             "replaced_by"
           ],
-          "tableTo": "refresh_tokens",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "refresh_tokens_token_hash_unique": {
           "name": "refresh_tokens_token_hash_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "token_hash"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {},
@@ -342,15 +342,15 @@
           "columns": [
             {
               "expression": "lower(regexp_replace(btrim(\"name\"), '[[:space:]]+', ' ', 'g'))",
-              "isExpression": true,
               "asc": true,
+              "isExpression": true,
               "nulls": "last"
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -424,24 +424,24 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "workspace_settings_workspace_id_workspaces_id_fk": {
           "name": "workspace_settings_workspace_id_workspaces_id_fk",
           "tableFrom": "workspace_settings",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -506,9 +506,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "workspace_members_user_id_idx": {
           "name": "workspace_members_user_id_idx",
@@ -521,37 +521,37 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "workspace_members_workspace_id_workspaces_id_fk": {
           "name": "workspace_members_workspace_id_workspaces_id_fk",
           "tableFrom": "workspace_members",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "workspace_members_user_id_users_id_fk": {
           "name": "workspace_members_user_id_users_id_fk",
           "tableFrom": "workspace_members",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -635,9 +635,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "invites_workspace_id_idx": {
           "name": "invites_workspace_id_idx",
@@ -650,9 +650,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "invites_email_status_idx": {
           "name": "invites_email_status_idx",
@@ -677,37 +677,37 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "invites_workspace_id_workspaces_id_fk": {
           "name": "invites_workspace_id_workspaces_id_fk",
           "tableFrom": "invites",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "invites_invited_by_users_id_fk": {
           "name": "invites_invited_by_users_id_fk",
           "tableFrom": "invites",
+          "tableTo": "users",
           "columnsFrom": [
             "invited_by"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -799,9 +799,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "projects_workspace_id_active_idx": {
           "name": "projects_workspace_id_active_idx",
@@ -820,9 +820,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "projects_workspace_active_visibility_idx": {
           "name": "projects_workspace_active_visibility_idx",
@@ -847,24 +847,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "projects_workspace_id_workspaces_id_fk": {
           "name": "projects_workspace_id_workspaces_id_fk",
           "tableFrom": "projects",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -939,9 +939,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "project_assignments_user_id_idx": {
           "name": "project_assignments_user_id_idx",
@@ -954,9 +954,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "project_assignments_workspace_id_idx": {
           "name": "project_assignments_workspace_id_idx",
@@ -969,63 +969,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "project_assignments_project_id_projects_id_fk": {
           "name": "project_assignments_project_id_projects_id_fk",
           "tableFrom": "project_assignments",
+          "tableTo": "projects",
           "columnsFrom": [
             "project_id"
           ],
-          "tableTo": "projects",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "project_assignments_user_id_users_id_fk": {
           "name": "project_assignments_user_id_users_id_fk",
           "tableFrom": "project_assignments",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "project_assignments_workspace_id_workspaces_id_fk": {
           "name": "project_assignments_workspace_id_workspaces_id_fk",
           "tableFrom": "project_assignments",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "project_assignments_assigned_by_users_id_fk": {
           "name": "project_assignments_assigned_by_users_id_fk",
           "tableFrom": "project_assignments",
+          "tableTo": "users",
           "columnsFrom": [
             "assigned_by"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1127,9 +1127,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "project_external_refs_workspace_provider_key_unique": {
           "name": "project_external_refs_workspace_provider_key_unique",
@@ -1160,9 +1160,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "project_external_refs_workspace_provider_id_idx": {
           "name": "project_external_refs_workspace_provider_id_idx",
@@ -1193,38 +1193,38 @@
             }
           ],
           "isUnique": false,
-          "with": {},
-          "method": "btree",
           "where": "\"project_external_refs\".\"external_id\" IS NOT NULL",
-          "concurrently": false
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
         "project_external_refs_workspace_id_workspaces_id_fk": {
           "name": "project_external_refs_workspace_id_workspaces_id_fk",
           "tableFrom": "project_external_refs",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "project_external_refs_project_id_projects_id_fk": {
           "name": "project_external_refs_project_id_projects_id_fk",
           "tableFrom": "project_external_refs",
+          "tableTo": "projects",
           "columnsFrom": [
             "project_id"
           ],
-          "tableTo": "projects",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1310,9 +1310,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "tasks_workspace_id_idx": {
           "name": "tasks_workspace_id_idx",
@@ -1325,9 +1325,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "tasks_workspace_project_active_idx": {
           "name": "tasks_workspace_project_active_idx",
@@ -1352,37 +1352,37 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "tasks_project_id_projects_id_fk": {
           "name": "tasks_project_id_projects_id_fk",
           "tableFrom": "tasks",
+          "tableTo": "projects",
           "columnsFrom": [
             "project_id"
           ],
-          "tableTo": "projects",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "tasks_workspace_id_workspaces_id_fk": {
           "name": "tasks_workspace_id_workspaces_id_fk",
           "tableFrom": "tasks",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1490,9 +1490,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "task_external_refs_workspace_provider_key_unique": {
           "name": "task_external_refs_workspace_provider_key_unique",
@@ -1516,16 +1516,16 @@
               "nulls": "last"
             },
             {
-              "expression": "external_key",
-              "isExpression": false,
+              "expression": "lower(\"external_key\")",
               "asc": true,
+              "isExpression": true,
               "nulls": "last"
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "task_external_refs_workspace_provider_id_idx": {
           "name": "task_external_refs_workspace_provider_id_idx",
@@ -1556,51 +1556,51 @@
             }
           ],
           "isUnique": false,
-          "with": {},
-          "method": "btree",
           "where": "\"task_external_refs\".\"external_id\" IS NOT NULL",
-          "concurrently": false
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
         "task_external_refs_workspace_id_workspaces_id_fk": {
           "name": "task_external_refs_workspace_id_workspaces_id_fk",
           "tableFrom": "task_external_refs",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "task_external_refs_project_id_projects_id_fk": {
           "name": "task_external_refs_project_id_projects_id_fk",
           "tableFrom": "task_external_refs",
+          "tableTo": "projects",
           "columnsFrom": [
             "project_id"
           ],
-          "tableTo": "projects",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "task_external_refs_task_id_tasks_id_fk": {
           "name": "task_external_refs_task_id_tasks_id_fk",
           "tableFrom": "task_external_refs",
+          "tableTo": "tasks",
           "columnsFrom": [
             "task_id"
           ],
-          "tableTo": "tasks",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1703,9 +1703,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "time_entries_user_id_idx": {
           "name": "time_entries_user_id_idx",
@@ -1718,9 +1718,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "time_entries_workspace_id_idx": {
           "name": "time_entries_workspace_id_idx",
@@ -1733,9 +1733,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "time_entries_started_at_idx": {
           "name": "time_entries_started_at_idx",
@@ -1748,9 +1748,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "time_entries_date_range_idx": {
           "name": "time_entries_date_range_idx",
@@ -1781,9 +1781,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "time_entries_running_unique": {
           "name": "time_entries_running_unique",
@@ -1796,51 +1796,51 @@
             }
           ],
           "isUnique": true,
-          "with": {},
-          "method": "btree",
           "where": "\"time_entries\".\"ended_at\" IS NULL",
-          "concurrently": false
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
         "time_entries_task_id_tasks_id_fk": {
           "name": "time_entries_task_id_tasks_id_fk",
           "tableFrom": "time_entries",
+          "tableTo": "tasks",
           "columnsFrom": [
             "task_id"
           ],
-          "tableTo": "tasks",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "time_entries_user_id_users_id_fk": {
           "name": "time_entries_user_id_users_id_fk",
           "tableFrom": "time_entries",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "time_entries_workspace_id_workspaces_id_fk": {
           "name": "time_entries_workspace_id_workspaces_id_fk",
           "tableFrom": "time_entries",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1951,9 +1951,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "github_connections_github_user_id_idx": {
           "name": "github_connections_github_user_id_idx",
@@ -1966,24 +1966,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "github_connections_user_id_users_id_fk": {
           "name": "github_connections_user_id_users_id_fk",
           "tableFrom": "github_connections",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2053,9 +2053,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "github_oauth_states_user_id_idx": {
           "name": "github_oauth_states_user_id_idx",
@@ -2068,9 +2068,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "github_oauth_states_expires_at_idx": {
           "name": "github_oauth_states_expires_at_idx",
@@ -2083,24 +2083,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "github_oauth_states_user_id_users_id_fk": {
           "name": "github_oauth_states_user_id_users_id_fk",
           "tableFrom": "github_oauth_states",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2171,9 +2171,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "workspace_github_organizations_workspace_id_normalized_login_unique": {
           "name": "workspace_github_organizations_workspace_id_normalized_login_unique",
@@ -2192,37 +2192,37 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "workspace_github_organizations_workspace_id_workspaces_id_fk": {
           "name": "workspace_github_organizations_workspace_id_workspaces_id_fk",
           "tableFrom": "workspace_github_organizations",
+          "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "workspace_github_organizations_created_by_user_id_users_id_fk": {
           "name": "workspace_github_organizations_created_by_user_id_users_id_fk",
           "tableFrom": "workspace_github_organizations",
+          "tableTo": "users",
           "columnsFrom": [
             "created_by_user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2234,10 +2234,10 @@
   },
   "enums": {},
   "schemas": {},
-  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
+  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},
