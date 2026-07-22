@@ -16,7 +16,10 @@ import SavedReportsBar from '@/components/reports/SavedReportsBar.vue';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useReportsData } from '@/composables/reports/useReportsData';
 import { useSavedReports } from '@/composables/reports/useSavedReports';
-import { buildConfigFromState } from '@/lib/saved-report-config';
+import {
+  buildConfigFromState,
+  describeSavedReportConfig,
+} from '@/lib/saved-report-config';
 import { downloadReportExport } from '@/lib/report-download';
 import {
   createDefaultReportTableFilters,
@@ -69,6 +72,10 @@ const currentSavedReportConfig = computed(() =>
     grouping: grouping.value,
     period: reportPeriod.value,
   }),
+);
+
+const savedReportSummary = computed(() =>
+  describeSavedReportConfig(currentSavedReportConfig.value),
 );
 
 const savedReports = useSavedReports({
@@ -252,6 +259,7 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
         :is-dirty="savedReports.isDirty.value"
         :is-saving="savedReports.isSaving.value"
         :presets="savedReports.presets.value"
+        :summary="savedReportSummary"
         @delete="handleDeleteReport"
         @new="startNewReport"
         @rename="handleRenameReport"
@@ -260,7 +268,7 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
         @select="savedReports.selectPreset"
       />
 
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           label="Tracked Hours"
           :value="totalHoursLabel"

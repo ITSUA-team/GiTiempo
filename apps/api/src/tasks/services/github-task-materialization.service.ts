@@ -13,7 +13,10 @@ import type { ProjectRow } from '../../projects/services/projects.service';
 import {
   normalizeGitHubIssueExternalKey,
   normalizeGitHubRepoKey,
+  parseGitHubRepoKey,
+  rewriteGitHubIssueOwner,
 } from '../../github/github-repo-key';
+import { WorkspaceGitHubOrganizationsService } from '../../github/services/workspace-github-organizations.service';
 import { taskExternalRefs } from '../schemas/task-external-refs.schema';
 import { taskRowSelection, tasks } from '../schemas/tasks.schema';
 
@@ -22,7 +25,40 @@ type TaskRow = typeof tasks.$inferSelect;
 
 @Injectable()
 export class GithubTaskMaterializationService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    private readonly organizations: WorkspaceGitHubOrganizationsService,
+  ) {}
+
+  /**
+   * Anchors an issue key's owner casing to the workspace's connected
+   * organization, the single source of truth. Whatever casing the extension or
+   * the app supplied ("itsua-team" vs "ITSUA-team"), it resolves to the one
+   * connected form, so the same issue can never be stored under two owners. If
+   * the organization is not connected there is no authority to resolve
+   * against, so the key is left as received.
+   */
+  private async canonicalizeIssueKey(
+    workspaceId: string,
+    issueKey: string,
+  ): Promise<string> {
+    const repoPart = issueKey.slice(0, issueKey.lastIndexOf('#'));
+    const parts = parseGitHubRepoKey(repoPart);
+    if (!parts) {
+      return issueKey;
+    }
+
+    const canonicalOwner =
+      await this.organizations.resolveCanonicalOrganizationLogin(
+        workspaceId,
+        parts.owner,
+      );
+    if (!canonicalOwner || canonicalOwner === parts.owner) {
+      return issueKey;
+    }
+
+    return rewriteGitHubIssueOwner(issueKey, canonicalOwner) ?? issueKey;
+  }
 
   async findOrCreateProjectForRepo(
     executor: QueryExecutor,
@@ -113,11 +149,18 @@ export class GithubTaskMaterializationService {
       workspaceId: string;
     },
   ): Promise<TaskRow> {
+    // Resolve the owner casing against the connected organization so both the
+    // extension and the app converge on one canonical key for the same issue.
+    const issueKey = await this.canonicalizeIssueKey(
+      input.workspaceId,
+      input.issueKey,
+    );
+
     const existingRef = await this.findGitHubTaskRef(
       executor,
       input.workspaceId,
       input.projectId,
-      input.issueKey,
+      issueKey,
     );
 
     if (existingRef) {
@@ -145,9 +188,9 @@ export class GithubTaskMaterializationService {
       );
     }
 
-    const separatorIndex = input.issueKey.lastIndexOf('#');
-    const githubRepo = input.issueKey.slice(0, separatorIndex);
-    const issueNumber = Number(input.issueKey.slice(separatorIndex + 1));
+    const separatorIndex = issueKey.lastIndexOf('#');
+    const githubRepo = issueKey.slice(0, separatorIndex);
+    const issueNumber = Number(issueKey.slice(separatorIndex + 1));
     const [createdRef] = await executor
       .insert(taskExternalRefs)
       .values({
@@ -156,19 +199,16 @@ export class GithubTaskMaterializationService {
         taskId: task.id,
         provider: 'github',
         externalType: 'issue',
-        externalKey: input.issueKey,
+        externalKey: issueKey,
         externalUrl: `https://github.com/${githubRepo}/issues/${issueNumber}`,
         metadata: { githubRepo, issueNumber },
         syncedAt: new Date(),
       })
-      .onConflictDoNothing({
-        target: [
-          taskExternalRefs.workspaceId,
-          taskExternalRefs.provider,
-          taskExternalRefs.externalType,
-          taskExternalRefs.externalKey,
-        ],
-      })
+      // The unique index guarding this insert is keyed on lower(external_key),
+      // an expression a column-list conflict target cannot reference — so any
+      // conflict (a concurrent insert of the same issue under any casing)
+      // funnels into the recovery path below.
+      .onConflictDoNothing()
       .returning({ taskId: taskExternalRefs.taskId });
 
     if (!createdRef) {
@@ -177,7 +217,7 @@ export class GithubTaskMaterializationService {
       const winningRef = await this.findGitHubTaskRefInWorkspace(
         executor,
         input.workspaceId,
-        input.issueKey,
+        issueKey,
       );
       if (!winningRef) {
         throw DomainError.internal(

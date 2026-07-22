@@ -4,6 +4,7 @@ import {
   applyConfigToState,
   buildConfigFromState,
   createDefaultSavedReportState,
+  describeSavedReportConfig,
   isSameSavedReportConfig,
   resolveRelativePeriod,
   toApiGrouping,
@@ -387,5 +388,53 @@ describe('dirty comparison', () => {
     );
 
     expect(isSameSavedReportConfig(relative, absolute)).toBe(false);
+  });
+});
+
+describe('describeSavedReportConfig', () => {
+  it('labels a relative period, the grouping path, and omits a zero filter count', () => {
+    const config = buildConfigFromState(
+      makeState({
+        grouping: ['project', 'member', 'task'],
+        period: 'this_month',
+      }),
+    );
+
+    expect(describeSavedReportConfig(config)).toEqual([
+      { icon: 'pi pi-calendar', label: 'This month' },
+      { icon: 'pi pi-sitemap', label: 'Project › Member › Task' },
+    ]);
+  });
+
+  it('labels an absolute window with its dates', () => {
+    const config = buildConfigFromState(
+      makeState({
+        dateRange: [new Date(2026, 3, 1), new Date(2026, 3, 21)],
+        period: null,
+      }),
+    );
+
+    const [dateItem] = describeSavedReportConfig(config);
+    expect(dateItem!.label).toBe('Apr 1 – Apr 21');
+  });
+
+  it('counts identity and column filters together', () => {
+    const state = makeState({ period: 'last_7_days' });
+    state.filters.billable = 'withBillable';
+    state.filters.global = 'orion';
+    state.filters.projectId = PROJECT_ID;
+
+    const items = describeSavedReportConfig(buildConfigFromState(state));
+
+    expect(items.at(-1)).toEqual({ icon: 'pi pi-filter', label: '3 filters' });
+  });
+
+  it('uses the singular for one filter', () => {
+    const state = makeState({ period: 'last_7_days' });
+    state.filters.hours = 'gte8';
+
+    const items = describeSavedReportConfig(buildConfigFromState(state));
+
+    expect(items.at(-1)).toEqual({ icon: 'pi pi-filter', label: '1 filter' });
   });
 });

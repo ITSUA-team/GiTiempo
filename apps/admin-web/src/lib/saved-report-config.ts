@@ -198,6 +198,82 @@ export function applyConfigToState(
   };
 }
 
+/** One chip in the "This report saves" summary of the mobile save sheet. */
+export interface SavedReportConfigSummaryItem {
+  icon: string;
+  label: string;
+}
+
+const periodLabels: Record<SavedReportPeriod, string> = {
+  last_7_days: 'Last 7 days',
+  last_30_days: 'Last 30 days',
+  previous_month: 'Previous month',
+  this_month: 'This month',
+  this_week: 'This week',
+};
+
+const groupingDimensionLabels: Record<TimeReportGroupBy, string> = {
+  project: 'Project',
+  task: 'Task',
+  user: 'Member',
+};
+
+function formatSummaryDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+function countActiveFilters(config: SavedReportConfig): number {
+  const { filters } = config;
+
+  return [
+    filters.activity !== 'any',
+    filters.billable !== 'any',
+    filters.billableShare !== 'any',
+    filters.hours !== 'any',
+    filters.global.trim() !== '',
+    config.projectId !== null,
+    config.memberId !== null,
+  ].filter(Boolean).length;
+}
+
+/**
+ * Human-readable summary of what a preset captures: the date intent, the
+ * grouping path, and how many filters are set. Shown before saving so the
+ * user knows what the preset will restore — the stored shape, matching the
+ * dirty comparison, not the resolved window.
+ */
+export function describeSavedReportConfig(
+  config: SavedReportConfig,
+): SavedReportConfigSummaryItem[] {
+  const dateLabel =
+    config.dateRange.kind === 'relative'
+      ? periodLabels[config.dateRange.period]
+      : `${formatSummaryDate(config.dateRange.dateFrom)} – ${formatSummaryDate(config.dateRange.dateTo)}`;
+
+  const items: SavedReportConfigSummaryItem[] = [
+    { icon: 'pi pi-calendar', label: dateLabel },
+    {
+      icon: 'pi pi-sitemap',
+      label: config.grouping
+        .map((dimension) => groupingDimensionLabels[dimension])
+        .join(' › '),
+    },
+  ];
+
+  const filterCount = countActiveFilters(config);
+  if (filterCount > 0) {
+    items.push({
+      icon: 'pi pi-filter',
+      label: `${filterCount} ${filterCount === 1 ? 'filter' : 'filters'}`,
+    });
+  }
+
+  return items;
+}
+
 export function createDefaultSavedReportState(
   now = new Date(),
 ): SavedReportState {

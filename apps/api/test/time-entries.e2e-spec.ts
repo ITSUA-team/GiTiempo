@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { and, eq, like, or } from 'drizzle-orm';
+import { and, eq, inArray, like, or } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
@@ -15,6 +15,7 @@ import {
   tasks,
   timeEntries,
   users,
+  workspaceGitHubOrganizations,
   workspaces,
 } from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
@@ -103,20 +104,36 @@ describe('Time entries (e2e)', () => {
     await db
       .delete(projectExternalRefs)
       .where(like(projectExternalRefs.externalKey, 'gitiempo-test/%'));
-    await db
-      .delete(tasks)
+    // Delete fixture tasks by project, not title: a GitHub task keeps its
+    // issue title, so a title filter misses it and blocks the project delete.
+    const fixtureProjects = await db
+      .select({ id: projects.id })
+      .from(projects)
       .where(
         or(
-          eq(tasks.title, 'Chrome extension issue'),
-          eq(tasks.title, 'Other project issue'),
-          like(tasks.title, 'Search task search %'),
+          like(projects.name, 'gitiempo-test/%'),
+          like(projects.name, 'Search task search %'),
+          like(projects.name, 'Other %'),
         ),
       );
-    await db
-      .delete(projects)
-      .where(like(projects.name, 'Search task search %'));
-    await db.delete(projects).where(like(projects.name, 'gitiempo-test/%'));
-    await db.delete(projects).where(like(projects.name, 'Other %'));
+    const fixtureProjectIds = fixtureProjects.map((row) => row.id);
+    if (fixtureProjectIds.length > 0) {
+      const fixtureTasks = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(inArray(tasks.projectId, fixtureProjectIds));
+      const fixtureTaskIds = fixtureTasks.map((row) => row.id);
+      if (fixtureTaskIds.length > 0) {
+        await db
+          .delete(timeEntries)
+          .where(inArray(timeEntries.taskId, fixtureTaskIds));
+        await db
+          .delete(taskExternalRefs)
+          .where(inArray(taskExternalRefs.taskId, fixtureTaskIds));
+        await db.delete(tasks).where(inArray(tasks.id, fixtureTaskIds));
+      }
+      await db.delete(projects).where(inArray(projects.id, fixtureProjectIds));
+    }
     await db.delete(workspaces).where(like(workspaces.name, 'Foreign %'));
   }
 
@@ -711,6 +728,80 @@ describe('Time entries (e2e)', () => {
     expect(summary.body.visibleProjects).toBeGreaterThanOrEqual(1);
     expect(summary.body.trackedHoursWeek).toBeGreaterThan(0);
     expect(summary.body.trackedHoursMonth).toBeGreaterThan(0);
+  });
+
+  it('anchors the owner to the connected organization casing', async () => {
+    // Connected org's canonical login is mixed-case; the extension sends it
+    // lowercased. The stored task key must use the connected canonical form.
+    await db
+      .delete(workspaceGitHubOrganizations)
+      .where(eq(workspaceGitHubOrganizations.normalizedLogin, 'gitiempo-test'));
+    await db.insert(workspaceGitHubOrganizations).values({
+      workspaceId,
+      organizationLogin: 'Gitiempo-Test',
+      normalizedLogin: 'gitiempo-test',
+      createdByUserId: otherMemberUserId,
+    });
+
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/repo-${suffix}`;
+    const issueNumber = 88;
+
+    try {
+      const started = await request(app.getHttpServer())
+        .post('/time-entries/timer/start-from-github')
+        .set('Authorization', bearer(otherMemberToken))
+        .send({ githubRepo, issueNumber, issueTitle: 'Org anchored issue' });
+      expect(started.status).toBe(201);
+
+      await request(app.getHttpServer())
+        .post('/time-entries/timer/stop')
+        .set('Authorization', bearer(otherMemberToken));
+
+      const [taskRef] = await db
+        .select({ externalKey: taskExternalRefs.externalKey })
+        .from(taskExternalRefs)
+        .where(eq(taskExternalRefs.taskId, started.body.task.id))
+        .limit(1);
+      // Owner canonicalized to the connected org; repo/issue preserved.
+      expect(taskRef?.externalKey).toBe(
+        `Gitiempo-Test/repo-${suffix}#${issueNumber}`,
+      );
+    } finally {
+      await db
+        .delete(workspaceGitHubOrganizations)
+        .where(
+          eq(workspaceGitHubOrganizations.normalizedLogin, 'gitiempo-test'),
+        );
+    }
+  });
+
+  it('preserves the GitHub owner/repo casing from the extension', async () => {
+    // The extension used to lowercase the owner, which split one issue into two
+    // tasks. It must now store GitHub's real casing so it matches the app path.
+    const suffix = randomUUID().slice(0, 8);
+    // Prefix stays lowercase so the fixture cleanup matches; the tail carries
+    // the mixed casing under test.
+    const githubRepo = `gitiempo-test/Repo-CamelCase-${suffix}`;
+    const issueNumber = 77;
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(otherMemberToken))
+      .send({ githubRepo, issueNumber, issueTitle: 'Casing issue' });
+    expect(started.status).toBe(201);
+
+    await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(otherMemberToken));
+
+    const [taskRef] = await db
+      .select({ externalKey: taskExternalRefs.externalKey })
+      .from(taskExternalRefs)
+      .where(eq(taskExternalRefs.externalKey, `${githubRepo}#${issueNumber}`))
+      .limit(1);
+    // Stored verbatim, not lowercased.
+    expect(taskRef?.externalKey).toBe(`${githubRepo}#${issueNumber}`);
   });
 
   it('starts timer from GitHub issue data and creates provider refs', async () => {
