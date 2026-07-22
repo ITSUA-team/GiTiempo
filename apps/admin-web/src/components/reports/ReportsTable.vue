@@ -233,12 +233,12 @@ function handleMemberFilterUpdate(
       <SectionHeader title="Results">
         <template #actions>
           <div
-            class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center"
+            class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center"
           >
             <DatePicker
               :model-value="dateRange"
               aria-label="Report date range"
-              class="w-full sm:w-[240px]"
+              class="w-full sm:w-[220px]"
               date-format="M d, yy"
               icon-display="input"
               :manual-input="false"
@@ -251,7 +251,7 @@ function handleMemberFilterUpdate(
               @update:model-value="handleDateRangeUpdate"
             />
 
-            <IconField class="w-full sm:w-[280px]">
+            <IconField class="w-full sm:w-[240px] md:w-[280px]">
               <InputIcon class="pi pi-search text-text-muted" />
               <InputText
                 :model-value="filters.global"
