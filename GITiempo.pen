@@ -43451,6 +43451,791 @@
       "width": 360,
       "height": 130,
       "content": "Mobile saved reports: chips mirror the desktop saved bar (Admin Reports V2). 'Save as…' / Save open the save sheet (update vs save-as-new). Saved reports sheet: tap applies, ⋯ = rename/delete. Same data contract as desktop — no new filter semantics."
+    },
+    {
+      "type": "frame",
+      "id": "daVAj",
+      "x": 5560,
+      "y": 3263,
+      "name": "Report Result Card Redesign",
+      "clip": true,
+      "width": 390,
+      "fill": "$color-app-bg",
+      "layout": "vertical",
+      "gap": 14,
+      "padding": 16,
+      "children": [
+        {
+          "type": "frame",
+          "id": "NaQYT",
+          "name": "headerBlock",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "children": [
+            {
+              "type": "text",
+              "id": "W55DWt",
+              "name": "title",
+              "fill": "$color-text-dark",
+              "content": "Report result card",
+              "fontFamily": "$font-sans",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "nTeNt",
+              "name": "subtitle",
+              "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Redesigned — informative, scannable, tree-aware",
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ubP6p",
+          "name": "cardList",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "frame",
+              "id": "rPqMP",
+              "name": "card Project Orion",
+              "width": "fill_container",
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-md",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "zINCH",
+                  "name": "header",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Tzmzb",
+                      "name": "left",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "WI9Et",
+                          "name": "badge",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$color-accent-tint",
+                          "cornerRadius": "$radius-md",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "e7mgPB",
+                              "name": "badgeIcon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "folder",
+                              "library": "lucide",
+                              "fill": "$color-brand"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "IMsld",
+                          "name": "nameCol",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "M2ODLE",
+                              "name": "name",
+                              "fill": "$color-text-dark",
+                              "content": "Project Orion",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ZVhxD",
+                              "name": "meta",
+                              "fill": "$color-text-muted",
+                              "content": "6 members · 3 tasks",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "icon",
+                      "id": "uwOd0",
+                      "name": "chevron",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "YGcYj",
+                  "name": "divider",
+                  "fill": "$color-divider",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "jXSK2",
+                  "name": "metrics",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pk2Ix",
+                      "name": "hoursCol",
+                      "layout": "vertical",
+                      "gap": 3,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "LaQdl",
+                          "name": "hoursLabel",
+                          "fill": "$color-text-muted",
+                          "content": "TRACKED",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 10,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "text",
+                          "id": "JzPri",
+                          "name": "hoursVal",
+                          "fill": "$color-text-dark",
+                          "content": "148h 20m",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 19,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NIPc1",
+                      "name": "billCol",
+                      "layout": "vertical",
+                      "gap": 3,
+                      "alignItems": "end",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "LRmpo",
+                          "name": "billLabel",
+                          "fill": "$color-text-muted",
+                          "content": "BILLABLE",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 10,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "text",
+                          "id": "kUBJF",
+                          "name": "billVal",
+                          "fill": "$color-brand",
+                          "content": "91%",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 19,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ymThj",
+                  "name": "meterTrack",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 6,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 3,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 3,
+                      "id": "wdvii",
+                      "name": "meterFill",
+                      "fill": "$color-brand",
+                      "width": 300,
+                      "height": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pMmbm",
+                  "name": "footer",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XDYeE",
+                      "name": "billHrs",
+                      "fill": "$color-text-muted",
+                      "content": "135h 10m billable",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OaxwS",
+                      "name": "activity",
+                      "gap": 5,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "DHiuH",
+                          "name": "actIcon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "clock-3",
+                          "library": "lucide",
+                          "fill": "$color-text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "rLHw3",
+                          "name": "actText",
+                          "fill": "$color-text-muted",
+                          "content": "2h ago",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "S1tKrJ",
+              "name": "card Alex Morgan",
+              "width": "fill_container",
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-md",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "N6673",
+                  "name": "header",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "X7ChZl",
+                      "name": "left",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "yDSUk",
+                          "name": "badge",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$color-accent-tint",
+                          "cornerRadius": "$radius-md",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "zmMLr",
+                              "name": "badgeIcon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "user",
+                              "library": "lucide",
+                              "fill": "$color-brand"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "YZDMG",
+                          "name": "nameCol",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "m0mNiB",
+                              "name": "name",
+                              "fill": "$color-text-dark",
+                              "content": "Alex Morgan",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "TvbgB",
+                              "name": "meta",
+                              "fill": "$color-text-muted",
+                              "content": "Member · 24 entries",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "n2L6J",
+                  "name": "divider",
+                  "fill": "$color-divider",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "G8CmX",
+                  "name": "metrics",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "b0RuE",
+                      "name": "hoursCol",
+                      "layout": "vertical",
+                      "gap": 3,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "p2Enn",
+                          "name": "hoursLabel",
+                          "fill": "$color-text-muted",
+                          "content": "TRACKED",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 10,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "text",
+                          "id": "AZOnL",
+                          "name": "hoursVal",
+                          "fill": "$color-text-dark",
+                          "content": "42h 15m",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 19,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "STUvN",
+                      "name": "billCol",
+                      "layout": "vertical",
+                      "gap": 3,
+                      "alignItems": "end",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "db31m",
+                          "name": "billLabel",
+                          "fill": "$color-text-muted",
+                          "content": "BILLABLE",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 10,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "text",
+                          "id": "I0GMIy",
+                          "name": "billVal",
+                          "fill": "$color-brand",
+                          "content": "78%",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 19,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gyUbm",
+                  "name": "meterTrack",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 6,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 3,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 3,
+                      "id": "lKnkA",
+                      "name": "meterFill",
+                      "fill": "$color-brand",
+                      "width": 257,
+                      "height": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "JVozj",
+                  "name": "footer",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Q9IEUS",
+                      "name": "billHrs",
+                      "fill": "$color-text-muted",
+                      "content": "32h 55m billable",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "X4k75",
+                      "name": "activity",
+                      "gap": 5,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "a4k1w",
+                          "name": "actIcon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "clock-3",
+                          "library": "lucide",
+                          "fill": "$color-text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hTb4D",
+                          "name": "actText",
+                          "fill": "$color-text-muted",
+                          "content": "Yesterday",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sHp3H",
+              "name": "card Fix OAuth refresh loop",
+              "width": "fill_container",
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-md",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Q6Dfwe",
+                  "name": "header",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "srjgI",
+                      "name": "left",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "zp63Y",
+                          "name": "badge",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$color-accent-tint",
+                          "cornerRadius": "$radius-md",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "dAyHs",
+                              "name": "badgeIcon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "square-check-big",
+                              "library": "lucide",
+                              "fill": "$color-brand"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "a1lcgc",
+                          "name": "nameCol",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "owIlD",
+                              "name": "name",
+                              "fill": "$color-text-dark",
+                              "content": "Fix OAuth refresh loop",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "VPxkt",
+                              "name": "meta",
+                              "fill": "$color-text-muted",
+                              "content": "Task · in Project Orion",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "EuSTR",
+                  "name": "divider",
+                  "fill": "$color-divider",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "WJNjP",
+                  "name": "metrics",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "geZ3d",
+                      "name": "hoursCol",
+                      "layout": "vertical",
+                      "gap": 3,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "DySYA",
+                          "name": "hoursLabel",
+                          "fill": "$color-text-muted",
+                          "content": "TRACKED",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 10,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "text",
+                          "id": "TsymF",
+                          "name": "hoursVal",
+                          "fill": "$color-text-dark",
+                          "content": "8h 30m",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 19,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YSYnM",
+                      "name": "billCol",
+                      "layout": "vertical",
+                      "gap": 3,
+                      "alignItems": "end",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "xvehL",
+                          "name": "billLabel",
+                          "fill": "$color-text-muted",
+                          "content": "BILLABLE",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 10,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "text",
+                          "id": "uW82u",
+                          "name": "billVal",
+                          "fill": "$color-brand",
+                          "content": "45%",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 19,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "R5zLt",
+                  "name": "meterTrack",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 6,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 3,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 3,
+                      "id": "KhXZg",
+                      "name": "meterFill",
+                      "fill": "$color-brand",
+                      "width": 149,
+                      "height": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "KZWcp",
+                  "name": "footer",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "OGxWk",
+                      "name": "billHrs",
+                      "fill": "$color-text-muted",
+                      "content": "3h 50m billable",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "F2um2f",
+                      "name": "activity",
+                      "gap": 5,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "kSLj8",
+                          "name": "actIcon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "clock-3",
+                          "library": "lucide",
+                          "fill": "$color-text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "e0Zg2",
+                          "name": "actText",
+                          "fill": "$color-text-muted",
+                          "content": "Apr 18",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "note",
+      "id": "lNyIn",
+      "x": 5990,
+      "y": 3263,
+      "name": "reportResultCardNote",
+      "width": 320,
+      "height": 300,
+      "content": "Report result card — redesign\n\nReplaces the old row (name + child count + a flat Hours/Billable pair) with a scannable, tree-aware card. Same data source, richer read:\n\n• Type badge — project / member / task, so the grouping level is obvious without indentation.\n• Name + context meta (child counts for groups, 'Task · in <project>' for leaves).\n• TRACKED — headline hours (formatPaddedHoursMinutesDuration).\n• BILLABLE — the % (billableShare) as the key ratio, plus a proportional meter (accent-tint track, brand fill) and the billable hours.\n• Last activity (relative) in the footer.\n• Chevron only on parent/group rows → expands into indented children; leaf rows omit it.\n\nStates shown: group (Project Orion, expanded), member leaf, task leaf. Collapsed group = chevron rotated to point right."
     }
   ],
   "variables": {
