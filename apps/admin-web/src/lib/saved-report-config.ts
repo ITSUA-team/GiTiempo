@@ -130,7 +130,7 @@ export function buildConfigFromState(
           }
         : { kind: 'relative', period: 'this_month' };
 
-  return savedReportConfigSchema.parse({
+  const result = savedReportConfigSchema.safeParse({
     dateRange,
     filters: {
       activity: state.filters.activity,
@@ -143,6 +143,8 @@ export function buildConfigFromState(
     memberId: state.filters.memberId,
     projectId: state.filters.projectId,
   });
+
+  return result.success ? result.data : savedReportConfigSchema.parse({});
 }
 
 function keepAvailable(
