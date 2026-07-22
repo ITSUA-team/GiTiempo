@@ -163,7 +163,13 @@ watch(
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark flex min-h-screen flex-col">
+  <!-- overflow-x-clip is a viewport-scroll guard covering the header and the
+       content: any accidental horizontal spill (an over-long grid value, a
+       full-bleed row) is clipped instead of scrolling the whole page sideways
+       on mobile. It clips only the horizontal axis, so vertical scroll and the
+       sticky header are untouched; wide tables keep their own overflow-x-auto,
+       and overlays/menus teleport to <body>, outside this subtree. -->
+  <div class="bg-app-bg text-text-dark flex min-h-screen flex-col overflow-x-clip">
     <WorkspaceHeader
       :counterpart-href="userWorkspaceHref"
       :counterpart-label="ADMIN_COUNTERPART_LABEL"
