@@ -118,16 +118,39 @@ function toggleOverflow(event: Event): void {
   overflowMenu.value?.toggle(event);
 }
 
+/**
+ * Renaming from the manage sheet reuses the shared name dialog, so the sheet
+ * must close first — otherwise the centered dialog stacks over the still-open
+ * bottom sheet and Escape/backdrop dismiss both at once.
+ */
+function renameFromManageSheet(id: string): void {
+  manageSheetOpen.value = false;
+  openRenameDialog(id);
+}
+
 function pillClass(isActive: boolean): string {
   return isActive
     ? 'bg-accent-tint text-brand font-semibold'
     : 'bg-surface-primary text-text-muted border border-divider font-medium';
 }
+
+// The mobile strip sits on a white surface, so idle chips are grey-filled with
+// no border rather than the desktop bar's white-bordered-on-grey pill.
+function mobilePillClass(isActive: boolean): string {
+  return isActive
+    ? 'bg-accent-tint text-brand font-semibold'
+    : 'bg-app-bg text-text-muted font-medium';
+}
 </script>
 
 <template>
   <div
-    class="flex flex-col gap-2"
+    class="flex flex-col"
+    :class="
+      isMobileViewport
+        ? 'border-divider bg-surface-primary -mx-6 -mt-6 gap-2.5 border-b px-4 pt-2.5 pb-3'
+        : 'gap-2'
+    "
     data-testid="saved-reports-bar"
   >
     <template v-if="isMobileViewport">
@@ -139,8 +162,8 @@ function pillClass(isActive: boolean): string {
           <button
             v-for="preset in presets"
             :key="preset.id"
-            class="flex h-[32px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px]"
-            :class="pillClass(preset.id === activeId)"
+            class="flex h-[32px] shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] whitespace-nowrap"
+            :class="mobilePillClass(preset.id === activeId)"
             :data-testid="`saved-report-tab-${preset.id}`"
             type="button"
             @click="emit('select', preset.id)"
@@ -209,11 +232,11 @@ function pillClass(isActive: boolean): string {
           </Button>
 
           <Button
-            class="h-[32px] text-[13px]"
+            class="text-text-muted h-[30px] px-2 text-[13px] font-medium"
             data-testid="saved-report-save-as"
             label="Save as…"
-            outlined
             severity="secondary"
+            text
             @click="saveSheetOpen = true"
           />
         </div>
@@ -327,7 +350,7 @@ function pillClass(isActive: boolean): string {
     <Dialog
       :header="dialogHeader"
       modal
-      :style="{ width: '380px' }"
+      :style="{ width: 'min(380px, calc(100vw - 2rem))' }"
       :visible="nameDialogMode !== null"
       @update:visible="closeDialog"
     >
@@ -376,10 +399,11 @@ function pillClass(isActive: boolean): string {
     <SavedReportsListSheet
       v-model:visible="manageSheetOpen"
       :active-id="activeId"
+      :error="error"
       :presets="presets"
       @delete="(id) => emit('delete', id)"
       @new="emit('new')"
-      @rename="openRenameDialog"
+      @rename="renameFromManageSheet"
       @select="(id) => emit('select', id)"
     />
   </div>

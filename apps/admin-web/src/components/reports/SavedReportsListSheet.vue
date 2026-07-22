@@ -16,6 +16,8 @@ import { describeSavedReportConfig } from '@/lib/saved-report-config';
 defineProps<{
   visible: boolean;
   activeId: string | null;
+  /** Surfaced inside the sheet so a failed delete is visible above the mask. */
+  error?: string | null;
   presets: SavedReport[];
 }>();
 
@@ -80,20 +82,40 @@ function toggleOverflow(event: Event, id: string): void {
 
 <template>
   <Dialog
-    class="!m-0 w-full !max-w-none !rounded-b-none !rounded-t-2xl"
-    header="Saved reports"
+    aria-label="Saved reports"
+    class="!relative !m-0 w-full !max-w-none !rounded-t-[16px] !rounded-b-none !border-0"
     modal
     :draggable="false"
     position="bottom"
+    :pt="{ header: { class: '!pt-5 !pb-2' } }"
     :visible="visible"
     @update:visible="close"
   >
-    <div class="flex flex-col gap-3">
+    <template #header>
+      <span
+        aria-hidden="true"
+        class="absolute top-2 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full bg-[#e0e0e0]"
+      />
+      <span class="text-text-dark text-[18px] font-semibold">
+        Saved reports
+      </span>
+    </template>
+
+    <div class="flex flex-col gap-3.5">
+      <p
+        v-if="error"
+        class="text-destructive text-[12px]"
+        data-testid="saved-sheet-error"
+        role="alert"
+      >
+        {{ error }}
+      </p>
+
       <div class="flex flex-col gap-1">
         <div
           v-for="preset in presets"
           :key="preset.id"
-          class="flex h-[56px] items-center justify-between gap-2 rounded-lg px-3"
+          class="flex h-[56px] items-center justify-between gap-2 rounded-md px-3"
           :class="preset.id === activeId ? 'bg-accent-tint' : ''"
           :data-testid="`saved-sheet-row-${preset.id}`"
         >
@@ -104,7 +126,7 @@ function toggleOverflow(event: Event, id: string): void {
           >
             <i
               aria-hidden="true"
-              class="pi pi-bookmark shrink-0 text-[14px]"
+              class="pi pi-bookmark shrink-0 text-[16px]"
               :class="preset.id === activeId ? 'text-brand' : 'text-text-muted'"
             />
             <span class="flex min-w-0 flex-col gap-0.5">
@@ -120,10 +142,11 @@ function toggleOverflow(event: Event, id: string): void {
           <i
             v-if="preset.id === activeId"
             aria-hidden="true"
-            class="pi pi-check text-brand text-[16px]"
+            class="pi pi-check text-brand text-[18px]"
             data-testid="saved-sheet-active-check"
           />
           <button
+            v-else
             :aria-label="`Options for ${preset.name}`"
             class="text-text-muted flex size-[36px] shrink-0 items-center justify-center"
             :data-testid="`saved-sheet-overflow-${preset.id}`"
@@ -132,7 +155,7 @@ function toggleOverflow(event: Event, id: string): void {
           >
             <i
               aria-hidden="true"
-              class="pi pi-ellipsis-v text-[14px]"
+              class="pi pi-ellipsis-v text-[18px]"
             />
           </button>
         </div>
@@ -148,7 +171,7 @@ function toggleOverflow(event: Event, id: string): void {
       >
         <i
           aria-hidden="true"
-          class="pi pi-plus text-[14px]"
+          class="pi pi-plus text-[16px]"
         />
         New report
       </button>
