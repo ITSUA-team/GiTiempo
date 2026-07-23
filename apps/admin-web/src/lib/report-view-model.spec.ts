@@ -11,7 +11,6 @@ import {
   filterReportRows,
   filterReportTreeGroups,
   flattenReportTree,
-  getReportExportBlockedReason,
   sumReportRows,
   sumReportTreeTotals,
   toReportTableRows,
@@ -624,61 +623,5 @@ describe('sumReportRows', () => {
       nonBillableSeconds: 1800,
       totalSeconds: 5400,
     });
-  });
-});
-
-describe('getReportExportBlockedReason', () => {
-  it('lets identity-only filters export under any grouping', () => {
-    const filters = createDefaultReportTableFilters();
-    filters.projectId = projectId;
-
-    expect(getReportExportBlockedReason(filters, ['project'])).toBeNull();
-    expect(getReportExportBlockedReason(filters, ['member'])).toBeNull();
-    expect(
-      getReportExportBlockedReason(filters, ['project', 'member', 'task']),
-    ).toBeNull();
-  });
-
-  it('blocks label and aggregate filters regardless of grouping', () => {
-    const searching = createDefaultReportTableFilters();
-    searching.global = '1h 00m';
-    const byHours = createDefaultReportTableFilters();
-    byHours.hours = 'gte8';
-    const byShare = createDefaultReportTableFilters();
-    byShare.billableShare = 'gte90';
-    const byActivity = createDefaultReportTableFilters();
-    byActivity.activity = 'last7';
-
-    expect(getReportExportBlockedReason(searching, ['member'])).toContain(
-      'cannot be exported',
-    );
-    expect(getReportExportBlockedReason(byHours, ['project'])).toContain(
-      'cannot be exported',
-    );
-    expect(getReportExportBlockedReason(byShare, ['project'])).toContain(
-      'cannot be exported',
-    );
-    expect(getReportExportBlockedReason(byActivity, ['project'])).toContain(
-      'cannot be exported',
-    );
-  });
-
-  it('blocks a member filter only when no member level is grouped', () => {
-    const filters = createDefaultReportTableFilters();
-    filters.memberId = userId;
-
-    // Rows without member identity total everyone on screen while a
-    // userId-scoped export would return only this member's entries.
-    expect(getReportExportBlockedReason(filters, ['project'])).toContain(
-      'member grouping level',
-    );
-    expect(
-      getReportExportBlockedReason(filters, ['project', 'task']),
-    ).toContain('member grouping level');
-    // Any grouping that includes a member level carries per-member sums.
-    expect(getReportExportBlockedReason(filters, ['member'])).toBeNull();
-    expect(
-      getReportExportBlockedReason(filters, ['project', 'member']),
-    ).toBeNull();
   });
 });

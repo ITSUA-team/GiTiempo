@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReportDocument } from '@gitiempo/shared';
 import { createAuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
 import { createAdminReportsClient } from './admin-reports-client';
@@ -183,6 +184,50 @@ describe('createAdminReportsClient', () => {
     expect(result.filename).toBe('time-report-2026-05.csv');
     expect(result.blob.type).toBe('text/csv;charset=utf-8');
     expect(result.blob.size).toBeGreaterThan(0);
+  });
+
+  it('renders the on-screen document to a PDF through the export endpoint', async () => {
+    fetchFn.mockResolvedValue(
+      new Response(new Blob(['%PDF-1.3'], { type: 'application/pdf' }), {
+        headers: { 'Content-Type': 'application/pdf' },
+        status: 200,
+      }),
+    );
+
+    const document: ReportDocument = {
+      columns: ['NAME', 'HOURS', 'BILLABLE', 'BILL %'],
+      filters: 'Projects: All · Members: All · Grouping: Project',
+      footerNote: 'Generated with GiTiempo',
+      masthead: { tag: 'TIME REPORT', wordmark: 'GiTiempo' },
+      period: 'May 2026',
+      rows: [
+        {
+          billable: '1h 00m',
+          detail: null,
+          hours: '2h 00m',
+          isLeaf: true,
+          label: 'Project Orion',
+          level: 0,
+          share: '50%',
+        },
+      ],
+      stats: [{ label: 'TRACKED HOURS', value: '2h 00m' }],
+      title: 'Time report',
+      total: { billable: '1h 00m', hours: '2h 00m', label: 'Total', share: '50%' },
+    };
+
+    const blob = await client.exportReportPdf(document);
+
+    const [url, init] = fetchFn.mock.calls[0] ?? [];
+    const requestUrl = new URL(String(url));
+
+    // The document travels as a validated JSON body, never in the URL.
+    expect(requestUrl.pathname).toBe('/reports/time/export/pdf');
+    expect(requestUrl.search).toBe('');
+    expect(init).toEqual(expect.objectContaining({ method: 'POST' }));
+    expect(JSON.parse(String(init?.body))).toEqual({ document });
+    expect(blob.type).toBe('application/pdf');
+    expect(blob.size).toBeGreaterThan(0);
   });
 
   it('surfaces API error messages from the report endpoints', async () => {

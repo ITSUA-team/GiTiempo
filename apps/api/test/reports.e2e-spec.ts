@@ -524,6 +524,88 @@ describe('Reports (e2e)', () => {
     expect(report.status).toBe(403);
   });
 
+  function sampleReportDocument() {
+    return {
+      columns: ['NAME', 'HOURS', 'BILLABLE', 'BILL %'],
+      filters: 'Projects: All · Members: All · Grouping: Project',
+      footerNote: 'Generated with GiTiempo · Mar 1, 2027',
+      masthead: { tag: 'TIME REPORT', wordmark: 'GiTiempo' },
+      period: 'Mar 1, 2027 – Apr 1, 2027 · Workspace',
+      rows: [
+        {
+          billable: '10h 00m',
+          detail: null,
+          hours: '12h 30m',
+          isLeaf: true,
+          label: 'Internal Platform',
+          level: 0,
+          share: '80%',
+        },
+      ],
+      stats: [
+        { label: 'TRACKED HOURS', value: '12h 30m' },
+        { label: 'BILLABLE', value: '10h 00m · 80%' },
+      ],
+      title: 'Time report',
+      total: {
+        billable: '10h 00m',
+        hours: '12h 30m',
+        label: 'Total',
+        share: '80%',
+      },
+    };
+  }
+
+  it('styles a client-built report document into a PDF', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export/pdf')
+      .set('Authorization', bearer(adminToken))
+      .send({ document: sampleReportDocument() })
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.status).toBe(200);
+    expect((res.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('rejects report-document rendering for members', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export/pdf')
+      .set('Authorization', bearer(memberToken))
+      .send({ document: sampleReportDocument() });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects a report document that violates the bounded schema', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export/pdf')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        document: {
+          ...sampleReportDocument(),
+          rows: [
+            {
+              billable: '0h 00m',
+              detail: null,
+              hours: '0h 00m',
+              isLeaf: true,
+              // Over the 300-char label cap → schema rejects before rendering.
+              label: 'x'.repeat(301),
+              level: 0,
+              share: '0%',
+            },
+          ],
+        },
+      });
+
+    expect(res.status).toBe(400);
+  });
+
   // The PDF prints the names of the project and member filters. Those lookups
   // are separate from the row query, so they need the same scope: matching on
   // id alone let any id in the database be resolved to a name.

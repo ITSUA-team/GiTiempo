@@ -35,7 +35,6 @@ import {
 
 export {
   defaultReportGrouping,
-  getReportExportBlockedReason,
   maxReportGroupingLevels,
   reportGroupingApiValue,
   toReportGroupingApiPath,

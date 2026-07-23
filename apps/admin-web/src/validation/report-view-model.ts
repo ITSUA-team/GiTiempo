@@ -111,53 +111,6 @@ export const reportSetupFiltersSchema = z.object({
 });
 export type ReportSetupFilters = z.infer<typeof reportSetupFiltersSchema>;
 
-/**
- * Single source of truth for whether the CSV export may run, and why not.
- *
- * Only filters the table and the CSV agree on reach the export. `hours` and
- * `billable` filter aggregate row totals, and `global` matches formatted
- * labels including durations and percentages; the export is detailed
- * project-task-user rows holding none of those. The backend's own `search` is
- * not an equivalent either: it matches task titles the table never shows and
- * ignores the duration labels the table does.
- *
- * The member filter is grouping-dependent. When `member` is one of the
- * grouping levels, every visible leaf carries one member's own sums, so a
- * `userId`-scoped export matches the screen. Without a member level the table
- * keeps whole folded rows with every contributor's time (`filterReportRows`
- * selects leaves, it never re-sums), while a `userId`-scoped export would
- * return only that member's entries — the file would silently show a fraction
- * of the on-screen hours.
- */
-export function getReportExportBlockedReason(
-  filters: Pick<
-    ReportTableFilters,
-    | 'activity'
-    | 'billable'
-    | 'billableShare'
-    | 'global'
-    | 'hours'
-    | 'memberId'
-  >,
-  grouping: ReportGrouping,
-): string | null {
-  if (
-    filters.hours !== 'any' ||
-    filters.billable !== 'any' ||
-    filters.billableShare !== 'any' ||
-    filters.activity !== 'any' ||
-    filters.global.trim() !== ''
-  ) {
-    return 'Search and column filters over aggregates cannot be exported. Clear them to export this report.';
-  }
-
-  if (!grouping.includes('member') && filters.memberId !== null) {
-    return 'A member filter cannot be exported without a member grouping level: rows on screen total everyone, but the file would hold only that member. Add a member level or clear the filter.';
-  }
-
-  return null;
-}
-
 // Leaf row: one aggregate at the requested grouping-path granularity. The
 // tree and its subtotals are derived from these (see buildReportTree).
 export const reportTableRowSchema = z.object({

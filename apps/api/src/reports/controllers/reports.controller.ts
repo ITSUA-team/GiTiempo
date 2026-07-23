@@ -19,6 +19,7 @@ import {
 import { ZodSerializerDto } from 'nestjs-zod';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { ReportPdfExportRequestDto } from '../dto/report-pdf-export-request.dto';
 import { TimeReportExportRequestDto } from '../dto/time-report-export-request.dto';
 import { TimeReportRequestDto } from '../dto/time-report-request.dto';
 import { TimeReportResponseDto } from '../dto/time-report-response.dto';
@@ -66,6 +67,38 @@ export class ReportsController {
     @Body() body: TimeReportExportRequestDto,
   ): Promise<StreamableFile> {
     const exportResult = await this.reports.exportTimeReport(user, body);
+    const content = Buffer.isBuffer(exportResult.content)
+      ? exportResult.content
+      : Buffer.from(exportResult.content, 'utf8');
+
+    return new StreamableFile(content, {
+      disposition: `attachment; filename="${exportResult.filename}"`,
+      type: exportResult.contentType,
+    });
+  }
+
+  // WYSIWYG export: the client sends the exact on-screen (filtered, grouped)
+  // report as a validated document and the server only applies the PDF styling,
+  // so the file matches the screen. No DB query runs; the role gate stays.
+  @Post('time/export/pdf')
+  @HttpCode(HttpStatus.OK)
+  @Header('Access-Control-Expose-Headers', 'Content-Disposition')
+  @ApiBody({ type: ReportPdfExportRequestDto })
+  @ApiOperation({ summary: 'Render an on-screen report document as a PDF' })
+  @ApiProduces('application/pdf')
+  @ApiOkResponse({
+    description: 'PDF of the report exactly as shown on screen',
+    schema: { type: 'string' },
+  })
+  @ApiForbiddenResponse({ description: 'Admin or PM role required' })
+  async exportReportPdf(
+    @CurrentUser() user: AuthUser,
+    @Body() body: ReportPdfExportRequestDto,
+  ): Promise<StreamableFile> {
+    const exportResult = await this.reports.renderPdfDocument(
+      user,
+      body.document,
+    );
     const content = Buffer.isBuffer(exportResult.content)
       ? exportResult.content
       : Buffer.from(exportResult.content, 'utf8');

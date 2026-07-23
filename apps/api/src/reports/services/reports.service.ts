@@ -15,6 +15,7 @@ import {
   type SQLWrapper,
 } from 'drizzle-orm';
 import type {
+  ReportDocument,
   TimeReportBillableGroup,
   TimeReportEffectiveDateRange,
   TimeReportExportRequest,
@@ -39,7 +40,11 @@ import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
-import { renderTimeReportPdf, type ReportPdfLeaf } from './report-pdf';
+import {
+  renderReportDocumentPdf,
+  renderTimeReportPdf,
+  type ReportPdfLeaf,
+} from './report-pdf';
 
 interface ExportResult {
   content: string | Buffer;
@@ -141,6 +146,35 @@ export class ReportsService {
       content: toCsv(context.groupBy, rows),
       contentType: 'text/csv; charset=utf-8',
       filename: `${filenameBase}.csv`,
+    };
+  }
+
+  /**
+   * Styles a client-built report document into a PDF (the WYSIWYG export path).
+   *
+   * No DB query runs: the client already computed the on-screen, filtered,
+   * grouped report under its own scoped token, so this only applies the pdfmake
+   * design. The role gate stays — only admins/PMs may produce a report — and
+   * the request schema bounds the document so a caller cannot make the renderer
+   * allocate unboundedly. The client names the download itself.
+   */
+  async renderPdfDocument(
+    user: AuthUser,
+    document: ReportDocument,
+  ): Promise<ExportResult> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+    if (membership.role !== 'admin' && membership.role !== 'pm') {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    return {
+      content: await renderReportDocumentPdf(document),
+      contentType: 'application/pdf',
+      filename: 'time-report.pdf',
     };
   }
 
