@@ -69,7 +69,9 @@ When the same PrimeVue-based UI block is used by both `apps/user-web` and `apps/
 
 ### Buttons
 
-Use PrimeVue `<Button>`. Do not recreate app buttons with raw HTML unless the surface is explicitly non-PrimeVue, such as the extension popup.
+Use PrimeVue `<Button>` for standard actions. Do not recreate app buttons with raw HTML unless the surface is explicitly non-PrimeVue (such as the extension popup) or the approved design requires a bespoke non-standard control that PrimeVue `<Button>` cannot model.
+
+Documented bespoke exception — the reports saved-views surfaces: the preset **pill switcher** and unified **⋯/＋ capsule** in the saved-reports bar, the save/manage bottom-sheet **radio-card selector** and tap-to-apply **preset rows**, and the grouping builder's **segmented reorder steppers**. These are composite controls with no `<Button>` equivalent, so they use native `<button>` / `role="button"` with full `type`, `aria-label`, focus, disabled, and keyboard handling. Standard actions on the same surfaces (the `Save` / `Save as…` buttons) still use `<Button>`, and any new standard action must too.
 
 | Variant     | PrimeVue props                            | Usage                 |
 | ----------- | ----------------------------------------- | --------------------- |

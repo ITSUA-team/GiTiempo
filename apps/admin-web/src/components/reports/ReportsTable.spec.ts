@@ -7,7 +7,6 @@ import {
   giTiempoPrimeVueOptions,
   giTiempoSelfAppendedAutoCompleteOverlayStyle,
 } from '@gitiempo/web-config/theme';
-
 import {
   createDefaultReportTableFilters,
   type ReportGrouping,
@@ -175,8 +174,8 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
-    // hours/billable/billable-share/activity filters; the add-level control
-    // carries its own testid
+    // hours/billable/billable-share/activity filters; the grouping builder
+    // control carries its own test id.
     expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
     expect(
       wrapper.find('[data-testid="report-grouping-add-level"]').exists(),
@@ -332,6 +331,44 @@ describe('ReportsTable', () => {
     expect(wrapper.emitted('update:grouping')).toEqual([
       [['member', 'project']],
     ]);
+  });
+
+  it('renders a touch reorder pipeline and reorders via the stepper on mobile', async () => {
+    setMobileViewport(true);
+
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    // numbered drill-down cards with order captions
+    expect(
+      wrapper.find('[data-testid="report-grouping-chip-project"]').text(),
+    ).toContain('Top level');
+    expect(
+      wrapper.find('[data-testid="report-grouping-chip-member"]').text(),
+    ).toContain('within Project');
+
+    // reorder controls are always present on touch — no desktop hover gating
+    const moveLater = wrapper.find(
+      '[data-testid="report-grouping-move-later-project"]',
+    );
+    expect(moveLater.exists()).toBe(true);
+    expect(moveLater.classes()).not.toContain('opacity-0');
+
+    await moveLater.trigger('click');
+    expect(wrapper.emitted('update:grouping')).toEqual([
+      [['member', 'project']],
+    ]);
+  });
+
+  it('does not let the chip grab handler hijack a nested reorder button key press', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    // Enter on the button must activate the button, not toggle the chip's grab
+    await wrapper
+      .find('[data-testid="report-grouping-move-later-project"]')
+      .trigger('keydown.enter');
+
+    expect(chip.attributes('aria-grabbed')).toBe('false');
   });
 
   it('exposes each grouping chip as a labelled sortable control', () => {
@@ -558,8 +595,8 @@ describe('ReportsTable', () => {
 
     const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
 
-    // mobile hours/billable/billable-share/activity filters; add-level
-    // carries its own testid
+    // mobile hours/billable/billable-share/activity filters; the grouping
+    // builder control carries its own test id.
     expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
     expect(autoCompleteControls).toHaveLength(2);
     for (const autoCompleteControl of autoCompleteControls) {
@@ -628,6 +665,55 @@ describe('ReportsTable', () => {
     expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
   });
 
+  it('shows billable %, a proportional meter, dimension badges, and leaf context on mobile cards', () => {
+    setMobileViewport(true);
+
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const mobileCards = wrapper.findAll('[data-testid="report-mobile-card"]');
+
+    // billableShare 0.5 -> "50%" and a half-filled meter
+    expect(mobileCards[0]?.text()).toContain('50%');
+    const meterFill = mobileCards[0]?.find('.bg-brand');
+    expect(meterFill?.attributes('style')).toContain('width: 50%');
+
+    // grouping dimension is badged: project -> folder, member -> user
+    expect(mobileCards[0]?.find('.pi-folder').exists()).toBe(true);
+    expect(mobileCards[1]?.find('.pi-user').exists()).toBe(true);
+
+    // the leaf row falls back to its entry count for context
+    expect(mobileCards[1]?.text()).toContain('2 entries');
+  });
+
+  it('toggles a mobile group row through its expand control', async () => {
+    setMobileViewport(true);
+
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(
+      2,
+    );
+
+    const toggle = wrapper.find('[data-testid="report-mobile-toggle"]');
+    expect(toggle.exists()).toBe(true);
+    expect(toggle.attributes('aria-expanded')).toBe('true');
+    // only the parent group carries a toggle; the member leaf has none
+    expect(
+      wrapper.findAll('[data-testid="report-mobile-toggle"]'),
+    ).toHaveLength(1);
+
+    await toggle.trigger('click');
+
+    // collapsing the group drops its child card
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(
+      1,
+    );
+    expect(
+      wrapper
+        .find('[data-testid="report-mobile-toggle"]')
+        .attributes('aria-expanded'),
+    ).toBe('false');
+  });
+
   it('exposes billable share and activity column filters that update the filter model', async () => {
     const filters = createDefaultReportTableFilters();
     const wrapper = mountTable({ filters });
@@ -641,7 +727,7 @@ describe('ReportsTable', () => {
       );
 
     const shareFilter = findByOption('90%+');
-    const activityFilter = findByOption('Last 7 days');
+    const activityFilter = findByOption('Any time');
 
     expect(shareFilter).toBeDefined();
     expect(activityFilter).toBeDefined();

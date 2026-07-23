@@ -36,7 +36,6 @@ import {
   adminTableHeaderClass,
   adminTableMinWidthClass,
 } from '@/lib/admin-table-classes';
-import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import ReportGroupingBuilder from '@/components/reports/ReportGroupingBuilder.vue';
 import { useReportTableTree } from '@/composables/reports/useReportTableTree';
 import {
@@ -49,6 +48,7 @@ import {
   type ReportDisplayRow,
   type ReportFilterOption,
   type ReportGrouping,
+  type ReportGroupingDimension,
   type ReportHoursFilter,
   type ReportTableRow,
   type ReportTableFilters,
@@ -127,6 +127,34 @@ function getReportRowClass(data: ReportDisplayRow): string {
 
 function formatRowActivity(lastStartedAt: string | null): string {
   return lastStartedAt ? formatLocalCalendarDate(lastStartedAt) : '—';
+}
+
+// Mobile cards badge each row by its grouping dimension so the level reads at a
+// glance without relying on indentation alone.
+const reportDimensionIcon: Record<ReportGroupingDimension, string> = {
+  member: 'pi-user',
+  project: 'pi-folder',
+  task: 'pi-check-square',
+};
+
+// Second line of a mobile card: a group's own child count ("6 members"), or the
+// leaf's time-entry count so every row carries context.
+function reportRowMeta(row: ReportDisplayRow): string {
+  if (row.childCountLabel) {
+    return row.childCountLabel;
+  }
+
+  return `${row.entryCount} ${row.entryCount === 1 ? 'entry' : 'entries'}`;
+}
+
+// Billable meter fill as a raw percentage; a null share (no tracked time) reads
+// as an empty bar rather than a divide-by-zero.
+function billableMeterWidth(share: number | null): number {
+  if (share === null) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, share * 100));
 }
 
 const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
@@ -222,12 +250,12 @@ function handleMemberFilterUpdate(
       <SectionHeader title="Results">
         <template #actions>
           <div
-            class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center"
+            class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center"
           >
             <DatePicker
               :model-value="dateRange"
               aria-label="Report date range"
-              class="w-full sm:w-[240px]"
+              class="w-full sm:w-[220px]"
               date-format="M d, yy"
               icon-display="input"
               :manual-input="false"
@@ -240,7 +268,7 @@ function handleMemberFilterUpdate(
               @update:model-value="handleDateRangeUpdate"
             />
 
-            <IconField class="w-full sm:w-[280px]">
+            <IconField class="w-full sm:w-[240px] md:w-[280px]">
               <InputIcon class="pi pi-search text-text-muted" />
               <InputText
                 :model-value="filters.global"
@@ -411,32 +439,97 @@ function handleMemberFilterUpdate(
             :style="{ marginLeft: `${row.level * 12}px` }"
           >
             <MobileRecordCard data-testid="report-mobile-card">
-              <div class="min-w-0">
-                <h3 :class="['truncate', getRowLabelClass(row)]">
-                  {{ row.label }}
-                </h3>
-                <p
-                  v-if="row.childCountLabel"
-                  class="text-text-muted truncate text-[13px]"
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex min-w-0 items-center gap-2.5">
+                  <span
+                    class="bg-accent-tint flex size-8 shrink-0 items-center justify-center rounded-md"
+                    aria-hidden="true"
+                  >
+                    <i
+                      :class="[
+                        'pi text-brand text-[15px]',
+                        reportDimensionIcon[row.dimension],
+                      ]"
+                    />
+                  </span>
+                  <div class="flex min-w-0 flex-col gap-0.5">
+                    <h3 class="text-text-dark truncate text-[15px] font-semibold">
+                      {{ row.label }}
+                    </h3>
+                    <p class="text-text-muted truncate text-[12px]">
+                      {{ reportRowMeta(row) }}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  v-if="row.hasChildren"
+                  type="button"
+                  class="text-text-muted hover:bg-app-bg flex size-8 shrink-0 items-center justify-center rounded-md border-none bg-transparent p-0"
+                  :aria-expanded="!collapsedIds.has(row.id)"
+                  :aria-label="`Toggle ${row.label} group`"
+                  data-testid="report-mobile-toggle"
+                  @click="toggleRowExpansion(row)"
                 >
-                  {{ row.childCountLabel }}
-                </p>
+                  <i
+                    :class="[
+                      'pi text-[14px]',
+                      collapsedIds.has(row.id)
+                        ? 'pi-chevron-right'
+                        : 'pi-chevron-down',
+                    ]"
+                  />
+                </button>
               </div>
 
-              <MobileRecordMetadataList
-                :items="[
-                  {
-                    label: 'Hours',
-                    value: formatPaddedHoursMinutesDuration(row.totalSeconds),
-                  },
-                  {
-                    label: 'Billable',
-                    value: formatPaddedHoursMinutesDuration(
-                      row.billableSeconds,
-                    ),
-                  },
-                ]"
-              />
+              <div class="bg-divider h-px w-full" />
+
+              <div class="flex flex-col gap-2">
+                <div class="flex items-end justify-between gap-3">
+                  <div class="flex min-w-0 flex-col gap-1">
+                    <span
+                      class="text-text-muted text-[10px] font-semibold tracking-wide"
+                    >TRACKED</span>
+                    <span
+                      class="text-text-dark text-[19px] leading-none font-bold"
+                    >{{ formatPaddedHoursMinutesDuration(row.totalSeconds) }}</span>
+                  </div>
+                  <div class="flex shrink-0 flex-col items-end gap-1">
+                    <span
+                      class="text-text-muted text-[10px] font-semibold tracking-wide"
+                    >BILLABLE</span>
+                    <span
+                      class="text-brand text-[19px] leading-none font-bold"
+                    >{{ formatReportPercent(row.billableShare) }}</span>
+                  </div>
+                </div>
+
+                <div
+                  class="bg-accent-tint h-1.5 w-full overflow-hidden rounded-full"
+                  role="presentation"
+                >
+                  <div
+                    class="bg-brand h-full rounded-full"
+                    :style="{ width: `${billableMeterWidth(row.billableShare)}%` }"
+                  />
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-text-muted truncate text-[11px]">
+                  {{ formatPaddedHoursMinutesDuration(row.billableSeconds) }}
+                  billable
+                </span>
+                <span
+                  class="text-text-muted flex shrink-0 items-center gap-1.5 text-[11px]"
+                >
+                  <i
+                    class="pi pi-clock text-[11px]"
+                    aria-hidden="true"
+                  />
+                  {{ formatRowActivity(row.lastStartedAt) }}
+                </span>
+              </div>
             </MobileRecordCard>
           </div>
         </template>
