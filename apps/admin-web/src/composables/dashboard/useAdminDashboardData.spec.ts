@@ -82,6 +82,7 @@ function createReportRow(
   lastStartedAt: string | null,
 ): TimeReportRow {
   return {
+    billable: null,
     billableSeconds: 7200,
     billableShare: 1,
     entryCount: 1,

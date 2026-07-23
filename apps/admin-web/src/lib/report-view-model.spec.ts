@@ -28,6 +28,7 @@ const otherUserId = '33333333-3333-4333-8333-333333333334';
 
 function makeLeafRow(overrides: Partial<ReportTableRow>): ReportTableRow {
   return {
+    billable: null,
     billableSeconds: 3600,
     billableShare: 1,
     entryCount: 1,
@@ -53,6 +54,7 @@ const response: TimeReportResponse = {
   groupBy: ['user'],
   items: [
     {
+      billable: null,
       billableSeconds: 3600,
       billableShare: 0.5,
       entryCount: 2,
@@ -217,6 +219,58 @@ describe('report-view-model', () => {
 
     expect(visible.map((node) => node.label)).toEqual(['Project Orion']);
     expect(visible[0]!.billableSeconds).toBe(1800);
+  });
+
+  it('splits leaves into billable and non-billable groups when grouped by billable', () => {
+    const rows: ReportTableRow[] = [
+      makeLeafRow({
+        billableSeconds: 3600,
+        billableShare: 2 / 3,
+        nonBillableSeconds: 1800,
+        totalSeconds: 5400,
+      }),
+    ];
+
+    const tree = buildReportTree(rows, ['project', 'billable']);
+
+    expect(tree).toHaveLength(1);
+    const project = tree[0]!;
+    // Heavier billable bucket sorts first.
+    expect(project.children.map((child) => child.label)).toEqual([
+      'Billable',
+      'Non-billable',
+    ]);
+    const [billable, nonBillable] = project.children;
+    expect(billable).toMatchObject({
+      dimension: 'billable',
+      totalSeconds: 3600,
+      billableSeconds: 3600,
+      nonBillableSeconds: 0,
+    });
+    expect(nonBillable).toMatchObject({
+      dimension: 'billable',
+      totalSeconds: 1800,
+      billableSeconds: 0,
+      nonBillableSeconds: 1800,
+    });
+    // The parent still totals both buckets.
+    expect(project.totalSeconds).toBe(5400);
+  });
+
+  it('drops the empty bucket for a fully billable leaf', () => {
+    const rows: ReportTableRow[] = [
+      makeLeafRow({
+        billableSeconds: 3600,
+        billableShare: 1,
+        nonBillableSeconds: 0,
+        totalSeconds: 3600,
+      }),
+    ];
+
+    const tree = buildReportTree(rows, ['billable']);
+
+    expect(tree.map((node) => node.label)).toEqual(['Billable']);
+    expect(tree[0]!.dimension).toBe('billable');
   });
 
   it('searches report rows using formatted duration labels', () => {

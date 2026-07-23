@@ -88,6 +88,7 @@ const ManagementPageSkeletonStub = {
 };
 
 const reportRow: ReportTableRow = {
+  billable: null,
   billableSeconds: 3600,
   billableShare: 0.5,
   entryCount: 2,

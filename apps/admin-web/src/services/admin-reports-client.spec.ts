@@ -14,6 +14,7 @@ const reportResponse = {
   groupBy: ['project'],
   items: [
     {
+      billable: null,
       billableSeconds: 3600,
       billableShare: 0.5,
       entryCount: 2,

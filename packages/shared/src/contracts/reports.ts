@@ -9,7 +9,18 @@ const optionalSearchSchema = z
   .transform((value) => (value === "" ? undefined : value))
   .optional();
 
-export const timeReportGroupBySchema = z.enum(["project", "task", "user"]);
+// "billable" groups entries by whether they are billable, splitting any level
+// into a Billable / Non-billable pair. Unlike project/task/user it is not an
+// entity — its identity is the boolean bucket (see timeReportBillableGroupSchema).
+export const timeReportGroupBySchema = z.enum([
+  "project",
+  "task",
+  "user",
+  "billable",
+]);
+
+// Identity of a row grouped on the billable dimension.
+export const timeReportBillableGroupSchema = z.enum(["billable", "nonBillable"]);
 
 // Ordered path of 1-4 unique dimensions. Requests carry JSON, so this is an
 // array — there is no comma-separated string form to normalize.
@@ -128,6 +139,8 @@ export const timeReportRowSchema = aggregateTimingSchema.extend({
   project: timeReportProjectSummarySchema.nullable(),
   task: timeReportTaskSummarySchema.nullable(),
   user: timeReportUserSummarySchema.nullable(),
+  // Populated only when the grouping path includes the billable dimension.
+  billable: timeReportBillableGroupSchema.nullable(),
 });
 
 export const timeReportListMetaSchema = z.object({
@@ -151,6 +164,9 @@ export const timeReportResponseSchema = z.object({
 });
 
 export type TimeReportGroupBy = z.infer<typeof timeReportGroupBySchema>;
+export type TimeReportBillableGroup = z.infer<
+  typeof timeReportBillableGroupSchema
+>;
 export type TimeReportGroupByPath = z.infer<typeof timeReportGroupByPathSchema>;
 export type TimeReportExportFormat = z.infer<
   typeof timeReportExportFormatSchema

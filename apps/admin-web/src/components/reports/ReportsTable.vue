@@ -120,6 +120,25 @@ function getRowLabelClass(row: ReportDisplayRow): string {
   return 'text-text-dark text-[13px] leading-none font-normal';
 }
 
+// When the grouping path includes billable, split rows render as a status pill
+// (green Billable / neutral Non-billable) and every parent group row above the
+// split gets a billable-share bar, per the approved design.
+const showsBillableSplit = computed(() => grouping.value.includes('billable'));
+
+function reportRowBillableBucket(
+  row: ReportDisplayRow,
+): 'billable' | 'nonBillable' | null {
+  if (row.dimension !== 'billable') {
+    return null;
+  }
+  // A billable bucket is fully billable (share 1); its counterpart is share 0.
+  return row.billableShare === 1 ? 'billable' : 'nonBillable';
+}
+
+function reportRowSharePct(row: ReportDisplayRow): number {
+  return Math.round((row.billableShare ?? 0) * 100);
+}
+
 // Top-level group rows read as subtotal bands, like the approved design.
 function getReportRowClass(data: ReportDisplayRow): string {
   return data.level === 0 && !data.isLeaf ? 'bg-app-bg/50' : '';
@@ -412,9 +431,50 @@ function handleMemberFilterUpdate(
           >
             <MobileRecordCard data-testid="report-mobile-card">
               <div class="min-w-0">
-                <h3 :class="['truncate', getRowLabelClass(row)]">
+                <span
+                  v-if="reportRowBillableBucket(row)"
+                  :class="[
+                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold',
+                    reportRowBillableBucket(row) === 'billable'
+                      ? 'bg-status-active-bg text-status-active-text'
+                      : 'text-text-muted border-divider bg-app-bg border',
+                  ]"
+                >
+                  <span
+                    :class="[
+                      'h-2 w-2 rounded-full',
+                      reportRowBillableBucket(row) === 'billable'
+                        ? 'bg-status-active-text'
+                        : 'border-text-muted border bg-transparent',
+                    ]"
+                    aria-hidden="true"
+                  />
+                  {{ row.label }}
+                </span>
+                <h3
+                  v-else
+                  :class="['truncate', getRowLabelClass(row)]"
+                >
                   {{ row.label }}
                 </h3>
+                <div
+                  v-if="
+                    showsBillableSplit &&
+                      row.hasChildren &&
+                      !reportRowBillableBucket(row)
+                  "
+                  class="mt-1.5 flex items-center gap-2"
+                >
+                  <span
+                    class="bg-accent-tint block h-1.5 w-20 overflow-hidden rounded-full"
+                  >
+                    <span
+                      class="bg-brand block h-full rounded-full"
+                      :style="{ width: `${reportRowSharePct(row)}%` }"
+                    />
+                  </span>
+                  <span class="text-brand text-[12px] font-medium">{{ reportRowSharePct(row) }}% billable</span>
+                </div>
                 <p
                   v-if="row.childCountLabel"
                   class="text-text-muted truncate text-[13px]"
@@ -573,9 +633,50 @@ function handleMemberFilterUpdate(
                 class="pi pi-arrow-right text-text-muted shrink-0 text-[10px]"
                 aria-hidden="true"
               />
-              <span :class="['truncate', getRowLabelClass(data)]">{{
-                data.label
-              }}</span>
+              <span
+                v-if="reportRowBillableBucket(data)"
+                :class="[
+                  'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold',
+                  reportRowBillableBucket(data) === 'billable'
+                    ? 'bg-status-active-bg text-status-active-text'
+                    : 'text-text-muted border-divider bg-app-bg border',
+                ]"
+                data-testid="report-billable-pill"
+              >
+                <span
+                  :class="[
+                    'h-2 w-2 rounded-full',
+                    reportRowBillableBucket(data) === 'billable'
+                      ? 'bg-status-active-text'
+                      : 'border-text-muted border bg-transparent',
+                  ]"
+                  aria-hidden="true"
+                />
+                {{ data.label }}
+              </span>
+              <span
+                v-else
+                :class="['truncate', getRowLabelClass(data)]"
+              >{{ data.label }}</span>
+              <span
+                v-if="
+                  showsBillableSplit &&
+                    data.hasChildren &&
+                    !reportRowBillableBucket(data)
+                "
+                class="flex shrink-0 items-center gap-2"
+                data-testid="report-billable-share"
+              >
+                <span
+                  class="bg-accent-tint block h-1.5 w-24 overflow-hidden rounded-full"
+                >
+                  <span
+                    class="bg-brand block h-full rounded-full"
+                    :style="{ width: `${reportRowSharePct(data)}%` }"
+                  />
+                </span>
+                <span class="text-brand text-[12px] font-medium">{{ reportRowSharePct(data) }}% billable</span>
+              </span>
               <span
                 v-if="data.childCountLabel"
                 class="text-text-muted shrink-0 text-[12px] font-normal"

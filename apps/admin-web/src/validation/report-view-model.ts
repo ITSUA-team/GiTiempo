@@ -30,6 +30,12 @@ export const reportBillableFilterSchema = z.enum([
 ]);
 export type ReportBillableFilter = z.infer<typeof reportBillableFilterSchema>;
 
+// Identity of a row split on the billable grouping dimension (client mirror of
+// the shared TimeReportBillableGroup). Distinct from the billable column filter
+// above: this labels which bucket a split row belongs to.
+export const reportBillableGroupSchema = z.enum(['billable', 'nonBillable']);
+export type ReportBillableGroup = z.infer<typeof reportBillableGroupSchema>;
+
 export const reportBillableShareFilterSchema = z.enum([
   'any',
   'below50',
@@ -58,6 +64,7 @@ export const reportGroupingDimensionSchema = z.enum([
   'project',
   'member',
   'task',
+  'billable',
 ]);
 export type ReportGroupingDimension = z.infer<
   typeof reportGroupingDimensionSchema
@@ -85,6 +92,7 @@ export const reportGroupingApiValue: Record<
   member: 'user',
   project: 'project',
   task: 'task',
+  billable: 'billable',
 };
 
 export function toReportGroupingApiPath(
@@ -154,6 +162,9 @@ export function getReportExportBlockedReason(
 // Leaf row: one aggregate at the requested grouping-path granularity. The
 // tree and its subtotals are derived from these (see buildReportTree).
 export const reportTableRowSchema = z.object({
+  // Which billable bucket this row belongs to, or null until the row is split
+  // on the billable grouping dimension (see splitRowsByBillable).
+  billable: reportBillableGroupSchema.nullable().default(null),
   billableSeconds: z.number().int().min(0),
   billableShare: z.number().min(0).max(1).nullable(),
   entryCount: z.number().int().min(0),

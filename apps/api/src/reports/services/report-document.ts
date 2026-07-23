@@ -87,12 +87,14 @@ const dimensionNouns: Record<TimeReportGroupBy, string> = {
   project: 'project',
   task: 'task',
   user: 'member',
+  billable: 'billable group',
 };
 
 const dimensionTitles: Record<TimeReportGroupBy, string> = {
   project: 'Project',
   task: 'Task',
   user: 'Member',
+  billable: 'Billable',
 };
 
 export function formatHoursMinutes(totalSeconds: number): string {

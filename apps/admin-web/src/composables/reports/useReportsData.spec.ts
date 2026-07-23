@@ -62,6 +62,7 @@ function createLeafReportRow({
   userId: string;
 }): TimeReportRow {
   return {
+    billable: null,
     billableSeconds,
     billableShare: totalSeconds > 0 ? billableSeconds / totalSeconds : null,
     entryCount,

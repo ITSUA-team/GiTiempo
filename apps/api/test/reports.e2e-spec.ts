@@ -347,6 +347,86 @@ describe('Reports (e2e)', () => {
     expect(unknown.status).toBe(400);
   });
 
+  it('groups the whole report by billable status', async () => {
+    const res = await getReport(adminToken, { groupBy: ['billable'] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.groupBy).toEqual(['billable']);
+    // Admin scope: billable 10800+5400+900 = 17100, non-billable 1800.
+    expect(res.body.items).toHaveLength(2);
+    const billable = res.body.items.find(
+      (item: { billable: string | null }) => item.billable === 'billable',
+    );
+    const nonBillable = res.body.items.find(
+      (item: { billable: string | null }) => item.billable === 'nonBillable',
+    );
+    expect(billable).toMatchObject({
+      billable: 'billable',
+      project: null,
+      totalSeconds: 17100,
+      billableSeconds: 17100,
+    });
+    expect(nonBillable).toMatchObject({
+      billable: 'nonBillable',
+      totalSeconds: 1800,
+      nonBillableSeconds: 1800,
+    });
+  });
+
+  it('splits each project into billable and non-billable sub-groups', async () => {
+    const res = await getReport(adminToken, {
+      groupBy: ['project', 'billable'],
+    });
+
+    expect(res.status).toBe(200);
+    const platformRows = res.body.items.filter(
+      (item: { project: { id: string } | null }) =>
+        item.project?.id === platformProjectId,
+    );
+    const billable = platformRows.find(
+      (row: { billable: string | null }) => row.billable === 'billable',
+    );
+    const nonBillable = platformRows.find(
+      (row: { billable: string | null }) => row.billable === 'nonBillable',
+    );
+
+    expect(billable).toMatchObject({
+      billable: 'billable',
+      totalSeconds: 10800,
+      billableSeconds: 10800,
+      nonBillableSeconds: 0,
+      entryCount: 2,
+    });
+    expect(nonBillable).toMatchObject({
+      billable: 'nonBillable',
+      totalSeconds: 1800,
+      billableSeconds: 0,
+      nonBillableSeconds: 1800,
+      entryCount: 1,
+    });
+  });
+
+  it('renders a PDF grouped by billable without error', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        format: 'pdf',
+        groupBy: ['project', 'billable'],
+      })
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.status).toBe(200);
+    expect((res.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
   it('exports detailed CSV rows recording the grouping path', async () => {
     const res = await request(app.getHttpServer())
       .post('/reports/time/export')

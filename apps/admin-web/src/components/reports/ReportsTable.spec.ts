@@ -81,6 +81,7 @@ function findFilter(
 
 function makeLeafRow(overrides: Partial<ReportTableRow>): ReportTableRow {
   return {
+    billable: null,
     billableSeconds: 3600,
     billableShare: 0.5,
     entryCount: 2,
@@ -289,6 +290,7 @@ describe('ReportsTable', () => {
     // only the unused dimension is offered
     expect(addLevel!.props('options')).toEqual([
       { label: 'Task', value: 'task' },
+      { label: 'Billable', value: 'billable' },
     ]);
 
     addLevel!.vm.$emit('update:modelValue', 'task');
@@ -300,11 +302,36 @@ describe('ReportsTable', () => {
   });
 
   it('hides the add-level control when every dimension is grouped', () => {
-    const wrapper = mountTable({ grouping: ['project', 'member', 'task'] });
+    const wrapper = mountTable({
+      grouping: ['project', 'member', 'task', 'billable'],
+    });
 
     expect(
       wrapper.find('[data-testid="report-grouping-add-level"]').exists(),
     ).toBe(false);
+  });
+
+  it('renders billable rows as status pills with a group share bar', () => {
+    const wrapper = mountTable({
+      grouping: ['project', 'billable'],
+      tableRows: [
+        makeLeafRow({
+          billableSeconds: 3600,
+          nonBillableSeconds: 1800,
+          totalSeconds: 5400,
+        }),
+      ],
+    });
+
+    // The project splits into a Billable and a Non-billable pill row…
+    expect(
+      wrapper.findAll('[data-testid="report-billable-pill"]'),
+    ).toHaveLength(2);
+    // …and the parent project row carries the billable-share bar (67%).
+    expect(
+      wrapper.find('[data-testid="report-billable-share"]').exists(),
+    ).toBe(true);
+    expect(wrapper.text()).toContain('67% billable');
   });
 
   it('removes a grouping level but never the last one', async () => {
