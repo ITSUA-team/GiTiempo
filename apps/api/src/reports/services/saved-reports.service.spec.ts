@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { savedReportConfigSchema } from '@gitiempo/shared';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { POSTGRES_UNIQUE_VIOLATION } from '../../db/postgres-errors';
@@ -20,13 +21,13 @@ const adminUser: AuthUser = {
 const pmUser: AuthUser = { ...adminUser, role: 'pm', sub: 'pm-1' };
 const memberUser: AuthUser = { ...adminUser, role: 'member', sub: 'member-1' };
 
-const validConfig = {
+const validConfig = savedReportConfigSchema.parse({
   dateRange: {
     dateFrom: '2026-07-01T00:00:00.000Z',
     dateTo: '2026-07-15T00:00:00.000Z',
     kind: 'absolute',
   },
-};
+});
 
 function makeRow(overrides: Record<string, unknown> = {}) {
   return {
