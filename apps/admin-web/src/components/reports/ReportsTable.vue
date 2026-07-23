@@ -40,6 +40,10 @@ import {
 import ReportGroupingBuilder from '@/components/reports/ReportGroupingBuilder.vue';
 import { useReportTableTree } from '@/composables/reports/useReportTableTree';
 import {
+  reportRelativePeriodOptions,
+  resolveRelativePeriod,
+} from '@/lib/saved-report-config';
+import {
   formatReportPercent,
   reportGroupingDimensionLabels,
   type ReportActivityFilter,
@@ -200,6 +204,20 @@ const activityFilterOptions: {
   { label: 'Last 30 days', value: 'last30' },
 ];
 
+// The date control offers a custom absolute range plus the relative periods a
+// preset can store — without this the UI cannot express a state (this_month,
+// last_7_days, …) the saved-report contract requires.
+const REPORT_PERIOD_CUSTOM = 'custom';
+const reportPeriodOptions: { label: string; value: SavedReportPeriod | 'custom' }[] =
+  [
+    { label: 'Custom range', value: REPORT_PERIOD_CUSTOM },
+    ...reportRelativePeriodOptions,
+  ];
+
+const selectedReportPeriod = computed<SavedReportPeriod | 'custom'>(
+  () => period.value ?? REPORT_PERIOD_CUSTOM,
+);
+
 function handleGlobalSearchUpdate(value: string | null | undefined): void {
   filters.value.global = value ?? '';
 }
@@ -208,6 +226,19 @@ function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
   // Picking dates by hand means the range is no longer a named period.
   period.value = null;
   dateRange.value = normalizeReportDateRangeValue(value);
+}
+
+function handlePeriodUpdate(value: SavedReportPeriod | 'custom'): void {
+  if (value === REPORT_PERIOD_CUSTOM) {
+    // Switch to a hand-picked window; keep the currently shown dates to edit.
+    period.value = null;
+    return;
+  }
+
+  // Resolve the relative period to a concrete window now, but remember the
+  // period itself so a preset re-resolves it every time it is opened.
+  period.value = value;
+  dateRange.value = resolveRelativePeriod(value);
 }
 
 function handleProjectFilterComplete(event: AutoCompleteCompleteEvent): void {
@@ -263,6 +294,18 @@ function handleMemberFilterUpdate(
           <div
             class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center"
           >
+            <Select
+              :model-value="selectedReportPeriod"
+              aria-label="Report period"
+              class="w-full sm:w-[160px]"
+              data-testid="report-period"
+              :options="reportPeriodOptions"
+              option-label="label"
+              option-value="value"
+              :pt="giTiempoFieldWidthSelectPt"
+              @update:model-value="handlePeriodUpdate"
+            />
+
             <DatePicker
               :model-value="dateRange"
               aria-label="Report date range"

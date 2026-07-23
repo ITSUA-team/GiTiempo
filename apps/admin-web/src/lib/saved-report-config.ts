@@ -214,6 +214,21 @@ const periodLabels: Record<SavedReportPeriod, string> = {
   this_week: 'This week',
 };
 
+// Relative-period choices for the reports date control, in a sensible order.
+// Labels are the single source of truth shared with describeSavedReportConfig.
+const orderedReportPeriods: SavedReportPeriod[] = [
+  'this_week',
+  'this_month',
+  'previous_month',
+  'last_7_days',
+  'last_30_days',
+];
+
+export const reportRelativePeriodOptions: {
+  label: string;
+  value: SavedReportPeriod;
+}[] = orderedReportPeriods.map((value) => ({ label: periodLabels[value], value }));
+
 const groupingDimensionLabels: Record<TimeReportGroupBy, string> = {
   project: 'Project',
   task: 'Task',
