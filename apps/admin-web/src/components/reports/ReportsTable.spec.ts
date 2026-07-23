@@ -7,7 +7,6 @@ import {
   giTiempoPrimeVueOptions,
   giTiempoSelfAppendedAutoCompleteOverlayStyle,
 } from '@gitiempo/web-config/theme';
-import type { SavedReportPeriod } from '@gitiempo/shared';
 
 import {
   createDefaultReportTableFilters,
@@ -105,7 +104,6 @@ function mountTable({
   grouping = ['project'] as ReportGrouping,
   filters = createDefaultReportTableFilters(),
   loading = false,
-  period = null as SavedReportPeriod | null,
   tableRows = rows,
   memberOptions = [{ label: 'Alex Admin', value: 'member-1' }],
   projectOptions = [{ label: 'Project Orion', value: 'project-1' }],
@@ -116,7 +114,6 @@ function mountTable({
       grouping,
       filters,
       loading,
-      period,
       memberOptions,
       projectOptions,
       rows: tableRows,
@@ -716,49 +713,6 @@ describe('ReportsTable', () => {
         .find('[data-testid="report-mobile-toggle"]')
         .attributes('aria-expanded'),
     ).toBe('false');
-  });
-
-  function findPeriodSelect(wrapper: ReturnType<typeof mountTable>) {
-    return wrapper
-      .findAllComponents(SelectStub)
-      .find((candidate) =>
-        (candidate.props('options') as { label: string }[]).some(
-          (option) => option.label === 'Custom range',
-        ),
-      );
-  }
-
-  it('lets a relative period be chosen and resolves it to a concrete range', async () => {
-    const wrapper = mountTable();
-
-    const periodSelect = findPeriodSelect(wrapper);
-    expect(periodSelect).toBeDefined();
-
-    periodSelect!.vm.$emit('update:modelValue', 'this_month');
-    await nextTick();
-
-    // the period intent is recorded (so a preset re-resolves it on open)…
-    expect(wrapper.emitted('update:period')).toEqual([['this_month']]);
-    // …and it is resolved to a concrete [start, end] window immediately
-    const dateEmits = wrapper.emitted('update:dateRange');
-    expect(dateEmits).toBeTruthy();
-    const [resolvedRange] = dateEmits!.at(-1)!;
-    expect(resolvedRange).toHaveLength(2);
-    expect((resolvedRange as Date[])[0]).toBeInstanceOf(Date);
-  });
-
-  it('reflects the active relative period and returns to custom on selection', async () => {
-    const wrapper = mountTable({ period: 'last_7_days' });
-
-    const periodSelect = findPeriodSelect(wrapper);
-    expect(periodSelect!.props('modelValue')).toBe('last_7_days');
-
-    periodSelect!.vm.$emit('update:modelValue', 'custom');
-    await nextTick();
-
-    // choosing custom clears the named period without touching the dates
-    expect(wrapper.emitted('update:period')).toEqual([[null]]);
-    expect(wrapper.emitted('update:dateRange')).toBeUndefined();
   });
 
   it('exposes billable share and activity column filters that update the filter model', async () => {
