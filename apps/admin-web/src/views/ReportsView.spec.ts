@@ -63,7 +63,7 @@ const ReportsTableStub = defineComponent({
         new Date('2026-05-02T12:00:00.000Z'),
       ],
       setBillableFilter: () => {
-        emit('update:filters', { ...props.filters, billable: 'withBillable' });
+        emit('update:filters', { ...props.filters, billable: 'gte8' });
       },
       setSearchFilter: () => {
         emit('update:filters', { ...props.filters, global: 'orion' });

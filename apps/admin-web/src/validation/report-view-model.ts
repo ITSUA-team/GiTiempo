@@ -23,11 +23,10 @@ export type ReportDateRange = z.infer<typeof reportDateRangeSchema>;
 export const reportHoursFilterSchema = z.enum(['any', 'gt0', 'gte8', 'gte40']);
 export type ReportHoursFilter = z.infer<typeof reportHoursFilterSchema>;
 
-export const reportBillableFilterSchema = z.enum([
-  'any',
-  'withBillable',
-  'withoutBillable',
-]);
+// Billable-hours thresholds, mirroring the Hours filter but measured on a
+// group's billable seconds (was a broken with/without-billable toggle; the
+// billable split now lives in the grouping dimension instead).
+export const reportBillableFilterSchema = z.enum(['any', 'gte8', 'gte40']);
 export type ReportBillableFilter = z.infer<typeof reportBillableFilterSchema>;
 
 // Identity of a row split on the billable grouping dimension (client mirror of

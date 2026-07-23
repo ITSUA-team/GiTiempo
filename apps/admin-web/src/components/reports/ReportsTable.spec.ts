@@ -730,7 +730,7 @@ describe('ReportsTable', () => {
     filters.projectId = 'project-1';
     filters.memberId = 'member-1';
     filters.hours = 'gt0';
-    filters.billable = 'withBillable';
+    filters.billable = 'gte8';
 
     const wrapper = mountTable({
       filters,
@@ -751,22 +751,28 @@ describe('ReportsTable', () => {
     });
   });
 
-  it('keeps billable hours stable when the non-billable filter is selected', () => {
+  it('filters groups by the billable hours they display, keeping subtrees', () => {
     const filters = createDefaultReportTableFilters();
-    filters.billable = 'withoutBillable';
+    filters.billable = 'gte8';
 
     const wrapper = mountTable({
       filters,
+      grouping: ['project', 'member'],
       tableRows: [
+        // Orion's 10h billable come from two 5h member leaves — a leaf-level
+        // comparison would wrongly hide it under the 8h billable threshold.
+        makeLeafRow({ billableSeconds: 5 * 3600, totalSeconds: 5 * 3600 }),
         makeLeafRow({
-          billableSeconds: 2700,
-          totalSeconds: 7200,
+          billableSeconds: 5 * 3600,
+          id: 'project-1:no-task:member-2',
+          memberIds: ['member-2'],
+          memberName: 'Pat PM',
+          totalSeconds: 5 * 3600,
         }),
       ],
     });
 
-    expect(wrapper.text()).toContain('2h 00m');
-    expect(wrapper.text()).toContain('45m');
-    expect(wrapper.text()).not.toContain('1h 15m');
+    expect(wrapper.text()).toContain('Project Orion');
+    expect(wrapper.text()).toContain('10h 00m');
   });
 });

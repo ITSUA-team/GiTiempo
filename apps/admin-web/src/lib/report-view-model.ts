@@ -23,7 +23,6 @@ import {
   reportSummaryViewSchema,
   reportTableFiltersSchema,
   reportTableRowSchema,
-  type ReportBillableFilter,
   type ReportDateRange,
   type ReportFilterOption,
   type ReportGrouping,
@@ -650,21 +649,6 @@ export function flattenReportTree(
   return rows;
 }
 
-export function getReportRowUnbillableSeconds(row: ReportTableRow): number {
-  return Math.max(0, row.totalSeconds - row.billableSeconds);
-}
-
-export function getReportRowBillableSeconds(
-  row: ReportTableRow,
-  billableFilter: ReportBillableFilter,
-): number {
-  if (billableFilter === 'withoutBillable') {
-    return getReportRowUnbillableSeconds(row);
-  }
-
-  return row.billableSeconds;
-}
-
 function matchesReportBillableShareFilter(
   share: number | null,
   filter: ReportTableFilters['billableShare'],
@@ -731,13 +715,16 @@ export function filterReportTreeGroups(
       return false;
     }
 
-    if (parsedFilters.billable === 'withBillable' && node.billableSeconds <= 0) {
+    if (
+      parsedFilters.billable === 'gte8' &&
+      node.billableSeconds < 8 * 60 * 60
+    ) {
       return false;
     }
 
     if (
-      parsedFilters.billable === 'withoutBillable' &&
-      node.totalSeconds - node.billableSeconds <= 0
+      parsedFilters.billable === 'gte40' &&
+      node.billableSeconds < 40 * 60 * 60
     ) {
       return false;
     }
@@ -820,9 +807,7 @@ export function filterReportRows(
       row.memberName,
       row.taskName,
       formatPaddedHoursMinutesDuration(row.totalSeconds),
-      formatPaddedHoursMinutesDuration(
-        getReportRowBillableSeconds(row, parsedFilters.billable),
-      ),
+      formatPaddedHoursMinutesDuration(row.billableSeconds),
       formatReportPercent(row.billableShare),
     ]
       .join(' ')

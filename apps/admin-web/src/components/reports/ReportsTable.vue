@@ -158,8 +158,8 @@ const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
 const billableFilterOptions: { label: string; value: ReportBillableFilter }[] =
   [
     { label: 'Any', value: 'any' },
-    { label: 'Billable', value: 'withBillable' },
-    { label: 'Non-billable', value: 'withoutBillable' },
+    { label: '8h+', value: 'gte8' },
+    { label: '40h+', value: 'gte40' },
   ];
 
 const billableShareFilterOptions: {

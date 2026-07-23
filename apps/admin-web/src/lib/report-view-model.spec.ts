@@ -196,29 +196,31 @@ describe('report-view-model', () => {
     expect(() => filterReportRows([row], invalidFilters)).toThrow();
   });
 
-  it('filters non-billable groups without changing billable display values', () => {
+  it('filters groups below the billable-hours threshold, keeping subtrees', () => {
     const filters = createDefaultReportTableFilters();
-    filters.billable = 'withoutBillable';
+    filters.billable = 'gte8';
     const rows: ReportTableRow[] = [
+      // Project Orion: 5h billable — under the 8h threshold, so it drops out.
       makeLeafRow({
-        billableSeconds: 1800,
-        billableShare: 0.5,
-        nonBillableSeconds: 1800,
+        billableSeconds: 5 * 60 * 60,
+        totalSeconds: 6 * 60 * 60,
       }),
+      // Billing API: 10h billable — kept.
       makeLeafRow({
+        billableSeconds: 10 * 60 * 60,
         id: `${otherProjectId}:no-task:${otherUserId}`,
         memberIds: [otherUserId],
         memberName: 'Nina PM',
         projectIds: [otherProjectId],
         projectName: 'Billing API',
+        totalSeconds: 12 * 60 * 60,
       }),
     ];
     const tree = buildReportTree(rows, ['project']);
 
     const visible = filterReportTreeGroups(tree, filters);
 
-    expect(visible.map((node) => node.label)).toEqual(['Project Orion']);
-    expect(visible[0]!.billableSeconds).toBe(1800);
+    expect(visible.map((node) => node.label)).toEqual(['Billing API']);
   });
 
   it('splits leaves into billable and non-billable groups when grouped by billable', () => {
