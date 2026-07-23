@@ -156,4 +156,49 @@ describe('SavedReportsBar mobile layout', () => {
 
     expect(wrapper.emitted('save')).toHaveLength(1);
   });
+
+  it('drops Save and shows a saved status when the loaded preset is clean', () => {
+    const wrapper = mountBar({ activeId: 'preset-1', isDirty: false });
+
+    // no dead disabled Save button in the clean state
+    expect(wrapper.find('[data-testid="saved-report-save"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.text()).toContain('Saved');
+    expect(wrapper.text()).toContain('Monthly billing');
+    // Save as… stays reachable
+    expect(wrapper.find('[data-testid="saved-report-save-as"]').exists()).toBe(
+      true,
+    );
+  });
+
+  it('reads "Not saved yet" with nothing loaded and no changes', () => {
+    const wrapper = mountBar({ activeId: null, isDirty: false });
+
+    expect(wrapper.text()).toContain('Not saved yet');
+    expect(wrapper.find('[data-testid="saved-report-save"]').exists()).toBe(
+      false,
+    );
+  });
+
+  it('promotes Save as new when there are unsaved changes but nothing is loaded', () => {
+    const wrapper = mountBar({ activeId: null, isDirty: true });
+
+    expect(wrapper.find('[data-testid="saved-report-save"]').exists()).toBe(
+      false,
+    );
+    const saveAs = wrapper.find('[data-testid="saved-report-save-as"]');
+    expect(saveAs.exists()).toBe(true);
+    expect(saveAs.text()).toContain('Save as new');
+  });
+
+  it('marks the active preset with a bookmark and a dirty dot when changed', () => {
+    const wrapper = mountBar({ activeId: 'preset-1', isDirty: true });
+    const activePill = wrapper.find(
+      '[data-testid="saved-report-tab-preset-1"]',
+    );
+
+    expect(activePill.find('.pi-bookmark-fill').exists()).toBe(true);
+    expect(activePill.find('.bg-status-warn-text').exists()).toBe(true);
+  });
 });

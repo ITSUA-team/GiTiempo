@@ -60,6 +60,12 @@ const activePreset = computed(
 
 const canSave = computed(() => props.activeId !== null && props.isDirty);
 
+// Presentational: with unsaved changes but nothing loaded, the only save path is
+// "save as new", so it takes the primary treatment instead of a dead Save.
+const saveAsIsPrimary = computed(
+  () => props.isDirty && props.activeId === null,
+);
+
 const isNameValid = computed(() => nameDraft.value.trim().length > 0);
 
 const dialogHeader = computed(() =>
@@ -134,12 +140,14 @@ function pillClass(isActive: boolean): string {
     : 'bg-surface-primary text-text-muted border border-divider font-medium';
 }
 
-// The mobile strip sits on a white surface, so idle chips are grey-filled with
-// no border rather than the desktop bar's white-bordered-on-grey pill.
+// The mobile strip sits on a white surface: idle chips are grey-filled, the
+// active one gets a brand outline + fill so the loaded view reads at a glance.
+// The transparent 1px on idle keeps both heights identical (border-box) so the
+// brand border never shifts layout.
 function mobilePillClass(isActive: boolean): string {
   return isActive
-    ? 'bg-accent-tint text-brand font-semibold'
-    : 'bg-app-bg text-text-muted font-medium';
+    ? 'bg-accent-tint text-brand border-brand border-[1.5px] font-semibold'
+    : 'bg-app-bg text-text-muted border border-transparent font-medium';
 }
 </script>
 
@@ -154,6 +162,7 @@ function mobilePillClass(isActive: boolean): string {
     data-testid="saved-reports-bar"
   >
     <template v-if="isMobileViewport">
+      <!-- Row 1: preset switcher (active-emphasized pills) + unified ⋯/＋ capsule -->
       <div class="flex items-center gap-2">
         <div
           class="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto"
@@ -162,7 +171,7 @@ function mobilePillClass(isActive: boolean): string {
           <button
             v-for="preset in presets"
             :key="preset.id"
-            class="flex h-[32px] shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] whitespace-nowrap"
+            class="flex h-[40px] shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] whitespace-nowrap transition-colors"
             :class="mobilePillClass(preset.id === activeId)"
             :data-testid="`saved-report-tab-${preset.id}`"
             type="button"
@@ -170,41 +179,79 @@ function mobilePillClass(isActive: boolean): string {
           >
             <i
               v-if="preset.id === activeId"
-              class="pi pi-bookmark text-[12px]"
+              class="pi pi-bookmark-fill text-[12px]"
               aria-hidden="true"
             />
             {{ preset.name }}
+            <span
+              v-if="preset.id === activeId && isDirty"
+              class="bg-status-warn-text size-[6px] shrink-0 rounded-full"
+              aria-hidden="true"
+            />
+            <span
+              v-if="preset.id === activeId && isDirty"
+              class="sr-only"
+            >Unsaved changes</span>
           </button>
+          <span
+            v-if="presets.length === 0"
+            class="text-text-muted px-1 text-[13px]"
+          >No saved reports yet</span>
         </div>
 
-        <button
+        <div
           v-if="presets.length > 0"
-          aria-label="Manage saved reports"
-          class="border-divider bg-surface-primary text-text-muted flex size-[32px] shrink-0 items-center justify-center rounded-full border"
-          data-testid="saved-reports-manage"
-          type="button"
-          @click="manageSheetOpen = true"
+          class="bg-app-bg flex h-[40px] shrink-0 items-center rounded-full"
         >
-          <i
-            class="pi pi-ellipsis-h text-[12px]"
+          <button
+            aria-label="Manage saved reports"
+            aria-haspopup="dialog"
+            :aria-expanded="manageSheetOpen"
+            class="text-text-muted flex size-[40px] items-center justify-center rounded-l-full"
+            data-testid="saved-reports-manage"
+            type="button"
+            @click="manageSheetOpen = true"
+          >
+            <i
+              class="pi pi-ellipsis-h text-[13px]"
+              aria-hidden="true"
+            />
+          </button>
+          <span
+            class="bg-divider h-5 w-px"
             aria-hidden="true"
           />
-        </button>
+          <button
+            aria-label="New report"
+            class="text-brand flex size-[40px] items-center justify-center rounded-r-full"
+            data-testid="saved-report-new"
+            type="button"
+            @click="emit('new')"
+          >
+            <i
+              class="pi pi-plus text-[13px]"
+              aria-hidden="true"
+            />
+          </button>
+        </div>
         <button
+          v-else
           aria-label="New report"
-          class="border-divider bg-surface-primary text-text-muted flex size-[32px] shrink-0 items-center justify-center rounded-full border"
+          class="bg-app-bg text-brand flex size-[40px] shrink-0 items-center justify-center rounded-full"
           data-testid="saved-report-new"
           type="button"
           @click="emit('new')"
         >
           <i
-            class="pi pi-plus text-[12px]"
+            class="pi pi-plus text-[13px]"
             aria-hidden="true"
           />
         </button>
       </div>
 
-      <div class="flex items-center justify-between gap-3">
+      <!-- Row 2: contextual status + save. Clean state drops the dead disabled
+           Save entirely; only a live save path ever gets the accent-tint. -->
+      <div class="flex min-h-[40px] items-center justify-between gap-3">
         <span
           v-if="isDirty"
           class="text-text-muted flex items-center gap-1.5 text-[12px]"
@@ -213,13 +260,27 @@ function mobilePillClass(isActive: boolean): string {
           <span class="bg-status-warn-text size-[7px] rounded-full" />
           Unsaved changes
         </span>
-        <span v-else />
+        <span
+          v-else-if="activeId !== null"
+          class="text-status-active-text flex min-w-0 items-center gap-1.5 text-[12px]"
+        >
+          <i
+            class="pi pi-check-circle shrink-0 text-[12px]"
+            aria-hidden="true"
+          />
+          <span class="truncate">Saved · {{ activePreset?.name }}</span>
+        </span>
+        <span
+          v-else
+          class="text-text-muted text-[12px]"
+        >Not saved yet</span>
 
-        <div class="flex items-center gap-2">
+        <div class="flex shrink-0 items-center gap-2">
           <Button
-            class="bg-accent-tint text-brand h-[32px] gap-1.5 rounded-[6px] px-3 text-[13px] font-semibold"
+            v-if="canSave"
+            class="bg-accent-tint text-brand h-[38px] gap-1.5 rounded-md px-3.5 text-[13px] font-semibold"
             data-testid="saved-report-save"
-            :disabled="!canSave || isSaving"
+            :disabled="isSaving"
             :loading="isSaving"
             text
             @click="emit('save')"
@@ -232,11 +293,25 @@ function mobilePillClass(isActive: boolean): string {
           </Button>
 
           <Button
-            class="text-text-muted h-[30px] px-2 text-[13px] font-medium"
+            v-if="saveAsIsPrimary"
+            class="bg-accent-tint text-brand h-[38px] gap-1.5 rounded-md px-3.5 text-[13px] font-semibold"
+            data-testid="saved-report-save-as"
+            text
+            @click="saveSheetOpen = true"
+          >
+            <i
+              class="pi pi-save text-[12px]"
+              aria-hidden="true"
+            />
+            Save as new…
+          </Button>
+          <Button
+            v-else
+            class="h-[38px] rounded-md px-3.5 text-[13px]"
             data-testid="saved-report-save-as"
             label="Save as…"
+            outlined
             severity="secondary"
-            text
             @click="saveSheetOpen = true"
           />
         </div>

@@ -334,6 +334,44 @@ describe('ReportsTable', () => {
     ]);
   });
 
+  it('renders a touch reorder pipeline and reorders via the stepper on mobile', async () => {
+    setMobileViewport(true);
+
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+
+    // numbered drill-down cards with order captions
+    expect(
+      wrapper.find('[data-testid="report-grouping-chip-project"]').text(),
+    ).toContain('Top level');
+    expect(
+      wrapper.find('[data-testid="report-grouping-chip-member"]').text(),
+    ).toContain('within Project');
+
+    // reorder controls are always present on touch — no desktop hover gating
+    const moveLater = wrapper.find(
+      '[data-testid="report-grouping-move-later-project"]',
+    );
+    expect(moveLater.exists()).toBe(true);
+    expect(moveLater.classes()).not.toContain('opacity-0');
+
+    await moveLater.trigger('click');
+    expect(wrapper.emitted('update:grouping')).toEqual([
+      [['member', 'project']],
+    ]);
+  });
+
+  it('does not let the chip grab handler hijack a nested reorder button key press', async () => {
+    const wrapper = mountTable({ grouping: ['project', 'member'] });
+    const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
+
+    // Enter on the button must activate the button, not toggle the chip's grab
+    await wrapper
+      .find('[data-testid="report-grouping-move-later-project"]')
+      .trigger('keydown.enter');
+
+    expect(chip.attributes('aria-grabbed')).toBe('false');
+  });
+
   it('exposes each grouping chip as a labelled sortable control', () => {
     const wrapper = mountTable({ grouping: ['project', 'member'] });
     const chip = wrapper.find('[data-testid="report-grouping-chip-project"]');
