@@ -20,3 +20,4 @@ export * from '../time-entries/schemas/time-entries.schema';
 export * from '../github/schemas/github-connections.schema';
 export * from '../github/schemas/github-oauth-states.schema';
 export * from '../github/schemas/workspace-github-organizations.schema';
+export * from '../reports/schemas/saved-reports.schema';

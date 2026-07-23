@@ -156,13 +156,15 @@ async function triggerExport(
   wrapper: ReturnType<typeof mountReportsView>,
   format: 'csv' | 'pdf' = 'csv',
 ): Promise<void> {
-  const items = wrapper.findComponent(Menu).props('model') as {
-    command: () => void;
-    label: string;
-  }[];
-  const item = items.find((candidate) =>
-    candidate.label.toLowerCase().includes(format),
-  );
+  // The page renders more than one Menu (export, saved-report overflow), so
+  // pick by content rather than position.
+  const item = wrapper
+    .findAllComponents(Menu)
+    .flatMap(
+      (menu) =>
+        menu.props('model') as { command: () => void; label: string }[],
+    )
+    .find((candidate) => candidate.label.toLowerCase().includes(format));
   item!.command();
   await flushPromises();
 }

@@ -2738,6 +2738,165 @@
         ]
       }
     },
+    "/reports/saved": {
+      "get": {
+        "operationId": "SavedReportsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedReportListResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List saved report presets for the workspace",
+        "tags": [
+          "reports"
+        ]
+      },
+      "post": {
+        "operationId": "SavedReportsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSavedReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedReportResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          },
+          "409": {
+            "description": "Preset name already used"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a saved report preset",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/saved/{id}": {
+      "patch": {
+        "operationId": "SavedReportsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSavedReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedReportResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          },
+          "404": {
+            "description": "Preset not found in this workspace"
+          },
+          "409": {
+            "description": "Preset name already used"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rename a saved report preset or replace its config",
+        "tags": [
+          "reports"
+        ]
+      },
+      "delete": {
+        "operationId": "SavedReportsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Preset deleted"
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          },
+          "404": {
+            "description": "Preset not found in this workspace"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a saved report preset",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
     "/commons/health/live": {
       "get": {
         "operationId": "CommonsController_live",
@@ -6071,6 +6230,589 @@
             "enum": [
               "csv",
               "pdf"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "SavedReportListResponseDto": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "name": {
+              "type": "string"
+            },
+            "config": {
+              "type": "object",
+              "properties": {
+                "dateRange": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "absolute"
+                      ]
+                    },
+                    "dateFrom": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    },
+                    "dateTo": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "dateFrom",
+                    "dateTo"
+                  ]
+                },
+                "filters": {
+                  "default": {
+                    "activity": "any",
+                    "billable": "any",
+                    "billableShare": "any",
+                    "global": "",
+                    "hours": "any"
+                  },
+                  "type": "object",
+                  "properties": {
+                    "activity": {
+                      "default": "any",
+                      "type": "string",
+                      "enum": [
+                        "any",
+                        "today",
+                        "last7",
+                        "last30"
+                      ]
+                    },
+                    "billable": {
+                      "default": "any",
+                      "type": "string",
+                      "enum": [
+                        "any",
+                        "gte8",
+                        "gte40"
+                      ]
+                    },
+                    "billableShare": {
+                      "default": "any",
+                      "type": "string",
+                      "enum": [
+                        "any",
+                        "below50",
+                        "gte50",
+                        "gte90"
+                      ]
+                    },
+                    "global": {
+                      "default": "",
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "hours": {
+                      "default": "any",
+                      "type": "string",
+                      "enum": [
+                        "any",
+                        "gt0",
+                        "gte8",
+                        "gte40"
+                      ]
+                    }
+                  }
+                },
+                "grouping": {
+                  "default": [
+                    "project"
+                  ],
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "project",
+                      "task",
+                      "user"
+                    ]
+                  }
+                },
+                "memberId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "default": null,
+                  "nullable": true
+                },
+                "projectId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "default": null,
+                  "nullable": true
+                }
+              },
+              "required": [
+                "dateRange"
+              ]
+            },
+            "createdBy": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "nullable": true
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "config",
+            "createdBy",
+            "createdAt",
+            "updatedAt"
+          ]
+        }
+      },
+      "CreateSavedReportDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "dateRange": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "absolute"
+                    ]
+                  },
+                  "dateFrom": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "dateTo": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "dateFrom",
+                  "dateTo"
+                ]
+              },
+              "filters": {
+                "default": {
+                  "activity": "any",
+                  "billable": "any",
+                  "billableShare": "any",
+                  "global": "",
+                  "hours": "any"
+                },
+                "type": "object",
+                "properties": {
+                  "activity": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "today",
+                      "last7",
+                      "last30"
+                    ]
+                  },
+                  "billable": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gte8",
+                      "gte40"
+                    ]
+                  },
+                  "billableShare": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "below50",
+                      "gte50",
+                      "gte90"
+                    ]
+                  },
+                  "global": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "hours": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gt0",
+                      "gte8",
+                      "gte40"
+                    ]
+                  }
+                }
+              },
+              "grouping": {
+                "default": [
+                  "project"
+                ],
+                "minItems": 1,
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "project",
+                    "task",
+                    "user"
+                  ]
+                }
+              },
+              "memberId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              }
+            },
+            "required": [
+              "dateRange"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "config"
+        ],
+        "additionalProperties": false
+      },
+      "SavedReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "dateRange": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "absolute"
+                    ]
+                  },
+                  "dateFrom": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "dateTo": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "dateFrom",
+                  "dateTo"
+                ]
+              },
+              "filters": {
+                "default": {
+                  "activity": "any",
+                  "billable": "any",
+                  "billableShare": "any",
+                  "global": "",
+                  "hours": "any"
+                },
+                "type": "object",
+                "properties": {
+                  "activity": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "today",
+                      "last7",
+                      "last30"
+                    ]
+                  },
+                  "billable": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gte8",
+                      "gte40"
+                    ]
+                  },
+                  "billableShare": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "below50",
+                      "gte50",
+                      "gte90"
+                    ]
+                  },
+                  "global": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "hours": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gt0",
+                      "gte8",
+                      "gte40"
+                    ]
+                  }
+                }
+              },
+              "grouping": {
+                "default": [
+                  "project"
+                ],
+                "minItems": 1,
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "project",
+                    "task",
+                    "user"
+                  ]
+                }
+              },
+              "memberId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              }
+            },
+            "required": [
+              "dateRange"
+            ]
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "config",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateSavedReportDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "dateRange": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "absolute"
+                    ]
+                  },
+                  "dateFrom": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "dateTo": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "dateFrom",
+                  "dateTo"
+                ]
+              },
+              "filters": {
+                "default": {
+                  "activity": "any",
+                  "billable": "any",
+                  "billableShare": "any",
+                  "global": "",
+                  "hours": "any"
+                },
+                "type": "object",
+                "properties": {
+                  "activity": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "today",
+                      "last7",
+                      "last30"
+                    ]
+                  },
+                  "billable": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gte8",
+                      "gte40"
+                    ]
+                  },
+                  "billableShare": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "below50",
+                      "gte50",
+                      "gte90"
+                    ]
+                  },
+                  "global": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "hours": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gt0",
+                      "gte8",
+                      "gte40"
+                    ]
+                  }
+                }
+              },
+              "grouping": {
+                "default": [
+                  "project"
+                ],
+                "minItems": 1,
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "project",
+                    "task",
+                    "user"
+                  ]
+                }
+              },
+              "memberId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              }
+            },
+            "required": [
+              "dateRange"
             ]
           }
         },
