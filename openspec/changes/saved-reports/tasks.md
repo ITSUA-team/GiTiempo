@@ -1,9 +1,9 @@
 ## 1. Shared contract
 
-- [x] 1.1 Add `packages/shared/src/contracts/saved-reports.ts`: `savedReportPeriodSchema` (`this_week | this_month | previous_month | last_7_days | last_30_days`), `savedReportDateRangeSchema` (discriminated union of relative period and absolute window), `savedReportConfigSchema` (dateRange, ordered grouping path reusing `timeReportGroupByPathSchema` vocabulary, `projectId`, `memberId`, column filters), `savedReportSchema`, create/update payloads, and list response
+- [x] 1.1 Add `packages/shared/src/contracts/saved-reports.ts`: absolute `savedReportDateRangeSchema`, `savedReportConfigSchema` (dateRange, ordered grouping path reusing `timeReportGroupByPathSchema` vocabulary, `projectId`, `memberId`, column filters), `savedReportSchema`, create/update payloads, and list response
 - [x] 1.2 Make the config schema tolerant per design D3: strip unknown keys, default missing filter keys, so older stored configs keep parsing
 - [x] 1.3 Export the module from `packages/shared/src/contracts/index.ts`
-- [x] 1.4 Cover parsing in `saved-reports.spec.ts`: both date-range shapes, unknown period rejected, unknown grouping dimension rejected, defaults applied to a minimal config
+- [x] 1.4 Cover parsing in `saved-reports.spec.ts`: absolute range required, retired relative shape rejected, unknown grouping dimension rejected, defaults applied to omitted filters
 - [x] 1.5 Build shared and confirm dependents typecheck
 
 ## 2. Database
@@ -25,8 +25,8 @@
 
 ## 4. Admin web preset core
 
-- [x] 4.1 Add `src/lib/saved-report-config.ts`: `buildConfigFromState`, `applyConfigToState`, `resolveRelativePeriod(period, now)` returning a concrete range, and `normaliseConfig` for comparison; keep it pure and take `now` as a parameter so tests are deterministic
-- [x] 4.2 Implement dirty comparison per design D4: compare normalised stored shapes, never the resolved window, so a relative preset is not dirty the day after it was saved
+- [x] 4.1 Add `src/lib/saved-report-config.ts`: `buildConfigFromState`, `applyConfigToState`, and `normaliseConfig` for absolute date ranges
+- [x] 4.2 Implement dirty comparison per design D4: compare normalised absolute config shapes
 - [x] 4.3 Resolve identities that no longer exist in the user's option scope to the unfiltered choice, reporting the fallback
 - [x] 4.4 Cover all of the above in `saved-report-config.spec.ts` — this is the pure core and carries most of the test weight
 
@@ -37,7 +37,7 @@
 
 ## 6. Admin web UI
 
-- [x] 6.1 Add relative period options to the report date range control beside the existing custom range picker, per design D2
+- [x] 6.1 Keep the existing absolute date range picker as the sole reports date control, per design D2
 - [x] 6.2 Build `src/components/reports/SavedReportsBar.vue` to the approved `savedReportsBar` frame (node `kT0h1`): `Saved reports` label, 32px pill tabs with the active pill tinted and bookmark-marked, `+ New report` pill, unsaved-changes dot and label, `Save` button, `Save as new…` action
 - [x] 6.3 Add the rename/delete overflow menu on the active tab and record it in the final review as a deliberate addition to the approved design (per `apps/admin-web/AGENTS.md`)
 - [x] 6.4 Wire the bar into `ReportsView.vue` above the summary cards, threading apply/save/new through the reports composables
@@ -46,7 +46,13 @@
 
 ## 7. Docs and verification
 
-- [x] 7.1 Document the saved reports bar, preset semantics, and relative periods in `docs/ui/pages-admin.md`
+- [x] 7.1 Document the saved reports bar and absolute preset semantics in `docs/ui/pages-admin.md`
 - [x] 7.2 API: `pnpm --filter @gitiempo/api lint && typecheck && test`; run e2e after `db:migrate` + `db:seed`
 - [x] 7.3 Admin web: `pnpm --filter admin-web lint && typecheck && test`
 - [x] 7.4 State in the final review whether any PrimeVue constraint forced a deviation from the approved .pen design
+
+## 8. Retire relative periods
+
+- [x] 8.1 Remove relative period schema/types, selector state, resolver, and UI from the shared contract and admin reports flow
+- [x] 8.2 Add a Drizzle migration that resolves every supported legacy relative config to an absolute UTC range
+- [x] 8.3 Update OpenSpec artifacts, UI documentation, contract fixtures, and regression coverage for the absolute-only contract

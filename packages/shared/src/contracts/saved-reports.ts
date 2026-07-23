@@ -9,28 +9,9 @@ import { timeReportGroupByPathSchema } from "./reports.js";
  * (see the change design, D3): unknown keys are stripped and missing keys take
  * their default, which lets a preset saved before a new filter existed keep
  * parsing. Values that ARE present are validated strictly, so a bad grouping
- * dimension or period is still rejected.
+ * dimension is still rejected.
  */
-
-/**
- * Relative windows resolve against the viewer's local calendar when the preset
- * is opened, so a preset named "Monthly billing" reports the current month
- * every month rather than freezing to the month it was saved in.
- */
-export const savedReportPeriodSchema = z.enum([
-  "this_week",
-  "this_month",
-  "previous_month",
-  "last_7_days",
-  "last_30_days",
-]);
-
-const savedReportRelativeRangeSchema = z.object({
-  kind: z.literal("relative"),
-  period: savedReportPeriodSchema,
-});
-
-const savedReportAbsoluteRangeSchema = z
+export const savedReportDateRangeSchema = z
   .object({
     kind: z.literal("absolute"),
     dateFrom: z.iso.datetime(),
@@ -41,16 +22,6 @@ const savedReportAbsoluteRangeSchema = z
       new Date(range.dateTo).getTime() > new Date(range.dateFrom).getTime(),
     { message: "dateTo must be later than dateFrom", path: ["dateTo"] },
   );
-
-export const savedReportDateRangeSchema = z.union([
-  savedReportRelativeRangeSchema,
-  savedReportAbsoluteRangeSchema,
-]);
-
-export const defaultSavedReportDateRange = {
-  kind: "relative",
-  period: "this_month",
-} as const;
 
 // Column-filter vocabularies. Defined here so the API, the admin client, and
 // the stored config all validate against one definition.
@@ -87,7 +58,7 @@ export const savedReportFiltersSchema = z.object({
 });
 
 export const savedReportConfigSchema = z.object({
-  dateRange: savedReportDateRangeSchema.default(defaultSavedReportDateRange),
+  dateRange: savedReportDateRangeSchema,
   filters: savedReportFiltersSchema.default(() =>
     savedReportFiltersSchema.parse({}),
   ),
@@ -126,7 +97,6 @@ export const updateSavedReportSchema = z
     message: "Provide a name, a config, or both",
   });
 
-export type SavedReportPeriod = z.infer<typeof savedReportPeriodSchema>;
 export type SavedReportDateRange = z.infer<typeof savedReportDateRangeSchema>;
 export type SavedReportHoursFilter = z.infer<
   typeof savedReportHoursFilterSchema

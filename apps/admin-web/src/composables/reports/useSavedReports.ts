@@ -25,9 +25,7 @@ interface UseSavedReportsOptions {
 /**
  * Owns the preset list and which preset is loaded.
  *
- * Dirty state compares the current config against the config as it was
- * loaded — the stored shape, not the resolved date window — so a relative
- * preset does not read as changed simply because time passed.
+ * Dirty state compares the current config with the stored preset shape.
  */
 export function useSavedReports({
   client = getAdminSavedReportsClient(),

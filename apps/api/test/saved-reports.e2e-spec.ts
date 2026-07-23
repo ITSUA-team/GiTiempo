@@ -15,7 +15,11 @@ const NAME_PREFIX = 'E2E Preset';
 type PresetConfig = Record<string, unknown>;
 
 const validConfig: PresetConfig = {
-  dateRange: { kind: 'relative', period: 'this_month' },
+  dateRange: {
+    dateFrom: '2026-07-01T00:00:00.000Z',
+    dateTo: '2026-07-15T00:00:00.000Z',
+    kind: 'absolute',
+  },
   filters: {
     activity: 'today',
     billable: 'withBillable',
@@ -108,7 +112,7 @@ describe('Saved reports (e2e)', () => {
     ).toContain(`${NAME_PREFIX} Monthly`);
   });
 
-  it('round-trips a relative period and an absolute window unchanged', async () => {
+  it('round-trips an absolute window unchanged', async () => {
     const absolute = {
       ...validConfig,
       dateRange: {
@@ -128,20 +132,14 @@ describe('Saved reports (e2e)', () => {
     expect(created.body.config.dateRange).toEqual(absolute.dateRange);
   });
 
-  it('fills defaults for a config that omits fields', async () => {
+  it('rejects a config missing its required date range', async () => {
     const created = await createPreset(
       adminToken,
       `${NAME_PREFIX} Minimal`,
       {},
     );
 
-    expect(created.status).toBe(201);
-    expect(created.body.config).toMatchObject({
-      dateRange: { kind: 'relative', period: 'this_month' },
-      grouping: ['project'],
-      memberId: null,
-      projectId: null,
-    });
+    expect(created.status).toBe(400);
   });
 
   it('rejects a duplicate name, ignoring case and surrounding space', async () => {
@@ -164,10 +162,10 @@ describe('Saved reports (e2e)', () => {
     expect(bad.status).toBe(400);
   });
 
-  it('rejects an unknown relative period', async () => {
+  it('rejects retired relative periods', async () => {
     const bad = await createPreset(adminToken, `${NAME_PREFIX} BadPeriod`, {
       ...validConfig,
-      dateRange: { kind: 'relative', period: 'last_year' },
+      dateRange: { kind: 'relative', period: 'this_month' },
     });
 
     expect(bad.status).toBe(400);

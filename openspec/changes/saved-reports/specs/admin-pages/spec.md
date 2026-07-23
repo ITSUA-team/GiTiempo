@@ -57,13 +57,6 @@ The reports page MUST support report setup controls for backend export, a config
 - **AND** an invalid date range does not trigger report fetch or CSV export generation
 - **AND** validation remains aligned with the shared report export query contract
 
-#### Scenario: Date range offers relative periods
-
-- **WHEN** the user opens the report date range control
-- **THEN** it offers relative period options alongside the custom range picker
-- **AND** selecting a relative period resolves it to a concrete window in the user's local calendar
-- **AND** choosing a custom range clears the relative period selection
-
 #### Scenario: Saved reports bar lists workspace presets
 
 - **WHEN** an admin or PM opens the reports page
@@ -75,7 +68,7 @@ The reports page MUST support report setup controls for backend export, a config
 
 - **WHEN** the user activates a preset tab
 - **THEN** the page restores that preset's date range, ordered grouping path, project and member scope, and column filters
-- **AND** a relative period is resolved to the window covering the current date
+- **AND** the restored date range is the exact absolute window saved by the preset
 - **AND** the report reloads for the restored setup
 
 #### Scenario: Unsaved changes are indicated against the loaded preset
@@ -83,7 +76,6 @@ The reports page MUST support report setup controls for backend export, a config
 - **WHEN** a preset is loaded and the user changes any setup control or column filter
 - **THEN** the bar shows an unsaved-changes indicator
 - **AND** reverting the change back to the preset's value clears the indicator
-- **AND** a preset storing a relative period is not reported as changed merely because the period resolves to a different window than when it was saved
 
 #### Scenario: Saving overwrites the loaded preset
 

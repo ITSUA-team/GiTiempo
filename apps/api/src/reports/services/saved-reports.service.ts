@@ -20,6 +20,7 @@ import {
 import { MembersService } from '../../members/services/members.service';
 import type { AuthUser } from '../../auth/types/auth-user';
 import {
+  SAVED_REPORTS_WORKSPACE_NAME_UNIQUE,
   savedReports,
   savedReportRowSelection,
 } from '../schemas/saved-reports.schema';
@@ -143,7 +144,10 @@ export class SavedReportsService {
 
   private mapDuplicateName(error: unknown, name?: string): unknown {
     const details = getPostgresError(error);
-    if (details?.code === POSTGRES_UNIQUE_VIOLATION) {
+    if (
+      details?.code === POSTGRES_UNIQUE_VIOLATION &&
+      details.constraint === SAVED_REPORTS_WORKSPACE_NAME_UNIQUE
+    ) {
       return new ConflictException(
         name === undefined
           ? 'A saved report with this name already exists'

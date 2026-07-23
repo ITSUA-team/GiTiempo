@@ -12,6 +12,9 @@ import type { SavedReportConfig } from '@gitiempo/shared';
 import { users } from '../../users/schemas/users.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 
+export const SAVED_REPORTS_WORKSPACE_NAME_UNIQUE =
+  'saved_reports_workspace_name_unique';
+
 /**
  * Named report presets, shared across a workspace.
  *
@@ -47,7 +50,7 @@ export const savedReports = pgTable(
     index('saved_reports_workspace_id_idx').on(table.workspaceId),
     // Names identify a preset to the whole workspace, so they collide on case
     // and surrounding whitespace, matching the users email-lookup pattern.
-    uniqueIndex('saved_reports_workspace_name_unique').on(
+    uniqueIndex(SAVED_REPORTS_WORKSPACE_NAME_UNIQUE).on(
       table.workspaceId,
       sql`lower(btrim(${table.name}))`,
     ),

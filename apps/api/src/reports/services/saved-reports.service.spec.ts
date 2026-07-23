@@ -6,6 +6,7 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { POSTGRES_UNIQUE_VIOLATION } from '../../db/postgres-errors';
+import { SAVED_REPORTS_WORKSPACE_NAME_UNIQUE } from '../schemas/saved-reports.schema';
 import { SavedReportsService } from './saved-reports.service';
 
 const adminUser: AuthUser = {
@@ -19,9 +20,24 @@ const adminUser: AuthUser = {
 const pmUser: AuthUser = { ...adminUser, role: 'pm', sub: 'pm-1' };
 const memberUser: AuthUser = { ...adminUser, role: 'member', sub: 'member-1' };
 
+const validConfig = {
+  dateRange: {
+    dateFrom: '2026-07-01T00:00:00.000Z',
+    dateTo: '2026-07-15T00:00:00.000Z',
+    kind: 'absolute',
+  },
+};
+
 function makeRow(overrides: Record<string, unknown> = {}) {
   return {
-    config: { grouping: ['project'] },
+    config: {
+      dateRange: {
+        dateFrom: '2026-07-01T00:00:00.000Z',
+        dateTo: '2026-07-15T00:00:00.000Z',
+        kind: 'absolute',
+      },
+      grouping: ['project'],
+    },
     createdAt: new Date('2026-07-01T10:00:00.000Z'),
     createdBy: adminUser.sub,
     id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010',
@@ -80,9 +96,12 @@ function mutationReturning(
   };
 }
 
-function uniqueViolation() {
+function uniqueViolation(
+  constraint: string = SAVED_REPORTS_WORKSPACE_NAME_UNIQUE,
+) {
   return Object.assign(new Error('duplicate key'), {
     code: POSTGRES_UNIQUE_VIOLATION,
+    constraint,
   });
 }
 
@@ -143,7 +162,11 @@ describe('SavedReportsService reads', () => {
 
     expect(preset).toEqual({
       config: {
-        dateRange: { kind: 'relative', period: 'this_month' },
+        dateRange: {
+          dateFrom: '2026-07-01T00:00:00.000Z',
+          dateTo: '2026-07-15T00:00:00.000Z',
+          kind: 'absolute',
+        },
         filters: {
           activity: 'any',
           billable: 'any',
@@ -166,7 +189,18 @@ describe('SavedReportsService reads', () => {
   it('fills defaults for a config stored before a filter existed', async () => {
     const { service } = createService(
       'admin',
-      selectReturning([makeRow({ config: { entries: 'gte10' } })]),
+      selectReturning([
+        makeRow({
+          config: {
+            dateRange: {
+              dateFrom: '2026-07-01T00:00:00.000Z',
+              dateTo: '2026-07-15T00:00:00.000Z',
+              kind: 'absolute',
+            },
+            entries: 'gte10',
+          },
+        }),
+      ]),
     );
 
     const [preset] = await service.list(adminUser);
@@ -185,7 +219,7 @@ describe('SavedReportsService writes', () => {
     );
 
     await service.create(adminUser, {
-      config: { grouping: ['project'] } as never,
+      config: { ...validConfig, grouping: ['project'] } as never,
       name: 'Monthly billing',
     });
 
@@ -206,7 +240,7 @@ describe('SavedReportsService writes', () => {
     );
 
     await service.create(adminUser, {
-      config: { grouping: ['project'] } as never,
+      config: { ...validConfig, grouping: ['project'] } as never,
       name: 'Monthly billing',
     });
 
@@ -225,7 +259,7 @@ describe('SavedReportsService writes', () => {
 
     await expect(
       service.create(adminUser, {
-        config: { projectId: 'not-a-uuid' } as never,
+        config: { ...validConfig, projectId: 'not-a-uuid' } as never,
         name: 'Broken',
       }),
     ).rejects.toThrow();
@@ -243,7 +277,7 @@ describe('SavedReportsService writes', () => {
     );
 
     await service.update(adminUser, 'id', {
-      config: { grouping: ['project', 'user'] } as never,
+      config: { ...validConfig, grouping: ['project', 'user'] } as never,
     });
 
     expect(captured[0]!.config).toMatchObject({
@@ -258,7 +292,7 @@ describe('SavedReportsService writes', () => {
 
     await expect(
       service.update(adminUser, 'id', {
-        config: { grouping: ['not-a-dimension'] } as never,
+        config: { ...validConfig, grouping: ['not-a-dimension'] } as never,
       }),
     ).rejects.toThrow();
 
@@ -276,7 +310,7 @@ describe('SavedReportsService writes', () => {
 
     await expect(
       service.create(adminUser, {
-        config: {} as never,
+        config: validConfig,
         name: 'Monthly billing',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -294,6 +328,24 @@ describe('SavedReportsService writes', () => {
     await expect(
       service.update(adminUser, 'id', { name: 'Client hours' }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('does not mask an unrelated unique constraint violation', async () => {
+    const violation = uniqueViolation('saved_reports_other_unique');
+    const { service } = createService('admin', {
+      insert: () => ({
+        values: () => ({
+          returning: () => Promise.reject(violation),
+        }),
+      }),
+    });
+
+    await expect(
+      service.create(adminUser, {
+        config: validConfig,
+        name: 'Monthly billing',
+      }),
+    ).rejects.toBe(violation);
   });
 
   it('advances the update timestamp', async () => {
@@ -318,7 +370,7 @@ describe('SavedReportsService writes', () => {
     );
 
     await service.update(adminUser, 'id', {
-      config: { grouping: ['user'] } as never,
+      config: { ...validConfig, grouping: ['user'] } as never,
     });
 
     expect(captured[0]).not.toHaveProperty('name');

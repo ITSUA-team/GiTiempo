@@ -9,7 +9,11 @@ function makeConfig(
   overrides: Partial<SavedReportConfig> = {},
 ): SavedReportConfig {
   return {
-    dateRange: { kind: 'relative', period: 'this_month' },
+    dateRange: {
+      dateFrom: '2026-07-01T00:00:00.000Z',
+      dateTo: '2026-07-15T00:00:00.000Z',
+      kind: 'absolute',
+    },
     filters: {
       activity: 'any',
       billable: 'any',
@@ -153,17 +157,20 @@ describe('useSavedReports dirty state', () => {
     expect(saved.isDirty.value).toBe(false);
   });
 
-  it('stays clean when only the resolved window would differ', async () => {
+  it('becomes dirty when the date range changes', async () => {
     const { current, saved } = setup();
     await saved.refresh();
     saved.selectPreset('preset-1');
 
-    // Same stored shape; a later day resolves to different concrete dates.
     current.value = makeConfig({
-      dateRange: { kind: 'relative', period: 'this_month' },
+      dateRange: {
+        dateFrom: '2026-07-02T00:00:00.000Z',
+        dateTo: '2026-07-15T00:00:00.000Z',
+        kind: 'absolute',
+      },
     });
 
-    expect(saved.isDirty.value).toBe(false);
+    expect(saved.isDirty.value).toBe(true);
   });
 });
 

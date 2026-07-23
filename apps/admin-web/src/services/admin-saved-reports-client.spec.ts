@@ -4,7 +4,11 @@ import { createAdminSavedReportsClient } from './admin-saved-reports-client';
 const PROJECT_ID = '00000000-0000-4000-8000-000000000001';
 
 const config = {
-  dateRange: { kind: 'relative' as const, period: 'this_month' as const },
+  dateRange: {
+    dateFrom: '2026-07-01T00:00:00.000Z',
+    dateTo: '2026-07-15T00:00:00.000Z',
+    kind: 'absolute' as const,
+  },
   filters: {
     activity: 'any' as const,
     billable: 'any' as const,

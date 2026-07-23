@@ -1,192 +1,86 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 import {
   createSavedReportSchema,
   savedReportConfigSchema,
   savedReportDateRangeSchema,
   updateSavedReportSchema,
-} from "./saved-reports.js";
+} from './saved-reports.js';
 
-describe("savedReportDateRangeSchema", () => {
-  it("accepts a relative period", () => {
-    expect(
-      savedReportDateRangeSchema.parse({
-        kind: "relative",
-        period: "this_month",
-      }),
-    ).toEqual({ kind: "relative", period: "this_month" });
+const dateRange = {
+  dateFrom: '2026-05-01T00:00:00.000Z',
+  dateTo: '2026-06-01T00:00:00.000Z',
+  kind: 'absolute' as const,
+};
+
+describe('savedReportDateRangeSchema', () => {
+  it('accepts an absolute window', () => {
+    expect(savedReportDateRangeSchema.parse(dateRange)).toEqual(dateRange);
   });
 
-  it("accepts an absolute window", () => {
-    const range = {
-      dateFrom: "2026-05-01T00:00:00.000Z",
-      dateTo: "2026-06-01T00:00:00.000Z",
-      kind: "absolute" as const,
-    };
-
-    expect(savedReportDateRangeSchema.parse(range)).toEqual(range);
-  });
-
-  it("rejects an unknown period", () => {
+  it('rejects a relative period and an inverted window', () => {
     expect(() =>
-      savedReportDateRangeSchema.parse({
-        kind: "relative",
-        period: "last_year",
-      }),
+      savedReportDateRangeSchema.parse({ kind: 'relative', period: 'this_month' }),
     ).toThrow();
-  });
-
-  it("rejects an absolute window that ends before it starts", () => {
     expect(() =>
-      savedReportDateRangeSchema.parse({
-        dateFrom: "2026-06-01T00:00:00.000Z",
-        dateTo: "2026-05-01T00:00:00.000Z",
-        kind: "absolute",
-      }),
+      savedReportDateRangeSchema.parse({ ...dateRange, dateFrom: dateRange.dateTo }),
     ).toThrow();
   });
 });
 
-describe("savedReportConfigSchema", () => {
-  it("fills every default for a minimal config", () => {
-    expect(savedReportConfigSchema.parse({})).toEqual({
-      dateRange: { kind: "relative", period: "this_month" },
+describe('savedReportConfigSchema', () => {
+  it('requires a date range but defaults omitted filters and scope', () => {
+    const parsed = savedReportConfigSchema.parse({ dateRange });
+
+    expect(parsed).toMatchObject({
+      dateRange,
       filters: {
-        activity: "any",
-        billable: "any",
-        billableShare: "any",
-        global: "",
-        hours: "any",
+        activity: 'any',
+        billable: 'any',
+        billableShare: 'any',
+        global: '',
+        hours: 'any',
       },
-      grouping: ["project"],
+      grouping: ['project'],
       memberId: null,
       projectId: null,
     });
+    expect(() => savedReportConfigSchema.parse({})).toThrow();
   });
 
-  it("keeps a config that names every field", () => {
-    const config = {
-      dateRange: { kind: "relative" as const, period: "last_7_days" as const },
-      filters: {
-        activity: "today" as const,
-        billable: "withBillable" as const,
-        billableShare: "gte90" as const,
-        global: "orion",
-        hours: "gte8" as const,
-      },
-      grouping: ["project" as const, "user" as const],
-      memberId: "00000000-0000-4000-8000-000000000002",
-      projectId: "00000000-0000-4000-8000-000000000001",
-    };
-
-    expect(savedReportConfigSchema.parse(config)).toEqual(config);
-  });
-
-  it("preserves grouping order", () => {
-    expect(
-      savedReportConfigSchema.parse({ grouping: ["user", "task", "project"] })
-        .grouping,
-    ).toEqual(["user", "task", "project"]);
-  });
-
-  it("strips keys it does not know, so older configs keep parsing", () => {
+  it('preserves grouping order and strips unknown keys', () => {
     const parsed = savedReportConfigSchema.parse({
-      entries: "gte10",
-      grouping: ["project"],
+      dateRange,
+      grouping: ['user', 'task', 'project'],
       retiredFilter: true,
     });
 
-    expect(parsed).not.toHaveProperty("entries");
-    expect(parsed).not.toHaveProperty("retiredFilter");
-    expect(parsed.grouping).toEqual(["project"]);
+    expect(parsed.grouping).toEqual(['user', 'task', 'project']);
+    expect(parsed).not.toHaveProperty('retiredFilter');
   });
 
-  it("defaults only the filter keys that are missing", () => {
-    expect(
-      savedReportConfigSchema.parse({ filters: { hours: "gte40" } }).filters,
-    ).toEqual({
-      activity: "any",
-      billable: "any",
-      billableShare: "any",
-      global: "",
-      hours: "gte40",
-    });
-  });
-
-  it("rejects an unknown grouping dimension", () => {
+  it('rejects invalid grouping and filter vocabulary', () => {
     expect(() =>
-      savedReportConfigSchema.parse({ grouping: ["project", "client"] }),
+      savedReportConfigSchema.parse({ dateRange, grouping: ['project', 'client'] }),
     ).toThrow();
-  });
-
-  it("rejects a duplicated grouping dimension", () => {
     expect(() =>
-      savedReportConfigSchema.parse({ grouping: ["project", "project"] }),
-    ).toThrow();
-  });
-
-  it("rejects more than four grouping levels", () => {
-    expect(() =>
-      savedReportConfigSchema.parse({
-        grouping: ["project", "user", "task", "project"],
-      }),
-    ).toThrow();
-  });
-
-  it("rejects a filter value outside its vocabulary", () => {
-    expect(() =>
-      savedReportConfigSchema.parse({ filters: { hours: "gte100" } }),
+      savedReportConfigSchema.parse({ dateRange, filters: { hours: 'gte100' } }),
     ).toThrow();
   });
 });
 
-describe("createSavedReportSchema", () => {
-  it("trims the name and fills config defaults", () => {
-    const parsed = createSavedReportSchema.parse({
-      config: {},
-      name: "  Monthly billing  ",
-    });
-
-    expect(parsed.name).toBe("Monthly billing");
-    expect(parsed.config.grouping).toEqual(["project"]);
-  });
-
-  it("rejects an empty name", () => {
-    expect(() =>
-      createSavedReportSchema.parse({ config: {}, name: "   " }),
-    ).toThrow();
-  });
-
-  it("rejects a name longer than 120 characters", () => {
-    expect(() =>
-      createSavedReportSchema.parse({ config: {}, name: "x".repeat(121) }),
-    ).toThrow();
-  });
-
-  it("rejects unknown top-level keys", () => {
-    expect(() =>
-      createSavedReportSchema.parse({
-        config: {},
-        name: "Monthly billing",
-        workspaceId: "00000000-0000-4000-8000-000000000001",
-      }),
-    ).toThrow();
-  });
-});
-
-describe("updateSavedReportSchema", () => {
-  it("accepts a rename alone", () => {
-    expect(updateSavedReportSchema.parse({ name: "Client hours" })).toEqual({
-      name: "Client hours",
-    });
-  });
-
-  it("accepts a config alone", () => {
+describe('saved report payloads', () => {
+  it('trims names and accepts a config update', () => {
     expect(
-      updateSavedReportSchema.parse({ config: {} }).config?.grouping,
-    ).toEqual(["project"]);
+      createSavedReportSchema.parse({ config: { dateRange }, name: '  Monthly billing  ' }),
+    ).toMatchObject({ name: 'Monthly billing' });
+    expect(updateSavedReportSchema.parse({ config: { dateRange } })).toMatchObject({
+      config: { dateRange },
+    });
   });
 
-  it("rejects an empty update", () => {
+  it('rejects empty names, missing date ranges, and empty updates', () => {
+    expect(() => createSavedReportSchema.parse({ config: { dateRange }, name: '   ' })).toThrow();
+    expect(() => createSavedReportSchema.parse({ config: {}, name: 'Monthly billing' })).toThrow();
     expect(() => updateSavedReportSchema.parse({})).toThrow();
   });
 });

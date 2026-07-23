@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import type {
-  SavedReportPeriod,
-  TimeReportExportFormat,
-} from '@gitiempo/shared';
+import type { TimeReportExportFormat } from '@gitiempo/shared';
 import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Button from 'primevue/button';
@@ -63,14 +60,12 @@ const {
 
 const tableFilters = ref(createDefaultReportTableFilters());
 const exporting = ref(false);
-const reportPeriod = ref<SavedReportPeriod | null>(null);
 
 const currentSavedReportConfig = computed(() =>
   buildConfigFromState({
     dateRange: dateRange.value,
     filters: tableFilters.value,
     grouping: grouping.value,
-    period: reportPeriod.value,
   }),
 );
 
@@ -83,7 +78,6 @@ const savedReports = useSavedReports({
   onApply({ fallbacks, state }) {
     dateRange.value = state.dateRange;
     grouping.value = state.grouping;
-    reportPeriod.value = state.period;
     tableFilters.value = state.filters;
 
     if (fallbacks.length > 0) {
@@ -296,7 +290,6 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
           v-model:filters="tableFilters"
           v-model:date-range="dateRange"
           v-model:grouping="grouping"
-          v-model:period="reportPeriod"
           :rows="tableRows"
           :loading="loading"
           :project-options="projectOptions"

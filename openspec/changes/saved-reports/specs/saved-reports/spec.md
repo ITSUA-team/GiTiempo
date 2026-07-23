@@ -29,13 +29,7 @@ The backend MUST persist named report presets scoped to a workspace. A preset MU
 
 ### Requirement: Report Presets Capture The Report Configuration
 
-A preset configuration MUST record the report date range, the ordered grouping path, the project and member scope, and the table column filters. The date range MUST be either a relative period resolved when the preset is opened, or an explicit absolute window. The backend MUST validate the configuration against the shared contract on write and reject configurations that do not conform.
-
-#### Scenario: Preset stores a relative period
-- **GIVEN** an authenticated admin creates a preset
-- **WHEN** the configuration date range is a relative period such as `this_month`
-- **THEN** the backend stores the period rather than concrete dates
-- **AND** listing the preset returns the same relative period
+A preset configuration MUST record an absolute report date range, the ordered grouping path, the project and member scope, and the table column filters. The backend MUST validate the configuration against the shared contract on write and reject configurations that do not conform.
 
 #### Scenario: Preset stores an absolute window
 - **GIVEN** an authenticated admin creates a preset
@@ -50,7 +44,7 @@ A preset configuration MUST record the report date range, the ordered grouping p
 
 #### Scenario: Invalid configuration is rejected
 - **GIVEN** an authenticated admin or PM creates or updates a preset
-- **WHEN** the configuration is missing required fields, carries an unknown grouping dimension, or names an unknown relative period
+- **WHEN** the configuration is missing its date range, carries an unknown grouping dimension, or uses a retired relative date range shape
 - **THEN** the backend rejects the request as a validation error
 - **AND** no preset is created or modified
 

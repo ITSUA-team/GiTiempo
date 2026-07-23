@@ -5,7 +5,11 @@ import type { SavedReport } from '@gitiempo/shared';
 import SavedReportsBar from './SavedReportsBar.vue';
 
 const config = {
-  dateRange: { kind: 'relative' as const, period: 'this_month' as const },
+  dateRange: {
+    dateFrom: '2026-07-01T00:00:00.000Z',
+    dateTo: '2026-07-15T00:00:00.000Z',
+    kind: 'absolute' as const,
+  },
   filters: {
     activity: 'any' as const,
     billable: 'any' as const,

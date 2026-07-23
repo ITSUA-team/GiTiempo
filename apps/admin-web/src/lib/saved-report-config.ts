@@ -1,7 +1,6 @@
 import {
   savedReportConfigSchema,
   type SavedReportConfig,
-  type SavedReportPeriod,
   type TimeReportGroupBy,
 } from '@gitiempo/shared';
 import {
@@ -20,21 +19,15 @@ import {
 /**
  * Translates between a saved preset config and the reports page state.
  *
- * Pure by design: every function takes `now` rather than reading the clock, so
- * relative periods are deterministic in tests, and nothing here touches Vue
- * refs or the network.
+ * Pure by design: functions receive data rather than Vue refs or network
+ * dependencies.
  */
 
 /**
- * The slice of page state a preset restores. `period` is what the date control
- * has selected: a relative period, or `null` when the user picked a custom
- * range. It is tracked separately from `dateRange` because `dateRange` always
- * holds concrete dates — the resolved window — and the preset must store the
- * user's intent, not the day it happened to be saved.
+ * The slice of page state a preset restores.
  */
 export interface SavedReportState {
   dateRange: ReportDateRange;
-  period: SavedReportPeriod | null;
   grouping: ReportGrouping;
   filters: ReportTableFilters;
 }
@@ -43,7 +36,6 @@ export interface SavedReportState {
 export type SavedReportFallback = 'project' | 'member';
 
 export interface ApplyConfigOptions {
-  now?: Date;
   /** Ids the user can currently choose. `null` skips the availability check. */
   availableProjectIds?: readonly string[] | null;
   availableMemberIds?: readonly string[] | null;
@@ -70,65 +62,26 @@ export function toUiGrouping(
   return grouping.map((dimension) => apiToUiDimension[dimension]);
 }
 
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function addDays(date: Date, days: number): Date {
-  const shifted = startOfDay(date);
-  shifted.setDate(shifted.getDate() + days);
-  return shifted;
-}
-
-/**
- * Resolves a period against the viewer's local calendar, matching how the
- * Last-activity filter and column already read dates.
- */
-export function resolveRelativePeriod(
-  period: SavedReportPeriod,
-  now = new Date(),
-): [Date, Date] {
-  const today = startOfDay(now);
-
-  switch (period) {
-    case 'this_week': {
-      // Weeks start Monday; getDay() is 0 on Sunday.
-      const weekday = (today.getDay() + 6) % 7;
-      return [addDays(today, -weekday), today];
-    }
-    case 'this_month':
-      return [new Date(today.getFullYear(), today.getMonth(), 1), today];
-    case 'previous_month':
-      return [
-        new Date(today.getFullYear(), today.getMonth() - 1, 1),
-        new Date(today.getFullYear(), today.getMonth(), 0),
-      ];
-    case 'last_7_days':
-      return [addDays(today, -6), today];
-    case 'last_30_days':
-      return [addDays(today, -29), today];
-  }
-}
-
 function toIsoDate(date: Date): string {
   return date.toISOString();
 }
 
 export function buildConfigFromState(
   state: SavedReportState,
+  now = new Date(),
 ): SavedReportConfig {
-  const [start, end] = state.dateRange ?? [];
+  const defaultDateRange = getDefaultReportDateRange(now);
+  const [start, end] = state.dateRange ?? defaultDateRange ?? [];
 
-  const dateRange: SavedReportConfig['dateRange'] =
-    state.period !== null
-      ? { kind: 'relative', period: state.period }
-      : start && end
-        ? {
-            dateFrom: toIsoDate(start),
-            dateTo: toIsoDate(end),
-            kind: 'absolute',
-          }
-        : { kind: 'relative', period: 'this_month' };
+  if (!start || !end) {
+    throw new Error('A saved report requires a complete date range.');
+  }
+
+  const dateRange: SavedReportConfig['dateRange'] = {
+    dateFrom: toIsoDate(start),
+    dateTo: toIsoDate(end),
+    kind: 'absolute',
+  };
 
   const result = savedReportConfigSchema.safeParse({
     dateRange,
@@ -144,7 +97,20 @@ export function buildConfigFromState(
     projectId: state.filters.projectId,
   });
 
-  return result.success ? result.data : savedReportConfigSchema.parse({});
+  if (result.success) return result.data;
+
+  const [defaultStart, defaultEnd] = defaultDateRange ?? [];
+  if (!defaultStart || !defaultEnd) {
+    throw new Error('A saved report requires a complete date range.');
+  }
+
+  return savedReportConfigSchema.parse({
+    dateRange: {
+      dateFrom: toIsoDate(defaultStart),
+      dateTo: toIsoDate(defaultEnd),
+      kind: 'absolute',
+    },
+  });
 }
 
 function keepAvailable(
@@ -164,7 +130,6 @@ export function applyConfigToState(
   config: SavedReportConfig,
   options: ApplyConfigOptions = {},
 ): AppliedConfig {
-  const now = options.now ?? new Date();
   const project = keepAvailable(config.projectId, options.availableProjectIds);
   const member = keepAvailable(config.memberId, options.availableMemberIds);
 
@@ -172,13 +137,10 @@ export function applyConfigToState(
   if (project.dropped) fallbacks.push('project');
   if (member.dropped) fallbacks.push('member');
 
-  const dateRange: ReportDateRange =
-    config.dateRange.kind === 'relative'
-      ? resolveRelativePeriod(config.dateRange.period, now)
-      : [
-          new Date(config.dateRange.dateFrom),
-          new Date(config.dateRange.dateTo),
-        ];
+  const dateRange: ReportDateRange = [
+    new Date(config.dateRange.dateFrom),
+    new Date(config.dateRange.dateTo),
+  ];
 
   return {
     fallbacks,
@@ -194,8 +156,6 @@ export function applyConfigToState(
         projectId: project.id,
       },
       grouping: toUiGrouping(config.grouping),
-      period:
-        config.dateRange.kind === 'relative' ? config.dateRange.period : null,
     },
   };
 }
@@ -205,14 +165,6 @@ export interface SavedReportConfigSummaryItem {
   icon: string;
   label: string;
 }
-
-const periodLabels: Record<SavedReportPeriod, string> = {
-  last_7_days: 'Last 7 days',
-  last_30_days: 'Last 30 days',
-  previous_month: 'Previous month',
-  this_month: 'This month',
-  this_week: 'This week',
-};
 
 const groupingDimensionLabels: Record<TimeReportGroupBy, string> = {
   project: 'Project',
@@ -242,18 +194,13 @@ function countActiveFilters(config: SavedReportConfig): number {
 }
 
 /**
- * Human-readable summary of what a preset captures: the date intent, the
- * grouping path, and how many filters are set. Shown before saving so the
- * user knows what the preset will restore — the stored shape, matching the
- * dirty comparison, not the resolved window.
+ * Human-readable summary of what a preset captures: the date range, grouping
+ * path, and how many filters are set.
  */
 export function describeSavedReportConfig(
   config: SavedReportConfig,
 ): SavedReportConfigSummaryItem[] {
-  const dateLabel =
-    config.dateRange.kind === 'relative'
-      ? periodLabels[config.dateRange.period]
-      : `${formatSummaryDate(config.dateRange.dateFrom)} – ${formatSummaryDate(config.dateRange.dateTo)}`;
+  const dateLabel = `${formatSummaryDate(config.dateRange.dateFrom)} – ${formatSummaryDate(config.dateRange.dateTo)}`;
 
   const items: SavedReportConfigSummaryItem[] = [
     { icon: 'pi pi-calendar', label: dateLabel },
@@ -283,24 +230,15 @@ export function createDefaultSavedReportState(
     dateRange: getDefaultReportDateRange(now),
     filters: createDefaultReportTableFilters(),
     grouping: [...defaultReportGrouping],
-    period: null,
   };
 }
 
-/**
- * Canonical form for dirty comparison.
- *
- * Compares the STORED shape, never the resolved window: a relative preset must
- * not read as changed simply because "this month" covers different days than
- * it did when the preset was saved.
- */
+/** Canonical form for dirty comparison. */
 export function normaliseConfig(config: SavedReportConfig): string {
   const parsed = savedReportConfigSchema.parse(config);
 
   return JSON.stringify([
-    parsed.dateRange.kind === 'relative'
-      ? ['relative', parsed.dateRange.period]
-      : ['absolute', parsed.dateRange.dateFrom, parsed.dateRange.dateTo],
+    ['absolute', parsed.dateRange.dateFrom, parsed.dateRange.dateTo],
     parsed.grouping,
     parsed.projectId ?? '',
     parsed.memberId ?? '',

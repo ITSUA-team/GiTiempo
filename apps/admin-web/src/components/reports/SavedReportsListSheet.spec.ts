@@ -5,7 +5,11 @@ import type { SavedReport } from '@gitiempo/shared';
 import SavedReportsListSheet from './SavedReportsListSheet.vue';
 
 const config = {
-  dateRange: { kind: 'relative' as const, period: 'this_month' as const },
+  dateRange: {
+    dateFrom: '2026-07-01T00:00:00.000Z',
+    dateTo: '2026-07-15T00:00:00.000Z',
+    kind: 'absolute' as const,
+  },
   filters: {
     activity: 'any' as const,
     billable: 'any' as const,
@@ -66,7 +70,7 @@ describe('SavedReportsListSheet', () => {
 
     const row = query('[data-testid="saved-sheet-row-preset-1"]');
     expect(row?.textContent).toContain('Monthly billing');
-    expect(row?.textContent).toContain('This month');
+    expect(row?.textContent).toContain('Jul 1 – Jul 15');
     expect(row?.textContent).toContain('Project › Member');
   });
 

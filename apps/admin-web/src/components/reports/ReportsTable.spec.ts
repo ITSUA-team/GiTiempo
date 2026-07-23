@@ -7,7 +7,6 @@ import {
   giTiempoPrimeVueOptions,
   giTiempoSelfAppendedAutoCompleteOverlayStyle,
 } from '@gitiempo/web-config/theme';
-
 import {
   createDefaultReportTableFilters,
   type ReportGrouping,
@@ -175,8 +174,8 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
-    // hours/billable/billable-share/activity filters; the add-level control
-    // carries its own testid
+    // hours/billable/billable-share/activity filters; the grouping builder
+    // control carries its own test id.
     expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
     expect(
       wrapper.find('[data-testid="report-grouping-add-level"]').exists(),
@@ -596,8 +595,8 @@ describe('ReportsTable', () => {
 
     const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
 
-    // mobile hours/billable/billable-share/activity filters; add-level
-    // carries its own testid
+    // mobile hours/billable/billable-share/activity filters; the grouping
+    // builder control carries its own test id.
     expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
     expect(autoCompleteControls).toHaveLength(2);
     for (const autoCompleteControl of autoCompleteControls) {

@@ -27,7 +27,6 @@ import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
-import type { SavedReportPeriod } from '@gitiempo/shared';
 
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
 import {
@@ -69,14 +68,6 @@ const props = defineProps<{
 const filters = defineModel<ReportTableFilters>('filters', { required: true });
 const dateRange = defineModel<ReportDateRange>('dateRange', { required: true });
 const grouping = defineModel<ReportGrouping>('grouping', { required: true });
-/**
- * Which relative period the range came from, or `null` when the dates were
- * picked by hand. Saved report presets store this rather than the resolved
- * dates, so a preset keeps reporting "this month" every month.
- */
-const period = defineModel<SavedReportPeriod | null>('period', {
-  default: null,
-});
 const isMobileViewport = useIsMobileViewport();
 const projectFilterSuggestions = ref<ReportFilterOption[]>([]);
 const memberFilterSuggestions = ref<ReportFilterOption[]>([]);
@@ -205,8 +196,6 @@ function handleGlobalSearchUpdate(value: string | null | undefined): void {
 }
 
 function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
-  // Picking dates by hand means the range is no longer a named period.
-  period.value = null;
   dateRange.value = normalizeReportDateRangeValue(value);
 }
 
