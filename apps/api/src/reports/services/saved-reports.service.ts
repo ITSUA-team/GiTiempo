@@ -59,11 +59,16 @@ export class SavedReportsService {
   ): Promise<SavedReport> {
     await this.requireReportsRole(user);
 
+    // The config column is written only through the shared schema (D3), so a
+    // malformed config cannot enter even from an internal caller that bypasses
+    // the HTTP DTO. Symmetric with the re-validation in toSavedReport.
+    const config = savedReportConfigSchema.parse(input.config);
+
     try {
       const [row] = await this.db
         .insert(savedReports)
         .values({
-          config: input.config,
+          config,
           createdBy: user.sub,
           name: input.name,
           workspaceId: user.workspaceId,
@@ -83,12 +88,19 @@ export class SavedReportsService {
   ): Promise<SavedReport> {
     await this.requireReportsRole(user);
 
+    // Same write-side guard as create: a provided config is parsed through the
+    // shared schema before it can reach the column (D3).
+    const config =
+      input.config === undefined
+        ? undefined
+        : savedReportConfigSchema.parse(input.config);
+
     try {
       const [row] = await this.db
         .update(savedReports)
         .set({
           ...(input.name === undefined ? {} : { name: input.name }),
-          ...(input.config === undefined ? {} : { config: input.config }),
+          ...(config === undefined ? {} : { config }),
           updatedAt: new Date(),
         })
         .where(this.scopedId(user, id))

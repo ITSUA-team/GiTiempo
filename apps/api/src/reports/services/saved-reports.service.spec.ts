@@ -196,6 +196,75 @@ describe('SavedReportsService writes', () => {
     });
   });
 
+  it('writes the config through the shared schema on create, applying defaults', async () => {
+    const captured: Record<string, unknown>[] = [];
+    const { service } = createService(
+      'admin',
+      mutationReturning([makeRow()], (values) =>
+        captured.push(values as Record<string, unknown>),
+      ),
+    );
+
+    await service.create(adminUser, {
+      config: { grouping: ['project'] } as never,
+      name: 'Monthly billing',
+    });
+
+    // the column receives the full parsed shape, never the raw input
+    expect(captured[0]!.config).toMatchObject({
+      grouping: ['project'],
+      memberId: null,
+      projectId: null,
+      filters: { activity: 'any', billable: 'any' },
+    });
+  });
+
+  it('rejects an invalid config on create before touching the database', async () => {
+    const insert = vi.fn();
+    const { service } = createService('admin', { insert });
+
+    await expect(
+      service.create(adminUser, {
+        config: { projectId: 'not-a-uuid' } as never,
+        name: 'Broken',
+      }),
+    ).rejects.toThrow();
+
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('writes a provided config through the shared schema on update', async () => {
+    const captured: Record<string, unknown>[] = [];
+    const { service } = createService(
+      'admin',
+      mutationReturning([makeRow()], (values) =>
+        captured.push(values as Record<string, unknown>),
+      ),
+    );
+
+    await service.update(adminUser, 'id', {
+      config: { grouping: ['project', 'user'] } as never,
+    });
+
+    expect(captured[0]!.config).toMatchObject({
+      grouping: ['project', 'user'],
+      projectId: null,
+    });
+  });
+
+  it('rejects an invalid config on update before touching the database', async () => {
+    const update = vi.fn();
+    const { service } = createService('admin', { update });
+
+    await expect(
+      service.update(adminUser, 'id', {
+        config: { grouping: ['not-a-dimension'] } as never,
+      }),
+    ).rejects.toThrow();
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('reports a duplicate name as a conflict', async () => {
     const { service } = createService('admin', {
       insert: () => ({
