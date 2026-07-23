@@ -2,7 +2,7 @@
 
 ### Requirement: Reports Generation And Export
 
-The reports page MUST support report setup controls for backend export, a configurable ordered grouping builder of one to four levels, scoped report summaries for loaded data, table-only discovery filters, hierarchical grouped results, saved report presets, and backend CSV and PDF generation through an export menu while preserving project-scope restrictions for PM users.
+The reports page MUST support report setup controls, a configurable ordered grouping builder of one to four levels, scoped report summaries for loaded data, table-only discovery filters, hierarchical grouped results, saved report presets, and CSV and PDF generation through an export menu that mirrors the on-screen report, while preserving project-scope restrictions for PM users.
 
 #### Scenario: Reports page renders reporting surface
 
@@ -35,13 +35,13 @@ The reports page MUST support report setup controls for backend export, a config
 - **THEN** it shows a loading skeleton that matches the reports header, filter bar, summary cards, and results table structure
 - **AND** it does not render an empty report message before the initial request finishes
 
-#### Scenario: Header setup controls define backend CSV export scope
+#### Scenario: Header setup controls define the exported report scope
 
 - **WHEN** the user changes project, member, date range, or grouping-builder values in the header setup controls
 - **THEN** those values are kept as report-generation setup state
 - **AND** currently loaded table rows and summary cards do not change solely because those setup controls changed
-- **AND** activating an export option requests backend generation in that format with the current setup state, including the ordered grouping path
-- **AND** the `Export` menu is disabled with an explanatory reason while any aggregate-level table filter (search, hours, billable, billable share, or last activity) is active, because the exported file cannot express those filters
+- **AND** activating an export produces a file built from the report currently on screen, reflecting the setup state, the ordered grouping path, and every active table filter
+- **AND** the `Export` menu stays enabled whenever the date range is valid and is not disabled by active table filters, because the exported file reflects those filters
 
 #### Scenario: Results table keeps grouped identity breakdowns
 
@@ -141,21 +141,20 @@ The reports page MUST support report setup controls for backend export, a config
 - **AND** Today matches groups whose last activity falls on the current local calendar day, and Last 7/30 days match activity within that many days of now
 - **AND** the total row sums only the groups that remain visible
 
-#### Scenario: CSV export uses backend report endpoint
+#### Scenario: CSV export mirrors the on-screen report
 
 - **WHEN** the user activates "Export as CSV"
-- **THEN** the page requests `GET /reports/time/export` with the current report setup controls, including the ordered grouping path
-- **AND** the browser downloads the CSV returned by the backend
-- **AND** the downloaded CSV contains backend-generated detailed project-task-user rows for the selected setup controls
-- **AND** table global search and column filters do not change the CSV export scope
-- **AND** no browser-side report row aggregation or CSV serialization is required
+- **THEN** the page serializes the CSV in the browser from the filtered, grouped report tree currently shown, including the ordered grouping path with its subtotal and total rows
+- **AND** the browser downloads that CSV without a dedicated backend export request
+- **AND** the active global search and column filters are reflected in the exported rows, so the file matches the table
+- **AND** workspace-controlled names are guarded against spreadsheet formula injection
 
-#### Scenario: PDF export uses backend report endpoint
+#### Scenario: PDF export mirrors the on-screen report
 
 - **WHEN** the user activates "Export as PDF"
-- **THEN** the page requests `GET /reports/time/export` with `format=pdf` and the current report setup controls, including the ordered grouping path
-- **AND** the browser downloads the PDF returned by the backend
-- **AND** no browser-side PDF rendering is required
+- **THEN** the page builds a renderer-agnostic report document from the report currently shown — the same filtered, grouped rows, subtotals, and totals — and sends it to `POST /reports/time/export/pdf`
+- **AND** the backend only styles that document into a PDF, behind the admin/PM role gate and a bounded strict schema, without re-querying report data
+- **AND** the browser downloads the returned PDF, which matches the table including active table filters
 
 #### Scenario: Report request errors stay distinct from empty results
 
