@@ -244,9 +244,10 @@ export class AuthService {
     const normalized = normalizeEmail(email);
     const existingUser = await this.findUserByEmail(normalized);
     if (!existingUser) {
+      // Log only the domain, not the address, to keep PII out of logs.
       this.logger.warn({
         event: 'auth.github_login.no_user',
-        email: normalized,
+        emailDomain: normalized.split('@')[1] ?? null,
       });
       throw new UnauthorizedException('Unauthorized');
     }
@@ -260,7 +261,6 @@ export class AuthService {
       this.logger.warn({
         event: 'auth.github_login.no_membership',
         userId: existingUser.id,
-        email: normalized,
       });
       throw error;
     }

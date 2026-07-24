@@ -1,7 +1,7 @@
 ## 1. Backend: OAuth sign-in service + endpoints
 
 - [x] 1.1 Add `AuthGithubService` (`apps/api/src/auth/services/auth-github.service.ts`): build the authorize URL (dedicated OAuth App client id, `<APP_URL>/auth/github/callback`, `user:email`, signed state), exchange the code, read the primary verified email from `GET /user/emails`, sign a one-time handoff, and exchange the handoff for a session.
-- [x] 1.2 Sign the CSRF state and the handoff as short-lived JWTs (`JWT_ACCESS_SECRET`) carrying a distinct `purpose` (and no issuer/audience), so neither can pass the access-token verifier.
+- [x] 1.2 Sign the CSRF state and the handoff as short-lived JWTs (`JWT_ACCESS_SECRET`) carrying a distinct `purpose` (and no issuer/audience), so neither can pass the access-token verifier. Enforce single-use on the handoff via a remembered `jti` (in-memory) so it cannot be replayed within its TTL.
 - [x] 1.3 Add `AuthService.createSessionForVerifiedEmail(email)`: match an existing member by verified email, require an active membership, and issue the normal token pair reusing the member's Firebase UID; warn-log the no-user / no-membership / invalid-handoff reasons.
 - [x] 1.4 Add `AuthGithubController` (`GET /auth/github/start`, `GET /auth/github/callback`, `POST /auth/github/session`, all `@SkipAuth`) + `GithubSessionDto`; wire into `auth.module.ts`.
 - [x] 1.5 Add `GITHUB_SIGNIN_CLIENT_ID`/`GITHUB_SIGNIN_CLIENT_SECRET` to `env.validation.ts` and the `.env.example` files (separate from `GITHUB_APP_*`).
@@ -35,5 +35,5 @@
 
 ## 7. Docs & OpenSpec
 
-- [ ] 7.1 Update `docs/deployment.md` and `docs/ui/pages-user.md` to the backend OAuth-App flow.
+- [x] 7.1 Update `docs/deployment.md` and `docs/ui/pages-user.md` to the backend OAuth-App flow.
 - [ ] 7.2 After deploy verification, archive this OpenSpec change.

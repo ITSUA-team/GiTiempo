@@ -43,7 +43,7 @@ No provisioning, no invite acceptance, no registration via GitHub.
 
 ## Risks / Trade-offs
 
-- **Handoff replay** → the handoff JWT is stateless and replayable within its 60s TTL. A `?code=` intercepted from the redirect (browser history, Referer, logs) could be re-posted to mint a session. Mitigation: 60s TTL + HTTPS. Harden with a single-use nonce store before treating it as production-grade; the DTO/comments call it "one-time" but do not yet enforce it.
+- **Handoff replay** → each handoff carries a random `jti` that is remembered until the JWT expires, so a replay within the 60s TTL is rejected (single-use, enforced). The store is in-memory — sufficient for a single API instance; a horizontally scaled deployment would need a shared store (e.g. the DB, like `github_oauth_states`).
 - **Email not a member** → a verified GitHub email with no matching active member returns 401 (`no_user`). This is intended (login-only), and is logged for diagnosis.
 - **Config coherence** → `VITE_GITHUB_SIGNIN_ENABLED` (frontend, default on) and `GITHUB_SIGNIN_*` (backend) are independent; if the button shows without the backend configured the flow fails with a service error. Document that both must be set per environment.
 - **PII in logs** → failure warns include the member email; confirm this is acceptable or hash it.
@@ -54,4 +54,4 @@ No database migration. Steps: (1) create a dedicated identity-only GitHub **OAut
 
 ## Open Questions
 
-- Whether to enforce single-use on the handoff code (nonce store) before production, given the replay window above.
+- If the API is ever horizontally scaled, move the single-use handoff store (and the CSRF-state check) to a shared backend so replay protection holds across instances.

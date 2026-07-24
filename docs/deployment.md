@@ -97,6 +97,8 @@ The Compose stack passes `.env` to the `api` and one-shot `migrate` services wit
 
 `APP_URL` is an API runtime value used when the backend builds its own OAuth callback URL. `PUBLIC_API_URL` is a GitHub Environment variable used by the deploy workflow for the final public readiness check; it does not belong in the VPS runtime `.env` unless a future runtime feature needs it.
 
+`GITHUB_SIGNIN_CLIENT_ID` and `GITHUB_SIGNIN_CLIENT_SECRET` configure backend GitHub sign-in. They belong to a dedicated, identity-only GitHub **OAuth App** (not the GitHub App integration) whose authorization callback is `<APP_URL>/auth/github/callback`; the `user:email` scope is requested in code. They are independent of `GITHUB_APP_*`. The frontend button is gated by `VITE_GITHUB_SIGNIN_ENABLED`; keep that flag off in any environment where these two values are not set, so the button never shows a flow that cannot complete.
+
 Seed users are optional runtime env values consumed only by the seed command. `SEED_ADMIN_EMAIL` and `SEED_ADMIN_FIREBASE_UID` create or update the initial admin membership. `SEED_MEMBER_EMAIL` and `SEED_MEMBER_FIREBASE_UID` create or update a member and assign that user to the seeded `Demo Client` project so the user app has visible project/task data. These values must match real Firebase Auth users; seed does not create Firebase Auth accounts or passwords.
 
 Staging defaults to `NODE_ENV=development` unless the environment overrides it.

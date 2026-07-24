@@ -131,4 +131,21 @@ describe('AuthGithubService', () => {
     const { svc } = createService();
     await expect(svc.exchangeSession('garbage')).rejects.toThrow();
   });
+
+  it('rejects a replayed handoff code (single-use)', async () => {
+    const { svc } = createService();
+    const state = new URL(svc.buildStartUrl('user')).searchParams.get('state')!;
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'admin@example.com', primary: true, verified: true },
+      ]),
+    );
+    const handoff = new URL(
+      await svc.completeCallback({ code: 'abc', state }),
+    ).searchParams.get('code')!;
+
+    await svc.exchangeSession(handoff);
+    await expect(svc.exchangeSession(handoff)).rejects.toThrow();
+  });
 });

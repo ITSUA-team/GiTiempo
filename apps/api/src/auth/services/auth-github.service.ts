@@ -21,6 +21,8 @@ interface GithubStateClaims {
 interface GithubHandoffClaims {
   purpose: 'gh-login-handoff';
   email: string;
+  jti: string;
+  exp?: number;
 }
 
 interface GithubEmailEntry {
@@ -40,6 +42,12 @@ interface GithubEmailEntry {
 @Injectable()
 export class AuthGithubService {
   private readonly logger = new Logger(AuthGithubService.name);
+
+  // Handoff codes are single-use: a consumed `jti` is remembered until the JWT
+  // would expire anyway, so a replay within the 60s TTL is rejected. In-memory
+  // is sufficient for a single API instance; a shared store would be needed if
+  // the API is ever horizontally scaled.
+  private readonly consumedHandoffs = new Map<string, number>();
 
   constructor(
     private readonly config: ConfigService<Env, true>,
@@ -186,9 +194,15 @@ export class AuthGithubService {
   }
 
   private signHandoff(email: string): string {
-    return jwt.sign({ purpose: 'gh-login-handoff', email }, this.secret(), {
-      expiresIn: '60s',
-    });
+    return jwt.sign(
+      {
+        purpose: 'gh-login-handoff',
+        email,
+        jti: randomBytes(16).toString('hex'),
+      },
+      this.secret(),
+      { expiresIn: '60s' },
+    );
   }
 
   private verifyHandoff(token: string): string {
@@ -202,11 +216,30 @@ export class AuthGithubService {
       });
       throw new UnauthorizedException('Unauthorized');
     }
-    if (decoded.purpose !== 'gh-login-handoff' || !decoded.email) {
+    if (
+      decoded.purpose !== 'gh-login-handoff' ||
+      !decoded.email ||
+      !decoded.jti
+    ) {
       this.logger.warn({ event: 'auth.github_login.handoff_bad_claims' });
       throw new UnauthorizedException('Unauthorized');
     }
+    if (!this.claimHandoff(decoded.jti, decoded.exp)) {
+      this.logger.warn({ event: 'auth.github_login.handoff_replayed' });
+      throw new UnauthorizedException('Unauthorized');
+    }
     return decoded.email;
+  }
+
+  /** Single-use: returns false if this handoff jti was already consumed. */
+  private claimHandoff(jti: string, exp?: number): boolean {
+    const now = Date.now();
+    for (const [key, expiresAt] of this.consumedHandoffs) {
+      if (expiresAt <= now) this.consumedHandoffs.delete(key);
+    }
+    if (this.consumedHandoffs.has(jti)) return false;
+    this.consumedHandoffs.set(jti, exp ? exp * 1000 : now + 60_000);
+    return true;
   }
 
   // --- Config helpers --------------------------------------------------------
