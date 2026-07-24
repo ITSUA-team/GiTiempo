@@ -42,6 +42,8 @@ The landing implementation must receive all three values from environment-aware 
 
 Do not read production frontend config from repository `.env` files. GitHub Actions must inject environment-specific values from GitHub Environments or repository secrets/variables. The staging Environment example at `deploy/github-environment.staging.example.env` documents the frontend and API values.
 
+For Cloudflare staging deployment, `CLOUDFLARE_ACCOUNT_ID` and the landing `PUBLIC_*` values are GitHub Environment variables. `CLOUDFLARE_API_TOKEN` is a GitHub Environment secret. The example file separates those categories so operators do not duplicate the account ID as a secret.
+
 ### Frontend Manual Triggers
 
 The staging frontend deploy workflow supports `workflow_dispatch` with:
@@ -224,4 +226,4 @@ Rollback deploys should redeploy a previously published Docker image or Cloudfla
 
 Database migrations are not automatically reversible. Any schema rollback requires an explicit migration plan before production rollout.
 
-Frontend rollback is independent per app. Rolling back `user-web` must not roll back `admin-web` unless both were part of the same incident.
+Frontend rollback is independent per app. Roll back `landing-web` by redeploying a previously published landing Cloudflare Worker version only; do not redeploy `user-web`, `admin-web`, or the API. Rolling back `user-web` must not roll back `admin-web` unless both were part of the same incident.

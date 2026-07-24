@@ -110,6 +110,14 @@ Do not implement disabled Pencil nodes. Member, Project Manager, and Admin role 
 - On tablet and mobile, render all three role details as stacked cards so no role information is hidden.
 - The selector must remain clickable and keyboard-operable without client JavaScript.
 
+### Admin role detail
+
+- Selector label: `Admin`.
+- Eyebrow: `RUN THE WORKSPACE`.
+- Heading: `Admin`.
+- Detail points, in order: `Invite teammates and assign roles`; `Manage settings and GitHub connection`; `See the full workspace across projects`.
+- Use the inverse brand-purple detail treatment from the approved role section: inverse heading/body text with lavender eyebrow and point markers. This approved Admin detail overrides the stale desktop Pencil node that only exposes the role label.
+
 ## Landing Tokens And Typography
 
 - Reuse shared semantic tokens from `packages/web-config/src/styles/tokens.css`; do not copy Vue or PrimeVue components.

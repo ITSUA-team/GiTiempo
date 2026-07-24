@@ -69,3 +69,17 @@ The frontend deployment system SHALL provide a manual landing staging dispatch w
 
 - **WHEN** an operator manually runs the landing staging workflow
 - **THEN** only landing-web is verified and deployed from the selected ref
+
+## MODIFIED Requirements
+
+### Requirement: Deployment Guide
+
+The repository MUST document the staging frontend deploy process in `docs/deployment.md`, with `README.md` linking to that canonical operator guide. The guide MUST explain staging hostnames, required GitHub Environment values and their variable/secret ownership, the shared `deploy/github-environment.staging.example.env` example, automatic trigger behavior, manual dispatch behavior, the rule that implementation work must not run a live deploy, and independent rollback for each frontend app.
+
+#### Scenario: Operator reads deployment guide
+
+- **WHEN** an operator needs to deploy or roll back frontend staging
+- **THEN** `docs/deployment.md` explains the landing, user-web, and admin-web staging hostnames and required GitHub Environment configuration
+- **AND** it explains the separate landing workflow and its manual dispatch behavior
+- **AND** it states that a landing rollback redeploys only a previously published landing Worker version
+- **AND** it states that implementation and local verification do not invoke a live deployment

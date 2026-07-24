@@ -16,15 +16,15 @@
 
 - [x] 3.1 Implement the hero/navigation and dashboard illustration to match the approved Pencil frames, including `Start tracking` and `Start tracking now` links to `PUBLIC_USER_APP_URL` and `Open admin workspace` links to `PUBLIC_ADMIN_APP_URL`.
 - [x] 3.2 Implement product benefits and the `#github-workflow` demonstration with the documented copy, hierarchy, and responsive presentation.
-- [x] 3.3 Implement `#how-it-works`, roles, and MVP scope sections with enabled Member, Project Manager, and Admin details while omitting the disabled Reports/Invoices card.
+- [x] 3.3 Implement `#how-it-works`, roles, and MVP scope sections with enabled Member, Project Manager, and Admin details; preserve the documented Admin copy/treatment; omit the disabled Reports/Invoices card.
 - [x] 3.4 Implement the static `#faq` section and final CTA/footer with the approved copy and direct user/admin app-entry actions.
 - [x] 3.5 Apply unique `#product`, `#github-workflow`, `#how-it-works`, and `#faq` targets with scroll-margin behavior and verify all internal and external links.
 
 ## 4. Behavior and Quality Checks
 
 - [x] 4.1 Add tests for environment validation, canonical/metadata generation, exact CTA labels and destinations, section ordering/anchors, one-`h1` structure, disabled-content omission, the approved illustrative timer, and zero hydrated islands.
-- [x] 4.2 Verify keyboard navigation, skip-link behavior, visible focus, semantic landmarks/headings, contrast, target sizes, image alternatives, reduced motion, and 200% zoom/reflow against WCAG 2.2 AA expectations.
-- [x] 4.3 Compare the implementation with the approved Pencil desktop, tablet, and mobile frames at 390, 768, 1024, and 1440 pixels and resolve layout, typography, spacing, overflow, and CTA-priority drift.
+- [x] 4.2 Verify keyboard navigation, skip-link behavior, visible focus, semantic landmarks/headings, contrast, target sizes, image alternatives, reduced motion, and 200% zoom/reflow against WCAG 2.2 AA expectations; retain the resulting evidence in `verification.md`.
+- [x] 4.3 Compare the implementation with the approved Pencil desktop, tablet, and mobile frames at 390, 768, 1024, and 1440 pixels; resolve layout, typography, spacing, overflow, and CTA-priority drift; retain the resulting evidence in `verification.md`.
 - [x] 4.4 Run `pnpm --filter landing-web lint`, `typecheck`, `test`, and `build`, then run root checks needed to prove workspace integration without deploying.
 
 ## 5. CI and Staging Deployment
@@ -32,4 +32,4 @@
 - [x] 5.1 Extend `.github/scripts/detect-ci-targets.mjs` and its tests so landing source, shared tokens, workspace manifests, and landing workflow changes select landing checks independently.
 - [x] 5.2 Add `apps/landing-web/wrangler.toml` for a dedicated Cloudflare Workers Static Assets staging deployment at `gitiempo-landing.itsua.dev` without SPA fallback.
 - [x] 5.3 Add a landing-only staging workflow with landing path filters, manual ref dispatch, required Cloudflare and `PUBLIC_*` validation, verification gates, and no Firebase/API requirements.
-- [x] 5.4 Update the deployment/operator documentation and staging environment example with the landing Worker, hostname, public URL values, trigger behavior, and the rule that implementation verification does not perform a live deploy.
+- [x] 5.4 Update the deployment/operator documentation and staging environment example with the landing Worker, hostname, public URL values, variable/secret ownership, trigger behavior, independent rollback, and the rule that implementation verification does not perform a live deploy.

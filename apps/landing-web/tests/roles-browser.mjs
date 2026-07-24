@@ -60,6 +60,10 @@ try {
     'Member must be the default desktop role.',
     "document.querySelector('#role-member').checked && getComputedStyle(document.querySelector('.role-panel--member')).display === 'flex'",
   );
+  assertInBrowser(
+    'The 1440px desktop layout must not overflow horizontally.',
+    'document.documentElement.scrollWidth <= innerWidth',
+  );
 
   run('agent-browser', ['snapshot', '-i', '-s', '.roles-interaction']);
   run('agent-browser', ['check', '#role-admin']);

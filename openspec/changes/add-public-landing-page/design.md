@@ -41,6 +41,16 @@ The docs are authoritative over Pencil where they disagree. In particular, Admin
 
 Alternative considered: reproduce every visible Pencil node. Rejected because repository guidance makes documented enabled/disabled behavior the source of truth while Pencil remains the parity checklist for approved visible content.
 
+### `apps/landing-web`: Admin role detail source of truth
+
+`docs/ui/pages-landing.md` defines the enabled Admin role detail, including the `RUN THE WORKSPACE` eyebrow, `Admin` heading, three ordered detail points, and inverse brand-purple treatment. The typed landing content must render that exact detail on desktop when Admin is selected and as the third stacked card at tablet and mobile widths. This intentional docs-over-Pencil decision is specific to the stale Admin detail node; the rest of the approved Pencil role layout remains the visual parity checklist.
+
+### Verification evidence and rollback ownership
+
+Record the completed landing checks and responsive comparison evidence in `openspec/changes/add-public-landing-page/verification.md`. The evidence must cover 390, 768, 1024, and 1440 pixels; native keyboard role selection; the Admin panel/card; and the required landing lint, typecheck, test, and build commands.
+
+`docs/deployment.md` is the canonical operator guide. A landing rollback redeploys a previously published landing Cloudflare Worker version only; it must not redeploy the user-web, admin-web, or API. The change delta updates the frontend deployment-guide requirement to make this document and independent rollback expectation explicit.
+
 ### `apps/landing-web`: CTA configuration and navigation
 
 The app will validate three public build-time values:
@@ -90,7 +100,7 @@ Alternative considered: add landing to the reusable SPA deploy workflow. Rejecte
 2. Add landing-specific validation and target detection; run the full landing check set locally.
 3. Add the dedicated staging Worker configuration and workflow without invoking a live deploy during implementation.
 4. Configure the staging GitHub Environment and Cloudflare hostname outside the implementation run, then allow the `staging` workflow to publish.
-5. Roll back by reverting the landing app/workflow change or redeploying the prior landing Worker version; user/admin SPAs remain independently deployable.
+5. Roll back a landing incident by redeploying the prior landing Worker version as documented in `docs/deployment.md`; user-web, admin-web, and API deployments remain independent.
 
 ## Open Questions
 

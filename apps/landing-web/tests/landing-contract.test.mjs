@@ -77,6 +77,8 @@ test('page keeps required anchors, semantic foundations, and no hydrated islands
 
   assert.match(product, /id="product"/);
   assert.match(product, /id="github-workflow"/);
+  assert.match(product, /role="group"/);
+  assert.match(product, /aria-label="GitHub issue timer showing an active timer for Improve reports filters"/);
   assert.match(workflow, /id="how-it-works"/);
   assert.match(faq, /id="faq"/);
   assert.match(page, /<main id="main-content">/);
@@ -115,6 +117,10 @@ test('the Admin role is available and disabled scope cards remain absent from so
   const content = source('../src/data/content.ts');
   assert.match(content, /label: 'Admin'/);
   assert.match(content, /RUN THE WORKSPACE/);
+  assert.match(content, /title: 'Admin'/);
+  assert.match(content, /Invite teammates and assign roles/);
+  assert.match(content, /Manage settings and GitHub connection/);
+  assert.match(content, /See the full workspace across projects/);
   assert.doesNotMatch(content, /Reports\s*\+\s*Invoices/i);
   assert.match(content, /WEB \+ EXTENSION/);
   assert.match(content, /Start where work happens/);

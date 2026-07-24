@@ -14,7 +14,8 @@ The system SHALL provide a standalone public landing application at `/` that bui
 
 - **WHEN** the production landing page is built
 - **THEN** approved navigation, content, FAQs, and app-entry links work without hydrating a client framework
-- **AND** the only permitted browser behavior is the documented illustrative preview timer
+- **AND** the only emitted browser script is the documented illustrative preview timer
+- **AND** native HTML and CSS behavior, including anchor navigation and radio selection, remains permitted without a script
 
 ### Requirement: Approved Content Hierarchy
 
@@ -31,6 +32,13 @@ The landing page MUST render the documented enabled content in this order: hero 
 - **WHEN** the approved page is rendered
 - **THEN** Member, Project Manager, and Admin role details are present
 - **AND** the disabled Reports/Invoices MVP-scope card is not present
+
+#### Scenario: Admin role detail is rendered from the approved source
+
+- **WHEN** the Admin role is selected on desktop or rendered in the stacked responsive roles layout
+- **THEN** its selector label is `Admin`, its eyebrow is `RUN THE WORKSPACE`, and its heading is `Admin`
+- **AND** it renders, in order, `Invite teammates and assign roles`, `Manage settings and GitHub connection`, and `See the full workspace across projects`
+- **AND** its detail surface uses the documented inverse brand-purple treatment
 
 ### Requirement: Direct Application Entry CTAs
 
@@ -82,6 +90,7 @@ The landing page MUST meet the documented WCAG 2.2 AA expectations for semantics
 - **WHEN** a screen reader inspects the page
 - **THEN** header, navigation, main, sections, and footer use appropriate semantic landmarks
 - **AND** the page contains exactly one level-one heading with a logical descendant heading hierarchy
+- **AND** the illustrative GitHub workflow preview exposes a useful text label without hiding its heading or supporting copy
 
 #### Scenario: Visitor requests reduced motion
 
