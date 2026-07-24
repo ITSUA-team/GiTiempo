@@ -1,76 +1,57 @@
 ## Context
 
-The web frontends already authenticate with Firebase Auth and exchange the resulting Firebase ID token through `POST /auth/login`, which verifies the token and issues the app access/refresh session keyed by Firebase UID. Email/password **and Google** sign-in already flow through this provider-agnostic exchange (see the existing `frontend-auth` "Google login succeeds" and "Google invite acceptance succeeds" scenarios). GitHub sign-in is therefore an additive frontend change: a new Firebase provider that reuses the existing exchange, session layer, and membership checks unchanged.
+The app authenticates with Firebase (email/password, Google): the browser gets a Firebase ID token and exchanges it at `POST /auth/login`, which verifies it, looks the member up by `firebase_uid`, and issues the app access/refresh session. Session identity is Firebase-UID-keyed (`users.firebase_uid` is `NOT NULL UNIQUE`; every access token carries a `firebaseUid` claim). A separate GitHub **App** integration already exists for repo/issue data (`github_connections`); it is a *connect* flow that requires an existing session and must stay independent of sign-in.
 
-A separate concern already exists in the codebase — the **GitHub App integration** (repository/issue access, tokens in `github_connections`). This change must stay strictly independent of it.
-
-Constraints:
-- No backend endpoint, DTO, or database migration (`POST /auth/login` already accepts any Firebase ID token).
-- The backend resolves sessions by Firebase UID and must not match or merge local users by email.
-- A member's existing Firebase UID must be preserved when they add GitHub as a sign-in method.
+This change adds GitHub as a sign-in method **on the backend** rather than through Firebase, so it can use a dedicated identity-only OAuth App and a familiar "Sign in with GitHub" without a Firebase provider or a GitHub App install.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Add GitHub as a Firebase sign-in provider on the user-web and admin-web login pages and on invite acceptance, reusing the existing token-exchange path.
-- Add a shared `signInWithGitHub()` to the web authentication runtime alongside the existing Google helper.
-- Request only the `user:email` scope from a dedicated, identity-only GitHub OAuth App.
-- Recover from `auth/account-exists-with-different-credential` by linking the pending GitHub credential onto the existing Firebase account, preserving the UID.
-- Gate GitHub invite acceptance on an exact invite-email match, mirroring the existing email/Google acceptance.
+- Let an existing member sign in with GitHub and receive the normal app session.
+- Reuse the existing session issuance and the member's existing Firebase UID — no schema, JWT-contract, or Firebase Admin change.
+- Keep sign-in fully independent of the GitHub App integration (separate OAuth App and secrets).
 
 **Non-Goals:**
-- Any backend, database, or `POST /auth/login` change.
-- Any interaction with the GitHub App integration or `github_connections`; no automatic integration connection on sign-in.
-- Matching or merging local users by email on the backend.
-- GitHub sign-in on first-owner registration or in the Chrome extension.
-- Requesting repository or organization scopes.
+- Provisioning new users via GitHub (login-only; new members still come through invite/registration).
+- GitHub on invite acceptance or first-owner registration.
+- Any change to email/password or Google sign-in.
 
 ## Decisions
 
-### D1: GitHub is just another Firebase provider on the existing exchange
-GitHub sign-in produces a Firebase ID token exchanged through the unchanged `POST /auth/login`. No GitHub-specific backend path is introduced.
-- *Rationale*: The exchange is already provider-agnostic (Google proves it); adding a backend GitHub flow would duplicate identity handling and break the "no backend change" boundary.
-- *Alternative rejected*: A dedicated backend GitHub OAuth callback — unnecessary and out of scope.
+### D1: Sign-in runs on the backend, not through Firebase
+The API owns the OAuth flow (`/auth/github/start`, `/auth/github/callback`, `/auth/github/session`) instead of a client-side Firebase `GithubAuthProvider`.
+- *Rationale*: a dedicated OAuth App gives a familiar `Sign in with GitHub` with no GitHub App install and no repo-permission prompts, and keeps auth separate from the repo integration; the backend already owns session issuance.
+- *Alternative rejected*: Firebase `GithubAuthProvider` — requires enabling a GitHub provider in the Firebase console and couples sign-in setup to Firebase; the team chose the backend OAuth App.
 
-### D2: `signInWithGitHub()` lives in the shared web auth runtime, mirroring the Google helper
-The new helper is added next to the existing Google sign-in helper in the shared authentication/session module and consumed by both apps.
-- *Rationale*: Single source of truth for provider setup, scope, and error handling; both login pages and invite accept reuse it.
-- *Alternative rejected*: Per-app implementations — duplicates the linking-recovery logic and drifts.
+### D2: Match an existing member by primary verified GitHub email
+The callback reads the member's primary **verified** email from `GET /user/emails` and `AuthService.createSessionForVerifiedEmail` matches an existing member (`findUserByEmail`), requires an active membership, and mints the session — reusing the member's existing `firebase_uid`.
+- *Rationale*: keeps the Firebase-UID invariant and the JWT contract intact with no new column; sign-in authenticates existing members exactly like email/password login.
+- *Alternative rejected*: creating users or making `firebase_uid` nullable — a large auth-core change for a login-only feature.
 
-### D3: Existing-account recovery links the pending credential onto the existing UID
-On `auth/account-exists-with-different-credential`, capture the pending GitHub credential, resolve the email's existing sign-in method, authenticate with it, then `linkWithCredential(pendingGitHubCredential)`.
-- *Rationale*: This is Firebase's documented account-linking pattern and the only path that keeps a single Firebase UID (so local membership stays intact).
-- *Alternative rejected*: Creating/allowing a second Firebase identity for the same person — produces duplicate UIDs and breaks membership continuity.
+### D3: State and session handoff are short-lived purpose-scoped JWTs
+CSRF `state` and the SPA handoff `code` are JWTs signed with `JWT_ACCESS_SECRET` but omitting the issuer/audience the access-token verifier requires and carrying a distinct `purpose`, so neither can pass as a session token. The callback redirects to `<SPA>/auth/github/callback?code=<handoff>`; the SPA `POST`s it to `/auth/github/session` for the token pair.
+- *Rationale*: stateless, no new table, reuses the app's JWT signing.
+- *Alternative rejected*: a DB-backed one-time code table — more infrastructure; see the replay risk below.
 
-### D4: A dedicated identity-only GitHub OAuth App, separate from the integration
-Configure a new GitHub OAuth App used only for Firebase sign-in, requesting only `user:email`, and enable the GitHub provider in Firebase Authentication. It is wholly separate from the GitHub App integration used for repository data.
-- *Rationale*: Keeps sign-in independent of integration tokens/`github_connections` and enforces least privilege (no repo scopes).
-- *Alternative rejected*: Reusing the integration's GitHub OAuth credentials — couples sign-in to the integration and risks persisting a sign-in token as an integration token.
+### D4: A dedicated identity-only OAuth App, separate from the integration
+`GITHUB_SIGNIN_CLIENT_ID`/`GITHUB_SIGNIN_CLIENT_SECRET` with the `user:email` scope and authorization callback `<APP_URL>/auth/github/callback`. Never touches `GITHUB_APP_*` or `github_connections`.
+- *Rationale*: least privilege, clean separation, a single simple OAuth-App callback URL.
 
-### D5: Invite acceptance reuses the existing server-side email-match enforcement
-The exact invite-email check already lives in the backend: `invites.service.ts` verifies the Firebase ID token and throws `ForbiddenException('Invite email does not match identity')` when the resolved email differs from the invite. `InviteAcceptView.vue` signs in with GitHub, submits `POST /invites/accept`, and surfaces a mismatch through its existing failure handling (string-matching that message) while signing the provider out — exactly as the Google path does. No new frontend email validation is added.
-- *Rationale*: Reuses the single source of truth for email match; keeps the frontend change to adding a GitHub `SubmitAction` and error mapper.
-- *Alternative rejected*: Duplicating the email comparison in the browser — drift risk and redundant with the enforced backend rule.
+### D5: GitHub sign-in is login-only
+No provisioning, no invite acceptance, no registration via GitHub.
+- *Rationale*: keeps the change small and the identity model unchanged; new members onboard through the existing invite flow.
 
 ## Risks / Trade-offs
 
-- **Private/unverified GitHub email** → `user:email` is requested so Firebase can resolve a verified email; if none is available, sign-in surfaces guidance and invite acceptance fails the email-match safely rather than proceeding.
-- **Account-linking UX is subtle (cancel, wrong password, popup blocked)** → follow the existing Google helper's popup/redirect strategy and single-flight submitting state; cover cancel/failed-recovery with tests so the UI always returns to a clean guest state.
-- **Two GitHub OAuth apps could be confused (sign-in vs integration)** → name and scope them distinctly and document the separation; sign-in never writes to `github_connections`.
-- **Provider-config drift across environments** → the GitHub provider + OAuth App credentials are environment configuration (Firebase console + env/secrets), not code; document the required setup so staging/prod match.
+- **Handoff replay** → the handoff JWT is stateless and replayable within its 60s TTL. A `?code=` intercepted from the redirect (browser history, Referer, logs) could be re-posted to mint a session. Mitigation: 60s TTL + HTTPS. Harden with a single-use nonce store before treating it as production-grade; the DTO/comments call it "one-time" but do not yet enforce it.
+- **Email not a member** → a verified GitHub email with no matching active member returns 401 (`no_user`). This is intended (login-only), and is logged for diagnosis.
+- **Config coherence** → `VITE_GITHUB_SIGNIN_ENABLED` (frontend, default on) and `GITHUB_SIGNIN_*` (backend) are independent; if the button shows without the backend configured the flow fails with a service error. Document that both must be set per environment.
+- **PII in logs** → failure warns include the member email; confirm this is acceptable or hash it.
 
 ## Migration Plan
 
-- No database migration. Steps: (1) create the dedicated GitHub OAuth App (`user:email` only) and enable the GitHub provider in Firebase Auth for each environment; (2) ship the frontend changes (shared runtime helper, login pages, invite accept); (3) verify the happy path and the account-exists linking recovery in staging.
-- Rollback: hide the **Continue with GitHub** action (feature-flag or revert) and/or disable the GitHub provider in Firebase; no data to unwind since nothing new is persisted.
-
-## Resolved (from the codebase)
-
-- **Sign-in strategy**: the existing Google helper in `packages/web-shared/src/auth/runtime.ts` uses `signInWithPopup`; `signInWithGithub()` mirrors it with `GithubAuthProvider` and `addScope('user:email')`.
-- **Provider seam is layered**: app-local Firebase init (`apps/*/src/lib/firebase.ts`) → shared `AuthRuntime` (`runtime.ts`, the only importer of `firebase/auth`) → `AuthSessionCore` (`session-core.ts`, adds `loginWithGithub` next to `loginWithGoogle`) → Pinia store → shared `AuthSignInForm.vue` (add a `submitGithub` emit + button, appears in both apps) and `InviteAcceptView.vue` (user-web only; add a GitHub `SubmitAction`).
-- **This is the first account-linking flow**: the Google helper does a plain `signInWithPopup` with no linking recovery, so the `auth/account-exists-with-different-credential` handling is new and belongs inside the shared runtime helper so both login and invite paths inherit it.
-- **Firebase config**: no new client env var — GitHub is enabled as a provider in the Firebase console; the client only constructs `GithubAuthProvider`.
+No database migration. Steps: (1) create a dedicated identity-only GitHub **OAuth App** (not a GitHub App) with callback `<APP_URL>/auth/github/callback`; (2) set `GITHUB_SIGNIN_CLIENT_ID`/`GITHUB_SIGNIN_CLIENT_SECRET` in the API env; (3) ship the code; (4) verify the start → callback → session round-trip in staging. Rollback: set `VITE_GITHUB_SIGNIN_ENABLED=false` to hide the button; nothing new is persisted.
 
 ## Open Questions
 
-- `firebase-errors.ts` currently lives in `apps/user-web` only. Since the linking recovery is encapsulated in the runtime helper, the login views likely need no new error-code mapping; if they do, promote the helper to `web-shared` rather than duplicate it.
+- Whether to enforce single-use on the handoff code (nonce store) before production, given the replay window above.

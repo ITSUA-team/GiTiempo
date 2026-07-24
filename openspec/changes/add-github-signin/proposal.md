@@ -1,28 +1,27 @@
 ## Why
 
-Members can only sign in with email/password today. GitHub sign-in is a lower-friction option engineering teams expect, letting members authenticate with an identity they already use — without changing the backend session model, the Firebase UID, or how local membership is enforced.
+Members can only sign in with email/password and Google today. GitHub sign-in is a lower-friction option engineering teams expect. A dedicated OAuth App keeps it a familiar "Sign in with GitHub" — no GitHub App install and no repository-permission prompts — and keeps authentication cleanly separate from the repo/issue integration.
 
 ## What Changes
 
-- Add GitHub as an additional Firebase sign-in method (`GithubAuthProvider`) alongside email/password. The browser still exchanges the resulting Firebase ID token through the existing `POST /auth/login`, so the access/refresh session, the Firebase UID, and local membership checks are unchanged.
-- Add `signInWithGitHub()` to the shared web authentication runtime/session code and surface a **Continue with GitHub** action on the user-web and admin-web login pages.
-- Offer the same **Continue with GitHub** option during invite acceptance, gated by exact invite-email validation (the GitHub account email must match the invite).
-- Recover from `auth/account-exists-with-different-credential`: sign in with the email's existing method, then link the pending GitHub credential so the member keeps their existing Firebase UID (no duplicate identity).
-- Configure a dedicated, identity-only GitHub OAuth App requesting **only** `user:email` (no repository scopes) and enable the GitHub provider in Firebase Authentication.
-- **BREAKING**: none. Backend, database, and existing email/password flows are untouched.
+- Add a backend, login-scoped GitHub OAuth flow: `GET /auth/github/start`, `GET /auth/github/callback`, and `POST /auth/github/session` (all unauthenticated). The browser leaves the SPA, the API runs the OAuth exchange, reads the member's primary verified GitHub email, matches an existing member, and issues the normal access/refresh session.
+- Use a dedicated, identity-only GitHub **OAuth App** (`GITHUB_SIGNIN_CLIENT_ID`/`GITHUB_SIGNIN_CLIENT_SECRET`) requesting only the `user:email` scope — separate from the GitHub App integration and `github_connections`.
+- Surface a **Continue with GitHub** action on the user-web and admin-web login pages that redirects to `/auth/github/start`; a new `/auth/github/callback` SPA view exchanges the returned one-time handoff code for a session. A `VITE_GITHUB_SIGNIN_ENABLED` flag gates the button per environment.
+- Match an existing member by primary verified GitHub email only, reusing that member's existing Firebase UID. GitHub sign-in is login-only — it does not provision new users; invite acceptance and registration are unchanged.
+- **BREAKING**: none. No database migration, no JWT-contract change, and no Firebase Admin change; email/password and Google sign-in are untouched.
 
 ## Capabilities
 
 ### New Capabilities
-- `github-signin`: GitHub authentication as a Firebase sign-in method — provider configuration and `user:email`-only scope, the shared `signInWithGitHub()` runtime, the `account-exists-with-different-credential` linking recovery that preserves the existing Firebase UID, and the explicit independence from the GitHub App integration and `github_connections` token storage.
+- `github-signin`: a backend login-scoped GitHub OAuth flow (start / callback / session) using a dedicated identity-only OAuth App with the `user:email` scope; it matches an existing member by primary verified email and issues the normal session (reusing the member's Firebase UID), delivers the session to the SPA via a one-time handoff code, and stays independent of the GitHub App integration and `github_connections`.
 
 ### Modified Capabilities
-- `frontend-auth`: the login pages and the invite-acceptance flow gain the GitHub sign-in option; invite acceptance validates the GitHub account email against the invite exactly, and the auth submission state covers the full GitHub attempt (including linking recovery) as it already does for email/password.
+- None. GitHub sign-in is a self-contained flow; it does not change the Firebase login-exchange, invite-acceptance, or registration behavior.
 
 ## Impact
 
-- **Frontend**: the shared web authentication runtime/session module gains `signInWithGitHub()` and the linking-recovery helper; `apps/user-web` and `apps/admin-web` login pages and the invite-accept page gain a **Continue with GitHub** action plus its error surfaces. No change to the token-exchange call itself.
-- **Backend**: none — `POST /auth/login` already verifies any Firebase ID token; no new endpoint, DTO, or database migration. The backend continues to not match or merge local users by email.
-- **External configuration** (not code): a dedicated GitHub OAuth App (identity-only, `user:email`) and the GitHub provider enabled in Firebase Authentication, wired through existing frontend Firebase env/secret configuration.
-- **Out of scope**: the GitHub App integration and `github_connections`; automatic integration-connection creation on sign-in; first-owner registration; the Chrome extension.
-- **Docs/tests**: new `github-signin` spec + `frontend-auth` delta; affected UI docs; user-web, admin-web, shared-auth, and invite-flow tests covering the happy path and the account-exists linking recovery.
+- **Backend** (`apps/api`): new `auth/github` controller + service, `AuthService.createSessionForVerifiedEmail`, `GithubSessionDto`, and `GITHUB_SIGNIN_CLIENT_ID`/`GITHUB_SIGNIN_CLIENT_SECRET` env. State and the one-time handoff are short-lived, purpose-scoped JWTs signed with `JWT_ACCESS_SECRET` (they omit the issuer/audience the access-token verifier requires, so they can never pass as a session token). No database, JWT-contract, or Firebase Admin change.
+- **Frontend** (`user-web` + `admin-web`): the login-page GitHub button redirects to the API; a new `/auth/github/callback` view exchanges the code through the shared auth client; `VITE_GITHUB_SIGNIN_ENABLED` gates the button. `packages/web-shared` gains an `exchangeGithubSession` client passthrough and a `loginWithGithubSession` session action.
+- **External configuration** (not code): a dedicated GitHub **OAuth App** (identity-only, `user:email`) with authorization callback `<APP_URL>/auth/github/callback`; its Client ID/Secret go in `GITHUB_SIGNIN_*`. No Firebase provider configuration is involved.
+- **Out of scope**: the GitHub App integration and `github_connections`; user provisioning via GitHub (login-only); GitHub on invite acceptance or first-owner registration; the Chrome extension.
+- **Docs/tests**: the `github-signin` spec; user-web, admin-web, shared-auth, and api auth tests covering start/callback/session and the no-user / no-membership / invalid-handoff paths.
