@@ -19,14 +19,14 @@
 
 ## Origins And Links
 
-| Environment | Landing origin | User preview login | Admin origin |
+| Environment | Landing origin | User app entry | Admin app entry |
 |---|---|---|---|
 | Local | `http://localhost:4321` | `http://localhost:5173/login` | `http://localhost:5174` |
 | Staging | `https://gitiempo-landing.itsua.dev` | `https://gitiempo.itsua.dev/login` | `https://gitiempo-admin.itsua.dev` |
 
 - Treat origins as environment configuration. Do not hard-code staging URLs in Astro components.
 - The canonical URL comes from the configured public landing origin.
-- External preview links remain normal same-tab navigation unless a later approved requirement says otherwise.
+- Links into the user and admin apps remain normal same-tab navigation unless a later approved requirement says otherwise.
 
 ## Page Order And Anchors
 
@@ -53,13 +53,13 @@ Anchor targets must use scroll margin that clears the header. Navigation labels 
 
 | Location | Label | Target | Visual priority |
 |---|---|---|---|
-| Header | Try the live preview | Configured user preview login URL | Primary |
-| Hero | Try the live preview → | Configured user preview login URL | Primary |
-| Hero | See the GitHub workflow | `#github-workflow` | Secondary |
-| Final CTA | Try the live preview | Configured user preview login URL | Primary |
-| Final CTA | See the GitHub workflow | `#github-workflow` | Secondary |
+| Header | Start tracking | Configured user app entry URL | Primary |
+| Hero | Start tracking now → | Configured user app entry URL | Primary |
+| Hero | Open admin workspace | Configured admin app entry URL | Secondary |
+| Final CTA | Start tracking now | Configured user app entry URL | Primary |
+| Final CTA | Open admin workspace | Configured admin app entry URL | Secondary |
 
-Keep the preview CTA visually dominant. Do not introduce an admin-preview CTA: the approved landing speaks to the user workflow.
+Keep the user-app CTA visually dominant. Both CTA paths take users into the working applications; do not describe either destination as a preview.
 
 ## Approved FAQ Copy
 

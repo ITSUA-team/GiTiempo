@@ -27,18 +27,18 @@ Frontend builds use build-time environment values. The existing SPAs use `VITE_*
 
 | App | Required deployment values |
 |---|---|
-| `landing-web` | Public site URL/canonical origin and user-app preview URL |
+| `landing-web` | Public site URL/canonical origin, user-app entry URL, and admin-app entry URL |
 | `user-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_ADMIN_APP_URL` |
 | `admin-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_USER_APP_URL` |
 
 Landing origins and CTA targets:
 
-| Environment | Landing origin | Primary preview target |
-|---|---|---|
-| Local | `http://localhost:4321` | `http://localhost:5173/login` |
-| Staging | `https://gitiempo-landing.itsua.dev` | `https://gitiempo.itsua.dev/login` |
+| Environment | Landing origin | User app entry | Admin app entry |
+|---|---|---|---|
+| Local | `http://localhost:4321` | `http://localhost:5173/login` | `http://localhost:5174` |
+| Staging | `https://gitiempo-landing.itsua.dev` | `https://gitiempo.itsua.dev/login` | `https://gitiempo-admin.itsua.dev` |
 
-The landing implementation must receive both values from environment-aware configuration. Do not hard-code the staging origins in Astro components.
+The landing implementation must receive all three values from environment-aware configuration. Do not hard-code the staging origins in Astro components.
 
 Do not read production frontend config from repository `.env` files. GitHub Actions must inject environment-specific values from GitHub Environments or repository secrets/variables. The staging Environment example at `deploy/github-environment.staging.example.env` documents the shared frontend and API values.
 
