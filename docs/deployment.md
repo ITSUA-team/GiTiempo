@@ -6,26 +6,39 @@ This document describes the deployment workflow for GI Tiempo. It is the source 
 
 | Component | Target | Deployment unit |
 |---|---|---|
+| `apps/landing-web` | Cloudflare Workers Static Assets | Separate Worker/static asset deployment |
 | `apps/user-web` | Cloudflare Workers Static Assets | Separate Worker/static asset deployment |
 | `apps/admin-web` | Cloudflare Workers Static Assets | Separate Worker/static asset deployment |
 | `apps/api` | VPS | Docker image started by Docker Compose |
 | PostgreSQL | VPS | Docker Compose service with persistent volume |
 | Chrome Extension | Chrome Web Store | Manual publish |
 
-Frontend and backend deploy independently. A frontend-only change must not restart the API, and an API-only change must not redeploy either SPA.
+Frontend and backend deploy independently. A landing-only change must not redeploy either SPA or restart the API. A change limited to one SPA must not redeploy the landing or the other SPA, and an API-only change must not redeploy any frontend.
 
 ## Frontend Deploys
 
-`apps/user-web` and `apps/admin-web` deploy as separate Cloudflare Workers Static Assets projects.
+`apps/landing-web`, `apps/user-web`, and `apps/admin-web` deploy as separate Cloudflare Workers Static Assets projects. The landing is a static Astro site; the authenticated apps are Vite SPAs.
 
-Each frontend app owns its own Wrangler configuration. GitHub Actions deploys both apps through the shared `deploy-frontend-staging.yml` workflow and reusable deploy job. The app build output is the Vite `dist/` directory, served with SPA fallback so unknown routes return `index.html`.
+Each frontend app owns its own Wrangler configuration. The existing GitHub Actions workflow deploys the two SPAs through the shared `deploy-frontend-staging.yml` workflow and reusable deploy job. Landing deployment automation is a separate implementation update and must not be treated as configured until its app and workflow exist.
 
-Production frontend builds use build-time `VITE_*` variables:
+All three frontend builds output `dist/`. Only `user-web` and `admin-web` use SPA fallback so unknown routes return `index.html`; the Astro landing must preserve static route semantics.
+
+Frontend builds use build-time environment values. The existing SPAs use `VITE_*`; the landing must use Astro-compatible public environment values for browser-visible URLs.
 
 | App | Required deployment values |
 |---|---|
+| `landing-web` | Public site URL/canonical origin and user-app preview URL |
 | `user-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_ADMIN_APP_URL` |
 | `admin-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_USER_APP_URL` |
+
+Landing origins and CTA targets:
+
+| Environment | Landing origin | Primary preview target |
+|---|---|---|
+| Local | `http://localhost:4321` | `http://localhost:5173/login` |
+| Staging | `https://gitiempo-landing.itsua.dev` | `https://gitiempo.itsua.dev/login` |
+
+The landing implementation must receive both values from environment-aware configuration. Do not hard-code the staging origins in Astro components.
 
 Do not read production frontend config from repository `.env` files. GitHub Actions must inject environment-specific values from GitHub Environments or repository secrets/variables. The staging Environment example at `deploy/github-environment.staging.example.env` documents the shared frontend and API values.
 
@@ -35,10 +48,10 @@ The staging frontend deploy workflow supports `workflow_dispatch` with:
 
 | Input | Values | Purpose |
 |---|---|---|
-| `target` | `user-web`, `admin-web`, `both` | Choose which SPA to deploy |
+| `target` | `user-web`, `admin-web`, `both` | Choose which existing SPA deployment to run |
 | `ref` | branch, tag, or SHA | Optional source revision |
 
-Production frontend deploys are not configured yet. When added, they should require GitHub Environment approval.
+The existing trigger does not include `landing-web`. Adding that target requires a later deployment implementation update. Production frontend deploys are not configured yet. When added, they should require GitHub Environment approval.
 
 ### Frontend Automatic Triggers
 
@@ -49,6 +62,8 @@ Recommended path filters:
 | Workflow | Trigger paths |
 |---|---|
 | `deploy-frontend-staging` | `apps/user-web/**`, `apps/admin-web/**`, `packages/shared/**`, `packages/web-config/**`, `packages/web-shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, shared CI/deploy workflow files |
+
+When landing deployment automation is implemented, it must have a landing-specific target/path filter for `apps/landing-web/**` plus only the shared workspace and deployment files that can affect its build. It must not add landing-only changes to the two-SPA deployment matrix.
 
 The workflow must run lint/typecheck/tests/build for the affected app before deployment. Shared frontend package changes deploy both SPAs after both app gates pass.
 

@@ -4,8 +4,10 @@ Read this file first. Load only the linked section files needed for the task.
 
 ## Scope
 
-- Stack: Tailwind CSS v4, PrimeVue v4 styled mode, Heroicons for custom icons.
-- Rule: Prefer PrimeVue components for app UI and use Tailwind utility classes through tokens and `pt` overrides.
+- Authenticated web apps: Vue 3, Tailwind CSS v4, PrimeVue v4 styled mode, and Heroicons for custom icons.
+- Marketing landing: Astro, TypeScript, and Tailwind CSS v4 in the separate `apps/landing-web` app. Do not add Vue, PrimeVue, Pinia, or SPA routing by default.
+- Rule for authenticated web apps: Prefer PrimeVue components and use Tailwind utility classes through tokens and `pt` overrides.
+- Rule for the landing: Use semantic Astro markup, approved shared tokens, and the responsive Pencil frames documented in `pages-landing.md`.
 - Rule: Validate frontend form payloads and API boundaries with shared Zod schemas where a payload shape is shared or contract-facing.
 - Rule: The Chrome extension uses Tailwind only and shares the same design tokens.
 
@@ -16,6 +18,7 @@ Read this file first. Load only the linked section files needed for the task.
 - Need shell, sidebar, or responsive behavior: read `layout.md`.
 - Need User SPA screens: read `pages-user.md`.
 - Need Admin SPA screens: read `pages-admin.md`.
+- Need the public Astro landing page: read `pages-landing.md`.
 - Need extension popup or injected GitHub issue-page UI: read `chrome-ext.md`.
 - Need dialogs, toasts, pickers, or selectors: read `patterns.md`.
 - Need accessibility constraints: read `accessibility.md`.
@@ -27,6 +30,7 @@ Read this file first. Load only the linked section files needed for the task.
 - If a `pt` utility class does not apply, fix preset tokens or CSS layer order instead of adding deep selectors or `!important`.
 - Use PrimeVue controls instead of raw form controls, buttons, tags, avatars, dialogs, tables, selectors, and loading widgets when the app UI has a PrimeVue equivalent.
 - Use Zod schemas for shared or contract-facing frontend validation; keep API request/response parsing at shared HTTP client boundaries.
+- Landing-only typography, composition, and large brand-surface exceptions are defined in `pages-landing.md`; they do not change authenticated app rules.
 - Dark mode is disabled for MVP.
 - Mobile is required, but desktop-first polish is acceptable for MVP.
 
@@ -71,6 +75,7 @@ Read this file first. Load only the linked section files needed for the task.
 - `layout.md`: App shell, sidebar navigation, breakpoints, top-bar breadcrumb pattern.
 - `pages-user.md`: Dashboard, timer, time entries, projects, profile.
 - `pages-admin.md`: Dashboard, reports, deferred invoices, members, projects, settings.
+- `pages-landing.md`: Astro app boundary, ports and origins, approved section/CTA behavior, responsive frames, SEO, accessibility, and landing verification.
 - `chrome-ext.md`: Popup dimensions, injected page control states, and extension UI constraints.
 - `patterns.md`: Dialogs, toasts, confirms, date pickers, selectors, duration format.
 - `accessibility.md`: Required accessibility rules and what PrimeVue already covers.
@@ -83,6 +88,7 @@ Read this file first. Load only the linked section files needed for the task.
 - shared component styling, forms, tables, empty/loading/error states, or token usage: `components.md`
 - user-facing page structure or page-specific UI: `pages-user.md`
 - admin-facing page structure or page-specific UI: `pages-admin.md`
+- public landing structure, CTA behavior, Astro/Tailwind rules, responsive parity, SEO, or landing deployment intent: `pages-landing.md`
 - dialogs, toasts, selectors, pickers, and confirm flows: `patterns.md`
 - accessibility-sensitive UI behavior: `accessibility.md`
 - When working in `packages/web-shared`, also read the package `AGENTS.md` file and each app `AGENTS.md` file for the apps that render the shared component.
