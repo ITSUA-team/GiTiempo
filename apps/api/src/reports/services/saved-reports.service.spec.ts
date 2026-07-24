@@ -209,6 +209,70 @@ describe('SavedReportsService reads', () => {
     expect(preset!.config.filters.hours).toBe('any');
     expect(preset!.config).not.toHaveProperty('entries');
   });
+
+  it('repairs a legacy "member" grouping dimension to "user" on read', async () => {
+    const { service } = createService(
+      'admin',
+      selectReturning([
+        makeRow({
+          config: {
+            dateRange: {
+              dateFrom: '2026-07-01T00:00:00.000Z',
+              dateTo: '2026-07-15T00:00:00.000Z',
+              kind: 'absolute',
+            },
+            grouping: ['project', 'member'],
+          },
+        }),
+      ]),
+    );
+
+    const [preset] = await service.list(adminUser);
+
+    expect(preset!.config.grouping).toEqual(['project', 'user']);
+  });
+
+  it('drops an unknown grouping level and falls back to ["project"]', async () => {
+    const { service } = createService(
+      'admin',
+      selectReturning([
+        makeRow({
+          config: {
+            dateRange: {
+              dateFrom: '2026-07-01T00:00:00.000Z',
+              dateTo: '2026-07-15T00:00:00.000Z',
+              kind: 'absolute',
+            },
+            grouping: ['bogus-dimension'],
+          },
+        }),
+      ]),
+    );
+
+    const [preset] = await service.list(adminUser);
+
+    expect(preset!.config.grouping).toEqual(['project']);
+  });
+
+  it('drops a config too corrupt to repair instead of failing the whole list', async () => {
+    const good = makeRow({ id: 'good-id', name: 'Good preset' });
+    // Missing the required dateRange: unrepairable, so it must be skipped
+    // rather than 500-ing the list for the valid preset alongside it.
+    const corrupt = makeRow({
+      id: 'corrupt-id',
+      name: 'Corrupt preset',
+      config: { grouping: ['project'] },
+    });
+    const { service } = createService(
+      'admin',
+      selectReturning([good, corrupt]),
+    );
+
+    const presets = await service.list(adminUser);
+
+    expect(presets).toHaveLength(1);
+    expect(presets[0]!.name).toBe('Good preset');
+  });
 });
 
 describe('SavedReportsService writes', () => {
