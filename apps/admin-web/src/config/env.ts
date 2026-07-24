@@ -9,6 +9,7 @@ export interface AdminWebEnv {
     storageBucket?: string;
   };
   githubAppInstallUrl?: string;
+  githubSignInEnabled: boolean;
   userAppUrl?: string;
 }
 
@@ -41,5 +42,11 @@ export const appEnv: AdminWebEnv = {
   },
   get githubAppInstallUrl() {
     return import.meta.env.VITE_GITHUB_APP_INSTALL_URL;
+  },
+  // GitHub sign-in shows by default. Set VITE_GITHUB_SIGNIN_ENABLED=false to hide
+  // the button in environments where the Firebase GitHub provider is not yet
+  // configured. The OAuth App credentials live in the Firebase console, not here.
+  get githubSignInEnabled() {
+    return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED !== "false";
   },
 };

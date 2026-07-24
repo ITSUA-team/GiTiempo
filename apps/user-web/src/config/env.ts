@@ -1,6 +1,7 @@
 export interface UserWebEnv {
   adminAppUrl?: string;
   apiBaseUrl?: string;
+  githubSignInEnabled: boolean;
   firebase: {
     apiKey?: string;
     appId?: string;
@@ -17,6 +18,12 @@ export const appEnv: UserWebEnv = {
   },
   get apiBaseUrl() {
     return import.meta.env.VITE_API_BASE_URL;
+  },
+  // GitHub sign-in shows by default. Set VITE_GITHUB_SIGNIN_ENABLED=false to hide
+  // the button in environments where the Firebase GitHub provider is not yet
+  // configured. The OAuth App credentials live in the Firebase console, not here.
+  get githubSignInEnabled() {
+    return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED !== "false";
   },
   firebase: {
     get apiKey() {

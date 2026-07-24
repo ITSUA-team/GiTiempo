@@ -19,6 +19,7 @@ import { useAuthStore } from '@/stores/auth';
 const AddProjectMockView = () => import('@/views/AddProjectView.vue');
 const DashboardView = () => import('@/views/DashboardView.vue');
 const ForbiddenView = () => import('@/views/ForbiddenView.vue');
+const GithubCallbackView = () => import('@/views/GithubCallbackView.vue');
 const InvoicesView = () => import('@/views/InvoicesView.vue');
 const MembersView = () => import('@/views/MembersView.vue');
 const NotFoundView = () => import('@/views/NotFoundView.vue');
@@ -29,6 +30,7 @@ const SettingsView = () => import('@/views/SettingsView.vue');
 type AdminRouteName = (typeof routeNames)[keyof typeof routeNames];
 type AdminNonProductRouteName =
   | typeof routeNames.forbidden
+  | typeof routeNames.githubCallback
   | typeof routeNames.login
   | typeof routeNames.notFound;
 type AdminProductRouteName = Exclude<AdminRouteName, AdminNonProductRouteName>;
@@ -52,6 +54,14 @@ export const adminRouteAllowedRoles = {
 } as const satisfies Record<AdminProductRouteName, readonly WorkspaceRole[]>;
 
 const publicRoutes: RouteRecordRaw[] = [
+  {
+    path: '/auth/github/callback',
+    name: routeNames.githubCallback,
+    component: GithubCallbackView,
+    meta: {
+      allowAuthenticatedGuestFlow: true,
+    },
+  },
   {
     path: '/login',
     name: routeNames.login,

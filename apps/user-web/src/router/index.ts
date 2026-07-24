@@ -18,6 +18,7 @@ const ForbiddenView = () => import("@/views/ForbiddenView.vue");
 const InviteAcceptView = () => import("@/views/InviteAcceptView.vue");
 const InvitePasswordSetupView = () =>
   import("@/views/InvitePasswordSetupView.vue");
+const GithubCallbackView = () => import("@/views/GithubCallbackView.vue");
 const NotFoundView = () => import("@/views/NotFoundView.vue");
 const ProfileView = () => import("@/views/ProfileView.vue");
 const ProjectView = () => import("@/views/ProjectView.vue");
@@ -36,6 +37,14 @@ const publicRoutes: RouteRecordRaw[] = [
     path: "/invites/password-setup",
     name: routeNames.invitePasswordSetup,
     component: InvitePasswordSetupView,
+    meta: {
+      allowAuthenticatedGuestFlow: true,
+    },
+  },
+  {
+    path: "/auth/github/callback",
+    name: routeNames.githubCallback,
+    component: GithubCallbackView,
     meta: {
       allowAuthenticatedGuestFlow: true,
     },

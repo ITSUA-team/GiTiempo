@@ -22,6 +22,7 @@ interface AuthHttpClientOptions {
 
 export interface AuthHttpClient {
   loginWithFirebaseToken(firebaseIdToken: string): Promise<TokenPairResponse>;
+  exchangeGithubSession(code: string): Promise<TokenPairResponse>;
   logoutAuthSession(accessToken: string, refreshToken: string): Promise<void>;
   registerWorkspaceOwner(input: RegisterRequest): Promise<TokenPairResponse>;
   refreshAuthSession(refreshToken: string): Promise<TokenPairResponse>;
@@ -45,6 +46,16 @@ export function createAuthHttpClient({
         fetchFn,
         method: "POST",
         path: "/auth/login",
+        responseSchema: tokenPairResponseSchema,
+      });
+    },
+    exchangeGithubSession(code) {
+      return requestJson({
+        apiBaseUrl,
+        body: { code },
+        fetchFn,
+        method: "POST",
+        path: "/auth/github/session",
         responseSchema: tokenPairResponseSchema,
       });
     },

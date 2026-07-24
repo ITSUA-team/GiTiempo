@@ -73,6 +73,7 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     }),
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
+    exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
@@ -258,6 +259,17 @@ describe("InviteAcceptView", () => {
     });
     expect(loginWithFirebaseToken).toHaveBeenCalledWith("firebase-google-token");
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("does not offer GitHub on invite acceptance", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
+
+    const { wrapper } = await mountInviteAcceptView();
+
+    expect(wrapper.find('[data-testid="invite-accept-github"]').exists()).toBe(
+      false,
+    );
   });
 
   it("shows invalid credentials guidance inline", async () => {

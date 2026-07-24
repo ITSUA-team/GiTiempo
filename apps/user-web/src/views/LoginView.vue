@@ -78,6 +78,16 @@ async function handleGoogleSignIn(): Promise<void> {
   }
 }
 
+function handleGithubSignIn(): void {
+  // Backend-driven GitHub sign-in: leave the SPA and let the API run the OAuth
+  // flow; it redirects back to /auth/github/callback with a one-time code.
+  const base = appEnv.apiBaseUrl ?? window.location.origin;
+  window.location.href = new URL(
+    "/auth/github/start?app=user",
+    base,
+  ).toString();
+}
+
 function goToRegister(): void {
   void router.push({ name: routeNames.register });
 }
@@ -108,9 +118,11 @@ function goToRegister(): void {
           description="Use your workspace account to continue into GiTiempo."
           email-placeholder="you@workspace.com"
           :error-message="errorMessage"
+          :github-enabled="appEnv.githubSignInEnabled"
           :is-submitting="authStore.isSubmitting"
           @submit-credentials="handleEmailSignIn"
           @submit-google="handleGoogleSignIn"
+          @submit-github="handleGithubSignIn"
         >
           <template #secondary-actions>
             <Button

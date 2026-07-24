@@ -155,6 +155,14 @@ export function createAuthSessionCore({
     await establishSessionFromTokenPair(tokenPair);
   }
 
+  // Backend GitHub sign-in returns a one-time handoff code (not a Firebase
+  // token); exchange it for the normal session token pair.
+  async function exchangeGithubHandoff(code: string): Promise<void> {
+    const tokenPair = await getAuthRuntime().exchangeGithubSession(code);
+
+    await establishSessionFromTokenPair(tokenPair);
+  }
+
   async function establishSessionFromTokenPair(
     tokenPair: TokenPairResponse,
   ): Promise<void> {
@@ -211,6 +219,10 @@ export function createAuthSessionCore({
     } finally {
       isSubmitting.value = false;
     }
+  }
+
+  function loginWithGithubSession(code: string): Promise<void> {
+    return runSubmittingLogin(() => exchangeGithubHandoff(code));
   }
 
   function loginWithFirebaseToken(firebaseIdToken: string): Promise<void> {
@@ -298,6 +310,7 @@ export function createAuthSessionCore({
     isSubmitting,
     loginWithEmailPassword,
     loginWithGoogle,
+    loginWithGithubSession,
     logout,
     profile,
     refreshAccessToken,

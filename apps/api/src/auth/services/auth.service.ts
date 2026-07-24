@@ -233,6 +233,55 @@ export class AuthService {
     return pair;
   }
 
+  /**
+   * Issues an app session for an already externally-verified email (the
+   * primary + verified GitHub email resolved by the backend GitHub OAuth flow).
+   * Mirrors `login` but keyed on the email instead of a Firebase ID token, and
+   * authenticates existing members only — it never provisions a user, so the
+   * Firebase-UID identity model stays intact.
+   */
+  async createSessionForVerifiedEmail(email: string): Promise<TokenPair> {
+    const normalized = normalizeEmail(email);
+    const existingUser = await this.findUserByEmail(normalized);
+    if (!existingUser) {
+      this.logger.warn({
+        event: 'auth.github_login.no_user',
+        email: normalized,
+      });
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    let membership;
+    try {
+      membership = await this.members.requireActiveMembershipForUser(
+        existingUser.id,
+      );
+    } catch (error) {
+      this.logger.warn({
+        event: 'auth.github_login.no_membership',
+        userId: existingUser.id,
+        email: normalized,
+      });
+      throw error;
+    }
+    const pair = await this.issueTokenPair(
+      {
+        sub: existingUser.id,
+        email: existingUser.email,
+        firebaseUid: existingUser.firebaseUid,
+        workspaceId: membership.workspaceId,
+        role: membership.role,
+      },
+      membership.id,
+      randomUUID(),
+    );
+    this.logger.log({
+      event: 'auth.github_login.success',
+      userId: existingUser.id,
+    });
+    return pair;
+  }
+
   async register(input: RegisterRequest): Promise<TokenPair> {
     const email = normalizeEmail(input.email);
     const displayName = input.fullName.trim();

@@ -78,6 +78,16 @@ async function handleGoogleSignIn(): Promise<void> {
     errorMessage.value = getErrorMessage(error);
   }
 }
+
+function handleGithubSignIn(): void {
+  // Backend-driven GitHub sign-in: leave the SPA and let the API run the OAuth
+  // flow; it redirects back to /auth/github/callback with a one-time code.
+  const base = appEnv.apiBaseUrl ?? window.location.origin;
+  window.location.href = new URL(
+    "/auth/github/start?app=admin",
+    base,
+  ).toString();
+}
 </script>
 
 <template>
@@ -105,9 +115,11 @@ async function handleGoogleSignIn(): Promise<void> {
           description="Use your workspace account to continue into the admin workspace."
           email-placeholder="admin@workspace.com"
           :error-message="errorMessage"
+          :github-enabled="appEnv.githubSignInEnabled"
           :is-submitting="authStore.isSubmitting"
           @submit-credentials="handleEmailSignIn"
           @submit-google="handleGoogleSignIn"
+          @submit-github="handleGithubSignIn"
         />
       </section>
     </template>

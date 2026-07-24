@@ -62,6 +62,7 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     }),
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
+    exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
@@ -133,6 +134,35 @@ describe("LoginView", () => {
     await routeReady;
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("redirects to the backend GitHub sign-in flow when GitHub is clicked", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    let redirectedTo = "";
+    const original = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        origin: "http://localhost:5173",
+        get href() {
+          return redirectedTo;
+        },
+        set href(value: string) {
+          redirectedTo = value;
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="sign-in-github"]').trigger("click");
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: original,
+    });
+
+    expect(redirectedTo).toContain("/auth/github/start?app=user");
   });
 
   it("falls back to the dashboard when the login redirect query is unsafe", async () => {

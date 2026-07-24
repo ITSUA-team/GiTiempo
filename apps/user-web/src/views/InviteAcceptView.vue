@@ -194,6 +194,7 @@ function mapGoogleErrorMessage(error: unknown): string {
   return getErrorMessage(error, "Could not authenticate with Google.");
 }
 
+
 async function handleInviteAcceptanceFailure(error: unknown): Promise<void> {
   const message = getErrorMessage(error, "Could not accept invitation.");
 
@@ -356,6 +357,7 @@ async function handleGoogleAccept(): Promise<void> {
     }
   }
 }
+
 </script>
 
 <template>
