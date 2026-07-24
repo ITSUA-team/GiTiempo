@@ -51,10 +51,12 @@ export class AuthGithubService {
     const url = new URL('https://github.com/login/oauth/authorize');
     url.searchParams.set(
       'client_id',
-      this.requireConfig('GITHUB_APP_CLIENT_ID'),
+      this.requireConfig('GITHUB_SIGNIN_CLIENT_ID'),
     );
     url.searchParams.set('redirect_uri', this.callbackUrl());
     url.searchParams.set('state', state);
+    // Identity-only: read the user's email so an existing member can be matched.
+    url.searchParams.set('scope', 'user:email');
     return url.toString();
   }
 
@@ -114,8 +116,8 @@ export class AuthGithubService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          client_id: this.requireConfig('GITHUB_APP_CLIENT_ID'),
-          client_secret: this.requireConfig('GITHUB_APP_CLIENT_SECRET'),
+          client_id: this.requireConfig('GITHUB_SIGNIN_CLIENT_ID'),
+          client_secret: this.requireConfig('GITHUB_SIGNIN_CLIENT_SECRET'),
           code,
           redirect_uri: this.callbackUrl(),
         }),

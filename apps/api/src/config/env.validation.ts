@@ -75,10 +75,14 @@ export const envSchema = z
     USER_SPA_URL: z.string().url().default('http://localhost:5173'),
     ADMIN_SPA_URL: optionalUrl.default('http://localhost:5174'),
 
-    // --- GitHub App ---
+    // --- GitHub App (repo/issue integration) ---
     GITHUB_APP_ID: optionalNonEmptyString,
     GITHUB_APP_CLIENT_ID: optionalNonEmptyString,
     GITHUB_APP_CLIENT_SECRET: optionalNonEmptyString,
+
+    // --- GitHub sign-in OAuth App (identity only, separate from the App above) ---
+    GITHUB_SIGNIN_CLIENT_ID: optionalNonEmptyString,
+    GITHUB_SIGNIN_CLIENT_SECRET: optionalNonEmptyString,
 
     // --- Token encryption ---
     ENCRYPTION_KEY: optionalNonEmptyString,

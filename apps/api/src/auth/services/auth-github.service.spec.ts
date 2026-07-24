@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGithubService } from './auth-github.service';
 
 const env: Record<string, string> = {
-  GITHUB_APP_CLIENT_ID: 'Iv-test-client',
-  GITHUB_APP_CLIENT_SECRET: 'secret',
+  GITHUB_SIGNIN_CLIENT_ID: 'signin-client',
+  GITHUB_SIGNIN_CLIENT_SECRET: 'signin-secret',
   APP_URL: 'https://api.example.test',
   USER_SPA_URL: 'http://localhost:5173',
   ADMIN_SPA_URL: 'http://localhost:5174',
@@ -48,10 +48,11 @@ describe('AuthGithubService', () => {
     expect(url.origin + url.pathname).toBe(
       'https://github.com/login/oauth/authorize',
     );
-    expect(url.searchParams.get('client_id')).toBe('Iv-test-client');
+    expect(url.searchParams.get('client_id')).toBe('signin-client');
     expect(url.searchParams.get('redirect_uri')).toBe(
       'https://api.example.test/auth/github/callback',
     );
+    expect(url.searchParams.get('scope')).toBe('user:email');
     expect(url.searchParams.get('state')).toBeTruthy();
     expect(url.searchParams.get('code_challenge')).toBeNull();
   });
