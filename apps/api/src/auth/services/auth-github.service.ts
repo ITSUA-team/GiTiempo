@@ -32,12 +32,14 @@ interface GithubEmailEntry {
 }
 
 /**
- * Backend "Sign in with GitHub": a login-scoped GitHub OAuth flow that reuses
- * the existing GitHub App credentials. The state and handoff tokens are signed
- * with `JWT_ACCESS_SECRET` but omit the issuer/audience the access-token
- * verifier requires and carry a distinct `purpose`, so they can never pass as a
- * session token. Only a primary + verified GitHub email is accepted, and the
- * session is minted for an already-existing member (no provisioning).
+ * Backend "Sign in with GitHub": a login-scoped GitHub OAuth flow that uses a
+ * dedicated identity-only OAuth App (`GITHUB_SIGNIN_CLIENT_ID`/`_SECRET`),
+ * separate from the GitHub App integration — it never touches `GITHUB_APP_*` or
+ * `github_connections`. The state and handoff tokens are signed with
+ * `JWT_ACCESS_SECRET` but omit the issuer/audience the access-token verifier
+ * requires and carry a distinct `purpose`, so they can never pass as a session
+ * token. Only a primary + verified GitHub email is accepted, and the session is
+ * minted for an already-existing member (no provisioning).
  */
 @Injectable()
 export class AuthGithubService {
