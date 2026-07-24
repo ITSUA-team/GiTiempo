@@ -6,10 +6,13 @@ import { timeReportGroupByPathSchema } from "./reports.js";
  * across a workspace.
  *
  * The config is stored as one JSON column, so it is deliberately tolerant
- * (see the change design, D3): unknown keys are stripped and missing keys take
- * their default, which lets a preset saved before a new filter existed keep
- * parsing. Values that ARE present are validated strictly, so a bad grouping
- * dimension is still rejected.
+ * (see the change design, D3): unknown keys are stripped, missing keys take
+ * their default, and a filter value that no longer validates (e.g. a retired
+ * filter vocabulary) falls back to its default rather than throwing — so a
+ * preset saved against an older contract keeps loading. The structural parts —
+ * the grouping path and the date range — stay strict, so a genuinely broken
+ * config is still rejected (and skipped by the read path, never failing the
+ * whole list).
  */
 export const savedReportDateRangeSchema = z
   .object({
@@ -17,10 +20,13 @@ export const savedReportDateRangeSchema = z
     dateFrom: z.iso.datetime(),
     dateTo: z.iso.datetime(),
   })
+  // Inclusive: a single-day window (dateTo === dateFrom) is legitimate — the
+  // reports date picker allows it and migration 0017 can emit it on a month or
+  // week boundary. Only a truly inverted range (dateTo < dateFrom) is rejected.
   .refine(
     (range) =>
-      new Date(range.dateTo).getTime() > new Date(range.dateFrom).getTime(),
-    { message: "dateTo must be later than dateFrom", path: ["dateTo"] },
+      new Date(range.dateTo).getTime() >= new Date(range.dateFrom).getTime(),
+    { message: "dateTo must not be before dateFrom", path: ["dateTo"] },
   );
 
 // Column-filter vocabularies. Defined here so the API, the admin client, and
@@ -45,12 +51,15 @@ export const savedReportActivityFilterSchema = z.enum([
   "last30",
 ]);
 
+// `.catch` (not `.default`) so a stored value that no longer belongs to a
+// filter's vocabulary — e.g. the retired withBillable/withoutBillable options —
+// degrades to the neutral choice instead of throwing on read.
 export const savedReportFiltersSchema = z.object({
-  activity: savedReportActivityFilterSchema.default("any"),
-  billable: savedReportBillableFilterSchema.default("any"),
-  billableShare: savedReportBillableShareFilterSchema.default("any"),
-  global: z.string().trim().max(200).default(""),
-  hours: savedReportHoursFilterSchema.default("any"),
+  activity: savedReportActivityFilterSchema.catch("any"),
+  billable: savedReportBillableFilterSchema.catch("any"),
+  billableShare: savedReportBillableShareFilterSchema.catch("any"),
+  global: z.string().trim().max(200).catch(""),
+  hours: savedReportHoursFilterSchema.catch("any"),
 });
 
 export const savedReportConfigSchema = z.object({

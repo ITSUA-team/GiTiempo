@@ -2,6 +2,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { and, desc, eq } from 'drizzle-orm';
@@ -37,6 +38,8 @@ type SavedReportRow = typeof savedReports.$inferSelect;
  */
 @Injectable()
 export class SavedReportsService {
+  private readonly logger = new Logger(SavedReportsService.name);
+
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
     private readonly members: MembersService,
@@ -51,7 +54,23 @@ export class SavedReportsService {
       .where(eq(savedReports.workspaceId, user.workspaceId))
       .orderBy(desc(savedReports.createdAt));
 
-    return rows.map((row) => this.toSavedReport(row));
+    // Parse each row on its own: a preset whose stored config predates the
+    // current contract (e.g. a legacy relative date range not yet normalised by
+    // migration 0017) must be skipped, not allowed to fail the whole list.
+    const presets: SavedReport[] = [];
+    for (const row of rows) {
+      try {
+        presets.push(this.toSavedReport(row));
+      } catch (error) {
+        this.logger.warn(
+          `Skipping saved report ${row.id} with an unparseable config: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+
+    return presets;
   }
 
   async create(

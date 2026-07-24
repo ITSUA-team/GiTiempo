@@ -22,8 +22,17 @@ describe('savedReportDateRangeSchema', () => {
       savedReportDateRangeSchema.parse({ kind: 'relative', period: 'this_month' }),
     ).toThrow();
     expect(() =>
-      savedReportDateRangeSchema.parse({ ...dateRange, dateFrom: dateRange.dateTo }),
+      savedReportDateRangeSchema.parse({
+        ...dateRange,
+        dateFrom: dateRange.dateTo,
+        dateTo: dateRange.dateFrom,
+      }),
     ).toThrow();
+  });
+
+  it('accepts an inclusive single-day window', () => {
+    const singleDay = { ...dateRange, dateTo: dateRange.dateFrom };
+    expect(savedReportDateRangeSchema.parse(singleDay)).toEqual(singleDay);
   });
 });
 
@@ -58,13 +67,18 @@ describe('savedReportConfigSchema', () => {
     expect(parsed).not.toHaveProperty('retiredFilter');
   });
 
-  it('rejects invalid grouping and filter vocabulary', () => {
+  it('rejects invalid grouping but tolerates a retired filter value', () => {
     expect(() =>
       savedReportConfigSchema.parse({ dateRange, grouping: ['project', 'client'] }),
     ).toThrow();
-    expect(() =>
-      savedReportConfigSchema.parse({ dateRange, filters: { hours: 'gte100' } }),
-    ).toThrow();
+    // A filter value outside the current vocabulary degrades to the neutral
+    // option instead of failing the whole config (see savedReportFiltersSchema).
+    const parsed = savedReportConfigSchema.parse({
+      dateRange,
+      filters: { hours: 'gte100', billable: 'withBillable' },
+    });
+    expect(parsed.filters.hours).toBe('any');
+    expect(parsed.filters.billable).toBe('any');
   });
 });
 
