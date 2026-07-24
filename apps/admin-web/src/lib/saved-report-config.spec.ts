@@ -33,7 +33,7 @@ function makeConfig(
     },
     filters: {
       activity: 'today',
-      billable: 'withoutBillable',
+      billable: 'gte40',
       billableShare: 'below50',
       global: 'api',
       hours: 'gte40',
@@ -93,7 +93,7 @@ describe('buildConfigFromState', () => {
       makeState({
         filters: {
           activity: 'last7',
-          billable: 'withBillable',
+          billable: 'gte8',
           billableShare: 'gte90',
           global: 'orion',
           hours: 'gte8',

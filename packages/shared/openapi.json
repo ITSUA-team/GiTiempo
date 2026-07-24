@@ -6302,8 +6302,8 @@
                       "type": "string",
                       "enum": [
                         "any",
-                        "withBillable",
-                        "withoutBillable"
+                        "gte8",
+                        "gte40"
                       ]
                     },
                     "billableShare": {
@@ -6457,8 +6457,8 @@
                     "type": "string",
                     "enum": [
                       "any",
-                      "withBillable",
-                      "withoutBillable"
+                      "gte8",
+                      "gte40"
                     ]
                   },
                   "billableShare": {
@@ -6595,8 +6595,8 @@
                     "type": "string",
                     "enum": [
                       "any",
-                      "withBillable",
-                      "withoutBillable"
+                      "gte8",
+                      "gte40"
                     ]
                   },
                   "billableShare": {
@@ -6749,8 +6749,8 @@
                     "type": "string",
                     "enum": [
                       "any",
-                      "withBillable",
-                      "withoutBillable"
+                      "gte8",
+                      "gte40"
                     ]
                   },
                   "billableShare": {

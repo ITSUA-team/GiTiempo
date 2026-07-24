@@ -80,6 +80,7 @@ function findFilter(
 
 function makeLeafRow(overrides: Partial<ReportTableRow>): ReportTableRow {
   return {
+    billable: null,
     billableSeconds: 3600,
     billableShare: 0.5,
     entryCount: 2,
@@ -288,6 +289,7 @@ describe('ReportsTable', () => {
     // only the unused dimension is offered
     expect(addLevel!.props('options')).toEqual([
       { label: 'Task', value: 'task' },
+      { label: 'Billable', value: 'billable' },
     ]);
 
     addLevel!.vm.$emit('update:modelValue', 'task');
@@ -299,11 +301,36 @@ describe('ReportsTable', () => {
   });
 
   it('hides the add-level control when every dimension is grouped', () => {
-    const wrapper = mountTable({ grouping: ['project', 'member', 'task'] });
+    const wrapper = mountTable({
+      grouping: ['project', 'member', 'task', 'billable'],
+    });
 
     expect(
       wrapper.find('[data-testid="report-grouping-add-level"]').exists(),
     ).toBe(false);
+  });
+
+  it('renders billable rows as status pills with a group share bar', () => {
+    const wrapper = mountTable({
+      grouping: ['project', 'billable'],
+      tableRows: [
+        makeLeafRow({
+          billableSeconds: 3600,
+          nonBillableSeconds: 1800,
+          totalSeconds: 5400,
+        }),
+      ],
+    });
+
+    // The project splits into a Billable and a Non-billable pill row…
+    expect(
+      wrapper.findAll('[data-testid="report-billable-pill"]'),
+    ).toHaveLength(2);
+    // …and the parent project row carries the billable-share bar (67%).
+    expect(
+      wrapper.find('[data-testid="report-billable-share"]').exists(),
+    ).toBe(true);
+    expect(wrapper.text()).toContain('67% billable');
   });
 
   it('removes a grouping level but never the last one', async () => {
@@ -789,7 +816,7 @@ describe('ReportsTable', () => {
     filters.projectId = 'project-1';
     filters.memberId = 'member-1';
     filters.hours = 'gt0';
-    filters.billable = 'withBillable';
+    filters.billable = 'gte8';
 
     const wrapper = mountTable({
       filters,
@@ -810,22 +837,28 @@ describe('ReportsTable', () => {
     });
   });
 
-  it('keeps billable hours stable when the non-billable filter is selected', () => {
+  it('filters groups by the billable hours they display, keeping subtrees', () => {
     const filters = createDefaultReportTableFilters();
-    filters.billable = 'withoutBillable';
+    filters.billable = 'gte8';
 
     const wrapper = mountTable({
       filters,
+      grouping: ['project', 'member'],
       tableRows: [
+        // Orion's 10h billable come from two 5h member leaves — a leaf-level
+        // comparison would wrongly hide it under the 8h billable threshold.
+        makeLeafRow({ billableSeconds: 5 * 3600, totalSeconds: 5 * 3600 }),
         makeLeafRow({
-          billableSeconds: 2700,
-          totalSeconds: 7200,
+          billableSeconds: 5 * 3600,
+          id: 'project-1:no-task:member-2',
+          memberIds: ['member-2'],
+          memberName: 'Pat PM',
+          totalSeconds: 5 * 3600,
         }),
       ],
     });
 
-    expect(wrapper.text()).toContain('2h 00m');
-    expect(wrapper.text()).toContain('45m');
-    expect(wrapper.text()).not.toContain('1h 15m');
+    expect(wrapper.text()).toContain('Project Orion');
+    expect(wrapper.text()).toContain('10h 00m');
   });
 });

@@ -50,6 +50,7 @@ const apiToUiDimension: Record<TimeReportGroupBy, ReportGroupingDimension> = {
   project: 'project',
   task: 'task',
   user: 'member',
+  billable: 'billable',
 };
 
 export function toApiGrouping(grouping: ReportGrouping): TimeReportGroupBy[] {
@@ -170,6 +171,7 @@ const groupingDimensionLabels: Record<TimeReportGroupBy, string> = {
   project: 'Project',
   task: 'Task',
   user: 'Member',
+  billable: 'Billable',
 };
 
 function formatSummaryDate(iso: string): string {

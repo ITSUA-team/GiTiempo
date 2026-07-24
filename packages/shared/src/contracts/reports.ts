@@ -9,7 +9,18 @@ const optionalSearchSchema = z
   .transform((value) => (value === "" ? undefined : value))
   .optional();
 
-export const timeReportGroupBySchema = z.enum(["project", "task", "user"]);
+// "billable" groups entries by whether they are billable, splitting any level
+// into a Billable / Non-billable pair. Unlike project/task/user it is not an
+// entity — its identity is the boolean bucket (see timeReportBillableGroupSchema).
+export const timeReportGroupBySchema = z.enum([
+  "project",
+  "task",
+  "user",
+  "billable",
+]);
+
+// Identity of a row grouped on the billable dimension.
+export const timeReportBillableGroupSchema = z.enum(["billable", "nonBillable"]);
 
 // Ordered path of 1-4 unique dimensions. Requests carry JSON, so this is an
 // array — there is no comma-separated string form to normalize.
@@ -128,6 +139,8 @@ export const timeReportRowSchema = aggregateTimingSchema.extend({
   project: timeReportProjectSummarySchema.nullable(),
   task: timeReportTaskSummarySchema.nullable(),
   user: timeReportUserSummarySchema.nullable(),
+  // Populated only when the grouping path includes the billable dimension.
+  billable: timeReportBillableGroupSchema.nullable(),
 });
 
 export const timeReportListMetaSchema = z.object({
@@ -150,7 +163,66 @@ export const timeReportResponseSchema = z.object({
   meta: timeReportListMetaSchema,
 });
 
+/**
+ * A fully-formatted, renderer-agnostic report document.
+ *
+ * The client computes the on-screen (filtered, grouped, sorted) report and
+ * emits this document; the PDF endpoint validates it and only applies pdfmake
+ * styling — so the file matches the screen exactly. Every value is a display
+ * string; the caller already resolved its own scoped data, so no server query
+ * runs. Bounds cap the payload (a client cannot make the renderer allocate
+ * unboundedly).
+ */
+export const reportDocumentStatSchema = z
+  .object({ label: z.string().max(60), value: z.string().max(60) })
+  .strict();
+
+export const reportDocumentRowSchema = z
+  .object({
+    detail: z.string().max(120).nullable(),
+    label: z.string().max(300),
+    level: z.number().int().min(0).max(8),
+    isLeaf: z.boolean(),
+    hours: z.string().max(40),
+    billable: z.string().max(40),
+    share: z.string().max(40),
+  })
+  .strict();
+
+export const reportDocumentTotalSchema = z
+  .object({
+    label: z.string().max(60),
+    hours: z.string().max(40),
+    billable: z.string().max(40),
+    share: z.string().max(40),
+  })
+  .strict();
+
+export const reportDocumentSchema = z
+  .object({
+    masthead: z
+      .object({ wordmark: z.string().max(60), tag: z.string().max(60) })
+      .strict(),
+    title: z.string().max(120),
+    period: z.string().max(200),
+    filters: z.string().max(400),
+    stats: z.array(reportDocumentStatSchema).max(8),
+    columns: z.array(z.string().max(40)).max(8),
+    rows: z.array(reportDocumentRowSchema).max(5000),
+    total: reportDocumentTotalSchema,
+    footerNote: z.string().max(200),
+  })
+  .strict();
+
+// Body of POST /reports/time/export/pdf — a client-built document to style.
+export const reportPdfExportRequestSchema = z
+  .object({ document: reportDocumentSchema })
+  .strict();
+
 export type TimeReportGroupBy = z.infer<typeof timeReportGroupBySchema>;
+export type TimeReportBillableGroup = z.infer<
+  typeof timeReportBillableGroupSchema
+>;
 export type TimeReportGroupByPath = z.infer<typeof timeReportGroupByPathSchema>;
 export type TimeReportExportFormat = z.infer<
   typeof timeReportExportFormatSchema
@@ -177,3 +249,10 @@ export type TimeReportEffectiveDateRange = z.infer<
   typeof timeReportEffectiveDateRangeSchema
 >;
 export type TimeReportResponse = z.infer<typeof timeReportResponseSchema>;
+export type ReportDocumentStat = z.infer<typeof reportDocumentStatSchema>;
+export type ReportDocumentRow = z.infer<typeof reportDocumentRowSchema>;
+export type ReportDocumentTotal = z.infer<typeof reportDocumentTotalSchema>;
+export type ReportDocument = z.infer<typeof reportDocumentSchema>;
+export type ReportPdfExportRequest = z.infer<
+  typeof reportPdfExportRequestSchema
+>;

@@ -11,7 +11,6 @@ import {
   filterReportRows,
   filterReportTreeGroups,
   flattenReportTree,
-  getReportExportBlockedReason,
   sumReportRows,
   sumReportTreeTotals,
   toReportTableRows,
@@ -28,6 +27,7 @@ const otherUserId = '33333333-3333-4333-8333-333333333334';
 
 function makeLeafRow(overrides: Partial<ReportTableRow>): ReportTableRow {
   return {
+    billable: null,
     billableSeconds: 3600,
     billableShare: 1,
     entryCount: 1,
@@ -53,6 +53,7 @@ const response: TimeReportResponse = {
   groupBy: ['user'],
   items: [
     {
+      billable: null,
       billableSeconds: 3600,
       billableShare: 0.5,
       entryCount: 2,
@@ -194,29 +195,83 @@ describe('report-view-model', () => {
     expect(() => filterReportRows([row], invalidFilters)).toThrow();
   });
 
-  it('filters non-billable groups without changing billable display values', () => {
+  it('filters groups below the billable-hours threshold, keeping subtrees', () => {
     const filters = createDefaultReportTableFilters();
-    filters.billable = 'withoutBillable';
+    filters.billable = 'gte8';
     const rows: ReportTableRow[] = [
+      // Project Orion: 5h billable — under the 8h threshold, so it drops out.
       makeLeafRow({
-        billableSeconds: 1800,
-        billableShare: 0.5,
-        nonBillableSeconds: 1800,
+        billableSeconds: 5 * 60 * 60,
+        totalSeconds: 6 * 60 * 60,
       }),
+      // Billing API: 10h billable — kept.
       makeLeafRow({
+        billableSeconds: 10 * 60 * 60,
         id: `${otherProjectId}:no-task:${otherUserId}`,
         memberIds: [otherUserId],
         memberName: 'Nina PM',
         projectIds: [otherProjectId],
         projectName: 'Billing API',
+        totalSeconds: 12 * 60 * 60,
       }),
     ];
     const tree = buildReportTree(rows, ['project']);
 
     const visible = filterReportTreeGroups(tree, filters);
 
-    expect(visible.map((node) => node.label)).toEqual(['Project Orion']);
-    expect(visible[0]!.billableSeconds).toBe(1800);
+    expect(visible.map((node) => node.label)).toEqual(['Billing API']);
+  });
+
+  it('splits leaves into billable and non-billable groups when grouped by billable', () => {
+    const rows: ReportTableRow[] = [
+      makeLeafRow({
+        billableSeconds: 3600,
+        billableShare: 2 / 3,
+        nonBillableSeconds: 1800,
+        totalSeconds: 5400,
+      }),
+    ];
+
+    const tree = buildReportTree(rows, ['project', 'billable']);
+
+    expect(tree).toHaveLength(1);
+    const project = tree[0]!;
+    // Heavier billable bucket sorts first.
+    expect(project.children.map((child) => child.label)).toEqual([
+      'Billable',
+      'Non-billable',
+    ]);
+    const [billable, nonBillable] = project.children;
+    expect(billable).toMatchObject({
+      dimension: 'billable',
+      totalSeconds: 3600,
+      billableSeconds: 3600,
+      nonBillableSeconds: 0,
+    });
+    expect(nonBillable).toMatchObject({
+      dimension: 'billable',
+      totalSeconds: 1800,
+      billableSeconds: 0,
+      nonBillableSeconds: 1800,
+    });
+    // The parent still totals both buckets.
+    expect(project.totalSeconds).toBe(5400);
+  });
+
+  it('drops the empty bucket for a fully billable leaf', () => {
+    const rows: ReportTableRow[] = [
+      makeLeafRow({
+        billableSeconds: 3600,
+        billableShare: 1,
+        nonBillableSeconds: 0,
+        totalSeconds: 3600,
+      }),
+    ];
+
+    const tree = buildReportTree(rows, ['billable']);
+
+    expect(tree.map((node) => node.label)).toEqual(['Billable']);
+    expect(tree[0]!.dimension).toBe('billable');
   });
 
   it('searches report rows using formatted duration labels', () => {
@@ -568,61 +623,5 @@ describe('sumReportRows', () => {
       nonBillableSeconds: 1800,
       totalSeconds: 5400,
     });
-  });
-});
-
-describe('getReportExportBlockedReason', () => {
-  it('lets identity-only filters export under any grouping', () => {
-    const filters = createDefaultReportTableFilters();
-    filters.projectId = projectId;
-
-    expect(getReportExportBlockedReason(filters, ['project'])).toBeNull();
-    expect(getReportExportBlockedReason(filters, ['member'])).toBeNull();
-    expect(
-      getReportExportBlockedReason(filters, ['project', 'member', 'task']),
-    ).toBeNull();
-  });
-
-  it('blocks label and aggregate filters regardless of grouping', () => {
-    const searching = createDefaultReportTableFilters();
-    searching.global = '1h 00m';
-    const byHours = createDefaultReportTableFilters();
-    byHours.hours = 'gte8';
-    const byShare = createDefaultReportTableFilters();
-    byShare.billableShare = 'gte90';
-    const byActivity = createDefaultReportTableFilters();
-    byActivity.activity = 'last7';
-
-    expect(getReportExportBlockedReason(searching, ['member'])).toContain(
-      'cannot be exported',
-    );
-    expect(getReportExportBlockedReason(byHours, ['project'])).toContain(
-      'cannot be exported',
-    );
-    expect(getReportExportBlockedReason(byShare, ['project'])).toContain(
-      'cannot be exported',
-    );
-    expect(getReportExportBlockedReason(byActivity, ['project'])).toContain(
-      'cannot be exported',
-    );
-  });
-
-  it('blocks a member filter only when no member level is grouped', () => {
-    const filters = createDefaultReportTableFilters();
-    filters.memberId = userId;
-
-    // Rows without member identity total everyone on screen while a
-    // userId-scoped export would return only this member's entries.
-    expect(getReportExportBlockedReason(filters, ['project'])).toContain(
-      'member grouping level',
-    );
-    expect(
-      getReportExportBlockedReason(filters, ['project', 'task']),
-    ).toContain('member grouping level');
-    // Any grouping that includes a member level carries per-member sums.
-    expect(getReportExportBlockedReason(filters, ['member'])).toBeNull();
-    expect(
-      getReportExportBlockedReason(filters, ['project', 'member']),
-    ).toBeNull();
   });
 });

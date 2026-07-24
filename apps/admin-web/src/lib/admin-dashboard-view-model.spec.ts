@@ -83,6 +83,7 @@ function createReportRow(
   totalSeconds = 7200,
 ): TimeReportRow {
   return {
+    billable: null,
     billableSeconds: totalSeconds,
     billableShare: totalSeconds > 0 ? 1 : null,
     entryCount: totalSeconds > 0 ? 1 : 0,

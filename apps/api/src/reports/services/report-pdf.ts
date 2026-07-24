@@ -300,11 +300,11 @@ export function buildTimeReportPdfDefinition(
   return renderReportDocument(buildReportDocument(input));
 }
 
-export function renderTimeReportPdf(input: ReportPdfInput): Promise<Buffer> {
+function definitionToPdfBuffer(
+  definition: Record<string, unknown>,
+): Promise<Buffer> {
   const printer = new PdfPrinter(STANDARD_FONTS);
-  const document = printer.createPdfKitDocument(
-    buildTimeReportPdfDefinition(input),
-  );
+  const document = printer.createPdfKitDocument(definition);
 
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -313,4 +313,16 @@ export function renderTimeReportPdf(input: ReportPdfInput): Promise<Buffer> {
     document.on('error', reject);
     document.end();
   });
+}
+
+export function renderTimeReportPdf(input: ReportPdfInput): Promise<Buffer> {
+  return definitionToPdfBuffer(buildTimeReportPdfDefinition(input));
+}
+
+// Renders a pre-built, validated document — the WYSIWYG export path where the
+// client computed the on-screen report and the server only styles it.
+export function renderReportDocumentPdf(
+  document: ReportDocument,
+): Promise<Buffer> {
+  return definitionToPdfBuffer(renderReportDocument(document));
 }

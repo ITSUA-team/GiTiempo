@@ -23,7 +23,6 @@ import {
   reportSummaryViewSchema,
   reportTableFiltersSchema,
   reportTableRowSchema,
-  type ReportBillableFilter,
   type ReportDateRange,
   type ReportFilterOption,
   type ReportGrouping,
@@ -36,7 +35,6 @@ import {
 
 export {
   defaultReportGrouping,
-  getReportExportBlockedReason,
   maxReportGroupingLevels,
   reportGroupingApiValue,
   toReportGroupingApiPath,
@@ -67,6 +65,7 @@ export const reportGroupingDimensionLabels: Record<
   member: 'Member',
   project: 'Project',
   task: 'Task',
+  billable: 'Billable',
 };
 
 // Every groupable dimension in display order; the builder offers the unused
@@ -75,6 +74,7 @@ export const reportGroupingDimensions: ReportGroupingDimension[] = [
   'project',
   'member',
   'task',
+  'billable',
 ];
 
 interface ReportRowContext {
@@ -328,6 +328,7 @@ export function toReportTableRows(
         : [];
 
     return reportTableRowSchema.parse({
+      billable: row.billable,
       billableSeconds: row.billableSeconds,
       billableShare: row.billableShare,
       entryCount: row.entryCount,
@@ -437,12 +438,14 @@ const reportDimensionNouns: Record<ReportGroupingDimension, string> = {
   member: 'member',
   project: 'project',
   task: 'task',
+  billable: 'billable group',
 };
 
 const unknownDimensionLabel: Record<ReportGroupingDimension, string> = {
   member: 'All members',
   project: 'All projects',
   task: 'No task',
+  billable: 'Non-billable',
 };
 
 function getRowDimensionKey(
@@ -451,6 +454,7 @@ function getRowDimensionKey(
 ): string {
   if (dimension === 'project') return row.projectIds[0] ?? 'all-projects';
   if (dimension === 'member') return row.memberIds[0] ?? 'all-members';
+  if (dimension === 'billable') return row.billable ?? 'unknown-billable';
   return row.taskId ?? 'no-task';
 }
 
@@ -458,6 +462,14 @@ function getRowDimensionLabel(
   row: ReportTableRow,
   dimension: ReportGroupingDimension,
 ): string {
+  if (dimension === 'billable') {
+    return row.billable === 'billable'
+      ? 'Billable'
+      : row.billable === 'nonBillable'
+        ? 'Non-billable'
+        : unknownDimensionLabel.billable;
+  }
+
   const label =
     dimension === 'project'
       ? row.projectName
@@ -558,6 +570,47 @@ function buildReportTreeLevel(
   );
 }
 
+/**
+ * Splits each leaf into up to two rows — one per billable bucket — from the
+ * billable/non-billable seconds it already carries. Only used when the grouping
+ * path includes the billable dimension. An empty bucket is dropped, so a fully
+ * billable leaf yields just the Billable row. entryCount is zeroed on the split
+ * rows: an aggregated leaf mixes billable and non-billable entries, so the count
+ * cannot be attributed — and no column displays it under this grouping.
+ */
+function splitRowsByBillable(rows: ReportTableRow[]): ReportTableRow[] {
+  const split: ReportTableRow[] = [];
+
+  for (const row of rows) {
+    if (row.billableSeconds > 0) {
+      split.push({
+        ...row,
+        billable: 'billable',
+        billableSeconds: row.billableSeconds,
+        billableShare: 1,
+        entryCount: 0,
+        id: `${row.id}:billable`,
+        nonBillableSeconds: 0,
+        totalSeconds: row.billableSeconds,
+      });
+    }
+    if (row.nonBillableSeconds > 0) {
+      split.push({
+        ...row,
+        billable: 'nonBillable',
+        billableSeconds: 0,
+        billableShare: 0,
+        entryCount: 0,
+        id: `${row.id}:nonBillable`,
+        nonBillableSeconds: row.nonBillableSeconds,
+        totalSeconds: row.nonBillableSeconds,
+      });
+    }
+  }
+
+  return split;
+}
+
 export function buildReportTree(
   rows: ReportTableRow[],
   grouping: ReportGrouping,
@@ -566,7 +619,11 @@ export function buildReportTree(
     return [];
   }
 
-  return buildReportTreeLevel(rows, grouping, 0, 'report');
+  const leaves = grouping.includes('billable')
+    ? splitRowsByBillable(rows)
+    : rows;
+
+  return buildReportTreeLevel(leaves, grouping, 0, 'report');
 }
 
 /**
@@ -589,21 +646,6 @@ export function flattenReportTree(
   nodes.forEach(visit);
 
   return rows;
-}
-
-export function getReportRowUnbillableSeconds(row: ReportTableRow): number {
-  return Math.max(0, row.totalSeconds - row.billableSeconds);
-}
-
-export function getReportRowBillableSeconds(
-  row: ReportTableRow,
-  billableFilter: ReportBillableFilter,
-): number {
-  if (billableFilter === 'withoutBillable') {
-    return getReportRowUnbillableSeconds(row);
-  }
-
-  return row.billableSeconds;
 }
 
 function matchesReportBillableShareFilter(
@@ -672,13 +714,16 @@ export function filterReportTreeGroups(
       return false;
     }
 
-    if (parsedFilters.billable === 'withBillable' && node.billableSeconds <= 0) {
+    if (
+      parsedFilters.billable === 'gte8' &&
+      node.billableSeconds < 8 * 60 * 60
+    ) {
       return false;
     }
 
     if (
-      parsedFilters.billable === 'withoutBillable' &&
-      node.totalSeconds - node.billableSeconds <= 0
+      parsedFilters.billable === 'gte40' &&
+      node.billableSeconds < 40 * 60 * 60
     ) {
       return false;
     }
@@ -761,9 +806,7 @@ export function filterReportRows(
       row.memberName,
       row.taskName,
       formatPaddedHoursMinutesDuration(row.totalSeconds),
-      formatPaddedHoursMinutesDuration(
-        getReportRowBillableSeconds(row, parsedFilters.billable),
-      ),
+      formatPaddedHoursMinutesDuration(row.billableSeconds),
       formatReportPercent(row.billableShare),
     ]
       .join(' ')

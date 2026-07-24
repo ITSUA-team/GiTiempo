@@ -1,7 +1,9 @@
 import {
+  reportPdfExportRequestSchema,
   timeReportExportRequestSchema,
   timeReportRequestSchema,
   timeReportResponseSchema,
+  type ReportDocument,
   type TimeReportExportRequest,
   type TimeReportRequest,
   type TimeReportResponse,
@@ -25,6 +27,8 @@ export interface AdminReportsClient {
   exportTimeReport(
     query?: Partial<TimeReportExportRequest>,
   ): Promise<ReportExport>;
+  // Renders the on-screen report document to a PDF; the caller names the file.
+  exportReportPdf(document: ReportDocument): Promise<Blob>;
   getTimeReport(query?: Partial<TimeReportRequest>): Promise<TimeReportResponse>;
 }
 
@@ -104,6 +108,17 @@ export function createAdminReportsClient({
       };
     },
 
+    async exportReportPdf(document) {
+      const body = reportPdfExportRequestSchema.parse({ document });
+      const response = await apiClient.request({
+        body,
+        method: 'POST',
+        path: '/reports/time/export/pdf',
+      });
+
+      return response.blob();
+    },
+
     getTimeReport(query) {
       return apiClient.requestJson({
         body: buildTimeReportBody(query),
@@ -124,6 +139,9 @@ function createDefaultAdminReportsClient(): AdminReportsClient {
 export const adminReportsClient: AdminReportsClient = {
   exportTimeReport(query) {
     return createDefaultAdminReportsClient().exportTimeReport(query);
+  },
+  exportReportPdf(document) {
+    return createDefaultAdminReportsClient().exportReportPdf(document);
   },
   getTimeReport(query) {
     return createDefaultAdminReportsClient().getTimeReport(query);

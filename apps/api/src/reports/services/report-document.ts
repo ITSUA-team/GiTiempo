@@ -1,8 +1,20 @@
 import type {
+  ReportDocument,
+  ReportDocumentRow,
+  ReportDocumentStat,
   TimeReportEffectiveDateRange,
   TimeReportGroupBy,
   TimeReportGroupByPath,
   TimeReportTotals,
+} from '@gitiempo/shared';
+
+// The report document shape lives in the shared contract now, so the client can
+// build one and the PDF endpoint can validate it. Re-exported for local callers.
+export type {
+  ReportDocument,
+  ReportDocumentRow,
+  ReportDocumentStat,
+  ReportDocumentTotal,
 } from '@gitiempo/shared';
 
 /**
@@ -45,54 +57,18 @@ export interface ReportGroupNode {
   billableSeconds: number;
 }
 
-export interface ReportDocumentStat {
-  label: string;
-  value: string;
-}
-
-export interface ReportDocumentRow {
-  /** Secondary text beside the label, e.g. "2 members". */
-  detail: string | null;
-  label: string;
-  /** Depth in the grouping path; drives indentation. */
-  level: number;
-  isLeaf: boolean;
-  hours: string;
-  billable: string;
-  share: string;
-}
-
-export interface ReportDocumentTotal {
-  label: string;
-  hours: string;
-  billable: string;
-  share: string;
-}
-
-export interface ReportDocument {
-  masthead: { wordmark: string; tag: string };
-  title: string;
-  /** Date window and workspace, e.g. "May 1, 2026 – Jun 1, 2026 · GI Tiempo". */
-  period: string;
-  /** Applied filters and the grouping path. */
-  filters: string;
-  stats: ReportDocumentStat[];
-  columns: string[];
-  rows: ReportDocumentRow[];
-  total: ReportDocumentTotal;
-  footerNote: string;
-}
-
 const dimensionNouns: Record<TimeReportGroupBy, string> = {
   project: 'project',
   task: 'task',
   user: 'member',
+  billable: 'billable group',
 };
 
 const dimensionTitles: Record<TimeReportGroupBy, string> = {
   project: 'Project',
   task: 'Task',
   user: 'Member',
+  billable: 'Billable',
 };
 
 export function formatHoursMinutes(totalSeconds: number): string {

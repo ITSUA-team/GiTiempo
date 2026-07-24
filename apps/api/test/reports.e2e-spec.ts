@@ -347,6 +347,86 @@ describe('Reports (e2e)', () => {
     expect(unknown.status).toBe(400);
   });
 
+  it('groups the whole report by billable status', async () => {
+    const res = await getReport(adminToken, { groupBy: ['billable'] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.groupBy).toEqual(['billable']);
+    // Admin scope: billable 10800+5400+900 = 17100, non-billable 1800.
+    expect(res.body.items).toHaveLength(2);
+    const billable = res.body.items.find(
+      (item: { billable: string | null }) => item.billable === 'billable',
+    );
+    const nonBillable = res.body.items.find(
+      (item: { billable: string | null }) => item.billable === 'nonBillable',
+    );
+    expect(billable).toMatchObject({
+      billable: 'billable',
+      project: null,
+      totalSeconds: 17100,
+      billableSeconds: 17100,
+    });
+    expect(nonBillable).toMatchObject({
+      billable: 'nonBillable',
+      totalSeconds: 1800,
+      nonBillableSeconds: 1800,
+    });
+  });
+
+  it('splits each project into billable and non-billable sub-groups', async () => {
+    const res = await getReport(adminToken, {
+      groupBy: ['project', 'billable'],
+    });
+
+    expect(res.status).toBe(200);
+    const platformRows = res.body.items.filter(
+      (item: { project: { id: string } | null }) =>
+        item.project?.id === platformProjectId,
+    );
+    const billable = platformRows.find(
+      (row: { billable: string | null }) => row.billable === 'billable',
+    );
+    const nonBillable = platformRows.find(
+      (row: { billable: string | null }) => row.billable === 'nonBillable',
+    );
+
+    expect(billable).toMatchObject({
+      billable: 'billable',
+      totalSeconds: 10800,
+      billableSeconds: 10800,
+      nonBillableSeconds: 0,
+      entryCount: 2,
+    });
+    expect(nonBillable).toMatchObject({
+      billable: 'nonBillable',
+      totalSeconds: 1800,
+      billableSeconds: 0,
+      nonBillableSeconds: 1800,
+      entryCount: 1,
+    });
+  });
+
+  it('renders a PDF grouped by billable without error', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        format: 'pdf',
+        groupBy: ['project', 'billable'],
+      })
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.status).toBe(200);
+    expect((res.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
   it('exports detailed CSV rows recording the grouping path', async () => {
     const res = await request(app.getHttpServer())
       .post('/reports/time/export')
@@ -442,6 +522,88 @@ describe('Reports (e2e)', () => {
   it('rejects member report access', async () => {
     const report = await getReport(memberToken, {});
     expect(report.status).toBe(403);
+  });
+
+  function sampleReportDocument() {
+    return {
+      columns: ['NAME', 'HOURS', 'BILLABLE', 'BILL %'],
+      filters: 'Projects: All · Members: All · Grouping: Project',
+      footerNote: 'Generated with GiTiempo · Mar 1, 2027',
+      masthead: { tag: 'TIME REPORT', wordmark: 'GiTiempo' },
+      period: 'Mar 1, 2027 – Apr 1, 2027 · Workspace',
+      rows: [
+        {
+          billable: '10h 00m',
+          detail: null,
+          hours: '12h 30m',
+          isLeaf: true,
+          label: 'Internal Platform',
+          level: 0,
+          share: '80%',
+        },
+      ],
+      stats: [
+        { label: 'TRACKED HOURS', value: '12h 30m' },
+        { label: 'BILLABLE', value: '10h 00m · 80%' },
+      ],
+      title: 'Time report',
+      total: {
+        billable: '10h 00m',
+        hours: '12h 30m',
+        label: 'Total',
+        share: '80%',
+      },
+    };
+  }
+
+  it('styles a client-built report document into a PDF', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export/pdf')
+      .set('Authorization', bearer(adminToken))
+      .send({ document: sampleReportDocument() })
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.status).toBe(200);
+    expect((res.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('rejects report-document rendering for members', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export/pdf')
+      .set('Authorization', bearer(memberToken))
+      .send({ document: sampleReportDocument() });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects a report document that violates the bounded schema', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export/pdf')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        document: {
+          ...sampleReportDocument(),
+          rows: [
+            {
+              billable: '0h 00m',
+              detail: null,
+              hours: '0h 00m',
+              isLeaf: true,
+              // Over the 300-char label cap → schema rejects before rendering.
+              label: 'x'.repeat(301),
+              level: 0,
+              share: '0%',
+            },
+          ],
+        },
+      });
+
+    expect(res.status).toBe(400);
   });
 
   // The PDF prints the names of the project and member filters. Those lookups

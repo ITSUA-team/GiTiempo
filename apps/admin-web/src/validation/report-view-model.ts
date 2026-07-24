@@ -23,12 +23,17 @@ export type ReportDateRange = z.infer<typeof reportDateRangeSchema>;
 export const reportHoursFilterSchema = z.enum(['any', 'gt0', 'gte8', 'gte40']);
 export type ReportHoursFilter = z.infer<typeof reportHoursFilterSchema>;
 
-export const reportBillableFilterSchema = z.enum([
-  'any',
-  'withBillable',
-  'withoutBillable',
-]);
+// Billable-hours thresholds, mirroring the Hours filter but measured on a
+// group's billable seconds (was a broken with/without-billable toggle; the
+// billable split now lives in the grouping dimension instead).
+export const reportBillableFilterSchema = z.enum(['any', 'gte8', 'gte40']);
 export type ReportBillableFilter = z.infer<typeof reportBillableFilterSchema>;
+
+// Identity of a row split on the billable grouping dimension (client mirror of
+// the shared TimeReportBillableGroup). Distinct from the billable column filter
+// above: this labels which bucket a split row belongs to.
+export const reportBillableGroupSchema = z.enum(['billable', 'nonBillable']);
+export type ReportBillableGroup = z.infer<typeof reportBillableGroupSchema>;
 
 export const reportBillableShareFilterSchema = z.enum([
   'any',
@@ -58,6 +63,7 @@ export const reportGroupingDimensionSchema = z.enum([
   'project',
   'member',
   'task',
+  'billable',
 ]);
 export type ReportGroupingDimension = z.infer<
   typeof reportGroupingDimensionSchema
@@ -85,6 +91,7 @@ export const reportGroupingApiValue: Record<
   member: 'user',
   project: 'project',
   task: 'task',
+  billable: 'billable',
 };
 
 export function toReportGroupingApiPath(
@@ -104,56 +111,12 @@ export const reportSetupFiltersSchema = z.object({
 });
 export type ReportSetupFilters = z.infer<typeof reportSetupFiltersSchema>;
 
-/**
- * Single source of truth for whether the CSV export may run, and why not.
- *
- * Only filters the table and the CSV agree on reach the export. `hours` and
- * `billable` filter aggregate row totals, and `global` matches formatted
- * labels including durations and percentages; the export is detailed
- * project-task-user rows holding none of those. The backend's own `search` is
- * not an equivalent either: it matches task titles the table never shows and
- * ignores the duration labels the table does.
- *
- * The member filter is grouping-dependent. When `member` is one of the
- * grouping levels, every visible leaf carries one member's own sums, so a
- * `userId`-scoped export matches the screen. Without a member level the table
- * keeps whole folded rows with every contributor's time (`filterReportRows`
- * selects leaves, it never re-sums), while a `userId`-scoped export would
- * return only that member's entries — the file would silently show a fraction
- * of the on-screen hours.
- */
-export function getReportExportBlockedReason(
-  filters: Pick<
-    ReportTableFilters,
-    | 'activity'
-    | 'billable'
-    | 'billableShare'
-    | 'global'
-    | 'hours'
-    | 'memberId'
-  >,
-  grouping: ReportGrouping,
-): string | null {
-  if (
-    filters.hours !== 'any' ||
-    filters.billable !== 'any' ||
-    filters.billableShare !== 'any' ||
-    filters.activity !== 'any' ||
-    filters.global.trim() !== ''
-  ) {
-    return 'Search and column filters over aggregates cannot be exported. Clear them to export this report.';
-  }
-
-  if (!grouping.includes('member') && filters.memberId !== null) {
-    return 'A member filter cannot be exported without a member grouping level: rows on screen total everyone, but the file would hold only that member. Add a member level or clear the filter.';
-  }
-
-  return null;
-}
-
 // Leaf row: one aggregate at the requested grouping-path granularity. The
 // tree and its subtotals are derived from these (see buildReportTree).
 export const reportTableRowSchema = z.object({
+  // Which billable bucket this row belongs to, or null until the row is split
+  // on the billable grouping dimension (see splitRowsByBillable).
+  billable: reportBillableGroupSchema.nullable().default(null),
   billableSeconds: z.number().int().min(0),
   billableShare: z.number().min(0).max(1).nullable(),
   entryCount: z.number().int().min(0),

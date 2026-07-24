@@ -12,8 +12,11 @@ import {
   or,
   sql,
   type SQL,
+  type SQLWrapper,
 } from 'drizzle-orm';
 import type {
+  ReportDocument,
+  TimeReportBillableGroup,
   TimeReportEffectiveDateRange,
   TimeReportExportRequest,
   TimeReportGroupBy,
@@ -37,7 +40,11 @@ import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
-import { renderTimeReportPdf, type ReportPdfLeaf } from './report-pdf';
+import {
+  renderReportDocumentPdf,
+  renderTimeReportPdf,
+  type ReportPdfLeaf,
+} from './report-pdf';
 
 interface ExportResult {
   content: string | Buffer;
@@ -55,6 +62,7 @@ interface AggregateRow {
   userEmail: string | null;
   userDisplayName: string | null;
   userAvatarUrl: string | null;
+  billable: string | null;
   totalSeconds: number | string | null;
   billableSeconds: number | string | null;
   nonBillableSeconds: number | string | null;
@@ -142,6 +150,35 @@ export class ReportsService {
   }
 
   /**
+   * Styles a client-built report document into a PDF (the WYSIWYG export path).
+   *
+   * No DB query runs: the client already computed the on-screen, filtered,
+   * grouped report under its own scoped token, so this only applies the pdfmake
+   * design. The role gate stays — only admins/PMs may produce a report — and
+   * the request schema bounds the document so a caller cannot make the renderer
+   * allocate unboundedly. The client names the download itself.
+   */
+  async renderPdfDocument(
+    user: AuthUser,
+    document: ReportDocument,
+  ): Promise<ExportResult> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+    if (membership.role !== 'admin' && membership.role !== 'pm') {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    return {
+      content: await renderReportDocumentPdf(document),
+      contentType: 'application/pdf',
+      filename: 'time-report.pdf',
+    };
+  }
+
+  /**
    * The PDF renders the grouped report at the requested path, so it reads
    * rows at grouped granularity (no pagination) rather than the CSV's
    * detailed project-task-user rows.
@@ -188,6 +225,15 @@ export class ReportsService {
               user: {
                 key: row.userId,
                 label: row.userDisplayName?.trim() || row.userEmail || '—',
+              },
+            }
+          : {}),
+        ...(row.billable
+          ? {
+              billable: {
+                key: row.billable,
+                label:
+                  row.billable === 'billable' ? 'Billable' : 'Non-billable',
               },
             }
           : {}),
@@ -431,9 +477,12 @@ export class ReportsService {
 
     const keyColumn = dimensionKeyColumn(context.groupBy[0]!);
 
-    return this.groupedRowsQuery(context, inArray(keyColumn, keys)).orderBy(
-      ...leafOrder,
-    );
+    return this.groupedRowsQuery(
+      context,
+      // keyColumn is a column for entity dimensions but a CASE expression for
+      // billable; both are SQLWrapper at runtime, so widen for the overload.
+      inArray(keyColumn as SQLWrapper, keys),
+    ).orderBy(...leafOrder);
   }
 
   private async getTopLevelKeys(
@@ -561,6 +610,7 @@ export class ReportsService {
       userEmail: users.email,
       userDisplayName: users.displayName,
       userAvatarUrl: users.avatarUrl,
+      billable: sql<null>`NULL`,
       ...this.aggregateSelection(),
     };
   }
@@ -572,6 +622,7 @@ export class ReportsService {
     const withProject = groupBy.includes('project') || groupBy.includes('task');
     const withTask = groupBy.includes('task');
     const withUser = groupBy.includes('user');
+    const withBillable = groupBy.includes('billable');
     const keyColumns = groupBy.map((dimension) =>
       dimensionKeyColumn(dimension),
     );
@@ -588,6 +639,7 @@ export class ReportsService {
       userEmail: withUser ? users.email : sql<null>`NULL`,
       userDisplayName: withUser ? users.displayName : sql<null>`NULL`,
       userAvatarUrl: withUser ? users.avatarUrl : sql<null>`NULL`,
+      billable: withBillable ? billableGroupKey : sql<null>`NULL`,
       ...this.aggregateSelection(),
     };
   }
@@ -601,6 +653,7 @@ export class ReportsService {
       ...(groupBy.includes('user')
         ? [users.id, users.email, users.displayName, users.avatarUrl]
         : []),
+      ...(groupBy.includes('billable') ? [timeEntries.isBillable] : []),
     ];
   }
 
@@ -627,14 +680,21 @@ export class ReportsService {
       project: withProject ? requireProject(row) : null,
       task: groupBy.includes('task') ? requireTask(row) : null,
       user: groupBy.includes('user') ? requireUser(row) : null,
+      billable: groupBy.includes('billable') ? requireBillable(row) : null,
       ...toAggregateTiming(row),
     };
   }
 }
 
+// The billable dimension has no id column; its key is the boolean bucket,
+// rendered as a stable text key so it can group, order, page, and CONCAT into
+// group ids exactly like the entity dimensions.
+const billableGroupKey = sql<TimeReportBillableGroup>`CASE WHEN ${timeEntries.isBillable} THEN 'billable' ELSE 'nonBillable' END`;
+
 function dimensionKeyColumn(dimension: TimeReportGroupBy) {
   if (dimension === 'task') return tasks.id;
   if (dimension === 'user') return users.id;
+  if (dimension === 'billable') return billableGroupKey;
   return projects.id;
 }
 
@@ -677,6 +737,7 @@ function leafOrderBy(
     project: projects.name,
     task: tasks.title,
     user: users.email,
+    billable: billableGroupKey,
   };
 
   return [
@@ -786,6 +847,16 @@ function requireUser(row: AggregateRow) {
   };
 }
 
+function requireBillable(row: AggregateRow): TimeReportBillableGroup {
+  if (row.billable !== 'billable' && row.billable !== 'nonBillable') {
+    throw DomainError.internal(
+      'report_billable_context_missing',
+      'Report billable row is missing billable context',
+    );
+  }
+  return row.billable;
+}
+
 /**
  * Fixed labels for the group-by column. The dimension is already a validated
  * enum, but mapping through a constant keeps request input out of the exported
@@ -795,6 +866,7 @@ const csvGroupByLabels: Record<TimeReportGroupBy, string> = {
   project: 'project',
   task: 'task',
   user: 'user',
+  billable: 'billable',
 };
 
 function toCsv(groupBy: TimeReportGroupByPath, rows: AggregateRow[]): string {

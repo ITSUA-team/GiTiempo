@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ProjectListResponse,
   ProjectResponse,
+  ReportDocument,
   TimeReportResponse,
   TimeReportRow,
   WorkspaceMemberListResponse,
@@ -62,6 +63,7 @@ function createLeafReportRow({
   userId: string;
 }): TimeReportRow {
   return {
+    billable: null,
     billableSeconds,
     billableShare: totalSeconds > 0 ? billableSeconds / totalSeconds : null,
     entryCount,
@@ -222,10 +224,25 @@ function mountWithQuery(component: Parameters<typeof mount>[0]) {
 
 function createReportsClientMocks() {
   return {
+    exportReportPdf: vi.fn(),
     exportTimeReport: vi.fn(),
     getTimeReport: vi.fn(async (query: { projectId?: string }) =>
       createReportResponse(reportRowsByProject.get(query.projectId ?? '') ?? []),
     ),
+  };
+}
+
+function createReportDocument(): ReportDocument {
+  return {
+    columns: ['NAME', 'HOURS', 'BILLABLE', 'BILL %'],
+    filters: 'Projects: All · Members: All · Grouping: Project',
+    footerNote: 'Generated with GiTiempo',
+    masthead: { tag: 'TIME REPORT', wordmark: 'GiTiempo' },
+    period: 'May 2026',
+    rows: [],
+    stats: [],
+    title: 'Time report',
+    total: { billable: '0m', hours: '0m', label: 'Total', share: '0%' },
   };
 }
 
@@ -377,15 +394,11 @@ describe('useReportsData', () => {
     );
   });
 
-  it('refetches rows and scopes export when the date range changes', async () => {
+  it('refetches rows when the date range changes', async () => {
     const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
-    reportsClient.exportTimeReport.mockResolvedValue({
-      blob: new Blob(['csv'], { type: 'text/csv' }),
-      filename: 'time-report.csv',
-    });
     let reports!: ReturnType<typeof useReportsData>;
 
     mountWithQuery(
@@ -418,24 +431,6 @@ describe('useReportsData', () => {
       expect.objectContaining({
         dateFrom: new Date(2026, 4, 1).toISOString(),
         dateTo: new Date(2026, 4, 3).toISOString(),
-      }),
-    );
-
-    // Export scope is always stated explicitly; there is no default that could
-    // silently export an unfiltered report.
-    await reports.exportCurrentReport({
-      dateRange: reports.dateRange.value,
-      groupBy: ['project'],
-      memberId: null,
-      projectId: null,
-    });
-    await flushPromises();
-
-    expect(reportsClient.exportTimeReport).toHaveBeenCalledWith(
-      expect.objectContaining({
-        dateFrom: new Date(2026, 4, 1).toISOString(),
-        dateTo: new Date(2026, 4, 3).toISOString(),
-        groupBy: ['project'],
       }),
     );
   });
@@ -478,15 +473,13 @@ describe('useReportsData', () => {
     expect(reports.summary.value.totalSeconds).toBe(projectTotal);
   });
 
-  it('exports through the reports API using explicit export setup controls', async () => {
+  it('renders the on-screen document to a PDF through the reports API', async () => {
     const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
-    reportsClient.exportTimeReport.mockResolvedValue({
-      blob: new Blob(['csv'], { type: 'text/csv' }),
-      filename: 'time-report.csv',
-    });
+    const pdfBlob = new Blob(['%PDF-'], { type: 'application/pdf' });
+    reportsClient.exportReportPdf.mockResolvedValue(pdfBlob);
     let reports!: ReturnType<typeof useReportsData>;
 
     mountWithQuery(
@@ -506,26 +499,14 @@ describe('useReportsData', () => {
 
     await flushPromises();
 
-    const result = await reports.exportCurrentReport({
-      dateRange: null,
-      groupBy: ['user'],
-      memberId: ninaId,
-      projectId: projectBillingId,
-    });
+    const document = createReportDocument();
+    const result = await reports.exportReportPdf(document);
 
-    expect(result?.filename).toBe('time-report.csv');
-    expect(reportsClient.exportTimeReport).toHaveBeenCalledWith(
-      expect.objectContaining({
-        groupBy: ['user'],
-        projectId: projectBillingId,
-        sortBy: 'totalSeconds',
-        sortOrder: 'desc',
-        userId: ninaId,
-      }),
-    );
+    expect(result).toBe(pdfBlob);
+    expect(reportsClient.exportReportPdf).toHaveBeenCalledWith(document);
   });
 
-  it('blocks invalid setup date ranges before export without refreshing table data', async () => {
+  it('does not refetch table data for an invalid setup date range', async () => {
     const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
@@ -559,15 +540,6 @@ describe('useReportsData', () => {
     await flushPromises();
 
     expect(reportsClient.getTimeReport).not.toHaveBeenCalled();
-    await expect(
-      reports.exportCurrentReport({
-        dateRange: reports.dateRange.value,
-        groupBy: ['project'],
-        memberId: null,
-        projectId: null,
-      }),
-    ).rejects.toThrow('End date must be after the start date.');
-    expect(reportsClient.exportTimeReport).not.toHaveBeenCalled();
   });
 
   it('keeps admin reports in request-error state when workspace member options fail', async () => {

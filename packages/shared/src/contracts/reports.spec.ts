@@ -195,6 +195,7 @@ describe("timeReportResponseSchema", () => {
           nonBillableSeconds: 3600,
           entryCount: 2,
           billableShare: 0.5,
+          billable: null,
           firstStartedAt: "2026-05-01T10:00:00.000Z",
           lastStartedAt: "2026-05-02T10:00:00.000Z",
         },
@@ -212,6 +213,7 @@ describe("timeReportResponseSchema", () => {
           nonBillableSeconds: 0,
           entryCount: 1,
           billableShare: 1,
+          billable: null,
           firstStartedAt: "2026-05-01T10:00:00.000Z",
           lastStartedAt: "2026-05-01T10:00:00.000Z",
         },
@@ -229,6 +231,7 @@ describe("timeReportResponseSchema", () => {
           nonBillableSeconds: 3600,
           entryCount: 1,
           billableShare: 0,
+          billable: null,
           firstStartedAt: "2026-05-02T10:00:00.000Z",
           lastStartedAt: "2026-05-02T10:00:00.000Z",
         },
@@ -242,6 +245,8 @@ describe("timeReportResponseSchema", () => {
     });
 
     expect(result.items).toHaveLength(3);
+    // billable stays null when the grouping path omits the billable dimension.
+    expect(result.items.every((item) => item.billable === null)).toBe(true);
   });
 
   it("rejects a single-value response groupBy", () => {
