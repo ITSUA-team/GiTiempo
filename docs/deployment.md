@@ -19,7 +19,7 @@ Frontend and backend deploy independently. A landing-only change must not redepl
 
 `apps/landing-web`, `apps/user-web`, and `apps/admin-web` deploy as separate Cloudflare Workers Static Assets projects. The landing is a static Astro site; the authenticated apps are Vite SPAs.
 
-Each frontend app owns its own Wrangler configuration. The existing GitHub Actions workflow deploys the two SPAs through the shared `deploy-frontend-staging.yml` workflow and reusable deploy job. Landing deployment automation is a separate implementation update and must not be treated as configured until its app and workflow exist.
+Each frontend app owns its own Wrangler configuration. The existing GitHub Actions workflow deploys the two SPAs through the shared `deploy-frontend-staging.yml` workflow and reusable deploy job. The landing deploys through its own `deploy-landing-staging.yml` workflow so its static build and public-only configuration stay isolated from SPA requirements.
 
 All three frontend builds output `dist/`. Only `user-web` and `admin-web` use SPA fallback so unknown routes return `index.html`; the Astro landing must preserve static route semantics.
 
@@ -40,7 +40,7 @@ Landing origins and CTA targets:
 
 The landing implementation must receive all three values from environment-aware configuration. Do not hard-code the staging origins in Astro components.
 
-Do not read production frontend config from repository `.env` files. GitHub Actions must inject environment-specific values from GitHub Environments or repository secrets/variables. The staging Environment example at `deploy/github-environment.staging.example.env` documents the shared frontend and API values.
+Do not read production frontend config from repository `.env` files. GitHub Actions must inject environment-specific values from GitHub Environments or repository secrets/variables. The staging Environment example at `deploy/github-environment.staging.example.env` documents the frontend and API values.
 
 ### Frontend Manual Triggers
 
@@ -51,21 +51,24 @@ The staging frontend deploy workflow supports `workflow_dispatch` with:
 | `target` | `user-web`, `admin-web`, `both` | Choose which existing SPA deployment to run |
 | `ref` | branch, tag, or SHA | Optional source revision |
 
-The existing trigger does not include `landing-web`. Adding that target requires a later deployment implementation update. Production frontend deploys are not configured yet. When added, they should require GitHub Environment approval.
+Landing uses the separate `deploy-landing-staging` workflow with an optional `ref` input (branch, tag, or SHA). It verifies and deploys only `landing-web`; it does not accept the SPA `target` input. Production frontend deploys are not configured yet. When added, they should require GitHub Environment approval.
 
 ### Frontend Automatic Triggers
 
-Automatic frontend deploys run from the `staging` branch through one matrix workflow. The workflow detects changed files and deploys only the affected SPA targets.
+Automatic frontend deploys run from the `staging` branch. The SPA matrix workflow detects changed files and deploys only the affected SPA targets; the landing workflow uses its own landing-only path filters.
 
 Recommended path filters:
 
 | Workflow | Trigger paths |
 |---|---|
 | `deploy-frontend-staging` | `apps/user-web/**`, `apps/admin-web/**`, `packages/shared/**`, `packages/web-config/**`, `packages/web-shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, shared CI/deploy workflow files |
+| `deploy-landing-staging` | `apps/landing-web/**`, `packages/web-config/**`, workspace manifests, Turbo configuration, workspace check action, landing target detector, and landing workflow files |
 
-When landing deployment automation is implemented, it must have a landing-specific target/path filter for `apps/landing-web/**` plus only the shared workspace and deployment files that can affect its build. It must not add landing-only changes to the two-SPA deployment matrix.
+Landing-only changes do not enter the two-SPA deployment matrix. The landing workflow validates `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, and `PUBLIC_ADMIN_APP_URL`, then runs the landing lint, typecheck, test, and build gates before invoking Wrangler. It does not require Firebase or API values.
 
-The workflow must run lint/typecheck/tests/build for the affected app before deployment. Shared frontend package changes deploy both SPAs after both app gates pass.
+Each deployment workflow runs lint/typecheck/tests/build for its affected app before deployment. Shared frontend package changes deploy both SPAs after both app gates pass.
+
+Implementation and local verification do not invoke a live deployment; publishing occurs only through an authorized GitHub Actions staging workflow run.
 
 ## API Deploys
 
@@ -184,6 +187,7 @@ GitHub Actions stores deploy credentials and environment-specific values.
 |---|---|---|
 | Cloudflare API token/account/zone data | GitHub Environment | Used by Wrangler deploys |
 | `VITE_*` frontend values | GitHub Environment | Injected at frontend build time |
+| `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, `PUBLIC_ADMIN_APP_URL` | GitHub Environment | Injected at landing build time; canonical origin and direct user/admin app entry URLs |
 | `PUBLIC_API_URL` | GitHub Environment variable | Public API base URL used for readiness checks |
 | `API_DEPLOY_PATH` | GitHub Environment variable | Remote VPS deploy directory |
 | `ALLOWED_ORIGINS` | GitHub Environment variable / VPS runtime env | Comma-separated CORS allow-list written into the VPS `.env`; include web app origins and exact Chrome extension origins such as `chrome-extension://<extension-id>` |

@@ -1,0 +1,27 @@
+---
+import { faqs } from '../data/content';
+---
+
+<section id="faq" class="min-h-[873px] bg-surface-primary py-10 sm:min-h-[723px] sm:py-12 lg:py-[84px]">
+  <div class="page-shell">
+    <div class="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+      <div class="max-w-2xl">
+        <p class="eyebrow text-brand">FREQUENTLY ASKED QUESTIONS</p>
+        <h2 class="section-heading mt-4">Time tracking without changing how your team works.</h2>
+      </div>
+      <p class="max-w-sm text-[15px] leading-6 text-text-muted sm:text-base">
+        Clear answers about GitHub, roles and the path from tracked work to review.
+      </p>
+    </div>
+    <dl class="mt-8 divide-y divide-divider border-y border-divider lg:mt-10">
+      {
+        faqs.map((faq) => (
+          <div class="grid gap-3 py-4 sm:py-3 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-10 lg:py-6">
+            <dt class="text-base font-bold leading-6 text-text-dark">{faq.question}</dt>
+            <dd class="text-sm leading-6 text-text-muted">{faq.answer}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </div>
+</section>

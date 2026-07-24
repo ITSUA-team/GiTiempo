@@ -1,0 +1,77 @@
+@import "tailwindcss";
+@import '@gitiempo/web-config/styles/tokens.css';
+
+@theme {
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  --color-landing-dark: #1a1a1a;
+  --color-landing-dark-soft: #292929;
+  --color-landing-muted-inverse: #c9c9cf;
+  --color-landing-purple-light: #cbbfff;
+  --color-landing-purple-soft: #e8e1f5;
+  --color-landing-purple-border: #9a79c6;
+  --color-landing-purple-panel: #6b3a94;
+  --color-landing-purple-ink: #d9ceff;
+  --color-landing-faint: #99999f;
+  --color-landing-status: #a88dff;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-w-80 bg-surface-primary text-text-dark antialiased;
+  }
+
+  a,
+  button {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand;
+  }
+
+  :target,
+  :focus {
+    scroll-margin-top: 6rem;
+  }
+}
+
+@utility page-shell {
+  @apply mx-auto w-full max-w-[1440px] px-6 sm:px-8 lg:px-[88px];
+}
+
+@utility eyebrow {
+  @apply font-mono text-[11px] font-bold tracking-[0.1em] sm:text-xs;
+}
+
+@utility section-heading {
+  @apply text-[30px] font-bold leading-[1.08] tracking-[-0.035em] sm:text-4xl lg:text-[42px];
+}
+
+@utility action-primary {
+  @apply inline-flex min-h-11 items-center justify-center gap-3 rounded-md bg-brand px-5 py-3 text-sm font-bold text-text-inverse transition-colors hover:bg-brand/90;
+}
+
+@utility action-nav {
+  @apply inline-flex min-h-11 items-center justify-center gap-3 rounded-md bg-white px-4 py-2.5 text-sm font-bold text-landing-dark transition-colors hover:bg-landing-purple-soft;
+}
+
+@utility action-secondary {
+  @apply inline-flex min-h-11 items-center justify-center gap-3 rounded-md border border-white/30 bg-landing-dark-soft px-5 py-3 text-sm font-semibold text-text-inverse transition-colors hover:bg-white/10;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

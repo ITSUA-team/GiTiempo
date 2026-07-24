@@ -1,0 +1,28 @@
+---
+import { scopeCards } from '../data/content';
+---
+
+<section class="bg-brand py-8 text-text-inverse sm:py-10 lg:py-[66px]">
+  <div class="page-shell">
+    <div class="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+      <div class="max-w-xl">
+        <p class="eyebrow text-landing-purple-ink">FLEXIBLE BY DESIGN</p>
+        <h2 class="section-heading mt-4 text-text-inverse">GitHub when you need it. Manual when you don't.</h2>
+      </div>
+      <p class="max-w-sm text-[15px] leading-6 text-landing-purple-soft sm:text-base">
+        Use the workflow your team already has. GITiempo adds a reliable time layer without forcing every task into GitHub.
+      </p>
+    </div>
+    <div class="mt-6 grid gap-4 sm:mt-8 lg:mt-10 lg:grid-cols-3">
+      {
+        scopeCards.map((card) => (
+          <article class="rounded-lg border border-transparent bg-transparent p-4 transition-colors hover:border-landing-purple-border hover:bg-landing-purple-panel sm:p-5 lg:p-7 cursor-pointer">
+            <p class="font-mono text-[11px] font-bold tracking-[0.08em] text-text-inverse">{card.eyebrow}</p>
+            <h3 class="mt-4 text-xl font-bold leading-tight tracking-[-0.03em]">{card.title}</h3>
+            <p class="mt-4 max-w-lg text-sm leading-6 text-landing-purple-soft">{card.body}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>

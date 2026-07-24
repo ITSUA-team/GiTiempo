@@ -1,0 +1,29 @@
+{
+  "name": "landing-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm build:css && astro dev --port 4321 --strictPort",
+    "build": "pnpm build:css && astro build",
+    "build:css": "tailwindcss -i src/styles/global.css -o public/landing.css --minify",
+    "typecheck": "astro check",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/roles-browser.mjs",
+    "lint": "eslint .",
+    "preview": "astro preview --port 4321 --strictPort"
+  },
+  "dependencies": {
+    "@gitiempo/web-config": "workspace:*"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.9",
+    "@tailwindcss/cli": "4.2.2",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
+    "@typescript-eslint/parser": "^8.58.2",
+    "astro": "7.0.0",
+    "eslint": "^9.25.1",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.8.3"
+  }
+}

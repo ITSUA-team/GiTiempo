@@ -1,0 +1,81 @@
+name: Deploy landing staging
+
+on:
+  push:
+    branches:
+      - staging
+    paths:
+      - apps/landing-web/**
+      - packages/web-config/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+      - .github/actions/workspace-check/**
+      - .github/scripts/detect-ci-targets.mjs
+      - .github/workflows/deploy-landing-staging.yml
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Optional branch, tag, or SHA to deploy.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy landing-web staging
+    runs-on: ubuntu-latest
+    environment: staging
+    concurrency:
+      group: landing-staging-landing-web
+      cancel-in-progress: false
+    env:
+      CI: true
+      TURBO_TELEMETRY_DISABLED: 1
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+      PUBLIC_USER_APP_URL: ${{ vars.PUBLIC_USER_APP_URL }}
+      PUBLIC_ADMIN_APP_URL: ${{ vars.PUBLIC_ADMIN_APP_URL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+
+      - name: Validate landing staging environment
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          require_env() {
+            local name="$1"
+            if [[ -z "${!name:-}" ]]; then
+              printf '::error::%s is required\n' "$name"
+              exit 1
+            fi
+          }
+
+          require_env CLOUDFLARE_ACCOUNT_ID
+          require_env CLOUDFLARE_API_TOKEN
+          require_env PUBLIC_SITE_URL
+          require_env PUBLIC_USER_APP_URL
+          require_env PUBLIC_ADMIN_APP_URL
+
+      - name: Run landing-web checks
+        uses: ./.github/actions/workspace-check
+        with:
+          package-name: landing-web
+          run-build: 'true'
+          run-api-e2e: 'false'
+
+      - name: Deploy landing-web to Cloudflare Workers staging
+        working-directory: apps/landing-web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm exec wrangler deploy --env staging

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">GITiempo</title>
+  <desc id="description">Time tracking that fits your workflow.</desc>
+  <rect width="1200" height="630" fill="#1a1a1a"/>
+  <rect x="744" y="130" width="340" height="370" rx="20" fill="#f4f4f5"/>
+  <rect x="776" y="164" width="276" height="36" rx="8" fill="#fff"/>
+  <rect x="776" y="222" width="132" height="244" rx="10" fill="#292929"/>
+  <rect x="928" y="222" width="124" height="154" rx="10" fill="#fff"/>
+  <rect x="928" y="396" width="124" height="70" rx="10" fill="#e8e1f5"/>
+  <circle cx="108" cy="132" r="8" fill="#a88dff"/>
+  <text x="132" y="138" fill="#cbbfff" font-family="monospace" font-size="20" font-weight="700">TIME TRACKING FOR GITHUB ISSUES &amp; PROJECTS</text>
+  <text x="100" y="260" fill="#fff" font-family="Arial, sans-serif" font-size="66" font-weight="700">Track time where</text>
+  <text x="100" y="335" fill="#fff" font-family="Arial, sans-serif" font-size="66" font-weight="700">the work happens.</text>
+  <rect x="100" y="420" width="220" height="60" rx="10" fill="#5d2b85"/>
+  <text x="128" y="458" fill="#fff" font-family="Arial, sans-serif" font-size="22" font-weight="700">Start tracking</text>
+</svg>

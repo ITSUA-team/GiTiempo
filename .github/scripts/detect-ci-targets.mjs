@@ -25,6 +25,13 @@ const ALL_PACKAGES = [
     runApiE2e: false,
   },
   {
+    appName: 'landing-web',
+    appPath: 'apps/landing-web',
+    packageName: 'landing-web',
+    runBuild: true,
+    runApiE2e: false,
+  },
+  {
     appName: 'shared',
     appPath: 'packages/shared',
     packageName: '@gitiempo/shared',
@@ -51,6 +58,8 @@ const FRONTEND_APPS = ALL_PACKAGES.filter(({ appName }) =>
   ['user-web', 'admin-web'].includes(appName),
 );
 
+const LANDING_DEPLOY_PATHS = ['.github/workflows/deploy-landing-staging.yml'];
+
 const mode = process.argv[2] ?? 'ci';
 const files = readFileSync(0, 'utf8')
   .split('\n')
@@ -73,7 +82,9 @@ function addPackage(packageName, overrides = {}) {
     ...target,
     ...existing,
     ...overrides,
-    runBuild: Boolean(existing?.runBuild || overrides.runBuild || target.runBuild),
+    runBuild: Boolean(
+      existing?.runBuild || overrides.runBuild || target.runBuild,
+    ),
     runApiE2e: Boolean(
       existing?.runApiE2e || overrides.runApiE2e || target.runApiE2e,
     ),
@@ -138,6 +149,10 @@ function detectCiTargets() {
     addPackage('admin-web');
   }
 
+  if (hasPath('apps/landing-web') || hasAnyPath(LANDING_DEPLOY_PATHS)) {
+    addPackage('landing-web');
+  }
+
   if (hasPath('packages/shared')) {
     addPackage('@gitiempo/shared');
     addPackage('@gitiempo/api');
@@ -155,6 +170,7 @@ function detectCiTargets() {
     addPackage('@gitiempo/web-config');
     addPackage('user-web');
     addPackage('admin-web');
+    addPackage('landing-web');
   }
 }
 
@@ -175,7 +191,11 @@ function detectFrontendDeployTargets() {
 
   if (
     hasWorkspaceWideChange() ||
-    hasAnyPath(['packages/shared', 'packages/web-config', 'packages/web-shared'])
+    hasAnyPath([
+      'packages/shared',
+      'packages/web-config',
+      'packages/web-shared',
+    ])
   ) {
     for (const target of FRONTEND_APPS) {
       addPackage(target.packageName);

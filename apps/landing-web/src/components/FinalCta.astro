@@ -1,0 +1,32 @@
+---
+interface Props {
+  userAppUrl: string;
+  adminAppUrl: string;
+}
+
+const { userAppUrl, adminAppUrl } = Astro.props;
+---
+
+<footer class="bg-landing-dark py-10 text-text-inverse sm:py-11 lg:py-[82px]">
+  <div class="page-shell">
+    <div class="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between">
+      <div class="max-w-2xl">
+        <p class="eyebrow text-landing-purple-light">READY TO TRACK TIME WITH CONTEXT?</p>
+        <h2 class="mt-4 text-[32px] font-bold leading-[1.05] tracking-[-0.045em] sm:text-4xl lg:text-[48px]">
+          Give every hour a home in the work your team already does.
+        </h2>
+        <p class="mt-5 max-w-xl text-[15px] leading-6 text-landing-muted-inverse sm:text-[17px] sm:leading-7">
+          Create your account to start tracking, or open the admin workspace to manage the team.
+        </p>
+      </div>
+      <div class="grid w-full gap-3 sm:max-w-[318px]">
+        <a class="action-primary justify-between" href={userAppUrl}>Start tracking now <span aria-hidden="true">→</span></a>
+        <a class="action-secondary justify-between" href={adminAppUrl}>Open admin workspace <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+    <div class="mt-8 flex flex-col gap-2 border-t border-white/20 pt-5 text-xs sm:mt-10 sm:flex-row sm:items-center sm:justify-between lg:mt-16">
+      <p class="font-bold text-text-inverse">GITiempo</p>
+      <p class="text-landing-faint">GitHub-native time tracking for focused teams</p>
+    </div>
+  </div>
+</footer>

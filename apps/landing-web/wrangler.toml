@@ -1,0 +1,18 @@
+"$schema" = "../../node_modules/wrangler/config-schema.json"
+name = "gitiempo-landing-web"
+compatibility_date = "2026-05-01"
+
+[assets]
+directory = "./dist"
+
+[env.staging]
+name = "gitiempo-landing-web-staging"
+workers_dev = false
+
+[env.staging.assets]
+directory = "./dist"
+
+[[env.staging.routes]]
+pattern = "gitiempo-landing.itsua.dev"
+zone_name = "itsua.dev"
+custom_domain = true

@@ -1,0 +1,157 @@
+---
+import { roles } from '../data/content';
+---
+
+<section class="bg-app-bg py-10 sm:py-10 lg:h-[680px] lg:py-[88px]">
+  <div class="page-shell">
+    <div class="max-w-2xl">
+      <p class="eyebrow text-brand">BUILT FOR EVERY ROLE</p>
+      <h2 class="section-heading mt-3 max-w-[650px] lg:text-[40px]">The right view of time for the person doing the work.</h2>
+    </div>
+
+    <div class="roles-interaction mt-8 hidden lg:grid lg:h-[396px] lg:grid-cols-[270px_minmax(0,1fr)] lg:gap-[18px]">
+      <fieldset class="rounded-[10px] bg-landing-dark p-5 text-text-inverse">
+        <legend class="sr-only">Choose a workspace role to view its workflow</legend>
+        <p class="eyebrow text-landing-purple-light">VIEW AS</p>
+        <p class="mt-4 text-[22px] font-bold leading-tight tracking-[-0.035em]">Choose a role</p>
+        <div class="mt-[18px] grid gap-3">
+          {
+            roles.map((role) => (
+              <label class="role-option flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md bg-landing-dark px-3 py-2.5 text-sm font-medium text-landing-muted-inverse transition-colors">
+                <input id={`role-${role.id}`} class="sr-only" type="radio" name="workspace-role" value={role.id} checked={role.selectedByDefault} />
+                <span class="role-option__dot size-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true"></span>
+                <span class="role-option__text">{role.label}</span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <div class="min-w-0">
+        {
+          roles.map((role) => (
+            <article class:list={[
+              'role-panel h-full flex-col rounded-[10px] p-9',
+              `role-panel--${role.id}`,
+              role.variant === 'member'
+                ? 'bg-landing-dark text-text-inverse'
+                : role.variant === 'admin'
+                  ? 'bg-brand text-text-inverse'
+                  : 'border border-divider bg-surface-primary text-text-dark',
+            ]}>
+              <p class:list={[
+                'eyebrow',
+                role.variant === 'member'
+                  ? 'text-landing-purple-light'
+                  : role.variant === 'admin'
+                    ? 'text-landing-purple-ink'
+                    : 'text-brand',
+              ]}>{role.eyebrow}</p>
+              <h3 class="mt-4 max-w-[540px] text-[27px] font-bold leading-[1.12] tracking-[-0.035em]">{role.title}</h3>
+              <ul class="mt-7 grid gap-3">
+                {
+                  role.points.map((point) => (
+                    <li class:list={[
+                      'flex gap-2.5 text-sm leading-[1.35]',
+                      role.variant === 'member'
+                        ? 'text-landing-muted-inverse'
+                        : role.variant === 'admin'
+                          ? 'text-landing-purple-soft'
+                          : 'text-text-muted',
+                    ]}>
+                      <span class:list={[
+                        'mt-1.5 size-1.5 shrink-0 rounded-full',
+                        role.variant === 'member'
+                          ? 'bg-landing-purple-light'
+                          : role.variant === 'admin'
+                            ? 'bg-landing-purple-ink'
+                            : 'bg-brand',
+                      ]}></span>
+                      {point}
+                    </li>
+                  ))
+                }
+              </ul>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+
+    <div class="mt-7 grid gap-4 lg:hidden">
+      {
+        roles.map((role) => (
+          <article class:list={[
+            'rounded-[10px] p-[18px] sm:p-5',
+            role.variant === 'member'
+              ? 'bg-landing-dark text-text-inverse'
+              : role.variant === 'admin'
+                ? 'bg-brand text-text-inverse'
+                : 'border border-divider bg-surface-primary text-text-dark',
+          ]}>
+            <p class:list={[
+              'eyebrow',
+              role.variant === 'member'
+                ? 'text-landing-purple-light'
+                : role.variant === 'admin'
+                  ? 'text-landing-purple-ink'
+                  : 'text-brand',
+            ]}>{role.eyebrow}</p>
+            <h3 class="mt-3 text-[22px] font-bold leading-[1.15] tracking-[-0.035em] sm:text-[25px]">{role.title}</h3>
+            <ul class="mt-4 grid gap-2.5">
+              {
+                role.points.map((point) => (
+                  <li class:list={[
+                    'flex gap-2.5 text-sm leading-[1.45]',
+                    role.variant === 'member'
+                      ? 'text-landing-muted-inverse'
+                      : role.variant === 'admin'
+                        ? 'text-landing-purple-soft'
+                        : 'text-text-muted',
+                  ]}>
+                    <span class:list={[
+                      'mt-1.5 size-1.5 shrink-0 rounded-full',
+                      role.variant === 'member'
+                        ? 'bg-landing-purple-light'
+                        : role.variant === 'admin'
+                          ? 'bg-landing-purple-ink'
+                          : 'bg-brand',
+                    ]}></span>
+                    {point}
+                  </li>
+                ))
+              }
+            </ul>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .role-panel {
+    display: none;
+  }
+
+  .roles-interaction:has(#role-member:checked) .role-panel--member,
+  .roles-interaction:has(#role-manager:checked) .role-panel--manager,
+  .roles-interaction:has(#role-admin:checked) .role-panel--admin {
+    display: flex;
+  }
+
+  .role-option:has(input:checked) {
+    background: var(--color-brand);
+    color: var(--color-text-inverse);
+    font-weight: 700;
+  }
+
+  .role-option:has(input:checked) .role-option__dot {
+    background: var(--color-surface-primary);
+  }
+
+  .role-option:has(input:focus-visible) {
+    outline: 2px solid var(--color-text-inverse);
+    outline-offset: 3px;
+  }
+</style>

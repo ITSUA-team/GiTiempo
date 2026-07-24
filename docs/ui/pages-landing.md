@@ -89,7 +89,7 @@ The three Pencil frames define the parity checkpoints. Use content-driven Tailwi
   - Full inline navigation.
   - Two-column hero with product preview.
   - Three workflow steps in one row.
-  - Two visible role panels.
+  - A selectable role list with its matching detail panel; Member, Project Manager, and Admin are available roles.
   - Side-by-side final CTA copy and actions.
 - Tablet, `640px` through `1023px`:
   - Compact inline navigation.
@@ -102,7 +102,13 @@ The three Pencil frames define the parity checkpoints. Use content-driven Tailwi
   - All content, cards, workflow steps, and CTA actions use one column.
   - Preserve the approved information hierarchy and enabled states.
 
-Do not implement disabled Pencil nodes. The disabled Admin role card and disabled Reports + Invoices scope card are not part of the landing UI.
+Do not implement disabled Pencil nodes. Member, Project Manager, and Admin role details are part of the landing UI; the disabled Reports + Invoices scope card is not.
+
+## Roles
+
+- On desktop, render a native radio role selector beside one matching detail panel. Member is selected by default; selecting Project Manager or Admin replaces the detail panel.
+- On tablet and mobile, render all three role details as stacked cards so no role information is hidden.
+- The selector must remain clickable and keyboard-operable without client JavaScript.
 
 ## Landing Tokens And Typography
 
@@ -124,6 +130,7 @@ Do not implement disabled Pencil nodes. The disabled Admin role card and disable
 - Product screenshots require useful alt text when they communicate workflow. Decorative graphics use empty alt text.
 - Do not rely on color alone for status or workflow meaning.
 - Respect `prefers-reduced-motion`; smooth scrolling and decorative motion must be disabled when reduced motion is requested.
+- The active timer values in landing app previews may advance once per second unless reduced motion is requested. They are illustrative only and do not represent a signed-in session or API data.
 - Verify keyboard order, 200% zoom, contrast, and no horizontal overflow.
 
 ## SEO And Performance
