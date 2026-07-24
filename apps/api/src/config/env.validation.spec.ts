@@ -13,6 +13,7 @@ function makeBaseEnv(
     FIREBASE_PRIVATE_KEY:
       '-----BEGIN PRIVATE KEY-----\\nkey\\n-----END PRIVATE KEY-----',
     USER_SPA_URL: 'https://user.example.com',
+    ADMIN_SPA_URL: 'https://admin.example.com',
     APP_URL: 'https://api.example.com',
     GITHUB_APP_ID: '1',
     GITHUB_APP_CLIENT_ID: 'client-id',
@@ -35,6 +36,12 @@ describe('validate', () => {
         }),
       ),
     ).toThrow(/SMTP_HOST/);
+  });
+
+  it('requires ADMIN_SPA_URL in production so admin sign-in cannot fall back to localhost', () => {
+    expect(() =>
+      validate(makeBaseEnv({ NODE_ENV: 'production', ADMIN_SPA_URL: '' })),
+    ).toThrow(/ADMIN_SPA_URL/);
   });
 
   it('rejects invite console secret logging outside development', () => {
