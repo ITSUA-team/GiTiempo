@@ -71,8 +71,9 @@ test('page keeps required anchors, semantic foundations, and no hydrated islands
   const product = source('../src/components/ProductBenefits.astro');
   const workflow = source('../src/components/WorkflowSteps.astro');
   const roles = source('../src/components/Roles.astro');
+  const roleCard = source('../src/components/RoleCard.astro');
   const faq = source('../src/components/Faq.astro');
-  const appSources = [page, layout, product, workflow, roles, faq];
+  const appSources = [page, layout, product, workflow, roles, roleCard, faq];
 
   assert.match(product, /id="product"/);
   assert.match(product, /id="github-workflow"/);
@@ -85,7 +86,7 @@ test('page keeps required anchors, semantic foundations, and no hydrated islands
   assert.equal((source('../src/components/Hero.astro').match(/<h1/g) ?? []).length, 1);
 });
 
-test('active preview timers advance without creating a hydrated island', () => {
+test('active preview timers are the only approved framework-free browser script', () => {
   const layout = source('../src/layouts/BaseLayout.astro');
   const dashboard = markup('../src/components/DashboardPreview.astro');
   const product = markup('../src/components/ProductBenefits.astro');
@@ -94,16 +95,17 @@ test('active preview timers advance without creating a hydrated island', () => {
   assert.equal((product.match(/data-live-timer/g) ?? []).length, 1);
   assert.match(layout, /prefers-reduced-motion: reduce/);
   assert.match(layout, /window\.setInterval/);
+  assert.equal((layout.match(/<script>/g) ?? []).length, 1);
 });
 
 test('switches desktop role details with native radio controls', () => {
   const roles = markup('../src/components/Roles.astro');
+  const roleCard = source('../src/components/RoleCard.astro');
 
   assert.match(roles, /type="radio"/);
   assert.match(roles, /name="workspace-role"/);
-  assert.match(roles, /role-panel--member/);
-  assert.match(roles, /role-panel--manager/);
-  assert.match(roles, /role-panel--admin/);
+  assert.match(roleCard, /role-panel--\$\{role\.id\}/);
+  assert.match(roleCard, /variantClasses/);
   assert.match(roles, /:has\(#role-member:checked\)/);
   assert.match(roles, /:has\(#role-manager:checked\)/);
   assert.match(roles, /:has\(#role-admin:checked\)/);
@@ -126,6 +128,19 @@ test('scope cards reveal their panel treatment only on hover', () => {
   assert.match(scope, /hover:border-landing-purple-border/);
   assert.match(scope, /hover:bg-landing-purple-panel/);
   assert.doesNotMatch(scope, /card\.variant/);
+  assert.doesNotMatch(scope, /cursor-pointer/);
+});
+
+test('self-hosts the approved landing typefaces', () => {
+  const styles = source('../src/styles/global.css');
+  const fontBuild = source('../scripts/build-css.mjs');
+
+  assert.equal((styles.match(/@font-face/g) ?? []).length, 3);
+  assert.match(styles, /\/fonts\/inter-latin-wght-normal\.woff2/);
+  assert.match(styles, /\/fonts\/ibm-plex-mono-latin-400-normal\.woff2/);
+  assert.match(styles, /\/fonts\/ibm-plex-mono-latin-700-normal\.woff2/);
+  assert.match(fontBuild, /@fontsource-variable\/inter\/files/);
+  assert.match(fontBuild, /@fontsource\/ibm-plex-mono\/files/);
 });
 
 test('provides crawl guidance and a static sitemap', () => {

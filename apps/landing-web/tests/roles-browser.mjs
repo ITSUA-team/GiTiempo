@@ -2,7 +2,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const port = Number(process.env.LANDING_BROWSER_TEST_PORT ?? '4322');
-const origin = `http://localhost:${port}`;
+const origin = `http://127.0.0.1:${port}`;
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -45,9 +45,9 @@ function setViewport(width, height) {
 
 run('pnpm', ['build']);
 
-const preview = spawn('pnpm', ['exec', 'astro', 'preview', '--port', String(port), '--strictPort'], {
+const preview = spawn('pnpm', ['exec', 'astro', 'preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
   cwd: process.cwd(),
-  stdio: 'ignore',
+  stdio: 'inherit',
 });
 
 try {

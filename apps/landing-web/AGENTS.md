@@ -8,7 +8,7 @@
 
 ## Boundaries
 
-- Keep this app Astro, TypeScript, and Tailwind CSS v4 with static output and zero client JavaScript by default.
+- Keep this app Astro, TypeScript, and Tailwind CSS v4 with static output and zero client JavaScript by default. The documented illustrative preview timer is the sole approved framework-free inline browser script.
 - Do not introduce Vue, PrimeVue, Pinia, Firebase, API clients, SPA routing, or Astro islands without an approved source-of-truth update.
 - Reuse `@gitiempo/web-config/styles/tokens.css`; keep landing-only composition and tokens in `src/styles/global.css`.
 - Use `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, and `PUBLIC_ADMIN_APP_URL` for all public-site origins and app-entry CTAs. Do not hard-code staging origins in components.

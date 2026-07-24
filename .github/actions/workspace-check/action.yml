@@ -13,6 +13,10 @@ inputs:
     description: Run Docker-backed API e2e after package checks.
     required: false
     default: 'false'
+  run-browser:
+    description: Run the package browser verification suite.
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -47,6 +51,20 @@ runs:
         fi
 
         pnpm exec turbo run $tasks --filter="$PACKAGE_NAME"
+
+    - name: Install browser test runtime
+      if: inputs.run-browser == 'true'
+      shell: bash
+      env:
+        PACKAGE_NAME: ${{ inputs.package-name }}
+      run: pnpm --filter "$PACKAGE_NAME" exec agent-browser install
+
+    - name: Run package browser verification
+      if: inputs.run-browser == 'true'
+      shell: bash
+      env:
+        PACKAGE_NAME: ${{ inputs.package-name }}
+      run: pnpm --filter "$PACKAGE_NAME" test:browser
 
     - name: Run Docker-backed API e2e
       if: inputs.run-api-e2e == 'true'

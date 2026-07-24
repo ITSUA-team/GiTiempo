@@ -9,6 +9,7 @@ const ALL_PACKAGES = [
     packageName: '@gitiempo/api',
     runBuild: false,
     runApiE2e: true,
+    runBrowser: false,
   },
   {
     appName: 'user-web',
@@ -16,6 +17,7 @@ const ALL_PACKAGES = [
     packageName: 'user-web',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: false,
   },
   {
     appName: 'admin-web',
@@ -23,6 +25,7 @@ const ALL_PACKAGES = [
     packageName: 'admin-web',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: false,
   },
   {
     appName: 'landing-web',
@@ -30,6 +33,7 @@ const ALL_PACKAGES = [
     packageName: 'landing-web',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: true,
   },
   {
     appName: 'shared',
@@ -37,6 +41,7 @@ const ALL_PACKAGES = [
     packageName: '@gitiempo/shared',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: false,
   },
   {
     appName: 'web-shared',
@@ -44,6 +49,7 @@ const ALL_PACKAGES = [
     packageName: '@gitiempo/web-shared',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: false,
   },
   {
     appName: 'web-config',
@@ -51,6 +57,7 @@ const ALL_PACKAGES = [
     packageName: '@gitiempo/web-config',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: false,
   },
 ];
 
@@ -87,6 +94,9 @@ function addPackage(packageName, overrides = {}) {
     ),
     runApiE2e: Boolean(
       existing?.runApiE2e || overrides.runApiE2e || target.runApiE2e,
+    ),
+    runBrowser: Boolean(
+      existing?.runBrowser || overrides.runBrowser || target.runBrowser,
     ),
   });
 }
@@ -219,6 +229,7 @@ function formatMatrixTarget(target) {
     package_name: target.packageName,
     run_build: String(target.runBuild),
     run_api_e2e: String(target.runApiE2e),
+    run_browser: String(target.runBrowser),
   };
 }
 

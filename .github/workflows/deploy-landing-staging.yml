@@ -73,6 +73,7 @@ jobs:
           package-name: landing-web
           run-build: 'true'
           run-api-e2e: 'false'
+          run-browser: 'true'
 
       - name: Deploy landing-web to Cloudflare Workers staging
         working-directory: apps/landing-web

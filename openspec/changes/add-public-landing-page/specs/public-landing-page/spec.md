@@ -2,7 +2,7 @@
 
 ### Requirement: Standalone Public Landing Route
 
-The system SHALL provide a standalone public landing application at `/` that builds to static HTML and does not require authentication, backend API access, SPA routing, or client-side JavaScript for its approved behavior.
+The system SHALL provide a standalone public landing application at `/` that builds to static HTML and does not require authentication, backend API access, SPA routing, or a client application runtime for its approved behavior. The documented illustrative preview timer is the sole approved framework-free inline browser script.
 
 #### Scenario: Visitor opens the public root
 
@@ -14,6 +14,7 @@ The system SHALL provide a standalone public landing application at `/` that bui
 
 - **WHEN** the production landing page is built
 - **THEN** approved navigation, content, FAQs, and app-entry links work without hydrating a client framework
+- **AND** the only permitted browser behavior is the documented illustrative preview timer
 
 ### Requirement: Approved Content Hierarchy
 
@@ -28,7 +29,7 @@ The landing page MUST render the documented enabled content in this order: hero 
 #### Scenario: Future-scope cards remain disabled
 
 - **WHEN** the approved page is rendered
-- **THEN** the disabled Admin-role card is not present
+- **THEN** Member, Project Manager, and Admin role details are present
 - **AND** the disabled Reports/Invoices MVP-scope card is not present
 
 ### Requirement: Direct Application Entry CTAs
@@ -103,13 +104,14 @@ The landing application MUST publish environment-correct canonical metadata, use
 
 ### Requirement: Static Performance Budget
 
-The landing application MUST prefer optimized Astro-managed assets, explicit image dimensions, minimal font payloads, and zero client JavaScript for the approved page.
+The landing application MUST prefer optimized Astro-managed assets, explicit image dimensions, minimal font payloads, and zero client framework JavaScript for the approved page. The documented illustrative preview timer is the sole permitted framework-free inline browser script.
 
 #### Scenario: Production assets are generated
 
 - **WHEN** the landing production build completes
 - **THEN** images have reserved dimensions and optimized output where applicable
 - **AND** the root page does not include a client framework bundle or hydrated island
+- **AND** no browser script other than the documented illustrative preview timer is emitted
 
 ### Requirement: Validated Public Build Configuration
 

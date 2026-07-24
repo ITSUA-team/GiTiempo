@@ -11,12 +11,12 @@ The landing page is a separate product surface with different runtime needs: it 
 - Add a production-ready Astro application at `apps/landing-web` that renders the approved page at `/`.
 - Preserve the approved content hierarchy, responsive behavior, shared design tokens, and visual parity at the documented desktop, tablet, and mobile widths.
 - Link visitors directly to configured user and admin application entry URLs using action-oriented CTA copy.
-- Ship semantic, accessible, indexable static HTML with canonical/social metadata, robots, sitemap, optimized assets, and no client JavaScript unless a later approved interaction requires it.
+- Ship semantic, accessible, indexable static HTML with canonical/social metadata, robots, sitemap, and optimized assets. The approved illustrative preview timer is the sole framework-free inline browser script; no client application runtime or hydrated island is permitted.
 - Integrate landing validation and staging deployment without coupling it to the authenticated SPA workflow.
 
 **Non-Goals:**
 
-- Implement authentication, account creation, timer behavior, dashboards, reports, invoices, or backend API calls in the landing app.
+- Implement authentication, account creation, timer behavior backed by product data, dashboards, reports, invoices, or backend API calls in the landing app. The documented illustrative preview timer remains permitted.
 - Change existing user/admin routes, Firebase configuration, API contracts, permissions, or workspace roles.
 - Add interactive islands, analytics, a CMS, dynamic FAQ behavior, localization, or new approved content.
 - Implement Pencil elements that `docs/ui/pages-landing.md` explicitly marks as disabled.
@@ -27,7 +27,7 @@ The landing page is a separate product surface with different runtime needs: it 
 
 The new app will use Astro with TypeScript, Tailwind CSS v4, and static output. Its package scripts will expose `dev`, `build`, `typecheck`, `test`, `lint`, and `preview` so root Turbo commands and the existing workspace check action can treat it as a normal workspace package. Development will bind to strict port `4321`.
 
-Astro components will render server/static HTML only. Repeated cards, FAQ entries, and navigation items may be driven by typed local data, but the page will not ship a client runtime.
+Astro components will render server/static HTML only. Repeated cards, FAQ entries, and navigation items may be driven by typed local data. The page will not ship a client runtime; the documented illustrative timer may use a narrowly scoped framework-free inline browser script.
 
 Alternative considered: build the page in Vue to match the SPAs. Rejected because the public page does not need SPA routing or authenticated runtime dependencies, and repository guidance explicitly selects Astro.
 
@@ -37,7 +37,7 @@ Alternative considered: build the page in Vue to match the SPAs. Rejected becaus
 
 The page will provide `#product`, `#github-workflow`, `#how-it-works`, and `#faq` targets with scroll-margin compensation. It will contain one `h1`, semantic landmarks, a skip link, visible focus states, and static FAQ question/answer markup.
 
-The docs are authoritative over Pencil where they disagree. In particular, disabled Admin-role and Reports/Invoices future-scope cards will not render even if a responsive Pencil frame still contains them.
+The docs are authoritative over Pencil where they disagree. In particular, Admin role details are enabled while the Reports/Invoices future-scope card remains disabled, even if a responsive Pencil frame still contains a stale future-state node.
 
 Alternative considered: reproduce every visible Pencil node. Rejected because repository guidance makes documented enabled/disabled behavior the source of truth while Pencil remains the parity checklist for approved visible content.
 
@@ -80,7 +80,7 @@ Alternative considered: add landing to the reusable SPA deploy workflow. Rejecte
 - [Pencil contains disabled future-state cards that docs exclude] → Treat docs as authoritative and record those omissions in visual parity checks.
 - [Static CTA URLs can be misconfigured at build time] → Validate all three public URLs and fail checks/builds with clear messages when invalid or missing.
 - [Importing workspace CSS into Astro can expose resolution or build-order issues] → Declare the workspace dependency explicitly and verify root Turbo and filtered landing builds.
-- [No client JavaScript limits interactive marketing patterns] → Keep FAQ and navigation static; require a future source-of-truth update before adding islands.
+- [No client runtime limits interactive marketing patterns] → Keep FAQ and navigation static; the illustrative timer is the single approved framework-free script, and a future source-of-truth update is required before adding any other script or island.
 - [A separate deploy workflow duplicates a small amount of Cloudflare setup] → Accept the duplication to keep environment validation and deployment triggers isolated.
 - [Visual parity can regress between the three reference widths] → Capture automated or manual comparison evidence at 390, 768, 1024, and 1440 pixels before completion.
 

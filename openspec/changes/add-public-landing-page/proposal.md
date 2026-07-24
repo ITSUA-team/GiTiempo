@@ -4,7 +4,7 @@ GiTiempo has an approved public landing-page content contract and responsive Pen
 
 ## What Changes
 
-- Add a standalone Astro and Tailwind CSS v4 landing application at `apps/landing-web`, served at `/` and built as static HTML with no client JavaScript by default.
+- Add a standalone Astro and Tailwind CSS v4 landing application at `apps/landing-web`, served at `/` and built as static HTML with no client framework runtime. The documented illustrative preview timer is the sole approved framework-free inline browser script.
 - Implement the approved desktop, tablet, and mobile landing screens, content order, anchor navigation, accessibility behavior, SEO metadata, robots/sitemap output, and shared visual tokens.
 - Configure the landing CTAs to use environment-provided user-app and admin-app entry URLs. User-facing actions say `Start tracking` or `Start tracking now`; admin actions say `Open admin workspace`.
 - Add landing-specific workspace, validation, CI target detection, and Cloudflare Workers Static Assets staging deployment support.

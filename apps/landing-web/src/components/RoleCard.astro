@@ -1,0 +1,78 @@
+---
+import type { RolePanel } from '../data/content';
+
+interface Props {
+  role: RolePanel;
+  compact?: boolean;
+  selectablePanel?: boolean;
+}
+
+const { role, compact = false, selectablePanel = false } = Astro.props;
+
+const variantClasses = {
+  member: {
+    surface: 'bg-landing-dark text-text-inverse',
+    eyebrow: 'text-landing-purple-light',
+    copy: 'text-landing-muted-inverse',
+    marker: 'bg-landing-purple-light',
+  },
+  manager: {
+    surface: 'border border-divider bg-surface-primary text-text-dark',
+    eyebrow: 'text-brand',
+    copy: 'text-text-muted',
+    marker: 'bg-brand',
+  },
+  admin: {
+    surface: 'bg-brand text-text-inverse',
+    eyebrow: 'text-landing-purple-ink',
+    copy: 'text-landing-purple-soft',
+    marker: 'bg-landing-purple-ink',
+  },
+} satisfies Record<RolePanel['variant'], Record<string, string>>;
+
+const variant = variantClasses[role.variant];
+---
+
+<article
+  class:list={[
+    variant.surface,
+    compact
+      ? 'rounded-[10px] p-[18px] sm:p-5'
+      : 'h-full flex-col rounded-[10px] p-9',
+    selectablePanel && 'role-panel',
+    selectablePanel && `role-panel--${role.id}`,
+  ]}
+>
+  <p class:list={['eyebrow', variant.eyebrow]}>{role.eyebrow}</p>
+  <h3
+    class:list={[
+      'font-bold tracking-[-0.035em]',
+      compact
+        ? 'mt-3 text-[22px] leading-[1.15] sm:text-[25px]'
+        : 'mt-4 max-w-[540px] text-[27px] leading-[1.12]',
+    ]}
+  >
+    {role.title}
+  </h3>
+  <ul class:list={compact ? 'mt-4 grid gap-2.5' : 'mt-7 grid gap-3'}>
+    {
+      role.points.map((point) => (
+        <li
+          class:list={[
+            'flex gap-2.5 text-sm',
+            compact ? 'leading-[1.45]' : 'leading-[1.35]',
+            variant.copy,
+          ]}
+        >
+          <span
+            class:list={[
+              'mt-1.5 size-1.5 shrink-0 rounded-full',
+              variant.marker,
+            ]}
+          ></span>
+          {point}
+        </li>
+      ))
+    }
+  </ul>
+</article>

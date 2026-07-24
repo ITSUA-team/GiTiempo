@@ -130,7 +130,7 @@ Do not implement disabled Pencil nodes. Member, Project Manager, and Admin role 
 - Product screenshots require useful alt text when they communicate workflow. Decorative graphics use empty alt text.
 - Do not rely on color alone for status or workflow meaning.
 - Respect `prefers-reduced-motion`; smooth scrolling and decorative motion must be disabled when reduced motion is requested.
-- The active timer values in landing app previews may advance once per second unless reduced motion is requested. They are illustrative only and do not represent a signed-in session or API data.
+- The active timer values in landing app previews may advance once per second unless reduced motion is requested. They are illustrative only and do not represent a signed-in session or API data. This is the only approved browser script: it must remain framework-free, scope itself to preview timer elements, and must not add a client application runtime.
 - Verify keyboard order, 200% zoom, contrast, and no horizontal overflow.
 
 ## SEO And Performance
@@ -141,7 +141,7 @@ Do not implement disabled Pencil nodes. Member, Project Manager, and Admin role 
 - Include `robots.txt` and sitemap support for the deployed site.
 - Use `astro:assets` for local content images, include intrinsic dimensions, and avoid layout shifts.
 - Prefer local or self-hosted fonts and avoid render-blocking third-party scripts.
-- Ship zero client JavaScript by default. Document any later island and its hydration reason.
+- Ship zero client framework JavaScript and hydrated islands. The documented illustrative preview timer is the sole approved inline browser script; document any additional script or island and its hydration reason before implementation.
 - Do not invent review counts, customer logos, guarantees, pricing, support commitments, or structured-data claims that are not approved elsewhere.
 
 ## Verification

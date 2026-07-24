@@ -1,5 +1,6 @@
 ---
 import { roles } from '../data/content';
+import RoleCard from './RoleCard.astro';
 ---
 
 <section class="bg-app-bg py-10 sm:py-10 lg:h-[680px] lg:py-[88px]">
@@ -30,49 +31,7 @@ import { roles } from '../data/content';
       <div class="min-w-0">
         {
           roles.map((role) => (
-            <article class:list={[
-              'role-panel h-full flex-col rounded-[10px] p-9',
-              `role-panel--${role.id}`,
-              role.variant === 'member'
-                ? 'bg-landing-dark text-text-inverse'
-                : role.variant === 'admin'
-                  ? 'bg-brand text-text-inverse'
-                  : 'border border-divider bg-surface-primary text-text-dark',
-            ]}>
-              <p class:list={[
-                'eyebrow',
-                role.variant === 'member'
-                  ? 'text-landing-purple-light'
-                  : role.variant === 'admin'
-                    ? 'text-landing-purple-ink'
-                    : 'text-brand',
-              ]}>{role.eyebrow}</p>
-              <h3 class="mt-4 max-w-[540px] text-[27px] font-bold leading-[1.12] tracking-[-0.035em]">{role.title}</h3>
-              <ul class="mt-7 grid gap-3">
-                {
-                  role.points.map((point) => (
-                    <li class:list={[
-                      'flex gap-2.5 text-sm leading-[1.35]',
-                      role.variant === 'member'
-                        ? 'text-landing-muted-inverse'
-                        : role.variant === 'admin'
-                          ? 'text-landing-purple-soft'
-                          : 'text-text-muted',
-                    ]}>
-                      <span class:list={[
-                        'mt-1.5 size-1.5 shrink-0 rounded-full',
-                        role.variant === 'member'
-                          ? 'bg-landing-purple-light'
-                          : role.variant === 'admin'
-                            ? 'bg-landing-purple-ink'
-                            : 'bg-brand',
-                      ]}></span>
-                      {point}
-                    </li>
-                  ))
-                }
-              </ul>
-            </article>
+            <RoleCard role={role} selectablePanel />
           ))
         }
       </div>
@@ -81,55 +40,14 @@ import { roles } from '../data/content';
     <div class="mt-7 grid gap-4 lg:hidden">
       {
         roles.map((role) => (
-          <article class:list={[
-            'rounded-[10px] p-[18px] sm:p-5',
-            role.variant === 'member'
-              ? 'bg-landing-dark text-text-inverse'
-              : role.variant === 'admin'
-                ? 'bg-brand text-text-inverse'
-                : 'border border-divider bg-surface-primary text-text-dark',
-          ]}>
-            <p class:list={[
-              'eyebrow',
-              role.variant === 'member'
-                ? 'text-landing-purple-light'
-                : role.variant === 'admin'
-                  ? 'text-landing-purple-ink'
-                  : 'text-brand',
-            ]}>{role.eyebrow}</p>
-            <h3 class="mt-3 text-[22px] font-bold leading-[1.15] tracking-[-0.035em] sm:text-[25px]">{role.title}</h3>
-            <ul class="mt-4 grid gap-2.5">
-              {
-                role.points.map((point) => (
-                  <li class:list={[
-                    'flex gap-2.5 text-sm leading-[1.45]',
-                    role.variant === 'member'
-                      ? 'text-landing-muted-inverse'
-                      : role.variant === 'admin'
-                        ? 'text-landing-purple-soft'
-                        : 'text-text-muted',
-                  ]}>
-                    <span class:list={[
-                      'mt-1.5 size-1.5 shrink-0 rounded-full',
-                      role.variant === 'member'
-                        ? 'bg-landing-purple-light'
-                        : role.variant === 'admin'
-                          ? 'bg-landing-purple-ink'
-                          : 'bg-brand',
-                    ]}></span>
-                    {point}
-                  </li>
-                ))
-              }
-            </ul>
-          </article>
+          <RoleCard role={role} compact />
         ))
       }
     </div>
   </div>
 </section>
 
-<style>
+<style is:global>
   .role-panel {
     display: none;
   }
