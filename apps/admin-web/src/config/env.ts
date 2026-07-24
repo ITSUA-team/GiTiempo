@@ -9,6 +9,7 @@ export interface AdminWebEnv {
     storageBucket?: string;
   };
   githubAppInstallUrl?: string;
+  githubSignInEnabled: boolean;
   userAppUrl?: string;
 }
 
@@ -41,5 +42,8 @@ export const appEnv: AdminWebEnv = {
   },
   get githubAppInstallUrl() {
     return import.meta.env.VITE_GITHUB_APP_INSTALL_URL;
+  },
+  get githubSignInEnabled() {
+    return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED !== 'false';
   },
 };

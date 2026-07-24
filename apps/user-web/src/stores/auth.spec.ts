@@ -77,6 +77,7 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     }),
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
+    exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
@@ -578,6 +579,20 @@ describe("useAuthStore", () => {
     expect(authStore.isAuthenticated).toBe(true);
     expect(authStore.accessToken).toBe("access-token");
     expect(getRefreshToken()).toBe("refresh-token-next");
+    expect(authStore.profile?.email).toBe("alexey@example.com");
+    expect(authStore.bootstrapComplete).toBe(true);
+  });
+
+  it("exchanges a GitHub handoff code and persists the token pair", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+
+    const authStore = useAuthStore();
+
+    await authStore.loginWithGithubSession("handoff-code");
+
+    expect(authStore.isAuthenticated).toBe(true);
+    expect(authStore.accessToken).toBe("github-access-token");
+    expect(getRefreshToken()).toBe("github-refresh-token");
     expect(authStore.profile?.email).toBe("alexey@example.com");
     expect(authStore.bootstrapComplete).toBe(true);
   });

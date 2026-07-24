@@ -37,6 +37,11 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
       accessTokenExpiresIn: 900,
       refreshToken: "refresh-token-next",
     }),
+    exchangeGithubSession: async () => ({
+      accessToken: "access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "refresh-token-next",
+    }),
     logoutSession: async () => undefined,
     registerWorkspaceOwner: async () => ({
       accessToken: "registered-access-token",
@@ -112,6 +117,17 @@ describe("createAuthSessionCore", () => {
     expect(session.profile.value).toBeNull();
     expect(getRefreshToken()).toBeNull();
     expect(session.bootstrapComplete.value).toBe(true);
+    expect(session.isSubmitting.value).toBe(false);
+  });
+
+  it("exchanges a GitHub handoff code into an app session", async () => {
+    const runtime = createRuntimeMock();
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+
+    await session.loginWithGithubSession("handoff-code");
+
+    expect(session.isAuthenticated.value).toBe(true);
+    expect(session.profile.value?.email).toBe("alexey@example.com");
     expect(session.isSubmitting.value).toBe(false);
   });
 
