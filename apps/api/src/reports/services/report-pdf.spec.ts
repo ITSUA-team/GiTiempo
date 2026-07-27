@@ -1,62 +1,46 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildTimeReportPdfDefinition,
-  renderTimeReportPdf,
-  type ReportPdfInput,
-  type ReportPdfLeaf,
-} from './report-pdf';
+import type { ReportDocument } from '@gitiempo/shared';
+import { renderReportDocument, renderReportDocumentPdf } from './report-pdf';
 
-const projectOrion = { key: 'p1', label: 'Project Orion' };
-const projectBilling = { key: 'p2', label: 'Billing API' };
-const alex = { key: 'u1', label: 'Alex Admin' };
-const nina = { key: 'u2', label: 'Nina PM' };
-
-function makeLeaf(overrides: Partial<ReportPdfLeaf>): ReportPdfLeaf {
-  return {
-    billableSeconds: 3600,
-    identity: { project: projectOrion, user: alex },
-    lastStartedAt: '2026-05-02T10:00:00.000Z',
-    totalSeconds: 3600,
-    ...overrides,
-  };
-}
-
-const leaves: ReportPdfLeaf[] = [
-  makeLeaf({}),
-  makeLeaf({
-    billableSeconds: 1800,
-    identity: { project: projectOrion, user: nina },
-    totalSeconds: 7200,
-  }),
-  makeLeaf({
-    billableSeconds: 900,
-    identity: { project: projectBilling, user: nina },
-    totalSeconds: 900,
-  }),
-];
-
-const input: ReportPdfInput = {
-  dateRange: {
-    dateFrom: '2026-05-01T00:00:00.000Z',
-    dateTo: '2026-06-01T00:00:00.000Z',
-  },
-  filters: { memberLabel: null, projectLabel: null },
-  generatedAt: new Date('2026-05-21T12:00:00.000Z'),
-  groupBy: ['project', 'user'],
-  leaves,
-  summary: {
-    billableSeconds: 6300,
-    billableShare: 6300 / 11700,
-    entryCount: 5,
-    nonBillableSeconds: 5400,
-    totalSeconds: 11700,
-  },
-  workspaceName: 'GI Tiempo',
+// The client builds the on-screen document and the server only styles it, so
+// these cover the styling from a ready-made document rather than a re-query.
+const document: ReportDocument = {
+  columns: ['NAME', 'HOURS', 'BILLABLE', 'BILL %'],
+  filters: 'Projects: All · Members: All · Grouping: Project › Member',
+  footerNote: 'Generated with GiTiempo · May 21, 2026',
+  masthead: { tag: 'TIME REPORT', wordmark: 'GiTiempo' },
+  period: 'May 1, 2026 – Jun 1, 2026 · GI Tiempo',
+  rows: [
+    {
+      billable: '1h 45m',
+      detail: '2 members',
+      hours: '3h 00m',
+      isLeaf: false,
+      label: 'Project Orion',
+      level: 0,
+      share: '58%',
+    },
+    {
+      billable: '1h 00m',
+      detail: null,
+      hours: '1h 00m',
+      isLeaf: true,
+      label: 'Alex Admin',
+      level: 1,
+      share: '100%',
+    },
+  ],
+  stats: [
+    { label: 'TRACKED HOURS', value: '3h 15m' },
+    { label: 'BILLABLE', value: '1h 45m · 58%' },
+  ],
+  title: 'Time report',
+  total: { billable: '1h 45m', hours: '3h 15m', label: 'Total', share: '58%' },
 };
 
-describe('buildTimeReportPdfDefinition', () => {
-  it('describes the designed document sections', () => {
-    const definition = buildTimeReportPdfDefinition(input) as {
+describe('renderReportDocument', () => {
+  it('composes the designed document sections from a client-built document', () => {
+    const definition = renderReportDocument(document) as {
       content: unknown[];
       footer: (page: number, total: number) => { columns: { text: string }[] };
     };
@@ -76,7 +60,7 @@ describe('buildTimeReportPdfDefinition', () => {
   });
 
   it('tints top-level group rows and indents nested rows', () => {
-    const definition = buildTimeReportPdfDefinition(input) as {
+    const definition = renderReportDocument(document) as {
       content: {
         table?: { body: { fillColor?: string; margin?: number[] }[][] };
       }[];
@@ -93,9 +77,9 @@ describe('buildTimeReportPdfDefinition', () => {
   });
 });
 
-describe('renderTimeReportPdf', () => {
-  it('renders a real PDF document', async () => {
-    const pdf = await renderTimeReportPdf(input);
+describe('renderReportDocumentPdf', () => {
+  it('renders a real PDF from a client-built document', async () => {
+    const pdf = await renderReportDocumentPdf(document);
 
     expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     expect(pdf.length).toBeGreaterThan(1500);

@@ -1,10 +1,5 @@
 import PdfPrinter from 'pdfmake';
-import {
-  buildReportDocument,
-  type ReportDocument,
-  type ReportDocumentRow,
-  type ReportPdfInput,
-} from './report-document';
+import type { ReportDocument, ReportDocumentRow } from '@gitiempo/shared';
 import {
   COLOR,
   DEFAULT_FONT,
@@ -14,14 +9,13 @@ import {
   TABLE,
 } from './report-pdf-theme';
 
-export type { ReportPdfInput, ReportPdfLeaf } from './report-document';
-
 /**
  * Renders a `ReportDocument` as the approved "Report PDF Preview" design
  * frame: brand masthead, period and workspace, filters line, summary strip,
  * the grouped table with per-level subtotal rows, a total row, and page
- * footers. This module composes the page — the report's wording and arithmetic
- * live in `report-document.ts`, its design tokens in `report-pdf-theme.ts`.
+ * footers. This module only composes the page from a document the client
+ * already built (the WYSIWYG export); its design tokens live in
+ * `report-pdf-theme.ts`.
  */
 
 /** pdfmake document nodes are untyped by the library. */
@@ -294,12 +288,6 @@ export function renderReportDocument(
   };
 }
 
-export function buildTimeReportPdfDefinition(
-  input: ReportPdfInput,
-): Record<string, unknown> {
-  return renderReportDocument(buildReportDocument(input));
-}
-
 function definitionToPdfBuffer(
   definition: Record<string, unknown>,
 ): Promise<Buffer> {
@@ -313,10 +301,6 @@ function definitionToPdfBuffer(
     document.on('error', reject);
     document.end();
   });
-}
-
-export function renderTimeReportPdf(input: ReportPdfInput): Promise<Buffer> {
-  return definitionToPdfBuffer(buildTimeReportPdfDefinition(input));
 }
 
 // Renders a pre-built, validated document — the WYSIWYG export path where the

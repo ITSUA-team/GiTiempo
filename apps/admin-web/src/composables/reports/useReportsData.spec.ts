@@ -225,7 +225,6 @@ function mountWithQuery(component: Parameters<typeof mount>[0]) {
 function createReportsClientMocks() {
   return {
     exportReportPdf: vi.fn(),
-    exportTimeReport: vi.fn(),
     getTimeReport: vi.fn(async (query: { projectId?: string }) =>
       createReportResponse(reportRowsByProject.get(query.projectId ?? '') ?? []),
     ),

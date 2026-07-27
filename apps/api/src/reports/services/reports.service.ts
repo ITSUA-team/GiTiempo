@@ -18,7 +18,6 @@ import type {
   ReportDocument,
   TimeReportBillableGroup,
   TimeReportEffectiveDateRange,
-  TimeReportExportRequest,
   TimeReportGroupBy,
   TimeReportGroupByPath,
   TimeReportRequest,
@@ -39,12 +38,7 @@ import { projects } from '../../projects/schemas/projects.schema';
 import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
-import { workspaces } from '../../workspaces/schemas/workspaces.schema';
-import {
-  renderReportDocumentPdf,
-  renderTimeReportPdf,
-  type ReportPdfLeaf,
-} from './report-pdf';
+import { renderReportDocumentPdf } from './report-pdf';
 
 interface ExportResult {
   content: string | Buffer;
@@ -119,36 +113,6 @@ export class ReportsService {
     };
   }
 
-  async exportTimeReport(
-    user: AuthUser,
-    query: TimeReportExportRequest,
-  ): Promise<ExportResult> {
-    const context = await this.buildQueryContext(user, query);
-    const filenameBase = `time-report-${dateForFilename(context.dateRange.dateFrom)}_${dateForFilename(context.dateRange.dateTo)}`;
-
-    if (query.format === 'pdf') {
-      const content = await this.buildPdfExport(user, context, query);
-
-      return {
-        content,
-        contentType: 'application/pdf',
-        filename: `${filenameBase}.pdf`,
-      };
-    }
-
-    const rows = await this.getDetailedRows(
-      context,
-      query.sortBy,
-      query.sortOrder,
-    );
-
-    return {
-      content: toCsv(context.groupBy, rows),
-      contentType: 'text/csv; charset=utf-8',
-      filename: `${filenameBase}.csv`,
-    };
-  }
-
   /**
    * Styles a client-built report document into a PDF (the WYSIWYG export path).
    *
@@ -178,162 +142,9 @@ export class ReportsService {
     };
   }
 
-  /**
-   * The PDF renders the grouped report at the requested path, so it reads
-   * rows at grouped granularity (no pagination) rather than the CSV's
-   * detailed project-task-user rows.
-   */
-  private async buildPdfExport(
-    user: AuthUser,
-    context: QueryContext,
-    query: TimeReportExportRequest,
-  ): Promise<Buffer> {
-    const [summary, rows, workspaceRow, filterLabels] = await Promise.all([
-      this.getSummary(context),
-      this.getRows(
-        context,
-        query.sortBy,
-        query.sortOrder,
-        undefined,
-        undefined,
-      ),
-      this.db
-        .select({ name: workspaces.name })
-        .from(workspaces)
-        .where(eq(workspaces.id, user.workspaceId))
-        .limit(1)
-        .then(([row]) => row ?? null),
-      this.getExportFilterLabels(context, query),
-    ]);
-
-    const leaves: ReportPdfLeaf[] = rows.map((row) => ({
-      billableSeconds: Math.trunc(toNumber(row.billableSeconds)),
-      identity: {
-        ...(row.projectId
-          ? {
-              project: {
-                key: row.projectId,
-                label: row.projectName ?? '—',
-              },
-            }
-          : {}),
-        ...(row.taskId
-          ? { task: { key: row.taskId, label: row.taskTitle ?? '—' } }
-          : {}),
-        ...(row.userId
-          ? {
-              user: {
-                key: row.userId,
-                label: row.userDisplayName?.trim() || row.userEmail || '—',
-              },
-            }
-          : {}),
-        ...(row.billable
-          ? {
-              billable: {
-                key: row.billable,
-                label:
-                  row.billable === 'billable' ? 'Billable' : 'Non-billable',
-              },
-            }
-          : {}),
-      },
-      lastStartedAt: toIsoDateString(row.lastStartedAt),
-      totalSeconds: Math.trunc(toNumber(row.totalSeconds)),
-    }));
-
-    return renderTimeReportPdf({
-      dateRange: context.dateRange,
-      filters: filterLabels,
-      generatedAt: new Date(),
-      groupBy: context.groupBy,
-      leaves,
-      summary,
-      workspaceName: workspaceRow?.name ?? 'Workspace',
-    });
-  }
-
-  /**
-   * Resolves the filter names printed on the PDF.
-   *
-   * These lookups must carry the same scope as the report itself. Matching on
-   * id alone let a caller pass any project or user id in the database and read
-   * its name back off the PDF, even though the rows stayed empty — a
-   * cross-workspace disclosure, and for a PM a way to read the name of a
-   * private project they are not assigned to. An out-of-scope id now resolves
-   * to no row, so the filter prints as "All".
-   *
-   * The member lookup goes further and requires the user to actually appear in
-   * the caller's scoped results: a PM sees only members who tracked time in the
-   * projects visible to them, so a bare workspace-membership check would let a
-   * PM read the name and email of any colleague, including ones whose time is
-   * entirely in projects they cannot see.
-   */
-  private async getExportFilterLabels(
-    context: QueryContext,
-    query: TimeReportExportRequest,
-  ): Promise<{ memberLabel: string | null; projectLabel: string | null }> {
-    const projectConditions =
-      query.projectId === undefined
-        ? []
-        : [
-            eq(projects.id, query.projectId),
-            eq(projects.workspaceId, context.workspaceId),
-            ...(context.isProjectManager
-              ? [
-                  eq(projects.isActive, true),
-                  or(
-                    eq(projects.visibility, 'public'),
-                    eq(projectAssignments.userId, context.scopeUserId),
-                  )!,
-                ]
-              : []),
-          ];
-
-    const [projectRow, userRow] = await Promise.all([
-      query.projectId !== undefined
-        ? this.db
-            .select({ name: projects.name })
-            .from(projects)
-            .leftJoin(
-              projectAssignments,
-              this.scopeAssignmentJoinCondition(context.scopeUserId),
-            )
-            .where(and(...projectConditions))
-            .limit(1)
-            .then(([row]) => row ?? null)
-        : Promise.resolve(null),
-      query.userId !== undefined
-        ? // The report's conditions already filter to this userId (buildQuery
-          // context pushes it in), so the scoped join projected to user
-          // identity answers "does this member appear in a row I can see?".
-          this.db
-            .select({ displayName: users.displayName, email: users.email })
-            .from(timeEntries)
-            .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
-            .innerJoin(projects, eq(projects.id, tasks.projectId))
-            .innerJoin(users, eq(users.id, timeEntries.userId))
-            .leftJoin(
-              projectAssignments,
-              this.scopeAssignmentJoinCondition(context.scopeUserId),
-            )
-            .where(and(...context.conditions, eq(users.id, query.userId)))
-            .limit(1)
-            .then(([row]) => row ?? null)
-        : Promise.resolve(null),
-    ]);
-
-    return {
-      memberLabel: userRow
-        ? userRow.displayName?.trim() || userRow.email
-        : null,
-      projectLabel: projectRow?.name ?? null,
-    };
-  }
-
   private async buildQueryContext(
     user: AuthUser,
-    query: TimeReportRequest | TimeReportExportRequest,
+    query: TimeReportRequest,
   ): Promise<QueryContext> {
     const membership = await this.members.requireRole(
       user.sub,
@@ -520,16 +331,6 @@ export class ReportsService {
     return rows.map((row) => row.key);
   }
 
-  private async getDetailedRows(
-    context: QueryContext,
-    sortBy: TimeReportSortBy,
-    sortOrder: TimeReportSortOrder,
-  ): Promise<AggregateRow[]> {
-    return this.detailedRowsQuery(context).orderBy(
-      getOrderBy(sortBy, sortOrder),
-    );
-  }
-
   private groupedRowsQuery(context: QueryContext, extraCondition?: SQL) {
     const selection = this.groupSelection(context.groupBy);
     const conditions = extraCondition
@@ -548,21 +349,6 @@ export class ReportsService {
       )
       .where(and(...conditions))
       .groupBy(...this.groupByColumns(context.groupBy));
-  }
-
-  private detailedRowsQuery(context: QueryContext) {
-    return this.db
-      .select(this.detailedSelection())
-      .from(timeEntries)
-      .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
-      .innerJoin(projects, eq(projects.id, tasks.projectId))
-      .innerJoin(users, eq(users.id, timeEntries.userId))
-      .leftJoin(
-        projectAssignments,
-        this.scopeAssignmentJoinCondition(context.scopeUserId),
-      )
-      .where(and(...context.conditions))
-      .groupBy(...this.detailedGroupByColumns());
   }
 
   private scopeAssignmentJoinCondition(userId: string): SQL {
@@ -593,25 +379,6 @@ export class ReportsService {
       lastStartedAt: sql<
         Date | string | null
       >`MAX(${timeEntries.startedAt})`.as('last_started_at'),
-    };
-  }
-
-  private detailedSelection() {
-    return {
-      groupId:
-        sql<string>`CONCAT(${projects.id}, ':', ${tasks.id}, ':', ${users.id})`.as(
-          'group_id',
-        ),
-      projectId: projects.id,
-      projectName: projects.name,
-      taskId: tasks.id,
-      taskTitle: tasks.title,
-      userId: users.id,
-      userEmail: users.email,
-      userDisplayName: users.displayName,
-      userAvatarUrl: users.avatarUrl,
-      billable: sql<null>`NULL`,
-      ...this.aggregateSelection(),
     };
   }
 
@@ -654,19 +421,6 @@ export class ReportsService {
         ? [users.id, users.email, users.displayName, users.avatarUrl]
         : []),
       ...(groupBy.includes('billable') ? [timeEntries.isBillable] : []),
-    ];
-  }
-
-  private detailedGroupByColumns() {
-    return [
-      projects.id,
-      projects.name,
-      tasks.id,
-      tasks.title,
-      users.id,
-      users.email,
-      users.displayName,
-      users.avatarUrl,
     ];
   }
 
@@ -747,7 +501,7 @@ function leafOrderBy(
 }
 
 function resolveDateRange(
-  query: TimeReportRequest | TimeReportExportRequest,
+  query: TimeReportRequest,
 ): TimeReportEffectiveDateRange {
   const now = new Date();
   const defaultFrom = startOfUtcMonth(now);
@@ -855,104 +609,6 @@ function requireBillable(row: AggregateRow): TimeReportBillableGroup {
     );
   }
   return row.billable;
-}
-
-/**
- * Fixed labels for the group-by column. The dimension is already a validated
- * enum, but mapping through a constant keeps request input out of the exported
- * file entirely rather than relying on validation upstream.
- */
-const csvGroupByLabels: Record<TimeReportGroupBy, string> = {
-  project: 'project',
-  task: 'task',
-  user: 'user',
-  billable: 'billable',
-};
-
-function toCsv(groupBy: TimeReportGroupByPath, rows: AggregateRow[]): string {
-  const groupByPath = groupBy
-    .map((dimension) => csvGroupByLabels[dimension])
-    .join('>');
-  const header = [
-    'Group By',
-    'Project ID',
-    'Project',
-    'Task ID',
-    'Task',
-    'User ID',
-    'User Email',
-    'User Name',
-    'Total Seconds',
-    'Billable Seconds',
-    'Non-Billable Seconds',
-    'Entry Count',
-    'First Started At',
-    'Last Started At',
-  ];
-  const lines = rows.map((row) => {
-    const timing = toAggregateTiming(row);
-
-    return [
-      groupByPath,
-      row.projectId ?? '',
-      row.projectName ?? '',
-      row.taskId ?? '',
-      row.taskTitle ?? '',
-      row.userId ?? '',
-      row.userEmail ?? '',
-      row.userDisplayName ?? '',
-      timing.totalSeconds,
-      timing.billableSeconds,
-      timing.nonBillableSeconds,
-      timing.entryCount,
-      timing.firstStartedAt ?? '',
-      timing.lastStartedAt ?? '',
-    ];
-  });
-
-  return [header, ...lines]
-    .map((line) => line.map(csvCell).join(','))
-    .join('\n');
-}
-
-/**
- * Characters that make a spreadsheet treat a cell as a formula. Covers the
- * ASCII set plus the full-width variants that some locales (notably Japanese
- * input) also evaluate, and the whitespace controls that can shift content
- * into a new cell.
- */
-const csvFormulaTrigger = /^[=+\-@\t\r\n＝＋－＠]/;
-
-/**
- * Renders one CSV field, defused against formula injection (CWE-1236).
- *
- * Project names, task titles and display names are workspace-controlled and
- * land in this file, so a project named `=cmd|'/c calc'!A1` would otherwise
- * execute when a colleague opens the export.
- *
- * Every field is quoted unconditionally, not only when it contains our comma.
- * Excel uses `;` as the separator in several locales, so an unquoted value
- * carrying `;` would split there and open a *new* cell whose content starts
- * with a trigger character — defusing only the first character of the original
- * value does not stop that.
- *
- * Known limitation: Excel may drop the quoting and apostrophe when the file is
- * saved and re-opened, at which point a formula can reactivate. The
- * Excel-proof alternative is a leading TAB instead of an apostrophe, which
- * survives the round-trip but leaves a tab in the data for programmatic
- * consumers. This export is read by both, so it takes the non-destructive
- * option.
- */
-function csvCell(value: string | number): string {
-  const raw = String(value);
-  // Neutralise before quoting so the apostrophe sits inside the quotes.
-  const guarded = csvFormulaTrigger.test(raw) ? `'${raw}` : raw;
-
-  return `"${guarded.replace(/"/g, '""')}"`;
-}
-
-function dateForFilename(value: string): string {
-  return value.slice(0, 10);
 }
 
 function escapeLikePattern(value: string): string {

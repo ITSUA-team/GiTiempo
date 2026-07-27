@@ -99,80 +99,40 @@ The backend MUST allow time reports to be filtered by project, user, date window
 - **THEN** the summary totals reflect all filtered matching entries
 - **AND** the summary totals are not limited to the current page rows
 
-### Requirement: Time Reports Can Be Exported As CSV
-
-The backend MUST expose a protected export endpoint for detailed report data using the same filters, sorting properties, and authorization scope rules as the JSON time-report endpoint. The export request MUST be submitted as a validated JSON body of named properties rather than a query string, and the backend MUST reject a request carrying any property outside the contract rather than ignoring it. CSV export rows MUST remain detailed at the project-task-user aggregate level for every requested `groupBy` path; the ordered `groupBy` path MUST be preserved as export metadata and MUST NOT collapse CSV row granularity to match the JSON grouped rows.
-
-#### Scenario: Admin exports time report CSV
-- **GIVEN** an authenticated admin requests `POST /reports/time/export`
-- **WHEN** matching completed entries exist
-- **THEN** the backend responds with CSV content
-- **AND** the export uses the same filters, sorting properties, and scope rules as `POST /reports/time`
-- **AND** each exported row aggregates one project, task, and user combination rather than one JSON report group
-
-#### Scenario: PM exports scoped time report CSV
-- **GIVEN** an authenticated PM requests `POST /reports/time/export`
-- **WHEN** matching completed entries exist inside and outside the PM report scope
-- **THEN** the CSV includes only detailed aggregate rows within the PM report scope
-
-#### Scenario: CSV groupBy does not collapse detailed rows
-- **GIVEN** matching completed entries share a project but have different task or user context
-- **WHEN** an authenticated admin or PM exports a CSV report with any `groupBy` path, including a multi-level path such as `groupBy: ["project", "user"]`
-- **THEN** the CSV emits separate rows for each matching project-task-user combination
-- **AND** each row records the ordered `groupBy` path in the CSV group-by column
-
-#### Scenario: Member cannot export reports
-- **GIVEN** an authenticated member belongs to a workspace
-- **WHEN** the member requests `POST /reports/time/export`
-- **THEN** the backend responds with 403 Forbidden
-
-#### Scenario: Export request rejects properties outside the contract
-- **GIVEN** an authenticated admin or PM requests an export
-- **WHEN** the request body carries a property the export contract does not define
-- **THEN** the backend rejects the request as a validation error
-- **AND** no export is produced
-
-#### Scenario: Exported cells cannot execute as spreadsheet formulas
-- **GIVEN** a project, task, or member name beginning with a formula character
-- **WHEN** an authenticated admin or PM exports a CSV report
-- **THEN** the exported cell is neutralised so a spreadsheet reads it as text
-- **AND** no exported field begins with a formula-initiating character
-- **AND** every field is quoted so a separator inside a value cannot open a new cell
-
-#### Scenario: CSV export includes aggregate columns
-- **GIVEN** an authenticated admin or PM exports a time report
-- **WHEN** the backend generates the CSV
-- **THEN** each exported row includes group-by metadata, project context, task context, user context, total seconds, billable seconds, non-billable seconds, entry count, first started at, and last started at
-
 ## ADDED Requirements
 
 ### Requirement: Time Reports Can Be Exported As PDF
 
-The backend MUST support `format=pdf` on the report export endpoint, producing a styled PDF document from the same filters, ordered grouping path, date-window defaults, and authorization scope rules as the CSV export. The CSV format MUST remain the default and keep its existing detailed row behavior. The PDF MUST render the grouped report: a document header identifying the product, workspace, and effective period, a summary of the applied filters and grouping path, overall summary totals, one table row per group node of the requested grouping path with per-level subtotals and indentation, an overall total row, and page footers carrying the generation date and page numbers.
+Report export is produced client-side (WYSIWYG): the browser serializes the CSV itself and builds the on-screen grouped report as a document, so the backend no longer exposes a CSV or combined report-export endpoint. The backend MUST expose a single protected export endpoint, `POST /reports/time/export/pdf`, that accepts a client-built report document and returns a styled PDF of exactly that document. The endpoint MUST only apply PDF styling and MUST NOT re-query report data, so the file matches what the caller had on screen. It MUST enforce the same admin-or-PM authorization scope as the JSON time-report endpoint, and MUST validate the document body against the shared report-document contract, rejecting a request that carries any property outside it. The response MUST be a PDF attachment whose download name ends in `.pdf`.
 
-#### Scenario: Admin exports a PDF report
-- **GIVEN** an authenticated admin requests `POST /reports/time/export` with `format=pdf`
-- **WHEN** matching completed entries exist
-- **THEN** the backend responds with PDF content and a PDF content type
-- **AND** the download filename carries the effective date window and a `.pdf` extension
-- **AND** the document reflects the requested ordered grouping path with per-level subtotal rows
+#### Scenario: Admin renders an on-screen report as PDF
+- **GIVEN** an authenticated admin has a filtered, grouped report on screen
+- **WHEN** the admin requests `POST /reports/time/export/pdf` with that report as the document body
+- **THEN** the backend responds with PDF content and an `application/pdf` content type
+- **AND** the response is an attachment whose filename ends in `.pdf`
+- **AND** the PDF reflects the supplied document, including its grouping, per-level subtotals, and total rows
 
-#### Scenario: Export format defaults to CSV
-- **GIVEN** an authenticated admin requests `POST /reports/time/export` without `format`
-- **WHEN** matching completed entries exist
-- **THEN** the backend responds with the existing detailed CSV content unchanged
+#### Scenario: PDF styling never re-queries report data
+- **GIVEN** an authenticated admin or PM submits a report document to `POST /reports/time/export/pdf`
+- **WHEN** the backend renders the PDF
+- **THEN** the backend styles only the supplied document and reads no time entries from the database
+- **AND** the PDF content matches the submitted document rather than a freshly queried report
 
-#### Scenario: PM PDF export stays inside report scope
-- **GIVEN** an authenticated PM requests a PDF export
-- **WHEN** matching completed entries exist inside and outside the PM report scope
-- **THEN** the PDF includes only data within the PM report scope
-
-#### Scenario: Member cannot export PDF reports
-- **GIVEN** an authenticated member requests `POST /reports/time/export` with `format=pdf`
-- **WHEN** the request is authorized
+#### Scenario: Member cannot render a report PDF
+- **GIVEN** an authenticated member belongs to a workspace
+- **WHEN** the member requests `POST /reports/time/export/pdf`
 - **THEN** the backend responds with 403 Forbidden
 
-#### Scenario: Invalid export format is rejected
-- **GIVEN** an authenticated admin requests the export endpoint
-- **WHEN** `format` is neither `csv` nor `pdf`
+#### Scenario: PDF export request rejects an off-contract document
+- **GIVEN** an authenticated admin or PM requests `POST /reports/time/export/pdf`
+- **WHEN** the document body carries a property the report-document contract does not define, or omits a required one
 - **THEN** the backend rejects the request as a validation error
+- **AND** no PDF is produced
+
+## REMOVED Requirements
+
+### Requirement: Time Reports Can Be Exported As CSV
+
+**Reason**: Report CSV export moved fully client-side (WYSIWYG). The browser serializes the CSV from the on-screen grouped report, so the backend `GET /reports/time/export` CSV endpoint was removed. The only remaining backend export surface is the PDF styler (`POST /reports/time/export/pdf`), covered by "Time Reports Can Be Exported As PDF".
+
+**Migration**: Clients build the CSV in the browser from the filtered, grouped report currently shown — see the `admin-pages` "Reports Generation And Export" requirement and `docs/ui/pages-admin.md`. No backend CSV endpoint is called.

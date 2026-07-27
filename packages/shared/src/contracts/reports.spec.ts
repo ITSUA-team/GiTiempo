@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  timeReportExportRequestSchema,
   timeReportRequestSchema,
   timeReportResponseSchema,
 } from "./reports.js";
@@ -120,53 +119,6 @@ describe("timeReportRequestSchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["dateTo"]);
-  });
-});
-
-describe("timeReportExportRequestSchema", () => {
-  it("defaults the export format to csv", () => {
-    const result = timeReportExportRequestSchema.parse({});
-
-    expect(result.format).toBe("csv");
-  });
-
-  it("accepts the pdf format", () => {
-    const result = timeReportExportRequestSchema.parse({ format: "pdf" });
-
-    expect(result.format).toBe("pdf");
-  });
-
-  it("rejects an unknown property instead of ignoring it", () => {
-    const result = timeReportExportRequestSchema.safeParse({
-      dryRun: true,
-      format: "csv",
-    });
-
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects a malformed project id", () => {
-    const result = timeReportExportRequestSchema.safeParse({
-      projectId: "not-a-uuid",
-    });
-
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects a date window that ends before it starts", () => {
-    const result = timeReportExportRequestSchema.safeParse({
-      dateFrom: "2026-06-01T00:00:00.000Z",
-      dateTo: "2026-05-01T00:00:00.000Z",
-    });
-
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects unknown export formats", () => {
-    const result = timeReportExportRequestSchema.safeParse({ format: "xlsx" });
-
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(["format"]);
   });
 });
 

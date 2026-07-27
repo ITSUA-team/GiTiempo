@@ -1,9 +1,7 @@
 import {
-  timeReportExportRequestSchema,
   timeReportRequestSchema,
   type ProjectListResponse,
   type ProjectMember,
-  type TimeReportExportRequest,
   type TimeReportRequest,
   type TimeReportResponse,
   type TimeReportRow,
@@ -248,21 +246,6 @@ export function toTimeReportQuery(
     groupBy: parsedFilters.groupBy,
     limit,
     page,
-    projectId: parsedFilters.projectId ?? undefined,
-    sortBy: 'totalSeconds',
-    sortOrder: 'desc',
-    userId: parsedFilters.memberId ?? undefined,
-  });
-}
-
-export function toTimeReportExportRequest(
-  filters: ReportSetupFilters,
-): TimeReportExportRequest {
-  const parsedFilters = reportSetupFiltersSchema.parse(filters);
-
-  return timeReportExportRequestSchema.parse({
-    ...toReportDateQuery(parsedFilters.dateRange),
-    groupBy: parsedFilters.groupBy,
     projectId: parsedFilters.projectId ?? undefined,
     sortBy: 'totalSeconds',
     sortOrder: 'desc',

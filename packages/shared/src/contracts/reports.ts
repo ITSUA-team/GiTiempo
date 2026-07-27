@@ -83,26 +83,6 @@ export const timeReportRequestSchema = z
 
 export const timeReportExportFormatSchema = z.enum(["csv", "pdf"]);
 
-/**
- * Export request body.
- *
- * The export is a POST with a JSON body rather than a query string: the
- * request is a structured set of named properties, each validated here, and
- * `.strict()` rejects anything not on this list instead of silently ignoring
- * it. It also keeps report filters out of URLs, proxy logs, and browser
- * history.
- */
-export const timeReportExportRequestSchema = z
-  .object({
-    ...timeReportFilterShape,
-    format: timeReportExportFormatSchema.default("csv"),
-  })
-  .strict()
-  .refine(isValidDateRange, {
-    message: "dateTo must be later than dateFrom",
-    path: ["dateTo"],
-  });
-
 export const timeReportProjectSummarySchema = z.object({
   id: z.uuid(),
   name: z.string(),
@@ -230,9 +210,6 @@ export type TimeReportExportFormat = z.infer<
 export type TimeReportSortBy = z.infer<typeof timeReportSortBySchema>;
 export type TimeReportSortOrder = z.infer<typeof timeReportSortOrderSchema>;
 export type TimeReportRequest = z.infer<typeof timeReportRequestSchema>;
-export type TimeReportExportRequest = z.infer<
-  typeof timeReportExportRequestSchema
->;
 export type TimeReportProjectSummary = z.infer<
   typeof timeReportProjectSummarySchema
 >;
