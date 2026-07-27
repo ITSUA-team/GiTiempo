@@ -1,13 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import type {
   AddWorkspaceGitHubOrganizationInput,
+  CreateSavedReportInput,
   GitHubConnectionStatusResponse,
   GitHubOwnerListResponse,
   ManagementProjectSummaryResponse,
   ProjectListResponse,
+  SavedReport,
+  SavedReportListResponse,
   TimeReportExportRequest,
   TimeReportRequest,
   TimeReportResponse,
+  UpdateSavedReportInput,
   UpdateWorkspaceInput,
   UpdateWorkspaceSettingsInput,
   WorkspaceGitHubOrganizationListResponse,
@@ -25,6 +29,7 @@ import {
   adminProjectsKeys,
   adminSettingsKeys,
   reportsKeys,
+  savedReportsKeys,
   type AdminServerStateScope,
 } from '@/lib/query-keys';
 import type { ReportExport } from '@/services/admin-reports-client';
@@ -34,6 +39,16 @@ type QueryKey = readonly unknown[];
 interface AdminProjectsClient {
   getManagementSummary(): Promise<ManagementProjectSummaryResponse>;
   listProjects(): Promise<ProjectListResponse>;
+}
+
+interface SavedReportsClient {
+  createSavedReport(input: CreateSavedReportInput): Promise<SavedReport>;
+  deleteSavedReport(id: string): Promise<void>;
+  listSavedReports(): Promise<SavedReportListResponse>;
+  updateSavedReport(
+    id: string,
+    input: UpdateSavedReportInput,
+  ): Promise<SavedReport>;
 }
 
 interface ExportTimeReportClient {
@@ -103,6 +118,25 @@ interface AdminScopedMutationOptions {
 
 interface UseAdminProjectsQueryOptions extends AdminScopedQueryOptions {
   client: Pick<AdminProjectsClient, 'listProjects'>;
+}
+
+interface UseSavedReportsQueryOptions extends AdminScopedQueryOptions {
+  client: Pick<SavedReportsClient, 'listSavedReports'>;
+}
+
+interface UseCreateSavedReportMutationOptions
+  extends AdminScopedMutationOptions {
+  client: Pick<SavedReportsClient, 'createSavedReport'>;
+}
+
+interface UseUpdateSavedReportMutationOptions
+  extends AdminScopedMutationOptions {
+  client: Pick<SavedReportsClient, 'updateSavedReport'>;
+}
+
+interface UseDeleteSavedReportMutationOptions
+  extends AdminScopedMutationOptions {
+  client: Pick<SavedReportsClient, 'deleteSavedReport'>;
 }
 
 interface UseExportTimeReportMutationOptions extends AdminScopedMutationOptions {
@@ -185,6 +219,69 @@ export const useAdminProjectsQuery = (options: UseAdminProjectsQueryOptions) =>
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () => options.client.listProjects(),
   });
+
+export const useSavedReportsQuery = (options: UseSavedReportsQueryOptions) =>
+  useQuery({
+    queryKey: computed(() => savedReportsKeys.list(toValue(options.scope))),
+    enabled: computed(() => isQueryEnabled(options)),
+    queryFn: () => options.client.listSavedReports(),
+  });
+
+export const useCreateSavedReportMutation = (
+  options: UseCreateSavedReportMutationOptions,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateSavedReportInput) =>
+      options.client.createSavedReport(input),
+    onSuccess: async () => {
+      await invalidateQueryKeys(
+        queryClient,
+        adminMutationInvalidationKeys.afterSavedReportMutation(
+          toValue(options.scope),
+        ),
+      );
+    },
+  });
+};
+
+export const useUpdateSavedReportMutation = (
+  options: UseUpdateSavedReportMutationOptions,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (variables: { id: string; input: UpdateSavedReportInput }) =>
+      options.client.updateSavedReport(variables.id, variables.input),
+    onSuccess: async () => {
+      await invalidateQueryKeys(
+        queryClient,
+        adminMutationInvalidationKeys.afterSavedReportMutation(
+          toValue(options.scope),
+        ),
+      );
+    },
+  });
+};
+
+export const useDeleteSavedReportMutation = (
+  options: UseDeleteSavedReportMutationOptions,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => options.client.deleteSavedReport(id),
+    onSuccess: async () => {
+      await invalidateQueryKeys(
+        queryClient,
+        adminMutationInvalidationKeys.afterSavedReportMutation(
+          toValue(options.scope),
+        ),
+      );
+    },
+  });
+};
 
 export const useExportTimeReportMutation = (
   options: UseExportTimeReportMutationOptions,

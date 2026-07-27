@@ -127,6 +127,13 @@ export const adminMembersKeys = {
     [...adminMembersKeys.all(scope), 'list'] as const,
 };
 
+export const savedReportsKeys = {
+  all: (scope?: AdminServerStateScope) =>
+    ['admin-web', normalizeScope(scope), 'saved-reports'] as const,
+  list: (scope: AdminServerStateScope) =>
+    [...savedReportsKeys.all(scope), 'list'] as const,
+};
+
 export const adminMutationInvalidationKeys = {
   afterProjectMutation(scope: AdminServerStateScope): QueryKey[] {
     return [
@@ -137,6 +144,9 @@ export const adminMutationInvalidationKeys = {
   },
   afterReportsDataMutation(scope: AdminServerStateScope): QueryKey[] {
     return [reportsKeys.all(scope), adminDashboardKeys.all(scope)];
+  },
+  afterSavedReportMutation(scope: AdminServerStateScope): QueryKey[] {
+    return [savedReportsKeys.all(scope)];
   },
   afterSettingsSave(scope: AdminServerStateScope): QueryKey[] {
     return [adminSettingsKeys.all(scope)];

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { TimeReportExportFormat } from '@gitiempo/shared';
 import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
@@ -78,6 +78,8 @@ const savedReportSummary = computed(() => {
 
 const savedReports = useSavedReports({
   currentConfig: currentSavedReportConfig,
+  enabled: isAuthenticated,
+  scope,
   onApply({ fallbacks, state }) {
     dateRange.value = state.dateRange;
     grouping.value = state.grouping;
@@ -93,10 +95,6 @@ const savedReports = useSavedReports({
     availableMemberIds: memberOptions.value.map((option) => option.value),
     availableProjectIds: projectOptions.value.map((option) => option.value),
   }),
-});
-
-onMounted(() => {
-  void savedReports.refresh();
 });
 
 /**

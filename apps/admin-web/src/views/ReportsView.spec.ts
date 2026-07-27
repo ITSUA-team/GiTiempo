@@ -12,6 +12,7 @@ import type {
   ReportSummaryView,
   ReportTableRow,
 } from '@/lib/report-view-model';
+import { createTestQueryPlugin } from '@/test/query-client';
 import { useAuthStore } from '@/stores/auth';
 
 const reportMocks = vi.hoisted(() => ({
@@ -221,7 +222,7 @@ function mountReportsView() {
 
   return mount(ReportsView, {
     global: {
-      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+      plugins: [pinia, createTestQueryPlugin(), [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
         ManagementPageSkeleton: ManagementPageSkeletonStub,
         ReportsTable: ReportsTableStub,

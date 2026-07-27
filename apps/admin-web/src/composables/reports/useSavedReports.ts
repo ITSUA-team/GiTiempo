@@ -1,6 +1,20 @@
-import { computed, ref, shallowRef, type ComputedRef } from 'vue';
+import {
+  computed,
+  ref,
+  shallowRef,
+  watch,
+  type ComputedRef,
+  type MaybeRefOrGetter,
+} from 'vue';
 import type { SavedReport, SavedReportConfig } from '@gitiempo/shared';
 
+import {
+  useCreateSavedReportMutation,
+  useDeleteSavedReportMutation,
+  useSavedReportsQuery,
+  useUpdateSavedReportMutation,
+} from '@/composables/query';
+import type { AdminServerStateScope } from '@/lib/query-keys';
 import {
   getAdminSavedReportsClient,
   type AdminSavedReportsClient,
@@ -14,6 +28,13 @@ import {
 
 interface UseSavedReportsOptions {
   client?: AdminSavedReportsClient;
+  /** Gates the preset list query, matching the other admin data composables. */
+  enabled?: MaybeRefOrGetter<boolean>;
+  /**
+   * Server-state scope. Presets are keyed by it, so a workspace switch refetches
+   * the right list instead of showing the previous workspace's presets.
+   */
+  scope: MaybeRefOrGetter<AdminServerStateScope>;
   /**
    * The config describing what the page currently shows, or null when the
    * current state cannot be a valid preset (e.g. an incomplete date range).
@@ -26,22 +47,33 @@ interface UseSavedReportsOptions {
 }
 
 /**
- * Owns the preset list and which preset is loaded.
+ * Owns which preset is loaded and whether the page diverges from it.
  *
- * Dirty state compares the current config with the stored preset shape.
+ * The preset LIST is server state, so it runs through TanStack Query — scoped
+ * keys and shared invalidation — like every other admin list. Only the
+ * loaded-preset selection and its snapshot for dirty comparison stay as local
+ * UI state.
  */
 export function useSavedReports({
   client = getAdminSavedReportsClient(),
   currentConfig,
+  enabled = true,
   onApply,
   resolveOptions,
+  scope,
 }: UseSavedReportsOptions) {
-  const presets = shallowRef<SavedReport[]>([]);
   const activeId = ref<string | null>(null);
   const loadedConfig = shallowRef<SavedReportConfig | null>(null);
-  const isLoading = ref(false);
   const isSaving = ref(false);
   const error = ref<string | null>(null);
+
+  const listQuery = useSavedReportsQuery({ client, enabled, scope });
+  const createMutation = useCreateSavedReportMutation({ client, scope });
+  const updateMutation = useUpdateSavedReportMutation({ client, scope });
+  const deleteMutation = useDeleteSavedReportMutation({ client, scope });
+
+  const presets = computed<SavedReport[]>(() => listQuery.data.value ?? []);
+  const isLoading = computed(() => listQuery.isFetching.value);
 
   const activePreset = computed(
     () => presets.value.find((preset) => preset.id === activeId.value) ?? null,
@@ -58,25 +90,27 @@ export function useSavedReports({
 
   const canSave = computed(() => activeId.value !== null && isDirty.value);
 
-  /**
-   * Never rejects: presets are supplementary to the report, so a failed list
-   * surfaces as a message in the bar rather than taking the page down — and
-   * the mutation paths below await this without needing their own guard.
-   */
-  async function refresh(): Promise<void> {
-    isLoading.value = true;
-    try {
-      presets.value = await client.listSavedReports();
-      // The loaded preset may have been deleted by someone else.
-      if (activeId.value !== null && activePreset.value === null) {
-        clearActive();
-      }
-    } catch (caught) {
-      error.value = toMessage(caught);
-    } finally {
-      isLoading.value = false;
+  // A failed list is supplementary to the report, so surface it in the bar
+  // rather than letting the query error take the page down.
+  watch(
+    () => listQuery.error.value,
+    (caught) => {
+      if (caught) error.value = toMessage(caught);
+    },
+  );
+
+  // A refetch may drop the loaded preset — deleted by someone else, or a
+  // workspace switch re-keyed the query — so clear it instead of leaving a
+  // phantom active tab. `remove` clears its own delete synchronously; this
+  // covers the refetches it does not drive.
+  watch(presets, (list) => {
+    if (
+      activeId.value !== null &&
+      !list.some((preset) => preset.id === activeId.value)
+    ) {
+      clearActive();
     }
-  }
+  });
 
   function applyPreset(preset: SavedReport): void {
     const applied = applyConfigToState(preset.config, resolveOptions?.() ?? {});
@@ -95,6 +129,28 @@ export function useSavedReports({
   function clearActive(): void {
     activeId.value = null;
     loadedConfig.value = null;
+  }
+
+  /**
+   * Refetch the preset list — the bar's retry affordance after a failed load.
+   * Drops the loaded preset here too so the check is deterministic for callers
+   * that await it, not only through the refetch watcher.
+   */
+  async function refresh(): Promise<void> {
+    error.value = null;
+    const result = await listQuery.refetch();
+    if (result.isError) {
+      error.value = toMessage(result.error);
+      return;
+    }
+
+    const list = result.data ?? [];
+    if (
+      activeId.value !== null &&
+      !list.some((preset) => preset.id === activeId.value)
+    ) {
+      clearActive();
+    }
   }
 
   async function withSave<T>(action: () => Promise<T>): Promise<T | null> {
@@ -132,10 +188,9 @@ export function useSavedReports({
 
     return withSave(async () => {
       const config = requireCurrentConfig();
-      const saved = await client.updateSavedReport(id, { config });
-      // Refresh before adopting the result: refresh() drops an active id that
-      // is missing from the list, which would undo the activation below.
-      await refresh();
+      // The mutation invalidates the list on success, so the refetched preset is
+      // present by the time we adopt it as the loaded config below.
+      const saved = await updateMutation.mutateAsync({ id, input: { config } });
       activeId.value = saved.id;
       loadedConfig.value = saved.config;
       return saved;
@@ -145,8 +200,7 @@ export function useSavedReports({
   function saveAsNew(name: string): Promise<SavedReport | null> {
     return withSave(async () => {
       const config = requireCurrentConfig();
-      const created = await client.createSavedReport({ config, name });
-      await refresh();
+      const created = await createMutation.mutateAsync({ config, name });
       activeId.value = created.id;
       loadedConfig.value = created.config;
       return created;
@@ -154,18 +208,13 @@ export function useSavedReports({
   }
 
   function rename(id: string, name: string): Promise<SavedReport | null> {
-    return withSave(async () => {
-      const renamed = await client.updateSavedReport(id, { name });
-      await refresh();
-      return renamed;
-    });
+    return withSave(() => updateMutation.mutateAsync({ id, input: { name } }));
   }
 
   function remove(id: string): Promise<boolean | null> {
     return withSave(async () => {
-      await client.deleteSavedReport(id);
+      await deleteMutation.mutateAsync(id);
       if (activeId.value === id) clearActive();
-      await refresh();
       return true;
     });
   }
