@@ -2,13 +2,16 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { and, desc, eq } from 'drizzle-orm';
 import {
   savedReportConfigSchema,
+  timeReportGroupBySchema,
   type CreateSavedReportInput,
   type SavedReport,
+  type SavedReportConfig,
   type UpdateSavedReportInput,
 } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
@@ -28,6 +31,16 @@ import {
 type SavedReportRow = typeof savedReports.$inferSelect;
 
 /**
+ * Grouping dimensions that stored configs may carry under an old vocabulary.
+ * The report UI names the member dimension `member`; the API/persisted contract
+ * has always named it `user`, so an early preset that stored the UI word (before
+ * the client-side conversion existed) is repaired to `user` on read.
+ */
+const LEGACY_GROUPING_ALIASES: Record<string, string> = {
+  member: 'user',
+};
+
+/**
  * Report presets are workspace-shared: every admin and PM sees the same list
  * and may edit or delete any entry. `createdBy` is attribution only.
  *
@@ -37,6 +50,8 @@ type SavedReportRow = typeof savedReports.$inferSelect;
  */
 @Injectable()
 export class SavedReportsService {
+  private readonly logger = new Logger(SavedReportsService.name);
+
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
     private readonly members: MembersService,
@@ -51,7 +66,12 @@ export class SavedReportsService {
       .where(eq(savedReports.workspaceId, user.workspaceId))
       .orderBy(desc(savedReports.createdAt));
 
-    return rows.map((row) => this.toSavedReport(row));
+    // Read is resilient per row: a single preset with a config too corrupt to
+    // repair is dropped from the response (and logged), never allowed to fail
+    // the whole list for every admin/PM in the workspace.
+    return rows
+      .map((row) => this.toSavedReportOrNull(row))
+      .filter((report): report is SavedReport => report !== null);
   }
 
   async create(
@@ -159,17 +179,88 @@ export class SavedReportsService {
   }
 
   /**
-   * Config is re-validated on read, so a row written before the config shape
+   * Config is re-validated on read so a row written before the config shape
    * changed surfaces its defaults instead of reaching the client half-formed.
+   * Callers here (create/update) re-read a config they just validated, so the
+   * parse always succeeds; the resilient `toSavedReportOrNull` is used for the
+   * unfiltered list, where a stale row could be corrupt.
    */
   private toSavedReport(row: SavedReportRow): SavedReport {
+    return this.buildSavedReport(row, this.parseStoredConfig(row.config));
+  }
+
+  /** Read-side variant that repairs a stale config, or drops the row if it is
+   * corrupt beyond repair (logged), so one preset cannot fail the whole list. */
+  private toSavedReportOrNull(row: SavedReportRow): SavedReport | null {
+    const result = savedReportConfigSchema.safeParse(
+      this.repairStoredConfig(row.config),
+    );
+    if (!result.success) {
+      this.logger.warn({
+        event: 'saved_reports.config_unrepairable',
+        savedReportId: row.id,
+        workspaceId: row.workspaceId,
+        issues: result.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          code: issue.code,
+        })),
+      });
+      return null;
+    }
+    return this.buildSavedReport(row, result.data);
+  }
+
+  private buildSavedReport(
+    row: SavedReportRow,
+    config: SavedReportConfig,
+  ): SavedReport {
     return {
-      config: savedReportConfigSchema.parse(row.config),
+      config,
       createdAt: row.createdAt.toISOString(),
       createdBy: row.createdBy,
       id: row.id,
       name: row.name,
       updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  private parseStoredConfig(config: unknown): SavedReportConfig {
+    return savedReportConfigSchema.parse(this.repairStoredConfig(config));
+  }
+
+  /**
+   * Normalizes a stored config's `grouping` path so a stale value cannot fail
+   * validation: legacy dimension names are mapped forward (e.g. `member` →
+   * `user`), unknown levels are dropped, duplicates are removed, and an empty
+   * result falls back to the schema default (`["project"]`). Other fields are
+   * left untouched — the shared schema strips unknown keys and fills defaults.
+   */
+  private repairStoredConfig(config: unknown): unknown {
+    if (
+      typeof config !== 'object' ||
+      config === null ||
+      !('grouping' in config)
+    ) {
+      return config;
+    }
+    const grouping = (config as { grouping: unknown }).grouping;
+    if (!Array.isArray(grouping)) return config;
+
+    const repaired: string[] = [];
+    for (const level of grouping) {
+      const mapped =
+        typeof level === 'string'
+          ? (LEGACY_GROUPING_ALIASES[level] ?? level)
+          : level;
+      const parsed = timeReportGroupBySchema.safeParse(mapped);
+      if (parsed.success && !repaired.includes(parsed.data)) {
+        repaired.push(parsed.data);
+      }
+    }
+
+    return {
+      ...config,
+      grouping: repaired.length > 0 ? repaired : ['project'],
     };
   }
 }
