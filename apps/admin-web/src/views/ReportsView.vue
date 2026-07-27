@@ -10,6 +10,7 @@ import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import ReportsTable from '@/components/reports/ReportsTable.vue';
 import SavedReportsBar from '@/components/reports/SavedReportsBar.vue';
+import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useReportsData } from '@/composables/reports/useReportsData';
 import { useSavedReports } from '@/composables/reports/useSavedReports';
@@ -31,6 +32,7 @@ import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
+const { requireConfirmation } = useConfirmation();
 const { errorToast, successToast } = useToasts();
 const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
@@ -123,9 +125,25 @@ async function handleRenameReport(id: string, name: string): Promise<void> {
   if (renamed) successToast(`Renamed to "${renamed.name}".`);
 }
 
-async function handleDeleteReport(id: string): Promise<void> {
-  const removed = await savedReports.remove(id);
-  if (removed) successToast('Report deleted.');
+function handleDeleteReport(id: string): void {
+  // Presets are workspace-shared, so a delete removes them for every admin and
+  // PM — confirm first, matching the destructive-action rule other admin pages
+  // already follow.
+  const name = savedReports.presets.value.find(
+    (preset) => preset.id === id,
+  )?.name;
+
+  requireConfirmation(
+    name
+      ? `"${name}" will be deleted for everyone in this workspace. This action cannot be undone.`
+      : 'This report will be deleted for everyone in this workspace. This action cannot be undone.',
+    'Delete report?',
+    'Delete',
+    async () => {
+      const removed = await savedReports.remove(id);
+      if (removed) successToast('Report deleted.');
+    },
+  );
 }
 const tableRows = computed(() =>
   filterReportRows(rows.value, tableFilters.value),

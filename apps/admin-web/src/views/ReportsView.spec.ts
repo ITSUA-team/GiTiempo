@@ -15,13 +15,16 @@ import type {
 import { useAuthStore } from '@/stores/auth';
 
 const reportMocks = vi.hoisted(() => ({
+  deleteSavedReport: vi.fn(),
   downloadReportExport: vi.fn(
     (exportResult: { filename: string }) => exportResult.filename,
   ),
   errorToast: vi.fn(),
   exportCurrentReport: vi.fn(),
   infoToast: vi.fn(),
+  listSavedReports: vi.fn(),
   refresh: vi.fn(),
+  requireConfirmation: vi.fn(),
   state: undefined as unknown,
   successToast: vi.fn(),
 }));
@@ -42,7 +45,23 @@ vi.mock('@/composables/reports/useReportsData', () => ({
   useReportsData: () => reportMocks.state,
 }));
 
+vi.mock('@/composables/feedback/useConfirmation', () => ({
+  useConfirmation: () => ({
+    requireConfirmation: reportMocks.requireConfirmation,
+  }),
+}));
+
+vi.mock('@/services/admin-saved-reports-client', () => ({
+  getAdminSavedReportsClient: () => ({
+    createSavedReport: vi.fn(),
+    deleteSavedReport: reportMocks.deleteSavedReport,
+    listSavedReports: reportMocks.listSavedReports,
+    updateSavedReport: vi.fn(),
+  }),
+}));
+
 import ReportsView from './ReportsView.vue';
+import SavedReportsBar from '@/components/reports/SavedReportsBar.vue';
 
 const ReportsTableStub = defineComponent({
   name: 'ReportsTable',
@@ -113,6 +132,31 @@ const summary: ReportSummaryView = {
   topProjectName: 'Project Orion',
   topProjectSeconds: 7200,
   totalSeconds: 7200,
+};
+
+const savedReport = {
+  config: {
+    dateRange: {
+      dateFrom: '2026-07-01T00:00:00.000Z',
+      dateTo: '2026-07-15T00:00:00.000Z',
+      kind: 'absolute' as const,
+    },
+    filters: {
+      activity: 'any' as const,
+      billable: 'any' as const,
+      billableShare: 'any' as const,
+      global: '',
+      hours: 'any' as const,
+    },
+    grouping: ['project' as const],
+    memberId: null,
+    projectId: null,
+  },
+  createdAt: '2026-07-01T10:00:00.000Z',
+  createdBy: null,
+  id: 'preset-1',
+  name: 'Monthly billing',
+  updatedAt: '2026-07-01T10:00:00.000Z',
 };
 
 function createReportState({
@@ -198,6 +242,11 @@ describe('ReportsView', () => {
     reportMocks.infoToast.mockClear();
     reportMocks.refresh.mockClear();
     reportMocks.successToast.mockClear();
+    reportMocks.requireConfirmation.mockReset();
+    reportMocks.deleteSavedReport.mockReset();
+    reportMocks.deleteSavedReport.mockResolvedValue(undefined);
+    reportMocks.listSavedReports.mockReset();
+    reportMocks.listSavedReports.mockResolvedValue([]);
     reportMocks.state = createReportState();
   });
 
@@ -447,5 +496,33 @@ describe('ReportsView', () => {
     expect(reportMocks.successToast).toHaveBeenCalledWith(
       'Exported time-report-2026-05.pdf.',
     );
+  });
+
+  it('confirms before deleting a workspace-shared preset', async () => {
+    reportMocks.listSavedReports.mockResolvedValue([savedReport]);
+
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    wrapper.findComponent(SavedReportsBar).vm.$emit('delete', 'preset-1');
+    await flushPromises();
+
+    expect(reportMocks.requireConfirmation).toHaveBeenCalledWith(
+      expect.stringContaining('Monthly billing'),
+      'Delete report?',
+      'Delete',
+      expect.any(Function),
+    );
+    // The preset is left untouched until the user accepts the confirmation.
+    expect(reportMocks.deleteSavedReport).not.toHaveBeenCalled();
+
+    const accept = reportMocks.requireConfirmation.mock.calls[0]?.[3] as
+      | (() => Promise<void>)
+      | undefined;
+    await accept?.();
+    await flushPromises();
+
+    expect(reportMocks.deleteSavedReport).toHaveBeenCalledWith('preset-1');
+    expect(reportMocks.successToast).toHaveBeenCalledWith('Report deleted.');
   });
 });
