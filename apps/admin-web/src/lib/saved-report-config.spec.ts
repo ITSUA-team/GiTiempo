@@ -8,6 +8,7 @@ import {
   isSameSavedReportConfig,
   toApiGrouping,
   toUiGrouping,
+  tryBuildConfigFromState,
   type SavedReportState,
 } from './saved-report-config';
 
@@ -130,6 +131,38 @@ describe('buildConfigFromState', () => {
     expect(config.filters).toMatchObject({ global: 'orion', hours: 'gte8' });
     expect(config.projectId).toBe(PROJECT_ID);
     expect(config.memberId).toBe(MEMBER_ID);
+  });
+
+  it('throws instead of silently substituting a default for an invalid state', () => {
+    const overLong = makeState({
+      filters: { ...makeState().filters, global: 'x'.repeat(201) },
+    });
+
+    expect(() => buildConfigFromState(overLong, NOW)).toThrow();
+  });
+});
+
+describe('tryBuildConfigFromState', () => {
+  it('returns the built config when the state is valid', () => {
+    const config = tryBuildConfigFromState(makeState(), NOW);
+
+    expect(config?.dateRange.kind).toBe('absolute');
+  });
+
+  it('returns null when a filter overflows the contract instead of throwing', () => {
+    const overLong = makeState({
+      filters: { ...makeState().filters, global: 'x'.repeat(201) },
+    });
+
+    expect(tryBuildConfigFromState(overLong, NOW)).toBeNull();
+  });
+
+  it('returns null for an incomplete date range', () => {
+    const partial = makeState({
+      dateRange: [new Date('2026-05-01T00:00:00.000Z'), null],
+    });
+
+    expect(tryBuildConfigFromState(partial, NOW)).toBeNull();
   });
 });
 

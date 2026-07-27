@@ -14,8 +14,8 @@ import { useToasts } from '@/composables/feedback/useToasts';
 import { useReportsData } from '@/composables/reports/useReportsData';
 import { useSavedReports } from '@/composables/reports/useSavedReports';
 import {
-  buildConfigFromState,
   describeSavedReportConfig,
+  tryBuildConfigFromState,
 } from '@/lib/saved-report-config';
 import { downloadReportExport } from '@/lib/report-download';
 import {
@@ -62,16 +62,17 @@ const tableFilters = ref(createDefaultReportTableFilters());
 const exporting = ref(false);
 
 const currentSavedReportConfig = computed(() =>
-  buildConfigFromState({
+  tryBuildConfigFromState({
     dateRange: dateRange.value,
     filters: tableFilters.value,
     grouping: grouping.value,
   }),
 );
 
-const savedReportSummary = computed(() =>
-  describeSavedReportConfig(currentSavedReportConfig.value),
-);
+const savedReportSummary = computed(() => {
+  const config = currentSavedReportConfig.value;
+  return config === null ? [] : describeSavedReportConfig(config);
+});
 
 const savedReports = useSavedReports({
   currentConfig: currentSavedReportConfig,

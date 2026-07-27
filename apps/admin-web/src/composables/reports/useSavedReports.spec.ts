@@ -41,7 +41,7 @@ function makePreset(overrides: Partial<SavedReport> = {}): SavedReport {
 }
 
 function setup(presets: SavedReport[] = [makePreset()]) {
-  const current = ref<SavedReportConfig>(makeConfig());
+  const current = ref<SavedReportConfig | null>(makeConfig());
   const applied: unknown[] = [];
 
   const client = {
@@ -172,6 +172,17 @@ describe('useSavedReports dirty state', () => {
 
     expect(saved.isDirty.value).toBe(true);
   });
+
+  it('reads as not dirty while the current state cannot be built', async () => {
+    const { current, saved } = setup();
+    await saved.refresh();
+    saved.selectPreset('preset-1');
+
+    current.value = null;
+
+    expect(saved.isDirty.value).toBe(false);
+    expect(saved.canSave.value).toBe(false);
+  });
 });
 
 describe('useSavedReports mutations', () => {
@@ -196,6 +207,30 @@ describe('useSavedReports mutations', () => {
 
     expect(result).toBeNull();
     expect(client.updateSavedReport).not.toHaveBeenCalled();
+  });
+
+  it('refuses to save an invalid current state and surfaces an error', async () => {
+    const { client, current, saved } = setup();
+    await saved.refresh();
+    saved.selectPreset('preset-1');
+    current.value = null;
+
+    const result = await saved.save();
+
+    expect(result).toBeNull();
+    expect(client.updateSavedReport).not.toHaveBeenCalled();
+    expect(saved.error.value).toBeTruthy();
+  });
+
+  it('refuses to save-as-new from an invalid current state and surfaces an error', async () => {
+    const { client, current, saved } = setup();
+    current.value = null;
+
+    const result = await saved.saveAsNew('Anything');
+
+    expect(result).toBeNull();
+    expect(client.createSavedReport).not.toHaveBeenCalled();
+    expect(saved.error.value).toBeTruthy();
   });
 
   it('creates and activates a preset on save as new', async () => {

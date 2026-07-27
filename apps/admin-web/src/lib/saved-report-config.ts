@@ -83,7 +83,10 @@ export function buildConfigFromState(
     kind: 'absolute',
   };
 
-  const result = savedReportConfigSchema.safeParse({
+  // Parse, not safeParse: an invalid page state must surface, never be quietly
+  // saved as a substituted default. Live UI calls tryBuildConfigFromState so the
+  // throw becomes an absent preset instead of a render crash.
+  return savedReportConfigSchema.parse({
     dateRange,
     filters: {
       activity: state.filters.activity,
@@ -96,21 +99,23 @@ export function buildConfigFromState(
     memberId: state.filters.memberId,
     projectId: state.filters.projectId,
   });
+}
 
-  if (result.success) return result.data;
-
-  const [defaultStart, defaultEnd] = defaultDateRange ?? [];
-  if (!defaultStart || !defaultEnd) {
-    throw new Error('A saved report requires a complete date range.');
+/**
+ * Live-UI variant of {@link buildConfigFromState}: returns null instead of
+ * throwing when the current page state cannot be a valid preset — an incomplete
+ * or inverted date range, or an over-long search — so a reactive computed hides
+ * the preset affordances rather than crashing the render.
+ */
+export function tryBuildConfigFromState(
+  state: SavedReportState,
+  now = new Date(),
+): SavedReportConfig | null {
+  try {
+    return buildConfigFromState(state, now);
+  } catch {
+    return null;
   }
-
-  return savedReportConfigSchema.parse({
-    dateRange: {
-      dateFrom: toIsoDate(defaultStart),
-      dateTo: toIsoDate(defaultEnd),
-      kind: 'absolute',
-    },
-  });
 }
 
 function keepAvailable(

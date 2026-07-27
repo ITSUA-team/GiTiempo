@@ -14,8 +14,11 @@ import {
 
 interface UseSavedReportsOptions {
   client?: AdminSavedReportsClient;
-  /** The config describing what the page currently shows. */
-  currentConfig: ComputedRef<SavedReportConfig>;
+  /**
+   * The config describing what the page currently shows, or null when the
+   * current state cannot be a valid preset (e.g. an incomplete date range).
+   */
+  currentConfig: ComputedRef<SavedReportConfig | null>;
   /** Applies a restored preset onto the page state. */
   onApply: (applied: AppliedConfig) => void;
   /** Option scope used to drop identities the viewer can no longer choose. */
@@ -45,9 +48,12 @@ export function useSavedReports({
   );
 
   const isDirty = computed(() => {
-    if (loadedConfig.value === null) return false;
+    const current = currentConfig.value;
+    // An unbuildable state (null) is not a savable change, so it reads as clean
+    // rather than a dirty preset that Save could never persist.
+    if (loadedConfig.value === null || current === null) return false;
 
-    return !isSameSavedReportConfig(loadedConfig.value, currentConfig.value);
+    return !isSameSavedReportConfig(loadedConfig.value, current);
   });
 
   const canSave = computed(() => activeId.value !== null && isDirty.value);
@@ -104,15 +110,29 @@ export function useSavedReports({
     }
   }
 
+  /**
+   * The current config, or a thrown error that withSave turns into the bar's
+   * inline message — a preset must never be written from an unbuildable state.
+   */
+  function requireCurrentConfig(): SavedReportConfig {
+    const config = currentConfig.value;
+    if (config === null) {
+      throw new Error(
+        'This report can’t be saved as it is. Check the date range and filters.',
+      );
+    }
+
+    return config;
+  }
+
   /** Overwrites the loaded preset with what the page currently shows. */
   function save(): Promise<SavedReport | null> {
     const id = activeId.value;
     if (id === null) return Promise.resolve(null);
 
     return withSave(async () => {
-      const saved = await client.updateSavedReport(id, {
-        config: currentConfig.value,
-      });
+      const config = requireCurrentConfig();
+      const saved = await client.updateSavedReport(id, { config });
       // Refresh before adopting the result: refresh() drops an active id that
       // is missing from the list, which would undo the activation below.
       await refresh();
@@ -124,10 +144,8 @@ export function useSavedReports({
 
   function saveAsNew(name: string): Promise<SavedReport | null> {
     return withSave(async () => {
-      const created = await client.createSavedReport({
-        config: currentConfig.value,
-        name,
-      });
+      const config = requireCurrentConfig();
+      const created = await client.createSavedReport({ config, name });
       await refresh();
       activeId.value = created.id;
       loadedConfig.value = created.config;

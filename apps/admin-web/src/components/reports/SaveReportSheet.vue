@@ -186,7 +186,11 @@ function optionClass(selected: boolean, disabled: boolean): string {
         />
       </div>
 
-      <div class="flex flex-col gap-2">
+      <div
+        v-if="summary.length > 0"
+        class="flex flex-col gap-2"
+        data-testid="save-sheet-summary"
+      >
         <span class="text-text-dark text-[13px] font-semibold">
           This report saves
         </span>
