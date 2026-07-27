@@ -44,7 +44,7 @@ A preset configuration MUST record an absolute report date range, the ordered gr
 
 #### Scenario: Invalid configuration is rejected
 - **GIVEN** an authenticated admin or PM creates or updates a preset
-- **WHEN** the configuration is missing its date range, carries an unknown grouping dimension, or uses a retired relative date range shape
+- **WHEN** the configuration is missing its date range, carries an unknown grouping dimension, uses a retired relative date range shape, or carries a column filter value outside its current vocabulary
 - **THEN** the backend rejects the request as a validation error
 - **AND** no preset is created or modified
 

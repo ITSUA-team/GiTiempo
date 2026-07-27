@@ -72,17 +72,28 @@ export function useSavedReports({
     }
   }
 
-  function applyPreset(preset: SavedReport): void {
-    const applied = applyConfigToState(preset.config, resolveOptions?.() ?? {});
+  function applyPreset(preset: SavedReport, config: SavedReportConfig): void {
+    const applied = applyConfigToState(config, resolveOptions?.() ?? {});
 
     activeId.value = preset.id;
-    loadedConfig.value = preset.config;
+    loadedConfig.value = config;
     onApply(applied);
   }
 
   function selectPreset(id: string): void {
     const preset = presets.value.find((candidate) => candidate.id === id);
-    if (preset) applyPreset(preset);
+    if (!preset) return;
+
+    // A preset whose stored config could not be loaded is listed as
+    // unavailable; it cannot be opened, so tell the user to recreate it rather
+    // than silently doing nothing.
+    if (preset.config === null) {
+      error.value =
+        'This saved report could not be loaded. Delete it and save a new one.';
+      return;
+    }
+
+    applyPreset(preset, preset.config);
   }
 
   /** Drops the active preset without touching page state. */

@@ -22,7 +22,7 @@ const validConfig: PresetConfig = {
   },
   filters: {
     activity: 'today',
-    billable: 'withBillable',
+    billable: 'gte8',
     billableShare: 'gte90',
     global: 'orion',
     hours: 'gte8',

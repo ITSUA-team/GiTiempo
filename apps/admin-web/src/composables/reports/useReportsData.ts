@@ -16,9 +16,7 @@ import {
   adminMembersClient,
   type AdminMembersClient,
 } from '@/services/admin-members-client';
-import type { TimeReportExportFormat } from '@gitiempo/shared';
 import type { AdminServerStateScope } from '@/lib/query-keys';
-import type { ReportSetupFilters } from '@/lib/report-view-model';
 
 import { useReportExport } from './useReportExport';
 import { useReportFilters } from './useReportFilters';
@@ -81,7 +79,6 @@ export function useReportsData({
   const reportExport = useReportExport({
     enabled,
     reportsClient,
-    scope,
   });
 
   useReportRefreshDebounce({
@@ -115,20 +112,11 @@ export function useReportsData({
     await rowsData.refetchRows();
   }
 
-  /**
-   * Export scope is the caller's to state explicitly. A default here once read
-   * dead setup state and would have exported an unfiltered report.
-   */
-  async function exportCurrentReport(
-    exportFilters: ReportSetupFilters,
-    format?: TimeReportExportFormat,
-  ) {
-    return reportExport.exportCurrentReport(exportFilters, format);
-  }
-
   return {
     dateRange: filters.dateRange,
-    exportCurrentReport,
+    // CSV is built client-side; only the PDF renders through the backend, from
+    // the on-screen document the view builds.
+    exportReportPdf: reportExport.exportReportPdf,
     grouping: filters.grouping,
     initialLoaded: rowsData.initialLoaded,
     isEmpty: rowsData.isEmpty,
