@@ -54,6 +54,10 @@ const overflowItems = computed(() => [
 ]);
 
 function metaLine(preset: SavedReport): string {
+  // A preset whose stored config could not be loaded arrives with a null
+  // config: list it as unavailable rather than describing settings it lacks.
+  if (preset.config === null) return 'Unavailable · needs repair';
+
   return describeSavedReportConfig(preset.config)
     .slice(0, 2)
     .map((item) => item.label)
@@ -120,11 +124,18 @@ function toggleOverflow(event: Event, id: string): void {
           :data-testid="`saved-sheet-row-${preset.id}`"
         >
           <button
-            class="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+            class="flex min-w-0 flex-1 items-center gap-2.5 text-left disabled:cursor-default"
             type="button"
+            :disabled="preset.config === null"
             @click="selectPreset(preset.id)"
           >
             <i
+              v-if="preset.config === null"
+              aria-hidden="true"
+              class="pi pi-exclamation-triangle text-destructive shrink-0 text-[16px]"
+            />
+            <i
+              v-else
               aria-hidden="true"
               class="pi pi-bookmark shrink-0 text-[16px]"
               :class="preset.id === activeId ? 'text-brand' : 'text-text-muted'"
@@ -133,7 +144,10 @@ function toggleOverflow(event: Event, id: string): void {
               <span class="text-text-dark truncate text-[14px] font-semibold">
                 {{ preset.name }}
               </span>
-              <span class="text-text-muted truncate text-[12px]">
+              <span
+                class="truncate text-[12px]"
+                :class="preset.config === null ? 'text-destructive' : 'text-text-muted'"
+              >
                 {{ metaLine(preset) }}
               </span>
             </span>

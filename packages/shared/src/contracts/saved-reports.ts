@@ -77,7 +77,11 @@ export const savedReportNameSchema = z.string().trim().min(1).max(120);
 export const savedReportSchema = z.object({
   id: z.uuid(),
   name: z.string(),
-  config: savedReportConfigSchema,
+  // Null when the stored config could not be loaded (a corrupt row that
+  // repair could not salvage). The preset is still listed — every workspace
+  // preset must be returned — but marked unavailable so it reads as "needs
+  // repair" instead of silently vanishing. Writes still require a valid config.
+  config: savedReportConfigSchema.nullable(),
   createdBy: z.uuid().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),

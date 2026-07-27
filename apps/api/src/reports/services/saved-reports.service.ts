@@ -66,12 +66,12 @@ export class SavedReportsService {
       .where(eq(savedReports.workspaceId, user.workspaceId))
       .orderBy(desc(savedReports.createdAt));
 
-    // Read is resilient per row: a single preset with a config too corrupt to
-    // repair is dropped from the response (and logged), never allowed to fail
-    // the whole list for every admin/PM in the workspace.
-    return rows
-      .map((row) => this.toSavedReportOrNull(row))
-      .filter((report): report is SavedReport => report !== null);
+    // Read is resilient per row: a preset with a config too corrupt to repair
+    // is returned as unavailable (config null, logged) rather than dropped, so
+    // every workspace preset stays listed — the client shows it as needing
+    // repair instead of it silently vanishing — and one bad row never fails the
+    // whole list for every admin/PM.
+    return rows.map((row) => this.toSavedReportOrUnavailable(row));
   }
 
   async create(
@@ -182,21 +182,27 @@ export class SavedReportsService {
    * Config is re-validated on read so a row written before the config shape
    * changed surfaces its defaults instead of reaching the client half-formed.
    * Callers here (create/update) re-read a config they just validated, so the
-   * parse always succeeds; the resilient `toSavedReportOrNull` is used for the
-   * unfiltered list, where a stale row could be corrupt.
+   * parse always succeeds; the resilient `toSavedReportOrUnavailable` is used
+   * for the unfiltered list, where a stale row could be corrupt.
    */
   private toSavedReport(row: SavedReportRow): SavedReport {
     return this.buildSavedReport(row, this.parseStoredConfig(row.config));
   }
 
-  /** Read-side variant that repairs a stale config, or drops the row if it is
-   * corrupt beyond repair (logged), so one preset cannot fail the whole list. */
-  private toSavedReportOrNull(row: SavedReportRow): SavedReport | null {
+  /**
+   * Read-side variant that repairs a stale config, or — when it is corrupt
+   * beyond repair — returns the preset with a null config and logs the failure
+   * at error level. The row is kept, not dropped, so the workspace still sees
+   * every preset and a corrupt one reads as needing repair rather than as lost
+   * data. Errors (not warnings) because migration 0017 should have normalised
+   * all valid legacy data, so a survivor is unexpected and worth surfacing.
+   */
+  private toSavedReportOrUnavailable(row: SavedReportRow): SavedReport {
     const result = savedReportConfigSchema.safeParse(
       this.repairStoredConfig(row.config),
     );
     if (!result.success) {
-      this.logger.warn({
+      this.logger.error({
         event: 'saved_reports.config_unrepairable',
         savedReportId: row.id,
         workspaceId: row.workspaceId,
@@ -205,14 +211,14 @@ export class SavedReportsService {
           code: issue.code,
         })),
       });
-      return null;
+      return this.buildSavedReport(row, null);
     }
     return this.buildSavedReport(row, result.data);
   }
 
   private buildSavedReport(
     row: SavedReportRow,
-    config: SavedReportConfig,
+    config: SavedReportConfig | null,
   ): SavedReport {
     return {
       config,

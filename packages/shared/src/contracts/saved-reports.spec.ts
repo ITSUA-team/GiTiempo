@@ -3,6 +3,7 @@ import {
   createSavedReportSchema,
   savedReportConfigSchema,
   savedReportDateRangeSchema,
+  savedReportSchema,
   updateSavedReportSchema,
 } from './saved-reports.js';
 
@@ -79,6 +80,28 @@ describe('savedReportConfigSchema', () => {
     });
     expect(parsed.filters.hours).toBe('any');
     expect(parsed.filters.billable).toBe('any');
+  });
+});
+
+describe('savedReportSchema', () => {
+  const base = {
+    id: '00000000-0000-4000-8000-000000000001',
+    name: 'Monthly billing',
+    createdBy: null,
+    createdAt: '2026-07-01T10:00:00.000Z',
+    updatedAt: '2026-07-01T10:00:00.000Z',
+  };
+
+  it('accepts a preset with a valid config', () => {
+    const parsed = savedReportSchema.parse({ ...base, config: { dateRange } });
+
+    expect(parsed.config?.dateRange).toEqual(dateRange);
+  });
+
+  it('accepts a preset whose stored config could not be loaded (null)', () => {
+    const parsed = savedReportSchema.parse({ ...base, config: null });
+
+    expect(parsed.config).toBeNull();
   });
 });
 

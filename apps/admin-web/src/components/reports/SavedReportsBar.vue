@@ -178,7 +178,12 @@ function mobilePillClass(isActive: boolean): string {
             @click="emit('select', preset.id)"
           >
             <i
-              v-if="preset.id === activeId"
+              v-if="preset.config === null"
+              class="pi pi-exclamation-triangle text-destructive text-[11px]"
+              aria-hidden="true"
+            />
+            <i
+              v-else-if="preset.id === activeId"
               class="pi pi-bookmark-fill text-[12px]"
               aria-hidden="true"
             />
@@ -337,7 +342,12 @@ function mobilePillClass(isActive: boolean): string {
           @click="emit('select', preset.id)"
         >
           <i
-            v-if="preset.id === activeId"
+            v-if="preset.config === null"
+            class="pi pi-exclamation-triangle text-destructive text-[11px]"
+            aria-hidden="true"
+          />
+          <i
+            v-else-if="preset.id === activeId"
             class="pi pi-bookmark text-[12px]"
             aria-hidden="true"
           />
