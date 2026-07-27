@@ -1,0 +1,67 @@
+---
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+const siteUrl = new URL(import.meta.env.PUBLIC_SITE_URL);
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
+const socialImageUrl = new URL('/social-card.svg', siteUrl).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#1a1a1a" />
+    <link rel="stylesheet" href="/landing.css" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <a
+      class="sr-only z-50 rounded-md bg-surface-primary px-4 py-3 font-bold text-text-dark focus:not-sr-only focus:fixed focus:left-6 focus:top-6"
+      href="#main-content"
+    >
+      Skip to main content
+    </a>
+    <slot />
+    <script>
+      const activeTimers = document.querySelectorAll<HTMLElement>('[data-live-timer]');
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      let elapsedSeconds = 1 * 60 * 60 + 42 * 60 + 18;
+
+      function formatElapsedTime(totalSeconds: number) {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
+      }
+
+      if (activeTimers.length > 0 && !reducedMotion.matches) {
+        window.setInterval(() => {
+          elapsedSeconds += 1;
+          const elapsedTime = formatElapsedTime(elapsedSeconds);
+
+          activeTimers.forEach((timer) => {
+            timer.textContent = elapsedTime;
+          });
+        }, 1000);
+      }
+    </script>
+  </body>
+</html>
