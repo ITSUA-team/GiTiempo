@@ -8,6 +8,7 @@ Time-tracking application for teams working with GitHub Issues and Projects.
 /
 ├── apps/
 │   ├── api/              ← NestJS backend (@gitiempo/api)
+│   ├── landing-web/      ← Astro public landing site (landing-web)
 │   ├── user-web/         ← Vue 3 SPA for members (user-web)
 │   ├── admin-web/        ← Vue 3 SPA for admins + PMs (admin-web)
 │   └── chrome-ext/       ← Chrome extension (planned)
@@ -56,6 +57,7 @@ Run a single app:
 
 ```bash
 pnpm --filter @gitiempo/api dev
+pnpm --filter landing-web dev
 pnpm --filter user-web dev
 pnpm --filter admin-web dev
 ```
@@ -70,6 +72,7 @@ Build a single app:
 
 ```bash
 pnpm --filter @gitiempo/api build
+pnpm --filter landing-web build
 pnpm --filter user-web build
 ```
 
@@ -93,6 +96,10 @@ pnpm test:e2e           # Run e2e tests through the configured workspace task
 ```
 
 API integration/e2e automation must use an isolated PostgreSQL database, not a developer, staging, or production database. See [docs/testing.md](docs/testing.md).
+
+## Deployment
+
+The canonical staging deployment and rollback guide is [docs/deployment.md](docs/deployment.md). Implementation and local verification do not publish a live deployment.
 
 ## Working with Packages
 
