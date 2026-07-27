@@ -1,7 +1,15 @@
 import { z } from 'zod';
 import {
+  savedReportActivityFilterSchema,
+  savedReportBillableFilterSchema,
+  savedReportBillableShareFilterSchema,
+  savedReportHoursFilterSchema,
   timeReportGroupBySchema,
   timeReportTotalsSchema,
+  type SavedReportActivityFilter,
+  type SavedReportBillableFilter,
+  type SavedReportBillableShareFilter,
+  type SavedReportHoursFilter,
   type TimeReportGroupBy,
 } from '@gitiempo/shared';
 
@@ -20,33 +28,13 @@ export const reportDateRangeSchema = z
   );
 export type ReportDateRange = z.infer<typeof reportDateRangeSchema>;
 
-export const reportHoursFilterSchema = z.enum(['any', 'gt0', 'gte8', 'gte40']);
-export type ReportHoursFilter = z.infer<typeof reportHoursFilterSchema>;
-
-export const reportBillableFilterSchema = z.enum([
-  'any',
-  'withBillable',
-  'withoutBillable',
-]);
-export type ReportBillableFilter = z.infer<typeof reportBillableFilterSchema>;
-
-export const reportBillableShareFilterSchema = z.enum([
-  'any',
-  'below50',
-  'gte50',
-  'gte90',
-]);
-export type ReportBillableShareFilter = z.infer<
-  typeof reportBillableShareFilterSchema
->;
-
-export const reportActivityFilterSchema = z.enum([
-  'any',
-  'today',
-  'last7',
-  'last30',
-]);
-export type ReportActivityFilter = z.infer<typeof reportActivityFilterSchema>;
+// Column-filter vocabularies are owned by the shared saved-report contract, so
+// the table filters and a saved preset validate against one definition. Only
+// the local UI type names for that shared vocabulary stay here.
+export type ReportHoursFilter = SavedReportHoursFilter;
+export type ReportBillableFilter = SavedReportBillableFilter;
+export type ReportBillableShareFilter = SavedReportBillableShareFilter;
+export type ReportActivityFilter = SavedReportActivityFilter;
 
 export const reportFilterOptionSchema = z.object({
   label: z.string(),
@@ -179,11 +167,11 @@ export const reportSummaryViewSchema = timeReportTotalsSchema.extend({
 export type ReportSummaryView = z.infer<typeof reportSummaryViewSchema>;
 
 export const reportTableFiltersSchema = z.object({
-  activity: reportActivityFilterSchema,
-  billable: reportBillableFilterSchema,
-  billableShare: reportBillableShareFilterSchema,
+  activity: savedReportActivityFilterSchema,
+  billable: savedReportBillableFilterSchema,
+  billableShare: savedReportBillableShareFilterSchema,
   global: z.string(),
-  hours: reportHoursFilterSchema,
+  hours: savedReportHoursFilterSchema,
   memberId: z.string().nullable(),
   projectId: z.string().nullable(),
 });
