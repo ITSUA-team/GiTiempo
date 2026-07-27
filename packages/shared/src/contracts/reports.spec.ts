@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  reportDocumentSchema,
   timeReportRequestSchema,
   timeReportResponseSchema,
 } from "./reports.js";
@@ -220,5 +221,53 @@ describe("timeReportResponseSchema", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("reportDocumentSchema", () => {
+  const validDocument = () => ({
+    masthead: { wordmark: "GiTiempo", tag: "TIME REPORT" },
+    title: "Time report",
+    period: "May 2026 · Acme",
+    filters: "Projects: All · Members: All · Grouping: Project",
+    stats: [{ label: "TRACKED HOURS", value: "10h 00m" }],
+    columns: ["NAME", "HOURS", "BILLABLE", "BILL %"],
+    rows: [
+      {
+        detail: null,
+        label: "Project Orion",
+        level: 0,
+        isLeaf: false,
+        hours: "10h 00m",
+        billable: "08h 00m",
+        share: "80%",
+      },
+    ],
+    total: { label: "Total", hours: "10h 00m", billable: "08h 00m", share: "80%" },
+    footerNote: "Generated with GiTiempo · May 1, 2026",
+  });
+
+  it("accepts a document with the four renderer columns", () => {
+    const result = reportDocumentSchema.safeParse(validDocument());
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a column count the renderer cannot lay out", () => {
+    // The PDF renderer emits four fixed cells per row and four column widths;
+    // a fifth header column would desync the table and throw in pdfmake, so the
+    // schema must reject it before the document ever reaches the renderer.
+    const tooMany = reportDocumentSchema.safeParse({
+      ...validDocument(),
+      columns: ["NAME", "HOURS", "BILLABLE", "BILL %", "EXTRA"],
+    });
+    const tooFew = reportDocumentSchema.safeParse({
+      ...validDocument(),
+      columns: ["NAME", "HOURS", "BILLABLE"],
+    });
+
+    expect(tooMany.success).toBe(false);
+    expect(tooMany.error?.issues[0]?.path[0]).toBe("columns");
+    expect(tooFew.success).toBe(false);
   });
 });

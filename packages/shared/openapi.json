@@ -6224,12 +6224,25 @@
                 }
               },
               "columns": {
-                "maxItems": 8,
                 "type": "array",
-                "items": {
-                  "type": "string",
-                  "maxLength": 40
-                }
+                "prefixItems": [
+                  {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  {
+                    "type": "string",
+                    "maxLength": 40
+                  }
+                ]
               },
               "rows": {
                 "maxItems": 5000,

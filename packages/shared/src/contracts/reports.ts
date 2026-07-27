@@ -187,7 +187,15 @@ export const reportDocumentSchema = z
     period: z.string().max(200),
     filters: z.string().max(400),
     stats: z.array(reportDocumentStatSchema).max(8),
-    columns: z.array(z.string().max(40)).max(8),
+    // Exactly the four columns the renderer lays out (name, hours, billable,
+    // share); rows and totals are fixed at four cells, so any other count
+    // would desync the header from the body and crash the PDF renderer.
+    columns: z.tuple([
+      z.string().max(40),
+      z.string().max(40),
+      z.string().max(40),
+      z.string().max(40),
+    ]),
     rows: z.array(reportDocumentRowSchema).max(5000),
     total: reportDocumentTotalSchema,
     footerNote: z.string().max(200),
