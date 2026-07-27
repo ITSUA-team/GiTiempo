@@ -178,6 +178,15 @@ export const reportDocumentTotalSchema = z
   })
   .strict();
 
+// The report table columns, in the order the renderer lays them out. A fixed
+// vocabulary, so a document cannot carry an unknown column label.
+export const reportDocumentColumnSchema = z.enum([
+  "NAME",
+  "HOURS",
+  "BILLABLE",
+  "BILL %",
+]);
+
 export const reportDocumentSchema = z
   .object({
     masthead: z
@@ -191,10 +200,10 @@ export const reportDocumentSchema = z
     // share); rows and totals are fixed at four cells, so any other count
     // would desync the header from the body and crash the PDF renderer.
     columns: z.tuple([
-      z.string().max(40),
-      z.string().max(40),
-      z.string().max(40),
-      z.string().max(40),
+      reportDocumentColumnSchema,
+      reportDocumentColumnSchema,
+      reportDocumentColumnSchema,
+      reportDocumentColumnSchema,
     ]),
     rows: z.array(reportDocumentRowSchema).max(5000),
     total: reportDocumentTotalSchema,

@@ -6228,19 +6228,39 @@
                 "prefixItems": [
                   {
                     "type": "string",
-                    "maxLength": 40
+                    "enum": [
+                      "NAME",
+                      "HOURS",
+                      "BILLABLE",
+                      "BILL %"
+                    ]
                   },
                   {
                     "type": "string",
-                    "maxLength": 40
+                    "enum": [
+                      "NAME",
+                      "HOURS",
+                      "BILLABLE",
+                      "BILL %"
+                    ]
                   },
                   {
                     "type": "string",
-                    "maxLength": 40
+                    "enum": [
+                      "NAME",
+                      "HOURS",
+                      "BILLABLE",
+                      "BILL %"
+                    ]
                   },
                   {
                     "type": "string",
-                    "maxLength": 40
+                    "enum": [
+                      "NAME",
+                      "HOURS",
+                      "BILLABLE",
+                      "BILL %"
+                    ]
                   }
                 ]
               },

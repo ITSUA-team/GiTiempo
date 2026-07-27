@@ -270,4 +270,16 @@ describe("reportDocumentSchema", () => {
     expect(tooMany.error?.issues[0]?.path[0]).toBe("columns");
     expect(tooFew.success).toBe(false);
   });
+
+  it("rejects an unknown column label", () => {
+    // Columns are a fixed vocabulary, so a valid count carrying an unrecognized
+    // label is still rejected — the schema no longer accepts arbitrary strings.
+    const result = reportDocumentSchema.safeParse({
+      ...validDocument(),
+      columns: ["PROJECT", "HOURS", "BILLABLE", "BILL %"],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path[0]).toBe("columns");
+  });
 });
