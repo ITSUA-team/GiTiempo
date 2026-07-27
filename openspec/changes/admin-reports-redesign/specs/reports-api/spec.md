@@ -2,7 +2,7 @@
 
 ### Requirement: Time Reports Aggregate By Project Task Or User
 
-The backend MUST accept report requests as a validated JSON body of named properties rather than query-string parameters, rejecting any property outside the contract. It MUST support report grouping by an ordered `groupBy` array of one to four unique dimensions drawn from `project`, `task`, and `user`, with `project` as the default grouping. Single-dimension paths MUST keep the same aggregation behavior as the previous single-value `groupBy`. For multi-dimension paths, the backend MUST return one aggregate leaf row per distinct combination of the requested dimensions, and each row MUST carry the identity context for every dimension on the requested path so clients can assemble the hierarchy and derive per-level subtotals.
+The backend MUST accept report requests as a validated JSON body of named properties rather than query-string parameters, rejecting any property outside the contract. It MUST support report grouping by an ordered `groupBy` array of one to four unique dimensions drawn from `project`, `task`, `user`, and `billable`, with `project` as the default grouping. The `billable` dimension is not an entity: it splits a level into a `billable` and a `nonBillable` bucket by whether entries are billable, and a `billable`-grouped row MUST carry that bucket as its identity for the dimension rather than an entity id. Single-dimension paths MUST keep the same aggregation behavior as the previous single-value `groupBy`. For multi-dimension paths, the backend MUST return one aggregate leaf row per distinct combination of the requested dimensions, and each row MUST carry the identity context for every dimension on the requested path so clients can assemble the hierarchy and derive per-level subtotals.
 
 #### Scenario: Report groups by project by default
 - **GIVEN** an authenticated admin or PM requests a time report without `groupBy`
@@ -26,6 +26,12 @@ The backend MUST accept report requests as a validated JSON body of named proper
 - **WHEN** matching completed time entries exist across users
 - **THEN** the backend returns one aggregate row per matching user
 - **AND** each row includes user/member context
+
+#### Scenario: Report groups by the billable dimension
+- **GIVEN** an authenticated admin or PM requests a time report with `groupBy: ["billable"]`
+- **WHEN** matching completed time entries exist across billable and non-billable entries
+- **THEN** the backend returns one aggregate row per billable bucket
+- **AND** each row carries its bucket identity as `billable` or `nonBillable`
 
 #### Scenario: Report groups by an ordered multi-level path
 - **GIVEN** an authenticated admin or PM requests a time report with `groupBy: ["project", "user", "task"]`
