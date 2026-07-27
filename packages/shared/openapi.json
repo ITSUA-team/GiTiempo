@@ -2693,29 +2693,24 @@
         ]
       }
     },
-    "/reports/time/export": {
+    "/reports/time/export/pdf": {
       "post": {
-        "operationId": "ReportsController_exportTimeReport",
+        "operationId": "ReportsController_exportReportPdf",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TimeReportExportRequestDto"
+                "$ref": "#/components/schemas/ReportPdfExportRequestDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "CSV or PDF export of the report",
+            "description": "PDF of the report exactly as shown on screen",
             "content": {
-              "text/csv": {
-                "schema": {
-                  "type": "string"
-                }
-              },
               "application/pdf": {
                 "schema": {
                   "type": "string"
@@ -2732,7 +2727,7 @@
             "bearer": []
           }
         ],
-        "summary": "Export aggregated time report as CSV or PDF",
+        "summary": "Render an on-screen report document as a PDF",
         "tags": [
           "reports"
         ]
@@ -5891,7 +5886,8 @@
               "enum": [
                 "project",
                 "task",
-                "user"
+                "user",
+                "billable"
               ]
             }
           },
@@ -5934,7 +5930,8 @@
               "enum": [
                 "project",
                 "task",
-                "user"
+                "user",
+                "billable"
               ]
             }
           },
@@ -6103,6 +6100,14 @@
                     "avatarUrl"
                   ],
                   "nullable": true
+                },
+                "billable": {
+                  "type": "string",
+                  "enum": [
+                    "billable",
+                    "nonBillable"
+                  ],
+                  "nullable": true
                 }
               },
               "required": [
@@ -6115,7 +6120,8 @@
                 "lastStartedAt",
                 "project",
                 "task",
-                "user"
+                "user",
+                "billable"
               ]
             }
           },
@@ -6159,80 +6165,170 @@
           "meta"
         ]
       },
-      "TimeReportExportRequestDto": {
+      "ReportPdfExportRequestDto": {
         "type": "object",
         "properties": {
-          "dateFrom": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          },
-          "dateTo": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          },
-          "projectId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "groupBy": {
-            "default": [
-              "project"
+          "document": {
+            "type": "object",
+            "properties": {
+              "masthead": {
+                "type": "object",
+                "properties": {
+                  "wordmark": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "tag": {
+                    "type": "string",
+                    "maxLength": 60
+                  }
+                },
+                "required": [
+                  "wordmark",
+                  "tag"
+                ],
+                "additionalProperties": false
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "period": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "filters": {
+                "type": "string",
+                "maxLength": 400
+              },
+              "stats": {
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "maxLength": 60
+                    },
+                    "value": {
+                      "type": "string",
+                      "maxLength": 60
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "columns": {
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 40
+                }
+              },
+              "rows": {
+                "maxItems": 5000,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "detail": {
+                      "type": "string",
+                      "maxLength": 120,
+                      "nullable": true
+                    },
+                    "label": {
+                      "type": "string",
+                      "maxLength": 300
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 8
+                    },
+                    "isLeaf": {
+                      "type": "boolean"
+                    },
+                    "hours": {
+                      "type": "string",
+                      "maxLength": 40
+                    },
+                    "billable": {
+                      "type": "string",
+                      "maxLength": 40
+                    },
+                    "share": {
+                      "type": "string",
+                      "maxLength": 40
+                    }
+                  },
+                  "required": [
+                    "detail",
+                    "label",
+                    "level",
+                    "isLeaf",
+                    "hours",
+                    "billable",
+                    "share"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "total": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "hours": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "billable": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "share": {
+                    "type": "string",
+                    "maxLength": 40
+                  }
+                },
+                "required": [
+                  "label",
+                  "hours",
+                  "billable",
+                  "share"
+                ],
+                "additionalProperties": false
+              },
+              "footerNote": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "masthead",
+              "title",
+              "period",
+              "filters",
+              "stats",
+              "columns",
+              "rows",
+              "total",
+              "footerNote"
             ],
-            "minItems": 1,
-            "maxItems": 4,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "project",
-                "task",
-                "user"
-              ]
-            }
-          },
-          "search": {
-            "type": "string",
-            "maxLength": 200
-          },
-          "sortBy": {
-            "default": "totalSeconds",
-            "type": "string",
-            "enum": [
-              "project",
-              "task",
-              "user",
-              "totalSeconds",
-              "billableSeconds",
-              "entryCount",
-              "firstStartedAt",
-              "lastStartedAt"
-            ]
-          },
-          "sortOrder": {
-            "default": "desc",
-            "type": "string",
-            "enum": [
-              "asc",
-              "desc"
-            ]
-          },
-          "format": {
-            "default": "csv",
-            "type": "string",
-            "enum": [
-              "csv",
-              "pdf"
-            ]
+            "additionalProperties": false
           }
         },
+        "required": [
+          "document"
+        ],
         "additionalProperties": false
       },
       "SavedReportListResponseDto": {
@@ -6331,7 +6427,14 @@
                         "gte40"
                       ]
                     }
-                  }
+                  },
+                  "required": [
+                    "activity",
+                    "billable",
+                    "billableShare",
+                    "global",
+                    "hours"
+                  ]
                 },
                 "grouping": {
                   "default": [
@@ -6345,7 +6448,8 @@
                     "enum": [
                       "project",
                       "task",
-                      "user"
+                      "user",
+                      "billable"
                     ]
                   }
                 },
@@ -6366,7 +6470,8 @@
               },
               "required": [
                 "dateRange"
-              ]
+              ],
+              "nullable": true
             },
             "createdBy": {
               "type": "string",
@@ -6486,7 +6591,14 @@
                       "gte40"
                     ]
                   }
-                }
+                },
+                "required": [
+                  "activity",
+                  "billable",
+                  "billableShare",
+                  "global",
+                  "hours"
+                ]
               },
               "grouping": {
                 "default": [
@@ -6500,7 +6612,8 @@
                   "enum": [
                     "project",
                     "task",
-                    "user"
+                    "user",
+                    "billable"
                   ]
                 }
               },
@@ -6624,7 +6737,14 @@
                       "gte40"
                     ]
                   }
-                }
+                },
+                "required": [
+                  "activity",
+                  "billable",
+                  "billableShare",
+                  "global",
+                  "hours"
+                ]
               },
               "grouping": {
                 "default": [
@@ -6638,7 +6758,8 @@
                   "enum": [
                     "project",
                     "task",
-                    "user"
+                    "user",
+                    "billable"
                   ]
                 }
               },
@@ -6659,7 +6780,8 @@
             },
             "required": [
               "dateRange"
-            ]
+            ],
+            "nullable": true
           },
           "createdBy": {
             "type": "string",
@@ -6778,7 +6900,14 @@
                       "gte40"
                     ]
                   }
-                }
+                },
+                "required": [
+                  "activity",
+                  "billable",
+                  "billableShare",
+                  "global",
+                  "hours"
+                ]
               },
               "grouping": {
                 "default": [
@@ -6792,7 +6921,8 @@
                   "enum": [
                     "project",
                     "task",
-                    "user"
+                    "user",
+                    "billable"
                   ]
                 }
               },
