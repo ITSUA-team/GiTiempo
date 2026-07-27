@@ -17,10 +17,14 @@ export const savedReportDateRangeSchema = z
     dateFrom: z.iso.datetime(),
     dateTo: z.iso.datetime(),
   })
+  // `>=`, not `>`: the reports page treats a single-day window (dateFrom equals
+  // dateTo) as valid — the fetch widens dateTo to the next day itself — so an
+  // equal window must round-trip through a preset. A strict `>` would reject the
+  // default range on the first of a month, where it collapses to one day.
   .refine(
     (range) =>
-      new Date(range.dateTo).getTime() > new Date(range.dateFrom).getTime(),
-    { message: "dateTo must be later than dateFrom", path: ["dateTo"] },
+      new Date(range.dateTo).getTime() >= new Date(range.dateFrom).getTime(),
+    { message: "dateTo must not be earlier than dateFrom", path: ["dateTo"] },
   );
 
 // Column-filter vocabularies. Defined here so the API, the admin client, and

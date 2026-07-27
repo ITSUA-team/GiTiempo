@@ -22,8 +22,18 @@ describe('savedReportDateRangeSchema', () => {
       savedReportDateRangeSchema.parse({ kind: 'relative', period: 'this_month' }),
     ).toThrow();
     expect(() =>
-      savedReportDateRangeSchema.parse({ ...dateRange, dateFrom: dateRange.dateTo }),
+      savedReportDateRangeSchema.parse({
+        ...dateRange,
+        dateFrom: dateRange.dateTo,
+        dateTo: dateRange.dateFrom,
+      }),
     ).toThrow();
+  });
+
+  it('accepts a single-day window where dateFrom equals dateTo', () => {
+    const singleDay = { ...dateRange, dateTo: dateRange.dateFrom };
+
+    expect(savedReportDateRangeSchema.parse(singleDay)).toEqual(singleDay);
   });
 });
 

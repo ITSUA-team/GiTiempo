@@ -88,6 +88,27 @@ describe('buildConfigFromState', () => {
     );
   });
 
+  it('keeps a single-day window instead of falling back to the default', () => {
+    const day = new Date('2026-05-20T00:00:00.000Z');
+
+    const config = buildConfigFromState(makeState({ dateRange: [day, day] }), NOW);
+
+    expect(config.dateRange).toEqual({
+      dateFrom: '2026-05-20T00:00:00.000Z',
+      dateTo: '2026-05-20T00:00:00.000Z',
+      kind: 'absolute',
+    });
+  });
+
+  it('builds a single-day config on the first of the month rather than throwing', () => {
+    const firstOfMonth = new Date(2026, 6, 1, 9, 0);
+    const state = createDefaultSavedReportState(firstOfMonth);
+
+    const config = buildConfigFromState(state, firstOfMonth);
+
+    expect(config.dateRange.dateFrom).toBe(config.dateRange.dateTo);
+  });
+
   it('carries grouping in API vocabulary and table filters', () => {
     const config = buildConfigFromState(
       makeState({
