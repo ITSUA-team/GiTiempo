@@ -24,7 +24,9 @@ Existing valid relative configs are migrated once. The migration resolves their 
 
 ### D3: Config remains a validated JSON document
 
-`config jsonb not null` is parsed through the shared Zod schema on every read and write. Unknown keys are stripped and missing filter keys default, but `dateRange` is required because a saved preset must restore a concrete date window.
+`config jsonb not null` is parsed through a shared Zod schema on every read and write. Unknown keys are stripped and missing filter keys default, but `dateRange` is required because a saved preset must restore a concrete date window.
+
+The write and read paths use two variants of that schema. The transport variant (create/update requests) is strict: a column filter value outside its current vocabulary is a validation error, so a client cannot persist an unknown filter that would silently coerce to the neutral choice. The persistence-read variant is tolerant: such a value degrades to the neutral choice via `.catch`, so a preset written against an older filter vocabulary keeps loading. Only the column filters differ between the variants; the structural parts (date range, grouping path) stay strict in both.
 
 ### D4: Dirty comparison uses normalized stored config
 

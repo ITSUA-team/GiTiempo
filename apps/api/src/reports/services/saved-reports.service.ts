@@ -8,6 +8,7 @@ import {
 import { and, desc, eq } from 'drizzle-orm';
 import {
   savedReportConfigSchema,
+  storedSavedReportConfigSchema,
   timeReportGroupBySchema,
   type CreateSavedReportInput,
   type SavedReport,
@@ -80,9 +81,11 @@ export class SavedReportsService {
   ): Promise<SavedReport> {
     await this.requireReportsRole(user);
 
-    // The config column is written only through the shared schema (D3), so a
-    // malformed config cannot enter even from an internal caller that bypasses
-    // the HTTP DTO. Symmetric with the re-validation in toSavedReport.
+    // The config column is written only through the strict transport schema
+    // (D3), so a config that does not conform — including a filter value outside
+    // its vocabulary — is rejected here even from an internal caller that
+    // bypasses the HTTP DTO, rather than silently degrading (that tolerance is
+    // read-only, in storedSavedReportConfigSchema).
     const config = savedReportConfigSchema.parse(input.config);
 
     try {
@@ -109,8 +112,8 @@ export class SavedReportsService {
   ): Promise<SavedReport> {
     await this.requireReportsRole(user);
 
-    // Same write-side guard as create: a provided config is parsed through the
-    // shared schema before it can reach the column (D3).
+    // Same strict write-side guard as create: a provided config is parsed
+    // through the transport schema before it can reach the column (D3).
     const config =
       input.config === undefined
         ? undefined
@@ -198,7 +201,7 @@ export class SavedReportsService {
    * all valid legacy data, so a survivor is unexpected and worth surfacing.
    */
   private toSavedReportOrUnavailable(row: SavedReportRow): SavedReport {
-    const result = savedReportConfigSchema.safeParse(
+    const result = storedSavedReportConfigSchema.safeParse(
       this.repairStoredConfig(row.config),
     );
     if (!result.success) {
@@ -231,7 +234,7 @@ export class SavedReportsService {
   }
 
   private parseStoredConfig(config: unknown): SavedReportConfig {
-    return savedReportConfigSchema.parse(this.repairStoredConfig(config));
+    return storedSavedReportConfigSchema.parse(this.repairStoredConfig(config));
   }
 
   /**

@@ -6604,14 +6604,7 @@
                       "gte40"
                     ]
                   }
-                },
-                "required": [
-                  "activity",
-                  "billable",
-                  "billableShare",
-                  "global",
-                  "hours"
-                ]
+                }
               },
               "grouping": {
                 "default": [
@@ -6913,14 +6906,7 @@
                       "gte40"
                     ]
                   }
-                },
-                "required": [
-                  "activity",
-                  "billable",
-                  "billableShare",
-                  "global",
-                  "hours"
-                ]
+                }
               },
               "grouping": {
                 "default": [

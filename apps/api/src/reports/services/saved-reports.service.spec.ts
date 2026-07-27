@@ -338,6 +338,23 @@ describe('SavedReportsService writes', () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
+  it('rejects a config with a filter outside its vocabulary on create', async () => {
+    const insert = vi.fn();
+    const { service } = createService('admin', { insert });
+
+    await expect(
+      service.create(adminUser, {
+        config: {
+          ...validConfig,
+          filters: { ...validConfig.filters, billable: 'not-a-real-filter' },
+        } as never,
+        name: 'Broken filter',
+      }),
+    ).rejects.toThrow();
+
+    expect(insert).not.toHaveBeenCalled();
+  });
+
   it('writes a provided config through the shared schema on update', async () => {
     const captured: Record<string, unknown>[] = [];
     const { service } = createService(

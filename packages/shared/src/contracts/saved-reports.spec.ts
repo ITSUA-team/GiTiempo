@@ -4,6 +4,7 @@ import {
   savedReportConfigSchema,
   savedReportDateRangeSchema,
   savedReportSchema,
+  storedSavedReportConfigSchema,
   updateSavedReportSchema,
 } from './saved-reports.js';
 
@@ -68,18 +69,43 @@ describe('savedReportConfigSchema', () => {
     expect(parsed).not.toHaveProperty('retiredFilter');
   });
 
-  it('rejects invalid grouping but tolerates a retired filter value', () => {
+  it('rejects an invalid grouping and a retired filter value (strict transport)', () => {
     expect(() =>
       savedReportConfigSchema.parse({ dateRange, grouping: ['project', 'client'] }),
     ).toThrow();
-    // A filter value outside the current vocabulary degrades to the neutral
-    // option instead of failing the whole config (see savedReportFiltersSchema).
-    const parsed = savedReportConfigSchema.parse({
+    // Strict transport: a filter value outside the current vocabulary is a
+    // validation error, never a silent degrade — the tolerant behaviour lives in
+    // storedSavedReportConfigSchema, exercised below.
+    expect(() =>
+      savedReportConfigSchema.parse({
+        dateRange,
+        filters: { billable: 'withBillable' },
+      }),
+    ).toThrow();
+  });
+});
+
+describe('storedSavedReportConfigSchema', () => {
+  it('degrades a retired filter value to the neutral option on read', () => {
+    // The persistence-read boundary tolerates a value outside the current
+    // vocabulary (e.g. the retired withBillable option) so a preset saved
+    // against an older contract keeps loading instead of failing.
+    const parsed = storedSavedReportConfigSchema.parse({
       dateRange,
       filters: { hours: 'gte100', billable: 'withBillable' },
     });
+
     expect(parsed.filters.hours).toBe('any');
     expect(parsed.filters.billable).toBe('any');
+  });
+
+  it('keeps the structural parts strict', () => {
+    // Tolerance is only for filter vocabularies; a missing date range or an
+    // unknown grouping dimension is still rejected on read.
+    expect(() => storedSavedReportConfigSchema.parse({})).toThrow();
+    expect(() =>
+      storedSavedReportConfigSchema.parse({ dateRange, grouping: ['client'] }),
+    ).toThrow();
   });
 });
 
@@ -119,5 +145,22 @@ describe('saved report payloads', () => {
     expect(() => createSavedReportSchema.parse({ config: { dateRange }, name: '   ' })).toThrow();
     expect(() => createSavedReportSchema.parse({ config: {}, name: 'Monthly billing' })).toThrow();
     expect(() => updateSavedReportSchema.parse({})).toThrow();
+  });
+
+  it('rejects a create or update config carrying a filter outside its vocabulary', () => {
+    // Regression: billable:'not-a-real-filter' must be a validation error on the
+    // write path, never silently coerced to 'any' (the tolerant read normalizer
+    // must not leak into the transport contract).
+    expect(() =>
+      createSavedReportSchema.parse({
+        config: { dateRange, filters: { billable: 'not-a-real-filter' } },
+        name: 'Broken filter',
+      }),
+    ).toThrow();
+    expect(() =>
+      updateSavedReportSchema.parse({
+        config: { dateRange, filters: { billable: 'not-a-real-filter' } },
+      }),
+    ).toThrow();
   });
 });
