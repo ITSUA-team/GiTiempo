@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isOrderedDateRange } from "./date-range.js";
+
 const dateTimeSchema = z.iso.datetime();
 
 const optionalSearchSchema = z
@@ -43,14 +45,6 @@ const timeReportFilterShape = {
   sortOrder: timeReportSortOrderSchema.default("desc"),
 };
 
-function isValidDateRange(data: { dateFrom?: string; dateTo?: string }): boolean {
-  return (
-    data.dateFrom === undefined ||
-    data.dateTo === undefined ||
-    new Date(data.dateTo).getTime() > new Date(data.dateFrom).getTime()
-  );
-}
-
 /**
  * Report request body.
  *
@@ -65,7 +59,7 @@ export const timeReportRequestSchema = z
     ...timeReportFilterShape,
   })
   .strict()
-  .refine(isValidDateRange, {
+  .refine((data) => isOrderedDateRange(data), {
     message: "dateTo must be later than dateFrom",
     path: ["dateTo"],
   });
@@ -87,7 +81,7 @@ export const timeReportExportRequestSchema = z
     format: timeReportExportFormatSchema.default("csv"),
   })
   .strict()
-  .refine(isValidDateRange, {
+  .refine((data) => isOrderedDateRange(data), {
     message: "dateTo must be later than dateFrom",
     path: ["dateTo"],
   });

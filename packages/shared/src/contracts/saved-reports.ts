@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isOrderedDateRange } from "./date-range.js";
 import { timeReportGroupByPathSchema } from "./reports.js";
 
 /**
@@ -21,11 +22,10 @@ export const savedReportDateRangeSchema = z
   // dateTo) as valid — the fetch widens dateTo to the next day itself — so an
   // equal window must round-trip through a preset. A strict `>` would reject the
   // default range on the first of a month, where it collapses to one day.
-  .refine(
-    (range) =>
-      new Date(range.dateTo).getTime() >= new Date(range.dateFrom).getTime(),
-    { message: "dateTo must not be earlier than dateFrom", path: ["dateTo"] },
-  );
+  .refine((range) => isOrderedDateRange(range, { inclusive: true }), {
+    message: "dateTo must not be earlier than dateFrom",
+    path: ["dateTo"],
+  });
 
 // Column-filter vocabularies. Defined here so the API, the admin client, and
 // the stored config all validate against one definition.
