@@ -420,7 +420,7 @@ The shared contracts SHALL define validation rules for time-report query paramet
 #### Scenario: Time report query supports report group values
 - **GIVEN** a client constructs a time-report query with `groupBy`
 - **WHEN** the query is validated
-- **THEN** only `project`, `task`, and `user` are valid report group values
+- **THEN** only `project`, `task`, `user`, and `billable` are valid report group values
 
 #### Scenario: Time report query supports export reuse
 - **GIVEN** a client constructs a time-report export query

@@ -6,28 +6,43 @@ This document describes the deployment workflow for GI Tiempo. It is the source 
 
 | Component | Target | Deployment unit |
 |---|---|---|
+| `apps/landing-web` | Cloudflare Workers Static Assets | Separate Worker/static asset deployment |
 | `apps/user-web` | Cloudflare Workers Static Assets | Separate Worker/static asset deployment |
 | `apps/admin-web` | Cloudflare Workers Static Assets | Separate Worker/static asset deployment |
 | `apps/api` | VPS | Docker image started by Docker Compose |
 | PostgreSQL | VPS | Docker Compose service with persistent volume |
 | Chrome Extension | Chrome Web Store | Manual publish |
 
-Frontend and backend deploy independently. A frontend-only change must not restart the API, and an API-only change must not redeploy either SPA.
+Frontend and backend deploy independently. A landing-only change must not redeploy either SPA or restart the API. A change limited to one SPA must not redeploy the landing or the other SPA, and an API-only change must not redeploy any frontend.
 
 ## Frontend Deploys
 
-`apps/user-web` and `apps/admin-web` deploy as separate Cloudflare Workers Static Assets projects.
+`apps/landing-web`, `apps/user-web`, and `apps/admin-web` deploy as separate Cloudflare Workers Static Assets projects. The landing is a static Astro site; the authenticated apps are Vite SPAs.
 
-Each frontend app owns its own Wrangler configuration. GitHub Actions deploys both apps through the shared `deploy-frontend-staging.yml` workflow and reusable deploy job. The app build output is the Vite `dist/` directory, served with SPA fallback so unknown routes return `index.html`.
+Each frontend app owns its own Wrangler configuration. The existing GitHub Actions workflow deploys the two SPAs through the shared `deploy-frontend-staging.yml` workflow and reusable deploy job. The landing deploys through its own `deploy-landing-staging.yml` workflow so its static build and public-only configuration stay isolated from SPA requirements.
 
-Production frontend builds use build-time `VITE_*` variables:
+All three frontend builds output `dist/`. Only `user-web` and `admin-web` use SPA fallback so unknown routes return `index.html`; the Astro landing must preserve static route semantics.
+
+Frontend builds use build-time environment values. The existing SPAs use `VITE_*`; the landing must use Astro-compatible public environment values for browser-visible URLs.
 
 | App | Required deployment values |
 |---|---|
+| `landing-web` | Public site URL/canonical origin, user-app entry URL, and admin-app entry URL |
 | `user-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_ADMIN_APP_URL` |
 | `admin-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_USER_APP_URL` |
 
-Do not read production frontend config from repository `.env` files. GitHub Actions must inject environment-specific values from GitHub Environments or repository secrets/variables. The staging Environment example at `deploy/github-environment.staging.example.env` documents the shared frontend and API values.
+Landing origins and CTA targets:
+
+| Environment | Landing origin | User app entry | Admin app entry |
+|---|---|---|---|
+| Local | `http://localhost:4321` | `http://localhost:5173/login` | `http://localhost:5174` |
+| Staging | `https://gitiempo-landing.itsua.dev` | `https://gitiempo.itsua.dev/login` | `https://gitiempo-admin.itsua.dev` |
+
+The landing implementation must receive all three values from environment-aware configuration. Do not hard-code the staging origins in Astro components.
+
+Do not read production frontend config from repository `.env` files. GitHub Actions must inject environment-specific values from GitHub Environments or repository secrets/variables. The staging Environment example at `deploy/github-environment.staging.example.env` documents the frontend and API values.
+
+For Cloudflare staging deployment, `CLOUDFLARE_ACCOUNT_ID` and the landing `PUBLIC_*` values are GitHub Environment variables. `CLOUDFLARE_API_TOKEN` is a GitHub Environment secret. The example file separates those categories so operators do not duplicate the account ID as a secret.
 
 ### Frontend Manual Triggers
 
@@ -35,22 +50,27 @@ The staging frontend deploy workflow supports `workflow_dispatch` with:
 
 | Input | Values | Purpose |
 |---|---|---|
-| `target` | `user-web`, `admin-web`, `both` | Choose which SPA to deploy |
+| `target` | `user-web`, `admin-web`, `both` | Choose which existing SPA deployment to run |
 | `ref` | branch, tag, or SHA | Optional source revision |
 
-Production frontend deploys are not configured yet. When added, they should require GitHub Environment approval.
+Landing uses the separate `deploy-landing-staging` workflow with an optional `ref` input (branch, tag, or SHA). It verifies and deploys only `landing-web`; it does not accept the SPA `target` input. Production frontend deploys are not configured yet. When added, they should require GitHub Environment approval.
 
 ### Frontend Automatic Triggers
 
-Automatic frontend deploys run from the `staging` branch through one matrix workflow. The workflow detects changed files and deploys only the affected SPA targets.
+Automatic frontend deploys run from the `staging` branch. The SPA matrix workflow detects changed files and deploys only the affected SPA targets; the landing workflow uses its own landing-only path filters.
 
 Recommended path filters:
 
 | Workflow | Trigger paths |
 |---|---|
 | `deploy-frontend-staging` | `apps/user-web/**`, `apps/admin-web/**`, `packages/shared/**`, `packages/web-config/**`, `packages/web-shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, shared CI/deploy workflow files |
+| `deploy-landing-staging` | `apps/landing-web/**`, `packages/web-config/**`, workspace manifests, Turbo configuration, workspace check action, landing target detector, and landing workflow files |
 
-The workflow must run lint/typecheck/tests/build for the affected app before deployment. Shared frontend package changes deploy both SPAs after both app gates pass.
+Landing-only changes do not enter the two-SPA deployment matrix. The landing workflow validates `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, and `PUBLIC_ADMIN_APP_URL`, then runs the landing lint, typecheck, test, and build gates before invoking Wrangler. It does not require Firebase or API values.
+
+Each deployment workflow runs lint/typecheck/tests/build for its affected app before deployment. Shared frontend package changes deploy both SPAs after both app gates pass.
+
+Implementation and local verification do not invoke a live deployment; publishing occurs only through an authorized GitHub Actions staging workflow run.
 
 ## API Deploys
 
@@ -171,6 +191,7 @@ GitHub Actions stores deploy credentials and environment-specific values.
 |---|---|---|
 | Cloudflare API token/account/zone data | GitHub Environment | Used by Wrangler deploys |
 | `VITE_*` frontend values | GitHub Environment | Injected at frontend build time |
+| `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, `PUBLIC_ADMIN_APP_URL` | GitHub Environment | Injected at landing build time; canonical origin and direct user/admin app entry URLs |
 | `PUBLIC_API_URL` | GitHub Environment variable | Public API base URL used for readiness checks |
 | `API_DEPLOY_PATH` | GitHub Environment variable | Remote VPS deploy directory |
 | `ALLOWED_ORIGINS` | GitHub Environment variable / VPS runtime env | Comma-separated CORS allow-list written into the VPS `.env`; include web app origins and exact Chrome extension origins such as `chrome-extension://<extension-id>` |
@@ -207,4 +228,4 @@ Rollback deploys should redeploy a previously published Docker image or Cloudfla
 
 Database migrations are not automatically reversible. Any schema rollback requires an explicit migration plan before production rollout.
 
-Frontend rollback is independent per app. Rolling back `user-web` must not roll back `admin-web` unless both were part of the same incident.
+Frontend rollback is independent per app. Roll back `landing-web` by redeploying a previously published landing Cloudflare Worker version only; do not redeploy `user-web`, `admin-web`, or the API. Rolling back `user-web` must not roll back `admin-web` unless both were part of the same incident.

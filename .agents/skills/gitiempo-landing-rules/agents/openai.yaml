@@ -1,0 +1,4 @@
+interface:
+  display_name: "GiTiempo Landing Rules"
+  short_description: "Project rules for the Astro and Tailwind GiTiempo landing page"
+  default_prompt: "Use the GiTiempo landing-page rules when building or reviewing apps/landing-web."

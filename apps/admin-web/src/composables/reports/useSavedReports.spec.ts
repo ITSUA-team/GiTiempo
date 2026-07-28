@@ -103,6 +103,19 @@ describe('useSavedReports listing', () => {
     expect(applied).toHaveLength(0);
   });
 
+  it('does not open an unavailable preset and surfaces a message', async () => {
+    const { applied, saved } = setup([
+      makePreset({ config: null, id: 'broken', name: 'Broken preset' }),
+    ]);
+    await saved.refresh();
+
+    saved.selectPreset('broken');
+
+    expect(saved.activeId.value).toBeNull();
+    expect(applied).toHaveLength(0);
+    expect(saved.error.value).toBeTruthy();
+  });
+
   it('clears the active preset when it disappears from the list', async () => {
     const presets = [makePreset()];
     const { saved } = setup(presets);

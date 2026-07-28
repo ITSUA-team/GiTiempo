@@ -29,6 +29,7 @@
 
 ## Cross-App Frontend
 
+- For any implementation, refactor, review, or configuration work under `apps/landing-web`, always load the `gitiempo-landing-rules` skill first and follow it throughout the task.
 - For any UI implementation or refactor in `apps/user-web`, `apps/admin-web`, `packages/web-config`, or shared Vue UI in `packages/web-shared`, load the `gitiempo-frontend-rules` skill first.
 - UI behavior and styling rules live in `docs/ui/*` and the nearest app `AGENTS.md`; do not duplicate or invent parallel frontend conventions elsewhere.
 - For any frontend UI task, read `docs/ui/INDEX.md` first, then only the smallest relevant `docs/ui/*` section files before reading or editing implementation files.

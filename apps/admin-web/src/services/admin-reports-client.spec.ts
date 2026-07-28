@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReportDocument } from '@gitiempo/shared';
 import { createAuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
 import { createAdminReportsClient } from './admin-reports-client';
@@ -14,6 +15,7 @@ const reportResponse = {
   groupBy: ['project'],
   items: [
     {
+      billable: null,
       billableSeconds: 3600,
       billableShare: 0.5,
       entryCount: 2,
@@ -109,101 +111,59 @@ describe('createAdminReportsClient', () => {
     expect(result.items[0]?.project?.name).toBe('Project Orion');
   });
 
-  it('names a PDF download correctly even without Content-Disposition', async () => {
-    // Cross-origin responses can hide the filename header; the name must be
-    // rebuilt from the request dates and the actual blob type.
-    fetchFn.mockResolvedValueOnce(
+  it('renders the on-screen document to a PDF through the export endpoint', async () => {
+    fetchFn.mockResolvedValue(
       new Response(new Blob(['%PDF-1.3'], { type: 'application/pdf' }), {
         headers: { 'Content-Type': 'application/pdf' },
         status: 200,
       }),
     );
 
-    const pdfResult = await client.exportTimeReport({
-      dateFrom: '2026-07-01T00:00:00.000Z',
-      dateTo: '2026-08-01T00:00:00.000Z',
-      format: 'pdf',
-    });
-
-    expect(pdfResult.filename).toBe('time-report-2026-07-01_2026-08-01.pdf');
-
-    fetchFn.mockResolvedValueOnce(
-      new Response(new Blob(['Group By\n'], { type: 'text/csv' }), {
-        headers: { 'Content-Type': 'text/csv; charset=utf-8' },
-        status: 200,
-      }),
-    );
-
-    const csvResult = await client.exportTimeReport({});
-
-    expect(csvResult.filename).toBe('time-report.csv');
-  });
-
-  it('exports time reports as CSV using backend filename metadata', async () => {
-    fetchFn.mockResolvedValue(
-      new Response('Group By,Project\nproject,Project Orion\n', {
-        headers: {
-          'Content-Disposition':
-            'attachment; filename="time-report-2026-05.csv"',
-          'Content-Type': 'text/csv; charset=utf-8',
+    const document: ReportDocument = {
+      columns: ['NAME', 'HOURS', 'BILLABLE', 'BILL %'],
+      filters: 'Projects: All · Members: All · Grouping: Project',
+      footerNote: 'Generated with GiTiempo',
+      masthead: { tag: 'TIME REPORT', wordmark: 'GiTiempo' },
+      period: 'May 2026',
+      rows: [
+        {
+          billable: '1h 00m',
+          detail: null,
+          hours: '2h 00m',
+          isLeaf: true,
+          label: 'Project Orion',
+          level: 0,
+          share: '50%',
         },
-        status: 200,
-      }),
-    );
+      ],
+      stats: [{ label: 'TRACKED HOURS', value: '2h 00m' }],
+      title: 'Time report',
+      total: { billable: '1h 00m', hours: '2h 00m', label: 'Total', share: '50%' },
+    };
 
-    const result = await client.exportTimeReport({
-      dateFrom: '2026-05-01T00:00:00.000Z',
-      dateTo: '2026-06-01T00:00:00.000Z',
-      groupBy: ['user'],
-      projectId,
-      sortBy: 'user',
-      sortOrder: 'asc',
-      userId,
-    });
+    const blob = await client.exportReportPdf(document);
 
     const [url, init] = fetchFn.mock.calls[0] ?? [];
     const requestUrl = new URL(String(url));
 
-    // Filters travel as a validated JSON body, never in the URL.
-    expect(requestUrl.pathname).toBe('/reports/time/export');
+    // The document travels as a validated JSON body, never in the URL.
+    expect(requestUrl.pathname).toBe('/reports/time/export/pdf');
     expect(requestUrl.search).toBe('');
     expect(init).toEqual(expect.objectContaining({ method: 'POST' }));
-    expect(JSON.parse(String(init?.body))).toEqual({
-      dateFrom: '2026-05-01T00:00:00.000Z',
-      dateTo: '2026-06-01T00:00:00.000Z',
-      // format defaults to csv so existing consumers keep the detailed CSV
-      format: 'csv',
-      groupBy: ['user'],
-      projectId,
-      sortBy: 'user',
-      sortOrder: 'asc',
-      userId,
-    });
-    expect(result.filename).toBe('time-report-2026-05.csv');
-    expect(result.blob.type).toBe('text/csv;charset=utf-8');
-    expect(result.blob.size).toBeGreaterThan(0);
+    expect(JSON.parse(String(init?.body))).toEqual({ document });
+    expect(blob.type).toBe('application/pdf');
+    expect(blob.size).toBeGreaterThan(0);
   });
 
   it('surfaces API error messages from the report endpoints', async () => {
-    fetchFn
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ message: 'Reports are forbidden' }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 403,
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ message: 'Reports are forbidden' }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 403,
-        }),
-      );
-
-    await expect(client.getTimeReport({ limit: 20, page: 1 })).rejects.toThrow(
-      'Reports are forbidden',
+    fetchFn.mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: 'Reports are forbidden' }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 403,
+      }),
     );
 
-    await expect(client.exportTimeReport()).rejects.toThrow(
+    await expect(client.getTimeReport({ limit: 20, page: 1 })).rejects.toThrow(
       'Reports are forbidden',
     );
   });
