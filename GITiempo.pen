@@ -2968,11 +2968,11 @@
                             {
                               "type": "text",
                               "id": "gJtMP",
-                              "fill": "$color-text-dark",
-                              "content": "Apr 1 - Apr 21",
+                              "fill": "$color-text-muted",
+                              "content": "Select date range",
                               "fontFamily": "Inter",
                               "fontSize": 14,
-                              "fontWeight": "500"
+                              "fontWeight": "normal"
                             },
                             {
                               "type": "icon",
@@ -2981,6 +2981,7 @@
                               "x": 194,
                               "y": 12,
                               "name": "Clear date range",
+                              "enabled": false,
                               "width": 14,
                               "height": 14,
                               "icon": "x",
@@ -37081,7 +37082,8 @@
                                   "fill": "#666666",
                                   "content": "2 active projects",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -37134,7 +37136,8 @@
                                   "fill": "#666666",
                                   "content": "Above target by 2h",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -37187,7 +37190,8 @@
                                   "fill": "#666666",
                                   "content": "2 tracked this week",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             }
@@ -37232,7 +37236,8 @@
                               "fill": "#666666",
                               "content": "Your strongest project and task based on this week's tracked entries.",
                               "fontFamily": "Inter",
-                              "fontSize": 10
+                              "fontSize": 10,
+                              "fontWeight": "normal"
                             },
                             {
                               "type": "text",
@@ -37292,7 +37297,8 @@
                               "fill": "#666666",
                               "content": "42% of your completed time this week",
                               "fontFamily": "Inter",
-                              "fontSize": 9
+                              "fontSize": 9,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -37565,7 +37571,8 @@
                           "fill": "#666666",
                           "content": "Tracking from this GitHub issue",
                           "fontFamily": "Inter",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "frame",
@@ -39646,7 +39653,8 @@
                                   "fill": "#666666",
                                   "content": "2 active projects",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -39699,7 +39707,8 @@
                                   "fill": "#666666",
                                   "content": "Above target by 2h",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -39752,7 +39761,8 @@
                                   "fill": "#666666",
                                   "content": "2 tracked this week",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             }
@@ -39797,7 +39807,8 @@
                               "fill": "#666666",
                               "content": "Your strongest project and task based on this week's tracked entries.",
                               "fontFamily": "Inter",
-                              "fontSize": 10
+                              "fontSize": 10,
+                              "fontWeight": "normal"
                             },
                             {
                               "type": "text",
@@ -39857,7 +39868,8 @@
                               "fill": "#666666",
                               "content": "42% of your completed time this week",
                               "fontFamily": "Inter",
-                              "fontSize": 9
+                              "fontSize": 9,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -39966,7 +39978,8 @@
                   "content": "The Chrome extension detects the task context, so time starts attached to the work instead of a separate entry.",
                   "lineHeight": 1.45,
                   "fontFamily": "Inter",
-                  "fontSize": 14
+                  "fontSize": 14,
+                  "fontWeight": "normal"
                 },
                 {
                   "type": "frame",
@@ -40080,7 +40093,8 @@
                           "fill": "#666666",
                           "content": "Tracking from this GitHub issue",
                           "fontFamily": "Inter",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "frame",
@@ -41727,7 +41741,8 @@
                               "fill": "#666666",
                               "content": "2 active projects",
                               "fontFamily": "Inter",
-                              "fontSize": 9
+                              "fontSize": 9,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -41792,7 +41807,8 @@
                               "fill": "#666666",
                               "content": "Above target by 2h",
                               "fontFamily": "Inter",
-                              "fontSize": 9
+                              "fontSize": 9,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -42066,7 +42082,8 @@
                   "content": "The Chrome extension detects the task context, so time starts attached to the work instead of a separate entry.",
                   "lineHeight": 1.45,
                   "fontFamily": "Inter",
-                  "fontSize": 14
+                  "fontSize": 14,
+                  "fontWeight": "normal"
                 },
                 {
                   "type": "frame",
