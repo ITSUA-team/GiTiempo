@@ -151,7 +151,7 @@ function optionClass(selected: boolean, disabled: boolean): string {
               {{
                 activeName !== null
                   ? `Keeps “${activeName}” unchanged`
-                  : 'Available to every admin in this workspace'
+                  : 'Available to every admin and PM in this workspace'
               }}
             </span>
           </span>
