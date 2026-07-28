@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import {
   Injectable,
   Logger,
@@ -12,10 +12,17 @@ import { AuthService, type TokenPair } from './auth.service';
 
 export type GithubLoginApp = 'user' | 'admin';
 
+/**
+ * Name of the HttpOnly cookie that binds a login transaction to the browser
+ * that started it. The signed `state` carries only the hash of this cookie's
+ * nonce, so a callback is honored only when the same browser presents it.
+ */
+export const GITHUB_OAUTH_STATE_COOKIE = 'gh_oauth_state';
+
 interface GithubStateClaims {
   purpose: 'gh-login-state';
   app: GithubLoginApp;
-  nonce: string;
+  nonceHash: string;
 }
 
 interface GithubHandoffClaims {
@@ -56,8 +63,17 @@ export class AuthGithubService {
     private readonly auth: AuthService,
   ) {}
 
-  buildStartUrl(app: GithubLoginApp): string {
-    const state = this.signState(app);
+  /**
+   * Starts a login transaction. The returned `stateNonce` MUST be stored by the
+   * caller in an HttpOnly, SameSite=Lax cookie (see `stateCookieOptions`): the
+   * signed `state` carries only the nonce's hash, so `completeCallback` accepts
+   * a callback only when the browser presents a cookie whose nonce matches. This
+   * binds the flow to the user agent that began it (RFC 9700 §4.7.1) — a state
+   * minted in one browser cannot complete a login in another (login CSRF).
+   */
+  startAuthorization(app: GithubLoginApp): { url: string; stateNonce: string } {
+    const stateNonce = randomBytes(32).toString('hex');
+    const state = this.signState(app, this.hashNonce(stateNonce));
     const url = new URL('https://github.com/login/oauth/authorize');
     url.searchParams.set(
       'client_id',
@@ -67,13 +83,37 @@ export class AuthGithubService {
     url.searchParams.set('state', state);
     // Identity-only: read the user's email so an existing member can be matched.
     url.searchParams.set('scope', 'user:email');
-    return url.toString();
+    return { url: url.toString(), stateNonce };
+  }
+
+  /**
+   * Cookie options for the state-binding nonce. `SameSite=Lax` so the top-level
+   * GET redirect back from GitHub still carries it (Strict would drop it);
+   * `HttpOnly` so script cannot read it; scoped to `/auth/github` and expiring
+   * with the 10-minute state; `Secure` in production (HTTPS).
+   */
+  stateCookieOptions(): {
+    httpOnly: true;
+    secure: boolean;
+    sameSite: 'lax';
+    path: string;
+    maxAge: number;
+  } {
+    return {
+      httpOnly: true,
+      secure: this.config.get('NODE_ENV', { infer: true }) === 'production',
+      sameSite: 'lax',
+      path: '/auth/github',
+      maxAge: 10 * 60 * 1000,
+    };
   }
 
   async completeCallback(input: {
     code?: string;
     state?: string;
     error?: string;
+    /** Nonce from the browser-bound HttpOnly cookie set at `startAuthorization`. */
+    stateNonce?: string;
   }): Promise<string> {
     if (input.error) {
       return this.spaRedirect('user', '/login', { githubError: 'denied' });
@@ -82,11 +122,14 @@ export class AuthGithubService {
       return this.spaRedirect('user', '/login', { githubError: 'state' });
     }
 
-    // The state carries which app to return to; a failed state means we cannot
-    // trust it, so fall back to the user app login with a state error.
+    // A valid signature proves the server issued the state, not that THIS browser
+    // began the flow. Requiring the state's nonce hash to match the browser's
+    // HttpOnly cookie binds the callback to its initiator, so a state minted (and
+    // GitHub-authorized) by an attacker cannot log a victim into the attacker's
+    // account. A missing/mismatched cookie falls back to a login state error.
     let app: GithubLoginApp;
     try {
-      app = this.verifyState(input.state).app;
+      app = this.verifyBoundState(input.state, input.stateNonce).app;
     } catch {
       return this.spaRedirect('user', '/login', { githubError: 'state' });
     }
@@ -175,24 +218,42 @@ export class AuthGithubService {
 
   // --- Signed tokens ---------------------------------------------------------
 
-  private signState(app: GithubLoginApp): string {
+  private signState(app: GithubLoginApp, nonceHash: string): string {
     return jwt.sign(
-      {
-        purpose: 'gh-login-state',
-        app,
-        nonce: randomBytes(16).toString('hex'),
-      },
+      { purpose: 'gh-login-state', app, nonceHash },
       this.secret(),
       { expiresIn: '10m' },
     );
   }
 
-  private verifyState(token: string): GithubStateClaims {
+  private verifyBoundState(
+    token: string,
+    cookieNonce: string | undefined,
+  ): GithubStateClaims {
     const decoded = jwt.verify(token, this.secret()) as GithubStateClaims;
-    if (decoded.purpose !== 'gh-login-state') {
+    if (
+      decoded.purpose !== 'gh-login-state' ||
+      typeof decoded.nonceHash !== 'string'
+    ) {
       throw new UnauthorizedException('invalid_state');
     }
+    if (!cookieNonce || !this.nonceMatches(cookieNonce, decoded.nonceHash)) {
+      throw new UnauthorizedException('state_not_bound');
+    }
     return decoded;
+  }
+
+  private hashNonce(nonce: string): string {
+    return createHash('sha256').update(nonce).digest('hex');
+  }
+
+  /** Constant-time compare of a cookie nonce against the state's stored hash. */
+  private nonceMatches(nonce: string, expectedHash: string): boolean {
+    const actual = Buffer.from(this.hashNonce(nonce), 'hex');
+    const expected = Buffer.from(expectedHash, 'hex');
+    return (
+      actual.length === expected.length && timingSafeEqual(actual, expected)
+    );
   }
 
   private signHandoff(email: string): string {

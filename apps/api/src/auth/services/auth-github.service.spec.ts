@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AuthGithubService } from './auth-github.service';
+import { AuthGithubService, type GithubLoginApp } from './auth-github.service';
 
 const env: Record<string, string> = {
   GITHUB_SIGNIN_CLIENT_ID: 'signin-client',
@@ -34,6 +34,17 @@ function mockGithub(emails: unknown) {
   });
 }
 
+// Mirrors the controller: start a transaction and keep both the signed state
+// and the nonce the browser would hold in its HttpOnly cookie.
+function startTransaction(
+  svc: AuthGithubService,
+  app: GithubLoginApp = 'user',
+): { state: string; stateNonce: string } {
+  const { url, stateNonce } = svc.startAuthorization(app);
+  const state = new URL(url).searchParams.get('state')!;
+  return { state, stateNonce };
+}
+
 describe('AuthGithubService', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -43,7 +54,8 @@ describe('AuthGithubService', () => {
 
   it('builds a start URL with client_id, redirect_uri, a signed state, and no PKCE', () => {
     const { svc } = createService();
-    const url = new URL(svc.buildStartUrl('user'));
+    const { url: startUrl, stateNonce } = svc.startAuthorization('user');
+    const url = new URL(startUrl);
 
     expect(url.origin + url.pathname).toBe(
       'https://github.com/login/oauth/authorize',
@@ -55,18 +67,40 @@ describe('AuthGithubService', () => {
     expect(url.searchParams.get('scope')).toBe('user:email');
     expect(url.searchParams.get('state')).toBeTruthy();
     expect(url.searchParams.get('code_challenge')).toBeNull();
+    // The browser-bound nonce is returned for the caller's cookie and never
+    // travels inside the state (which carries only its hash).
+    expect(stateNonce).toMatch(/^[0-9a-f]{64}$/);
+    expect(url.searchParams.get('state')).not.toContain(stateNonce);
+  });
+
+  it('binds the state to an HttpOnly, SameSite=Lax cookie, Secure only in production', () => {
+    const { svc } = createService();
+    expect(svc.stateCookieOptions()).toMatchObject({
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/auth/github',
+      secure: false,
+    });
+
+    const prod = new AuthGithubService(
+      {
+        get: (key: string) => (key === 'NODE_ENV' ? 'production' : env[key]),
+      } as never,
+      { createSessionForVerifiedEmail: vi.fn() } as never,
+    );
+    expect(prod.stateCookieOptions().secure).toBe(true);
   });
 
   it('completes the callback for a primary verified email and hands off a code', async () => {
     const { svc } = createService();
-    const state = new URL(svc.buildStartUrl('user')).searchParams.get('state')!;
+    const { state, stateNonce } = startTransaction(svc);
     vi.stubGlobal(
       'fetch',
       mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
     );
 
     const redirect = new URL(
-      await svc.completeCallback({ code: 'abc', state }),
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
     );
 
     expect(redirect.origin + redirect.pathname).toBe(
@@ -77,14 +111,14 @@ describe('AuthGithubService', () => {
 
   it('redirects with githubError=email when there is no verified primary email', async () => {
     const { svc } = createService();
-    const state = new URL(svc.buildStartUrl('user')).searchParams.get('state')!;
+    const { state, stateNonce } = startTransaction(svc);
     vi.stubGlobal(
       'fetch',
       mockGithub([{ email: 'me@example.com', primary: true, verified: false }]),
     );
 
     const redirect = new URL(
-      await svc.completeCallback({ code: 'abc', state }),
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
     );
 
     expect(redirect.pathname).toBe('/login');
@@ -102,11 +136,31 @@ describe('AuthGithubService', () => {
     expect(redirect.searchParams.get('githubError')).toBe('state');
   });
 
+  it('rejects a callback whose state is not bound to the browser (login CSRF)', async () => {
+    const { svc } = createService();
+    const { state } = startTransaction(svc);
+    // A state minted (and GitHub-authorized) in the attacker's browser, replayed
+    // in the victim's: without the initiating browser's cookie — or with a
+    // different nonce — the login must not complete. No token exchange is even
+    // attempted, so fetch is never called.
+    const withoutCookie = new URL(
+      await svc.completeCallback({ code: 'abc', state }),
+    );
+    const wrongCookie = new URL(
+      await svc.completeCallback({
+        code: 'abc',
+        state,
+        stateNonce: 'a'.repeat(64),
+      }),
+    );
+
+    expect(withoutCookie.searchParams.get('githubError')).toBe('state');
+    expect(wrongCookie.searchParams.get('githubError')).toBe('state');
+  });
+
   it('exchanges a handoff code into a session for the verified email', async () => {
     const { svc, auth } = createService();
-    const state = new URL(svc.buildStartUrl('admin')).searchParams.get(
-      'state',
-    )!;
+    const { state, stateNonce } = startTransaction(svc, 'admin');
     vi.stubGlobal(
       'fetch',
       mockGithub([
@@ -114,7 +168,7 @@ describe('AuthGithubService', () => {
       ]),
     );
     const redirect = new URL(
-      await svc.completeCallback({ code: 'abc', state }),
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
     );
     expect(redirect.origin).toBe('http://localhost:5174');
     const handoff = redirect.searchParams.get('code')!;
@@ -134,7 +188,7 @@ describe('AuthGithubService', () => {
 
   it('rejects a replayed handoff code (single-use)', async () => {
     const { svc } = createService();
-    const state = new URL(svc.buildStartUrl('user')).searchParams.get('state')!;
+    const { state, stateNonce } = startTransaction(svc);
     vi.stubGlobal(
       'fetch',
       mockGithub([
@@ -142,7 +196,7 @@ describe('AuthGithubService', () => {
       ]),
     );
     const handoff = new URL(
-      await svc.completeCallback({ code: 'abc', state }),
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
     ).searchParams.get('code')!;
 
     await svc.exchangeSession(handoff);

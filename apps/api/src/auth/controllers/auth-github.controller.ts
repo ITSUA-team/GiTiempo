@@ -1,12 +1,13 @@
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { SkipAuth } from '../decorators/skip-auth.decorator';
 import { GithubSessionDto } from '../dto/github-session.dto';
 import { TokenPairResponseDto } from '../dto/token-pair-response.dto';
 import {
   AuthGithubService,
+  GITHUB_OAUTH_STATE_COOKIE,
   type GithubLoginApp,
 } from '../services/auth-github.service';
 
@@ -23,7 +24,15 @@ export class AuthGithubController {
     @Res() response: Response,
   ): void {
     const target: GithubLoginApp = app === 'admin' ? 'admin' : 'user';
-    response.redirect(302, this.github.buildStartUrl(target));
+    const { url, stateNonce } = this.github.startAuthorization(target);
+    // Bind the transaction to this browser: the callback is only honored when it
+    // presents this HttpOnly cookie whose nonce matches the signed state.
+    response.cookie(
+      GITHUB_OAUTH_STATE_COOKIE,
+      stateNonce,
+      this.github.stateCookieOptions(),
+    );
+    response.redirect(302, url);
   }
 
   @Get('callback')
@@ -33,9 +42,21 @@ export class AuthGithubController {
     @Query('code') code: string | undefined,
     @Query('state') state: string | undefined,
     @Query('error') error: string | undefined,
+    @Req() request: Request,
     @Res() response: Response,
   ): Promise<void> {
-    const redirect = await this.github.completeCallback({ code, state, error });
+    const cookies = request.cookies as Record<string, string> | undefined;
+    const stateNonce = cookies?.[GITHUB_OAUTH_STATE_COOKIE];
+    // Single-use: consume the binding cookie so the callback cannot be replayed.
+    response.clearCookie(GITHUB_OAUTH_STATE_COOKIE, {
+      path: this.github.stateCookieOptions().path,
+    });
+    const redirect = await this.github.completeCallback({
+      code,
+      state,
+      error,
+      stateNonce,
+    });
     response.redirect(302, redirect);
   }
 
