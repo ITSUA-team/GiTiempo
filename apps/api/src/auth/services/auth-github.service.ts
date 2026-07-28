@@ -19,17 +19,13 @@ export type GithubLoginApp = 'user' | 'admin';
  */
 export const GITHUB_OAUTH_STATE_COOKIE = 'gh_oauth_state';
 
+/** Handoff codes are exchanged within seconds; a short TTL bounds the store. */
+const HANDOFF_TTL_MS = 60_000;
+
 interface GithubStateClaims {
   purpose: 'gh-login-state';
   app: GithubLoginApp;
   nonceHash: string;
-}
-
-interface GithubHandoffClaims {
-  purpose: 'gh-login-handoff';
-  email: string;
-  jti: string;
-  exp?: number;
 }
 
 interface GithubEmailEntry {
@@ -42,21 +38,26 @@ interface GithubEmailEntry {
  * Backend "Sign in with GitHub": a login-scoped GitHub OAuth flow that uses a
  * dedicated identity-only OAuth App (`GITHUB_SIGNIN_CLIENT_ID`/`_SECRET`),
  * separate from the GitHub App integration — it never touches `GITHUB_APP_*` or
- * `github_connections`. The state and handoff tokens are signed with
- * `JWT_ACCESS_SECRET` but omit the issuer/audience the access-token verifier
- * requires and carry a distinct `purpose`, so they can never pass as a session
- * token. Only a primary + verified GitHub email is accepted, and the session is
- * minted for an already-existing member (no provisioning).
+ * `github_connections`. The `state` is a JWT signed with `JWT_ACCESS_SECRET`
+ * that omits the issuer/audience the access-token verifier requires and carries
+ * a distinct `purpose`, so it can never pass as a session token; the handoff is
+ * an opaque single-use code whose email is held server-side, never in the URL.
+ * Only a primary + verified GitHub email is accepted, and the session is minted
+ * for an already-existing member (no provisioning).
  */
 @Injectable()
 export class AuthGithubService {
   private readonly logger = new Logger(AuthGithubService.name);
 
-  // Handoff codes are single-use: a consumed `jti` is remembered until the JWT
-  // would expire anyway, so a replay within the 60s TTL is rejected. In-memory
-  // is sufficient for a single API instance; a shared store would be needed if
-  // the API is ever horizontally scaled.
-  private readonly consumedHandoffs = new Map<string, number>();
+  // Opaque handoff codes: the verified email is held here, keyed by an
+  // unguessable random code, so it never travels in the redirect URL (where it
+  // could leak via history, proxy logs, or telemetry — RFC 9700 §§4.2-4.3).
+  // Codes are single-use and short-lived. In-memory is sufficient for a single
+  // API instance; a shared store would be needed once the API is scaled out.
+  private readonly pendingHandoffs = new Map<
+    string,
+    { email: string; expiresAt: number }
+  >();
 
   constructor(
     private readonly config: ConfigService<Env, true>,
@@ -145,7 +146,7 @@ export class AuthGithubService {
         return this.spaRedirect(app, '/login', { githubError: 'email' });
       }
 
-      const handoff = this.signHandoff(email);
+      const handoff = this.createHandoff(email);
       return this.spaRedirect(app, '/auth/github/callback', { code: handoff });
     } catch (error) {
       this.logger.warn({
@@ -157,7 +158,11 @@ export class AuthGithubService {
   }
 
   async exchangeSession(code: string): Promise<TokenPair> {
-    const email = this.verifyHandoff(code);
+    const email = this.claimHandoff(code);
+    if (email === null) {
+      this.logger.warn({ event: 'auth.github_login.handoff_invalid' });
+      throw new UnauthorizedException('Unauthorized');
+    }
     return this.auth.createSessionForVerifiedEmail(email);
   }
 
@@ -283,53 +288,38 @@ export class AuthGithubService {
     );
   }
 
-  private signHandoff(email: string): string {
-    return jwt.sign(
-      {
-        purpose: 'gh-login-handoff',
-        email,
-        jti: randomBytes(16).toString('hex'),
-      },
-      this.secret(),
-      { expiresIn: '60s' },
-    );
+  /**
+   * Issues an opaque single-use handoff code and stores the email against it.
+   * The code carries no payload, so decoding it (from the URL, history, or
+   * logs) reveals nothing — the email lives only server-side.
+   */
+  private createHandoff(email: string): string {
+    const code = randomBytes(32).toString('hex');
+    this.pendingHandoffs.set(code, {
+      email,
+      expiresAt: Date.now() + HANDOFF_TTL_MS,
+    });
+    return code;
   }
 
-  private verifyHandoff(token: string): string {
-    let decoded: GithubHandoffClaims;
-    try {
-      decoded = jwt.verify(token, this.secret()) as GithubHandoffClaims;
-    } catch (error) {
-      this.logger.warn({
-        event: 'auth.github_login.handoff_invalid',
-        reason: error instanceof Error ? error.message : String(error),
-      });
-      throw new UnauthorizedException('Unauthorized');
-    }
-    if (
-      decoded.purpose !== 'gh-login-handoff' ||
-      !decoded.email ||
-      !decoded.jti
-    ) {
-      this.logger.warn({ event: 'auth.github_login.handoff_bad_claims' });
-      throw new UnauthorizedException('Unauthorized');
-    }
-    if (!this.claimHandoff(decoded.jti, decoded.exp)) {
-      this.logger.warn({ event: 'auth.github_login.handoff_replayed' });
-      throw new UnauthorizedException('Unauthorized');
-    }
-    return decoded.email;
+  /**
+   * Consumes a handoff code, returning its email once, or null when the code is
+   * unknown or expired. Deleting on read makes it single-use, so a replayed
+   * callback URL cannot mint a second session.
+   */
+  private claimHandoff(code: string): string | null {
+    this.purgeExpiredHandoffs();
+    const entry = this.pendingHandoffs.get(code);
+    if (!entry) return null;
+    this.pendingHandoffs.delete(code);
+    return entry.expiresAt > Date.now() ? entry.email : null;
   }
 
-  /** Single-use: returns false if this handoff jti was already consumed. */
-  private claimHandoff(jti: string, exp?: number): boolean {
+  private purgeExpiredHandoffs(): void {
     const now = Date.now();
-    for (const [key, expiresAt] of this.consumedHandoffs) {
-      if (expiresAt <= now) this.consumedHandoffs.delete(key);
+    for (const [code, entry] of this.pendingHandoffs) {
+      if (entry.expiresAt <= now) this.pendingHandoffs.delete(code);
     }
-    if (this.consumedHandoffs.has(jti)) return false;
-    this.consumedHandoffs.set(jti, exp ? exp * 1000 : now + 60_000);
-    return true;
   }
 
   // --- Config helpers --------------------------------------------------------

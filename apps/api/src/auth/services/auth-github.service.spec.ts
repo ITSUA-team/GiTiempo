@@ -228,4 +228,24 @@ describe('AuthGithubService', () => {
     await svc.exchangeSession(handoff);
     await expect(svc.exchangeSession(handoff)).rejects.toThrow();
   });
+
+  it('issues an opaque handoff code that does not embed the email', async () => {
+    const { svc } = createService();
+    const { state, stateNonce } = startTransaction(svc, 'admin');
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'admin@example.com', primary: true, verified: true },
+      ]),
+    );
+    const code = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    ).searchParams.get('code')!;
+
+    // Opaque random code: no JWT payload to decode and the email never appears,
+    // so the redirect URL, history, or logs cannot leak it.
+    expect(code).toMatch(/^[0-9a-f]{64}$/);
+    expect(code).not.toContain('admin@example.com');
+    expect(code.includes('.')).toBe(false);
+  });
 });
