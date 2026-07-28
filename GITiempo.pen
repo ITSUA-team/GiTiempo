@@ -15219,7 +15219,6 @@
               "id": "7loGY",
               "name": "panel",
               "width": "fill_container",
-              "height": 478,
               "fill": "$color-surface",
               "cornerRadius": "$radius-lg",
               "layout": "vertical",
@@ -15363,7 +15362,6 @@
                   "id": "Cuwiv",
                   "name": "actions",
                   "width": "fill_container",
-                  "height": 150,
                   "layout": "vertical",
                   "gap": 12,
                   "children": [
@@ -15410,6 +15408,33 @@
                           "id": "S7LkA",
                           "fill": "$color-text-dark",
                           "content": "Continue with Google",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZuKxU",
+                      "name": "github button",
+                      "width": "fill_container",
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        12,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "W0QLa",
+                          "fill": "$color-text-dark",
+                          "content": "Continue with GitHub",
                           "fontFamily": "Inter",
                           "fontSize": 15,
                           "fontWeight": "600"
@@ -37081,7 +37106,8 @@
                                   "fill": "#666666",
                                   "content": "2 active projects",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -37134,7 +37160,8 @@
                                   "fill": "#666666",
                                   "content": "Above target by 2h",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -37187,7 +37214,8 @@
                                   "fill": "#666666",
                                   "content": "2 tracked this week",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             }
@@ -37232,7 +37260,8 @@
                               "fill": "#666666",
                               "content": "Your strongest project and task based on this week's tracked entries.",
                               "fontFamily": "Inter",
-                              "fontSize": 10
+                              "fontSize": 10,
+                              "fontWeight": "normal"
                             },
                             {
                               "type": "text",
@@ -37292,7 +37321,8 @@
                               "fill": "#666666",
                               "content": "42% of your completed time this week",
                               "fontFamily": "Inter",
-                              "fontSize": 9
+                              "fontSize": 9,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -37565,7 +37595,8 @@
                           "fill": "#666666",
                           "content": "Tracking from this GitHub issue",
                           "fontFamily": "Inter",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "frame",
@@ -39646,7 +39677,8 @@
                                   "fill": "#666666",
                                   "content": "2 active projects",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -39699,7 +39731,8 @@
                                   "fill": "#666666",
                                   "content": "Above target by 2h",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -39752,7 +39785,8 @@
                                   "fill": "#666666",
                                   "content": "2 tracked this week",
                                   "fontFamily": "Inter",
-                                  "fontSize": 9
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             }
@@ -39797,7 +39831,8 @@
                               "fill": "#666666",
                               "content": "Your strongest project and task based on this week's tracked entries.",
                               "fontFamily": "Inter",
-                              "fontSize": 10
+                              "fontSize": 10,
+                              "fontWeight": "normal"
                             },
                             {
                               "type": "text",
@@ -39857,7 +39892,8 @@
                               "fill": "#666666",
                               "content": "42% of your completed time this week",
                               "fontFamily": "Inter",
-                              "fontSize": 9
+                              "fontSize": 9,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -39966,7 +40002,8 @@
                   "content": "The Chrome extension detects the task context, so time starts attached to the work instead of a separate entry.",
                   "lineHeight": 1.45,
                   "fontFamily": "Inter",
-                  "fontSize": 14
+                  "fontSize": 14,
+                  "fontWeight": "normal"
                 },
                 {
                   "type": "frame",
@@ -40080,7 +40117,8 @@
                           "fill": "#666666",
                           "content": "Tracking from this GitHub issue",
                           "fontFamily": "Inter",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "frame",
@@ -41727,7 +41765,8 @@
                               "fill": "#666666",
                               "content": "2 active projects",
                               "fontFamily": "Inter",
-                              "fontSize": 9
+                              "fontSize": 9,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -41792,7 +41831,8 @@
                               "fill": "#666666",
                               "content": "Above target by 2h",
                               "fontFamily": "Inter",
-                              "fontSize": 9
+                              "fontSize": 9,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -42066,7 +42106,8 @@
                   "content": "The Chrome extension detects the task context, so time starts attached to the work instead of a separate entry.",
                   "lineHeight": 1.45,
                   "fontFamily": "Inter",
-                  "fontSize": 14
+                  "fontSize": 14,
+                  "fontWeight": "normal"
                 },
                 {
                   "type": "frame",
@@ -53568,6 +53609,495 @@
                       ]
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "eStIM",
+      "x": 5280,
+      "y": -1100,
+      "name": "Login Page — Admin",
+      "clip": true,
+      "width": 1280,
+      "height": 900,
+      "fill": "$color-app-bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "GTO74",
+          "name": "left",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$color-surface",
+          "layout": "vertical",
+          "padding": [
+            48,
+            56
+          ],
+          "justifyContent": "space_between",
+          "children": [
+            {
+              "type": "frame",
+              "id": "q0aAX",
+              "name": "brand",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hh8KF",
+                  "name": "logo",
+                  "width": 40,
+                  "height": 40,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 12,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Z0ck6",
+                      "fill": "$color-brand",
+                      "content": "GT",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gEXo7",
+                  "name": "brandText",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Y2egUO",
+                      "fill": "$color-text-dark",
+                      "content": "GiTiempo",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "qlVxf",
+                      "fill": "$color-text-muted",
+                      "content": "Time tracking for modern product teams",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "V6NlY",
+              "name": "hero",
+              "width": 520,
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "TCoCY",
+                  "fill": "$color-text-dark",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Manage reporting, members, and projects in one workspace.",
+                  "fontFamily": "Inter",
+                  "fontSize": 40,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "W4skJa",
+                  "fill": "$color-text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Sign in with your workspace account to access reports, invoicing, member management, and settings from the admin side of GiTiempo.",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "XYFEq",
+                  "name": "heroCards",
+                  "width": "fill_container",
+                  "height": 132,
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "s5E5rl",
+                      "name": "card1",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$color-app-bg",
+                      "cornerRadius": "$radius-lg",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mtGBD",
+                          "fill": "$color-text-dark",
+                          "content": "Admin-ready reports",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "o622mg",
+                          "fill": "$color-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Review team time, project summaries, and invoice inputs from a single authenticated workspace.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "O6vmsX",
+                      "name": "card2",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$color-app-bg",
+                      "cornerRadius": "$radius-lg",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "vRyRu",
+                          "fill": "$color-text-dark",
+                          "content": "Shared workspace auth",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "I5Eel",
+                          "fill": "$color-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Use the same Firebase-backed workspace identity as the user app, without maintaining a second login model.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zhXSg",
+              "name": "footer",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "NjWsb",
+                  "fill": "$color-text-muted",
+                  "content": "Guest-only admin entry",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "a44JJ",
+                  "fill": "$color-text-muted",
+                  "content": "Shared auth direction with user-web",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "DDP5j",
+                  "name": "loginSwitch",
+                  "fill": "#5D2B85",
+                  "content": "Need time tracking? Open the user workspace.",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "yNFU6",
+          "name": "right",
+          "width": 520,
+          "height": "fill_container",
+          "fill": "$color-app-bg",
+          "layout": "vertical",
+          "padding": 48,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "hIgQy",
+              "name": "panel",
+              "width": "fill_container",
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": 20,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "LGbNo",
+                  "name": "panelHeader",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "V6VCSn",
+                      "fill": "$color-text-dark",
+                      "content": "Admin sign in",
+                      "fontFamily": "Inter",
+                      "fontSize": 28,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Q3QyEQ",
+                      "fill": "$color-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Use your workspace account to continue into the admin workspace.",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "i5Wzc5",
+                  "name": "emailField",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zU3AB",
+                      "fill": "$color-text-dark",
+                      "content": "Email",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m7Xuy",
+                      "width": "fill_container",
+                      "height": 42,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "u2QJDB",
+                          "fill": "$color-text-muted",
+                          "content": "admin@workspace.com",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "I5uR7",
+                  "name": "passwordField",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CJChb",
+                      "fill": "$color-text-dark",
+                      "content": "Password",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "J8XOPf",
+                      "width": "fill_container",
+                      "height": 42,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "qpSmD",
+                          "fill": "$color-text-dark",
+                          "content": "••••••••••",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "DJuFy",
+                          "fill": "$color-brand",
+                          "content": "Forgot?",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "RbrK1",
+                  "name": "actions",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "VUCve",
+                      "width": "fill_container",
+                      "fill": "$color-brand",
+                      "cornerRadius": "$radius-sm",
+                      "padding": [
+                        12,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "b6K5hr",
+                          "fill": "$color-surface",
+                          "content": "Sign in",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ttq2C",
+                      "width": "fill_container",
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        12,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "W3NX6Q",
+                          "fill": "$color-text-dark",
+                          "content": "Continue with Google",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "H364un",
+                      "name": "github button",
+                      "width": "fill_container",
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        12,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "E3Clk",
+                          "fill": "$color-text-dark",
+                          "content": "Continue with GitHub",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "k6lDU",
+                  "fill": "$color-text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "By continuing, you agree to your workspace authentication policy.",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             }
