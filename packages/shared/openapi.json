@@ -2693,29 +2693,24 @@
         ]
       }
     },
-    "/reports/time/export": {
+    "/reports/time/export/pdf": {
       "post": {
-        "operationId": "ReportsController_exportTimeReport",
+        "operationId": "ReportsController_exportReportPdf",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TimeReportExportRequestDto"
+                "$ref": "#/components/schemas/ReportPdfExportRequestDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "CSV or PDF export of the report",
+            "description": "PDF of the report exactly as shown on screen",
             "content": {
-              "text/csv": {
-                "schema": {
-                  "type": "string"
-                }
-              },
               "application/pdf": {
                 "schema": {
                   "type": "string"
@@ -2732,7 +2727,166 @@
             "bearer": []
           }
         ],
-        "summary": "Export aggregated time report as CSV or PDF",
+        "summary": "Render an on-screen report document as a PDF",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/saved": {
+      "get": {
+        "operationId": "SavedReportsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedReportListResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List saved report presets for the workspace",
+        "tags": [
+          "reports"
+        ]
+      },
+      "post": {
+        "operationId": "SavedReportsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSavedReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedReportResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          },
+          "409": {
+            "description": "Preset name already used"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a saved report preset",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/saved/{id}": {
+      "patch": {
+        "operationId": "SavedReportsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSavedReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedReportResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          },
+          "404": {
+            "description": "Preset not found in this workspace"
+          },
+          "409": {
+            "description": "Preset name already used"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rename a saved report preset or replace its config",
+        "tags": [
+          "reports"
+        ]
+      },
+      "delete": {
+        "operationId": "SavedReportsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Preset deleted"
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          },
+          "404": {
+            "description": "Preset not found in this workspace"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a saved report preset",
         "tags": [
           "reports"
         ]
@@ -5732,7 +5886,8 @@
               "enum": [
                 "project",
                 "task",
-                "user"
+                "user",
+                "billable"
               ]
             }
           },
@@ -5775,7 +5930,8 @@
               "enum": [
                 "project",
                 "task",
-                "user"
+                "user",
+                "billable"
               ]
             }
           },
@@ -5944,6 +6100,14 @@
                     "avatarUrl"
                   ],
                   "nullable": true
+                },
+                "billable": {
+                  "type": "string",
+                  "enum": [
+                    "billable",
+                    "nonBillable"
+                  ],
+                  "nullable": true
                 }
               },
               "required": [
@@ -5956,7 +6120,8 @@
                 "lastStartedAt",
                 "project",
                 "task",
-                "user"
+                "user",
+                "billable"
               ]
             }
           },
@@ -6000,77 +6165,803 @@
           "meta"
         ]
       },
-      "TimeReportExportRequestDto": {
+      "ReportPdfExportRequestDto": {
         "type": "object",
         "properties": {
-          "dateFrom": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          },
-          "dateTo": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          },
-          "projectId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "groupBy": {
-            "default": [
-              "project"
+          "document": {
+            "type": "object",
+            "properties": {
+              "masthead": {
+                "type": "object",
+                "properties": {
+                  "wordmark": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "tag": {
+                    "type": "string",
+                    "maxLength": 60
+                  }
+                },
+                "required": [
+                  "wordmark",
+                  "tag"
+                ],
+                "additionalProperties": false
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "period": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "filters": {
+                "type": "string",
+                "maxLength": 400
+              },
+              "stats": {
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "maxLength": 60
+                    },
+                    "value": {
+                      "type": "string",
+                      "maxLength": 60
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "columns": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "NAME",
+                      "HOURS",
+                      "BILLABLE",
+                      "BILL %"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "NAME",
+                      "HOURS",
+                      "BILLABLE",
+                      "BILL %"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "NAME",
+                      "HOURS",
+                      "BILLABLE",
+                      "BILL %"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "NAME",
+                      "HOURS",
+                      "BILLABLE",
+                      "BILL %"
+                    ]
+                  }
+                ]
+              },
+              "rows": {
+                "maxItems": 5000,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "detail": {
+                      "type": "string",
+                      "maxLength": 120,
+                      "nullable": true
+                    },
+                    "label": {
+                      "type": "string",
+                      "maxLength": 300
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 8
+                    },
+                    "isLeaf": {
+                      "type": "boolean"
+                    },
+                    "hours": {
+                      "type": "string",
+                      "maxLength": 40
+                    },
+                    "billable": {
+                      "type": "string",
+                      "maxLength": 40
+                    },
+                    "share": {
+                      "type": "string",
+                      "maxLength": 40
+                    }
+                  },
+                  "required": [
+                    "detail",
+                    "label",
+                    "level",
+                    "isLeaf",
+                    "hours",
+                    "billable",
+                    "share"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "total": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "hours": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "billable": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "share": {
+                    "type": "string",
+                    "maxLength": 40
+                  }
+                },
+                "required": [
+                  "label",
+                  "hours",
+                  "billable",
+                  "share"
+                ],
+                "additionalProperties": false
+              },
+              "footerNote": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "masthead",
+              "title",
+              "period",
+              "filters",
+              "stats",
+              "columns",
+              "rows",
+              "total",
+              "footerNote"
             ],
-            "minItems": 1,
-            "maxItems": 4,
-            "type": "array",
-            "items": {
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "document"
+        ],
+        "additionalProperties": false
+      },
+      "SavedReportListResponseDto": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
               "type": "string",
-              "enum": [
-                "project",
-                "task",
-                "user"
-              ]
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "name": {
+              "type": "string"
+            },
+            "config": {
+              "type": "object",
+              "properties": {
+                "dateRange": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "absolute"
+                      ]
+                    },
+                    "dateFrom": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    },
+                    "dateTo": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "dateFrom",
+                    "dateTo"
+                  ]
+                },
+                "filters": {
+                  "default": {
+                    "activity": "any",
+                    "billable": "any",
+                    "billableShare": "any",
+                    "global": "",
+                    "hours": "any"
+                  },
+                  "type": "object",
+                  "properties": {
+                    "activity": {
+                      "default": "any",
+                      "type": "string",
+                      "enum": [
+                        "any",
+                        "today",
+                        "last7",
+                        "last30"
+                      ]
+                    },
+                    "billable": {
+                      "default": "any",
+                      "type": "string",
+                      "enum": [
+                        "any",
+                        "gte8",
+                        "gte40"
+                      ]
+                    },
+                    "billableShare": {
+                      "default": "any",
+                      "type": "string",
+                      "enum": [
+                        "any",
+                        "below50",
+                        "gte50",
+                        "gte90"
+                      ]
+                    },
+                    "global": {
+                      "default": "",
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "hours": {
+                      "default": "any",
+                      "type": "string",
+                      "enum": [
+                        "any",
+                        "gt0",
+                        "gte8",
+                        "gte40"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "activity",
+                    "billable",
+                    "billableShare",
+                    "global",
+                    "hours"
+                  ]
+                },
+                "grouping": {
+                  "default": [
+                    "project"
+                  ],
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "project",
+                      "task",
+                      "user",
+                      "billable"
+                    ]
+                  }
+                },
+                "memberId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "default": null,
+                  "nullable": true
+                },
+                "projectId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "default": null,
+                  "nullable": true
+                }
+              },
+              "required": [
+                "dateRange"
+              ],
+              "nullable": true
+            },
+            "createdBy": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "nullable": true
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
             }
           },
-          "search": {
+          "required": [
+            "id",
+            "name",
+            "config",
+            "createdBy",
+            "createdAt",
+            "updatedAt"
+          ]
+        }
+      },
+      "CreateSavedReportDto": {
+        "type": "object",
+        "properties": {
+          "name": {
             "type": "string",
-            "maxLength": 200
+            "minLength": 1,
+            "maxLength": 120
           },
-          "sortBy": {
-            "default": "totalSeconds",
-            "type": "string",
-            "enum": [
-              "project",
-              "task",
-              "user",
-              "totalSeconds",
-              "billableSeconds",
-              "entryCount",
-              "firstStartedAt",
-              "lastStartedAt"
+          "config": {
+            "type": "object",
+            "properties": {
+              "dateRange": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "absolute"
+                    ]
+                  },
+                  "dateFrom": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "dateTo": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "dateFrom",
+                  "dateTo"
+                ]
+              },
+              "filters": {
+                "default": {
+                  "activity": "any",
+                  "billable": "any",
+                  "billableShare": "any",
+                  "global": "",
+                  "hours": "any"
+                },
+                "type": "object",
+                "properties": {
+                  "activity": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "today",
+                      "last7",
+                      "last30"
+                    ]
+                  },
+                  "billable": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gte8",
+                      "gte40"
+                    ]
+                  },
+                  "billableShare": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "below50",
+                      "gte50",
+                      "gte90"
+                    ]
+                  },
+                  "global": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "hours": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gt0",
+                      "gte8",
+                      "gte40"
+                    ]
+                  }
+                }
+              },
+              "grouping": {
+                "default": [
+                  "project"
+                ],
+                "minItems": 1,
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "project",
+                    "task",
+                    "user",
+                    "billable"
+                  ]
+                }
+              },
+              "memberId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              }
+            },
+            "required": [
+              "dateRange"
             ]
-          },
-          "sortOrder": {
-            "default": "desc",
+          }
+        },
+        "required": [
+          "name",
+          "config"
+        ],
+        "additionalProperties": false
+      },
+      "SavedReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
             "type": "string",
-            "enum": [
-              "asc",
-              "desc"
-            ]
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
-          "format": {
-            "default": "csv",
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "dateRange": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "absolute"
+                    ]
+                  },
+                  "dateFrom": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "dateTo": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "dateFrom",
+                  "dateTo"
+                ]
+              },
+              "filters": {
+                "default": {
+                  "activity": "any",
+                  "billable": "any",
+                  "billableShare": "any",
+                  "global": "",
+                  "hours": "any"
+                },
+                "type": "object",
+                "properties": {
+                  "activity": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "today",
+                      "last7",
+                      "last30"
+                    ]
+                  },
+                  "billable": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gte8",
+                      "gte40"
+                    ]
+                  },
+                  "billableShare": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "below50",
+                      "gte50",
+                      "gte90"
+                    ]
+                  },
+                  "global": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "hours": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gt0",
+                      "gte8",
+                      "gte40"
+                    ]
+                  }
+                },
+                "required": [
+                  "activity",
+                  "billable",
+                  "billableShare",
+                  "global",
+                  "hours"
+                ]
+              },
+              "grouping": {
+                "default": [
+                  "project"
+                ],
+                "minItems": 1,
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "project",
+                    "task",
+                    "user",
+                    "billable"
+                  ]
+                }
+              },
+              "memberId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              }
+            },
+            "required": [
+              "dateRange"
+            ],
+            "nullable": true
+          },
+          "createdBy": {
             "type": "string",
-            "enum": [
-              "csv",
-              "pdf"
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "config",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateSavedReportDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "dateRange": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "absolute"
+                    ]
+                  },
+                  "dateFrom": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "dateTo": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "dateFrom",
+                  "dateTo"
+                ]
+              },
+              "filters": {
+                "default": {
+                  "activity": "any",
+                  "billable": "any",
+                  "billableShare": "any",
+                  "global": "",
+                  "hours": "any"
+                },
+                "type": "object",
+                "properties": {
+                  "activity": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "today",
+                      "last7",
+                      "last30"
+                    ]
+                  },
+                  "billable": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gte8",
+                      "gte40"
+                    ]
+                  },
+                  "billableShare": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "below50",
+                      "gte50",
+                      "gte90"
+                    ]
+                  },
+                  "global": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "hours": {
+                    "default": "any",
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "gt0",
+                      "gte8",
+                      "gte40"
+                    ]
+                  }
+                }
+              },
+              "grouping": {
+                "default": [
+                  "project"
+                ],
+                "minItems": 1,
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "project",
+                    "task",
+                    "user",
+                    "billable"
+                  ]
+                }
+              },
+              "memberId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              },
+              "projectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "default": null,
+                "nullable": true
+              }
+            },
+            "required": [
+              "dateRange"
             ]
           }
         },

@@ -1,43 +1,29 @@
 import { type ComputedRef, type Ref } from 'vue';
-import type { TimeReportExportFormat } from '@gitiempo/shared';
+import type { ReportDocument } from '@gitiempo/shared';
 
-import { useExportTimeReportMutation } from '@/composables/query';
-import { toTimeReportExportRequest, type ReportSetupFilters } from '@/lib/report-view-model';
-import type { AdminServerStateScope } from '@/lib/query-keys';
-import type {
-  AdminReportsClient,
-  ReportExport,
-} from '@/services/admin-reports-client';
+import type { AdminReportsClient } from '@/services/admin-reports-client';
 
 interface UseReportExportOptions {
   enabled: Ref<boolean> | ComputedRef<boolean>;
   reportsClient: AdminReportsClient;
-  scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
 
 export function useReportExport({
   enabled,
   reportsClient,
-  scope,
 }: UseReportExportOptions) {
-  const exportReportMutation = useExportTimeReportMutation({
-    client: reportsClient,
-    scope,
-  });
-
-  async function exportCurrentReport(
-    filters: ReportSetupFilters,
-    format: TimeReportExportFormat = 'csv',
-  ): Promise<ReportExport | null> {
+  // The client builds the on-screen report document and the server only styles
+  // it into a PDF. CSV is built entirely client-side (see report-csv.ts) and
+  // never reaches the backend, so both formats match the screen exactly.
+  async function exportReportPdf(
+    document: ReportDocument,
+  ): Promise<Blob | null> {
     if (!enabled.value) {
       return null;
     }
 
-    return exportReportMutation.mutateAsync({
-      ...toTimeReportExportRequest(filters),
-      format,
-    });
+    return reportsClient.exportReportPdf(document);
   }
 
-  return { exportCurrentReport };
+  return { exportReportPdf };
 }

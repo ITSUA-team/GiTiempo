@@ -6,17 +6,9 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
-import {
-  projects,
-  tasks,
-  timeEntries,
-  users,
-  workspaceMembers,
-  workspaces,
-} from '../src/db/schema';
+import { projects, tasks, timeEntries, users } from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
-import { ReportsService } from '../src/reports/services/reports.service';
 
 const DATE_FROM = '2027-03-01T00:00:00.000Z';
 const DATE_TO = '2027-04-01T00:00:00.000Z';
@@ -347,96 +339,63 @@ describe('Reports (e2e)', () => {
     expect(unknown.status).toBe(400);
   });
 
-  it('exports detailed CSV rows recording the grouping path', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/reports/time/export')
-      .set('Authorization', bearer(adminToken))
-      .send({
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
-        groupBy: ['project', 'user'],
-      });
+  it('groups the whole report by billable status', async () => {
+    const res = await getReport(adminToken, { groupBy: ['billable'] });
 
     expect(res.status).toBe(200);
-    const lines = (res.text as string).trim().split('\n');
-    // header + one row per project-task-user combination (5 seeded combos)
-    expect(lines).toHaveLength(6);
-    for (const line of lines.slice(1)) {
-      // Every field is quoted to defuse formula injection across locales.
-      expect(line.startsWith('"project>user",')).toBe(true);
-    }
-  });
-
-  it('exports a styled PDF report for admins', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/reports/time/export')
-      .set('Authorization', bearer(adminToken))
-      .send({
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
-        format: 'pdf',
-        groupBy: ['project', 'user'],
-      })
-      .buffer(true)
-      .parse((response, callback) => {
-        const chunks: Buffer[] = [];
-        response.on('data', (chunk: Buffer) => chunks.push(chunk));
-        response.on('end', () => callback(null, Buffer.concat(chunks)));
-      });
-
-    expect(res.status).toBe(200);
-    expect(res.headers['content-type']).toContain('application/pdf');
-    expect(res.headers['content-disposition']).toContain('.pdf');
-    const body = res.body as Buffer;
-    expect(body.subarray(0, 5).toString('latin1')).toBe('%PDF-');
-    expect(body.length).toBeGreaterThan(1500);
-  });
-
-  it('keeps PDF export inside the PM report scope', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/reports/time/export')
-      .set('Authorization', bearer(pmToken))
-      .send({
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
-        format: 'pdf',
-        groupBy: ['project'],
-      })
-      .buffer(true)
-      .parse((response, callback) => {
-        const chunks: Buffer[] = [];
-        response.on('data', (chunk: Buffer) => chunks.push(chunk));
-        response.on('end', () => callback(null, Buffer.concat(chunks)));
-      });
-
-    expect(res.status).toBe(200);
-    expect((res.body as Buffer).subarray(0, 5).toString('latin1')).toBe(
-      '%PDF-',
+    expect(res.body.groupBy).toEqual(['billable']);
+    // Admin scope: billable 10800+5400+900 = 17100, non-billable 1800.
+    expect(res.body.items).toHaveLength(2);
+    const billable = res.body.items.find(
+      (item: { billable: string | null }) => item.billable === 'billable',
     );
+    const nonBillable = res.body.items.find(
+      (item: { billable: string | null }) => item.billable === 'nonBillable',
+    );
+    expect(billable).toMatchObject({
+      billable: 'billable',
+      project: null,
+      totalSeconds: 17100,
+      billableSeconds: 17100,
+    });
+    expect(nonBillable).toMatchObject({
+      billable: 'nonBillable',
+      totalSeconds: 1800,
+      nonBillableSeconds: 1800,
+    });
   });
 
-  it('rejects unknown export formats', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/reports/time/export')
-      .set('Authorization', bearer(adminToken))
-      .send({ dateFrom: DATE_FROM, dateTo: DATE_TO, format: 'xlsx' });
-
-    expect(res.status).toBe(400);
-  });
-
-  it('exposes the export filename header to cross-origin callers', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/reports/time/export')
-      .set('Authorization', bearer(adminToken))
-      .send({ dateFrom: DATE_FROM, dateTo: DATE_TO });
+  it('splits each project into billable and non-billable sub-groups', async () => {
+    const res = await getReport(adminToken, {
+      groupBy: ['project', 'billable'],
+    });
 
     expect(res.status).toBe(200);
-    // Without this, browsers cannot read Content-Disposition on cross-origin
-    // downloads and the file loses its real .csv/.pdf name.
-    expect(res.headers['access-control-expose-headers']).toContain(
-      'Content-Disposition',
+    const platformRows = res.body.items.filter(
+      (item: { project: { id: string } | null }) =>
+        item.project?.id === platformProjectId,
     );
-    expect(res.headers['content-disposition']).toContain('.csv');
+    const billable = platformRows.find(
+      (row: { billable: string | null }) => row.billable === 'billable',
+    );
+    const nonBillable = platformRows.find(
+      (row: { billable: string | null }) => row.billable === 'nonBillable',
+    );
+
+    expect(billable).toMatchObject({
+      billable: 'billable',
+      totalSeconds: 10800,
+      billableSeconds: 10800,
+      nonBillableSeconds: 0,
+      entryCount: 2,
+    });
+    expect(nonBillable).toMatchObject({
+      billable: 'nonBillable',
+      totalSeconds: 1800,
+      billableSeconds: 0,
+      nonBillableSeconds: 1800,
+      entryCount: 1,
+    });
   });
 
   it('rejects member report access', async () => {
@@ -444,159 +403,85 @@ describe('Reports (e2e)', () => {
     expect(report.status).toBe(403);
   });
 
-  // The PDF prints the names of the project and member filters. Those lookups
-  // are separate from the row query, so they need the same scope: matching on
-  // id alone let any id in the database be resolved to a name.
-  describe('PDF filter labels stay inside the caller scope', () => {
-    async function labelsFor(
-      token: string,
-      query: Record<string, unknown>,
-    ): Promise<{ memberLabel: string | null; projectLabel: string | null }> {
-      const service = app.get(ReportsService);
-      const user = { ...decode(token) };
-      const context = await (
-        service as unknown as {
-          buildQueryContext: (u: unknown, q: unknown) => Promise<unknown>;
-        }
-      ).buildQueryContext(user, {
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
-        format: 'pdf',
-        groupBy: ['project'],
-        sortBy: 'totalSeconds',
-        sortOrder: 'desc',
-        ...query,
+  function sampleReportDocument() {
+    return {
+      columns: ['NAME', 'HOURS', 'BILLABLE', 'BILL %'],
+      filters: 'Projects: All · Members: All · Grouping: Project',
+      footerNote: 'Generated with GiTiempo · Mar 1, 2027',
+      masthead: { tag: 'TIME REPORT', wordmark: 'GiTiempo' },
+      period: 'Mar 1, 2027 – Apr 1, 2027 · Workspace',
+      rows: [
+        {
+          billable: '10h 00m',
+          detail: null,
+          hours: '12h 30m',
+          isLeaf: true,
+          label: 'Internal Platform',
+          level: 0,
+          share: '80%',
+        },
+      ],
+      stats: [
+        { label: 'TRACKED HOURS', value: '12h 30m' },
+        { label: 'BILLABLE', value: '10h 00m · 80%' },
+      ],
+      title: 'Time report',
+      total: {
+        billable: '10h 00m',
+        hours: '12h 30m',
+        label: 'Total',
+        share: '80%',
+      },
+    };
+  }
+
+  it('styles a client-built report document into a PDF', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export/pdf')
+      .set('Authorization', bearer(adminToken))
+      .send({ document: sampleReportDocument() })
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
       });
 
-      return (
-        service as unknown as {
-          getExportFilterLabels: (
-            c: unknown,
-            q: unknown,
-          ) => Promise<{
-            memberLabel: string | null;
-            projectLabel: string | null;
-          }>;
-        }
-      ).getExportFilterLabels(context, { ...query });
-    }
+    expect(res.status).toBe(200);
+    expect((res.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+  });
 
-    function decode(token: string) {
-      const payload = JSON.parse(
-        Buffer.from(token.split('.')[1]!, 'base64url').toString('utf8'),
-      ) as Record<string, unknown>;
+  it('rejects report-document rendering for members', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export/pdf')
+      .set('Authorization', bearer(memberToken))
+      .send({ document: sampleReportDocument() });
 
-      return payload;
-    }
+    expect(res.status).toBe(403);
+  });
 
-    it('resolves an in-scope project name for an admin', async () => {
-      const labels = await labelsFor(adminToken, {
-        projectId: platformProjectId,
+  it('rejects a report document that violates the bounded schema', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/reports/time/export/pdf')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        document: {
+          ...sampleReportDocument(),
+          rows: [
+            {
+              billable: '0h 00m',
+              detail: null,
+              hours: '0h 00m',
+              isLeaf: true,
+              // Over the 300-char label cap → schema rejects before rendering.
+              label: 'x'.repeat(301),
+              level: 0,
+              share: '0%',
+            },
+          ],
+        },
       });
 
-      expect(labels.projectLabel).toBe('Internal Platform');
-    });
-
-    it('hides a project belonging to another workspace', async () => {
-      const [otherWorkspace] = await db
-        .insert(workspaces)
-        .values({ name: 'Reports Foreign Workspace' })
-        .returning({ id: workspaces.id });
-      const [foreignProject] = await db
-        .insert(projects)
-        .values({
-          name: 'Foreign Secret Project',
-          visibility: 'public',
-          workspaceId: otherWorkspace!.id,
-        })
-        .returning({ id: projects.id });
-
-      try {
-        const labels = await labelsFor(adminToken, {
-          projectId: foreignProject!.id,
-        });
-
-        expect(labels.projectLabel).toBeNull();
-      } finally {
-        await db.delete(projects).where(eq(projects.id, foreignProject!.id));
-        await db
-          .delete(workspaces)
-          .where(eq(workspaces.id, otherWorkspace!.id));
-      }
-    });
-
-    it('hides a private project a PM is not assigned to', async () => {
-      const labels = await labelsFor(pmToken, { projectId: probeProjectId });
-
-      expect(labels.projectLabel).toBeNull();
-    });
-
-    it('hides a user who is not a member of this workspace', async () => {
-      const [outsider] = await db
-        .insert(users)
-        .values({
-          email: 'outsider@elsewhere.test',
-          displayName: 'Outsider Person',
-          firebaseUid: 'reports-outsider-uid',
-        })
-        .returning({ id: users.id });
-
-      try {
-        const labels = await labelsFor(adminToken, { userId: outsider!.id });
-
-        expect(labels.memberLabel).toBeNull();
-      } finally {
-        await db.delete(users).where(eq(users.id, outsider!.id));
-      }
-    });
-
-    it('resolves a member of this workspace', async () => {
-      const labels = await labelsFor(adminToken, { userId: bobUserId });
-
-      expect(labels.memberLabel).toBeTruthy();
-    });
-
-    it('hides a member whose time is only in a project the PM cannot see', async () => {
-      // A real workspace member whose sole entry is in the probe project,
-      // which the PM is not assigned to. The PM must not read their name off
-      // the PDF even though they share a workspace.
-      const [hidden] = await db
-        .insert(users)
-        .values({
-          email: 'hidden-worker@elsewhere.test',
-          displayName: 'Hidden Worker',
-          firebaseUid: 'reports-hidden-worker-uid',
-        })
-        .returning({ id: users.id });
-      await db.insert(workspaceMembers).values({
-        workspaceId,
-        userId: hidden!.id,
-        role: 'member',
-      });
-      await db.insert(timeEntries).values({
-        workspaceId,
-        taskId: probeTaskId,
-        userId: hidden!.id,
-        source: 'manual' as const,
-        startedAt: new Date('2027-03-07T10:00:00.000Z'),
-        endedAt: new Date('2027-03-07T11:00:00.000Z'),
-        durationSeconds: 3600,
-        isBillable: true,
-      });
-
-      try {
-        const pmLabels = await labelsFor(pmToken, { userId: hidden!.id });
-        const adminLabels = await labelsFor(adminToken, { userId: hidden!.id });
-
-        expect(pmLabels.memberLabel).toBeNull();
-        expect(adminLabels.memberLabel).toBe('Hidden Worker');
-      } finally {
-        await db.delete(timeEntries).where(eq(timeEntries.userId, hidden!.id));
-        await db
-          .delete(workspaceMembers)
-          .where(eq(workspaceMembers.userId, hidden!.id));
-        await db.delete(users).where(eq(users.id, hidden!.id));
-      }
-    });
+    expect(res.status).toBe(400);
   });
 });

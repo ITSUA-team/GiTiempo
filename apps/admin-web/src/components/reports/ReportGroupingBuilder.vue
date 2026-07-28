@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
-import { giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
+import {
+  giTiempoAddLevelSelectMobilePt,
+  giTiempoFieldWidthSelectPt,
+} from '@gitiempo/web-config/theme';
+import { useIsMobileViewport } from '@gitiempo/web-shared';
 import Select from 'primevue/select';
 
 import {
@@ -12,6 +16,8 @@ import {
 } from '@/lib/report-view-model';
 
 const grouping = defineModel<ReportGrouping>('grouping', { required: true });
+
+const isMobileViewport = useIsMobileViewport();
 
 const availableGroupingDimensions = computed(() =>
   reportGroupingDimensions.filter(
@@ -230,106 +236,265 @@ function handleGroupingFocusOut(event: FocusEvent): void {
 
 <template>
   <div
-    class="flex flex-wrap items-center justify-between gap-3"
+    :class="
+      isMobileViewport
+        ? 'flex w-full flex-col gap-2'
+        : 'flex flex-wrap items-center justify-between gap-3'
+    "
     data-testid="report-grouping-builder"
     @focusout="handleGroupingFocusOut"
   >
-    <div class="flex flex-wrap items-center gap-2">
-      <span class="text-text-muted text-[13px] font-medium">Group by</span>
-      <template
-        v-for="(dimension, index) in grouping"
-        :key="dimension"
+    <!-- Mobile: numbered drill-down pipeline. The horizontal draggable chips are
+         unusable by touch (hover-gated controls), so each level becomes a
+         full-width card with always-visible ≥40px reorder/remove. Same handlers,
+         a11y model and testids as the desktop chip. -->
+    <template v-if="isMobileViewport">
+      <div class="flex items-center justify-between">
+        <span class="text-text-muted text-[13px] font-medium">Group by</span>
+        <span
+          v-if="grouping.length > 1"
+          class="text-text-muted text-[11px]"
+        >Tap ↑ ↓ to reorder</span>
+      </div>
+      <p class="text-text-muted text-[12px]">
+        Rows drill down in this order.
+      </p>
+
+      <ul
+        role="list"
+        class="flex w-full flex-col"
       >
-        <i
-          v-if="index > 0"
-          class="pi pi-chevron-right text-text-muted text-[11px]"
+        <template
+          v-for="(dimension, index) in grouping"
+          :key="dimension"
+        >
+          <li>
+            <div
+              v-if="index > 0"
+              aria-hidden="true"
+              class="flex h-[10px] items-center pl-[23px]"
+            >
+              <span class="bg-accent-tint h-full w-[2px]" />
+            </div>
+            <div
+              :ref="(el) => registerChipElement(dimension, el)"
+              :aria-grabbed="grabbedGroupingIndex === index"
+              :aria-label="groupingLevelLabel(index)"
+              aria-roledescription="sortable grouping level"
+              class="group border-divider bg-surface-primary focus-visible:ring-brand flex min-h-[52px] cursor-grab items-center gap-3 rounded-[8px] border px-3 py-2 focus:outline-none focus-visible:ring-2"
+              :class="
+                grabbedGroupingIndex === index
+                  ? 'bg-accent-tint ring-brand shadow-[0_3px_10px_#5D2B8555] ring-2'
+                  : ''
+              "
+              :data-testid="`report-grouping-chip-${dimension}`"
+              draggable="true"
+              role="button"
+              tabindex="0"
+              @dragstart="handleGroupingDragStart(index)"
+              @dragover.prevent
+              @drop.prevent="handleGroupingDrop(index)"
+              @keydown.enter.self.prevent="toggleGroupingGrab(index)"
+              @keydown.esc.prevent="cancelGroupingGrab"
+              @keydown.left.self.prevent="moveGrabbedGroupingLevel(-1)"
+              @keydown.right.self.prevent="moveGrabbedGroupingLevel(1)"
+              @keydown.up.self.prevent="moveGrabbedGroupingLevel(-1)"
+              @keydown.down.self.prevent="moveGrabbedGroupingLevel(1)"
+              @keydown.space.self.prevent="toggleGroupingGrab(index)"
+            >
+              <span
+                aria-hidden="true"
+                class="bg-accent-tint text-brand flex size-[24px] shrink-0 items-center justify-center rounded-full text-[12px] font-semibold"
+              >{{ index + 1 }}</span>
+              <span class="flex min-w-0 flex-1 flex-col text-left">
+                <span
+                  class="text-text-dark truncate text-[15px] font-semibold"
+                >{{ reportGroupingDimensionLabels[dimension] }}</span>
+                <span class="text-text-muted text-[11px]">{{
+                  index === 0
+                    ? 'Top level'
+                    : `within ${reportGroupingDimensionLabels[grouping[index - 1]!]}`
+                }}</span>
+              </span>
+              <div
+                v-if="grouping.length > 1"
+                class="border-divider flex shrink-0 overflow-hidden rounded-[8px] border"
+              >
+                <button
+                  :aria-label="`Move ${reportGroupingDimensionLabels[dimension]} earlier`"
+                  class="text-brand active:bg-accent-tint flex size-[40px] items-center justify-center disabled:opacity-30"
+                  :data-testid="`report-grouping-move-earlier-${dimension}`"
+                  :disabled="index === 0"
+                  type="button"
+                  @click="moveGroupingLevelByStep(index, -1, $event)"
+                >
+                  <i
+                    class="pi pi-chevron-up text-[13px]"
+                    aria-hidden="true"
+                  />
+                </button>
+                <button
+                  :aria-label="`Move ${reportGroupingDimensionLabels[dimension]} later`"
+                  class="text-brand active:bg-accent-tint border-divider flex size-[40px] items-center justify-center border-l disabled:opacity-30"
+                  :data-testid="`report-grouping-move-later-${dimension}`"
+                  :disabled="index === grouping.length - 1"
+                  type="button"
+                  @click="moveGroupingLevelByStep(index, 1, $event)"
+                >
+                  <i
+                    class="pi pi-chevron-down text-[13px]"
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+              <button
+                v-if="grouping.length > 1"
+                type="button"
+                class="text-text-muted active:bg-divider ml-1 flex size-[40px] shrink-0 items-center justify-center rounded-[8px]"
+                :aria-label="`Remove ${reportGroupingDimensionLabels[dimension]} grouping level`"
+                :data-testid="`report-grouping-remove-${dimension}`"
+                @click="removeGroupingLevel(index)"
+              >
+                <i
+                  class="pi pi-times text-[13px]"
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+          </li>
+        </template>
+      </ul>
+
+      <div
+        v-if="canAddGroupingLevel"
+        class="flex items-center gap-3"
+      >
+        <span
           aria-hidden="true"
+          class="bg-accent-tint text-brand flex size-[24px] shrink-0 items-center justify-center rounded-full"
+        >
+          <i class="pi pi-plus text-[11px]" />
+        </span>
+        <Select
+          class="flex-1"
+          :model-value="null"
+          aria-label="Add grouping level"
+          data-testid="report-grouping-add-level"
+          :options="addLevelOptions"
+          option-label="label"
+          option-value="value"
+          placeholder="+ Add level"
+          :pt="giTiempoAddLevelSelectMobilePt"
+          @update:model-value="addGroupingLevel"
         />
-        <div
-          :ref="(el) => registerChipElement(dimension, el)"
-          :aria-grabbed="grabbedGroupingIndex === index"
-          :aria-label="groupingLevelLabel(index)"
-          aria-roledescription="sortable grouping level"
-          :class="
-            grabbedGroupingIndex === index
-              ? 'ring-brand shadow-[0_3px_10px_#5D2B8555] ring-2'
-              : ''
-          "
-          class="group bg-accent-tint focus-visible:ring-brand flex h-[30px] cursor-grab items-center gap-1.5 rounded-full px-2.5 focus:outline-none focus-visible:ring-2"
-          :data-testid="`report-grouping-chip-${dimension}`"
-          draggable="true"
-          role="button"
-          tabindex="0"
-          @dragstart="handleGroupingDragStart(index)"
-          @dragover.prevent
-          @drop.prevent="handleGroupingDrop(index)"
-          @keydown.enter.prevent="toggleGroupingGrab(index)"
-          @keydown.esc.prevent="cancelGroupingGrab"
-          @keydown.left.prevent="moveGrabbedGroupingLevel(-1)"
-          @keydown.right.prevent="moveGrabbedGroupingLevel(1)"
-          @keydown.space.prevent="toggleGroupingGrab(index)"
+      </div>
+      <p
+        v-else
+        class="text-text-muted text-[12px]"
+      >
+        All dimensions in use.
+      </p>
+    </template>
+
+    <!-- Desktop: horizontal draggable chips (unchanged). -->
+    <template v-else>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-text-muted text-[13px] font-medium">Group by</span>
+        <template
+          v-for="(dimension, index) in grouping"
+          :key="dimension"
         >
           <i
-            class="pi pi-bars text-brand text-[10px]"
+            v-if="index > 0"
+            class="pi pi-chevron-right text-text-muted text-[11px]"
             aria-hidden="true"
           />
-          <button
-            v-if="grouping.length > 1"
-            :aria-label="`Move ${reportGroupingDimensionLabels[dimension]} earlier`"
-            class="text-brand hover:bg-brand/10 flex h-4 w-4 items-center justify-center rounded-full border-none bg-transparent p-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 disabled:opacity-30"
-            :data-testid="`report-grouping-move-earlier-${dimension}`"
-            :disabled="index === 0"
-            type="button"
-            @click="moveGroupingLevelByStep(index, -1, $event)"
+          <div
+            :ref="(el) => registerChipElement(dimension, el)"
+            :aria-grabbed="grabbedGroupingIndex === index"
+            :aria-label="groupingLevelLabel(index)"
+            aria-roledescription="sortable grouping level"
+            :class="
+              grabbedGroupingIndex === index
+                ? 'ring-brand shadow-[0_3px_10px_#5D2B8555] ring-2'
+                : ''
+            "
+            class="group bg-accent-tint focus-visible:ring-brand flex h-[30px] cursor-grab items-center gap-1.5 rounded-full px-2.5 focus:outline-none focus-visible:ring-2"
+            :data-testid="`report-grouping-chip-${dimension}`"
+            draggable="true"
+            role="button"
+            tabindex="0"
+            @dragstart="handleGroupingDragStart(index)"
+            @dragover.prevent
+            @drop.prevent="handleGroupingDrop(index)"
+            @keydown.enter.self.prevent="toggleGroupingGrab(index)"
+            @keydown.esc.prevent="cancelGroupingGrab"
+            @keydown.left.self.prevent="moveGrabbedGroupingLevel(-1)"
+            @keydown.right.self.prevent="moveGrabbedGroupingLevel(1)"
+            @keydown.space.self.prevent="toggleGroupingGrab(index)"
           >
-            <i class="pi pi-chevron-left text-[9px]" />
-          </button>
-          <span class="text-brand text-[13px] font-semibold">
-            {{ reportGroupingDimensionLabels[dimension] }}
-          </span>
-          <button
-            v-if="grouping.length > 1"
-            :aria-label="`Move ${reportGroupingDimensionLabels[dimension]} later`"
-            class="text-brand hover:bg-brand/10 flex h-4 w-4 items-center justify-center rounded-full border-none bg-transparent p-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 disabled:opacity-30"
-            :data-testid="`report-grouping-move-later-${dimension}`"
-            :disabled="index === grouping.length - 1"
-            type="button"
-            @click="moveGroupingLevelByStep(index, 1, $event)"
-          >
-            <i class="pi pi-chevron-right text-[9px]" />
-          </button>
-          <button
-            v-if="grouping.length > 1"
-            type="button"
-            class="text-brand hover:bg-brand/10 flex h-4 w-4 items-center justify-center rounded-full border-none bg-transparent p-0"
-            :aria-label="`Remove ${reportGroupingDimensionLabels[dimension]} grouping level`"
-            :data-testid="`report-grouping-remove-${dimension}`"
-            @click="removeGroupingLevel(index)"
-          >
-            <i class="pi pi-times text-[10px]" />
-          </button>
-        </div>
-      </template>
+            <i
+              class="pi pi-bars text-brand text-[10px]"
+              aria-hidden="true"
+            />
+            <button
+              v-if="grouping.length > 1"
+              :aria-label="`Move ${reportGroupingDimensionLabels[dimension]} earlier`"
+              class="text-brand hover:bg-brand/10 flex h-4 w-4 items-center justify-center rounded-full border-none bg-transparent p-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 disabled:opacity-30"
+              :data-testid="`report-grouping-move-earlier-${dimension}`"
+              :disabled="index === 0"
+              type="button"
+              @click="moveGroupingLevelByStep(index, -1, $event)"
+            >
+              <i class="pi pi-chevron-left text-[9px]" />
+            </button>
+            <span class="text-brand text-[13px] font-semibold">
+              {{ reportGroupingDimensionLabels[dimension] }}
+            </span>
+            <button
+              v-if="grouping.length > 1"
+              :aria-label="`Move ${reportGroupingDimensionLabels[dimension]} later`"
+              class="text-brand hover:bg-brand/10 flex h-4 w-4 items-center justify-center rounded-full border-none bg-transparent p-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 disabled:opacity-30"
+              :data-testid="`report-grouping-move-later-${dimension}`"
+              :disabled="index === grouping.length - 1"
+              type="button"
+              @click="moveGroupingLevelByStep(index, 1, $event)"
+            >
+              <i class="pi pi-chevron-right text-[9px]" />
+            </button>
+            <button
+              v-if="grouping.length > 1"
+              type="button"
+              class="text-brand hover:bg-brand/10 flex h-4 w-4 items-center justify-center rounded-full border-none bg-transparent p-0"
+              :aria-label="`Remove ${reportGroupingDimensionLabels[dimension]} grouping level`"
+              :data-testid="`report-grouping-remove-${dimension}`"
+              @click="removeGroupingLevel(index)"
+            >
+              <i class="pi pi-times text-[10px]" />
+            </button>
+          </div>
+        </template>
 
-      <Select
-        v-if="canAddGroupingLevel"
-        :model-value="null"
-        aria-label="Add grouping level"
-        class="h-[30px] w-[140px] rounded-full text-[13px]"
-        data-testid="report-grouping-add-level"
-        :options="addLevelOptions"
-        option-label="label"
-        option-value="value"
-        placeholder="+ Add level"
-        :pt="giTiempoFieldWidthSelectPt"
-        @update:model-value="addGroupingLevel"
-      />
-    </div>
+        <Select
+          v-if="canAddGroupingLevel"
+          :model-value="null"
+          aria-label="Add grouping level"
+          class="h-[30px] w-[140px] rounded-full text-[13px]"
+          data-testid="report-grouping-add-level"
+          :options="addLevelOptions"
+          option-label="label"
+          option-value="value"
+          placeholder="+ Add level"
+          :pt="giTiempoFieldWidthSelectPt"
+          @update:model-value="addGroupingLevel"
+        />
+      </div>
 
-    <span class="text-text-muted hidden text-xs sm:inline">
-      Drag, or press Space to grab and ← → to move · up to
-      {{ maxReportGroupingLevels }} levels
-    </span>
+      <span class="text-text-muted hidden text-xs sm:inline">
+        Drag, or press Space to grab and ← → to move · up to
+        {{ maxReportGroupingLevels }} levels
+      </span>
+    </template>
 
     <!-- Narrates each grab, move and drop; assertive so it interrupts. -->
     <span

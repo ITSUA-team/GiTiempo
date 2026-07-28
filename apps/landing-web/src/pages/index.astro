@@ -1,0 +1,29 @@
+---
+import Faq from '../components/Faq.astro';
+import FinalCta from '../components/FinalCta.astro';
+import Hero from '../components/Hero.astro';
+import MvpScope from '../components/MvpScope.astro';
+import Navigation from '../components/Navigation.astro';
+import ProductBenefits from '../components/ProductBenefits.astro';
+import Roles from '../components/Roles.astro';
+import WorkflowSteps from '../components/WorkflowSteps.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getPublicConfig } from '../lib/public-config.mjs';
+
+const config = getPublicConfig(import.meta.env);
+const title = 'GITiempo — Time tracking that fits your workflow';
+const description = 'Track time from GitHub issues or your workspace, keep manual work in context, and make review simpler.';
+---
+
+<BaseLayout {title} {description}>
+  <Navigation userAppUrl={config.userAppUrl} />
+  <main id="main-content">
+    <Hero userAppUrl={config.userAppUrl} adminAppUrl={config.adminAppUrl} />
+    <ProductBenefits />
+    <WorkflowSteps />
+    <Roles />
+    <MvpScope />
+    <Faq />
+  </main>
+  <FinalCta userAppUrl={config.userAppUrl} adminAppUrl={config.adminAppUrl} />
+</BaseLayout>

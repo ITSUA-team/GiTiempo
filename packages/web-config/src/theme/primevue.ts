@@ -51,6 +51,28 @@ export const giTiempoFieldWidthSelectPt = {
   overlay: { class: giTiempoAnchorWidthOverlayClass },
 } as const;
 
+// The mobile "+ Add level" grouping control. The root string carries its own
+// height/width/radius so nothing merges against the shared control base (which
+// would reintroduce the h-[30px]/h-[38px] + rounded-full/rounded-[6px] conflict);
+// the component passes only `class="flex-1"`. Renders as a full-width dashed
+// brand add-row sized for touch.
+export const giTiempoAddLevelSelectMobilePt = {
+  root: {
+    class:
+      "border-brand/40 text-brand flex h-[48px] w-full items-center rounded-[8px] border-2 border-dashed bg-transparent px-3 font-sans text-[15px] font-semibold shadow-none",
+  },
+  label: {
+    class:
+      "text-brand flex h-full items-center px-0 font-sans text-[15px] font-semibold",
+  },
+  dropdown: {
+    class:
+      "text-brand flex h-[48px] w-9 shrink-0 items-center justify-center rounded-none border-0 bg-transparent p-0 shadow-none",
+  },
+  overlay: { class: giTiempoAnchorWidthOverlayClass },
+  option: { class: "flex min-h-[44px] items-center" },
+} as const;
+
 export const giTiempoDatePickerPt = {
   root: { class: "h-[38px] w-full" },
   pcInputText: {

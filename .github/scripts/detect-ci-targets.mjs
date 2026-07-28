@@ -9,6 +9,7 @@ const ALL_PACKAGES = [
     packageName: '@gitiempo/api',
     runBuild: false,
     runApiE2e: true,
+    runBrowser: false,
   },
   {
     appName: 'user-web',
@@ -16,6 +17,7 @@ const ALL_PACKAGES = [
     packageName: 'user-web',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: false,
   },
   {
     appName: 'admin-web',
@@ -23,6 +25,15 @@ const ALL_PACKAGES = [
     packageName: 'admin-web',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: false,
+  },
+  {
+    appName: 'landing-web',
+    appPath: 'apps/landing-web',
+    packageName: 'landing-web',
+    runBuild: true,
+    runApiE2e: false,
+    runBrowser: true,
   },
   {
     appName: 'shared',
@@ -30,6 +41,7 @@ const ALL_PACKAGES = [
     packageName: '@gitiempo/shared',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: false,
   },
   {
     appName: 'web-shared',
@@ -37,6 +49,7 @@ const ALL_PACKAGES = [
     packageName: '@gitiempo/web-shared',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: false,
   },
   {
     appName: 'web-config',
@@ -44,12 +57,15 @@ const ALL_PACKAGES = [
     packageName: '@gitiempo/web-config',
     runBuild: true,
     runApiE2e: false,
+    runBrowser: false,
   },
 ];
 
 const FRONTEND_APPS = ALL_PACKAGES.filter(({ appName }) =>
   ['user-web', 'admin-web'].includes(appName),
 );
+
+const LANDING_DEPLOY_PATHS = ['.github/workflows/deploy-landing-staging.yml'];
 
 const mode = process.argv[2] ?? 'ci';
 const files = readFileSync(0, 'utf8')
@@ -73,9 +89,14 @@ function addPackage(packageName, overrides = {}) {
     ...target,
     ...existing,
     ...overrides,
-    runBuild: Boolean(existing?.runBuild || overrides.runBuild || target.runBuild),
+    runBuild: Boolean(
+      existing?.runBuild || overrides.runBuild || target.runBuild,
+    ),
     runApiE2e: Boolean(
       existing?.runApiE2e || overrides.runApiE2e || target.runApiE2e,
+    ),
+    runBrowser: Boolean(
+      existing?.runBrowser || overrides.runBrowser || target.runBrowser,
     ),
   });
 }
@@ -138,6 +159,10 @@ function detectCiTargets() {
     addPackage('admin-web');
   }
 
+  if (hasPath('apps/landing-web') || hasAnyPath(LANDING_DEPLOY_PATHS)) {
+    addPackage('landing-web');
+  }
+
   if (hasPath('packages/shared')) {
     addPackage('@gitiempo/shared');
     addPackage('@gitiempo/api');
@@ -155,6 +180,7 @@ function detectCiTargets() {
     addPackage('@gitiempo/web-config');
     addPackage('user-web');
     addPackage('admin-web');
+    addPackage('landing-web');
   }
 }
 
@@ -175,7 +201,11 @@ function detectFrontendDeployTargets() {
 
   if (
     hasWorkspaceWideChange() ||
-    hasAnyPath(['packages/shared', 'packages/web-config', 'packages/web-shared'])
+    hasAnyPath([
+      'packages/shared',
+      'packages/web-config',
+      'packages/web-shared',
+    ])
   ) {
     for (const target of FRONTEND_APPS) {
       addPackage(target.packageName);
@@ -199,6 +229,7 @@ function formatMatrixTarget(target) {
     package_name: target.packageName,
     run_build: String(target.runBuild),
     run_api_e2e: String(target.runApiE2e),
+    run_browser: String(target.runBrowser),
   };
 }
 

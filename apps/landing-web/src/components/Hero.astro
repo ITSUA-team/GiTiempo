@@ -1,0 +1,39 @@
+---
+import DashboardPreview from './DashboardPreview.astro';
+
+interface Props {
+  userAppUrl: string;
+  adminAppUrl: string;
+}
+
+const { userAppUrl, adminAppUrl } = Astro.props;
+---
+
+<section class="bg-landing-dark py-6 text-text-inverse sm:py-7 lg:min-h-[960px] lg:py-0">
+  <div class="page-shell grid items-center gap-6 lg:grid-cols-[0.82fr_1fr] lg:gap-20 lg:pt-[226px]">
+    <div class="max-w-xl lg:max-w-[510px]">
+      <p class="eyebrow flex items-center gap-2 text-landing-purple-light">
+        <span class="size-2 rounded-full bg-landing-status" aria-hidden="true"></span>
+        TIME TRACKING FOR GITHUB ISSUES &amp; PROJECTS
+      </p>
+      <h1 class="mt-5 text-[40px] font-bold leading-[1.03] tracking-[-0.055em] sm:text-[56px] lg:mt-6 lg:text-[58px]">
+        Track time where the work already happens.
+      </h1>
+      <p class="mt-5 max-w-[34rem] text-base leading-7 text-landing-muted-inverse sm:mt-6 sm:text-lg">
+        Start timers from GitHub or GITiempo, keep manual tasks alongside synced issues, and turn tracked hours into reports and invoice records.
+      </p>
+      <div class="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center">
+        <a class="action-primary" href={userAppUrl}>Start tracking now <span aria-hidden="true">→</span></a>
+        <a class="action-secondary w-full sm:w-auto lg:min-h-0 lg:border-0 lg:bg-transparent lg:px-2 lg:py-3" href={adminAppUrl}>
+          Open admin workspace
+        </a>
+      </div>
+      <p class="mt-5 text-[13px] leading-5 text-landing-faint sm:mt-6">
+        Create an account with Google or email. Connect GitHub only when it adds useful context.
+      </p>
+    </div>
+    <div class="lg:mt-[40px] lg:justify-self-end lg:w-full lg:max-w-[632px]">
+      <DashboardPreview />
+    </div>
+  </div>
+</section>
