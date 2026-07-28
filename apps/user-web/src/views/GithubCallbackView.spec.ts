@@ -105,14 +105,33 @@ describe("GithubCallbackView", () => {
     wrapper.unmount();
   });
 
-  it("returns to login when the callback carries a githubError", async () => {
+  it("funnels a callback githubError to the login page as a code", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
-    const { router, wrapper } = await mountCallbackView(
+    const { router } = await mountCallbackView(
       "/auth/github/callback?githubError=email",
     );
     await flushPromises();
 
+    // The message is shown by the login page (which decodes the code), not by
+    // this transient callback view, so it survives the navigation.
     expect(router.currentRoute.value.name).toBe(routeNames.login);
-    expect(wrapper.text()).toContain("verified primary email");
+    expect(router.currentRoute.value.query.githubError).toBe("email");
+  });
+
+  it("funnels a failed session exchange to the login page", async () => {
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        exchangeGithubSession: async () => {
+          throw new Error("boom");
+        },
+      }),
+    );
+    const { router } = await mountCallbackView(
+      "/auth/github/callback?code=bad-code",
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(router.currentRoute.value.query.githubError).toBe("failed");
   });
 });

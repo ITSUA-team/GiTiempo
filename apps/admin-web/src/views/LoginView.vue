@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   AuthIntroPanel,
   AuthSignInForm,
+  resolveGithubSignInError,
   StandaloneSplitPage,
   type EmailPasswordSignInInput,
 } from "@gitiempo/web-shared";
@@ -42,6 +43,15 @@ const introFeatureCards = [
 
 const redirectTarget = computed(() => {
   return normalizeRedirectTargetValue(route.query.redirect);
+});
+
+onMounted(() => {
+  // The backend redirects OAuth failures to /login?githubError=<code>; decode it
+  // into a message and clear the param so a refresh or back-nav does not re-show it.
+  const message = resolveGithubSignInError(route.query.githubError);
+  if (message === null) return;
+  errorMessage.value = message;
+  void router.replace({ query: { ...route.query, githubError: undefined } });
 });
 
 async function navigateAfterLogin(): Promise<void> {

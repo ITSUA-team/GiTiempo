@@ -200,6 +200,18 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.login);
   });
 
+  it("shows the GitHub sign-in error from the query and clears it from the URL", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { router, wrapper } = await mountLoginView(
+      "/login?githubError=denied",
+    );
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("GitHub sign-in was cancelled.");
+    expect(router.currentRoute.value.query.githubError).toBeUndefined();
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+  });
+
   it("preserves the visible user workspace link", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
