@@ -109,6 +109,44 @@ describe('AuthGithubService', () => {
     expect(redirect.searchParams.get('code')).toBeTruthy();
   });
 
+  it('round-trips a safe redirect target through the state to the SPA callback', async () => {
+    const { svc } = createService();
+    const { url, stateNonce } = svc.startAuthorization('user', '/time-entries');
+    const state = new URL(url).searchParams.get('state')!;
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(redirect.pathname).toBe('/auth/github/callback');
+    expect(redirect.searchParams.get('code')).toBeTruthy();
+    expect(redirect.searchParams.get('redirect')).toBe('/time-entries');
+  });
+
+  it('drops an unsafe redirect target so the callback cannot open-redirect', async () => {
+    const { svc } = createService();
+    const { url, stateNonce } = svc.startAuthorization(
+      'user',
+      '//evil.example/escape',
+    );
+    const state = new URL(url).searchParams.get('state')!;
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(redirect.searchParams.get('code')).toBeTruthy();
+    expect(redirect.searchParams.get('redirect')).toBeNull();
+  });
+
   it('redirects with githubError=email when there is no verified primary email', async () => {
     const { svc } = createService();
     const { state, stateNonce } = startTransaction(svc);

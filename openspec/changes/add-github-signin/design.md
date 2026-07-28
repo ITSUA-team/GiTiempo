@@ -45,7 +45,7 @@ No provisioning, no invite acceptance, no registration via GitHub.
 
 - **Handoff replay** → each handoff carries a random `jti` that is remembered until the JWT expires, so a replay within the 60s TTL is rejected (single-use, enforced). The store is in-memory — sufficient for a single API instance; a horizontally scaled deployment would need a shared store (e.g. the DB, like `github_oauth_states`).
 - **Email not a member** → a verified GitHub email with no matching active member returns 401 (`no_user`). This is intended (login-only), and is logged for diagnosis.
-- **Config coherence** → `VITE_GITHUB_SIGNIN_ENABLED` (frontend, default on) and `GITHUB_SIGNIN_*` (backend) are independent; if the button shows without the backend configured the flow fails with a service error. Document that both must be set per environment.
+- **Config coherence** → `VITE_GITHUB_SIGNIN_ENABLED` (frontend, default off — the button shows only when it is `'true'`) and `GITHUB_SIGNIN_*` (backend) are independent; enable the flag only where the backend is configured, so the button never shows a flow that cannot complete. The staging deploy workflow passes the flag through from a repo variable (unset ⇒ off) and validates it is a strict boolean.
 - **PII in logs** → failure warns include the member email; confirm this is acceptable or hash it.
 
 ## Migration Plan

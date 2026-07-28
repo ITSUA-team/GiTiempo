@@ -10,8 +10,8 @@
 
 - [x] 2.1 web-shared: add an `exchangeGithubSession` client passthrough (`http-client.ts`, `runtime.ts`) and a `loginWithGithubSession` session action (`session-core.ts`) that establishes the session from the returned token pair.
 - [x] 2.2 Login pages (user-web + admin-web `LoginView.vue`): the **Continue with GitHub** button redirects to `<apiBaseUrl>/auth/github/start?app=<user|admin>`.
-- [x] 2.3 Add a `/auth/github/callback` route + `GithubCallbackView` (both apps) that reads the handoff code (or `githubError`), calls `loginWithGithubSession`, and redirects to the dashboard (or back to login with a message).
-- [x] 2.4 Keep `AuthSignInForm` `submitGithub` emit + `githubEnabled` gate; add `githubSignInEnabled` to each `appEnv` from `VITE_GITHUB_SIGNIN_ENABLED` (default on).
+- [x] 2.3 Add a `/auth/github/callback` route + `GithubCallbackView` (both apps) that reads the handoff code (or `githubError`), calls `loginWithGithubSession`, and redirects to the preserved protected-route target — the normalized `?redirect=` is forwarded on the start URL, round-tripped through the signed `state`, and re-validated with `normalizeRedirectTargetValue` before navigating (email/Google parity) — falling back to the dashboard, or back to login with a message.
+- [x] 2.4 Keep `AuthSignInForm` `submitGithub` emit + `githubEnabled` gate; add `githubSignInEnabled` to each `appEnv` from `VITE_GITHUB_SIGNIN_ENABLED` (default off — the button shows only when it is `'true'`, so an environment without the backend `GITHUB_SIGNIN_*` secrets never surfaces a broken flow). The staging deploy workflow passes it through from a repo variable and validates it.
 
 ## 3. Remove the Firebase-client GitHub path
 
@@ -20,8 +20,9 @@
 ## 4. Tests
 
 - [x] 4.1 `auth-github.service.spec.ts`: authorize URL (client id, callback, `user:email`, no PKCE), callback happy path → handoff, no-verified-email → error redirect, session exchange → token pair.
-- [x] 4.2 `AuthService.createSessionForVerifiedEmail`: member found → pair; no member → 401.
+- [x] 4.2 `AuthService.createSessionForVerifiedEmail` (direct, in `auth.service.spec.ts`): member found → pair; no user → 401; no active membership → error propagated.
 - [x] 4.3 Frontend: `LoginView` GitHub button redirects; `GithubCallbackView` code → session → dashboard; updated runtime mocks (`exchangeGithubSession`).
+- [x] 4.4 `auth-github.controller.spec.ts`: `/start` binds the state cookie and redirects, `/callback` reads/clears the cookie and redirects, `/session` delegates the handoff code; admin-web `GithubCallbackView.spec.ts` (success → dashboard, error → login) added to match user-web.
 
 ## 5. External configuration (manual — requires a GitHub account)
 

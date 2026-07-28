@@ -58,7 +58,7 @@ describe("completeGithubSignInCallback", () => {
     expect(onError).toHaveBeenCalledWith("failed");
   });
 
-  it("exchanges a code and calls onSuccess", async () => {
+  it("exchanges a code and calls onSuccess with no redirect", async () => {
     const exchange = vi.fn(async () => {});
     const onSuccess = vi.fn();
     const onError = vi.fn();
@@ -69,8 +69,19 @@ describe("completeGithubSignInCallback", () => {
     );
 
     expect(exchange).toHaveBeenCalledWith("handoff");
-    expect(onSuccess).toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalledWith(null);
     expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("passes a preserved redirect target through to onSuccess", async () => {
+    const onSuccess = vi.fn();
+
+    await completeGithubSignInCallback(
+      { githubError: undefined, code: "handoff", redirect: "/reports" },
+      { exchange: vi.fn(async () => {}), onSuccess, onError: vi.fn() },
+    );
+
+    expect(onSuccess).toHaveBeenCalledWith("/reports");
   });
 
   it("funnels a missing code to failed", async () => {

@@ -31,10 +31,16 @@ export class AuthGithubController {
   @ApiOperation({ summary: 'Start backend GitHub sign-in' })
   start(
     @Query('app') app: string | undefined,
+    @Query('redirect') redirect: string | undefined,
     @Res() response: Response,
   ): void {
     const target: GithubLoginApp = app === 'admin' ? 'admin' : 'user';
-    const { url, stateNonce } = this.github.startAuthorization(target);
+    // The SPA forwards its normalized protected-route target so the callback can
+    // return the user there after sign-in; the service re-sanitizes it.
+    const { url, stateNonce } = this.github.startAuthorization(
+      target,
+      redirect,
+    );
     // Bind the transaction to this browser: the callback is only honored when it
     // presents this HttpOnly cookie whose nonce matches the signed state.
     response.cookie(

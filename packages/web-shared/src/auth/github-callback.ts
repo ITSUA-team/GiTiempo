@@ -31,9 +31,15 @@ export function resolveGithubSignInError(value: unknown): string | null {
 
 export interface GithubSignInCallbackHandlers {
   exchange: (code: string) => Promise<void>;
+  /**
+   * Called after a successful exchange with the raw `?redirect=` value the
+   * backend round-tripped through the OAuth transaction (or null when absent).
+   * The caller re-validates it (e.g. `normalizeRedirectTargetValue`) before
+   * navigating, so an untrusted target cannot become an open redirect.
+   */
   // Return is intentionally loose so a router navigation (which resolves to a
   // NavigationFailure or undefined) can be passed directly.
-  onSuccess: () => void | Promise<unknown>;
+  onSuccess: (redirect: string | null) => void | Promise<unknown>;
   /**
    * Called with a `githubError` code to carry to the login page (which decodes
    * it with `resolveGithubSignInError`), so a transient callback view never has
@@ -49,7 +55,7 @@ export interface GithubSignInCallbackHandlers {
  * user-web and admin-web callback views.
  */
 export async function completeGithubSignInCallback(
-  query: { githubError: unknown; code: unknown },
+  query: { githubError: unknown; code: unknown; redirect?: unknown },
   handlers: GithubSignInCallbackHandlers,
 ): Promise<void> {
   const githubError = firstQueryValue(query.githubError);
@@ -66,7 +72,7 @@ export async function completeGithubSignInCallback(
 
   try {
     await handlers.exchange(code);
-    await handlers.onSuccess();
+    await handlers.onSuccess(firstQueryValue(query.redirect));
   } catch {
     await handlers.onError("failed");
   }

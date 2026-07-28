@@ -98,6 +98,8 @@ describe("LoginView", () => {
     clearRefreshToken();
     resetAuthRuntimeForTesting();
     vi.stubEnv("VITE_USER_APP_URL", "https://user.example.test/login");
+    // The GitHub button is off by default; opt in so the button renders here.
+    vi.stubEnv("VITE_GITHUB_SIGNIN_ENABLED", "true");
   });
 
   afterEach(() => {
@@ -163,6 +165,36 @@ describe("LoginView", () => {
     });
 
     expect(redirectedTo).toContain("/auth/github/start?app=admin");
+  });
+
+  it("carries the protected-route redirect target into the GitHub start URL", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView("/login?redirect=%2Freports");
+
+    let redirectedTo = "";
+    const original = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        origin: "http://localhost:5174",
+        get href() {
+          return redirectedTo;
+        },
+        set href(value: string) {
+          redirectedTo = value;
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="sign-in-github"]').trigger("click");
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: original,
+    });
+
+    expect(redirectedTo).toContain("app=admin");
+    expect(redirectedTo).toContain("redirect=%2Freports");
   });
 
   it("falls back to the dashboard for unsafe preserved redirects", async () => {

@@ -21,7 +21,10 @@ export const appEnv: UserWebEnv = {
   },
 
   get githubSignInEnabled() {
-    return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED !== 'false';
+    // Default off: the button shows only when a deployment explicitly opts in
+    // (VITE_GITHUB_SIGNIN_ENABLED='true'), so an environment that has not wired
+    // the backend GITHUB_SIGNIN_* secrets never surfaces a flow that cannot complete.
+    return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED === 'true';
   },
   firebase: {
     get apiKey() {

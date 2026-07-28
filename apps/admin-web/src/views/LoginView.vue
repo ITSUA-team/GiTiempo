@@ -91,12 +91,15 @@ async function handleGoogleSignIn(): Promise<void> {
 
 function handleGithubSignIn(): void {
   // Backend-driven GitHub sign-in: leave the SPA and let the API run the OAuth
-  // flow; it redirects back to /auth/github/callback with a one-time code.
+  // flow; it redirects back to /auth/github/callback with a one-time code. Carry
+  // the normalized protected-route target so the callback can return the user
+  // where they were headed (email/Google `?redirect=` parity).
   const base = appEnv.apiBaseUrl ?? window.location.origin;
-  window.location.href = new URL(
-    "/auth/github/start?app=admin",
-    base,
-  ).toString();
+  const startUrl = new URL("/auth/github/start", base);
+  startUrl.searchParams.set("app", "admin");
+  const target = redirectTarget.value;
+  if (target !== null) startUrl.searchParams.set("redirect", target);
+  window.location.href = startUrl.toString();
 }
 </script>
 

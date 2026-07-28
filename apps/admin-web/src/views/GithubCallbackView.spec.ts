@@ -9,8 +9,8 @@ import type {
 import PrimeVue from "primevue/config";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
-import { waitForRoute } from "@gitiempo/web-shared/testing";
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
+import { waitForRoute } from "@gitiempo/web-shared/testing";
 import { createAppRouter, routeNames } from "@/router";
 import {
   resetAuthRuntimeForTesting,
@@ -22,17 +22,17 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
     createdAt: "2026-01-01T00:00:00.000Z",
-    displayName: "Alexey Tsukanov",
-    email: "alexey@example.com",
+    displayName: "Admin User",
+    email: "admin@example.com",
     id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-    role: "member",
+    role: "admin",
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
   const workspaceMemberships: CurrentUserWorkspaceMembershipListResponse = {
     items: [
       {
         isCurrent: true,
-        role: "member",
+        role: "admin",
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         workspaceName: "Workspace Alpha",
       },
@@ -48,13 +48,13 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     getCurrentUser: async () => currentUser,
     listCurrentUserWorkspaces: async () => workspaceMemberships,
     loginWithFirebaseToken: async () => pair,
-    exchangeGithubSession: async () => pair,
     logoutSession: async () => undefined,
     registerWorkspaceOwner: async () => pair,
     refreshSession: async () => pair,
     switchWorkspace: async () => pair,
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
+    exchangeGithubSession: async () => pair,
     signOutIdentityProvider: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
@@ -85,7 +85,7 @@ async function mountCallbackView(initialPath: string) {
   };
 }
 
-describe("GithubCallbackView", () => {
+describe("GithubCallbackView (admin)", () => {
   beforeEach(() => {
     clearRefreshToken();
     resetAuthRuntimeForTesting();
@@ -108,14 +108,14 @@ describe("GithubCallbackView", () => {
   it("returns the user to a preserved redirect target after sign-in", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { router, wrapper } = await mountCallbackView(
-      "/auth/github/callback?code=handoff-code&redirect=%2Ftime-entries",
+      "/auth/github/callback?code=handoff-code&redirect=%2Freports",
     );
     await waitForRoute(
       router,
-      () => router.currentRoute.value.fullPath === "/time-entries",
+      () => router.currentRoute.value.fullPath === "/reports",
     );
 
-    expect(router.currentRoute.value.fullPath).toBe("/time-entries");
+    expect(router.currentRoute.value.fullPath).toBe("/reports");
     wrapper.unmount();
   });
 
@@ -136,14 +136,12 @@ describe("GithubCallbackView", () => {
   it("funnels a callback githubError to the login page as a code", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { router } = await mountCallbackView(
-      "/auth/github/callback?githubError=email",
+      "/auth/github/callback?githubError=state",
     );
     await flushPromises();
 
-    // The message is shown by the login page (which decodes the code), not by
-    // this transient callback view, so it survives the navigation.
     expect(router.currentRoute.value.name).toBe(routeNames.login);
-    expect(router.currentRoute.value.query.githubError).toBe("email");
+    expect(router.currentRoute.value.query.githubError).toBe("state");
   });
 
   it("funnels a failed session exchange to the login page", async () => {

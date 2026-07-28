@@ -2,6 +2,7 @@
 import { onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { completeGithubSignInCallback } from "@gitiempo/web-shared";
+import { normalizeRedirectTargetValue } from "@gitiempo/web-shared/router";
 
 import { routeNames } from "@/constants/routes";
 import { useAuthStore } from "@/stores/auth";
@@ -12,10 +13,21 @@ const router = useRouter();
 
 onMounted(() =>
   completeGithubSignInCallback(
-    { code: route.query.code, githubError: route.query.githubError },
+    {
+      code: route.query.code,
+      githubError: route.query.githubError,
+      redirect: route.query.redirect,
+    },
     {
       exchange: (code) => authStore.loginWithGithubSession(code),
-      onSuccess: () => router.replace({ name: routeNames.dashboard }),
+      // Return the user to their pre-login target (re-validated here, since it
+      // originated from the browser), matching the email/Google redirect flow.
+      onSuccess: (redirect) =>
+        router.replace(
+          normalizeRedirectTargetValue(redirect) ?? {
+            name: routeNames.dashboard,
+          },
+        ),
       // Carry the error to the login page so it — not this transient view —
       // shows the message; a bare local error is lost the moment we navigate.
       onError: (githubError) =>

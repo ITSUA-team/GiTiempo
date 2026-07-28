@@ -26,6 +26,8 @@ interface GithubStateClaims {
   purpose: 'gh-login-state';
   app: GithubLoginApp;
   nonceHash: string;
+  /** Same-app absolute path to return to after login (protected-route redirect). */
+  redirect?: string;
 }
 
 interface GithubEmailEntry {
@@ -72,9 +74,16 @@ export class AuthGithubService {
    * binds the flow to the user agent that began it (RFC 9700 §4.7.1) — a state
    * minted in one browser cannot complete a login in another (login CSRF).
    */
-  startAuthorization(app: GithubLoginApp): { url: string; stateNonce: string } {
+  startAuthorization(
+    app: GithubLoginApp,
+    redirect?: string,
+  ): { url: string; stateNonce: string } {
     const stateNonce = randomBytes(32).toString('hex');
-    const state = this.signState(app, this.hashNonce(stateNonce));
+    const state = this.signState(
+      app,
+      this.hashNonce(stateNonce),
+      this.sanitizeRedirect(redirect),
+    );
     const url = new URL('https://github.com/login/oauth/authorize');
     url.searchParams.set(
       'client_id',
@@ -133,8 +142,9 @@ export class AuthGithubService {
     // browser: its nonce hash must match the HttpOnly cookie, so a state minted
     // (and GitHub-authorized) by an attacker cannot log a victim into the
     // attacker's account (login CSRF). A missing/mismatched cookie is a state error.
+    let claims: GithubStateClaims;
     try {
-      this.verifyBoundState(input.state, input.stateNonce);
+      claims = this.verifyBoundState(input.state, input.stateNonce);
     } catch {
       return this.spaRedirect(app, '/login', { githubError: 'state' });
     }
@@ -147,7 +157,12 @@ export class AuthGithubService {
       }
 
       const handoff = this.createHandoff(email);
-      return this.spaRedirect(app, '/auth/github/callback', { code: handoff });
+      // Round-trip the protected-route redirect (signed into the state at /start)
+      // to the SPA callback so it can return the user where they were headed; the
+      // SPA re-validates it before navigating (email/Google `?redirect=` parity).
+      const query: Record<string, string> = { code: handoff };
+      if (claims.redirect) query.redirect = claims.redirect;
+      return this.spaRedirect(app, '/auth/github/callback', query);
     } catch (error) {
       this.logger.warn({
         event: 'auth.github_login.callback_failed',
@@ -227,12 +242,37 @@ export class AuthGithubService {
 
   // --- Signed tokens ---------------------------------------------------------
 
-  private signState(app: GithubLoginApp, nonceHash: string): string {
-    return jwt.sign(
-      { purpose: 'gh-login-state', app, nonceHash },
-      this.secret(),
-      { expiresIn: '10m' },
-    );
+  private signState(
+    app: GithubLoginApp,
+    nonceHash: string,
+    redirect?: string,
+  ): string {
+    const claims: GithubStateClaims = {
+      purpose: 'gh-login-state',
+      app,
+      nonceHash,
+    };
+    if (redirect) claims.redirect = redirect;
+    return jwt.sign(claims, this.secret(), { expiresIn: '10m' });
+  }
+
+  /**
+   * A post-login redirect target carried through the signed state. It originates
+   * from the browser, so only a same-app absolute path is kept — never a
+   * protocol-relative (`//host`) or absolute URL — and it is length-bounded. The
+   * SPA still re-validates it (`normalizeRedirectTargetValue`) before navigating.
+   */
+  private sanitizeRedirect(redirect: string | undefined): string | undefined {
+    if (
+      typeof redirect !== 'string' ||
+      redirect.length === 0 ||
+      redirect.length > 2048 ||
+      !redirect.startsWith('/') ||
+      redirect.startsWith('//')
+    ) {
+      return undefined;
+    }
+    return redirect;
   }
 
   private verifyBoundState(
