@@ -6,7 +6,7 @@
     "dev": "./node_modules/turbo/bin/turbo run dev",
     "build": "./node_modules/turbo/bin/turbo run build",
     "typecheck": "./node_modules/turbo/bin/turbo run typecheck",
-    "test": "./node_modules/turbo/bin/turbo run test",
+    "test": "./node_modules/turbo/bin/turbo run test && node --test .github/scripts/detect-ci-targets.test.mjs",
     "test:e2e": "./node_modules/turbo/bin/turbo run test:e2e",
     "test:e2e:api:docker": "./scripts/api-e2e-docker.sh",
     "api:e2e:docker": "./scripts/api-e2e-docker.sh",

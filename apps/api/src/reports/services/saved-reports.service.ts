@@ -4,11 +4,11 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { and, desc, eq } from 'drizzle-orm';
 import {
   savedReportConfigSchema,
+  storedSavedReportConfigSchema,
   timeReportGroupBySchema,
   type CreateSavedReportInput,
   type SavedReport,
@@ -67,12 +67,12 @@ export class SavedReportsService {
       .where(eq(savedReports.workspaceId, user.workspaceId))
       .orderBy(desc(savedReports.createdAt));
 
-    // Read is resilient per row: a single preset with a config too corrupt to
-    // repair is dropped from the response (and logged), never allowed to fail
-    // the whole list for every admin/PM in the workspace.
-    return rows
-      .map((row) => this.toSavedReportOrNull(row))
-      .filter((report): report is SavedReport => report !== null);
+    // Read is resilient per row: a preset with a config too corrupt to repair
+    // is returned as unavailable (config null, logged) rather than dropped, so
+    // every workspace preset stays listed — the client shows it as needing
+    // repair instead of it silently vanishing — and one bad row never fails the
+    // whole list for every admin/PM.
+    return rows.map((row) => this.toSavedReportOrUnavailable(row));
   }
 
   async create(
@@ -81,9 +81,11 @@ export class SavedReportsService {
   ): Promise<SavedReport> {
     await this.requireReportsRole(user);
 
-    // The config column is written only through the shared schema (D3), so a
-    // malformed config cannot enter even from an internal caller that bypasses
-    // the HTTP DTO. Symmetric with the re-validation in toSavedReport.
+    // The config column is written only through the strict transport schema
+    // (D3), so a config that does not conform — including a filter value outside
+    // its vocabulary — is rejected here even from an internal caller that
+    // bypasses the HTTP DTO, rather than silently degrading (that tolerance is
+    // read-only, in storedSavedReportConfigSchema).
     const config = savedReportConfigSchema.parse(input.config);
 
     try {
@@ -110,16 +112,15 @@ export class SavedReportsService {
   ): Promise<SavedReport> {
     await this.requireReportsRole(user);
 
-    // Same write-side guard as create: a provided config is parsed through the
-    // shared schema before it can reach the column (D3).
+    // Same strict write-side guard as create: a provided config is parsed
+    // through the transport schema before it can reach the column (D3).
     const config =
       input.config === undefined
         ? undefined
         : savedReportConfigSchema.parse(input.config);
 
-    let row: SavedReportRow;
     try {
-      const [updated] = await this.db
+      const [row] = await this.db
         .update(savedReports)
         .set({
           ...(input.name === undefined ? {} : { name: input.name }),
@@ -129,25 +130,13 @@ export class SavedReportsService {
         .where(this.scopedId(user, id))
         .returning();
 
-      if (!updated) throw new NotFoundException('Saved report not found');
-      row = updated;
+      if (!row) throw new NotFoundException('Saved report not found');
+
+      return this.toSavedReport(row);
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       throw this.mapDuplicateName(error, input.name);
     }
-
-    // Resilient read-back, symmetric with list(): a name-only update re-serializes
-    // the existing stored config, which may be a legacy-corrupt row list() drops.
-    // Rather than 500 on the ZodError, surface a 4xx. The name write persists, but
-    // the row stays dropped from every read until its config is repaired, so the
-    // rename is unobservable until then.
-    const report = this.toSavedReportOrNull(row);
-    if (report === null) {
-      throw new UnprocessableEntityException(
-        "This saved report's stored configuration is invalid and must be recreated.",
-      );
-    }
-    return report;
   }
 
   async remove(user: AuthUser, id: string): Promise<void> {
@@ -195,22 +184,28 @@ export class SavedReportsService {
   /**
    * Config is re-validated on read so a row written before the config shape
    * changed surfaces its defaults instead of reaching the client half-formed.
-   * Only create re-reads a config it just validated, so the parse always
-   * succeeds; list and update go through the resilient `toSavedReportOrNull`,
-   * where a stale row could be corrupt.
+   * Callers here (create/update) re-read a config they just validated, so the
+   * parse always succeeds; the resilient `toSavedReportOrUnavailable` is used
+   * for the unfiltered list, where a stale row could be corrupt.
    */
   private toSavedReport(row: SavedReportRow): SavedReport {
     return this.buildSavedReport(row, this.parseStoredConfig(row.config));
   }
 
-  /** Read-side variant that repairs a stale config, or drops the row if it is
-   * corrupt beyond repair (logged), so one preset cannot fail the whole list. */
-  private toSavedReportOrNull(row: SavedReportRow): SavedReport | null {
-    const result = savedReportConfigSchema.safeParse(
+  /**
+   * Read-side variant that repairs a stale config, or — when it is corrupt
+   * beyond repair — returns the preset with a null config and logs the failure
+   * at error level. The row is kept, not dropped, so the workspace still sees
+   * every preset and a corrupt one reads as needing repair rather than as lost
+   * data. Errors (not warnings) because migration 0017 should have normalised
+   * all valid legacy data, so a survivor is unexpected and worth surfacing.
+   */
+  private toSavedReportOrUnavailable(row: SavedReportRow): SavedReport {
+    const result = storedSavedReportConfigSchema.safeParse(
       this.repairStoredConfig(row.config),
     );
     if (!result.success) {
-      this.logger.warn({
+      this.logger.error({
         event: 'saved_reports.config_unrepairable',
         savedReportId: row.id,
         workspaceId: row.workspaceId,
@@ -219,14 +214,14 @@ export class SavedReportsService {
           code: issue.code,
         })),
       });
-      return null;
+      return this.buildSavedReport(row, null);
     }
     return this.buildSavedReport(row, result.data);
   }
 
   private buildSavedReport(
     row: SavedReportRow,
-    config: SavedReportConfig,
+    config: SavedReportConfig | null,
   ): SavedReport {
     return {
       config,
@@ -239,7 +234,7 @@ export class SavedReportsService {
   }
 
   private parseStoredConfig(config: unknown): SavedReportConfig {
-    return savedReportConfigSchema.parse(this.repairStoredConfig(config));
+    return storedSavedReportConfigSchema.parse(this.repairStoredConfig(config));
   }
 
   /**

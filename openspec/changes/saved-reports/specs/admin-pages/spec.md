@@ -16,9 +16,10 @@ The reports page MUST support report setup controls, a configurable ordered grou
 #### Scenario: Grouping builder configures an ordered multi-level grouping
 
 - **WHEN** the user edits the grouping builder
-- **THEN** the builder shows the current grouping as an ordered sequence of level chips drawn from project, member, and task
+- **THEN** the builder shows the current grouping as an ordered sequence of level chips drawn from project, member, task, and billable
 - **AND** the user can add a level (only dimensions not already selected are offered), remove a level, and reorder levels
 - **AND** the builder enforces at least one and at most four unique levels
+- **AND** a `billable` level splits each level it sits under into a billable and a non-billable bucket
 - **AND** the default grouping is a single project level
 
 #### Scenario: Results table renders grouped rows as an expandable hierarchy

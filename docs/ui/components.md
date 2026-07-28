@@ -19,7 +19,7 @@
 | Text Inverse   | `--color-text-inverse` / `--color-text-inverse-muted` | `text-text-inverse` / `text-text-inverse-muted` | `#FFFFFF` / `rgba(255,255,255,0.7)` | Text on brand, destructive, and dark surfaces |
 | Dividers       | `--color-divider`     | `border-divider`          | `#EEEEEE` | Borders and separators                                      |
 
-- Never use Brand Purple as a large background area.
+- In authenticated app UI, never use Brand Purple as a large background area. The approved landing-page MVP Scope section is the only current large-surface exception; see `pages-landing.md` and the approved Pencil frames.
 - Accent Tint is the only permitted purple-tinted background surface.
 - Text on Brand Purple must use `text-text-inverse`.
 - Text on Accent Tint must be `text-text-dark` or `text-brand`.

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import type { TimeReportExportFormat } from '@gitiempo/shared';
 import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
@@ -10,36 +10,38 @@ import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import ReportsTable from '@/components/reports/ReportsTable.vue';
 import SavedReportsBar from '@/components/reports/SavedReportsBar.vue';
-import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useReportsData } from '@/composables/reports/useReportsData';
 import { useSavedReports } from '@/composables/reports/useSavedReports';
 import {
+  buildConfigFromState,
   describeSavedReportConfig,
-  tryBuildConfigFromState,
 } from '@/lib/saved-report-config';
 import { downloadReportExport } from '@/lib/report-download';
 import {
+  buildReportTree,
   createDefaultReportTableFilters,
   defaultReportGrouping,
   filterReportRows,
+  filterReportTreeGroups,
+  flattenReportTree,
   formatReportPercent,
   getReportDateRangeError,
-  getReportExportBlockedReason,
-  toReportGroupingApiPath,
+  sumReportTreeTotals,
 } from '@/lib/report-view-model';
+import { buildReportCsv } from '@/lib/report-csv';
+import { buildReportPdfDocument } from '@/lib/report-pdf-document';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
-const { requireConfirmation } = useConfirmation();
 const { errorToast, successToast } = useToasts();
 const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 
 const {
   dateRange,
-  exportCurrentReport,
+  exportReportPdf,
   grouping,
   isInitialLoading,
   loadError,
@@ -64,22 +66,19 @@ const tableFilters = ref(createDefaultReportTableFilters());
 const exporting = ref(false);
 
 const currentSavedReportConfig = computed(() =>
-  tryBuildConfigFromState({
+  buildConfigFromState({
     dateRange: dateRange.value,
     filters: tableFilters.value,
     grouping: grouping.value,
   }),
 );
 
-const savedReportSummary = computed(() => {
-  const config = currentSavedReportConfig.value;
-  return config === null ? [] : describeSavedReportConfig(config);
-});
+const savedReportSummary = computed(() =>
+  describeSavedReportConfig(currentSavedReportConfig.value),
+);
 
 const savedReports = useSavedReports({
   currentConfig: currentSavedReportConfig,
-  enabled: isAuthenticated,
-  scope,
   onApply({ fallbacks, state }) {
     dateRange.value = state.dateRange;
     grouping.value = state.grouping;
@@ -95,6 +94,10 @@ const savedReports = useSavedReports({
     availableMemberIds: memberOptions.value.map((option) => option.value),
     availableProjectIds: projectOptions.value.map((option) => option.value),
   }),
+});
+
+onMounted(() => {
+  void savedReports.refresh();
 });
 
 /**
@@ -123,25 +126,9 @@ async function handleRenameReport(id: string, name: string): Promise<void> {
   if (renamed) successToast(`Renamed to "${renamed.name}".`);
 }
 
-function handleDeleteReport(id: string): void {
-  // Presets are workspace-shared, so a delete removes them for every admin and
-  // PM — confirm first, matching the destructive-action rule other admin pages
-  // already follow.
-  const name = savedReports.presets.value.find(
-    (preset) => preset.id === id,
-  )?.name;
-
-  requireConfirmation(
-    name
-      ? `"${name}" will be deleted for everyone in this workspace. This action cannot be undone.`
-      : 'This report will be deleted for everyone in this workspace. This action cannot be undone.',
-    'Delete report?',
-    'Delete',
-    async () => {
-      const removed = await savedReports.remove(id);
-      if (removed) successToast('Report deleted.');
-    },
-  );
+async function handleDeleteReport(id: string): Promise<void> {
+  const removed = await savedReports.remove(id);
+  if (removed) successToast('Report deleted.');
 }
 const tableRows = computed(() =>
   filterReportRows(rows.value, tableFilters.value),
@@ -149,20 +136,24 @@ const tableRows = computed(() =>
 const reportDateRangeError = computed(() =>
   getReportDateRangeError(dateRange.value),
 );
-// Rather than hand back a file that quietly disagrees with the table, block
-// the export whenever an active filter has no faithful CSV equivalent. The
-// rule and its wording live in the view model, and it is grouping-aware: a
-// member filter exports fine under member grouping but not over folded
-// project rows.
-const exportBlockedReason = computed(() =>
-  getReportExportBlockedReason(tableFilters.value, grouping.value),
-);
+// The export is generated from the on-screen tree (CSV client-side, PDF as a
+// document the server only styles), so every filter and grouping is reflected
+// and there is nothing to block — the file always matches the screen.
 const exportDisabled = computed(
+  () => loading.value || exporting.value || reportDateRangeError.value !== null,
+);
+
+const selectedProjectLabel = computed(
   () =>
-    loading.value ||
-    exporting.value ||
-    reportDateRangeError.value !== null ||
-    exportBlockedReason.value !== null,
+    projectOptions.value.find(
+      (option) => option.value === tableFilters.value.projectId,
+    )?.label ?? null,
+);
+const selectedMemberLabel = computed(
+  () =>
+    memberOptions.value.find(
+      (option) => option.value === tableFilters.value.memberId,
+    )?.label ?? null,
 );
 
 const totalHoursLabel = computed(() =>
@@ -209,33 +200,59 @@ function toggleExportMenu(event: Event): void {
   exportMenuRef.value?.toggle(event);
 }
 
+function reportExportFilename(format: TimeReportExportFormat): string {
+  const [start, end] = dateRange.value ?? [];
+  const range =
+    start && end
+      ? `-${start.toLocaleDateString('en-CA')}_${end.toLocaleDateString('en-CA')}`
+      : '';
+
+  return `time-report${range}.${format}`;
+}
+
 async function handleExport(format: TimeReportExportFormat): Promise<void> {
-  if (
-    exporting.value ||
-    reportDateRangeError.value ||
-    exportBlockedReason.value !== null
-  ) {
+  if (exporting.value || reportDateRangeError.value !== null) {
     return;
   }
 
   exporting.value = true;
 
   try {
-    const exportResult = await exportCurrentReport(
-      {
-        dateRange: dateRange.value,
-        groupBy: toReportGroupingApiPath(grouping.value),
-        memberId: tableFilters.value.memberId,
-        projectId: tableFilters.value.projectId,
-      },
-      format,
+    // Mirror the screen: the same filtered, grouped tree, always fully expanded
+    // (collapse is a transient view state, not part of the report).
+    const tree = filterReportTreeGroups(
+      buildReportTree(tableRows.value, grouping.value),
+      tableFilters.value,
     );
+    const displayRows = flattenReportTree(tree, new Set<string>());
+    const totals = sumReportTreeTotals(tree);
+    const filename = reportExportFilename(format);
 
-    if (!exportResult) {
+    let blob: Blob | null;
+    if (format === 'csv') {
+      blob = new Blob([buildReportCsv(displayRows, totals)], {
+        type: 'text/csv;charset=utf-8',
+      });
+    } else {
+      blob = await exportReportPdf(
+        buildReportPdfDocument({
+          dateRange: dateRange.value,
+          grouping: grouping.value,
+          memberLabel: selectedMemberLabel.value,
+          now: new Date(),
+          projectLabel: selectedProjectLabel.value,
+          rows: displayRows,
+          totals,
+          workspaceName: authStore.workspaceName || 'Workspace',
+        }),
+      );
+    }
+
+    if (!blob) {
       return;
     }
 
-    const filename = downloadReportExport(exportResult);
+    downloadReportExport({ blob, filename });
     successToast(`Exported ${filename}.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to export reports';
@@ -314,41 +331,34 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
           :member-options="memberOptions"
         >
           <template #actions>
-            <!-- A disabled button swallows hover, so the reason lives on a wrapper. -->
-            <span
-              v-tooltip.top="exportBlockedReason ?? ''"
-              class="w-full sm:w-auto"
+            <Button
+              data-testid="export-reports"
+              class="h-[38px] w-full sm:w-auto"
+              aria-label="Export report"
+              aria-haspopup="true"
+              aria-controls="report-export-menu"
+              :disabled="exportDisabled"
+              @click="toggleExportMenu"
             >
-              <Button
-                data-testid="export-reports"
-                class="h-[38px] w-full sm:w-auto"
-                aria-label="Export report"
-                aria-haspopup="true"
-                aria-controls="report-export-menu"
-                :aria-description="exportBlockedReason"
-                :disabled="exportDisabled"
-                @click="toggleExportMenu"
-              >
-                <span class="flex items-center gap-2">
-                  <i
-                    :class="[
-                      'text-[14px]',
-                      exporting ? 'pi pi-spin pi-spinner' : 'pi pi-download',
-                    ]"
-                    aria-hidden="true"
-                  />
-                  <span class="text-[14px] font-semibold">Export</span>
-                  <span
-                    class="mx-0.5 h-[18px] w-px bg-white/30"
-                    aria-hidden="true"
-                  />
-                  <i
-                    class="pi pi-chevron-down text-[12px]"
-                    aria-hidden="true"
-                  />
-                </span>
-              </Button>
-            </span>
+              <span class="flex items-center gap-2">
+                <i
+                  :class="[
+                    'text-[14px]',
+                    exporting ? 'pi pi-spin pi-spinner' : 'pi pi-download',
+                  ]"
+                  aria-hidden="true"
+                />
+                <span class="text-[14px] font-semibold">Export</span>
+                <span
+                  class="mx-0.5 h-[18px] w-px bg-white/30"
+                  aria-hidden="true"
+                />
+                <i
+                  class="pi pi-chevron-down text-[12px]"
+                  aria-hidden="true"
+                />
+              </span>
+            </Button>
             <Menu
               id="report-export-menu"
               ref="exportMenuRef"

@@ -1,4 +1,4 @@
-import type { TimeReportExportRequest, TimeReportRequest } from '@gitiempo/shared';
+import type { TimeReportRequest } from '@gitiempo/shared';
 
 export interface AdminServerStateScope {
   role?: string | null;
@@ -48,21 +48,6 @@ export function normalizeTimeReportQuery(query: Partial<TimeReportRequest> = {})
   };
 }
 
-export function normalizeTimeReportExportRequest(
-  query: Partial<TimeReportExportRequest> = {},
-) {
-  return {
-    dateFrom: query.dateFrom ?? null,
-    dateTo: query.dateTo ?? null,
-    groupBy: query.groupBy ?? null,
-    projectId: query.projectId ?? null,
-    search: query.search ?? null,
-    sortBy: query.sortBy ?? null,
-    sortOrder: query.sortOrder ?? null,
-    userId: query.userId ?? null,
-  };
-}
-
 export const adminDashboardKeys = {
   all: (scope?: AdminServerStateScope) =>
     ['admin-web', normalizeScope(scope), 'dashboard'] as const,
@@ -77,15 +62,6 @@ export const adminDashboardKeys = {
 export const reportsKeys = {
   all: (scope?: AdminServerStateScope) =>
     ['admin-web', normalizeScope(scope), 'reports'] as const,
-  export: (
-    scope: AdminServerStateScope,
-    query?: Partial<TimeReportExportRequest>,
-  ) =>
-    [
-      ...reportsKeys.all(scope),
-      'export',
-      normalizeTimeReportExportRequest(query),
-    ] as const,
   time: (scope: AdminServerStateScope, query?: Partial<TimeReportRequest>) =>
     [
       ...reportsKeys.all(scope),
@@ -127,13 +103,6 @@ export const adminMembersKeys = {
     [...adminMembersKeys.all(scope), 'list'] as const,
 };
 
-export const savedReportsKeys = {
-  all: (scope?: AdminServerStateScope) =>
-    ['admin-web', normalizeScope(scope), 'saved-reports'] as const,
-  list: (scope: AdminServerStateScope) =>
-    [...savedReportsKeys.all(scope), 'list'] as const,
-};
-
 export const adminMutationInvalidationKeys = {
   afterProjectMutation(scope: AdminServerStateScope): QueryKey[] {
     return [
@@ -144,9 +113,6 @@ export const adminMutationInvalidationKeys = {
   },
   afterReportsDataMutation(scope: AdminServerStateScope): QueryKey[] {
     return [reportsKeys.all(scope), adminDashboardKeys.all(scope)];
-  },
-  afterSavedReportMutation(scope: AdminServerStateScope): QueryKey[] {
-    return [savedReportsKeys.all(scope)];
   },
   afterSettingsSave(scope: AdminServerStateScope): QueryKey[] {
     return [adminSettingsKeys.all(scope)];

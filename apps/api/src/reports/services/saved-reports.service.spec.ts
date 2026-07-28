@@ -2,7 +2,6 @@ import {
   ConflictException,
   ForbiddenException,
   NotFoundException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { savedReportConfigSchema } from '@gitiempo/shared';
 import { describe, expect, it, vi } from 'vitest';
@@ -207,7 +206,7 @@ describe('SavedReportsService reads', () => {
 
     const [preset] = await service.list(adminUser);
 
-    expect(preset!.config.filters.hours).toBe('any');
+    expect(preset!.config!.filters.hours).toBe('any');
     expect(preset!.config).not.toHaveProperty('entries');
   });
 
@@ -230,7 +229,7 @@ describe('SavedReportsService reads', () => {
 
     const [preset] = await service.list(adminUser);
 
-    expect(preset!.config.grouping).toEqual(['project', 'user']);
+    expect(preset!.config!.grouping).toEqual(['project', 'user']);
   });
 
   it('drops an unknown grouping level and falls back to ["project"]', async () => {
@@ -252,13 +251,14 @@ describe('SavedReportsService reads', () => {
 
     const [preset] = await service.list(adminUser);
 
-    expect(preset!.config.grouping).toEqual(['project']);
+    expect(preset!.config!.grouping).toEqual(['project']);
   });
 
-  it('drops a config too corrupt to repair instead of failing the whole list', async () => {
+  it('returns a config too corrupt to repair as unavailable instead of dropping it', async () => {
     const good = makeRow({ id: 'good-id', name: 'Good preset' });
-    // Missing the required dateRange: unrepairable, so it must be skipped
-    // rather than 500-ing the list for the valid preset alongside it.
+    // Missing the required dateRange: unrepairable. It stays in the list as an
+    // unavailable preset (config null) rather than vanishing, and the valid one
+    // alongside it still loads.
     const corrupt = makeRow({
       id: 'corrupt-id',
       name: 'Corrupt preset',
@@ -271,8 +271,13 @@ describe('SavedReportsService reads', () => {
 
     const presets = await service.list(adminUser);
 
-    expect(presets).toHaveLength(1);
-    expect(presets[0]!.name).toBe('Good preset');
+    expect(presets).toHaveLength(2);
+    expect(
+      presets.find((preset) => preset.id === 'corrupt-id')!.config,
+    ).toBeNull();
+    expect(
+      presets.find((preset) => preset.id === 'good-id')!.config,
+    ).not.toBeNull();
   });
 });
 
@@ -327,6 +332,23 @@ describe('SavedReportsService writes', () => {
       service.create(adminUser, {
         config: { ...validConfig, projectId: 'not-a-uuid' } as never,
         name: 'Broken',
+      }),
+    ).rejects.toThrow();
+
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('rejects a config with a filter outside its vocabulary on create', async () => {
+    const insert = vi.fn();
+    const { service } = createService('admin', { insert });
+
+    await expect(
+      service.create(adminUser, {
+        config: {
+          ...validConfig,
+          filters: { ...validConfig.filters, billable: 'not-a-real-filter' },
+        } as never,
+        name: 'Broken filter',
       }),
     ).rejects.toThrow();
 
@@ -449,21 +471,6 @@ describe('SavedReportsService writes', () => {
     await expect(
       service.update(adminUser, 'missing', { name: 'Renamed' }),
     ).rejects.toBeInstanceOf(NotFoundException);
-  });
-
-  it('rejects a name-only update on a config too corrupt to repair', async () => {
-    // The same legacy-corrupt row list() drops must not 500 on a name-only PATCH:
-    // its stored config cannot be serialized back, so the read-back surfaces a
-    // 4xx instead of an unhandled ZodError.
-    const corrupt = makeRow({
-      name: 'Renamed',
-      config: { grouping: ['project'] },
-    });
-    const { service } = createService('admin', mutationReturning([corrupt]));
-
-    await expect(
-      service.update(adminUser, 'id', { name: 'Renamed' }),
-    ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 
   it('reports a missing preset on delete as not found', async () => {

@@ -12,6 +12,9 @@ permissions:
 env:
   CI: true
   TURBO_TELEMETRY_DISABLED: 1
+  PUBLIC_SITE_URL: https://landing-ci.invalid
+  PUBLIC_USER_APP_URL: https://user-ci.invalid/login
+  PUBLIC_ADMIN_APP_URL: https://admin-ci.invalid
 
 jobs:
   detect:
@@ -35,6 +38,9 @@ jobs:
           gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename' |
             node .github/scripts/detect-ci-targets.mjs ci
 
+      - name: Verify CI target detector
+        run: node --test .github/scripts/detect-ci-targets.test.mjs
+
   checks:
     name: Check ${{ matrix.package_name }}
     needs: detect
@@ -54,6 +60,7 @@ jobs:
           package-name: ${{ matrix.package_name }}
           run-build: ${{ matrix.run_build }}
           run-api-e2e: ${{ matrix.run_api_e2e }}
+          run-browser: ${{ matrix.run_browser }}
 
   ci-required:
     name: CI required

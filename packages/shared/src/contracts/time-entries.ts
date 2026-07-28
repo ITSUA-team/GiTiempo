@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { isOrderedDateRange } from "./date-range.js";
 import { syncedGitHubIssueSchema } from "./github.js";
 
 export const timeEntrySourceSchema = z.enum(["web", "extension", "manual"]);
@@ -84,10 +83,16 @@ export const timeEntryListQuerySchema = z
     search: optionalSearchSchema,
   })
   .strict()
-  .refine((data) => isOrderedDateRange(data), {
-    message: "dateTo must be later than dateFrom",
-    path: ["dateTo"],
-  });
+  .refine(
+    (data) =>
+      data.dateFrom === undefined ||
+      data.dateTo === undefined ||
+      new Date(data.dateTo).getTime() > new Date(data.dateFrom).getTime(),
+    {
+      message: "dateTo must be later than dateFrom",
+      path: ["dateTo"],
+    },
+  );
 
 const manualTimeEntryInputBaseSchema = z
   .object({

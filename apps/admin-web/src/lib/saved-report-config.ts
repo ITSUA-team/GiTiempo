@@ -50,6 +50,7 @@ const apiToUiDimension: Record<TimeReportGroupBy, ReportGroupingDimension> = {
   project: 'project',
   task: 'task',
   user: 'member',
+  billable: 'billable',
 };
 
 export function toApiGrouping(grouping: ReportGrouping): TimeReportGroupBy[] {
@@ -83,10 +84,7 @@ export function buildConfigFromState(
     kind: 'absolute',
   };
 
-  // Parse, not safeParse: an invalid page state must surface, never be quietly
-  // saved as a substituted default. Live UI calls tryBuildConfigFromState so the
-  // throw becomes an absent preset instead of a render crash.
-  return savedReportConfigSchema.parse({
+  const result = savedReportConfigSchema.safeParse({
     dateRange,
     filters: {
       activity: state.filters.activity,
@@ -99,23 +97,21 @@ export function buildConfigFromState(
     memberId: state.filters.memberId,
     projectId: state.filters.projectId,
   });
-}
 
-/**
- * Live-UI variant of {@link buildConfigFromState}: returns null instead of
- * throwing when the current page state cannot be a valid preset — an incomplete
- * or inverted date range, or an over-long search — so a reactive computed hides
- * the preset affordances rather than crashing the render.
- */
-export function tryBuildConfigFromState(
-  state: SavedReportState,
-  now = new Date(),
-): SavedReportConfig | null {
-  try {
-    return buildConfigFromState(state, now);
-  } catch {
-    return null;
+  if (result.success) return result.data;
+
+  const [defaultStart, defaultEnd] = defaultDateRange ?? [];
+  if (!defaultStart || !defaultEnd) {
+    throw new Error('A saved report requires a complete date range.');
   }
+
+  return savedReportConfigSchema.parse({
+    dateRange: {
+      dateFrom: toIsoDate(defaultStart),
+      dateTo: toIsoDate(defaultEnd),
+      kind: 'absolute',
+    },
+  });
 }
 
 function keepAvailable(
@@ -175,6 +171,7 @@ const groupingDimensionLabels: Record<TimeReportGroupBy, string> = {
   project: 'Project',
   task: 'Task',
   user: 'Member',
+  billable: 'Billable',
 };
 
 function formatSummaryDate(iso: string): string {

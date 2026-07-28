@@ -17,3 +17,6 @@ packages/shared/*.tsbuildinfo
 packages/*/dist/
 packages/*/*.tsbuildinfo
 .claude
+.codegraph
+.omc
+.reviews

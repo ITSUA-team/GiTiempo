@@ -5,7 +5,6 @@ import {
   adminMutationInvalidationKeys,
   adminProjectsKeys,
   adminSettingsKeys,
-  normalizeTimeReportExportRequest,
   normalizeTimeReportQuery,
   reportsKeys,
   type AdminServerStateScope,
@@ -43,26 +42,6 @@ describe('admin-web query keys', () => {
       sortBy: 'lastStartedAt',
       sortOrder: 'desc',
       userId: 'member-1',
-    });
-  });
-
-  it('normalizes report export query scope separately from paginated data', () => {
-    expect(
-      normalizeTimeReportExportRequest({
-        groupBy: ['user'],
-        projectId: 'project-1',
-        sortBy: 'totalSeconds',
-        sortOrder: 'asc',
-      }),
-    ).toEqual({
-      dateFrom: null,
-      dateTo: null,
-      groupBy: ['user'],
-      projectId: 'project-1',
-      search: null,
-      sortBy: 'totalSeconds',
-      sortOrder: 'asc',
-      userId: null,
     });
   });
 

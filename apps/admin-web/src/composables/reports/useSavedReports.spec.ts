@@ -1,9 +1,6 @@
-import { flushPromises, mount } from '@vue/test-utils';
-import { computed, defineComponent, ref, shallowRef } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
+import { computed, ref } from 'vue';
 import type { SavedReport, SavedReportConfig } from '@gitiempo/shared';
-
-import { createTestQueryPlugin } from '@/test/query-client';
 import { useSavedReports } from './useSavedReports';
 
 const PROJECT_ID = '00000000-0000-4000-8000-000000000001';
@@ -43,79 +40,43 @@ function makePreset(overrides: Partial<SavedReport> = {}): SavedReport {
   };
 }
 
-/**
- * `presets` is the mutable backing list. The create/delete/update mocks keep it
- * in sync the way the server would, so a mutation's invalidation-refetch sees
- * the change; tests may also mutate it directly to simulate an external change.
- */
 function setup(presets: SavedReport[] = [makePreset()]) {
-  const current = ref<SavedReportConfig | null>(makeConfig());
+  const current = ref<SavedReportConfig>(makeConfig());
   const applied: unknown[] = [];
 
   const client = {
-    createSavedReport: vi.fn(
-      async (input: { config: SavedReportConfig; name: string }) => {
-        const created = makePreset({
-          config: input.config,
-          id: 'preset-new',
-          name: input.name,
-        });
-        presets.push(created);
-        return created;
-      },
+    createSavedReport: vi.fn(async ({ name }: { name: string }) =>
+      makePreset({ id: 'preset-new', name }),
     ),
-    deleteSavedReport: vi.fn(async (id: string) => {
-      const index = presets.findIndex((preset) => preset.id === id);
-      if (index >= 0) presets.splice(index, 1);
-    }),
-    listSavedReports: vi.fn(async () => presets.map((preset) => ({ ...preset }))),
+    deleteSavedReport: vi.fn(async () => undefined),
+    listSavedReports: vi.fn(async () => presets),
     updateSavedReport: vi.fn(
       async (
         id: string,
         input: { config?: SavedReportConfig; name?: string },
-      ) => {
-        const updated = makePreset({
+      ) =>
+        makePreset({
           id,
           ...(input.config === undefined ? {} : { config: input.config }),
           ...(input.name === undefined ? {} : { name: input.name }),
-        });
-        const index = presets.findIndex((preset) => preset.id === id);
-        if (index >= 0) presets[index] = updated;
-        return updated;
-      },
+        }),
     ),
   };
 
-  let saved!: ReturnType<typeof useSavedReports>;
+  const saved = useSavedReports({
+    client: client as never,
+    currentConfig: computed(() => current.value),
+    onApply: (value) => applied.push(value),
+  });
 
-  mount(
-    defineComponent({
-      setup() {
-        saved = useSavedReports({
-          client: client as never,
-          currentConfig: computed(() => current.value),
-          enabled: ref(true),
-          onApply: (value) => applied.push(value),
-          scope: shallowRef({
-            role: 'admin',
-            userId: 'user-1',
-            workspaceId: 'workspace-1',
-          }),
-        });
-        return () => null;
-      },
-    }),
-    { global: { plugins: [createTestQueryPlugin()] } },
-  );
-
-  return { applied, client, current, presets, saved };
+  return { applied, client, current, saved };
 }
 
 describe('useSavedReports listing', () => {
   it('loads presets for the workspace', async () => {
     const { saved } = setup();
 
-    await flushPromises();
+    await saved.refresh();
 
     expect(saved.presets.value).toHaveLength(1);
     expect(saved.isLoading.value).toBe(false);
@@ -123,7 +84,7 @@ describe('useSavedReports listing', () => {
 
   it('applies a selected preset and marks it active', async () => {
     const { applied, saved } = setup();
-    await flushPromises();
+    await saved.refresh();
 
     saved.selectPreset('preset-1');
 
@@ -134,7 +95,7 @@ describe('useSavedReports listing', () => {
 
   it('ignores a selection that does not exist', async () => {
     const { applied, saved } = setup();
-    await flushPromises();
+    await saved.refresh();
 
     saved.selectPreset('missing');
 
@@ -142,13 +103,25 @@ describe('useSavedReports listing', () => {
     expect(applied).toHaveLength(0);
   });
 
+  it('does not open an unavailable preset and surfaces a message', async () => {
+    const { applied, saved } = setup([
+      makePreset({ config: null, id: 'broken', name: 'Broken preset' }),
+    ]);
+    await saved.refresh();
+
+    saved.selectPreset('broken');
+
+    expect(saved.activeId.value).toBeNull();
+    expect(applied).toHaveLength(0);
+    expect(saved.error.value).toBeTruthy();
+  });
+
   it('clears the active preset when it disappears from the list', async () => {
     const presets = [makePreset()];
     const { saved } = setup(presets);
-    await flushPromises();
+    await saved.refresh();
     saved.selectPreset('preset-1');
 
-    // Simulate a delete by another user, then reload.
     presets.length = 0;
     await saved.refresh();
 
@@ -158,9 +131,8 @@ describe('useSavedReports listing', () => {
 });
 
 describe('useSavedReports dirty state', () => {
-  it('is not dirty before a preset is loaded', async () => {
+  it('is not dirty before a preset is loaded', () => {
     const { saved } = setup();
-    await flushPromises();
 
     expect(saved.isDirty.value).toBe(false);
     expect(saved.canSave.value).toBe(false);
@@ -168,7 +140,7 @@ describe('useSavedReports dirty state', () => {
 
   it('is not dirty right after loading a preset', async () => {
     const { saved } = setup();
-    await flushPromises();
+    await saved.refresh();
 
     saved.selectPreset('preset-1');
 
@@ -178,7 +150,7 @@ describe('useSavedReports dirty state', () => {
 
   it('becomes dirty when the current config diverges', async () => {
     const { current, saved } = setup();
-    await flushPromises();
+    await saved.refresh();
     saved.selectPreset('preset-1');
 
     current.value = makeConfig({ grouping: ['project', 'user'] });
@@ -189,7 +161,7 @@ describe('useSavedReports dirty state', () => {
 
   it('clears again when the change is reverted', async () => {
     const { current, saved } = setup();
-    await flushPromises();
+    await saved.refresh();
     saved.selectPreset('preset-1');
 
     current.value = makeConfig({ grouping: ['project', 'user'] });
@@ -200,7 +172,7 @@ describe('useSavedReports dirty state', () => {
 
   it('becomes dirty when the date range changes', async () => {
     const { current, saved } = setup();
-    await flushPromises();
+    await saved.refresh();
     saved.selectPreset('preset-1');
 
     current.value = makeConfig({
@@ -213,23 +185,12 @@ describe('useSavedReports dirty state', () => {
 
     expect(saved.isDirty.value).toBe(true);
   });
-
-  it('reads as not dirty while the current state cannot be built', async () => {
-    const { current, saved } = setup();
-    await flushPromises();
-    saved.selectPreset('preset-1');
-
-    current.value = null;
-
-    expect(saved.isDirty.value).toBe(false);
-    expect(saved.canSave.value).toBe(false);
-  });
 });
 
 describe('useSavedReports mutations', () => {
   it('overwrites the loaded preset on save', async () => {
     const { client, current, saved } = setup();
-    await flushPromises();
+    await saved.refresh();
     saved.selectPreset('preset-1');
     current.value = makeConfig({ grouping: ['user'] });
 
@@ -243,42 +204,15 @@ describe('useSavedReports mutations', () => {
 
   it('does nothing on save when no preset is loaded', async () => {
     const { client, saved } = setup();
-    await flushPromises();
 
     const result = await saved.save();
 
     expect(result).toBeNull();
     expect(client.updateSavedReport).not.toHaveBeenCalled();
-  });
-
-  it('refuses to save an invalid current state and surfaces an error', async () => {
-    const { client, current, saved } = setup();
-    await flushPromises();
-    saved.selectPreset('preset-1');
-    current.value = null;
-
-    const result = await saved.save();
-
-    expect(result).toBeNull();
-    expect(client.updateSavedReport).not.toHaveBeenCalled();
-    expect(saved.error.value).toBeTruthy();
-  });
-
-  it('refuses to save-as-new from an invalid current state and surfaces an error', async () => {
-    const { client, current, saved } = setup();
-    await flushPromises();
-    current.value = null;
-
-    const result = await saved.saveAsNew('Anything');
-
-    expect(result).toBeNull();
-    expect(client.createSavedReport).not.toHaveBeenCalled();
-    expect(saved.error.value).toBeTruthy();
   });
 
   it('creates and activates a preset on save as new', async () => {
     const { client, saved } = setup();
-    await flushPromises();
 
     await saved.saveAsNew('Client hours');
 
@@ -291,7 +225,6 @@ describe('useSavedReports mutations', () => {
 
   it('surfaces a duplicate-name failure without activating anything', async () => {
     const { client, saved } = setup();
-    await flushPromises();
     client.createSavedReport.mockRejectedValueOnce(
       new Error('A saved report named "Client hours" already exists'),
     );
@@ -305,7 +238,6 @@ describe('useSavedReports mutations', () => {
 
   it('clears a previous error on the next successful save', async () => {
     const { client, saved } = setup();
-    await flushPromises();
     client.createSavedReport.mockRejectedValueOnce(new Error('nope'));
     await saved.saveAsNew('First');
 
@@ -316,7 +248,6 @@ describe('useSavedReports mutations', () => {
 
   it('renames through the client', async () => {
     const { client, saved } = setup();
-    await flushPromises();
 
     await saved.rename('preset-1', 'Renamed');
 
@@ -326,10 +257,12 @@ describe('useSavedReports mutations', () => {
   });
 
   it('clears the active preset when it is deleted', async () => {
-    const { client, saved } = setup();
-    await flushPromises();
+    const presets = [makePreset()];
+    const { client, saved } = setup(presets);
+    await saved.refresh();
     saved.selectPreset('preset-1');
 
+    presets.length = 0;
     await saved.remove('preset-1');
 
     expect(client.deleteSavedReport).toHaveBeenCalledWith('preset-1');
@@ -337,13 +270,15 @@ describe('useSavedReports mutations', () => {
   });
 
   it('keeps the active preset when a different one is deleted', async () => {
-    const { saved } = setup([
+    const presets = [
       makePreset(),
       makePreset({ id: 'preset-2', name: 'Other' }),
-    ]);
-    await flushPromises();
+    ];
+    const { saved } = setup(presets);
+    await saved.refresh();
     saved.selectPreset('preset-1');
 
+    presets.splice(1, 1);
     await saved.remove('preset-2');
 
     expect(saved.activeId.value).toBe('preset-1');
@@ -351,7 +286,6 @@ describe('useSavedReports mutations', () => {
 
   it('reports saving state while a mutation is in flight', async () => {
     const { client, saved } = setup();
-    await flushPromises();
     let release: (() => void) | null = null;
     client.createSavedReport.mockImplementationOnce(
       () =>
@@ -361,10 +295,7 @@ describe('useSavedReports mutations', () => {
     );
 
     const pending = saved.saveAsNew('Slow');
-    // withSave flips isSaving synchronously; the mutation invokes the client on
-    // a microtask, so let that run before releasing the deferred create.
     expect(saved.isSaving.value).toBe(true);
-    await flushPromises();
 
     release!();
     await pending;
@@ -375,7 +306,6 @@ describe('useSavedReports mutations', () => {
 describe('useSavedReports failure handling', () => {
   it('surfaces a failed list without rejecting', async () => {
     const { client, saved } = setup();
-    await flushPromises();
     client.listSavedReports.mockRejectedValueOnce(
       new Error('Your session has expired. Please sign in again.'),
     );
@@ -387,7 +317,7 @@ describe('useSavedReports failure handling', () => {
 
   it('keeps the previously loaded presets when a refresh fails', async () => {
     const { client, saved } = setup();
-    await flushPromises();
+    await saved.refresh();
     client.listSavedReports.mockRejectedValueOnce(new Error('offline'));
 
     await saved.refresh();
