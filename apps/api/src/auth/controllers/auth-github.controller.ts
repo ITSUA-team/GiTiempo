@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { ZodSerializerDto } from 'nestjs-zod';
@@ -61,6 +71,7 @@ export class AuthGithubController {
   }
 
   @Post('session')
+  @HttpCode(HttpStatus.OK)
   @SkipAuth()
   @ApiOperation({
     summary: 'Exchange a GitHub sign-in handoff code for a session',

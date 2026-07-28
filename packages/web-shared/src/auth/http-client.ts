@@ -1,4 +1,5 @@
 import {
+  githubSessionRequestSchema,
   loginRequestSchema,
   registerRequestSchema,
   refreshRequestSchema,
@@ -52,7 +53,7 @@ export function createAuthHttpClient({
     exchangeGithubSession(code) {
       return requestJson({
         apiBaseUrl,
-        body: { code },
+        body: githubSessionRequestSchema.parse({ code }),
         fetchFn,
         method: "POST",
         path: "/auth/github/session",

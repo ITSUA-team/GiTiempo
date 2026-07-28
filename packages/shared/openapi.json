@@ -391,6 +391,68 @@
         ]
       }
     },
+    "/auth/github/start": {
+      "get": {
+        "operationId": "AuthGithubController_start",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Start backend GitHub sign-in",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/github/callback": {
+      "get": {
+        "operationId": "AuthGithubController_callback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "GitHub sign-in OAuth callback",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/github/session": {
+      "post": {
+        "operationId": "AuthGithubController_session",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPairResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Exchange a GitHub sign-in handoff code for a session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/workspace": {
       "get": {
         "operationId": "WorkspacesController_getWorkspace",
@@ -3275,6 +3337,20 @@
         "required": [
           "refreshToken",
           "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "GithubSessionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "code"
         ],
         "additionalProperties": false
       },
