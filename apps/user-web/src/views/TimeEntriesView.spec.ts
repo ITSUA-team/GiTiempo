@@ -1093,7 +1093,9 @@ describe("TimeEntriesView", () => {
 
     expect(dateRangeFilter.attributes("data-date-format")).toBe("M d, yy");
     expect(dateRangeFilter.attributes("data-manual-input")).toBe("false");
-    expect(dateRangeFilter.attributes("data-placeholder")).toBe("");
+    expect(dateRangeFilter.attributes("data-placeholder")).toBe(
+      "Select date range",
+    );
     expect(dateRangeFilter.attributes("data-selection-mode")).toBe("range");
     expect(dateRangeFilter.attributes("data-show-button-bar")).toBe("true");
     expect(dateRangeFilter.attributes("data-show-clear")).toBe("false");

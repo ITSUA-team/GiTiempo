@@ -73,6 +73,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           date-format="M d, yy"
           icon-display="input"
           input-id="time-entries-date-range"
+          placeholder="Select date range"
           :manual-input="false"
           :model-value="selectedDateRange"
           selection-mode="range"
