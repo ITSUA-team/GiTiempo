@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { savedReportConfigSchema } from '@gitiempo/shared';
 import { describe, expect, it, vi } from 'vitest';
@@ -448,6 +449,21 @@ describe('SavedReportsService writes', () => {
     await expect(
       service.update(adminUser, 'missing', { name: 'Renamed' }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('rejects a name-only update on a config too corrupt to repair', async () => {
+    // The same legacy-corrupt row list() drops must not 500 on a name-only PATCH:
+    // its stored config cannot be serialized back, so the read-back surfaces a
+    // 4xx instead of an unhandled ZodError.
+    const corrupt = makeRow({
+      name: 'Renamed',
+      config: { grouping: ['project'] },
+    });
+    const { service } = createService('admin', mutationReturning([corrupt]));
+
+    await expect(
+      service.update(adminUser, 'id', { name: 'Renamed' }),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 
   it('reports a missing preset on delete as not found', async () => {

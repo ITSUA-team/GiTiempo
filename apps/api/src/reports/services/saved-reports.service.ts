@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { and, desc, eq } from 'drizzle-orm';
 import {
@@ -116,8 +117,9 @@ export class SavedReportsService {
         ? undefined
         : savedReportConfigSchema.parse(input.config);
 
+    let row: SavedReportRow;
     try {
-      const [row] = await this.db
+      const [updated] = await this.db
         .update(savedReports)
         .set({
           ...(input.name === undefined ? {} : { name: input.name }),
@@ -127,13 +129,25 @@ export class SavedReportsService {
         .where(this.scopedId(user, id))
         .returning();
 
-      if (!row) throw new NotFoundException('Saved report not found');
-
-      return this.toSavedReport(row);
+      if (!updated) throw new NotFoundException('Saved report not found');
+      row = updated;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       throw this.mapDuplicateName(error, input.name);
     }
+
+    // Resilient read-back, symmetric with list(): a name-only update re-serializes
+    // the existing stored config, which may be a legacy-corrupt row list() drops.
+    // Rather than 500 on the ZodError, surface a 4xx. The name write persists, but
+    // the row stays dropped from every read until its config is repaired, so the
+    // rename is unobservable until then.
+    const report = this.toSavedReportOrNull(row);
+    if (report === null) {
+      throw new UnprocessableEntityException(
+        "This saved report's stored configuration is invalid and must be recreated.",
+      );
+    }
+    return report;
   }
 
   async remove(user: AuthUser, id: string): Promise<void> {
@@ -181,9 +195,9 @@ export class SavedReportsService {
   /**
    * Config is re-validated on read so a row written before the config shape
    * changed surfaces its defaults instead of reaching the client half-formed.
-   * Callers here (create/update) re-read a config they just validated, so the
-   * parse always succeeds; the resilient `toSavedReportOrNull` is used for the
-   * unfiltered list, where a stale row could be corrupt.
+   * Only create re-reads a config it just validated, so the parse always
+   * succeeds; list and update go through the resilient `toSavedReportOrNull`,
+   * where a stale row could be corrupt.
    */
   private toSavedReport(row: SavedReportRow): SavedReport {
     return this.buildSavedReport(row, this.parseStoredConfig(row.config));

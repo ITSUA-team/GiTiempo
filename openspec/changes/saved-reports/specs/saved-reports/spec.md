@@ -50,7 +50,7 @@ A preset configuration MUST record an absolute report date range, the ordered gr
 
 ### Requirement: Report Presets Can Be Updated And Deleted
 
-The backend MUST allow an authorized user to rename a preset, replace its configuration, and delete it. Any user authorized for the reports surface in the workspace MUST be able to update or delete any preset in that workspace.
+The backend MUST allow an authorized user to rename a preset, replace its configuration, and delete it. Any user authorized for the reports surface in the workspace MUST be able to update or delete any preset in that workspace. An update that would have to re-serialize a stored configuration too corrupt to repair — the kind the list omits — MUST fail with a client error rather than a server error.
 
 #### Scenario: Preset configuration is overwritten
 - **GIVEN** a preset exists in a workspace
@@ -62,6 +62,11 @@ The backend MUST allow an authorized user to rename a preset, replace its config
 - **GIVEN** a preset exists in a workspace
 - **WHEN** an authenticated admin or PM updates its name to a name not already used in that workspace
 - **THEN** the backend stores the new name
+
+#### Scenario: Updating a preset with an unreadable stored configuration fails cleanly
+- **GIVEN** a preset whose stored configuration is corrupt beyond repair — the kind the list omits
+- **WHEN** an authenticated admin or PM updates the preset
+- **THEN** the backend rejects the request as an unprocessable-entity error rather than a server error
 
 #### Scenario: Renaming onto an existing name is rejected
 - **GIVEN** two presets exist in a workspace
