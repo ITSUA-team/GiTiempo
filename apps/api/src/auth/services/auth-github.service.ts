@@ -115,23 +115,27 @@ export class AuthGithubService {
     /** Nonce from the browser-bound HttpOnly cookie set at `startAuthorization`. */
     stateNonce?: string;
   }): Promise<string> {
+    // The state is echoed on every GitHub redirect (including a denial), so its
+    // signed `app` claim — not a hardcoded 'user' — decides which SPA to return
+    // to; a denial from an admin-started flow must reopen the admin app. The user
+    // app is only a fallback for an absent or unverifiable state.
+    const app = this.resolveStateApp(input.state);
+
     if (input.error) {
-      return this.spaRedirect('user', '/login', { githubError: 'denied' });
+      return this.spaRedirect(app, '/login', { githubError: 'denied' });
     }
     if (!input.code || !input.state) {
-      return this.spaRedirect('user', '/login', { githubError: 'state' });
+      return this.spaRedirect(app, '/login', { githubError: 'state' });
     }
 
-    // A valid signature proves the server issued the state, not that THIS browser
-    // began the flow. Requiring the state's nonce hash to match the browser's
-    // HttpOnly cookie binds the callback to its initiator, so a state minted (and
-    // GitHub-authorized) by an attacker cannot log a victim into the attacker's
-    // account. A missing/mismatched cookie falls back to a login state error.
-    let app: GithubLoginApp;
+    // Minting a session additionally requires the state to be bound to THIS
+    // browser: its nonce hash must match the HttpOnly cookie, so a state minted
+    // (and GitHub-authorized) by an attacker cannot log a victim into the
+    // attacker's account (login CSRF). A missing/mismatched cookie is a state error.
     try {
-      app = this.verifyBoundState(input.state, input.stateNonce).app;
+      this.verifyBoundState(input.state, input.stateNonce);
     } catch {
-      return this.spaRedirect('user', '/login', { githubError: 'state' });
+      return this.spaRedirect(app, '/login', { githubError: 'state' });
     }
 
     try {
@@ -241,6 +245,29 @@ export class AuthGithubService {
       throw new UnauthorizedException('state_not_bound');
     }
     return decoded;
+  }
+
+  /**
+   * The SPA to return to, read from the state's signature-verified `app` claim.
+   * This is a redirect target, not a security decision, so — unlike
+   * `verifyBoundState` — it does not require the browser-nonce binding: a denial
+   * or a failed exchange still lands the user in the app they started from.
+   * Falls back to the user app when the state is absent or unverifiable.
+   */
+  private resolveStateApp(state: string | undefined): GithubLoginApp {
+    if (!state) return 'user';
+    try {
+      const decoded = jwt.verify(state, this.secret()) as GithubStateClaims;
+      if (
+        decoded.purpose === 'gh-login-state' &&
+        (decoded.app === 'user' || decoded.app === 'admin')
+      ) {
+        return decoded.app;
+      }
+    } catch {
+      // Unverifiable state → user-app fallback below.
+    }
+    return 'user';
   }
 
   private hashNonce(nonce: string): string {

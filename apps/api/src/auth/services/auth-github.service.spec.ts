@@ -158,6 +158,32 @@ describe('AuthGithubService', () => {
     expect(wrongCookie.searchParams.get('githubError')).toBe('state');
   });
 
+  it('returns a GitHub denial to the app named in the state, not always the user app', async () => {
+    const { svc } = createService();
+    const { state } = startTransaction(svc, 'admin');
+
+    // GitHub echoes the state on a denial; the flow began in admin-web, so the
+    // denial must reopen the admin SPA — no session, so no cookie is required.
+    const redirect = new URL(
+      await svc.completeCallback({ error: 'access_denied', state }),
+    );
+
+    expect(redirect.origin).toBe('http://localhost:5174');
+    expect(redirect.pathname).toBe('/login');
+    expect(redirect.searchParams.get('githubError')).toBe('denied');
+  });
+
+  it('falls back to the user app for a denial with no resolvable state', async () => {
+    const { svc } = createService();
+
+    const redirect = new URL(
+      await svc.completeCallback({ error: 'access_denied' }),
+    );
+
+    expect(redirect.origin).toBe('http://localhost:5173');
+    expect(redirect.searchParams.get('githubError')).toBe('denied');
+  });
+
   it('exchanges a handoff code into a session for the verified email', async () => {
     const { svc, auth } = createService();
     const { state, stateNonce } = startTransaction(svc, 'admin');
