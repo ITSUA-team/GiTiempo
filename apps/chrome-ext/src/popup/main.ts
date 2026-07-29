@@ -2,6 +2,8 @@
 
 import "@/styles/extension.css";
 
+import { deriveProfileInitials } from "@gitiempo/shared";
+
 import { getExtensionConfig } from "@/lib/config";
 import { escapeHtml } from "@/lib/html";
 import type { PageContext, SupportedGitHubIssueContext } from "@/lib/github-context";
@@ -49,18 +51,7 @@ const popupTextActionClass =
 const popupHomeIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10.5 9-7 9 7" /><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" /><path d="M9.5 21v-6a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6" /></svg>`;
 
 function getUserInitials(user: SnapshotUser): string {
-  const source = (user.displayName?.trim() || user.email.split("@")[0] || "").trim();
-  const parts = source.split(/[\s._+-]+/).filter(Boolean);
-
-  if (parts.length === 0) {
-    return "?";
-  }
-
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return deriveProfileInitials(user.displayName?.trim() || user.email, "GT");
 }
 
 function renderHomeButton(): string {
