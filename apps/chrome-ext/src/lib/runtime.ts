@@ -14,7 +14,7 @@ export interface RuntimeSnapshot {
   authenticated: boolean;
   currentTimer: TimeEntryResponse | null;
   errorMessage: string | null;
-  user?: SnapshotUser | null;
+  user: SnapshotUser | null;
 }
 
 export interface RuntimeActionResult {
@@ -56,6 +56,7 @@ export function createRuntimeSnapshot(
     authenticated: currentTimerResponse !== null,
     currentTimer: currentTimerResponse?.timeEntry ?? null,
     errorMessage: null,
+    user: null,
     ...overrides,
   };
 }

@@ -91,6 +91,7 @@ describe("background snapshot broadcast", () => {
       authenticated: true,
       currentTimer: null,
       errorMessage: null,
+      user: null,
     };
 
     await broadcastSnapshot(snapshot);
@@ -128,6 +129,7 @@ describe("background snapshot broadcast", () => {
         authenticated: false,
         currentTimer: null,
         errorMessage: null,
+        user: null,
       }),
     ).resolves.toBeUndefined();
 
@@ -147,6 +149,7 @@ describe("background snapshot broadcast", () => {
         authenticated: true,
         currentTimer: null,
         errorMessage: null,
+        user: null,
       }),
     ).resolves.toBeUndefined();
 

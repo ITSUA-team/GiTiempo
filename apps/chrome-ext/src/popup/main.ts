@@ -63,25 +63,6 @@ function getUserInitials(user: SnapshotUser): string {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 }
 
-function resolveHeaderUser(snapshot: RuntimeSnapshot): SnapshotUser | null {
-  if (!snapshot.authenticated) {
-    return null;
-  }
-
-  if (snapshot.user) {
-    return snapshot.user;
-  }
-
-  if (snapshot.currentTimer) {
-    return {
-      displayName: snapshot.currentTimer.user.displayName,
-      email: snapshot.currentTimer.user.email,
-    };
-  }
-
-  return null;
-}
-
 function renderHomeButton(): string {
   return `
     <a
@@ -180,7 +161,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
     return `
       <div class="flex h-full flex-col gap-6">
-        ${renderBrandHeader({ authenticated: true, user: resolveHeaderUser(state.snapshot) })}
+        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
         <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
           <div class="bg-status-error-bg text-status-error-text flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
           <p class="m-0 text-lg font-semibold text-text-dark">Connection lost</p>
@@ -199,7 +180,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
     return `
       <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader({ authenticated: true, user: resolveHeaderUser(state.snapshot) })}
+        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
         <div class="bg-app-bg flex flex-col items-center gap-3 rounded-lg p-5 text-center">
           <div class="bg-status-active-bg text-status-active-text flex items-center rounded-sm px-3 py-1 text-xs font-semibold">Running timer</div>
           <p class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
@@ -216,7 +197,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
   if (state.pageContext?.kind === "supported") {
     return `
       <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader({ authenticated: true, user: resolveHeaderUser(state.snapshot) })}
+        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
         ${renderIssueCard(state.pageContext)}
         <div class="mt-auto flex flex-col gap-3">
           <button data-action="start-timer" class="${popupPrimaryButtonClass}">Start Timer</button>
@@ -227,7 +208,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
   return `
     <div class="flex h-full flex-col gap-5">
-      ${renderBrandHeader({ authenticated: true, user: resolveHeaderUser(state.snapshot) })}
+      ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
       <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
         <p class="m-0 text-xs font-medium text-text-muted">GitHub issue required</p>
         <p class="m-0 text-lg font-semibold text-text-dark">Open a supported GitHub issue to start a timer.</p>
@@ -386,6 +367,7 @@ export function createPopupApp({
         authenticated: false,
         currentTimer: null,
         errorMessage: null,
+        user: null,
       };
       state.pageContext = null;
       state.errorMessage =
