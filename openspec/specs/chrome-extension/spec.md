@@ -23,13 +23,33 @@ The system SHALL provide a Chrome extension app that builds as a Manifest V3 bro
 - **AND** they do not load PrimeVue or SPA router/store bootstrap code
 
 ### Requirement: Popup Supports Auth And Timer States
-The extension popup SHALL render the documented fixed-size GiTiempo popup states for authentication, detected issue context, running timer, and recoverable error conditions.
+The extension popup SHALL render the documented fixed-size GiTiempo popup states for authentication, detected issue context, running timer, and recoverable error conditions, and SHALL identify the signed-in user and offer entry into the GiTiempo web app home from every signed-in state.
 
 #### Scenario: Popup prompts unauthenticated user
 - **GIVEN** no valid extension session is available
 - **WHEN** the user opens the extension popup
 - **THEN** the popup shows the branded unauthenticated state
 - **AND** it provides a primary sign-in action
+
+#### Scenario: Popup header opens the web app home
+- **GIVEN** the user is authenticated
+- **WHEN** the user opens the extension popup in any signed-in state
+- **THEN** the popup header shows an action that opens the User SPA home in a new browser tab
+- **AND** the destination is the app home rather than the sign-in route
+- **AND** the destination follows the configured User SPA origin for the deployed environment
+
+#### Scenario: Popup header identifies the signed-in user
+- **GIVEN** the user is authenticated
+- **AND** the extension runtime snapshot carries a signed-in user
+- **WHEN** the user opens the extension popup in any signed-in state
+- **THEN** the popup header shows that user's initials avatar beside the home action
+- **AND** the avatar remains visible while a timer is running and while timer state cannot be loaded
+- **AND** the popup omits the avatar without hiding the home action when the snapshot carries no user
+
+#### Scenario: Popup header stays bare before sign-in
+- **GIVEN** the popup is still loading its state or no valid extension session is available
+- **WHEN** the popup renders the branded header
+- **THEN** it shows neither the home action nor the user avatar
 
 #### Scenario: Popup shows detected issue with no active timer
 - **GIVEN** the user is authenticated
@@ -38,7 +58,7 @@ The extension popup SHALL render the documented fixed-size GiTiempo popup states
 - **WHEN** the user opens the extension popup
 - **THEN** the popup shows the detected repository, issue number, and issue title
 - **AND** it shows a full-width `Start Timer` action
-- **AND** it shows a link to open the full GiTiempo workspace
+- **AND** it offers the workspace through the header home action without repeating it as a body-level link
 
 #### Scenario: Popup shows authenticated unsupported-page guidance
 - **GIVEN** the user is authenticated
@@ -47,7 +67,7 @@ The extension popup SHALL render the documented fixed-size GiTiempo popup states
 - **THEN** the popup keeps the branded shell visible
 - **AND** it shows concise guidance that a supported GitHub issue is required to start a timer
 - **AND** it does not show an available `Start Timer` action
-- **AND** it shows a link to open the full GiTiempo workspace
+- **AND** it shows a full-width action that opens the GiTiempo web app home
 
 #### Scenario: Popup shows running timer
 - **GIVEN** the user is authenticated
@@ -64,7 +84,7 @@ The extension popup SHALL render the documented fixed-size GiTiempo popup states
 - **AND** it provides a retry action without hiding the branded popup shell
 
 ### Requirement: Extension Authenticates With Workspace Session
-The extension SHALL authenticate users through Firebase and the existing backend auth exchange, storing GiTiempo JWT session tokens in Chrome extension storage.
+The extension SHALL authenticate users through Firebase and the existing backend auth exchange, storing GiTiempo JWT session tokens in Chrome extension storage, and SHALL surface the signed-in user on its runtime snapshot for display.
 
 #### Scenario: User signs in from popup
 - **GIVEN** the user is unauthenticated in the extension
@@ -108,6 +128,14 @@ The extension SHALL authenticate users through Firebase and the existing backend
 - **WHEN** the user views the control
 - **THEN** the primary action opens the extension or otherwise guides the user to sign in
 - **AND** it does not attempt to start a timer without a token
+
+#### Scenario: Runtime snapshot carries the signed-in user
+- **GIVEN** a stored extension session
+- **WHEN** the extension builds its runtime snapshot
+- **THEN** the snapshot carries the signed-in user's email read from the stored session token
+- **AND** it carries the display name when a running timer supplies one
+- **AND** it carries no user when no session is stored
+- **AND** it reads identity from the stored session without issuing an additional API request
 
 ### Requirement: Extension Detects GitHub Issue Context
 The extension SHALL detect supported GitHub issue surfaces and derive the local timer request context from the current page.
