@@ -10,3 +10,4 @@ export * from "./contracts/time-entries.js";
 export * from "./contracts/reports.js";
 export * from "./contracts/saved-reports.js";
 export * from "./contracts/github.js";
+export * from "./auth/access-token-claims.js";
