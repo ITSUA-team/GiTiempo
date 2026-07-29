@@ -311,15 +311,31 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.register);
   });
 
-  it("offers the browser extension through the configured landing section", async () => {
-    vi.stubEnv("VITE_LANDING_URL", "https://landing.example.test");
+  it("sends the browser extension callout to the install page when configured", async () => {
+    vi.stubEnv(
+      "VITE_EXTENSION_INSTALL_URL",
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    expect(
+      wrapper.get('[data-testid="login-extension-callout"]').attributes("href"),
+    ).toBe("https://chromewebstore.google.com/detail/gitiempo/abc");
+  });
+
+  it("offers the browser extension through the configured install page", async () => {
+    vi.stubEnv(
+      "VITE_EXTENSION_INSTALL_URL",
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
 
     const callout = wrapper.get('[data-testid="login-extension-callout"]');
 
     expect(callout.attributes("href")).toBe(
-      "https://landing.example.test/#github-workflow",
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
     );
     expect(callout.attributes("target")).toBe("_blank");
     expect(callout.attributes("rel")).toBe("noreferrer");
@@ -329,7 +345,10 @@ describe("LoginView", () => {
   });
 
   it("keeps the extension callout out of the sign-in form", async () => {
-    vi.stubEnv("VITE_LANDING_URL", "https://landing.example.test");
+    vi.stubEnv(
+      "VITE_EXTENSION_INSTALL_URL",
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
 
@@ -356,10 +375,10 @@ describe("LoginView", () => {
     expect(panel?.firstElementChild?.className).not.toContain("max-w-[600px]");
   });
 
-  it("hides the extension callout when no landing is configured", async () => {
+  it("hides the extension callout when no install page is configured", async () => {
     // Stub it empty rather than relying on absence: a developer's .env.local
     // sets this, and the suite must not depend on their machine.
-    vi.stubEnv("VITE_LANDING_URL", "");
+    vi.stubEnv("VITE_EXTENSION_INSTALL_URL", "");
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
 

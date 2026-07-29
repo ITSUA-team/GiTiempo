@@ -12,22 +12,22 @@ The user-web app MUST provide a dedicated login page that matches the approved e
 
 #### Scenario: Login page offers the browser extension
 
-- **GIVEN** a landing destination is configured for the environment
+- **GIVEN** an extension install page is configured for the environment
 - **WHEN** an anonymous user opens the login route
 - **THEN** the branded hero content panel shows a browser-extension callout below the feature highlights
 - **AND** the callout names the extension and states that time can be tracked from the browser
 - **AND** the callout stays outside the sign-in form so it never reads as an additional sign-in action
 
-#### Scenario: Extension callout opens the landing extension section
+#### Scenario: Extension callout opens the install page
 
-- **GIVEN** the login page shows the browser-extension callout
+- **GIVEN** an extension install page is configured for the environment
 - **WHEN** the user activates the callout
-- **THEN** the landing page section describing the Chrome extension opens in a new browser tab
+- **THEN** the install page opens in a new browser tab
 - **AND** the login route and any entered credentials remain untouched in the original tab
 
 #### Scenario: Extension callout is absent without a configured destination
 
-- **GIVEN** no landing destination is configured for the environment
+- **GIVEN** no extension install page is configured
 - **WHEN** an anonymous user opens the login route
 - **THEN** the page omits the browser-extension callout entirely
 - **AND** it renders no placeholder or inactive link in its place

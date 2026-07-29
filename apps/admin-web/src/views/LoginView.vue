@@ -5,6 +5,8 @@ import {
   authGradientPanelClass,
   AuthIntroPanel,
   AuthSignInForm,
+  ExtensionCallout,
+  getExtensionInstallHref,
   resolveGithubSignInError,
   StandaloneSplitPage,
   type EmailPasswordSignInInput,
@@ -25,6 +27,7 @@ const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",
 });
+const extensionHref = getExtensionInstallHref(appEnv.extensionInstallUrl);
 const introBadgeItems = [
   "Guest-only admin entry",
   "Shared auth direction with user-web",
@@ -120,7 +123,14 @@ function handleGithubSignIn(): void {
         counterpart-label="the user workspace"
         counterpart-prompt="Need time tracking? Open"
         product-tagline="GiTiempo"
-      />
+      >
+        <template
+          v-if="extensionHref"
+          #hero-footer
+        >
+          <ExtensionCallout :href="extensionHref" />
+        </template>
+      </AuthIntroPanel>
     </template>
 
     <template #right>

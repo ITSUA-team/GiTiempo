@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ArrowRightIcon, PlusIcon } from "@heroicons/vue/24/outline";
-import { PuzzlePieceIcon } from "@heroicons/vue/24/solid";
+import { PlusIcon } from "@heroicons/vue/24/outline";
 import {
   AuthDivider,
   authGradientPanelClass,
   AuthIntroPanel,
   AuthSignInForm,
+  ExtensionCallout,
   getErrorMessage,
+  getExtensionInstallHref,
   resolveGithubSignInError,
   StandaloneSplitPage,
   type EmailPasswordSignInInput,
@@ -17,7 +18,6 @@ import { normalizeRedirectTargetValue } from "@gitiempo/web-shared/router";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import { appEnv } from "@/config/env";
-import { getLandingExtensionHref } from "@/config/landing";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -30,7 +30,7 @@ const adminWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.adminAppUrl,
   fallbackPath: "/login",
 });
-const extensionHref = getLandingExtensionHref(appEnv.landingUrl);
+const extensionHref = getExtensionInstallHref(appEnv.extensionInstallUrl);
 const introBadgeItems = ["Secure workspace sign-in", "No dark mode for MVP"];
 const introFeatureCards = [
   {
@@ -132,31 +132,7 @@ function goToRegister(): void {
           v-if="extensionHref"
           #hero-footer
         >
-          <a
-            :href="extensionHref"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Browser extension: track time right from your browser (opens in a new tab)"
-            class="focus-visible:outline-text-inverse flex items-center justify-between gap-2.5 rounded-sm border border-white/20 bg-white/10 px-3.5 py-3 transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2"
-            data-testid="login-extension-callout"
-          >
-            <span class="flex items-center gap-3">
-              <span
-                class="text-text-inverse flex size-8 shrink-0 items-center justify-center rounded-md bg-white/20"
-              >
-                <PuzzlePieceIcon class="size-4" />
-              </span>
-              <span class="flex flex-col gap-px">
-                <span class="text-text-inverse text-sm font-semibold">
-                  Browser extension
-                </span>
-                <span class="text-text-inverse-muted text-xs">
-                  Track time right from your browser
-                </span>
-              </span>
-            </span>
-            <ArrowRightIcon class="text-text-inverse size-4 shrink-0" />
-          </a>
+          <ExtensionCallout :href="extensionHref" />
         </template>
       </AuthIntroPanel>
     </template>

@@ -140,9 +140,9 @@
 - Add a secondary outlined `Create workspace` action below `Continue with Google`. It links to `/register` and opens the register new workflow without changing the login form state.
 - Keep the register action visually secondary to both sign-in actions. Do not render it as a second filled primary button.
 - Keep the existing invite/help text below the action stack so users joining an existing workspace still understand they need an invitation.
-- The left brand panel carries a `Browser extension` callout below the feature cards: a puzzle icon, the title `Browser extension`, the line `Track time right from your browser`, and a trailing arrow. It links to the extension section of the public landing (`#github-workflow`) and opens in a new tab so an in-progress sign-in survives. It is intro content, not a sign-in action, and never renders inside the sign-in form.
-- The callout is driven by `VITE_LANDING_URL`. When that value is absent the callout is omitted entirely — no placeholder and no inactive link — so an environment without a deployed landing shows no dead end.
-- The admin login and both register screens carry no extension callout; the shared intro panel exposes it through an optional slot that only the user login fills.
+- The left brand panel carries a `Browser extension` callout below the feature cards: a puzzle icon, the title `Browser extension`, the line `Track time right from your browser`, and a trailing arrow. It opens in a new tab so an in-progress sign-in survives. It is intro content, not a sign-in action, and never renders inside the sign-in form.
+- The callout sends the user to the extension's install page (`VITE_EXTENSION_INSTALL_URL`). With that value unset the callout is omitted entirely — no placeholder and no inactive link — so no environment shows a dead end.
+- The admin login shows the same callout, driven by the same value; both register screens carry none. The shared intro panel exposes it through an optional slot each login fills.
 
 ### Login Page Approved Visual Treatment
 

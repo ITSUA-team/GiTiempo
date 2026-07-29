@@ -1,9 +1,9 @@
 ## 1. Configuration
 
-- [x] 1.1 Add an optional `VITE_LANDING_URL` build-time value to the user-web environment typing and runtime config, following the `VITE_ADMIN_APP_URL` pattern.
-- [x] 1.2 Resolve the landing extension destination in a single helper so the section anchor lives in one place rather than in the view markup.
-- [x] 1.3 Add `VITE_LANDING_URL` to `apps/user-web/.env.example` with a comment stating it is optional and hides the callout when unset.
-- [x] 1.4 Add unit coverage for the resolved destination: configured origin, trailing-slash origin, unset value, and an unparseable value.
+- [x] 1.1 Add an optional `VITE_EXTENSION_INSTALL_URL` build-time value to the user-web environment typing and runtime config, following the `VITE_ADMIN_APP_URL` pattern.
+- [x] 1.2 Resolve the callout destination in a single helper so the view never handles an unset or unparseable value.
+- [x] 1.3 Add the value to both SPAs' `.env.example` and to the staging frontend deploy workflow, noting it is optional and hides the link when unset.
+- [x] 1.4 Add unit coverage for the resolved destination: configured install page, surrounding whitespace, unset value, and an unparseable value.
 
 ## 2. Shared Intro Panel
 
@@ -26,9 +26,9 @@
 
 ## 5. Docs And Design
 
-- [x] 5.1 Document the callout in the `docs/ui/pages-user.md` login section, including its placement in the intro panel, the landing anchor target, and the hidden-when-unconfigured behavior.
+- [x] 5.1 Document the callout in the `docs/ui/pages-user.md` login section, including its placement in the intro panel, the install-page destination, and the hidden-when-unconfigured behavior.
 - [x] 5.2 Record the restyled auth visual system introduced by the redesign in `docs/ui/pages-user.md` so the doc matches the approved `.pen` auth screens.
-- [x] 5.3 Add `VITE_LANDING_URL` to the frontend environment table in `docs/deployment.md`.
+- [x] 5.3 Add the value to the frontend environment table in `docs/deployment.md`.
 
 ## 6. Verification
 

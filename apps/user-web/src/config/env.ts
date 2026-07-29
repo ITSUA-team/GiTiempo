@@ -1,8 +1,8 @@
 export interface UserWebEnv {
   adminAppUrl?: string;
   apiBaseUrl?: string;
+  extensionInstallUrl?: string;
   githubSignInEnabled: boolean;
-  landingUrl?: string;
   firebase: {
     apiKey?: string;
     appId?: string;
@@ -20,17 +20,17 @@ export const appEnv: UserWebEnv = {
   get apiBaseUrl() {
     return import.meta.env.VITE_API_BASE_URL;
   },
+  get extensionInstallUrl() {
+    // Where the login callout sends users to get the browser extension.
+    // Unset hides the callout rather than linking nowhere.
+    return import.meta.env.VITE_EXTENSION_INSTALL_URL;
+  },
 
   get githubSignInEnabled() {
     // Default off: the button shows only when a deployment explicitly opts in
     // (VITE_GITHUB_SIGNIN_ENABLED='true'), so an environment that has not wired
     // the backend GITHUB_SIGNIN_* secrets never surfaces a flow that cannot complete.
     return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED === 'true';
-  },
-  get landingUrl() {
-    // Optional: the login extension callout stays hidden where no landing is
-    // deployed, so an unconfigured environment never shows a dead link.
-    return import.meta.env.VITE_LANDING_URL;
   },
   firebase: {
     get apiKey() {

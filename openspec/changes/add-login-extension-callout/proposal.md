@@ -5,10 +5,10 @@ The redesigned auth screens introduced a `Browser extension` callout on the user
 ## What Changes
 
 - Add the `Browser extension` callout to the user login page's intro panel, directly below the feature highlights, matching the approved `Login Page` `.pen` screen.
-- Give the shared auth intro panel an optional content slot so the callout can be supplied by the user app alone; the admin login and the register screens keep no callout, as their approved screens show none.
-- Point the callout at the public landing section that describes the Chrome extension, opened in a new tab so an in-progress sign-in is never interrupted.
-- Introduce a landing URL configuration value for `apps/user-web`, following the existing `VITE_ADMIN_APP_URL` pattern for cross-app destinations.
-- Render the callout only when that destination is configured, so environments without a deployed landing show no dead link.
+- Give the shared auth intro panel an optional content slot, and share the callout itself, so both logins render one implementation; the register screens keep none.
+- Point the callout at the extension's install page, opened in a new tab so an in-progress sign-in is never interrupted.
+- Introduce one install-page configuration value shared by both SPAs, following the existing `VITE_ADMIN_APP_URL` pattern for outbound destinations.
+- Render the callout only when that destination is configured, so no environment shows a dead link.
 - Update `docs/ui/pages-user.md` to describe the callout and the restyled auth visual system the redesign introduced.
 
 ## Capabilities
@@ -23,9 +23,9 @@ The redesigned auth screens introduced a `Browser extension` callout on the user
 
 ## Impact
 
-- Affected app: `apps/user-web` (login view, configuration, tests).
-- Affected package: `packages/web-shared` — `AuthIntroPanel` gains one optional slot. The addition is backward compatible, so `apps/admin-web` renders exactly as it does today.
-- Affected configuration: a new `VITE_LANDING_URL` build-time value in `apps/user-web/.env.example` and the deployment environment tables in `docs/deployment.md`.
+- Affected apps: `apps/user-web` and `apps/admin-web` (login views, configuration, tests).
+- Affected package: `packages/web-shared` — `AuthIntroPanel` gains one optional slot, plus a shared `ExtensionCallout` and install-link resolver used by both logins.
+- Affected configuration: a new `VITE_EXTENSION_INSTALL_URL` build-time value in both SPAs' `.env.example`, the staging frontend deploy workflow, and the deployment environment table in `docs/deployment.md`.
 - Affected source-of-truth: `openspec/specs/user-pages/spec.md` through this change's delta spec, `docs/ui/pages-user.md`, and the approved `GITiempo.pen` auth screens.
 - No API, OpenAPI, database, or shared contract changes: the callout is a static outbound link.
-- No `apps/landing-web` changes: the callout targets the existing extension content anchor on the landing page.
+- No `apps/landing-web` changes.

@@ -256,6 +256,35 @@ describe("LoginView", () => {
     );
   });
 
+  it("offers the browser extension through the configured install page", async () => {
+    vi.stubEnv(
+      "VITE_EXTENSION_INSTALL_URL",
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    const callout = wrapper.get('[data-testid="login-extension-callout"]');
+
+    expect(callout.attributes("href")).toBe(
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    expect(callout.attributes("target")).toBe("_blank");
+    expect(callout.text()).toContain("Browser extension");
+  });
+
+  it("hides the extension callout when no install page is configured", async () => {
+    // Stub it empty rather than relying on absence: a developer's .env.local
+    // sets this, and the suite must not depend on their machine.
+    vi.stubEnv("VITE_EXTENSION_INSTALL_URL", "");
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    expect(wrapper.find('[data-testid="login-extension-callout"]').exists()).toBe(
+      false,
+    );
+  });
+
   it("paints the whole left half with the auth gradient", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
