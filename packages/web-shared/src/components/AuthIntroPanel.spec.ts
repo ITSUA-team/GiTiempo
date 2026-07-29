@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import AuthIntroPanel from "./AuthIntroPanel.vue";
 
-function mountPanel() {
+function mountPanel(slots?: Record<string, string>) {
   return mount(AuthIntroPanel, {
+    slots,
     props: {
       badgeItems: ["Guest-only admin entry"],
       counterpartHref: "https://user.example.test/login",
@@ -35,5 +36,20 @@ describe("AuthIntroPanel", () => {
     expect(logo.classes()).toContain("text-brand");
     expect(logo.classes()).toContain("rounded-[12px]");
     expect(logo.classes()).not.toContain("rounded-xl");
+  });
+
+  it("renders hero-footer content an app supplies", () => {
+    const wrapper = mountPanel({
+      "hero-footer": '<a href="https://landing.example.test">Browser extension</a>',
+    });
+
+    expect(wrapper.text()).toContain("Browser extension");
+  });
+
+  it("adds nothing when no hero-footer content is supplied", () => {
+    const wrapper = mountPanel();
+
+    expect(wrapper.html()).toBe(mountPanel().html());
+    expect(wrapper.text()).not.toContain("Browser extension");
   });
 });

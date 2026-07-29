@@ -2,6 +2,7 @@ export interface UserWebEnv {
   adminAppUrl?: string;
   apiBaseUrl?: string;
   githubSignInEnabled: boolean;
+  landingUrl?: string;
   firebase: {
     apiKey?: string;
     appId?: string;
@@ -25,6 +26,11 @@ export const appEnv: UserWebEnv = {
     // (VITE_GITHUB_SIGNIN_ENABLED='true'), so an environment that has not wired
     // the backend GITHUB_SIGNIN_* secrets never surfaces a flow that cannot complete.
     return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED === 'true';
+  },
+  get landingUrl() {
+    // Optional: the login extension callout stays hidden where no landing is
+    // deployed, so an unconfigured environment never shows a dead link.
+    return import.meta.env.VITE_LANDING_URL;
   },
   firebase: {
     get apiKey() {

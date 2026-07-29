@@ -310,4 +310,45 @@ describe("LoginView", () => {
 
     expect(router.currentRoute.value.name).toBe(routeNames.register);
   });
+
+  it("offers the browser extension through the configured landing section", async () => {
+    vi.stubEnv("VITE_LANDING_URL", "https://landing.example.test");
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    const callout = wrapper.get('[data-testid="login-extension-callout"]');
+
+    expect(callout.attributes("href")).toBe(
+      "https://landing.example.test/#github-workflow",
+    );
+    expect(callout.attributes("target")).toBe("_blank");
+    expect(callout.attributes("rel")).toBe("noreferrer");
+    expect(callout.attributes("aria-label")).toContain("opens in a new tab");
+    expect(callout.text()).toContain("Browser extension");
+    expect(callout.text()).toContain("Track time right from your browser");
+  });
+
+  it("keeps the extension callout out of the sign-in form", async () => {
+    vi.stubEnv("VITE_LANDING_URL", "https://landing.example.test");
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    expect(
+      wrapper.find('form [data-testid="login-extension-callout"]').exists(),
+    ).toBe(false);
+    expect(wrapper.find('[data-testid="sign-in-create-workspace"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="sign-in-email"]').exists()).toBe(true);
+  });
+
+  it("hides the extension callout when no landing is configured", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    expect(wrapper.find('[data-testid="login-extension-callout"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.text()).not.toContain("Browser extension");
+  });
 });

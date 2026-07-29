@@ -62,6 +62,10 @@ const props = defineProps<{
           </div>
         </article>
       </div>
+
+      <!-- Optional intro content an app can add below the highlights; renders
+           nothing when the consumer leaves it empty. -->
+      <slot name="hero-footer" />
     </div>
 
     <div class="text-text-muted flex flex-wrap gap-4 text-xs font-medium">

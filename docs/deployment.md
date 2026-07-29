@@ -28,7 +28,7 @@ Frontend builds use build-time environment values. The existing SPAs use `VITE_*
 | App | Required deployment values |
 |---|---|
 | `landing-web` | Public site URL/canonical origin, user-app entry URL, and admin-app entry URL |
-| `user-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_ADMIN_APP_URL` |
+| `user-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_ADMIN_APP_URL`, and optionally `VITE_LANDING_URL` (landing origin for the login browser-extension callout; the callout is hidden when unset) |
 | `admin-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_USER_APP_URL` |
 
 Landing origins and CTA targets:

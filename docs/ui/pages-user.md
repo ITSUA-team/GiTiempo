@@ -140,6 +140,19 @@
 - Add a secondary outlined `Create workspace` action below `Continue with Google`. It links to `/register` and opens the register new workflow without changing the login form state.
 - Keep the register action visually secondary to both sign-in actions. Do not render it as a second filled primary button.
 - Keep the existing invite/help text below the action stack so users joining an existing workspace still understand they need an invitation.
+- The left brand panel carries a `Browser extension` callout below the feature cards: a puzzle icon, the title `Browser extension`, the line `Track time right from your browser`, and a trailing arrow. It links to the extension section of the public landing (`#github-workflow`) and opens in a new tab so an in-progress sign-in survives. It is intro content, not a sign-in action, and never renders inside the sign-in form.
+- The callout is driven by `VITE_LANDING_URL`. When that value is absent the callout is omitted entirely — no placeholder and no inactive link — so an environment without a deployed landing shows no dead end.
+- The admin login and both register screens carry no extension callout; the shared intro panel exposes it through an optional slot that only the user login fills.
+
+### Login Page Approved Visual Treatment
+
+The approved `.pen` auth screens (user login, admin login, and both register screens) share one visual language. The implementation follows the `.pen` as parity source; where the running app still differs, the `.pen` wins.
+
+- The brand panel uses a 135° linear gradient from `#6E3AA0` to `#2E1442`, with the logo and hero copy reversed out in white over it.
+- All four auth screens use the same logo lockup: a white rounded badge with the brand-purple `GT` mark.
+- The Google and GitHub actions use their brand marks — the four-color Google `G` and the dark GitHub Octocat — rather than generic icons.
+- Labeled dividers separate the credential fields, the OAuth actions, and the create-workspace zone so the three ways in read as distinct groups.
+- The primary `Sign in` action carries an `↵ Enter` keycap hint.
 - Login errors stay scoped to the sign-in attempt. Navigating to `/register` must not reuse or display stale login submission errors.
 
 ## Register New Workflow Page

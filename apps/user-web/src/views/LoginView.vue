@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Button from "primevue/button";
+import { ArrowUpRightIcon, PuzzlePieceIcon } from "@heroicons/vue/24/outline";
 import {
   AuthIntroPanel,
   AuthSignInForm,
@@ -14,6 +15,7 @@ import { normalizeRedirectTargetValue } from "@gitiempo/web-shared/router";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import { appEnv } from "@/config/env";
+import { getLandingExtensionHref } from "@/config/landing";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -26,6 +28,7 @@ const adminWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.adminAppUrl,
   fallbackPath: "/login",
 });
+const extensionHref = getLandingExtensionHref(appEnv.landingUrl);
 const introBadgeItems = ["Secure workspace sign-in", "No dark mode for MVP"];
 const introFeatureCards = [
   {
@@ -119,7 +122,38 @@ function goToRegister(): void {
         counterpart-label="the admin workspace"
         counterpart-prompt="Need admin tools? Open"
         product-tagline="GiTiempo"
-      />
+      >
+        <template
+          v-if="extensionHref"
+          #hero-footer
+        >
+          <a
+            :href="extensionHref"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Browser extension: track time right from your browser (opens in a new tab)"
+            class="bg-app-bg shadow-card focus-visible:outline-brand flex items-center justify-between gap-3 rounded-lg p-4 transition hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2"
+            data-testid="login-extension-callout"
+          >
+            <span class="flex items-center gap-3">
+              <span
+                class="bg-accent-tint text-brand flex size-8 shrink-0 items-center justify-center rounded-md"
+              >
+                <PuzzlePieceIcon class="size-4" />
+              </span>
+              <span class="flex flex-col gap-0.5">
+                <span class="text-text-dark text-sm font-semibold">
+                  Browser extension
+                </span>
+                <span class="text-text-muted text-xs leading-5">
+                  Track time right from your browser
+                </span>
+              </span>
+            </span>
+            <ArrowUpRightIcon class="text-text-muted size-4 shrink-0" />
+          </a>
+        </template>
+      </AuthIntroPanel>
     </template>
 
     <template #right>

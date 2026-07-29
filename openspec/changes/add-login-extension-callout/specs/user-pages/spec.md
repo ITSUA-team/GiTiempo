@@ -2,7 +2,7 @@
 
 ### Requirement: Login Entry Page
 
-The user-web app MUST provide a dedicated login page that matches the approved entry design and exposes the supported authentication methods. The page MUST also surface the browser extension as a secondary way to track time, without competing with the sign-in actions.
+The user-web app MUST provide a dedicated login page that matches the approved entry design and exposes the supported authentication methods. The page MUST also surface the browser extension as a secondary way to track time, presented alongside the product introduction rather than among the sign-in actions.
 
 #### Scenario: Login page renders approved entry sections
 
@@ -14,9 +14,9 @@ The user-web app MUST provide a dedicated login page that matches the approved e
 
 - **GIVEN** a landing destination is configured for the environment
 - **WHEN** an anonymous user opens the login route
-- **THEN** the page shows a browser-extension callout below the sign-in action stack
+- **THEN** the branded hero content panel shows a browser-extension callout below the feature highlights
 - **AND** the callout names the extension and states that time can be tracked from the browser
-- **AND** the callout is presented as a secondary surface rather than an additional sign-in action
+- **AND** the callout stays outside the sign-in form so it never reads as an additional sign-in action
 
 #### Scenario: Extension callout opens the landing extension section
 
