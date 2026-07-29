@@ -13,6 +13,7 @@ describe("getExtensionConfig", () => {
       },
       googleOAuthClientId: "test-google-client-id.apps.googleusercontent.com",
       userSpaUrl: "http://localhost:5173/login",
+      userSpaHomeUrl: "http://localhost:5173",
     });
   });
 
@@ -61,6 +62,7 @@ describe("getExtensionConfig", () => {
       },
       googleOAuthClientId: "google-client-id.apps.googleusercontent.com",
       userSpaUrl: "https://app.example.com/login",
+      userSpaHomeUrl: "https://app.example.com",
     });
   });
 });

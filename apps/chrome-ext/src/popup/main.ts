@@ -7,7 +7,12 @@ import { escapeHtml } from "@/lib/html";
 import type { PageContext, SupportedGitHubIssueContext } from "@/lib/github-context";
 import { parseGitHubIssueUrl } from "@/lib/github-context";
 import { signInWithEmailPassword, signInWithGoogle } from "@/lib/firebase";
-import { createRuntimeClient, type RuntimeClient, type RuntimeSnapshot } from "@/lib/runtime";
+import {
+  createRuntimeClient,
+  type RuntimeClient,
+  type RuntimeSnapshot,
+  type SnapshotUser,
+} from "@/lib/runtime";
 import { formatElapsedTime } from "@/lib/time";
 
 interface PopupAppOptions {
@@ -40,16 +45,70 @@ const popupSecondaryButtonClass =
   "border-brand text-brand w-full rounded-sm border px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60";
 const popupTextActionClass =
   "text-brand rounded-sm bg-transparent text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
-const popupLinkActionClass =
-  "text-brand rounded-sm text-center text-[13px] font-semibold no-underline transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+
+const popupHomeIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10.5 9-7 9 7" /><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" /><path d="M9.5 21v-6a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6" /></svg>`;
+
+function getUserInitials(user: SnapshotUser): string {
+  const source = (user.displayName?.trim() || user.email.split("@")[0] || "").trim();
+  const parts = source.split(/[\s._+-]+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return "?";
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+}
+
+function resolveHeaderUser(snapshot: RuntimeSnapshot): SnapshotUser | null {
+  if (!snapshot.authenticated) {
+    return null;
+  }
+
+  if (snapshot.user) {
+    return snapshot.user;
+  }
+
+  if (snapshot.currentTimer) {
+    return {
+      displayName: snapshot.currentTimer.user.displayName,
+      email: snapshot.currentTimer.user.email,
+    };
+  }
+
+  return null;
+}
+
+function renderHomeButton(): string {
+  return `
+    <a
+      href="${escapeHtml(config.userSpaHomeUrl)}"
+      target="_blank"
+      rel="noreferrer"
+      aria-label="Open GiTiempo dashboard"
+      class="text-brand flex h-7 w-7 items-center justify-center rounded-md transition hover:bg-accent-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+    >${popupHomeIconSvg}</a>
+  `;
+}
+
+function renderUserAvatar(user: SnapshotUser): string {
+  return `<div data-testid="popup-user-avatar" title="${escapeHtml(user.displayName ?? user.email)}" class="bg-accent-tint text-brand flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold">${escapeHtml(getUserInitials(user))}</div>`;
+}
 
 function renderBrandHeader({
-  badgeLabel,
-  showBadge,
+  authenticated = false,
+  user = null,
 }: {
-  badgeLabel?: string;
-  showBadge: boolean;
-}): string {
+  authenticated?: boolean;
+  user?: SnapshotUser | null;
+} = {}): string {
+  const headerActions = authenticated
+    ? `<div class="flex items-center gap-2">${renderHomeButton()}${user ? renderUserAvatar(user) : ""}</div>`
+    : "";
+
   return `
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
@@ -59,7 +118,7 @@ function renderBrandHeader({
           <p class="m-0 text-xs text-text-muted">GitHub timer</p>
         </div>
       </div>
-      ${showBadge ? `<div class="bg-accent-tint text-brand flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold">${escapeHtml(badgeLabel ?? "GT")}</div>` : ""}
+      ${headerActions}
     </div>
   `;
 }
@@ -77,7 +136,7 @@ function renderIssueCard(pageContext: SupportedGitHubIssueContext): string {
 function renderPopupBody(state: PopupState, nowMs: number): string {
   if (state.isLoading || state.snapshot === null) {
     return `
-      ${renderBrandHeader({ showBadge: false })}
+      ${renderBrandHeader()}
       <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
         <p class="m-0 text-lg font-semibold text-text-dark">Loading extension state</p>
         <p class="m-0 text-sm text-text-muted">Checking your session and timer context.</p>
@@ -88,7 +147,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
   if (!state.snapshot.authenticated) {
     return `
       <div class="flex h-full flex-col gap-6">
-        ${renderBrandHeader({ showBadge: false })}
+        ${renderBrandHeader()}
         <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
           <p class="m-0 text-lg font-semibold text-text-dark">Sign in to continue</p>
           <p class="m-0 max-w-[220px] text-sm text-text-muted">Connect your workspace account to start tracking time.</p>
@@ -121,7 +180,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
     return `
       <div class="flex h-full flex-col gap-6">
-        ${renderBrandHeader({ showBadge: false })}
+        ${renderBrandHeader({ authenticated: true, user: resolveHeaderUser(state.snapshot) })}
         <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
           <div class="bg-status-error-bg text-status-error-text flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
           <p class="m-0 text-lg font-semibold text-text-dark">Connection lost</p>
@@ -140,7 +199,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
     return `
       <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader({ showBadge: false })}
+        ${renderBrandHeader({ authenticated: true, user: resolveHeaderUser(state.snapshot) })}
         <div class="bg-app-bg flex flex-col items-center gap-3 rounded-lg p-5 text-center">
           <div class="bg-status-active-bg text-status-active-text flex items-center rounded-sm px-3 py-1 text-xs font-semibold">Running timer</div>
           <p class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
@@ -157,11 +216,10 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
   if (state.pageContext?.kind === "supported") {
     return `
       <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader({ showBadge: true })}
+        ${renderBrandHeader({ authenticated: true, user: resolveHeaderUser(state.snapshot) })}
         ${renderIssueCard(state.pageContext)}
         <div class="mt-auto flex flex-col gap-3">
           <button data-action="start-timer" class="${popupPrimaryButtonClass}">Start Timer</button>
-          <a href="${escapeHtml(config.userSpaUrl)}" target="_blank" rel="noreferrer" class="${popupLinkActionClass}">Open full workspace in GiTiempo</a>
         </div>
       </div>
     `;
@@ -169,14 +227,14 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
   return `
     <div class="flex h-full flex-col gap-5">
-      ${renderBrandHeader({ showBadge: true })}
+      ${renderBrandHeader({ authenticated: true, user: resolveHeaderUser(state.snapshot) })}
       <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
         <p class="m-0 text-xs font-medium text-text-muted">GitHub issue required</p>
         <p class="m-0 text-lg font-semibold text-text-dark">Open a supported GitHub issue to start a timer.</p>
         <p class="m-0 text-xs text-text-muted">Timer start is unavailable on this tab.</p>
       </div>
       <div class="mt-auto flex flex-col gap-3">
-        <a href="${escapeHtml(config.userSpaUrl)}" target="_blank" rel="noreferrer" class="bg-brand text-text-inverse rounded-sm px-4 py-3 text-center text-sm font-semibold no-underline transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Open GiTiempo workspace</a>
+        <a href="${escapeHtml(config.userSpaHomeUrl)}" target="_blank" rel="noreferrer" class="bg-brand text-text-inverse rounded-sm px-4 py-3 text-center text-sm font-semibold no-underline transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Open GiTiempo workspace</a>
         <p class="m-0 text-center text-[13px] font-semibold text-brand">Supported on direct GitHub issue pages and GitHub Projects issue panes.</p>
       </div>
     </div>

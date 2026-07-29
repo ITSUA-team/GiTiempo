@@ -319,7 +319,34 @@ describe("popup app", () => {
 
     expect(document.body.textContent).toContain("Start Timer");
     expect(document.body.textContent).toContain("Improve reports filters");
-    expect(document.body.textContent).toContain("Open full workspace in GiTiempo");
+    expect(
+      document.querySelector('a[aria-label="Open GiTiempo dashboard"]'),
+    ).not.toBeNull();
+  });
+
+  it("renders the avatar from the snapshot user when no timer is running", async () => {
+    const runtimeClient = createRuntimeClient({
+      snapshot: {
+        authenticated: true,
+        currentTimer: null,
+        errorMessage: null,
+        user: {
+          displayName: "Volodymyr Nakonechnyi",
+          email: "volodymyr@example.com",
+        },
+      },
+    });
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient,
+      pageContextResolver: async () => supportedContext(),
+    });
+
+    await app.load();
+
+    expect(
+      document.querySelector('[data-testid="popup-user-avatar"]')?.textContent,
+    ).toBe("VN");
   });
 
   it("renders the authenticated unsupported-page state", async () => {
@@ -387,6 +414,12 @@ describe("popup app", () => {
     expect(document.body.textContent).toContain("Stop Timer");
     expect(document.body.textContent).toContain("01:00:00");
     expect(document.body.textContent).toContain("Project Orion / octo/timer-repo");
+    expect(
+      document.querySelector('[data-testid="popup-user-avatar"]')?.textContent,
+    ).toBe("AT");
+    expect(
+      document.querySelector('a[aria-label="Open GiTiempo dashboard"]'),
+    ).not.toBeNull();
   });
 
   it("prefers the running timer repo over the active page repo", async () => {
