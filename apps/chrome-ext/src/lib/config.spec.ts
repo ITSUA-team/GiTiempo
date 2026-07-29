@@ -12,8 +12,8 @@ describe("getExtensionConfig", () => {
         projectId: "test-project",
       },
       googleOAuthClientId: "test-google-client-id.apps.googleusercontent.com",
-      userSpaUrl: "http://localhost:5173/login",
       userSpaHomeUrl: "http://localhost:5173",
+      userSpaUrl: "http://localhost:5173/login",
     });
   });
 
@@ -61,8 +61,8 @@ describe("getExtensionConfig", () => {
         projectId: "project-id",
       },
       googleOAuthClientId: "google-client-id.apps.googleusercontent.com",
-      userSpaUrl: "https://app.example.com/login",
       userSpaHomeUrl: "https://app.example.com",
+      userSpaUrl: "https://app.example.com/login",
     });
   });
 });

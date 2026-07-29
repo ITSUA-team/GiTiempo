@@ -6,8 +6,8 @@ export interface ExtensionConfig {
     projectId: string;
   } | null;
   googleOAuthClientId: string;
-  userSpaUrl: string;
   userSpaHomeUrl: string;
+  userSpaUrl: string;
 }
 
 interface ExtensionEnv {
@@ -119,8 +119,8 @@ export function getExtensionConfig(
       projectId: firebaseProjectId,
     },
     googleOAuthClientId,
-    userSpaUrl,
     userSpaHomeUrl: deriveHomeUrl(userSpaUrl),
+    userSpaUrl,
   };
 }
 
