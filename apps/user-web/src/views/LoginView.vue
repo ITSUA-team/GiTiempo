@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import Button from "primevue/button";
-import { ArrowUpRightIcon, PuzzlePieceIcon } from "@heroicons/vue/24/outline";
+import { ArrowRightIcon, PlusIcon } from "@heroicons/vue/24/outline";
+import { PuzzlePieceIcon } from "@heroicons/vue/24/solid";
 import {
+  AuthDivider,
+  authGradientPanelClass,
   AuthIntroPanel,
   AuthSignInForm,
   getErrorMessage,
@@ -110,7 +112,10 @@ function goToRegister(): void {
 </script>
 
 <template>
-  <StandaloneSplitPage>
+  <StandaloneSplitPage
+    :left-panel-class="authGradientPanelClass"
+    left-panel-full-bleed
+  >
     <template #left>
       <AuthIntroPanel
         workspace-label="Time tracking for modern product teams"
@@ -132,25 +137,25 @@ function goToRegister(): void {
             target="_blank"
             rel="noreferrer"
             aria-label="Browser extension: track time right from your browser (opens in a new tab)"
-            class="bg-app-bg shadow-card focus-visible:outline-brand flex items-center justify-between gap-3 rounded-lg p-4 transition hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2"
+            class="focus-visible:outline-text-inverse flex items-center justify-between gap-2.5 rounded-sm border border-white/20 bg-white/10 px-3.5 py-3 transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2"
             data-testid="login-extension-callout"
           >
             <span class="flex items-center gap-3">
               <span
-                class="bg-accent-tint text-brand flex size-8 shrink-0 items-center justify-center rounded-md"
+                class="text-text-inverse flex size-8 shrink-0 items-center justify-center rounded-md bg-white/20"
               >
                 <PuzzlePieceIcon class="size-4" />
               </span>
-              <span class="flex flex-col gap-0.5">
-                <span class="text-text-dark text-sm font-semibold">
+              <span class="flex flex-col gap-px">
+                <span class="text-text-inverse text-sm font-semibold">
                   Browser extension
                 </span>
-                <span class="text-text-muted text-xs leading-5">
+                <span class="text-text-inverse-muted text-xs">
                   Track time right from your browser
                 </span>
               </span>
             </span>
-            <ArrowUpRightIcon class="text-text-muted size-4 shrink-0" />
+            <ArrowRightIcon class="text-text-inverse size-4 shrink-0" />
           </a>
         </template>
       </AuthIntroPanel>
@@ -158,7 +163,7 @@ function goToRegister(): void {
 
     <template #right>
       <section
-        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
+        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12"
       >
         <AuthSignInForm
           title="Sign in"
@@ -172,15 +177,17 @@ function goToRegister(): void {
           @submit-github="handleGithubSignIn"
         >
           <template #secondary-actions>
-            <Button
+            <AuthDivider label="New to GiTiempo?" />
+
+            <button
               type="button"
-              label="Create workspace"
-              severity="secondary"
-              variant="outlined"
-              class="h-11"
+              class="bg-accent-tint border-brand text-brand focus-visible:outline-brand flex h-11 items-center justify-center gap-2 rounded-sm border px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2"
               data-testid="sign-in-create-workspace"
               @click="goToRegister"
-            />
+            >
+              <PlusIcon class="size-4 shrink-0" />
+              Create workspace
+            </button>
           </template>
         </AuthSignInForm>
       </section>

@@ -32,10 +32,18 @@ describe("AuthIntroPanel", () => {
 
     expect(logo.text()).toBe("GT");
     expect(logo.classes()).toContain("size-10");
-    expect(logo.classes()).toContain("bg-accent-tint");
+    // The restyled auth screens put a white badge with the brand mark on the
+    // gradient panel, replacing the earlier accent-tint tile.
+    expect(logo.classes()).toContain("bg-surface-primary");
     expect(logo.classes()).toContain("text-brand");
-    expect(logo.classes()).toContain("rounded-[12px]");
-    expect(logo.classes()).not.toContain("rounded-xl");
+    expect(logo.classes()).toContain("rounded-lg");
+  });
+
+  it("reverses its copy out for the gradient panel behind it", () => {
+    const wrapper = mountPanel();
+
+    expect(wrapper.get("h1").classes()).toContain("text-text-inverse");
+    expect(wrapper.get("article").classes()).toContain("bg-white/10");
   });
 
   it("renders hero-footer content an app supplies", () => {

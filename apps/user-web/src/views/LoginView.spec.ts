@@ -277,7 +277,7 @@ describe("LoginView", () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
 
-    const workspaceLink = wrapper.get("a");
+    const workspaceLink = wrapper.get('[data-testid="auth-intro-counterpart"]');
 
     expect(workspaceLink.text()).toContain("Open the admin workspace");
     expect(workspaceLink.attributes("href")).toBe(
@@ -342,7 +342,24 @@ describe("LoginView", () => {
     expect(wrapper.find('[data-testid="sign-in-email"]').exists()).toBe(true);
   });
 
+  it("paints the whole left half with the auth gradient", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    // Guards the restyle: the gradient belongs to the half, not the inner
+    // column, or a white strip reappears beside the intro copy.
+    const panel = wrapper.get("h1").element.closest('[class*="linear-gradient"]');
+
+    expect(panel).not.toBeNull();
+    expect(panel?.className).toContain("lg:flex-1");
+    expect(panel?.className).not.toContain("lg:min-w-[50vw]");
+    expect(panel?.firstElementChild?.className).not.toContain("max-w-[600px]");
+  });
+
   it("hides the extension callout when no landing is configured", async () => {
+    // Stub it empty rather than relying on absence: a developer's .env.local
+    // sets this, and the suite must not depend on their machine.
+    vi.stubEnv("VITE_LANDING_URL", "");
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
 
