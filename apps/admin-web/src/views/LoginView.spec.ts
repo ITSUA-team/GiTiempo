@@ -248,11 +248,54 @@ describe("LoginView", () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
 
-    const workspaceLink = wrapper.get("a");
+    const workspaceLink = wrapper.get('[data-testid="auth-intro-counterpart"]');
 
     expect(workspaceLink.text()).toContain("Open the user workspace");
     expect(workspaceLink.attributes("href")).toBe(
       "https://user.example.test/login",
     );
+  });
+
+  it("offers the browser extension through the configured install page", async () => {
+    vi.stubEnv(
+      "VITE_EXTENSION_INSTALL_URL",
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    const callout = wrapper.get('[data-testid="login-extension-callout"]');
+
+    expect(callout.attributes("href")).toBe(
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    expect(callout.attributes("target")).toBe("_blank");
+    expect(callout.text()).toContain("Browser extension");
+  });
+
+  it("hides the extension callout when no install page is configured", async () => {
+    // Stub it empty rather than relying on absence: a developer's .env.local
+    // sets this, and the suite must not depend on their machine.
+    vi.stubEnv("VITE_EXTENSION_INSTALL_URL", "");
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    expect(wrapper.find('[data-testid="login-extension-callout"]').exists()).toBe(
+      false,
+    );
+  });
+
+  it("paints the whole left half with the auth gradient", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    // Guards the restyle: the gradient belongs to the half, not the inner
+    // column, or a white strip reappears beside the intro copy.
+    const panel = wrapper.get("h1").element.closest('[class*="linear-gradient"]');
+
+    expect(panel).not.toBeNull();
+    expect(panel?.className).toContain("lg:flex-1");
+    expect(panel?.className).not.toContain("lg:min-w-[50vw]");
+    expect(panel?.firstElementChild?.className).not.toContain("max-w-[600px]");
   });
 });

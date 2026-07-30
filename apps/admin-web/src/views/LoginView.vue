@@ -2,8 +2,11 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
+  authGradientPanelClass,
   AuthIntroPanel,
   AuthSignInForm,
+  ExtensionCallout,
+  getExtensionInstallHref,
   resolveGithubSignInError,
   StandaloneSplitPage,
   type EmailPasswordSignInInput,
@@ -24,6 +27,7 @@ const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",
 });
+const extensionHref = getExtensionInstallHref(appEnv.extensionInstallUrl);
 const introBadgeItems = [
   "Guest-only admin entry",
   "Shared auth direction with user-web",
@@ -104,7 +108,10 @@ function handleGithubSignIn(): void {
 </script>
 
 <template>
-  <StandaloneSplitPage>
+  <StandaloneSplitPage
+    :left-panel-class="authGradientPanelClass"
+    left-panel-full-bleed
+  >
     <template #left>
       <AuthIntroPanel
         workspace-label="Admin workspace access"
@@ -116,12 +123,19 @@ function handleGithubSignIn(): void {
         counterpart-label="the user workspace"
         counterpart-prompt="Need time tracking? Open"
         product-tagline="GiTiempo"
-      />
+      >
+        <template
+          v-if="extensionHref"
+          #hero-footer
+        >
+          <ExtensionCallout :href="extensionHref" />
+        </template>
+      </AuthIntroPanel>
     </template>
 
     <template #right>
       <section
-        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
+        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12"
       >
         <AuthSignInForm
           title="Admin sign in"
