@@ -9,6 +9,12 @@ import type { WorkspaceRole } from '@gitiempo/shared';
  * - `firebaseUid` — identity provider subject, kept for audit
  * - `workspaceId` / `role` — workspace session context
  * - `iss` / `aud` — verified on every request
+ *
+ * Clients also decode this payload for display and cache scoping, through
+ * `readAccessTokenPayload` in `packages/shared`: the SPAs read `sub`,
+ * `workspaceId`, and `role`, and the Chrome extension popup reads `email`.
+ * Those readers degrade silently when a claim disappears, so rename or drop
+ * one only together with them.
  */
 export interface JwtPayload {
   sub: string;

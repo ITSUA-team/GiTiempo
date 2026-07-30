@@ -9,7 +9,13 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { SkipAuth } from '../decorators/skip-auth.decorator';
@@ -29,6 +35,35 @@ export class AuthGithubController {
   @Get('start')
   @SkipAuth()
   @ApiOperation({ summary: 'Start backend GitHub sign-in' })
+  @ApiQuery({
+    name: 'app',
+    required: false,
+    enum: ['user', 'admin'],
+    description:
+      'Which SPA the flow was started from. Anything other than `admin` resolves to `user`.',
+  })
+  @ApiQuery({
+    name: 'redirect',
+    required: false,
+    type: String,
+    description:
+      'Same-app absolute path to return to after sign-in. Re-sanitized server-side, then signed into the OAuth state.',
+  })
+  @ApiFoundResponse({
+    description:
+      'Redirect to the GitHub authorization page. Never returns a body.',
+    headers: {
+      Location: {
+        description: 'GitHub authorization URL.',
+        schema: { type: 'string' },
+      },
+      'Set-Cookie': {
+        description:
+          '`gh_oauth_state` nonce (HttpOnly, SameSite=Lax) that binds the transaction to this browser.',
+        schema: { type: 'string' },
+      },
+    },
+  })
   start(
     @Query('app') app: string | undefined,
     @Query('redirect') redirect: string | undefined,
@@ -54,6 +89,41 @@ export class AuthGithubController {
   @Get('callback')
   @SkipAuth()
   @ApiOperation({ summary: 'GitHub sign-in OAuth callback' })
+  @ApiQuery({
+    name: 'code',
+    required: false,
+    type: String,
+    description:
+      'GitHub authorization code. Absent when the user denied the request.',
+  })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    type: String,
+    description:
+      'Signed state minted by `/auth/github/start`. Its `app` claim decides which SPA to return to.',
+  })
+  @ApiQuery({
+    name: 'error',
+    required: false,
+    type: String,
+    description: 'GitHub error code, present when the user denied the request.',
+  })
+  @ApiFoundResponse({
+    description:
+      'Redirect back to the originating SPA. On success to its `/auth/github/callback` with a single-use handoff `code`; otherwise to its `/login` with `githubError` set to `denied`, `state`, `email`, or `failed`. Never returns a body, and never fails the request.',
+    headers: {
+      Location: {
+        description: 'Absolute SPA URL to return the browser to.',
+        schema: { type: 'string' },
+      },
+      'Set-Cookie': {
+        description:
+          'Cleared `gh_oauth_state` cookie — the state binding is single-use.',
+        schema: { type: 'string' },
+      },
+    },
+  })
   async callback(
     @Query('code') code: string | undefined,
     @Query('state') state: string | undefined,

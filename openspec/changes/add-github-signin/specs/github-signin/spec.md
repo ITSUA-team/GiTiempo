@@ -8,11 +8,13 @@ The backend MUST provide a login-scoped GitHub OAuth flow — a start, a callbac
 
 - **WHEN** a guest activates GitHub sign-in and the browser requests the start endpoint for a given app (user or admin)
 - **THEN** the backend redirects to the GitHub authorization URL with the sign-in OAuth App client id, the callback `<APP_URL>/auth/github/callback`, the `user:email` scope, and a signed short-lived state that carries which app to return to
+- **AND** it binds the transaction to the initiating browser, so a state authorized in one browser cannot complete sign-in in another
 
 #### Scenario: Callback exchanges the code and hands off a one-time code
 
 - **WHEN** GitHub redirects back to the callback endpoint with a valid state and an authorization code
 - **THEN** the backend exchanges the code for a GitHub access token, reads the account's primary verified email, and redirects the browser to the app's `/auth/github/callback` SPA route with a short-lived one-time handoff code
+- **AND** the handoff code is opaque and carries no account data, so the resolved email never appears in the redirect URL
 
 #### Scenario: Session exchange returns the normal token pair
 
@@ -21,7 +23,7 @@ The backend MUST provide a login-scoped GitHub OAuth flow — a start, a callbac
 
 #### Scenario: Cancelled or unverifiable attempt returns to login
 
-- **WHEN** the user denies authorization, or the state cannot be verified
+- **WHEN** the user denies authorization, or the state cannot be verified as issued by the backend to the browser presenting it
 - **THEN** the callback redirects to the app login page with a GitHub error indicator and no session is created
 
 ### Requirement: GitHub Sign-In Authenticates Existing Members By Verified Email
@@ -56,8 +58,8 @@ The sign-in OAuth App MUST be a dedicated identity-only app, separate from the G
 
 #### Scenario: State and handoff cannot mint a session directly
 
-- **WHEN** the state or handoff token is presented to a normal authenticated endpoint
-- **THEN** it is rejected, because both carry a distinct purpose and omit the issuer/audience the access-token verifier requires
+- **WHEN** the state or the handoff code is presented to a normal authenticated endpoint
+- **THEN** it is rejected — the state carries a distinct purpose and omits the issuer/audience the access-token verifier requires, and the handoff is an opaque code with no claims to verify at all
 
 ### Requirement: Login Pages Offer GitHub Sign-In
 
