@@ -315,7 +315,7 @@ describe("popup app", () => {
 
     async function openMenu(
       overrides?: Parameters<typeof createRuntimeClient>[0],
-      popupOptions?: { setIntervalFn?: typeof setInterval },
+      popupOptions?: { now?: () => number; setIntervalFn?: typeof setInterval },
     ) {
       const runtimeClient = createRuntimeClient({
         snapshot: signedInSnapshot(),
@@ -389,12 +389,16 @@ describe("popup app", () => {
       expect(document.querySelector('[data-testid="popup-account-menu"]')).toBeNull();
     });
 
-    it("stays open across a re-render while a timer ticks", async () => {
+    it("advances the clock on a tick without rebuilding the menu", async () => {
       let tick: (() => void) | null = null;
+      // Anchored to the fixture's start, since elapsed time is clamped at zero
+      // before it and a clock starting from 0 would read 00:00:00 either way.
+      let clock = Date.parse("2026-04-21T09:00:00.000Z");
 
       await openMenu(
         { snapshot: signedInSnapshot({ currentTimer: currentTimer() }) },
         {
+          now: () => clock,
           setIntervalFn: ((handler: () => void) => {
             tick = handler;
             return 1 as unknown as ReturnType<typeof setInterval>;
@@ -402,20 +406,25 @@ describe("popup app", () => {
         },
       );
 
-      // Guard the guard: if the ticker was never registered the assertion below
-      // would pass without the re-render this test exists to force.
+      // Guard the guard: without a registered ticker the assertions below would
+      // pass while proving nothing.
       expect(tick).not.toBeNull();
       const menuBefore = document.querySelector('[data-testid="popup-account-menu"]');
+      const elapsedBefore = document.querySelector("[data-elapsed]")?.textContent;
+
+      clock += 60_000;
       tick!();
 
-      // The popup replaces its own innerHTML on every tick, so the node is expected
-      // to be a different element that is still present — open state survives only
-      // because it lives on popup state rather than in the DOM.
       const menuAfter = document.querySelector('[data-testid="popup-account-menu"]');
 
-      expect(menuBefore).not.toBeNull();
-      expect(menuAfter).not.toBeNull();
-      expect(menuAfter).not.toBe(menuBefore);
+      // The same node, not a replacement. A tick that reassigned innerHTML would
+      // take hover, focus, and text selection with it every second — which is what
+      // made an item pulse under a cursor that had never moved.
+      expect(menuAfter).toBe(menuBefore);
+      // And the clock still advanced, so keeping the DOM did not freeze it.
+      expect(document.querySelector("[data-elapsed]")?.textContent).not.toBe(
+        elapsedBefore,
+      );
     });
 
     it("carries the running timer into the menu", async () => {

@@ -118,7 +118,7 @@ function renderAccountMenuTimer(
 
   return `
     <div class="bg-status-active-bg text-status-active-text flex flex-col gap-1 rounded-sm px-2.5 py-2">
-      <p class="m-0 text-[13px] font-bold">${escapeHtml(formatElapsedTime(timer.startedAt, now))}</p>
+      <p data-elapsed class="m-0 text-[13px] font-bold">${escapeHtml(formatElapsedTime(timer.startedAt, now))}</p>
       <p class="m-0 text-[11px]">${escapeHtml(task)}</p>
       <p class="m-0 text-[11px] font-semibold">Keeps running after sign out</p>
     </div>
@@ -259,7 +259,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
         ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state, nowMs) : "", state.isAccountMenuOpen)}
         <div class="bg-app-bg flex flex-col items-center gap-3 rounded-lg p-5 text-center">
           <div class="bg-status-active-bg text-status-active-text flex items-center rounded-sm px-3 py-1 text-xs font-semibold">Running timer</div>
-          <p class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
+          <p data-elapsed class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
           <p class="m-0 text-sm font-medium text-text-dark">${escapeHtml(state.snapshot.currentTimer.task.title)}</p>
           <p class="m-0 text-xs text-text-muted">${escapeHtml(runningContext)}</p>
         </div>
@@ -428,8 +428,32 @@ export function createPopupApp({
 
     if (state.snapshot?.currentTimer) {
       intervalHandle = setIntervalFn(() => {
-        render();
+        advanceElapsed();
       }, 1000);
+    }
+  }
+
+  /**
+   * The ticker advances the clock and nothing else. It used to call `render()`,
+   * which reassigns `root.innerHTML` and so destroyed and rebuilt every node once
+   * a second — taking hover, focus, and text selection with it. On the account
+   * menu that showed up as a pulse: each fresh item started at its un-hovered
+   * background and transitioned back under a cursor that had never moved.
+   *
+   * Everything except the elapsed value changes through a snapshot update, which
+   * still renders in full, so there is nothing else for a tick to redraw.
+   */
+  function advanceElapsed(): void {
+    const startedAt = state.snapshot?.currentTimer?.startedAt;
+
+    if (!startedAt) {
+      return;
+    }
+
+    const elapsed = formatElapsedTime(startedAt, now());
+
+    for (const node of root.querySelectorAll<HTMLElement>("[data-elapsed]")) {
+      node.textContent = elapsed;
     }
   }
 
