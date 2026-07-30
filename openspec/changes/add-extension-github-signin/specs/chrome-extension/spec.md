@@ -115,7 +115,7 @@ The backend GitHub sign-in flow SHALL accept an extension login target, and for 
 
 #### Scenario: Failure returns to the extension rather than a web login page
 - **GIVEN** an extension-initiated flow
-- **WHEN** the user denies authorization, the state cannot be verified as belonging to the initiator, no verified primary email exists, or the code exchange fails
+- **WHEN** the user denies authorization, the state cannot be verified, no verified primary email exists, or the code exchange fails
 - **THEN** the backend redirects the browser to the configured extension destination carrying an error indicator
 - **AND** it does not redirect to a web app login page, so the extension's authorization window always reaches a destination it can observe
 
@@ -138,13 +138,31 @@ The backend GitHub sign-in flow SHALL accept an extension login target, and for 
 - **AND** no partial or defaulted destination is used
 
 ### Requirement: Extension Session Establishment Is Bound To Its Initiator
-For the extension login target, the backend SHALL accept a handoff code only for a transaction it can attribute to the client that started it, using the same class of binding the web targets use.
+For the extension login target, the backend SHALL accept a handoff code only for a transaction it can attribute to the client that started it, by proof of possession at the session exchange rather than by the cookie the web targets use, since the extension's authorization window does not carry that cookie to the callback. It MUST refuse to start an extension transaction that could not be bound this way.
 
 #### Scenario: A transaction started elsewhere cannot establish an extension session
 - **GIVEN** a GitHub authorization completed for a transaction that a different client started
 - **WHEN** that transaction's outcome is presented in order to establish an extension session
-- **THEN** the backend refuses to establish the session
-- **AND** it reports the attempt as a state failure
+- **THEN** the session exchange refuses to establish the session, because the presenting client cannot prove possession of the secret the transaction was bound to
+- **AND** no session is established for the client that presented it
+
+#### Scenario: Establishing the session requires the initiator's secret
+- **GIVEN** a handoff code issued to the extension for a transaction bound to a secret
+- **WHEN** the code is presented to the session endpoint without that secret, or with one that does not match
+- **THEN** the exchange is refused
+- **AND** the code is consumed, so a mismatched attempt cannot be followed by another guess
+
+#### Scenario: An unbindable extension transaction never starts
+- **GIVEN** a request for the extension target that carries no usable binding secret
+- **WHEN** the backend handles the start endpoint
+- **THEN** it refuses the request before the browser leaves for GitHub
+- **AND** no state is minted, so an unbound extension transaction cannot exist
+
+#### Scenario: Web sign-in keeps its own binding
+- **GIVEN** a handoff code issued to a web target, whose transaction is bound by the callback cookie instead
+- **WHEN** the code is presented to the session endpoint without a proof-of-possession secret
+- **THEN** the exchange succeeds
+- **AND** the extension's binding is not imposed on clients that are already bound another way
 
 #### Scenario: Single use survives across sign-in surfaces
 - **GIVEN** a handoff code issued to the extension
