@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { SavedReport } from '@gitiempo/shared';
-import Dialog from 'primevue/dialog';
 import Menu from 'primevue/menu';
 
+import BottomSheet from '@/components/BottomSheet.vue';
 import { describeSavedReportConfig } from '@/lib/saved-report-config';
 
 /**
@@ -85,24 +85,13 @@ function toggleOverflow(event: Event, id: string): void {
 </script>
 
 <template>
-  <Dialog
+  <BottomSheet
     aria-label="Saved reports"
-    class="!relative !m-0 w-full !max-w-none !rounded-t-[16px] !rounded-b-none !border-0"
-    modal
-    :draggable="false"
-    position="bottom"
-    :pt="{ header: { class: '!pt-5 !pb-2' } }"
     :visible="visible"
     @update:visible="close"
   >
-    <template #header>
-      <span
-        aria-hidden="true"
-        class="absolute top-2 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full bg-[#e0e0e0]"
-      />
-      <span class="text-text-dark text-[18px] font-semibold">
-        Saved reports
-      </span>
+    <template #title>
+      Saved reports
     </template>
 
     <div class="flex flex-col gap-3.5">
@@ -200,5 +189,5 @@ function toggleOverflow(event: Event, id: string): void {
       :model="overflowItems"
       :popup="true"
     />
-  </Dialog>
+  </BottomSheet>
 </template>
