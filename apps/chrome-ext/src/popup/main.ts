@@ -433,8 +433,8 @@ export function createPopupApp({
       // Firebase is not involved: the backend owns this flow and returns a
       // one-time handoff code, which the service worker exchanges for the same
       // token pair the other two actions produce.
-      const handoffCode = await signInWithGithubFn();
-      const result = await runtimeClient.exchangeGithubSession(handoffCode);
+      const { code, verifier } = await signInWithGithubFn();
+      const result = await runtimeClient.exchangeGithubSession(code, verifier);
 
       state.snapshot = result.snapshot;
       state.errorMessage = result.ok

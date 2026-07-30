@@ -124,6 +124,30 @@ describe("githubSessionRequestSchema", () => {
       githubSessionRequestSchema.safeParse({ code: "abc", extra: 1 }).success,
     ).toBe(false);
   });
+
+  it("accepts a verifier for public clients and keeps it optional for web ones", () => {
+    const verifier = "a".repeat(64);
+
+    expect(
+      githubSessionRequestSchema.parse({ code: "abc", verifier }),
+    ).toEqual({ code: "abc", verifier });
+    expect(githubSessionRequestSchema.parse({ code: "abc" })).toEqual({
+      code: "abc",
+    });
+  });
+
+  it("rejects a verifier too short to carry meaningful entropy", () => {
+    expect(
+      githubSessionRequestSchema.safeParse({ code: "abc", verifier: "short" })
+        .success,
+    ).toBe(false);
+    expect(
+      githubSessionRequestSchema.safeParse({
+        code: "abc",
+        verifier: "a".repeat(129),
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("switchWorkspaceRequestSchema", () => {

@@ -2,26 +2,64 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildGithubSignInStartUrl,
+  createVerifier,
+  deriveChallenge,
   readGithubSignInResult,
 } from "./github-signin";
 
+const CHALLENGE = "a".repeat(64);
+
 describe("buildGithubSignInStartUrl", () => {
-  it("targets the backend start endpoint as the extension", () => {
-    const url = new URL(buildGithubSignInStartUrl("https://api.example.test"));
+  it("targets the backend start endpoint as the extension, carrying the challenge", () => {
+    const url = new URL(
+      buildGithubSignInStartUrl("https://api.example.test", CHALLENGE),
+    );
 
     expect(url.origin + url.pathname).toBe(
       "https://api.example.test/auth/github/start",
     );
     expect(url.searchParams.get("app")).toBe("extension");
+    expect(url.searchParams.get("challenge")).toBe(CHALLENGE);
   });
 
   it("contributes nothing that could steer the destination", () => {
-    const url = new URL(buildGithubSignInStartUrl("https://api.example.test"));
+    const url = new URL(
+      buildGithubSignInStartUrl("https://api.example.test", CHALLENGE),
+    );
 
     // The destination is resolved by the backend from its own configuration. If
     // the extension could name it, anyone reaching the start endpoint could have
     // a handoff code delivered to a host they control.
-    expect([...url.searchParams.keys()]).toEqual(["app"]);
+    expect([...url.searchParams.keys()].sort()).toEqual(["app", "challenge"]);
+  });
+});
+
+describe("proof of possession", () => {
+  it("mints a fresh 64-char hex verifier each time", () => {
+    const first = createVerifier();
+    const second = createVerifier();
+
+    expect(first).toMatch(/^[0-9a-f]{64}$/);
+    expect(second).not.toBe(first);
+  });
+
+  it("derives the challenge as the hex SHA-256 of the verifier", async () => {
+    // The backend recomputes exactly this and compares in constant time, so the
+    // encoding has to match on both sides.
+    expect(await deriveChallenge("abc")).toBe(
+      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    );
+    expect(await deriveChallenge(createVerifier())).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("keeps the verifier out of the URL the browser sees", async () => {
+    const verifier = createVerifier();
+    const url = buildGithubSignInStartUrl(
+      "https://api.example.test",
+      await deriveChallenge(verifier),
+    );
+
+    expect(url).not.toContain(verifier);
   });
 });
 

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGithubService, type GithubLoginApp } from './auth-github.service';
 
@@ -48,11 +49,20 @@ function mockGithub(emails: unknown) {
 
 // Mirrors the controller: start a transaction and keep both the signed state
 // and the nonce the browser would hold in its HttpOnly cookie.
+const VERIFIER = 'v'.repeat(64);
+const CHALLENGE = createHash('sha256').update(VERIFIER).digest('hex');
+
 function startTransaction(
   svc: AuthGithubService,
   app: GithubLoginApp = 'user',
 ): { state: string; stateNonce: string } {
-  const { url, stateNonce } = svc.startAuthorization(app);
+  // The extension target refuses to start without a challenge, so every
+  // extension transaction here carries the one matching VERIFIER.
+  const { url, stateNonce } = svc.startAuthorization(
+    app,
+    undefined,
+    app === 'extension' ? CHALLENGE : undefined,
+  );
   const state = new URL(url).searchParams.get('state')!;
   return { state, stateNonce };
 }
@@ -305,7 +315,9 @@ describe('AuthGithubService', () => {
     it('builds the authorization URL exactly as the web targets do', () => {
       const { svc } = createService();
       const web = new URL(svc.startAuthorization('user').url);
-      const ext = new URL(svc.startAuthorization('extension').url);
+      const ext = new URL(
+        svc.startAuthorization('extension', undefined, CHALLENGE).url,
+      );
 
       for (const param of ['client_id', 'redirect_uri', 'scope']) {
         expect(ext.searchParams.get(param)).toBe(web.searchParams.get(param));
@@ -322,7 +334,9 @@ describe('AuthGithubService', () => {
       const { state, stateNonce } = startTransaction(svc, 'extension');
       vi.stubGlobal(
         'fetch',
-        mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
+        mockGithub([
+          { email: 'me@example.com', primary: true, verified: true },
+        ]),
       );
 
       const redirect = new URL(
@@ -400,11 +414,14 @@ describe('AuthGithubService', () => {
       const { url, stateNonce } = svc.startAuthorization(
         'extension',
         '/time-entries',
+        CHALLENGE,
       );
       const state = new URL(url).searchParams.get('state')!;
       vi.stubGlobal(
         'fetch',
-        mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
+        mockGithub([
+          { email: 'me@example.com', primary: true, verified: true },
+        ]),
       );
 
       const redirect = new URL(
@@ -427,22 +444,104 @@ describe('AuthGithubService', () => {
       expect(() => svc.startAuthorization('user')).not.toThrow();
     });
 
-    it('refuses to establish a session for a transaction another client started', async () => {
+    it('refuses to start without a challenge, so no transaction is unbound', () => {
+      const { svc } = createService();
+
+      expect(() => svc.startAuthorization('extension')).toThrow();
+      expect(() =>
+        svc.startAuthorization('extension', undefined, 'short'),
+      ).toThrow();
+    });
+
+    it('redeems the handoff only for the client holding the verifier', async () => {
+      const { svc } = createService();
+      const { state, stateNonce } = startTransaction(svc, 'extension');
+      vi.stubGlobal(
+        'fetch',
+        mockGithub([
+          { email: 'me@example.com', primary: true, verified: true },
+        ]),
+      );
+      const code = new URL(
+        await svc.completeCallback({ code: 'abc', state, stateNonce }),
+      ).searchParams.get('code')!;
+
+      await expect(svc.exchangeSession(code, VERIFIER)).resolves.toEqual(pair);
+    });
+
+    it('rejects a challenged handoff presented without a verifier', async () => {
+      const { svc } = createService();
+      const { state, stateNonce } = startTransaction(svc, 'extension');
+      vi.stubGlobal(
+        'fetch',
+        mockGithub([
+          { email: 'me@example.com', primary: true, verified: true },
+        ]),
+      );
+      const code = new URL(
+        await svc.completeCallback({ code: 'abc', state, stateNonce }),
+      ).searchParams.get('code')!;
+
+      // The binding cannot be dropped by simply omitting the field.
+      await expect(svc.exchangeSession(code)).rejects.toThrow();
+    });
+
+    it('rejects a wrong verifier and burns the code on the failed attempt', async () => {
+      const { svc } = createService();
+      const { state, stateNonce } = startTransaction(svc, 'extension');
+      vi.stubGlobal(
+        'fetch',
+        mockGithub([
+          { email: 'me@example.com', primary: true, verified: true },
+        ]),
+      );
+      const code = new URL(
+        await svc.completeCallback({ code: 'abc', state, stateNonce }),
+      ).searchParams.get('code')!;
+
+      await expect(svc.exchangeSession(code, 'w'.repeat(64))).rejects.toThrow();
+      // One guess only: a wrong verifier consumes the code rather than leaving it
+      // available for another attempt.
+      await expect(svc.exchangeSession(code, VERIFIER)).rejects.toThrow();
+    });
+
+    it('leaves web handoffs redeemable without a verifier', async () => {
+      const { svc } = createService();
+      const { state, stateNonce } = startTransaction(svc, 'user');
+      vi.stubGlobal(
+        'fetch',
+        mockGithub([
+          { email: 'me@example.com', primary: true, verified: true },
+        ]),
+      );
+      const code = new URL(
+        await svc.completeCallback({ code: 'abc', state, stateNonce }),
+      ).searchParams.get('code')!;
+
+      // Web clients stay bound by the cookie at the callback, so requiring a
+      // verifier of them would be a breaking change for no gain.
+      await expect(svc.exchangeSession(code)).resolves.toEqual(pair);
+    });
+
+    it('completes the callback without the state cookie, since the window drops it', async () => {
       const { svc } = createService();
       const { state } = startTransaction(svc, 'extension');
       vi.stubGlobal(
         'fetch',
-        mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
+        mockGithub([
+          { email: 'me@example.com', primary: true, verified: true },
+        ]),
       );
 
-      // Authorized elsewhere, so the initiator's binding secret is absent.
+      // Measured, not assumed: Chrome's authorization window does not carry the
+      // HttpOnly cookie to the callback, so the extension target must not require
+      // it here. The binding lives at the session exchange instead.
       const redirect = new URL(
         await svc.completeCallback({ code: 'abc', state }),
       );
 
       expect(redirect.origin).toBe(EXT_ORIGIN);
-      expect(redirect.searchParams.get('githubError')).toBe('state');
-      expect(redirect.searchParams.get('code')).toBeNull();
+      expect(redirect.searchParams.get('code')).toMatch(/^[0-9a-f]{64}$/);
     });
 
     it('resolves an unrecognized target to the user app, never the extension', async () => {

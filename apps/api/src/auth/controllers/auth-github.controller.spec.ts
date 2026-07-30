@@ -45,9 +45,13 @@ describe('AuthGithubController', () => {
     });
     const res = makeRes();
 
-    controller.start('admin', undefined, res as unknown as Response);
+    controller.start('admin', undefined, undefined, res as unknown as Response);
 
-    expect(github.startAuthorization).toHaveBeenCalledWith('admin', undefined);
+    expect(github.startAuthorization).toHaveBeenCalledWith(
+      'admin',
+      undefined,
+      undefined,
+    );
     expect(res.cookie).toHaveBeenCalledWith(
       GITHUB_OAUTH_STATE_COOKIE,
       'nonce-value',
@@ -62,19 +66,34 @@ describe('AuthGithubController', () => {
   it('GET /start defaults an unknown app to the user app', () => {
     github.startAuthorization.mockReturnValue({ url: 'u', stateNonce: 'n' });
 
-    controller.start(undefined, undefined, makeRes() as unknown as Response);
+    controller.start(
+      undefined,
+      undefined,
+      undefined,
+      makeRes() as unknown as Response,
+    );
 
-    expect(github.startAuthorization).toHaveBeenCalledWith('user', undefined);
+    expect(github.startAuthorization).toHaveBeenCalledWith(
+      'user',
+      undefined,
+      undefined,
+    );
   });
 
   it('GET /start reaches the extension target', () => {
     github.startAuthorization.mockReturnValue({ url: 'u', stateNonce: 'n' });
 
-    controller.start('extension', undefined, makeRes() as unknown as Response);
+    controller.start(
+      'extension',
+      undefined,
+      'a'.repeat(64),
+      makeRes() as unknown as Response,
+    );
 
     expect(github.startAuthorization).toHaveBeenCalledWith(
       'extension',
       undefined,
+      'a'.repeat(64),
     );
   });
 
@@ -83,23 +102,38 @@ describe('AuthGithubController', () => {
     (app) => {
       github.startAuthorization.mockReturnValue({ url: 'u', stateNonce: 'n' });
 
-      controller.start(app, undefined, makeRes() as unknown as Response);
+      controller.start(
+        app,
+        undefined,
+        undefined,
+        makeRes() as unknown as Response,
+      );
 
       // A typo must not deliver a handoff code to a client that is not waiting
       // for it: the extension's authorization window would never resolve, and
       // the user would sit on a window that does nothing.
-      expect(github.startAuthorization).toHaveBeenCalledWith('user', undefined);
+      expect(github.startAuthorization).toHaveBeenCalledWith(
+        'user',
+        undefined,
+        undefined,
+      );
     },
   );
 
   it('GET /start forwards the redirect target to the service', () => {
     github.startAuthorization.mockReturnValue({ url: 'u', stateNonce: 'n' });
 
-    controller.start('user', '/time-entries', makeRes() as unknown as Response);
+    controller.start(
+      'user',
+      '/time-entries',
+      undefined,
+      makeRes() as unknown as Response,
+    );
 
     expect(github.startAuthorization).toHaveBeenCalledWith(
       'user',
       '/time-entries',
+      undefined,
     );
   });
 
@@ -168,6 +202,18 @@ describe('AuthGithubController', () => {
     await expect(
       controller.session({ code: 'handoff' } as never),
     ).resolves.toBe(pair);
-    expect(github.exchangeSession).toHaveBeenCalledWith('handoff');
+    expect(github.exchangeSession).toHaveBeenCalledWith('handoff', undefined);
+  });
+
+  it('POST /session forwards a public client verifier alongside the code', async () => {
+    github.exchangeSession.mockResolvedValue({
+      accessToken: 'a',
+      refreshToken: 'r',
+      accessTokenExpiresIn: 900,
+    });
+
+    await controller.session({ code: 'handoff', verifier: 'v' } as never);
+
+    expect(github.exchangeSession).toHaveBeenCalledWith('handoff', 'v');
   });
 });

@@ -64,8 +64,15 @@ The SPA flow binds a transaction to one browser with an HttpOnly `SameSite=Lax` 
 
 The design therefore fixes the property and makes the mechanism the first implementation step:
 
-- **Primary** — reuse the cookie binding unchanged. Nothing new is built, and the extension target inherits the SPA guarantee.
-- **Contingency** — if the spike shows the cookie does not survive, bind to a secret the extension holds instead: the extension generates a random verifier, sends `challenge = SHA256(verifier)` on the start URL, the backend signs the challenge into the state and carries it onto the handoff entry, and `POST /auth/github/session` accepts a `verifier` that must hash to it. This is the PKCE shape RFC 9700 prescribes for public clients, and it costs a `GithubSessionDto` and shared-contract change plus an OpenAPI regeneration.
+- ~~**Primary** — reuse the cookie binding unchanged.~~ **Ruled out by measurement.** A real extension against a real API produced `githubError=state` on every attempt: `/start` returned 302, the callback returned 302 in **4 ms** — too fast for the GitHub token exchange, so it bailed at `verifyBoundState`. The state itself decoded correctly (`app: extension`, `nonceHash` present, unexpired), leaving the missing cookie as the only explanation. Chrome's authorization window does not carry `gh_oauth_state` through to the callback.
+- **Contingency — adopted.** The extension generates a random verifier, sends `challenge = SHA256(verifier)` on the start URL, the backend signs the challenge into the state and carries it onto the handoff entry, and `POST /auth/github/session` accepts a `verifier` that must hash to it in constant time. This is the PKCE shape RFC 9700 prescribes for public clients.
+
+Consequences of adopting it, all additive:
+
+- `githubSessionRequestSchema` gains an optional `verifier`, so web clients are unaffected and stay bound by their cookie. A handoff **with** a challenge cannot be redeemed without the matching verifier, so the binding cannot be dropped by omitting the field.
+- `startAuthorization` **refuses** the extension target without a well-formed challenge. Were it optional, an unbound extension transaction would be possible, which is the whole property being protected.
+- A wrong verifier consumes the code rather than leaving it available for another guess — one attempt, not a guessing oracle.
+- `verifyBoundState` skips the cookie check for the extension target only, and demands a challenge claim in its place. The binding is moved, not removed.
 
 - *Rationale for spiking rather than choosing now*: the two branches differ by a shared contract change and a regenerated OpenAPI snapshot. Building either on an assumption risks discarding real work, and a five-minute manual check in a loaded extension settles it.
 - *Note*: the extension-owned redirect URI already blocks the classic login-CSRF path, because a handoff code can only be delivered to the extension that owns the ID. The binding is defence in depth, and dropping it silently for one target would be an asymmetry a reviewer should reject.

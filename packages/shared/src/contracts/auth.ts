@@ -26,10 +26,21 @@ export const logoutRequestSchema = z
   })
   .strict();
 
-/** Body for `POST /auth/github/session`: the one-time GitHub sign-in handoff code. */
+/**
+ * Body for `POST /auth/github/session`: the one-time GitHub sign-in handoff code,
+ * plus the proof of possession required of a public client.
+ *
+ * Web clients omit `verifier`: their transaction is bound to the browser by an
+ * HttpOnly cookie the callback can read. The browser extension cannot rely on
+ * that — its authorization window does not carry the cookie through to the
+ * callback — so it instead sends a challenge when starting the flow and redeems
+ * the handoff with the matching verifier (RFC 9700 proof of possession for
+ * public clients).
+ */
 export const githubSessionRequestSchema = z
   .object({
     code: z.string().min(1).max(4096),
+    verifier: z.string().min(43).max(128).optional(),
   })
   .strict();
 

@@ -38,6 +38,8 @@ function createStorage(initialData?: Record<string, unknown>): {
   };
 }
 
+const VERIFIER = "v".repeat(64);
+
 function createTestConfig() {
   return getExtensionConfig({
     MODE: "test",
@@ -101,7 +103,7 @@ describe("createExtensionApiClient", () => {
       storage,
     });
 
-    await expect(client.exchangeGithubSession("handoff-code")).resolves.toEqual({
+    await expect(client.exchangeGithubSession("handoff-code", VERIFIER)).resolves.toEqual({
       accessToken: "access-token",
       accessTokenExpiresIn: 900,
       refreshToken: "refresh-token",
@@ -109,7 +111,7 @@ describe("createExtensionApiClient", () => {
     expect(fetchFn).toHaveBeenCalledWith(
       "http://localhost:3000/auth/github/session",
       {
-        body: JSON.stringify({ code: "handoff-code" }),
+        body: JSON.stringify({ code: "handoff-code", verifier: VERIFIER }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       },
@@ -136,7 +138,7 @@ describe("createExtensionApiClient", () => {
       storage,
     });
 
-    await expect(client.exchangeGithubSession("stale-code")).rejects.toThrow(
+    await expect(client.exchangeGithubSession("stale-code", VERIFIER)).rejects.toThrow(
       "Unauthorized",
     );
     expect(data).toEqual({});

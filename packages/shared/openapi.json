@@ -396,10 +396,19 @@
         "operationId": "AuthGithubController_start",
         "parameters": [
           {
+            "name": "challenge",
+            "required": false,
+            "in": "query",
+            "description": "Hex SHA-256 of a secret the client keeps. **Required for the `extension` target** and ignored otherwise: that target cannot be bound by the state cookie, so it proves possession of the matching verifier when exchanging the handoff code.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "redirect",
             "required": false,
             "in": "query",
-            "description": "Same-app absolute path to return to after sign-in. Re-sanitized server-side, then signed into the OAuth state.",
+            "description": "Same-app absolute path to return to after sign-in. Re-sanitized server-side, then signed into the OAuth state. Ignored for the `extension` target, which has no in-app route to return to.",
             "schema": {
               "type": "string"
             }
@@ -3463,6 +3472,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 4096
+          },
+          "verifier": {
+            "type": "string",
+            "minLength": 43,
+            "maxLength": 128
           }
         },
         "required": [

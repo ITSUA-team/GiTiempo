@@ -181,7 +181,10 @@ describe("popup app", () => {
       },
     }));
     const runtimeClient = createRuntimeClient({ exchangeGithubSession });
-    const signInWithGithubFn = vi.fn(async () => "handoff-code");
+    const signInWithGithubFn = vi.fn(async () => ({
+      code: "handoff-code",
+      verifier: "v".repeat(64),
+    }));
     const app = createPopupApp({
       githubSignInEnabled: true,
       root: document.querySelector<HTMLElement>("#app")!,
@@ -199,7 +202,10 @@ describe("popup app", () => {
     await Promise.resolve();
 
     expect(signInWithGithubFn).toHaveBeenCalledOnce();
-    expect(exchangeGithubSession).toHaveBeenCalledWith("handoff-code");
+    expect(exchangeGithubSession).toHaveBeenCalledWith(
+      "handoff-code",
+      "v".repeat(64),
+    );
     // Firebase is not part of this path.
     expect(runtimeClient.exchangeFirebaseToken).not.toHaveBeenCalled();
   });

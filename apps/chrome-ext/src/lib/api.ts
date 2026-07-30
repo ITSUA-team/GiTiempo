@@ -23,7 +23,10 @@ import {
 
 
 export interface ExtensionApiClient {
-  exchangeGithubSession(code: string): Promise<TokenPairResponse>;
+  exchangeGithubSession(
+    code: string,
+    verifier: string,
+  ): Promise<TokenPairResponse>;
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
   loginWithFirebaseToken(firebaseIdToken: string): Promise<TokenPairResponse>;
   startTimerFromGitHub(
@@ -142,10 +145,11 @@ export function createExtensionApiClient({
   // paths converge here rather than each growing their own request plumbing.
   async function exchangeGithubSession(
     code: string,
+    verifier: string,
   ): Promise<TokenPairResponse> {
     return establishSession(
       "/auth/github/session",
-      githubSessionRequestSchema.parse({ code }),
+      githubSessionRequestSchema.parse({ code, verifier }),
     );
   }
 

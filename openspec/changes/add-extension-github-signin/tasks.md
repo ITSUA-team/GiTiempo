@@ -8,9 +8,9 @@
 
 ## 2. Settle the state binding (blocks backend work)
 
-- [ ] 2.1 Load the extension unpacked and determine whether `chrome.identity.launchWebAuthFlow` carries the `gh_oauth_state` HttpOnly `SameSite=Lax` cookie set by the start endpoint through to the callback in the targeted Chrome versions. Record the finding in `design.md` under D5.
-- [ ] 2.2 If the cookie survives, adopt D5's primary branch: no new mechanism, the extension target inherits the existing browser binding unchanged. Close out D5 and skip 2.3.
-- [ ] 2.3 If the cookie does not survive, adopt D5's contingency: the extension sends `challenge = SHA256(verifier)` on the start URL, the backend signs the challenge into the state and carries it onto the handoff entry, and the session endpoint accepts a `verifier` that must hash to it. This adds a `GithubSessionDto` and `packages/shared` contract change, so run the shared package's vitest suite and regenerate `packages/shared/openapi.json`.
+- [x] 2.1 Load the extension unpacked and determine whether `chrome.identity.launchWebAuthFlow` carries the `gh_oauth_state` HttpOnly `SameSite=Lax` cookie set by the start endpoint through to the callback in the targeted Chrome versions. Record the finding in `design.md` under D5. — **Measured: the cookie does NOT survive.** Every attempt returned `githubError=state`; `/start` gave 302 and the callback gave 302 in 4 ms, too fast for the GitHub token exchange, so it bailed at `verifyBoundState`. The state decoded correctly and unexpired, leaving the absent cookie as the only explanation. D5's primary branch is ruled out.
+- [x] 2.2 ~~If the cookie survives, adopt D5's primary branch~~ Not applicable: 2.1 ruled it out. Kept for the record rather than deleted, so the decision trail stays readable. Original text: if the cookie survives, adopt D5's primary branch: no new mechanism, the extension target inherits the existing browser binding unchanged. Close out D5 and skip 2.3.
+- [x] 2.3 Adopted D5's contingency: the extension sends `challenge = SHA256(verifier)` on the start URL, the backend signs the challenge into the state and carries it onto the handoff entry, and the session endpoint accepts a `verifier` that must hash to it. This adds a `GithubSessionDto` and `packages/shared` contract change, so run the shared package's vitest suite and regenerate `packages/shared/openapi.json`. — Done: shared contract, DTO, service, controller, extension, and both test suites. `startAuthorization` **refuses** the extension target without a well-formed challenge, since an optional one would allow the unbound transaction this exists to prevent. A wrong verifier burns the code, so there is no guessing oracle. Web handoffs stay redeemable without a verifier.
 
 ## 3. Backend: the extension login target
 
@@ -54,7 +54,7 @@
 
 - [x] 8.1 `pnpm --filter @gitiempo/api lint typecheck test`.
 - [x] 8.2 `pnpm --filter chrome-ext typecheck`, `test`, and `build`, per `apps/chrome-ext/AGENTS.md`.
-- [ ] 8.3 If 2.3 applied, run `packages/shared`'s vitest suite and confirm `packages/shared/openapi.json` is current, since typecheck and build do not catch stale contract fixtures.
+- [x] 8.3 2.3 applied, so ran `packages/shared`'s vitest suite and confirm `packages/shared/openapi.json` is current, since typecheck and build do not catch stale contract fixtures.
 - [x] 8.4 Confirm the extension still imports nothing from `packages/web-shared` and no PrimeVue, Vue Router, Pinia, or SPA bootstrap module, per the extension's constraints.
 
 ## 9. External configuration (manual)

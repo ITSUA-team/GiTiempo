@@ -47,7 +47,14 @@ export class AuthGithubController {
     required: false,
     type: String,
     description:
-      'Same-app absolute path to return to after sign-in. Re-sanitized server-side, then signed into the OAuth state.',
+      'Same-app absolute path to return to after sign-in. Re-sanitized server-side, then signed into the OAuth state. Ignored for the `extension` target, which has no in-app route to return to.',
+  })
+  @ApiQuery({
+    name: 'challenge',
+    required: false,
+    type: String,
+    description:
+      'Hex SHA-256 of a secret the client keeps. **Required for the `extension` target** and ignored otherwise: that target cannot be bound by the state cookie, so it proves possession of the matching verifier when exchanging the handoff code.',
   })
   @ApiFoundResponse({
     description:
@@ -67,6 +74,7 @@ export class AuthGithubController {
   start(
     @Query('app') app: string | undefined,
     @Query('redirect') redirect: string | undefined,
+    @Query('challenge') challenge: string | undefined,
     @Res() response: Response,
   ): void {
     const target = parseGithubLoginApp(app);
@@ -75,6 +83,7 @@ export class AuthGithubController {
     const { url, stateNonce } = this.github.startAuthorization(
       target,
       redirect,
+      challenge,
     );
     // Bind the transaction to this browser: the callback is only honored when it
     // presents this HttpOnly cookie whose nonce matches the signed state.
@@ -155,6 +164,6 @@ export class AuthGithubController {
   @ApiOkResponse({ type: TokenPairResponseDto })
   @ZodSerializerDto(TokenPairResponseDto)
   session(@Body() body: GithubSessionDto): Promise<TokenPairResponseDto> {
-    return this.github.exchangeSession(body.code);
+    return this.github.exchangeSession(body.code, body.verifier);
   }
 }

@@ -161,7 +161,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       case "auth/exchange-github-session": {
         sendResponse(
-          await handleMutation(() => apiClient.exchangeGithubSession(request.code)),
+          await handleMutation(() =>
+            apiClient.exchangeGithubSession(request.code, request.verifier),
+          ),
         );
         return;
       }

@@ -39,10 +39,20 @@ export const GITHUB_OAUTH_STATE_COOKIE = 'gh_oauth_state';
 /** Handoff codes are exchanged within seconds; a short TTL bounds the store. */
 const HANDOFF_TTL_MS = 60_000;
 
+/** A challenge is the hex SHA-256 of the client's verifier, so its shape is fixed. */
+function isChallenge(value: string | undefined): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
+}
+
 interface GithubStateClaims {
   purpose: 'gh-login-state';
   app: GithubLoginApp;
   nonceHash: string;
+  /**
+   * SHA-256 of a secret held by a public client, present only for the extension
+   * target. See `startAuthorization` for why that target cannot use the cookie.
+   */
+  challenge?: string;
   /** Same-app absolute path to return to after login (protected-route redirect). */
   redirect?: string;
 }
@@ -75,7 +85,7 @@ export class AuthGithubService {
   // API instance; a shared store would be needed once the API is scaled out.
   private readonly pendingHandoffs = new Map<
     string,
-    { email: string; expiresAt: number }
+    { email: string; expiresAt: number; challenge?: string }
   >();
 
   constructor(
@@ -94,12 +104,21 @@ export class AuthGithubService {
   startAuthorization(
     app: GithubLoginApp,
     redirect?: string,
+    challenge?: string,
   ): { url: string; stateNonce: string } {
     // Fail before the browser leaves for GitHub rather than at the callback: an
     // unconfigured destination would otherwise surface as a 503 on an API page
     // the user never asked to see, after they had already authorized.
     if (app === 'extension') {
       this.redirectBase(app);
+      // Chrome's extension authorization window does not carry the HttpOnly
+      // state cookie through to the callback, measured rather than assumed, so
+      // the cookie cannot bind this target. The extension instead proves
+      // possession of a secret at the session exchange, and refusing to start
+      // without a challenge keeps every extension transaction bound to someone.
+      if (!isChallenge(challenge)) {
+        throw new UnauthorizedException('challenge_required');
+      }
     }
     const stateNonce = randomBytes(32).toString('hex');
     const state = this.signState(
@@ -109,6 +128,7 @@ export class AuthGithubService {
       // the intercepted redirect URL — so a post-login target is meaningless
       // there and is dropped rather than signed into the state.
       app === 'extension' ? undefined : this.sanitizeRedirect(redirect),
+      app === 'extension' ? challenge : undefined,
     );
     const url = new URL('https://github.com/login/oauth/authorize');
     url.searchParams.set(
@@ -186,7 +206,7 @@ export class AuthGithubService {
         return this.appRedirect(app, '/login', { githubError: 'email' });
       }
 
-      const handoff = this.createHandoff(email);
+      const handoff = this.createHandoff(email, claims.challenge);
       // Round-trip the protected-route redirect (signed into the state at /start)
       // to the SPA callback so it can return the user where they were headed; the
       // SPA re-validates it before navigating (email/Google `?redirect=` parity).
@@ -202,8 +222,8 @@ export class AuthGithubService {
     }
   }
 
-  async exchangeSession(code: string): Promise<TokenPair> {
-    const email = this.claimHandoff(code);
+  async exchangeSession(code: string, verifier?: string): Promise<TokenPair> {
+    const email = this.claimHandoff(code, verifier);
     if (email === null) {
       this.logger.warn({ event: 'auth.github_login.handoff_invalid' });
       throw new UnauthorizedException('Unauthorized');
@@ -276,6 +296,7 @@ export class AuthGithubService {
     app: GithubLoginApp,
     nonceHash: string,
     redirect?: string,
+    challenge?: string,
   ): string {
     const claims: GithubStateClaims = {
       purpose: 'gh-login-state',
@@ -283,6 +304,7 @@ export class AuthGithubService {
       nonceHash,
     };
     if (redirect) claims.redirect = redirect;
+    if (challenge) claims.challenge = challenge;
     return jwt.sign(claims, this.secret(), { expiresIn: '10m' });
   }
 
@@ -315,6 +337,16 @@ export class AuthGithubService {
       typeof decoded.nonceHash !== 'string'
     ) {
       throw new UnauthorizedException('invalid_state');
+    }
+    // The extension is bound by proof of possession at the session exchange
+    // instead of by cookie here, because its authorization window does not carry
+    // the cookie. The binding is not skipped, only moved: a state without a
+    // challenge cannot be redeemed, and `exchangeSession` demands the verifier.
+    if (decoded.app === 'extension') {
+      if (!isChallenge(decoded.challenge)) {
+        throw new UnauthorizedException('invalid_state');
+      }
+      return decoded;
     }
     if (!cookieNonce || !this.nonceMatches(cookieNonce, decoded.nonceHash)) {
       throw new UnauthorizedException('state_not_bound');
@@ -363,11 +395,12 @@ export class AuthGithubService {
    * The code carries no payload, so decoding it (from the URL, history, or
    * logs) reveals nothing — the email lives only server-side.
    */
-  private createHandoff(email: string): string {
+  private createHandoff(email: string, challenge?: string): string {
     const code = randomBytes(32).toString('hex');
     this.pendingHandoffs.set(code, {
       email,
       expiresAt: Date.now() + HANDOFF_TTL_MS,
+      ...(challenge ? { challenge } : {}),
     });
     return code;
   }
@@ -377,12 +410,38 @@ export class AuthGithubService {
    * unknown or expired. Deleting on read makes it single-use, so a replayed
    * callback URL cannot mint a second session.
    */
-  private claimHandoff(code: string): string | null {
+  private claimHandoff(code: string, verifier?: string): string | null {
     this.purgeExpiredHandoffs();
     const entry = this.pendingHandoffs.get(code);
     if (!entry) return null;
+    // Delete before any further check, so a wrong verifier burns the code rather
+    // than leaving it available for another guess.
     this.pendingHandoffs.delete(code);
-    return entry.expiresAt > Date.now() ? entry.email : null;
+    if (entry.expiresAt <= Date.now()) return null;
+    if (entry.challenge && !this.verifierMatches(verifier, entry.challenge)) {
+      return null;
+    }
+    return entry.email;
+  }
+
+  /**
+   * Constant-time check that the caller holds the secret whose hash was signed
+   * into the state. A challenged handoff without a verifier fails here, so the
+   * extension's binding cannot be dropped by simply omitting the field.
+   */
+  private verifierMatches(
+    verifier: string | undefined,
+    expectedChallenge: string,
+  ): boolean {
+    if (!verifier) return false;
+    const actual = Buffer.from(
+      createHash('sha256').update(verifier).digest('hex'),
+      'hex',
+    );
+    const expected = Buffer.from(expectedChallenge, 'hex');
+    return (
+      actual.length === expected.length && timingSafeEqual(actual, expected)
+    );
   }
 
   private purgeExpiredHandoffs(): void {
