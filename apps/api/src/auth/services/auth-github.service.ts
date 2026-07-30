@@ -39,6 +39,15 @@ export const GITHUB_OAUTH_STATE_COOKIE = 'gh_oauth_state';
 /** Handoff codes are exchanged within seconds; a short TTL bounds the store. */
 const HANDOFF_TTL_MS = 60_000;
 
+/**
+ * Outcome of redeeming a handoff code. The rejection reasons are for logs only:
+ * the caller turns every one of them into the same opaque 401, so nothing here
+ * tells a client which of them applied.
+ */
+type HandoffClaim =
+  | { email: string }
+  | { reason: 'unknown' | 'expired' | 'verifier' };
+
 /** A challenge is the hex SHA-256 of the client's verifier, so its shape is fixed. */
 function isChallenge(value: string | undefined): value is string {
   return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
@@ -223,12 +232,19 @@ export class AuthGithubService {
   }
 
   async exchangeSession(code: string, verifier?: string): Promise<TokenPair> {
-    const email = this.claimHandoff(code, verifier);
-    if (email === null) {
-      this.logger.warn({ event: 'auth.github_login.handoff_invalid' });
+    const claim = this.claimHandoff(code, verifier);
+    if (!('email' in claim)) {
+      // The reason never reaches the client — every rejection is an opaque 401 —
+      // but `verifier` is the one value here that indicates an attempt to redeem
+      // someone else's handoff, and it is worth telling apart from a slow client
+      // or a stale code in logs.
+      this.logger.warn({
+        event: 'auth.github_login.handoff_invalid',
+        reason: claim.reason,
+      });
       throw new UnauthorizedException('Unauthorized');
     }
-    return this.auth.createSessionForVerifiedEmail(email);
+    return this.auth.createSessionForVerifiedEmail(claim.email);
   }
 
   // --- OAuth mechanics -------------------------------------------------------
@@ -410,18 +426,21 @@ export class AuthGithubService {
    * unknown or expired. Deleting on read makes it single-use, so a replayed
    * callback URL cannot mint a second session.
    */
-  private claimHandoff(code: string, verifier?: string): string | null {
-    this.purgeExpiredHandoffs();
+  private claimHandoff(code: string, verifier?: string): HandoffClaim {
     const entry = this.pendingHandoffs.get(code);
-    if (!entry) return null;
+    // Purged after the lookup rather than before it: purging first would delete
+    // this code as well and report it as `unknown`, collapsing "arrived too late"
+    // into "never existed". The store is still swept on every claim either way.
+    this.purgeExpiredHandoffs();
+    if (!entry) return { reason: 'unknown' };
     // Delete before any further check, so a wrong verifier burns the code rather
     // than leaving it available for another guess.
     this.pendingHandoffs.delete(code);
-    if (entry.expiresAt <= Date.now()) return null;
+    if (entry.expiresAt <= Date.now()) return { reason: 'expired' };
     if (entry.challenge && !this.verifierMatches(verifier, entry.challenge)) {
-      return null;
+      return { reason: 'verifier' };
     }
-    return entry.email;
+    return { email: entry.email };
   }
 
   /**

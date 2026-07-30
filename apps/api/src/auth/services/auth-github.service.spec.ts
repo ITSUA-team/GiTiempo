@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { Logger } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGithubService, type GithubLoginApp } from './auth-github.service';
 
@@ -287,6 +288,34 @@ describe('AuthGithubService', () => {
 
     await svc.exchangeSession(handoff);
     await expect(svc.exchangeSession(handoff)).rejects.toThrow();
+  });
+
+  it('tells a failed proof of possession apart from an unknown code in logs', async () => {
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
+    const { svc } = createService();
+    const { state, stateNonce } = startTransaction(svc, 'extension');
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
+    );
+    const handoff = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    ).searchParams.get('code')!;
+
+    await expect(svc.exchangeSession('never-issued')).rejects.toThrow();
+    await expect(
+      svc.exchangeSession(handoff, 'w'.repeat(64)),
+    ).rejects.toThrow();
+
+    // A wrong verifier is the one rejection that indicates someone redeeming a
+    // handoff they did not start, so it must not be indistinguishable from a
+    // stale or invented code. The client still sees the same opaque 401.
+    expect(warn.mock.calls.map(([payload]) => payload)).toEqual([
+      { event: 'auth.github_login.handoff_invalid', reason: 'unknown' },
+      { event: 'auth.github_login.handoff_invalid', reason: 'verifier' },
+    ]);
   });
 
   it('issues an opaque handoff code that does not embed the email', async () => {
