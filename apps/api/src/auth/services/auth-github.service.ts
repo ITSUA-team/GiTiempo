@@ -10,7 +10,24 @@ import jwt from 'jsonwebtoken';
 import type { Env } from '../../config/env.validation';
 import { AuthService, type TokenPair } from './auth.service';
 
-export type GithubLoginApp = 'user' | 'admin';
+export type GithubLoginApp = 'user' | 'admin' | 'extension';
+
+const GITHUB_LOGIN_APPS: readonly GithubLoginApp[] = [
+  'user',
+  'admin',
+  'extension',
+];
+
+/**
+ * Resolves the `app` query value to a login target. Deliberately an explicit
+ * match rather than "anything that is not admin is user": with a third target, a
+ * typo would otherwise deliver a handoff code to the web app, where the
+ * extension's authorization window never sees it and the user waits on a window
+ * that will never resolve. An unrecognized or absent value is the user app.
+ */
+export function parseGithubLoginApp(value: string | undefined): GithubLoginApp {
+  return GITHUB_LOGIN_APPS.find((app) => app === value) ?? 'user';
+}
 
 /**
  * Name of the HttpOnly cookie that binds a login transaction to the browser
@@ -78,11 +95,20 @@ export class AuthGithubService {
     app: GithubLoginApp,
     redirect?: string,
   ): { url: string; stateNonce: string } {
+    // Fail before the browser leaves for GitHub rather than at the callback: an
+    // unconfigured destination would otherwise surface as a 503 on an API page
+    // the user never asked to see, after they had already authorized.
+    if (app === 'extension') {
+      this.redirectBase(app);
+    }
     const stateNonce = randomBytes(32).toString('hex');
     const state = this.signState(
       app,
       this.hashNonce(stateNonce),
-      this.sanitizeRedirect(redirect),
+      // The extension has no in-app route to return to — its outcome is read off
+      // the intercepted redirect URL — so a post-login target is meaningless
+      // there and is dropped rather than signed into the state.
+      app === 'extension' ? undefined : this.sanitizeRedirect(redirect),
     );
     const url = new URL('https://github.com/login/oauth/authorize');
     url.searchParams.set(
@@ -126,16 +152,20 @@ export class AuthGithubService {
     stateNonce?: string;
   }): Promise<string> {
     // The state is echoed on every GitHub redirect (including a denial), so its
-    // signed `app` claim — not a hardcoded 'user' — decides which SPA to return
-    // to; a denial from an admin-started flow must reopen the admin app. The user
-    // app is only a fallback for an absent or unverifiable state.
+    // signed `app` claim — not a hardcoded 'user' — decides which app to return
+    // to; a denial from an admin-started flow must reopen the admin app. For the
+    // extension this is load-bearing rather than cosmetic: its authorization
+    // window resolves only once the navigation reaches the extension's own
+    // redirect URL, so an outcome sent to a web login page would leave that
+    // window pending forever. The user app is only a fallback for an absent or
+    // unverifiable state, which by definition cannot be attributed to any client.
     const app = this.resolveStateApp(input.state);
 
     if (input.error) {
-      return this.spaRedirect(app, '/login', { githubError: 'denied' });
+      return this.appRedirect(app, '/login', { githubError: 'denied' });
     }
     if (!input.code || !input.state) {
-      return this.spaRedirect(app, '/login', { githubError: 'state' });
+      return this.appRedirect(app, '/login', { githubError: 'state' });
     }
 
     // Minting a session additionally requires the state to be bound to THIS
@@ -146,14 +176,14 @@ export class AuthGithubService {
     try {
       claims = this.verifyBoundState(input.state, input.stateNonce);
     } catch {
-      return this.spaRedirect(app, '/login', { githubError: 'state' });
+      return this.appRedirect(app, '/login', { githubError: 'state' });
     }
 
     try {
       const accessToken = await this.exchangeCode(input.code);
       const email = await this.fetchVerifiedPrimaryEmail(accessToken);
       if (!email) {
-        return this.spaRedirect(app, '/login', { githubError: 'email' });
+        return this.appRedirect(app, '/login', { githubError: 'email' });
       }
 
       const handoff = this.createHandoff(email);
@@ -162,13 +192,13 @@ export class AuthGithubService {
       // SPA re-validates it before navigating (email/Google `?redirect=` parity).
       const query: Record<string, string> = { code: handoff };
       if (claims.redirect) query.redirect = claims.redirect;
-      return this.spaRedirect(app, '/auth/github/callback', query);
+      return this.appRedirect(app, '/auth/github/callback', query);
     } catch (error) {
       this.logger.warn({
         event: 'auth.github_login.callback_failed',
         reason: error instanceof Error ? error.message : String(error),
       });
-      return this.spaRedirect(app, '/login', { githubError: 'failed' });
+      return this.appRedirect(app, '/login', { githubError: 'failed' });
     }
   }
 
@@ -293,7 +323,7 @@ export class AuthGithubService {
   }
 
   /**
-   * The SPA to return to, read from the state's signature-verified `app` claim.
+   * The client to return to, read from the state's signature-verified `app` claim.
    * This is a redirect target, not a security decision, so — unlike
    * `verifyBoundState` — it does not require the browser-nonce binding: a denial
    * or a failed exchange still lands the user in the app they started from.
@@ -305,7 +335,7 @@ export class AuthGithubService {
       const decoded = jwt.verify(state, this.secret()) as GithubStateClaims;
       if (
         decoded.purpose === 'gh-login-state' &&
-        (decoded.app === 'user' || decoded.app === 'admin')
+        GITHUB_LOGIN_APPS.includes(decoded.app)
       ) {
         return decoded.app;
       }
@@ -371,15 +401,31 @@ export class AuthGithubService {
     ).toString();
   }
 
-  private spaRedirect(
+  /**
+   * Where a flow's outcome is delivered. Read only from configuration — never
+   * from the request — because the handoff code rides in this URL, so a
+   * caller-supplied destination would let anyone who can reach `/start` have a
+   * code delivered to a host they control (RFC 9700 §4.1 exact-match redirects).
+   */
+  private redirectBase(app: GithubLoginApp): string {
+    if (app === 'extension') {
+      return this.requireConfig('GITHUB_SIGNIN_EXTENSION_REDIRECT_URL');
+    }
+    return this.requireConfig(
+      app === 'admin' ? 'ADMIN_SPA_URL' : 'USER_SPA_URL',
+    );
+  }
+
+  private appRedirect(
     app: GithubLoginApp,
     path: string,
     query: Record<string, string>,
   ): string {
-    const base = this.requireConfig(
-      app === 'admin' ? 'ADMIN_SPA_URL' : 'USER_SPA_URL',
-    );
-    const url = new URL(path, base);
+    const base = this.redirectBase(app);
+    // The extension has no route to load: Chrome intercepts the navigation as
+    // soon as it matches the extension's redirect URL, so the outcome rides on
+    // that URL's own query rather than on a path inside an app.
+    const url = app === 'extension' ? new URL(base) : new URL(path, base);
     for (const [key, value] of Object.entries(query)) {
       url.searchParams.set(key, value);
     }

@@ -67,6 +67,31 @@ describe('AuthGithubController', () => {
     expect(github.startAuthorization).toHaveBeenCalledWith('user', undefined);
   });
 
+  it('GET /start reaches the extension target', () => {
+    github.startAuthorization.mockReturnValue({ url: 'u', stateNonce: 'n' });
+
+    controller.start('extension', undefined, makeRes() as unknown as Response);
+
+    expect(github.startAuthorization).toHaveBeenCalledWith(
+      'extension',
+      undefined,
+    );
+  });
+
+  it.each(['extenson', 'Extension', 'ext', ''])(
+    'GET /start resolves the near-miss target %o to the user app, not the extension',
+    (app) => {
+      github.startAuthorization.mockReturnValue({ url: 'u', stateNonce: 'n' });
+
+      controller.start(app, undefined, makeRes() as unknown as Response);
+
+      // A typo must not deliver a handoff code to a client that is not waiting
+      // for it: the extension's authorization window would never resolve, and
+      // the user would sit on a window that does nothing.
+      expect(github.startAuthorization).toHaveBeenCalledWith('user', undefined);
+    },
+  );
+
   it('GET /start forwards the redirect target to the service', () => {
     github.startAuthorization.mockReturnValue({ url: 'u', stateNonce: 'n' });
 

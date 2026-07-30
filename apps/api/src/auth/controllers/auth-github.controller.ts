@@ -24,7 +24,7 @@ import { TokenPairResponseDto } from '../dto/token-pair-response.dto';
 import {
   AuthGithubService,
   GITHUB_OAUTH_STATE_COOKIE,
-  type GithubLoginApp,
+  parseGithubLoginApp,
 } from '../services/auth-github.service';
 
 @ApiTags('auth')
@@ -38,9 +38,9 @@ export class AuthGithubController {
   @ApiQuery({
     name: 'app',
     required: false,
-    enum: ['user', 'admin'],
+    enum: ['user', 'admin', 'extension'],
     description:
-      'Which SPA the flow was started from. Anything other than `admin` resolves to `user`.',
+      'Which client started the flow. An absent or unrecognized value resolves to `user`. `extension` returns the outcome to the configured browser-extension destination instead of a web app route.',
   })
   @ApiQuery({
     name: 'redirect',
@@ -69,7 +69,7 @@ export class AuthGithubController {
     @Query('redirect') redirect: string | undefined,
     @Res() response: Response,
   ): void {
-    const target: GithubLoginApp = app === 'admin' ? 'admin' : 'user';
+    const target = parseGithubLoginApp(app);
     // The SPA forwards its normalized protected-route target so the callback can
     // return the user there after sign-in; the service re-sanitizes it.
     const { url, stateNonce } = this.github.startAuthorization(
@@ -101,7 +101,7 @@ export class AuthGithubController {
     required: false,
     type: String,
     description:
-      'Signed state minted by `/auth/github/start`. Its `app` claim decides which SPA to return to.',
+      'Signed state minted by `/auth/github/start`. Its `app` claim decides which client to return to.',
   })
   @ApiQuery({
     name: 'error',

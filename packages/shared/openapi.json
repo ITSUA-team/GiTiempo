@@ -408,11 +408,12 @@
             "name": "app",
             "required": false,
             "in": "query",
-            "description": "Which SPA the flow was started from. Anything other than `admin` resolves to `user`.",
+            "description": "Which client started the flow. An absent or unrecognized value resolves to `user`. `extension` returns the outcome to the configured browser-extension destination instead of a web app route.",
             "schema": {
               "enum": [
                 "user",
-                "admin"
+                "admin",
+                "extension"
               ],
               "type": "string"
             }
@@ -460,7 +461,7 @@
             "name": "state",
             "required": false,
             "in": "query",
-            "description": "Signed state minted by `/auth/github/start`. Its `app` claim decides which SPA to return to.",
+            "description": "Signed state minted by `/auth/github/start`. Its `app` claim decides which client to return to.",
             "schema": {
               "type": "string"
             }
