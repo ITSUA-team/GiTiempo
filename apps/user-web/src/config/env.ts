@@ -1,6 +1,7 @@
 export interface UserWebEnv {
   adminAppUrl?: string;
   apiBaseUrl?: string;
+  extensionInstallUrl?: string;
   githubSignInEnabled: boolean;
   firebase: {
     apiKey?: string;
@@ -18,6 +19,11 @@ export const appEnv: UserWebEnv = {
   },
   get apiBaseUrl() {
     return import.meta.env.VITE_API_BASE_URL;
+  },
+  get extensionInstallUrl() {
+    // Where the login callout sends users to get the browser extension.
+    // Unset hides the callout rather than linking nowhere.
+    return import.meta.env.VITE_EXTENSION_INSTALL_URL;
   },
 
   get githubSignInEnabled() {
