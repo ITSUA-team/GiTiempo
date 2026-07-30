@@ -1,5 +1,7 @@
 /* global chrome */
 
+import type { TimeEntryResponse, TokenPairResponse } from "@gitiempo/shared";
+
 import { getExtensionConfig } from "@/lib/config";
 import { createExtensionApiClient } from "@/lib/api";
 import type {
@@ -7,8 +9,10 @@ import type {
   RuntimeAuthResult,
   RuntimeMutationResult,
   RuntimeSnapshot,
+  SnapshotUser,
 } from "@/lib/runtime";
 import { getStoredSession } from "@/lib/session";
+import { decodeAccessTokenEmail } from "@/lib/token";
 
 const config = getExtensionConfig();
 const apiClient = createExtensionApiClient({ config });
@@ -18,6 +22,22 @@ const contentScriptMatches = [
   "https://github.com/orgs/*/projects/*",
 ];
 
+function deriveSnapshotUser(
+  session: TokenPairResponse,
+  timeEntry: TimeEntryResponse | null,
+): SnapshotUser | null {
+  const email = decodeAccessTokenEmail(session.accessToken) ?? timeEntry?.user.email ?? null;
+
+  if (!email) {
+    return null;
+  }
+
+  return {
+    displayName: timeEntry?.user.displayName ?? null,
+    email,
+  };
+}
+
 async function loadSnapshot(): Promise<RuntimeSnapshot> {
   const session = await getStoredSession();
 
@@ -26,6 +46,7 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
       authenticated: false,
       currentTimer: null,
       errorMessage: null,
+      user: null,
     };
   }
 
@@ -36,6 +57,7 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
       authenticated: true,
       currentTimer: response.timeEntry,
       errorMessage: null,
+      user: deriveSnapshotUser(session, response.timeEntry),
     };
   } catch (error) {
     const nextSession = await getStoredSession();
@@ -44,6 +66,7 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
       authenticated: nextSession !== null,
       currentTimer: null,
       errorMessage: error instanceof Error ? error.message : "Unable to load timer state.",
+      user: nextSession ? deriveSnapshotUser(nextSession, null) : null,
     };
   }
 }

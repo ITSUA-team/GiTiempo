@@ -1,4 +1,4 @@
-import type { UserResponse } from "@gitiempo/shared";
+import { deriveProfileInitials, type UserResponse } from "@gitiempo/shared";
 import { computed, type Ref } from "vue";
 
 interface AuthProfilePresentationOptions {
@@ -16,19 +16,14 @@ export function createAuthProfilePresentation(
   const displayName = computed(
     () => profile.value?.displayName ?? displayNameFallback,
   );
-  const userInitials = computed(() => {
-    const source =
+  const userInitials = computed(() =>
+    deriveProfileInitials(
       profile.value?.displayName?.trim() ||
-      profile.value?.email ||
-      displayName.value;
-    const parts = source
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase());
-
-    return parts.join("") || initialsFallback;
-  });
+        profile.value?.email ||
+        displayName.value,
+      initialsFallback,
+    ),
+  );
 
   return {
     displayName,

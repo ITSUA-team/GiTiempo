@@ -6,6 +6,7 @@ export interface ExtensionConfig {
     projectId: string;
   } | null;
   googleOAuthClientId: string;
+  userSpaHomeUrl: string;
   userSpaUrl: string;
 }
 
@@ -24,6 +25,19 @@ export function normalizeUrl(value: string, fallback: string): string {
   const trimmed = value.trim();
 
   return (trimmed || fallback).replace(/\/$/, "");
+}
+
+/**
+ * The signed-in SPA URL points at the sign-in route; the extension's "open the
+ * app" affordance should land on the app home (dashboard) instead, so we reduce
+ * it to its origin. Falls back to the SPA URL if it cannot be parsed.
+ */
+export function deriveHomeUrl(userSpaUrl: string): string {
+  try {
+    return new URL(userSpaUrl).origin;
+  } catch {
+    return userSpaUrl;
+  }
 }
 
 function isRelaxedEnvironment(env: ExtensionEnv): boolean {
@@ -105,6 +119,7 @@ export function getExtensionConfig(
       projectId: firebaseProjectId,
     },
     googleOAuthClientId,
+    userSpaHomeUrl: deriveHomeUrl(userSpaUrl),
     userSpaUrl,
   };
 }
