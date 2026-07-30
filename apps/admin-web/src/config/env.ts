@@ -1,6 +1,5 @@
 export interface AdminWebEnv {
   apiBaseUrl?: string;
-  extensionInstallUrl?: string;
   firebase: {
     apiKey?: string;
     appId?: string;
@@ -17,11 +16,6 @@ export interface AdminWebEnv {
 export const appEnv: AdminWebEnv = {
   get apiBaseUrl() {
     return import.meta.env.VITE_API_BASE_URL;
-  },
-  get extensionInstallUrl() {
-    // Where the login callout sends users to get the browser extension.
-    // Unset hides the callout rather than linking nowhere.
-    return import.meta.env.VITE_EXTENSION_INSTALL_URL;
   },
   firebase: {
     get apiKey() {

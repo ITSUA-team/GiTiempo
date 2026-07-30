@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { PlusIcon } from "@heroicons/vue/24/outline";
+import Button from "primevue/button";
 import {
-  AuthDivider,
-  authGradientPanelClass,
   AuthIntroPanel,
   AuthSignInForm,
-  ExtensionCallout,
   getErrorMessage,
-  getExtensionInstallHref,
   resolveGithubSignInError,
   StandaloneSplitPage,
   type EmailPasswordSignInInput,
@@ -30,7 +26,6 @@ const adminWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.adminAppUrl,
   fallbackPath: "/login",
 });
-const extensionHref = getExtensionInstallHref(appEnv.extensionInstallUrl);
 const introBadgeItems = ["Secure workspace sign-in", "No dark mode for MVP"];
 const introFeatureCards = [
   {
@@ -112,10 +107,7 @@ function goToRegister(): void {
 </script>
 
 <template>
-  <StandaloneSplitPage
-    :left-panel-class="authGradientPanelClass"
-    left-panel-full-bleed
-  >
+  <StandaloneSplitPage>
     <template #left>
       <AuthIntroPanel
         workspace-label="Time tracking for modern product teams"
@@ -127,19 +119,12 @@ function goToRegister(): void {
         counterpart-label="the admin workspace"
         counterpart-prompt="Need admin tools? Open"
         product-tagline="GiTiempo"
-      >
-        <template
-          v-if="extensionHref"
-          #hero-footer
-        >
-          <ExtensionCallout :href="extensionHref" />
-        </template>
-      </AuthIntroPanel>
+      />
     </template>
 
     <template #right>
       <section
-        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12"
+        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
       >
         <AuthSignInForm
           title="Sign in"
@@ -153,17 +138,15 @@ function goToRegister(): void {
           @submit-github="handleGithubSignIn"
         >
           <template #secondary-actions>
-            <AuthDivider label="New to GiTiempo?" />
-
-            <button
+            <Button
               type="button"
-              class="bg-accent-tint border-brand text-brand focus-visible:outline-brand flex h-11 items-center justify-center gap-2 rounded-sm border px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2"
+              label="Create workspace"
+              severity="secondary"
+              variant="outlined"
+              class="h-11"
               data-testid="sign-in-create-workspace"
               @click="goToRegister"
-            >
-              <PlusIcon class="size-4 shrink-0" />
-              Create workspace
-            </button>
+            />
           </template>
         </AuthSignInForm>
       </section>
