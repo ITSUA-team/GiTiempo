@@ -16956,24 +16956,39 @@
             },
             {
               "type": "frame",
-              "id": "n9bR3",
-              "name": "extBavatar",
-              "width": 28,
-              "height": 28,
-              "fill": "$color-accent-tint",
-              "cornerRadius": 14,
-              "justifyContent": "center",
+              "id": "jZBcu",
+              "name": "extBbRight",
+              "gap": 8,
               "alignItems": "center",
               "children": [
                 {
-                  "type": "text",
-                  "id": "dL84a",
-                  "name": "extBavatarText",
-                  "fill": "$color-brand",
-                  "content": "AT",
-                  "fontFamily": "Inter",
-                  "fontSize": 11,
-                  "fontWeight": "600"
+                  "id": "h8L1H",
+                  "type": "ref",
+                  "ref": "mgzQ7",
+                  "name": "extBbHome"
+                },
+                {
+                  "type": "frame",
+                  "id": "n9bR3",
+                  "name": "extBavatar",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 14,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "dL84a",
+                      "name": "extBavatarText",
+                      "fill": "$color-brand",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
                 }
               ]
             }
@@ -17058,19 +17073,6 @@
                   "fontWeight": "600"
                 }
               ]
-            },
-            {
-              "type": "text",
-              "id": "TBqu1",
-              "name": "extBspaLink",
-              "fill": "#5D2B85",
-              "textGrowth": "fixed-width",
-              "width": "fill_container",
-              "content": "Open full workspace in GiTiempo",
-              "textAlign": "center",
-              "fontFamily": "Inter",
-              "fontSize": 13,
-              "fontWeight": "600"
             }
           ]
         }
@@ -17147,6 +17149,44 @@
                   "fontFamily": "Inter",
                   "fontSize": 15,
                   "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "C9HMJK",
+              "name": "extCbRight",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "W2Vno",
+                  "type": "ref",
+                  "ref": "mgzQ7",
+                  "name": "extCbHome"
+                },
+                {
+                  "type": "frame",
+                  "id": "DI4zv",
+                  "name": "extCavatar",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 14,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wWaBX",
+                      "name": "extBavatarText",
+                      "fill": "$color-brand",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
                 }
               ]
             }
@@ -17332,6 +17372,44 @@
                   "fontFamily": "Inter",
                   "fontSize": 15,
                   "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "m3u1U",
+              "name": "extDbRight",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "EDxYU",
+                  "type": "ref",
+                  "ref": "mgzQ7",
+                  "name": "extDbHome"
+                },
+                {
+                  "type": "frame",
+                  "id": "b4pMMk",
+                  "name": "extDavatar",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 14,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ed8vU",
+                      "name": "extBavatarText",
+                      "fill": "$color-brand",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
                 }
               ]
             }
@@ -53589,6 +53667,31 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "mgzQ7",
+      "x": 0,
+      "y": -1240,
+      "name": "Ext Home Button",
+      "reusable": true,
+      "width": 28,
+      "height": 28,
+      "cornerRadius": "$radius-md",
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "icon",
+          "id": "B5Ssb",
+          "name": "Home Icon",
+          "width": 18,
+          "height": 18,
+          "icon": "house",
+          "library": "lucide",
+          "fill": "$color-brand"
         }
       ]
     }

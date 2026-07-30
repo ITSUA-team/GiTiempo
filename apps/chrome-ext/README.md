@@ -14,6 +14,7 @@ Manifest V3 extension for starting and stopping GiTiempo timers from GitHub issu
 Copy `.env.example` and set all extension environment values before building the extension.
 Production builds fail fast when any required `VITE_EXTENSION_*` value is missing.
 Google sign-in requires `VITE_EXTENSION_GOOGLE_CLIENT_ID` so both the runtime config and generated manifest stay aligned for `chrome.identity.launchWebAuthFlow`.
+`VITE_EXTENSION_USER_SPA_URL` does double duty: it is the sign-in destination, and its origin is the app home the popup header opens. That assumes the User SPA is served from the root of the origin; hosting it under a subpath would mean configuring the two destinations separately.
 
 ## Load Unpacked
 

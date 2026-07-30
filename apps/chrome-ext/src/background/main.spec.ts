@@ -54,6 +54,16 @@ function createChromeStub(): ChromeStub {
   };
 }
 
+function makeAccessToken(payload: Record<string, unknown>): string {
+  const encode = (value: object): string =>
+    btoa(JSON.stringify(value))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+  return `${encode({ alg: "HS256", typ: "JWT" })}.${encode(payload)}.signature`;
+}
+
 describe("background snapshot broadcast", () => {
   let chromeStub: ChromeStub;
 
@@ -81,6 +91,7 @@ describe("background snapshot broadcast", () => {
       authenticated: true,
       currentTimer: null,
       errorMessage: null,
+      user: null,
     };
 
     await broadcastSnapshot(snapshot);
@@ -118,6 +129,7 @@ describe("background snapshot broadcast", () => {
         authenticated: false,
         currentTimer: null,
         errorMessage: null,
+        user: null,
       }),
     ).resolves.toBeUndefined();
 
@@ -137,6 +149,7 @@ describe("background snapshot broadcast", () => {
         authenticated: true,
         currentTimer: null,
         errorMessage: null,
+        user: null,
       }),
     ).resolves.toBeUndefined();
 
@@ -173,6 +186,7 @@ describe("background snapshot broadcast", () => {
           authenticated: false,
           currentTimer: null,
           errorMessage: null,
+          user: null,
         },
       });
     });
@@ -182,7 +196,33 @@ describe("background snapshot broadcast", () => {
         authenticated: false,
         currentTimer: null,
         errorMessage: null,
+        user: null,
       },
+    });
+  });
+
+  it("includes the signed-in user decoded from the session token", async () => {
+    sessionMocks.getStoredSession.mockResolvedValue({
+      accessToken: makeAccessToken({ sub: "user-1", email: "alexey@example.com" }),
+      refreshToken: "refresh-token",
+    });
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+
+    await import("./main");
+
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]?.[0];
+    const sendResponse = vi.fn();
+
+    expect(onMessage).toBeTypeOf("function");
+    onMessage({ type: "runtime/get-snapshot" }, {}, sendResponse);
+
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({
+        authenticated: true,
+        currentTimer: null,
+        errorMessage: null,
+        user: { displayName: null, email: "alexey@example.com" },
+      });
     });
   });
 });

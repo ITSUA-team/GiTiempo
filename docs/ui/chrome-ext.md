@@ -17,6 +17,13 @@
 - Background: `bg-surface-primary`.
 - Use the same branded header on every popup state.
 
+## Popup Header
+
+- Leading slot: the GiTiempo logo chip, product name, and `GitHub timer` subtitle.
+- Trailing slot, signed-in states only: a home icon that opens the User SPA home (dashboard) in a new tab, followed by the signed-in user's initials avatar.
+- Resolve avatar initials from the session user, falling back to the running timer's user; omit the avatar when neither is available.
+- Loading and unauthenticated states render the header without the trailing slot.
+
 ## States
 
 ### Unauthenticated
@@ -29,31 +36,28 @@
 ### Authenticated, No Active Timer
 
 - Show detected issue context.
-- Keep the branded header and allow a compact GiTiempo badge in the trailing header slot when popup user initials are not available locally.
 - Full-width Start Timer button.
-- Link to open the full User SPA.
 - Keep the issue context card visible above the actions.
+- Reach the full workspace through the header home icon; do not repeat it as a body-level link.
 
 ### Authenticated, Unsupported Page
 
 - Keep the branded popup shell visible.
-- Keep the same branded header treatment as the authenticated no-timer popup state.
 - Show concise guidance: `Open a supported GitHub issue to start a timer.`
 - Disable or hide Start Timer because issue metadata is unavailable.
-- Keep a link to open the full User SPA.
+- Keep a full-width action that opens the User SPA home (dashboard).
 
 ### Authenticated, Timer Running
 
 - Elapsed time: `text-2xl font-semibold text-brand`.
 - Task name.
 - Project/repository context.
-- Use the branded header without introducing a user badge if popup user-profile data is unavailable.
 - Full-width destructive stop button.
 
 ### Error Or Disconnected
 
 - Inline muted message.
-- Keep the branded header visible without requiring a user badge.
+- Keep the branded header visible so the home icon stays reachable.
 - Retry action link.
 
 ## Injected GitHub Issue UI
