@@ -23,26 +23,26 @@ const props = defineProps<{
   >
     <div class="flex items-center gap-3">
       <div
-        class="bg-surface-primary text-brand flex size-10 items-center justify-center rounded-lg text-[15px] font-bold"
+        class="bg-accent-tint text-brand flex size-10 items-center justify-center rounded-[12px] text-sm font-semibold"
         data-testid="auth-intro-logo"
       >
         GT
       </div>
       <div class="flex flex-col gap-0.5">
-        <p class="text-text-inverse text-lg font-semibold">
+        <p class="text-text-dark text-lg font-semibold">
           {{ props.productTagline }}
         </p>
-        <p class="text-text-inverse-muted text-[13px]">
+        <p class="text-text-muted text-[13px]">
           {{ props.workspaceLabel }}
         </p>
       </div>
     </div>
 
     <div class="flex max-w-[520px] flex-col gap-5 py-12 lg:py-0">
-      <h1 class="text-text-inverse text-[40px] leading-[1.1] font-semibold">
+      <h1 class="text-text-dark text-[40px] leading-[1.1] font-semibold">
         {{ props.heroTitle }}
       </h1>
-      <p class="text-text-inverse/80 max-w-[34rem] text-base leading-7">
+      <p class="text-text-muted max-w-[34rem] text-base leading-7">
         {{ props.heroDescription }}
       </p>
 
@@ -50,25 +50,21 @@ const props = defineProps<{
         <article
           v-for="feature in props.featureCards"
           :key="feature.title"
-          class="rounded-lg border border-white/20 bg-white/10 p-4"
+          class="bg-app-bg shadow-card rounded-lg p-4"
         >
           <div class="flex flex-col gap-2">
-            <p class="text-text-inverse text-base font-semibold">
+            <p class="text-text-dark text-base font-semibold">
               {{ feature.title }}
             </p>
-            <p class="text-text-inverse-muted text-[13px] leading-6">
+            <p class="text-text-muted text-[13px] leading-6">
               {{ feature.description }}
             </p>
           </div>
         </article>
       </div>
-
-      <!-- Optional intro content an app can add below the highlights; renders
-           nothing when the consumer leaves it empty. -->
-      <slot name="hero-footer" />
     </div>
 
-    <div class="text-text-inverse-muted flex flex-wrap gap-4 text-xs font-medium">
+    <div class="text-text-muted flex flex-wrap gap-4 text-xs font-medium">
       <span
         v-for="badge in props.badgeItems"
         :key="badge"
@@ -77,8 +73,7 @@ const props = defineProps<{
       </span>
       <a
         :href="props.counterpartHref"
-        class="text-accent-tint transition hover:underline"
-        data-testid="auth-intro-counterpart"
+        class="text-brand transition hover:underline"
       >
         {{ props.counterpartPrompt }} {{ props.counterpartLabel }}.
       </a>

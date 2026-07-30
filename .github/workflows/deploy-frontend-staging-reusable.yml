@@ -38,8 +38,6 @@ jobs:
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       VITE_ADMIN_APP_URL: ${{ vars.VITE_ADMIN_APP_URL }}
       VITE_USER_APP_URL: ${{ vars.VITE_USER_APP_URL }}
-      # Optional: unset simply hides the login extension link.
-      VITE_EXTENSION_INSTALL_URL: ${{ vars.VITE_EXTENSION_INSTALL_URL }}
 
     steps:
       - name: Check out repository
