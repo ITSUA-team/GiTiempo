@@ -2,6 +2,7 @@ import {
   currentTimeEntryResponseSchema,
   githubSessionRequestSchema,
   loginRequestSchema,
+  logoutRequestSchema,
   refreshRequestSchema,
   startTimerFromGitHubSchema,
   timeEntryResponseSchema,
@@ -27,6 +28,7 @@ export interface ExtensionApiClient {
     code: string,
     verifier: string,
   ): Promise<TokenPairResponse>;
+  exitSession(): Promise<void>;
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
   loginWithFirebaseToken(firebaseIdToken: string): Promise<TokenPairResponse>;
   startTimerFromGitHub(
@@ -153,6 +155,42 @@ export function createExtensionApiClient({
     );
   }
 
+  /**
+   * Ends the session: revoke it with the backend, then clear it locally. The
+   * clear happens whatever the revoke did, because leaving a session the user
+   * asked to end is worse than leaving a refresh token to expire on its own —
+   * the same ordering and the same tolerance as `logout()` in web-shared.
+   *
+   * Deliberately not routed through `requestWithAuth`: the endpoint answers `204`
+   * with no body, which a response-schema parse cannot consume, and a revoke has
+   * no response worth parsing anyway.
+   */
+  async function exitSession(): Promise<void> {
+    const session = await getStoredSession(storage);
+
+    try {
+      if (session) {
+        // The response status is not inspected: a refused or failed revoke leads
+        // to the same local clear, so branching on it would only add a path that
+        // behaves identically.
+        await fetchFn(getRequestUrl(config, "/auth/logout"), {
+          body: JSON.stringify(
+            logoutRequestSchema.parse({ refreshToken: session.refreshToken }),
+          ),
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+        });
+      }
+    } catch {
+      // A revoke we cannot reach must not keep the user signed in locally.
+    } finally {
+      await clearStoredSession(storage);
+    }
+  }
+
   async function refreshSession(
     refreshToken: string,
   ): Promise<TokenPairResponse | null> {
@@ -241,6 +279,7 @@ export function createExtensionApiClient({
 
   return {
     exchangeGithubSession,
+    exitSession,
     getCurrentTimer() {
       return requestWithAuth({
         path: "/time-entries/current",

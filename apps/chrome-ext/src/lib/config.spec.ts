@@ -14,6 +14,7 @@ describe("getExtensionConfig", () => {
       githubSignInEnabled: false,
       googleOAuthClientId: "test-google-client-id.apps.googleusercontent.com",
       userSpaHomeUrl: "http://localhost:5173",
+      userSpaProfileUrl: "http://localhost:5173/profile",
       userSpaUrl: "http://localhost:5173/login",
     });
   });
@@ -64,7 +65,26 @@ describe("getExtensionConfig", () => {
       githubSignInEnabled: false,
       googleOAuthClientId: "google-client-id.apps.googleusercontent.com",
       userSpaHomeUrl: "https://app.example.com",
+      userSpaProfileUrl: "https://app.example.com/profile",
       userSpaUrl: "https://app.example.com/login",
+    });
+  });
+
+  describe("userSpaProfileUrl", () => {
+    it.each([
+      ["http://localhost:5173/login", "http://localhost:5173/profile"],
+      ["https://app.example.com/login/", "https://app.example.com/profile"],
+      ["https://app.example.com", "https://app.example.com/profile"],
+    ])("derives %o into %o", (configured, expected) => {
+      const config = getExtensionConfig({
+        MODE: "test",
+        VITE_EXTENSION_USER_SPA_URL: configured,
+      });
+
+      expect(config.userSpaProfileUrl).toBe(expected);
+      // Both links the extension renders come off the same origin, so a change to
+      // one cannot silently point the other somewhere else.
+      expect(config.userSpaProfileUrl.startsWith(config.userSpaHomeUrl)).toBe(true);
     });
   });
 

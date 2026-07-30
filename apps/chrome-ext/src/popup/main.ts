@@ -36,6 +36,7 @@ interface PopupState {
   email: string;
   errorMessage: string | null;
   githubSignInEnabled: boolean;
+  isAccountMenuOpen: boolean;
   isLoading: boolean;
   isSubmitting: boolean;
   pageContext: PageContext | null;
@@ -87,19 +88,80 @@ function renderHomeButton(): string {
   `;
 }
 
-function renderUserAvatar(user: SnapshotUser): string {
-  return `<div data-testid="popup-user-avatar" title="${escapeHtml(user.displayName ?? user.email)}" class="bg-accent-tint text-brand flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold">${escapeHtml(getUserInitials(user))}</div>`;
+function renderUserAvatar(user: SnapshotUser, isMenuOpen: boolean): string {
+  // Expanded state swaps the tint for the brand fill, so the trigger reads as
+  // held open rather than merely hovered.
+  const stateClass = isMenuOpen
+    ? "bg-brand text-text-inverse"
+    : "bg-accent-tint text-brand";
+
+  return `<button data-action="toggle-account-menu" data-testid="popup-user-avatar" type="button" aria-expanded="${isMenuOpen ? "true" : "false"}" aria-label="Open account menu for ${escapeHtml(user.displayName ?? user.email)}" title="${escapeHtml(user.displayName ?? user.email)}" class="${stateClass} flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">${escapeHtml(getUserInitials(user))}</button>`;
 }
 
-function renderBrandHeader({
-  authenticated = false,
-  user = null,
-}: {
-  authenticated?: boolean;
-  user?: SnapshotUser | null;
-} = {}): string {
+const popupProfileIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>`;
+const popupSignOutIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>`;
+const popupMenuItemClass =
+  "flex w-full cursor-pointer items-center gap-2.5 rounded-sm px-2.5 py-2 text-left text-[13px] font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+
+/**
+ * The running-timer block. It exists because signing out leaves the timer
+ * running, and the panel covers the state that would otherwise show it — so the
+ * timer is carried in here rather than merely warned about.
+ */
+function renderAccountMenuTimer(
+  timer: NonNullable<RuntimeSnapshot["currentTimer"]>,
+  now: number,
+): string {
+  const task = timer.task?.title
+    ? `#${timer.githubIssue?.issueNumber ?? ""} ${timer.task.title}`.trim()
+    : timer.project.name;
+
+  return `
+    <div class="bg-status-active-bg text-status-active-text flex flex-col gap-1 rounded-sm px-2.5 py-2">
+      <p class="m-0 text-[13px] font-bold">${escapeHtml(formatElapsedTime(timer.startedAt, now))}</p>
+      <p class="m-0 text-[11px]">${escapeHtml(task)}</p>
+      <p class="m-0 text-[11px] font-semibold">Keeps running after sign out</p>
+    </div>
+  `;
+}
+
+function renderAccountMenu(state: PopupState, now: number): string {
+  const user = state.snapshot?.user;
+
+  if (!user) {
+    return "";
+  }
+
+  const timer = state.snapshot?.currentTimer ?? null;
+  const displayName = user.displayName?.trim();
+
+  return `
+    <div data-region="account-menu" data-testid="popup-account-menu" role="menu" class="border-divider bg-surface-primary absolute right-0 top-9 z-10 flex w-[220px] flex-col gap-0.5 rounded-md border p-1.5 shadow-lg">
+      <div class="flex flex-col gap-0.5 px-2.5 py-2">
+        ${displayName ? `<p class="m-0 truncate text-[13px] font-semibold text-text-dark">${escapeHtml(displayName)}</p>` : ""}
+        <p class="m-0 truncate text-xs text-text-muted">${escapeHtml(user.email)}</p>
+      </div>
+      ${timer ? renderAccountMenuTimer(timer, now) : ""}
+      <div class="bg-divider my-0.5 h-px" aria-hidden="true"></div>
+      <a href="${escapeHtml(config.userSpaProfileUrl)}" target="_blank" rel="noreferrer" role="menuitem" data-action="open-profile" class="${popupMenuItemClass} text-text-dark hover:bg-app-bg">${popupProfileIconSvg}Open profile</a>
+      <button type="button" role="menuitem" data-action="sign-out" class="${popupMenuItemClass} text-destructive hover:bg-destructive/5" ${state.isSubmitting ? "disabled" : ""}>${popupSignOutIconSvg}Sign out</button>
+    </div>
+  `;
+}
+
+function renderBrandHeader(
+  {
+    authenticated = false,
+    user = null,
+  }: {
+    authenticated?: boolean;
+    user?: SnapshotUser | null;
+  } = {},
+  menu = "",
+  isMenuOpen = false,
+): string {
   const headerActions = authenticated
-    ? `<div class="flex items-center gap-2">${renderHomeButton()}${user ? renderUserAvatar(user) : ""}</div>`
+    ? `<div class="relative flex items-center gap-2">${renderHomeButton()}${user ? renderUserAvatar(user, isMenuOpen) : ""}${menu}</div>`
     : "";
 
   return `
@@ -175,7 +237,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
     return `
       <div class="flex h-full flex-col gap-6">
-        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
+        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state, nowMs) : "", state.isAccountMenuOpen)}
         <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
           <div class="bg-status-error-bg text-status-error-text flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
           <p class="m-0 text-lg font-semibold text-text-dark">Connection lost</p>
@@ -194,7 +256,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
     return `
       <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
+        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state, nowMs) : "", state.isAccountMenuOpen)}
         <div class="bg-app-bg flex flex-col items-center gap-3 rounded-lg p-5 text-center">
           <div class="bg-status-active-bg text-status-active-text flex items-center rounded-sm px-3 py-1 text-xs font-semibold">Running timer</div>
           <p class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
@@ -211,7 +273,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
   if (state.pageContext?.kind === "supported") {
     return `
       <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
+        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state, nowMs) : "", state.isAccountMenuOpen)}
         ${renderIssueCard(state.pageContext)}
         <div class="mt-auto flex flex-col gap-3">
           <button data-action="start-timer" class="${popupPrimaryButtonClass}">Start Timer</button>
@@ -222,7 +284,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
   return `
     <div class="flex h-full flex-col gap-5">
-      ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
+      ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state, nowMs) : "", state.isAccountMenuOpen)}
       <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
         <p class="m-0 text-xs font-medium text-text-muted">GitHub issue required</p>
         <p class="m-0 text-lg font-semibold text-text-dark">Open a supported GitHub issue to start a timer.</p>
@@ -296,6 +358,7 @@ export function createPopupApp({
     email: "",
     errorMessage: null,
     githubSignInEnabled,
+    isAccountMenuOpen: false,
     isLoading: true,
     isSubmitting: false,
     pageContext: null,
@@ -309,6 +372,53 @@ export function createPopupApp({
     state.snapshot = snapshot;
     render();
   });
+
+  function closeAccountMenu(): void {
+    if (!state.isAccountMenuOpen) {
+      return;
+    }
+
+    state.isAccountMenuOpen = false;
+    render();
+  }
+
+  // Registered once on the document rather than inside `bindEvents`, which runs on
+  // every render — once a second while a timer ticks — and would otherwise stack a
+  // new listener per frame.
+  function handleDocumentKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape") {
+      closeAccountMenu();
+    }
+  }
+
+  function handleDocumentPointerDown(event: Event): void {
+    if (!state.isAccountMenuOpen) {
+      return;
+    }
+
+    const target = event.target;
+
+    if (!(target instanceof Node)) {
+      closeAccountMenu();
+      return;
+    }
+
+    // The trigger has its own toggle handler, so ignoring it here keeps a click on
+    // the avatar from closing and reopening in the same gesture.
+    const withinMenu = root
+      .querySelector('[data-region="account-menu"]')
+      ?.contains(target);
+    const withinTrigger = root
+      .querySelector('[data-action="toggle-account-menu"]')
+      ?.contains(target);
+
+    if (!withinMenu && !withinTrigger) {
+      closeAccountMenu();
+    }
+  }
+
+  document.addEventListener("keydown", handleDocumentKeydown);
+  document.addEventListener("pointerdown", handleDocumentPointerDown);
 
   function syncTicker(): void {
     if (intervalHandle) {
@@ -329,6 +439,18 @@ export function createPopupApp({
     });
     root.querySelector('[data-action="github-sign-in"]')?.addEventListener("click", () => {
       void handleGithubSignIn();
+    });
+    root
+      .querySelector('[data-action="toggle-account-menu"]')
+      ?.addEventListener("click", () => {
+        state.isAccountMenuOpen = !state.isAccountMenuOpen;
+        render();
+      });
+    root.querySelector('[data-action="open-profile"]')?.addEventListener("click", () => {
+      closeAccountMenu();
+    });
+    root.querySelector('[data-action="sign-out"]')?.addEventListener("click", () => {
+      void handleSignOut();
     });
     root.querySelector('[data-action="toggle-email"]')?.addEventListener("click", () => {
       state.showEmailForm = !state.showEmailForm;
@@ -419,6 +541,31 @@ export function createPopupApp({
       state.errorMessage =
         error instanceof Error ? error.message : "Unable to sign in with Google.";
     } finally {
+      state.isSubmitting = false;
+      render();
+    }
+  }
+
+  async function handleSignOut(): Promise<void> {
+    state.isSubmitting = true;
+    state.errorMessage = null;
+    render();
+
+    try {
+      const result = await runtimeClient.signOut();
+
+      // The snapshot the service worker rebuilt after clearing the session is what
+      // returns the popup to its unauthenticated state, rather than this handler
+      // asserting that state itself and risking a different answer.
+      state.snapshot = result.snapshot;
+      state.errorMessage = result.ok
+        ? null
+        : result.errorMessage ?? "Unable to sign out.";
+    } catch (error) {
+      state.errorMessage =
+        error instanceof Error ? error.message : "Unable to sign out.";
+    } finally {
+      state.isAccountMenuOpen = false;
       state.isSubmitting = false;
       render();
     }
@@ -521,6 +668,8 @@ export function createPopupApp({
   return {
     destroy() {
       unsubscribe();
+      document.removeEventListener("keydown", handleDocumentKeydown);
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
 
       if (intervalHandle) {
         clearIntervalFn(intervalHandle);

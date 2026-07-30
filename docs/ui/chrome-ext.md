@@ -24,6 +24,16 @@
 - Resolve avatar initials from the session user, falling back to the running timer's user; omit the avatar when neither is available.
 - Loading and unauthenticated states render the header without the trailing slot.
 
+### Account Menu
+
+- The avatar is the account trigger, matching the web apps, where the same menu opens from the avatar rather than from the logo. It reports itself expanded and takes the brand fill while open.
+- Anchored under the avatar, over the state beneath. Dismissed by escape, by a pointer outside it, or by choosing an action; dismissing changes nothing underneath.
+- Contents, in order: the member's identity, the running-timer block when a timer is active, then `Open profile` and `Sign out`. Two actions and no more — workspace switching and settings are out of scope for the popup.
+- Identity is the display name over the email, or **the email alone** when the snapshot carries no display name, which is the common case outside a running timer.
+- The running-timer block shows the elapsed time and task, because the panel covers the state that would otherwise show them, and because signing out leaves the timer running. It says so explicitly rather than leaving the outcome to be discovered.
+- `Sign out` revokes the session with the backend and then clears extension storage, clearing locally even when the revoke fails. Afterwards the popup and any injected issue control both fall back to their unauthenticated behaviour. It does **not** stop a running timer: the timer belongs to the workspace, not to the client that started it.
+- No menu is reachable in the loading or unauthenticated states, which have no avatar and no session to act on.
+
 ## States
 
 ### Unauthenticated

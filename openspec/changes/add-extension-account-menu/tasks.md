@@ -8,39 +8,39 @@
 
 ## 2. Extension: config and session exit
 
-- [ ] 2.1 Add `userSpaProfileUrl` to `apps/chrome-ext/src/lib/config.ts`, resolved from `VITE_EXTENSION_USER_SPA_URL` beside the existing `userSpaHomeUrl`, so both user-web routes the extension links to are derived in one module. No new environment variable.
-- [ ] 2.2 Add `exitSession()` to `src/lib/api.ts`: post the stored refresh token to `POST /auth/logout`, then clear extension storage. It cannot reuse `requestWithAuth`, which parses a response schema and would choke on the endpoint's `204`; it needs the narrowest authenticated request of the three shapes in that file, tolerating an empty body.
-- [ ] 2.3 Swallow a failed revoke and clear locally anyway, matching `logout()` in `packages/web-shared/src/auth/session-core.ts`. Reuse `logoutRequestSchema` from `packages/shared` rather than restating the body shape.
-- [ ] 2.4 Add `signOut()` to the runtime client and an `auth/sign-out` message, handled in `src/background/main.ts` through the existing mutation wrapper so the snapshot is rebuilt and broadcast to the popup and to any injected control.
+- [x] 2.1 Add `userSpaProfileUrl` to `apps/chrome-ext/src/lib/config.ts`, resolved from `VITE_EXTENSION_USER_SPA_URL` beside the existing `userSpaHomeUrl`, so both user-web routes the extension links to are derived in one module. No new environment variable. — Added `deriveProfileUrl`, which reuses `deriveHomeUrl` so both links share one origin assumption and degrade the same way on an unparseable value.
+- [x] 2.2 Add `exitSession()` to `src/lib/api.ts`: post the stored refresh token to `POST /auth/logout`, then clear extension storage. It cannot reuse `requestWithAuth`, which parses a response schema and would choke on the endpoint's `204`; it needs the narrowest authenticated request of the three shapes in that file, tolerating an empty body. — Confirmed while writing it: `requestWithAuth` would indeed have failed on the `204`, so `exitSession` is a third request shape that sends a bearer token and reads nothing back.
+- [x] 2.3 Swallow a failed revoke and clear locally anyway, matching `logout()` in `packages/web-shared/src/auth/session-core.ts`. Reuse `logoutRequestSchema` from `packages/shared` rather than restating the body shape.
+- [x] 2.4 Add `signOut()` to the runtime client and an `auth/sign-out` message, handled in `src/background/main.ts` through the existing mutation wrapper so the snapshot is rebuilt and broadcast to the popup and to any injected control. — The mutation wrapper turned out to be exactly right: it rebuilds the snapshot *after* storage is cleared, so `loadSnapshot` naturally returns the unauthenticated shape and broadcasts it, with no surface told separately.
 
 ## 3. Extension: the account menu
 
-- [ ] 3.1 Turn the header avatar into a `<button>` carrying `aria-expanded` and a label naming the action, and keep the initials, title, and appearance the header already specifies.
-- [ ] 3.2 Hold the open state as `isAccountMenuOpen` on popup state, not in the DOM. The popup re-renders `innerHTML` every second while a timer runs, so DOM-held state would be destroyed by the next tick; `showEmailForm` is the existing precedent.
-- [ ] 3.3 Render the panel per the frame approved in 1.5: the member's identity, the profile action, and sign out, and nothing else.
-- [ ] 3.4 Close the menu on escape, on pointer-down outside it, and on choosing an action, resetting the flag in each case so a re-render cannot resurrect it.
-- [ ] 3.5 Wire the profile action to open `userSpaProfileUrl` in a new tab, with the same `target`/`rel` treatment the header's home action already uses.
-- [ ] 3.6 Wire sign out to the runtime client, then let the broadcast snapshot return the popup to its unauthenticated state rather than setting that state by hand.
+- [x] 3.1 Turn the header avatar into a `<button>` carrying `aria-expanded` and a label naming the action, and keep the initials, title, and appearance the header already specifies.
+- [x] 3.2 Hold the open state as `isAccountMenuOpen` on popup state, not in the DOM. The popup re-renders `innerHTML` every second while a timer runs, so DOM-held state would be destroyed by the next tick; `showEmailForm` is the existing precedent.
+- [x] 3.3 Render the panel per the frame approved in 1.5: the member's identity, the profile action, and sign out, and nothing else.
+- [x] 3.4 Close the menu on escape, on pointer-down outside it, and on choosing an action, resetting the flag in each case so a re-render cannot resurrect it. — Escape and outside-pointer listeners are registered **once on the document** in `createPopupApp`, not in `bindEvents`: the latter runs on every render, so it would have stacked one listener per second while a timer ticks. Removed in `destroy()`. The trigger is excluded from the outside test so a click on the avatar does not close and reopen in one gesture.
+- [x] 3.5 Wire the profile action to open `userSpaProfileUrl` in a new tab, with the same `target`/`rel` treatment the header's home action already uses.
+- [x] 3.6 Wire sign out to the runtime client, then let the broadcast snapshot return the popup to its unauthenticated state rather than setting that state by hand.
 
 ## 4. Extension tests
 
-- [ ] 4.1 `popup/main.spec.ts`: the avatar opens the menu and reports `aria-expanded`; the menu offers exactly the two actions; the header home action stays reachable while it is open.
-- [ ] 4.2 `popup/main.spec.ts`: the menu closes on escape, on an outside pointer, and on choosing an action, and dismissing it leaves the state beneath unchanged.
-- [ ] 4.3 `popup/main.spec.ts`: an open menu survives a snapshot tick while a timer runs. This is the regression a screenshot cannot show and the one D4 exists to prevent.
-- [ ] 4.4 `popup/main.spec.ts`: no menu is reachable in the loading or unauthenticated states.
-- [ ] 4.5 `popup/main.spec.ts`: signing out reaches the runtime client, and the popup follows the broadcast snapshot to the unauthenticated state.
-- [ ] 4.6 `lib/api.spec.ts`: `exitSession` posts the refresh token to the logout endpoint and clears storage; a rejected revoke still clears; a `204` with no body is not treated as a failure.
-- [ ] 4.7 `lib/config.spec.ts`: `userSpaProfileUrl` is derived from the same origin as `userSpaHomeUrl`, including when the configured sign-in URL carries a path or a trailing slash.
+- [x] 4.1 `popup/main.spec.ts`: the avatar opens the menu and reports `aria-expanded`; the menu offers exactly the two actions; the header home action stays reachable while it is open.
+- [x] 4.2 `popup/main.spec.ts`: the menu closes on escape, on an outside pointer, and on choosing an action, and dismissing it leaves the state beneath unchanged.
+- [x] 4.3 `popup/main.spec.ts`: an open menu survives a snapshot tick while a timer runs. This is the regression a screenshot cannot show and the one D4 exists to prevent. — Written twice. The first version created a second app on the same DOM and could have passed by accident; the rewrite uses one app, asserts the ticker was actually registered, and asserts the menu node is a *different element* afterwards — proving a re-render happened rather than assuming it.
+- [x] 4.4 `popup/main.spec.ts`: no menu is reachable in the loading or unauthenticated states.
+- [x] 4.5 `popup/main.spec.ts`: signing out reaches the runtime client, and the popup follows the broadcast snapshot to the unauthenticated state.
+- [x] 4.6 `lib/api.spec.ts`: `exitSession` posts the refresh token to the logout endpoint and clears storage; a rejected revoke still clears; a `204` with no body is not treated as a failure. — Four cases: the `204` success shape, an unreachable revoke, a refused revoke, and no stored session (where the backend is not called at all).
+- [x] 4.7 `lib/config.spec.ts`: `userSpaProfileUrl` is derived from the same origin as `userSpaHomeUrl`, including when the configured sign-in URL carries a path or a trailing slash. — Table-driven over a path, a trailing slash, and a bare origin, and asserts the profile URL starts with the home URL so the two cannot drift apart.
 
 ## 5. Docs
 
-- [ ] 5.1 Update `docs/ui/chrome-ext.md`: the header avatar opens an account menu, what the menu contains, and that signing out leaves a running timer running. Describe the header once rather than per state, as that file already does.
+- [x] 5.1 Update `docs/ui/chrome-ext.md`: the header avatar opens an account menu, what the menu contains, and that signing out leaves a running timer running. Describe the header once rather than per state, as that file already does.
 
 ## 6. Verification
 
-- [ ] 6.1 `pnpm --filter chrome-ext typecheck`, `test`, and `build`, per `apps/chrome-ext/AGENTS.md`.
-- [ ] 6.2 Confirm the extension still imports nothing from `packages/web-shared` and no PrimeVue, Vue Router, Pinia, or SPA bootstrap module.
-- [ ] 6.3 Confirm no API change was needed: `POST /auth/logout` is untouched and `packages/shared/openapi.json` is unchanged by this work.
+- [x] 6.1 `pnpm --filter chrome-ext typecheck`, `test`, and `build`, per `apps/chrome-ext/AGENTS.md`. — typecheck, lint, build clean; 126 tests pass (was 110).
+- [x] 6.2 Confirm the extension still imports nothing from `packages/web-shared` and no PrimeVue, Vue Router, Pinia, or SPA bootstrap module. — Clean. One grep hit at `lib/api.ts:162` is the word `web-shared` inside a JSDoc comment, not an import; an import-only grep returns nothing.
+- [x] 6.3 Confirm no API change was needed: `POST /auth/logout` is untouched and `packages/shared/openapi.json` is unchanged by this work. — Confirmed: `git status` shows no change under `apps/api` or to `packages/shared/openapi.json`.
 
 ## 7. Manual verification
 

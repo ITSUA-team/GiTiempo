@@ -144,6 +144,89 @@ describe("createExtensionApiClient", () => {
     expect(data).toEqual({});
   });
 
+  it("revokes the session with the backend and then clears it locally", async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+    const { data, storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn,
+      storage,
+    });
+
+    await client.exitSession();
+
+    expect(fetchFn).toHaveBeenCalledWith("http://localhost:3000/auth/logout", {
+      body: JSON.stringify({ refreshToken: "refresh-token" }),
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+    // A 204 with no body is the endpoint's success shape, not a failure.
+    expect(data).toEqual({});
+  });
+
+  it("clears the local session even when the revoke fails", async () => {
+    const { data, storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn: vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+      storage,
+    });
+
+    // Leaving a session the user asked to end is worse than leaving a refresh
+    // token to expire on its own, so an unreachable revoke must not throw here.
+    await expect(client.exitSession()).resolves.toBeUndefined();
+    expect(data).toEqual({});
+  });
+
+  it("clears the local session when the backend refuses the revoke", async () => {
+    const { data, storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn: vi.fn(async () => jsonResponse({ message: "Unauthorized" }, { status: 401 })),
+      storage,
+    });
+
+    await client.exitSession();
+
+    expect(data).toEqual({});
+  });
+
+  it("does not call the backend when there is no stored session", async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn,
+      storage: createStorage().storage,
+    });
+
+    await client.exitSession();
+
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
   it("maps login gateway failures to a temporary API outage message", async () => {
     const client = createExtensionApiClient({
       config: createTestConfig(),

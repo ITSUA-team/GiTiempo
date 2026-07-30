@@ -167,6 +167,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         );
         return;
       }
+      case "auth/sign-out": {
+        // Through the mutation wrapper so the snapshot is rebuilt after the
+        // session is gone and broadcast to the popup and any injected control,
+        // rather than each surface being told separately.
+        sendResponse(await handleMutation(() => apiClient.exitSession()));
+        return;
+      }
       case "runtime/get-snapshot": {
         sendResponse(await loadSnapshot());
         return;
