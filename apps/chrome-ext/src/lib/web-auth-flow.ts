@@ -13,9 +13,15 @@ export function launchWebAuthFlow(
   url: string,
   providerLabel: string,
 ): Promise<string> {
+  // Rejected rather than thrown, so every failure of this function is a rejection
+  // regardless of which one it is. A synchronous throw from a Promise-returning
+  // function escapes `.catch()`, which would make the one failure that needs no
+  // user interaction the only one a caller can miss.
   if (!chrome.identity?.launchWebAuthFlow) {
-    throw new Error(
-      `${providerLabel} sign-in is unavailable because the Chrome identity API is not accessible.`,
+    return Promise.reject(
+      new Error(
+        `${providerLabel} sign-in is unavailable because the Chrome identity API is not accessible.`,
+      ),
     );
   }
 

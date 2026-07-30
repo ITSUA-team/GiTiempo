@@ -23,11 +23,20 @@ export interface GithubSignInHandoff {
   verifier: string;
 }
 
+/**
+ * Lower-case hex, the encoding the backend recomputes and compares against. Both
+ * the verifier and its challenge go through here, so the two cannot drift into
+ * different encodings and fail the comparison for a reason neither side reports.
+ */
+function toHex(bytes: Uint8Array): string {
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 /** 32 random bytes as hex: 64 chars, well inside the contract's bounds. */
 export function createVerifier(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
-  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return toHex(bytes);
 }
 
 export async function deriveChallenge(verifier: string): Promise<string> {
@@ -35,9 +44,7 @@ export async function deriveChallenge(verifier: string): Promise<string> {
     "SHA-256",
     new TextEncoder().encode(verifier),
   );
-  return [...new Uint8Array(digest)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return toHex(new Uint8Array(digest));
 }
 
 export function buildGithubSignInStartUrl(
