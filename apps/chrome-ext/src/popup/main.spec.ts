@@ -51,6 +51,7 @@ function currentTimer(): RuntimeSnapshot["currentTimer"] {
 
 function createRuntimeClient(overrides?: {
   exchangeFirebaseToken?: RuntimeClient["exchangeFirebaseToken"];
+  exchangeGithubSession?: RuntimeClient["exchangeGithubSession"];
   snapshot?: RuntimeSnapshot;
   startTimer?: RuntimeClient["startTimer"];
   stopTimer?: () => Promise<RuntimeMutationResult>;
@@ -58,6 +59,12 @@ function createRuntimeClient(overrides?: {
   return {
     exchangeFirebaseToken:
       overrides?.exchangeFirebaseToken ??
+      vi.fn(async (): Promise<RuntimeAuthResult> => ({
+        ok: true,
+        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      })),
+    exchangeGithubSession:
+      overrides?.exchangeGithubSession ??
       vi.fn(async (): Promise<RuntimeAuthResult> => ({
         ok: true,
         snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
@@ -127,8 +134,100 @@ describe("popup app", () => {
 
     await app.load();
 
-    expect(document.body.textContent).toContain("Sign in with Google");
+    expect(document.body.textContent).toContain("Continue with Google");
     expect(document.body.textContent).toContain("Sign in with email");
+  });
+
+  it("offers GitHub sign-in when the build enables it", async () => {
+    const app = createPopupApp({
+      githubSignInEnabled: true,
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient: createRuntimeClient(),
+      pageContextResolver: async () => ({ kind: "unsupported" }),
+    });
+
+    await app.load();
+
+    expect(document.body.textContent).toContain("Continue with GitHub");
+    expect(
+      document.querySelector('[data-action="github-sign-in"]'),
+    ).not.toBeNull();
+  });
+
+  it("hides GitHub sign-in when the build does not enable it, leaving the others", async () => {
+    const app = createPopupApp({
+      githubSignInEnabled: false,
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient: createRuntimeClient(),
+      pageContextResolver: async () => ({ kind: "unsupported" }),
+    });
+
+    await app.load();
+
+    expect(document.querySelector('[data-action="github-sign-in"]')).toBeNull();
+    expect(document.body.textContent).not.toContain("Continue with GitHub");
+    expect(document.body.textContent).toContain("Continue with Google");
+    expect(document.body.textContent).toContain("Sign in with email");
+  });
+
+  it("exchanges the GitHub handoff code and reaches a signed-in state", async () => {
+    const exchangeGithubSession = vi.fn(async () => ({
+      ok: true,
+      snapshot: {
+        authenticated: true,
+        currentTimer: null,
+        errorMessage: null,
+        user: null,
+      },
+    }));
+    const runtimeClient = createRuntimeClient({ exchangeGithubSession });
+    const signInWithGithubFn = vi.fn(async () => "handoff-code");
+    const app = createPopupApp({
+      githubSignInEnabled: true,
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient,
+      pageContextResolver: async () => ({ kind: "unsupported" }),
+      signInWithGithubFn,
+    });
+
+    await app.load();
+    document
+      .querySelector<HTMLButtonElement>('[data-action="github-sign-in"]')!
+      .click();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(signInWithGithubFn).toHaveBeenCalledOnce();
+    expect(exchangeGithubSession).toHaveBeenCalledWith("handoff-code");
+    // Firebase is not part of this path.
+    expect(runtimeClient.exchangeFirebaseToken).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a GitHub sign-in failure and re-enables the action", async () => {
+    const app = createPopupApp({
+      githubSignInEnabled: true,
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient: createRuntimeClient(),
+      pageContextResolver: async () => ({ kind: "unsupported" }),
+      signInWithGithubFn: vi.fn(async () => {
+        throw new Error("GitHub sign-in was declined. Authorize GiTiempo to continue.");
+      }),
+    });
+
+    await app.load();
+    document
+      .querySelector<HTMLButtonElement>('[data-action="github-sign-in"]')!
+      .click();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.body.textContent).toContain("GitHub sign-in was declined");
+    expect(
+      document.querySelector<HTMLButtonElement>('[data-action="github-sign-in"]')
+        ?.disabled,
+    ).toBe(false);
   });
 
   it("submits Google sign-in through Firebase and exchanges the token", async () => {
@@ -306,7 +405,7 @@ describe("popup app", () => {
     expect(document.body.textContent).toContain(
       "GiTiempo API is temporarily unavailable. Please try again in a moment.",
     );
-    expect(document.body.textContent).toContain("Sign in with Google");
+    expect(document.body.textContent).toContain("Continue with Google");
   });
 
   it("renders the authenticated no-timer popup state on supported issue pages", async () => {

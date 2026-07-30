@@ -159,6 +159,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse(await handleAuthExchange(request.firebaseIdToken));
         return;
       }
+      case "auth/exchange-github-session": {
+        sendResponse(
+          await handleMutation(() => apiClient.exchangeGithubSession(request.code)),
+        );
+        return;
+      }
       case "runtime/get-snapshot": {
         sendResponse(await loadSnapshot());
         return;

@@ -30,32 +30,32 @@
 
 ## 5. Extension: GitHub sign-in
 
-- [ ] 5.1 Add `githubSignInEnabled` to `apps/chrome-ext/src/lib/config.ts` from `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED`, default off and true only on a strict `'true'`, and document the variable in `apps/chrome-ext/.env.example`.
-- [ ] 5.2 Add `src/lib/github-signin.ts` that launches `chrome.identity.launchWebAuthFlow` against `${apiBaseUrl}/auth/github/start?app=extension` and reads `code` or `githubError` from the resolved redirect URL. Keep it out of `lib/firebase.ts`, which stays Firebase-only.
-- [ ] 5.3 Map each error indicator to distinct recoverable copy, and distinguish a closed authorization window — surfaced through `chrome.runtime.lastError`, as the Google flow already handles — as a cancellation rather than a backend or configuration failure.
-- [ ] 5.4 Add an `exchangeGithubSession(code)` method to `src/lib/api.ts` beside `loginWithFirebaseToken`, reusing the existing `tokenPairResponseSchema` parsing and `setStoredSession` so the stored session shape is unchanged.
-- [ ] 5.5 Render the GitHub action in the popup's unauthenticated state per the frame approved in 1.4, gated on the flag, using the existing injectable-dependency pattern in `src/popup/main.ts` so the flow stays testable.
-- [ ] 5.6 Confirm the generated manifest needs no change: the `identity` permission and the API host permission the flow requires are already emitted by `vite.config.ts`, and `launchWebAuthFlow` against a non-Google URL needs no `oauth2` entry.
+- [x] 5.1 Add `githubSignInEnabled` to `apps/chrome-ext/src/lib/config.ts` from `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED`, default off and true only on a strict `'true'`, and document the variable in `apps/chrome-ext/.env.example`.
+- [x] 5.2 Add `src/lib/github-signin.ts` that launches `chrome.identity.launchWebAuthFlow` against `${apiBaseUrl}/auth/github/start?app=extension` and reads `code` or `githubError` from the resolved redirect URL. Keep it out of `lib/firebase.ts`, which stays Firebase-only.
+- [x] 5.3 Map each error indicator to distinct recoverable copy, and distinguish a closed authorization window — surfaced through `chrome.runtime.lastError`, as the Google flow already handles — as a cancellation rather than a backend or configuration failure.
+- [x] 5.4 Add an `exchangeGithubSession(code)` method to `src/lib/api.ts` beside `loginWithFirebaseToken`, reusing the existing `tokenPairResponseSchema` parsing and `setStoredSession` so the stored session shape is unchanged.
+- [x] 5.5 Render the GitHub action in the popup's unauthenticated state per the frame approved in 1.4, gated on the flag, using the existing injectable-dependency pattern in `src/popup/main.ts` so the flow stays testable.
+- [x] 5.6 Confirm the generated manifest needs no change: the `identity` permission and the API host permission the flow requires are already emitted by `vite.config.ts`, and `launchWebAuthFlow` against a non-Google URL needs no `oauth2` entry.
 
 ## 6. Extension tests
 
-- [ ] 6.1 `lib/github-signin.spec.ts`: start URL carries the extension target; a resolved redirect with a code returns it; each `githubError` indicator maps to its copy; a closed window reports cancellation.
-- [ ] 6.2 `lib/api.spec.ts`: the session exchange posts the handoff code, stores the returned token pair, and surfaces API failures through the existing error mapping.
-- [ ] 6.3 `popup/main.spec.ts`: the GitHub action appears when the flag is enabled and is absent when it is not, and a completed GitHub sign-in moves the popup to a signed-in state. Update the existing unauthenticated-state literals, which assert popup markup exactly.
-- [ ] 6.4 `lib/config.spec.ts`: the flag defaults off, is true only on a strict `'true'`, and leaves the Google and email paths unaffected.
+- [x] 6.1 `lib/github-signin.spec.ts`: start URL carries the extension target; a resolved redirect with a code returns it; each `githubError` indicator maps to its copy; a closed window reports cancellation.
+- [x] 6.2 `lib/api.spec.ts`: the session exchange posts the handoff code, stores the returned token pair, and surfaces API failures through the existing error mapping.
+- [x] 6.3 `popup/main.spec.ts`: the GitHub action appears when the flag is enabled and is absent when it is not, and a completed GitHub sign-in moves the popup to a signed-in state. Update the existing unauthenticated-state literals, which assert popup markup exactly.
+- [x] 6.4 `lib/config.spec.ts`: the flag defaults off, is true only on a strict `'true'`, and leaves the Google and email paths unaffected.
 
 ## 7. Docs
 
-- [ ] 7.1 Update `docs/ui/chrome-ext.md` with the popup's sign-in actions and the flag that gates the GitHub one, describing the shared arrangement once rather than per state.
-- [ ] 7.2 Add `GITHUB_SIGNIN_EXTENSION_REDIRECT_URL` to `docs/deployment.md`, noting that it is optional, that the flow fails closed when unset, and that the extension id — and therefore the value — differs between an unpacked development build and a published one.
-- [ ] 7.3 Note in `docs/deployment.md` that the extension origin must be present in `ALLOWED_ORIGINS`, since the session exchange fails on CORS otherwise. `deploy/github-environment.staging.example.env` already carries the placeholder.
+- [x] 7.1 Update `docs/ui/chrome-ext.md` with the popup's sign-in actions and the flag that gates the GitHub one, describing the shared arrangement once rather than per state.
+- [x] 7.2 Add `GITHUB_SIGNIN_EXTENSION_REDIRECT_URL` to `docs/deployment.md`, noting that it is optional, that the flow fails closed when unset, and that the extension id — and therefore the value — differs between an unpacked development build and a published one.
+- [x] 7.3 Note in `docs/deployment.md` that the extension origin must be present in `ALLOWED_ORIGINS`, since the session exchange fails on CORS otherwise. `deploy/github-environment.staging.example.env` already carries the placeholder.
 
 ## 8. Verification
 
-- [ ] 8.1 `pnpm --filter @gitiempo/api lint typecheck test`.
-- [ ] 8.2 `pnpm --filter chrome-ext typecheck`, `test`, and `build`, per `apps/chrome-ext/AGENTS.md`.
+- [x] 8.1 `pnpm --filter @gitiempo/api lint typecheck test`.
+- [x] 8.2 `pnpm --filter chrome-ext typecheck`, `test`, and `build`, per `apps/chrome-ext/AGENTS.md`.
 - [ ] 8.3 If 2.3 applied, run `packages/shared`'s vitest suite and confirm `packages/shared/openapi.json` is current, since typecheck and build do not catch stale contract fixtures.
-- [ ] 8.4 Confirm the extension still imports nothing from `packages/web-shared` and no PrimeVue, Vue Router, Pinia, or SPA bootstrap module, per the extension's constraints.
+- [x] 8.4 Confirm the extension still imports nothing from `packages/web-shared` and no PrimeVue, Vue Router, Pinia, or SPA bootstrap module, per the extension's constraints.
 
 ## 9. External configuration (manual)
 

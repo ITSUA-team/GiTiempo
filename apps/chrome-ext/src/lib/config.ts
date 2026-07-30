@@ -5,6 +5,7 @@ export interface ExtensionConfig {
     authDomain: string;
     projectId: string;
   } | null;
+  githubSignInEnabled: boolean;
   googleOAuthClientId: string;
   userSpaHomeUrl: string;
   userSpaUrl: string;
@@ -17,6 +18,7 @@ interface ExtensionEnv {
   VITE_EXTENSION_FIREBASE_API_KEY?: string;
   VITE_EXTENSION_FIREBASE_AUTH_DOMAIN?: string;
   VITE_EXTENSION_FIREBASE_PROJECT_ID?: string;
+  VITE_EXTENSION_GITHUB_SIGNIN_ENABLED?: string;
   VITE_EXTENSION_GOOGLE_CLIENT_ID?: string;
   VITE_EXTENSION_USER_SPA_URL?: string;
 }
@@ -118,6 +120,12 @@ export function getExtensionConfig(
       authDomain: firebaseAuthDomain,
       projectId: firebaseProjectId,
     },
+    // Default off, and only a strict `"true"` enables it. The extension cannot
+    // tell whether the API has its GitHub sign-in credentials and extension
+    // redirect destination configured, and an action that opens a window ending
+    // in an error is worse than an action that is not offered.
+    githubSignInEnabled:
+      env.VITE_EXTENSION_GITHUB_SIGNIN_ENABLED?.trim() === "true",
     googleOAuthClientId,
     userSpaHomeUrl: deriveHomeUrl(userSpaUrl),
     userSpaUrl,

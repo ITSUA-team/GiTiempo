@@ -11,6 +11,7 @@ describe("getExtensionConfig", () => {
         authDomain: "test-project.firebaseapp.com",
         projectId: "test-project",
       },
+      githubSignInEnabled: false,
       googleOAuthClientId: "test-google-client-id.apps.googleusercontent.com",
       userSpaHomeUrl: "http://localhost:5173",
       userSpaUrl: "http://localhost:5173/login",
@@ -60,9 +61,53 @@ describe("getExtensionConfig", () => {
         authDomain: "project.firebaseapp.com",
         projectId: "project-id",
       },
+      githubSignInEnabled: false,
       googleOAuthClientId: "google-client-id.apps.googleusercontent.com",
       userSpaHomeUrl: "https://app.example.com",
       userSpaUrl: "https://app.example.com/login",
+    });
+  });
+
+  describe("githubSignInEnabled", () => {
+    it("is off when the flag is absent", () => {
+      expect(
+        getExtensionConfig({ MODE: "test" }).githubSignInEnabled,
+      ).toBe(false);
+    });
+
+    it.each(["true", " true "])("is on for the strict value %o", (value) => {
+      expect(
+        getExtensionConfig({
+          MODE: "test",
+          VITE_EXTENSION_GITHUB_SIGNIN_ENABLED: value,
+        }).githubSignInEnabled,
+      ).toBe(true);
+    });
+
+    it.each(["false", "TRUE", "1", "yes", ""])(
+      "stays off for the non-strict value %o",
+      (value) => {
+        // An action that opens a window ending in an error is worse than an
+        // action that is not offered, so anything ambiguous keeps it hidden.
+        expect(
+          getExtensionConfig({
+            MODE: "test",
+            VITE_EXTENSION_GITHUB_SIGNIN_ENABLED: value,
+          }).githubSignInEnabled,
+        ).toBe(false);
+      },
+    );
+
+    it("leaves the Google and email prerequisites untouched", () => {
+      const config = getExtensionConfig({
+        MODE: "test",
+        VITE_EXTENSION_GITHUB_SIGNIN_ENABLED: "true",
+      });
+
+      expect(config.googleOAuthClientId).toBe(
+        "test-google-client-id.apps.googleusercontent.com",
+      );
+      expect(config.firebase).not.toBeNull();
     });
   });
 });

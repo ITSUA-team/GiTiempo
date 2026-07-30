@@ -1,5 +1,6 @@
 import {
   currentTimeEntryResponseSchema,
+  githubSessionRequestSchema,
   loginRequestSchema,
   refreshRequestSchema,
   startTimerFromGitHubSchema,
@@ -22,6 +23,7 @@ import {
 
 
 export interface ExtensionApiClient {
+  exchangeGithubSession(code: string): Promise<TokenPairResponse>;
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
   loginWithFirebaseToken(firebaseIdToken: string): Promise<TokenPairResponse>;
   startTimerFromGitHub(
@@ -99,29 +101,52 @@ export function createExtensionApiClient({
 }: ExtensionApiClientOptions): ExtensionApiClient {
   let refreshPromise: Promise<TokenPairResponse | null> | null = null;
 
-  async function loginWithFirebaseToken(
-    firebaseIdToken: string,
+  /** Posts an unauthenticated credential and stores the session it mints. */
+  async function establishSession(
+    path: string,
+    body: unknown,
   ): Promise<TokenPairResponse> {
     const response = await fetchWithHandledNetworkError(() =>
-      fetchFn(getRequestUrl(config, "/auth/login"), {
-        body: JSON.stringify(loginRequestSchema.parse({ firebaseIdToken })),
+      fetchFn(getRequestUrl(config, path), {
+        body: JSON.stringify(body),
         headers: {
           "Content-Type": "application/json",
         },
         method: "POST",
       }),
     );
-    const body = await parseJsonResponse(response);
+    const responseBody = await parseJsonResponse(response);
 
     if (!response.ok) {
-      throw new Error(getResponseErrorMessage(response.status, body));
+      throw new Error(getResponseErrorMessage(response.status, responseBody));
     }
 
-    const tokenPair = tokenPairResponseSchema.parse(body);
+    const tokenPair = tokenPairResponseSchema.parse(responseBody);
 
     await setStoredSession(tokenPair, storage);
 
     return tokenPair;
+  }
+
+  async function loginWithFirebaseToken(
+    firebaseIdToken: string,
+  ): Promise<TokenPairResponse> {
+    return establishSession(
+      "/auth/login",
+      loginRequestSchema.parse({ firebaseIdToken }),
+    );
+  }
+
+  // The handoff code is exchanged on the same unauthenticated footing as a
+  // Firebase identity, and yields an indistinguishable token pair, so the two
+  // paths converge here rather than each growing their own request plumbing.
+  async function exchangeGithubSession(
+    code: string,
+  ): Promise<TokenPairResponse> {
+    return establishSession(
+      "/auth/github/session",
+      githubSessionRequestSchema.parse({ code }),
+    );
   }
 
   async function refreshSession(
@@ -211,6 +236,7 @@ export function createExtensionApiClient({
   }
 
   return {
+    exchangeGithubSession,
     getCurrentTimer() {
       return requestWithAuth({
         path: "/time-entries/current",

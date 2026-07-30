@@ -28,6 +28,7 @@ export type RuntimeMutationResult = RuntimeActionResult;
 
 export interface RuntimeClient {
   exchangeFirebaseToken(firebaseIdToken: string): Promise<RuntimeAuthResult>;
+  exchangeGithubSession(code: string): Promise<RuntimeAuthResult>;
   getSnapshot(): Promise<RuntimeSnapshot>;
   onSnapshotUpdated(listener: (snapshot: RuntimeSnapshot) => void): () => void;
   openExtension(): Promise<void>;
@@ -38,6 +39,7 @@ export interface RuntimeClient {
 
 export type BackgroundMessage =
   | { type: "auth/exchange-firebase-token"; firebaseIdToken: string }
+  | { type: "auth/exchange-github-session"; code: string }
   | { type: "runtime/get-snapshot" }
   | { type: "timer/start"; pageContext: SupportedGitHubIssueContext }
   | { type: "timer/stop" }
@@ -73,6 +75,12 @@ export function createRuntimeClient(): RuntimeClient {
       return sendRuntimeMessage<RuntimeAuthResult>({
         type: "auth/exchange-firebase-token",
         firebaseIdToken,
+      });
+    },
+    exchangeGithubSession(code) {
+      return sendRuntimeMessage<RuntimeAuthResult>({
+        type: "auth/exchange-github-session",
+        code,
       });
     },
     getSnapshot() {
