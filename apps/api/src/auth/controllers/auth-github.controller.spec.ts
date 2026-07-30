@@ -80,6 +80,24 @@ describe('AuthGithubController', () => {
     );
   });
 
+  it('GET /start sets no state cookie for the extension target', () => {
+    github.startAuthorization.mockReturnValue({ url: 'u', stateNonce: 'n' });
+    const res = makeRes();
+
+    controller.start(
+      'extension',
+      undefined,
+      'a'.repeat(64),
+      res as unknown as Response,
+    );
+
+    // The extension's authorization window does not carry the cookie to the
+    // callback, so it is bound by proof of possession instead. A cookie set here
+    // would read as a binding that does not exist.
+    expect(res.cookie).not.toHaveBeenCalled();
+    expect(res.redirect).toHaveBeenCalledWith(302, 'u');
+  });
+
   it('GET /start reaches the extension target', () => {
     github.startAuthorization.mockReturnValue({ url: 'u', stateNonce: 'n' });
 

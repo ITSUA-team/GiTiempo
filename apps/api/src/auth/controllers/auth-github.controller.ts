@@ -86,12 +86,18 @@ export class AuthGithubController {
       challenge,
     );
     // Bind the transaction to this browser: the callback is only honored when it
-    // presents this HttpOnly cookie whose nonce matches the signed state.
-    response.cookie(
-      GITHUB_OAUTH_STATE_COOKIE,
-      stateNonce,
-      this.github.stateCookieOptions(),
-    );
+    // presents this HttpOnly cookie whose nonce matches the signed state. Skipped
+    // for the extension, whose authorization window does not carry the cookie to
+    // the callback — that is why it is bound by proof of possession at the session
+    // exchange instead. Setting a cookie nothing reads would suggest a binding
+    // that is not there.
+    if (target !== 'extension') {
+      response.cookie(
+        GITHUB_OAUTH_STATE_COOKIE,
+        stateNonce,
+        this.github.stateCookieOptions(),
+      );
+    }
     response.redirect(302, url);
   }
 
