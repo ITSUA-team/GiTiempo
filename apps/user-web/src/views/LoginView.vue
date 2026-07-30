@@ -157,7 +157,7 @@ function goToRegister(): void {
 
             <button
               type="button"
-              class="bg-accent-tint border-brand text-brand focus-visible:outline-brand flex h-11 items-center justify-center gap-2 rounded-sm border px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2"
+              class="bg-accent-tint border-brand text-brand focus-visible:outline-brand hover:bg-brand/20 flex h-11 cursor-pointer items-center justify-center gap-2 rounded-sm border px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2"
               data-testid="sign-in-create-workspace"
               @click="goToRegister"
             >

@@ -155,7 +155,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
         <div class="flex flex-col gap-3 pt-1">
           <button
             type="submit"
-            class="focus-visible:outline-brand flex h-11 items-center justify-center gap-2 rounded-sm bg-[linear-gradient(135deg,#7a3ea8_0%,#5d2b85_100%)] px-4 text-[15px] font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+            class="focus-visible:outline-brand flex h-11 cursor-pointer items-center justify-center gap-2 rounded-sm bg-[linear-gradient(135deg,#7a3ea8_0%,#5d2b85_100%)] px-4 text-[15px] font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="props.isSubmitting"
             data-testid="sign-in-submit"
           >
@@ -172,7 +172,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
 
           <button
             type="button"
-            class="border-divider focus-visible:outline-brand flex h-11 items-center justify-center gap-2.5 rounded-sm border bg-white px-4 text-[15px] font-semibold text-[#3c4043] transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+            class="border-divider focus-visible:outline-brand enabled:hover:bg-app-bg flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm border bg-white px-4 text-[15px] font-semibold text-[#3c4043] transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="props.isSubmitting"
             data-testid="sign-in-google"
             @click="emit('submitGoogle')"
@@ -184,7 +184,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
           <button
             v-if="props.githubEnabled"
             type="button"
-            class="focus-visible:outline-brand flex h-11 items-center justify-center gap-2.5 rounded-sm bg-[#24292f] px-4 text-[15px] font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+            class="focus-visible:outline-brand flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm bg-[#24292f] px-4 text-[15px] font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 enabled:hover:bg-[#32383f] disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="props.isSubmitting"
             data-testid="sign-in-github"
             @click="emit('submitGithub')"
