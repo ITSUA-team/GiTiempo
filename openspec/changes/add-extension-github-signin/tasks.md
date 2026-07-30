@@ -48,7 +48,7 @@
 
 - [x] 7.1 Update `docs/ui/chrome-ext.md` with the popup's sign-in actions and the flag that gates the GitHub one, describing the shared arrangement once rather than per state.
 - [x] 7.2 Add `GITHUB_SIGNIN_EXTENSION_REDIRECT_URL` to `docs/deployment.md`, noting that it is optional, that the flow fails closed when unset, and that the extension id — and therefore the value — differs between an unpacked development build and a published one.
-- [x] 7.3 Note in `docs/deployment.md` that the extension origin must be present in `ALLOWED_ORIGINS`, since the session exchange fails on CORS otherwise. `deploy/github-environment.staging.example.env` already carries the placeholder.
+- [x] 7.3 Note in `docs/deployment.md` that the extension origin must be present in `ALLOWED_ORIGINS`, since the session exchange fails on CORS otherwise. `deploy/github-environment.staging.example.env` already carries the placeholder. — **The premise of this task was wrong and the note was softened accordingly.** "Fails on CORS" was never verified: the exchange runs in the extension's service worker against a host already in `host_permissions`, so it is not the CORS path a web page takes. The docs now ask operators to keep the origin listed as belt-and-braces rather than presenting it as a prerequisite.
 
 ## 8. Verification
 

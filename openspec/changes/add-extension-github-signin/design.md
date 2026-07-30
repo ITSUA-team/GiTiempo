@@ -125,10 +125,10 @@ Nothing crosses through `packages/web-shared`, which the extension is forbidden 
 
 ## Risks / Trade-offs
 
-- **`launchWebAuthFlow` may not share the profile cookie jar** → the whole point of D5. The spike runs first; the contingency is designed, not improvised.
+- **`launchWebAuthFlow` does not share the profile cookie jar** → measured, no longer a risk but a fact the design absorbed: the callback rejected every extension attempt at `verifyBoundState` while the state itself verified. D5's contingency was adopted, so the extension is bound by proof of possession at the session exchange. The residual risk moves with it: two targets are now bound by two mechanisms, so a change to either binding must be checked against both.
 - **An unverifiable state strands the auth window** → the fallback target cannot be known when the state cannot be read (D4). The window closing surfaces as a cancellation through `chrome.runtime.lastError`, which the popup already handles for the Google flow.
 - **The handoff code is visible in the redirect URL** → it is opaque, single-use, 60-second-lived, and the URL is intercepted by Chrome rather than fetched, so it never reaches a network log. The verified email stays server-side, which is why the handoff was made opaque in the first place.
-- **The extension origin must be in `ALLOWED_ORIGINS`** → already the documented pattern; `deploy/github-environment.staging.example.env` carries `chrome-extension://<extension-id>` today. The session exchange fails on CORS if an environment omits it.
+- **The extension origin belongs in `ALLOWED_ORIGINS`** → already the documented pattern; `deploy/github-environment.staging.example.env` carries `chrome-extension://<extension-id>` today. Keep it, but note it is belt-and-braces rather than a verified prerequisite: the session exchange runs in the extension's service worker against a host already in `host_permissions`, so it is not the CORS path a web page would take. The original wording here claimed the exchange fails without it, which was never verified.
 - **The extension ID changes between unpacked development and a published build** → the configured redirect URL is environment-scoped, like the SPA URLs, so development and staging hold different values. Worth stating in `docs/deployment.md` so it is not discovered during a release.
 - **Three sign-in actions crowd a fixed-size popup** → the reason D7 puts the frame first rather than appending a button and seeing how it looks.
 - **The handoff store is in-memory** → inherited, not introduced. A horizontally scaled API needs a shared store, as `add-github-signin` already records; the extension target adds a second client to that same limitation.
@@ -141,6 +141,5 @@ Rollback is the flag: setting `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED=false` and r
 
 ## Open Questions
 
-- Does `launchWebAuthFlow` carry the `gh_oauth_state` cookie in the Chrome versions being targeted? D5 turns this into the first task rather than leaving it open.
 - Should the popup also offer GitHub when a stored session has expired, or only in the fully unauthenticated state? The expired-session path already returns the user to the unauthenticated state, so this resolves itself unless the design frame says otherwise.
 - Once `add-github-signin` archives and a live `github-signin` spec exists, the backend target belongs in that capability. The requirements added here to `chrome-extension` should then be re-homed, and this change's `proposal.md` records why they start where they do.
