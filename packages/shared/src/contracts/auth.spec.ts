@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  githubSessionRequestSchema,
   registerRequestSchema,
   registrationErrorCodeSchema,
   switchWorkspaceRequestSchema,
@@ -102,6 +103,26 @@ describe("registrationErrorCodeSchema", () => {
     const result = registrationErrorCodeSchema.safeParse("firebase/email-taken");
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("githubSessionRequestSchema", () => {
+  it("accepts a non-empty handoff code", () => {
+    expect(githubSessionRequestSchema.parse({ code: "abc" })).toEqual({
+      code: "abc",
+    });
+  });
+
+  it("rejects an empty code, an over-long code, and unknown keys", () => {
+    expect(githubSessionRequestSchema.safeParse({ code: "" }).success).toBe(
+      false,
+    );
+    expect(
+      githubSessionRequestSchema.safeParse({ code: "a".repeat(4097) }).success,
+    ).toBe(false);
+    expect(
+      githubSessionRequestSchema.safeParse({ code: "abc", extra: 1 }).success,
+    ).toBe(false);
   });
 });
 

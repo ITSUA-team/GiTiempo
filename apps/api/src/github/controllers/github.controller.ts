@@ -10,9 +10,11 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiFoundResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { ZodSerializerDto } from 'nestjs-zod';
@@ -145,6 +147,35 @@ export class GithubController {
   @Get('callback')
   @SkipAuth()
   @ApiOperation({ summary: 'GitHub OAuth callback' })
+  @ApiQuery({
+    name: 'code',
+    required: false,
+    type: String,
+    description: 'GitHub authorization code, exchanged with PKCE.',
+  })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    type: String,
+    description:
+      'Opaque server-side state id issued by `/github/auth-url`. Consumed once.',
+  })
+  @ApiQuery({
+    name: 'error',
+    required: false,
+    type: String,
+    description: 'GitHub error code, present when the user denied the request.',
+  })
+  @ApiFoundResponse({
+    description:
+      'Redirect to the user SPA profile page: `?github=connected` on success, otherwise `?github=error&code=<safe-error-code>` (`invalid_state`, `github_config`, `github_exchange_failed`). Never returns a body, and never fails the request.',
+    headers: {
+      Location: {
+        description: 'Absolute user SPA profile URL to return the browser to.',
+        schema: { type: 'string' },
+      },
+    },
+  })
   async callback(
     @Query('code') code: string | undefined,
     @Query('state') state: string | undefined,

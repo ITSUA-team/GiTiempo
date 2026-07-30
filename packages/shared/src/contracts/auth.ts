@@ -26,6 +26,13 @@ export const logoutRequestSchema = z
   })
   .strict();
 
+/** Body for `POST /auth/github/session`: the one-time GitHub sign-in handoff code. */
+export const githubSessionRequestSchema = z
+  .object({
+    code: z.string().min(1).max(4096),
+  })
+  .strict();
+
 /** Body for `POST /auth/switch-workspace`. */
 export const switchWorkspaceRequestSchema = z
   .object({
@@ -70,6 +77,7 @@ export const tokenPairResponseSchema = z.object({
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
 export type LogoutRequest = z.infer<typeof logoutRequestSchema>;
+export type GithubSessionRequest = z.infer<typeof githubSessionRequestSchema>;
 export type SwitchWorkspaceRequest = z.infer<typeof switchWorkspaceRequestSchema>;
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
 export type RegistrationErrorCode = z.infer<typeof registrationErrorCodeSchema>;

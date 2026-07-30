@@ -9,6 +9,7 @@ export interface AdminWebEnv {
     storageBucket?: string;
   };
   githubAppInstallUrl?: string;
+  githubSignInEnabled: boolean;
   userAppUrl?: string;
 }
 
@@ -41,5 +42,11 @@ export const appEnv: AdminWebEnv = {
   },
   get githubAppInstallUrl() {
     return import.meta.env.VITE_GITHUB_APP_INSTALL_URL;
+  },
+  get githubSignInEnabled() {
+    // Default off: the button shows only when a deployment explicitly opts in
+    // (VITE_GITHUB_SIGNIN_ENABLED='true'), so an environment that has not wired
+    // the backend GITHUB_SIGNIN_* secrets never surfaces a flow that cannot complete.
+    return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED === 'true';
   },
 };

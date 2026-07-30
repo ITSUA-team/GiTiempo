@@ -1,6 +1,7 @@
 export interface UserWebEnv {
   adminAppUrl?: string;
   apiBaseUrl?: string;
+  githubSignInEnabled: boolean;
   firebase: {
     apiKey?: string;
     appId?: string;
@@ -17,6 +18,13 @@ export const appEnv: UserWebEnv = {
   },
   get apiBaseUrl() {
     return import.meta.env.VITE_API_BASE_URL;
+  },
+
+  get githubSignInEnabled() {
+    // Default off: the button shows only when a deployment explicitly opts in
+    // (VITE_GITHUB_SIGNIN_ENABLED='true'), so an environment that has not wired
+    // the backend GITHUB_SIGNIN_* secrets never surfaces a flow that cannot complete.
+    return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED === 'true';
   },
   firebase: {
     get apiKey() {

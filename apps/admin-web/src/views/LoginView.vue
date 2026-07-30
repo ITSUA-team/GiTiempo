@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   AuthIntroPanel,
   AuthSignInForm,
+  resolveGithubSignInError,
   StandaloneSplitPage,
   type EmailPasswordSignInInput,
 } from "@gitiempo/web-shared";
@@ -44,6 +45,15 @@ const redirectTarget = computed(() => {
   return normalizeRedirectTargetValue(route.query.redirect);
 });
 
+onMounted(() => {
+  // The backend redirects OAuth failures to /login?githubError=<code>; decode it
+  // into a message and clear the param so a refresh or back-nav does not re-show it.
+  const message = resolveGithubSignInError(route.query.githubError);
+  if (message === null) return;
+  errorMessage.value = message;
+  void router.replace({ query: { ...route.query, githubError: undefined } });
+});
+
 async function navigateAfterLogin(): Promise<void> {
   await router.replace(redirectTarget.value ?? { name: routeNames.dashboard });
 }
@@ -78,6 +88,19 @@ async function handleGoogleSignIn(): Promise<void> {
     errorMessage.value = getErrorMessage(error);
   }
 }
+
+function handleGithubSignIn(): void {
+  // Backend-driven GitHub sign-in: leave the SPA and let the API run the OAuth
+  // flow; it redirects back to /auth/github/callback with a one-time code. Carry
+  // the normalized protected-route target so the callback can return the user
+  // where they were headed (email/Google `?redirect=` parity).
+  const base = appEnv.apiBaseUrl ?? window.location.origin;
+  const startUrl = new URL("/auth/github/start", base);
+  startUrl.searchParams.set("app", "admin");
+  const target = redirectTarget.value;
+  if (target !== null) startUrl.searchParams.set("redirect", target);
+  window.location.href = startUrl.toString();
+}
 </script>
 
 <template>
@@ -105,9 +128,11 @@ async function handleGoogleSignIn(): Promise<void> {
           description="Use your workspace account to continue into the admin workspace."
           email-placeholder="admin@workspace.com"
           :error-message="errorMessage"
+          :github-enabled="appEnv.githubSignInEnabled"
           :is-submitting="authStore.isSubmitting"
           @submit-credentials="handleEmailSignIn"
           @submit-google="handleGoogleSignIn"
+          @submit-github="handleGithubSignIn"
         />
       </section>
     </template>

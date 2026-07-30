@@ -391,6 +391,147 @@
         ]
       }
     },
+    "/auth/github/start": {
+      "get": {
+        "operationId": "AuthGithubController_start",
+        "parameters": [
+          {
+            "name": "redirect",
+            "required": false,
+            "in": "query",
+            "description": "Same-app absolute path to return to after sign-in. Re-sanitized server-side, then signed into the OAuth state.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "app",
+            "required": false,
+            "in": "query",
+            "description": "Which SPA the flow was started from. Anything other than `admin` resolves to `user`.",
+            "schema": {
+              "enum": [
+                "user",
+                "admin"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to the GitHub authorization page. Never returns a body.",
+            "headers": {
+              "Location": {
+                "description": "GitHub authorization URL.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Set-Cookie": {
+                "description": "`gh_oauth_state` nonce (HttpOnly, SameSite=Lax) that binds the transaction to this browser.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Start backend GitHub sign-in",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/github/callback": {
+      "get": {
+        "operationId": "AuthGithubController_callback",
+        "parameters": [
+          {
+            "name": "error",
+            "required": false,
+            "in": "query",
+            "description": "GitHub error code, present when the user denied the request.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Signed state minted by `/auth/github/start`. Its `app` claim decides which SPA to return to.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "description": "GitHub authorization code. Absent when the user denied the request.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect back to the originating SPA. On success to its `/auth/github/callback` with a single-use handoff `code`; otherwise to its `/login` with `githubError` set to `denied`, `state`, `email`, or `failed`. Never returns a body, and never fails the request.",
+            "headers": {
+              "Location": {
+                "description": "Absolute SPA URL to return the browser to.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Set-Cookie": {
+                "description": "Cleared `gh_oauth_state` cookie — the state binding is single-use.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "GitHub sign-in OAuth callback",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/github/session": {
+      "post": {
+        "operationId": "AuthGithubController_session",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPairResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Exchange a GitHub sign-in handoff code for a session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/workspace": {
       "get": {
         "operationId": "WorkspacesController_getWorkspace",
@@ -1118,10 +1259,46 @@
     "/github/callback": {
       "get": {
         "operationId": "GithubController_callback",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "error",
+            "required": false,
+            "in": "query",
+            "description": "GitHub error code, present when the user denied the request.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Opaque server-side state id issued by `/github/auth-url`. Consumed once.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "description": "GitHub authorization code, exchanged with PKCE.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "200": {
-            "description": ""
+          "302": {
+            "description": "Redirect to the user SPA profile page: `?github=connected` on success, otherwise `?github=error&code=<safe-error-code>` (`invalid_state`, `github_config`, `github_exchange_failed`). Never returns a body, and never fails the request.",
+            "headers": {
+              "Location": {
+                "description": "Absolute user SPA profile URL to return the browser to.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "summary": "GitHub OAuth callback",
@@ -3275,6 +3452,20 @@
         "required": [
           "refreshToken",
           "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "GithubSessionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "code"
         ],
         "additionalProperties": false
       },

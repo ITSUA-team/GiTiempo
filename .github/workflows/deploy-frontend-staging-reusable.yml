@@ -55,6 +55,7 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
           VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_GITHUB_SIGNIN_ENABLED: ${{ vars.VITE_GITHUB_SIGNIN_ENABLED }}
         run: |
           set -euo pipefail
 
@@ -78,6 +79,15 @@ jobs:
           require_env VITE_FIREBASE_PROJECT_ID
           require_env VITE_FIREBASE_STORAGE_BUCKET
 
+          # Optional feature flag (default off): when set it must be a strict boolean,
+          # so a typo cannot silently leave the GitHub sign-in button in either state.
+          if [[ -n "${VITE_GITHUB_SIGNIN_ENABLED:-}" \
+            && "${VITE_GITHUB_SIGNIN_ENABLED}" != "true" \
+            && "${VITE_GITHUB_SIGNIN_ENABLED}" != "false" ]]; then
+            printf '::error::VITE_GITHUB_SIGNIN_ENABLED must be "true" or "false" when set\n'
+            exit 1
+          fi
+
       - name: Run ${{ inputs.app_name }} checks
         uses: ./.github/actions/workspace-check
         env:
@@ -87,6 +97,7 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
           VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_GITHUB_SIGNIN_ENABLED: ${{ vars.VITE_GITHUB_SIGNIN_ENABLED }}
         with:
           package-name: ${{ inputs.package_name }}
           run-build: 'true'

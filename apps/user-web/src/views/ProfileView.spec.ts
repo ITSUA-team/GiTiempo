@@ -92,6 +92,7 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     }),
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
+    exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
     updateCurrentUser: async (_accessToken, input: UpdateUserInput) => ({
       ...currentUser,

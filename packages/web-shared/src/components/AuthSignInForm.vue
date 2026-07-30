@@ -11,17 +11,22 @@ import {
   type EmailPasswordSignInInput,
 } from "../validation/auth";
 
-const props = defineProps<{
-  description: string;
-  emailPlaceholder: string;
-  errorMessage?: string | null;
-  isSubmitting: boolean;
-  title: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    description: string;
+    emailPlaceholder: string;
+    errorMessage?: string | null;
+    githubEnabled?: boolean;
+    isSubmitting: boolean;
+    title: string;
+  }>(),
+  { errorMessage: null, githubEnabled: true },
+);
 
 const emit = defineEmits<{
   submitCredentials: [payload: EmailPasswordSignInInput];
   submitGoogle: [];
+  submitGithub: [];
 }>();
 
 const initialValues: EmailPasswordSignInInput = {
@@ -151,6 +156,18 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
             :disabled="props.isSubmitting"
             data-testid="sign-in-google"
             @click="emit('submitGoogle')"
+          />
+
+          <Button
+            v-if="props.githubEnabled"
+            type="button"
+            label="Continue with GitHub"
+            severity="secondary"
+            variant="outlined"
+            class="h-11"
+            :disabled="props.isSubmitting"
+            data-testid="sign-in-github"
+            @click="emit('submitGithub')"
           />
 
           <slot name="secondary-actions" />

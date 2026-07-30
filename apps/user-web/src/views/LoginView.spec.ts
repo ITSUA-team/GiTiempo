@@ -62,6 +62,7 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     }),
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
+    exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
@@ -97,6 +98,8 @@ describe("LoginView", () => {
     clearRefreshToken();
     resetAuthRuntimeForTesting();
     vi.stubEnv("VITE_ADMIN_APP_URL", "https://admin.example.test/login");
+    // The GitHub button is off by default; opt in so the button renders here.
+    vi.stubEnv("VITE_GITHUB_SIGNIN_ENABLED", "true");
   });
 
   afterEach(() => {
@@ -135,6 +138,65 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
+  it("redirects to the backend GitHub sign-in flow when GitHub is clicked", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    let redirectedTo = "";
+    const original = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        origin: "http://localhost:5173",
+        get href() {
+          return redirectedTo;
+        },
+        set href(value: string) {
+          redirectedTo = value;
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="sign-in-github"]').trigger("click");
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: original,
+    });
+
+    expect(redirectedTo).toContain("/auth/github/start?app=user");
+  });
+
+  it("carries the protected-route redirect target into the GitHub start URL", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView("/login?redirect=%2Ftime-entries");
+
+    let redirectedTo = "";
+    const original = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        origin: "http://localhost:5173",
+        get href() {
+          return redirectedTo;
+        },
+        set href(value: string) {
+          redirectedTo = value;
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="sign-in-github"]').trigger("click");
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: original,
+    });
+
+    expect(redirectedTo).toContain("app=user");
+    expect(redirectedTo).toContain("redirect=%2Ftime-entries");
+  });
+
   it("falls back to the dashboard when the login redirect query is unsafe", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { router, wrapper } = await mountLoginView(
@@ -169,6 +231,18 @@ describe("LoginView", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("Invalid user credentials");
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+  });
+
+  it("shows the GitHub sign-in error from the query and clears it from the URL", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { router, wrapper } = await mountLoginView(
+      "/login?githubError=denied",
+    );
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("GitHub sign-in was cancelled.");
+    expect(router.currentRoute.value.query.githubError).toBeUndefined();
     expect(router.currentRoute.value.name).toBe(routeNames.login);
   });
 

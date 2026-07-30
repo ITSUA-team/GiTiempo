@@ -14989,7 +14989,25 @@
           "name": "left",
           "width": "fill_container",
           "height": "fill_container",
-          "fill": "$color-surface",
+          "fill": {
+            "type": "gradient",
+            "gradientType": "linear",
+            "enabled": true,
+            "rotation": 135,
+            "size": {
+              "height": 1
+            },
+            "colors": [
+              {
+                "color": "#6E3AA0",
+                "position": 0
+              },
+              {
+                "color": "#2E1442",
+                "position": 1
+              }
+            ]
+          },
           "layout": "vertical",
           "padding": [
             48,
@@ -15008,10 +15026,10 @@
                   "type": "frame",
                   "id": "08PqD",
                   "name": "logo",
-                  "width": 40,
-                  "height": 40,
-                  "fill": "$color-accent-tint",
-                  "cornerRadius": 12,
+                  "width": 38,
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "cornerRadius": 10,
                   "justifyContent": "center",
                   "alignItems": "center",
                   "children": [
@@ -15021,8 +15039,8 @@
                       "fill": "$color-brand",
                       "content": "GT",
                       "fontFamily": "Inter",
-                      "fontSize": 14,
-                      "fontWeight": "600"
+                      "fontSize": 15,
+                      "fontWeight": "700"
                     }
                   ]
                 },
@@ -15036,7 +15054,7 @@
                     {
                       "type": "text",
                       "id": "ANu2V",
-                      "fill": "$color-text-dark",
+                      "fill": "#FFFFFF",
                       "content": "GiTiempo",
                       "fontFamily": "Inter",
                       "fontSize": 18,
@@ -15045,7 +15063,7 @@
                     {
                       "type": "text",
                       "id": "wDp1U",
-                      "fill": "$color-text-muted",
+                      "fill": "#FFFFFFB3",
                       "content": "Time tracking for modern product teams",
                       "fontFamily": "Inter",
                       "fontSize": 13,
@@ -15066,7 +15084,7 @@
                 {
                   "type": "text",
                   "id": "AlCxD",
-                  "fill": "$color-text-dark",
+                  "fill": "#FFFFFF",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "Track work where your tasks already live.",
@@ -15077,7 +15095,7 @@
                 {
                   "type": "text",
                   "id": "RrAFE",
-                  "fill": "$color-text-muted",
+                  "fill": "#FFFFFFCC",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "Start timers from your tasks and projects in one place. Keep personal tracking simple while giving PMs the reporting they need.",
@@ -15099,8 +15117,11 @@
                       "name": "card1",
                       "width": "fill_container",
                       "height": "fill_container",
-                      "fill": "$color-app-bg",
+                      "fill": "#FFFFFF17",
                       "cornerRadius": "$radius-lg",
+                      "stroke": "#FFFFFF2E",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
                       "layout": "vertical",
                       "gap": 8,
                       "padding": 16,
@@ -15108,7 +15129,7 @@
                         {
                           "type": "text",
                           "id": "zL3Jv",
-                          "fill": "$color-text-dark",
+                          "fill": "#FFFFFF",
                           "content": "Flexible task tracking",
                           "fontFamily": "Inter",
                           "fontSize": 16,
@@ -15117,7 +15138,7 @@
                         {
                           "type": "text",
                           "id": "6BsJ6",
-                          "fill": "$color-text-muted",
+                          "fill": "#FFFFFFB3",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Attach tracked time to the right task context today, with room for more integrations over time.",
@@ -15133,8 +15154,11 @@
                       "name": "card2",
                       "width": "fill_container",
                       "height": "fill_container",
-                      "fill": "$color-app-bg",
+                      "fill": "#FFFFFF17",
                       "cornerRadius": "$radius-lg",
+                      "stroke": "#FFFFFF2E",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
                       "layout": "vertical",
                       "gap": 8,
                       "padding": 16,
@@ -15142,7 +15166,7 @@
                         {
                           "type": "text",
                           "id": "XHkJo",
-                          "fill": "$color-text-dark",
+                          "fill": "#FFFFFF",
                           "content": "PM-ready reporting",
                           "fontFamily": "Inter",
                           "fontSize": 16,
@@ -15151,7 +15175,7 @@
                         {
                           "type": "text",
                           "id": "qVHak",
-                          "fill": "$color-text-muted",
+                          "fill": "#FFFFFFB3",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Review projects, entries, members, invoices, and settings without leaving one workspace.",
@@ -15160,6 +15184,102 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Edjzx",
+                  "name": "extension link",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF17",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "#FFFFFF2E",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 10,
+                  "padding": [
+                    12,
+                    14
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "L8ZTSB",
+                      "name": "ext-left",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "e53IR",
+                          "name": "ext-icon-wrap",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "#FFFFFF2E",
+                          "cornerRadius": 8,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "F475g5",
+                              "name": "puzzle",
+                              "geometry": "M20.5 11h-1.5v-4c0-1.1-0.9-2-2-2h-4v-1.5c0-1.38-1.12-2.5-2.5-2.5s-2.5 1.12-2.5 2.5v1.5h-4c-1.1 0-1.99 0.9-1.99 2v3.8h1.49c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7h-1.5v3.8c0 1.1 0.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7v1.5h3.8c1.1 0 2-0.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5s-1.12-2.5-2.5-2.5z",
+                              "viewBox": [
+                                0,
+                                0,
+                                24,
+                                24
+                              ],
+                              "fill": "#FFFFFF",
+                              "width": 17,
+                              "height": 17
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Imgel",
+                          "name": "ext-text",
+                          "layout": "vertical",
+                          "gap": 1,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "u5gbe",
+                              "name": "ext-title",
+                              "fill": "#FFFFFF",
+                              "content": "Browser extension",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "B2zqI",
+                              "name": "ext-sub",
+                              "fill": "#FFFFFFB3",
+                              "content": "Track time right from your browser",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "btjH6",
+                      "name": "ext-arrow",
+                      "fill": "#FFFFFF",
+                      "content": "→",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "600"
                     }
                   ]
                 }
@@ -15174,7 +15294,7 @@
                 {
                   "type": "text",
                   "id": "FxxBb",
-                  "fill": "$color-text-muted",
+                  "fill": "#FFFFFFB3",
                   "content": "Secure workspace sign-in",
                   "fontFamily": "Inter",
                   "fontSize": 12,
@@ -15183,7 +15303,7 @@
                 {
                   "type": "text",
                   "id": "R7Dsq",
-                  "fill": "$color-text-muted",
+                  "fill": "#FFFFFFB3",
                   "content": "No dark mode for MVP",
                   "fontFamily": "Inter",
                   "fontSize": 12,
@@ -15193,7 +15313,7 @@
                   "type": "text",
                   "id": "TQwPI",
                   "name": "loginSwitch",
-                  "fill": "#5D2B85",
+                  "fill": "$color-accent-tint",
                   "content": "Need admin tools? Open the admin workspace.",
                   "fontFamily": "Inter",
                   "fontSize": 12,
@@ -15220,7 +15340,6 @@
               "id": "7loGY",
               "name": "panel",
               "width": "fill_container",
-              "height": 478,
               "fill": "$color-surface",
               "cornerRadius": "$radius-lg",
               "layout": "vertical",
@@ -15241,8 +15360,8 @@
                       "fill": "$color-text-dark",
                       "content": "Sign in",
                       "fontFamily": "Inter",
-                      "fontSize": 28,
-                      "fontWeight": "600"
+                      "fontSize": 36,
+                      "fontWeight": "700"
                     },
                     {
                       "type": "text",
@@ -15279,17 +15398,33 @@
                       "id": "Gl3cq",
                       "width": "fill_container",
                       "height": 42,
-                      "fill": "$color-surface",
+                      "fill": "$color-app-bg",
                       "cornerRadius": "$radius-sm",
                       "stroke": "$color-divider",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
+                      "gap": 10,
                       "padding": [
                         0,
                         12
                       ],
                       "alignItems": "center",
                       "children": [
+                        {
+                          "type": "path",
+                          "id": "YkraP",
+                          "name": "mail-icon",
+                          "geometry": "M20 4h-16c-1.1 0-1.99 0.9-1.99 2l-0.01 12c0 1.1 0.9 2 2 2h16c1.1 0 2-0.9 2-2v-12c0-1.1-0.9-2-2-2z m0 4l-8 5-8-5v-2l8 5 8-5v2z",
+                          "viewBox": [
+                            0,
+                            0,
+                            24,
+                            24
+                          ],
+                          "fill": "$color-text-muted",
+                          "width": 17,
+                          "height": 17
+                        },
                         {
                           "type": "text",
                           "id": "XS7RG",
@@ -15325,7 +15460,7 @@
                       "id": "qaW7L",
                       "width": "fill_container",
                       "height": 42,
-                      "fill": "$color-surface",
+                      "fill": "$color-app-bg",
                       "cornerRadius": "$radius-sm",
                       "stroke": "$color-divider",
                       "strokeWidth": 1,
@@ -15338,13 +15473,37 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "lzUEy",
-                          "fill": "$color-text-dark",
-                          "content": "••••••••••",
-                          "fontFamily": "Inter",
-                          "fontSize": 14,
-                          "fontWeight": "normal"
+                          "type": "frame",
+                          "id": "lUObi",
+                          "name": "pw-left",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "pPKbh",
+                              "name": "lock-icon",
+                              "geometry": "M18 8h-1v-2c0-2.76-2.24-5-5-5s-5 2.24-5 5v2h-1c-1.1 0-2 0.9-2 2v10c0 1.1 0.9 2 2 2h12c1.1 0 2-0.9 2-2v-10c0-1.1-0.9-2-2-2z m-9-2c0-1.66 1.34-3 3-3s3 1.34 3 3v2h-6v-2z m9 14h-12v-10h12v10z m-6-3c1.1 0 2-0.9 2-2s-0.9-2-2-2-2 0.9-2 2 0.9 2 2 2z",
+                              "viewBox": [
+                                0,
+                                0,
+                                24,
+                                24
+                              ],
+                              "fill": "$color-text-muted",
+                              "width": 16,
+                              "height": 16
+                            },
+                            {
+                              "type": "text",
+                              "id": "lzUEy",
+                              "fill": "$color-text-dark",
+                              "content": "••••••••••",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
                         {
                           "type": "text",
@@ -15364,7 +15523,6 @@
                   "id": "Cuwiv",
                   "name": "actions",
                   "width": "fill_container",
-                  "height": 150,
                   "layout": "vertical",
                   "gap": 12,
                   "children": [
@@ -15372,13 +15530,33 @@
                       "type": "frame",
                       "id": "K7TTz",
                       "width": "fill_container",
-                      "fill": "$color-brand",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "rotation": 135,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "#7A3EA8",
+                            "position": 0
+                          },
+                          {
+                            "color": "#5D2B85",
+                            "position": 1
+                          }
+                        ]
+                      },
                       "cornerRadius": "$radius-sm",
+                      "gap": 8,
                       "padding": [
                         12,
                         16
                       ],
                       "justifyContent": "center",
+                      "alignItems": "center",
                       "children": [
                         {
                           "type": "text",
@@ -15388,34 +15566,74 @@
                           "fontFamily": "Inter",
                           "fontSize": 15,
                           "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "E7h5B",
+                          "name": "enter-key",
+                          "fill": "#FFFFFF29",
+                          "cornerRadius": 4,
+                          "padding": [
+                            1,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "a6k334",
+                              "name": "key",
+                              "fill": "#FFFFFF",
+                              "content": "↵ Enter",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "600"
+                            }
+                          ]
                         }
                       ]
                     },
                     {
-                      "type": "frame",
-                      "id": "iIQfh",
+                      "id": "g3o7Yv",
+                      "type": "ref",
+                      "ref": "Cp38L",
+                      "name": "oauth divider",
                       "width": "fill_container",
-                      "fill": "$color-surface",
-                      "cornerRadius": "$radius-sm",
-                      "stroke": "$color-divider",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
                       "padding": [
-                        12,
-                        16
-                      ],
-                      "justifyContent": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "S7LkA",
-                          "fill": "$color-text-dark",
-                          "content": "Continue with Google",
-                          "fontFamily": "Inter",
-                          "fontSize": 15,
-                          "fontWeight": "600"
-                        }
+                        8,
+                        0
                       ]
+                    },
+                    {
+                      "id": "NZRd1",
+                      "type": "ref",
+                      "ref": "i95ptt",
+                      "name": "Google button",
+                      "width": "fill_container"
+                    },
+                    {
+                      "id": "owaQi",
+                      "type": "ref",
+                      "ref": "X2UYhO",
+                      "name": "GitHub button",
+                      "width": "fill_container"
+                    },
+                    {
+                      "id": "lwVev",
+                      "type": "ref",
+                      "ref": "Cp38L",
+                      "name": "create divider",
+                      "width": "fill_container",
+                      "padding": [
+                        8,
+                        0
+                      ],
+                      "descendants": {
+                        "r8J8z": {
+                          "content": "New to GiTiempo?"
+                        }
+                      }
                     },
                     {
                       "type": "frame",
@@ -15423,14 +15641,33 @@
                       "name": "Create workspace link button",
                       "width": "fill_container",
                       "height": 42,
-                      "fill": "$color-surface",
-                      "cornerRadius": 6,
+                      "fill": "$color-accent-tint",
+                      "cornerRadius": "$radius-sm",
                       "stroke": "$color-brand",
                       "strokeWidth": 1,
-                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        16
+                      ],
                       "justifyContent": "center",
                       "alignItems": "center",
                       "children": [
+                        {
+                          "type": "path",
+                          "id": "EwVcn",
+                          "name": "plus",
+                          "geometry": "M11 3h2v8h8v2h-8v8h-2v-8h-8v-2h8z",
+                          "viewBox": [
+                            0,
+                            0,
+                            24,
+                            24
+                          ],
+                          "fill": "$color-brand",
+                          "width": 15,
+                          "height": 15
+                        },
                         {
                           "type": "text",
                           "id": "Z0uJgH",
@@ -16956,39 +17193,24 @@
             },
             {
               "type": "frame",
-              "id": "jZBcu",
-              "name": "extBbRight",
-              "gap": 8,
+              "id": "n9bR3",
+              "name": "extBavatar",
+              "width": 28,
+              "height": 28,
+              "fill": "$color-accent-tint",
+              "cornerRadius": 14,
+              "justifyContent": "center",
               "alignItems": "center",
               "children": [
                 {
-                  "id": "h8L1H",
-                  "type": "ref",
-                  "ref": "mgzQ7",
-                  "name": "extBbHome"
-                },
-                {
-                  "type": "frame",
-                  "id": "n9bR3",
-                  "name": "extBavatar",
-                  "width": 28,
-                  "height": 28,
-                  "fill": "$color-accent-tint",
-                  "cornerRadius": 14,
-                  "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "dL84a",
-                      "name": "extBavatarText",
-                      "fill": "$color-brand",
-                      "content": "AT",
-                      "fontFamily": "Inter",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
+                  "type": "text",
+                  "id": "dL84a",
+                  "name": "extBavatarText",
+                  "fill": "$color-brand",
+                  "content": "AT",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600"
                 }
               ]
             }
@@ -17073,6 +17295,19 @@
                   "fontWeight": "600"
                 }
               ]
+            },
+            {
+              "type": "text",
+              "id": "TBqu1",
+              "name": "extBspaLink",
+              "fill": "#5D2B85",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Open full workspace in GiTiempo",
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "600"
             }
           ]
         }
@@ -17149,44 +17384,6 @@
                   "fontFamily": "Inter",
                   "fontSize": 15,
                   "fontWeight": "600"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "C9HMJK",
-              "name": "extCbRight",
-              "gap": 8,
-              "alignItems": "center",
-              "children": [
-                {
-                  "id": "W2Vno",
-                  "type": "ref",
-                  "ref": "mgzQ7",
-                  "name": "extCbHome"
-                },
-                {
-                  "type": "frame",
-                  "id": "DI4zv",
-                  "name": "extCavatar",
-                  "width": 28,
-                  "height": 28,
-                  "fill": "$color-accent-tint",
-                  "cornerRadius": 14,
-                  "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "wWaBX",
-                      "name": "extBavatarText",
-                      "fill": "$color-brand",
-                      "content": "AT",
-                      "fontFamily": "Inter",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
                 }
               ]
             }
@@ -17372,44 +17569,6 @@
                   "fontFamily": "Inter",
                   "fontSize": 15,
                   "fontWeight": "600"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "m3u1U",
-              "name": "extDbRight",
-              "gap": 8,
-              "alignItems": "center",
-              "children": [
-                {
-                  "id": "EDxYU",
-                  "type": "ref",
-                  "ref": "mgzQ7",
-                  "name": "extDbHome"
-                },
-                {
-                  "type": "frame",
-                  "id": "b4pMMk",
-                  "name": "extDavatar",
-                  "width": 28,
-                  "height": 28,
-                  "fill": "$color-accent-tint",
-                  "cornerRadius": 14,
-                  "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "ed8vU",
-                      "name": "extBavatarText",
-                      "fill": "$color-brand",
-                      "content": "AT",
-                      "fontFamily": "Inter",
-                      "fontSize": 11,
-                      "fontWeight": "600"
-                    }
-                  ]
                 }
               ]
             }
@@ -27797,7 +27956,25 @@
           "name": "Brand and workflow context",
           "width": 500,
           "height": "fill_container",
-          "fill": "$color-brand",
+          "fill": {
+            "type": "gradient",
+            "gradientType": "linear",
+            "enabled": true,
+            "rotation": 135,
+            "size": {
+              "height": 1
+            },
+            "colors": [
+              {
+                "color": "#6E3AA0",
+                "position": 0
+              },
+              {
+                "color": "#2E1442",
+                "position": 1
+              }
+            ]
+          },
           "layout": "vertical",
           "padding": [
             56,
@@ -28144,7 +28321,7 @@
                       "content": "Create workspace",
                       "lineHeight": 1.12,
                       "fontFamily": "$font-sans",
-                      "fontSize": 28,
+                      "fontSize": 32,
                       "fontWeight": "700"
                     },
                     {
@@ -28232,17 +28409,33 @@
                           "name": "Work email input",
                           "width": "fill_container",
                           "height": 42,
-                          "fill": "$color-surface",
+                          "fill": "$color-app-bg",
                           "cornerRadius": 6,
                           "stroke": "$color-divider",
                           "strokeWidth": 1,
-                          "layout": "vertical",
+                          "gap": 10,
                           "padding": [
                             0,
                             12
                           ],
                           "justifyContent": "center",
+                          "alignItems": "center",
                           "children": [
+                            {
+                              "type": "path",
+                              "id": "D7dRL",
+                              "name": "mail-icon",
+                              "geometry": "M20 4h-16c-1.1 0-1.99 0.9-1.99 2l-0.01 12c0 1.1 0.9 2 2 2h16c1.1 0 2-0.9 2-2v-12c0-1.1-0.9-2-2-2z m0 4l-8 5-8-5v-2l8 5 8-5v2z",
+                              "viewBox": [
+                                0,
+                                0,
+                                24,
+                                24
+                              ],
+                              "fill": "$color-text-muted",
+                              "width": 17,
+                              "height": 17
+                            },
                             {
                               "type": "text",
                               "id": "t5xbOt",
@@ -28281,17 +28474,33 @@
                           "name": "Full name input",
                           "width": "fill_container",
                           "height": 42,
-                          "fill": "$color-surface",
+                          "fill": "$color-app-bg",
                           "cornerRadius": 6,
                           "stroke": "$color-divider",
                           "strokeWidth": 1,
-                          "layout": "vertical",
+                          "gap": 10,
                           "padding": [
                             0,
                             12
                           ],
                           "justifyContent": "center",
+                          "alignItems": "center",
                           "children": [
+                            {
+                              "type": "path",
+                              "id": "u7ZPrF",
+                              "name": "person-icon",
+                              "geometry": "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z",
+                              "viewBox": [
+                                0,
+                                0,
+                                24,
+                                24
+                              ],
+                              "fill": "$color-text-muted",
+                              "width": 17,
+                              "height": 17
+                            },
                             {
                               "type": "text",
                               "id": "ZzCLH",
@@ -28330,17 +28539,33 @@
                           "name": "Workspace name input",
                           "width": "fill_container",
                           "height": 42,
-                          "fill": "$color-surface",
+                          "fill": "$color-app-bg",
                           "cornerRadius": 6,
                           "stroke": "$color-divider",
                           "strokeWidth": 1,
-                          "layout": "vertical",
+                          "gap": 10,
                           "padding": [
                             0,
                             12
                           ],
                           "justifyContent": "center",
+                          "alignItems": "center",
                           "children": [
+                            {
+                              "type": "path",
+                              "id": "XG7uF",
+                              "name": "work-icon",
+                              "geometry": "M20 6h-4v-2c0-1.11-0.89-2-2-2h-4c-1.11 0-2 0.89-2 2v2h-4c-1.11 0-1.99 0.89-1.99 2l-0.01 11c0 1.11 0.89 2 2 2h16c1.11 0 2-0.89 2-2v-11c0-1.11-0.89-2-2-2z m-6 0h-4v-2h4v2z",
+                              "viewBox": [
+                                0,
+                                0,
+                                24,
+                                24
+                              ],
+                              "fill": "$color-text-muted",
+                              "width": 17,
+                              "height": 17
+                            },
                             {
                               "type": "text",
                               "id": "xVuUl",
@@ -28379,17 +28604,33 @@
                           "name": "Password input",
                           "width": "fill_container",
                           "height": 42,
-                          "fill": "$color-surface",
+                          "fill": "$color-app-bg",
                           "cornerRadius": 6,
                           "stroke": "$color-divider",
                           "strokeWidth": 1,
-                          "layout": "vertical",
+                          "gap": 10,
                           "padding": [
                             0,
                             12
                           ],
                           "justifyContent": "center",
+                          "alignItems": "center",
                           "children": [
+                            {
+                              "type": "path",
+                              "id": "iO47W",
+                              "name": "lock-icon",
+                              "geometry": "M18 8h-1v-2c0-2.76-2.24-5-5-5s-5 2.24-5 5v2h-1c-1.1 0-2 0.9-2 2v10c0 1.1 0.9 2 2 2h12c1.1 0 2-0.9 2-2v-10c0-1.1-0.9-2-2-2z m-9-2c0-1.66 1.34-3 3-3s3 1.34 3 3v2h-6v-2z m9 14h-12v-10h12v10z m-6-3c1.1 0 2-0.9 2-2s-0.9-2-2-2-2 0.9-2 2 0.9 2 2 2z",
+                              "viewBox": [
+                                0,
+                                0,
+                                24,
+                                24
+                              ],
+                              "fill": "$color-text-muted",
+                              "width": 16,
+                              "height": 16
+                            },
                             {
                               "type": "text",
                               "id": "NiMpo",
@@ -28428,17 +28669,33 @@
                           "name": "Confirm password input",
                           "width": "fill_container",
                           "height": 42,
-                          "fill": "$color-surface",
+                          "fill": "$color-app-bg",
                           "cornerRadius": 6,
                           "stroke": "$color-divider",
                           "strokeWidth": 1,
-                          "layout": "vertical",
+                          "gap": 10,
                           "padding": [
                             0,
                             12
                           ],
                           "justifyContent": "center",
+                          "alignItems": "center",
                           "children": [
+                            {
+                              "type": "path",
+                              "id": "LATgL",
+                              "name": "lock-icon",
+                              "geometry": "M18 8h-1v-2c0-2.76-2.24-5-5-5s-5 2.24-5 5v2h-1c-1.1 0-2 0.9-2 2v10c0 1.1 0.9 2 2 2h12c1.1 0 2-0.9 2-2v-10c0-1.1-0.9-2-2-2z m-9-2c0-1.66 1.34-3 3-3s3 1.34 3 3v2h-6v-2z m9 14h-12v-10h12v10z m-6-3c1.1 0 2-0.9 2-2s-0.9-2-2-2-2 0.9-2 2 0.9 2 2 2z",
+                              "viewBox": [
+                                0,
+                                0,
+                                24,
+                                24
+                              ],
+                              "fill": "$color-text-muted",
+                              "width": 16,
+                              "height": 16
+                            },
                             {
                               "type": "text",
                               "id": "ni8qG",
@@ -28503,7 +28760,25 @@
                       "name": "Create workspace button",
                       "width": "fill_container",
                       "height": 42,
-                      "fill": "$color-brand",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "rotation": 135,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "#7A3EA8",
+                            "position": 0
+                          },
+                          {
+                            "color": "#5D2B85",
+                            "position": 1
+                          }
+                        ]
+                      },
                       "cornerRadius": 6,
                       "layout": "vertical",
                       "justifyContent": "center",
@@ -28577,7 +28852,25 @@
           "id": "a3vPOb",
           "name": "Mobile brand header",
           "width": "fill_container",
-          "fill": "$color-brand",
+          "fill": {
+            "type": "gradient",
+            "gradientType": "linear",
+            "enabled": true,
+            "rotation": 135,
+            "size": {
+              "height": 1
+            },
+            "colors": [
+              {
+                "color": "#6E3AA0",
+                "position": 0
+              },
+              {
+                "color": "#2E1442",
+                "position": 1
+              }
+            ]
+          },
           "layout": "vertical",
           "gap": 18,
           "padding": [
@@ -28741,17 +29034,33 @@
                       "name": "Mobile Work email input",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "$color-surface",
+                      "fill": "$color-app-bg",
                       "cornerRadius": 6,
                       "stroke": "$color-divider",
                       "strokeWidth": 1,
-                      "layout": "vertical",
+                      "gap": 10,
                       "padding": [
                         0,
                         12
                       ],
                       "justifyContent": "center",
+                      "alignItems": "center",
                       "children": [
+                        {
+                          "type": "path",
+                          "id": "XS7j0",
+                          "name": "mail-icon",
+                          "geometry": "M20 4h-16c-1.1 0-1.99 0.9-1.99 2l-0.01 12c0 1.1 0.9 2 2 2h16c1.1 0 2-0.9 2-2v-12c0-1.1-0.9-2-2-2z m0 4l-8 5-8-5v-2l8 5 8-5v2z",
+                          "viewBox": [
+                            0,
+                            0,
+                            24,
+                            24
+                          ],
+                          "fill": "$color-text-muted",
+                          "width": 16,
+                          "height": 16
+                        },
                         {
                           "type": "text",
                           "id": "b5iVZ",
@@ -28790,17 +29099,33 @@
                       "name": "Mobile Full name input",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "$color-surface",
+                      "fill": "$color-app-bg",
                       "cornerRadius": 6,
                       "stroke": "$color-divider",
                       "strokeWidth": 1,
-                      "layout": "vertical",
+                      "gap": 10,
                       "padding": [
                         0,
                         12
                       ],
                       "justifyContent": "center",
+                      "alignItems": "center",
                       "children": [
+                        {
+                          "type": "path",
+                          "id": "xKBHW",
+                          "name": "person-icon",
+                          "geometry": "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z",
+                          "viewBox": [
+                            0,
+                            0,
+                            24,
+                            24
+                          ],
+                          "fill": "$color-text-muted",
+                          "width": 16,
+                          "height": 16
+                        },
                         {
                           "type": "text",
                           "id": "r7HeP0",
@@ -28839,17 +29164,33 @@
                       "name": "Mobile Workspace name input",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "$color-surface",
+                      "fill": "$color-app-bg",
                       "cornerRadius": 6,
                       "stroke": "$color-divider",
                       "strokeWidth": 1,
-                      "layout": "vertical",
+                      "gap": 10,
                       "padding": [
                         0,
                         12
                       ],
                       "justifyContent": "center",
+                      "alignItems": "center",
                       "children": [
+                        {
+                          "type": "path",
+                          "id": "e8hvT6",
+                          "name": "work-icon",
+                          "geometry": "M20 6h-4v-2c0-1.11-0.89-2-2-2h-4c-1.11 0-2 0.89-2 2v2h-4c-1.11 0-1.99 0.89-1.99 2l-0.01 11c0 1.11 0.89 2 2 2h16c1.11 0 2-0.89 2-2v-11c0-1.11-0.89-2-2-2z m-6 0h-4v-2h4v2z",
+                          "viewBox": [
+                            0,
+                            0,
+                            24,
+                            24
+                          ],
+                          "fill": "$color-text-muted",
+                          "width": 16,
+                          "height": 16
+                        },
                         {
                           "type": "text",
                           "id": "pDWiA",
@@ -28888,17 +29229,33 @@
                       "name": "Mobile Password input",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "$color-surface",
+                      "fill": "$color-app-bg",
                       "cornerRadius": 6,
                       "stroke": "$color-divider",
                       "strokeWidth": 1,
-                      "layout": "vertical",
+                      "gap": 10,
                       "padding": [
                         0,
                         12
                       ],
                       "justifyContent": "center",
+                      "alignItems": "center",
                       "children": [
+                        {
+                          "type": "path",
+                          "id": "grJnT",
+                          "name": "lock-icon",
+                          "geometry": "M18 8h-1v-2c0-2.76-2.24-5-5-5s-5 2.24-5 5v2h-1c-1.1 0-2 0.9-2 2v10c0 1.1 0.9 2 2 2h12c1.1 0 2-0.9 2-2v-10c0-1.1-0.9-2-2-2z m-9-2c0-1.66 1.34-3 3-3s3 1.34 3 3v2h-6v-2z m9 14h-12v-10h12v10z m-6-3c1.1 0 2-0.9 2-2s-0.9-2-2-2-2 0.9-2 2 0.9 2 2 2z",
+                          "viewBox": [
+                            0,
+                            0,
+                            24,
+                            24
+                          ],
+                          "fill": "$color-text-muted",
+                          "width": 15,
+                          "height": 15
+                        },
                         {
                           "type": "text",
                           "id": "EIkJU",
@@ -28937,17 +29294,33 @@
                       "name": "Mobile Confirm password input",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "$color-surface",
+                      "fill": "$color-app-bg",
                       "cornerRadius": 6,
                       "stroke": "$color-divider",
                       "strokeWidth": 1,
-                      "layout": "vertical",
+                      "gap": 10,
                       "padding": [
                         0,
                         12
                       ],
                       "justifyContent": "center",
+                      "alignItems": "center",
                       "children": [
+                        {
+                          "type": "path",
+                          "id": "hMyHd",
+                          "name": "lock-icon",
+                          "geometry": "M18 8h-1v-2c0-2.76-2.24-5-5-5s-5 2.24-5 5v2h-1c-1.1 0-2 0.9-2 2v10c0 1.1 0.9 2 2 2h12c1.1 0 2-0.9 2-2v-10c0-1.1-0.9-2-2-2z m-9-2c0-1.66 1.34-3 3-3s3 1.34 3 3v2h-6v-2z m9 14h-12v-10h12v10z m-6-3c1.1 0 2-0.9 2-2s-0.9-2-2-2-2 0.9-2 2 0.9 2 2 2z",
+                          "viewBox": [
+                            0,
+                            0,
+                            24,
+                            24
+                          ],
+                          "fill": "$color-text-muted",
+                          "width": 15,
+                          "height": 15
+                        },
                         {
                           "type": "text",
                           "id": "i45KhQ",
@@ -29004,7 +29377,25 @@
               "name": "Mobile create workspace button",
               "width": "fill_container",
               "height": 42,
-              "fill": "$color-brand",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 135,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#7A3EA8",
+                    "position": 0
+                  },
+                  {
+                    "color": "#5D2B85",
+                    "position": 1
+                  }
+                ]
+              },
               "cornerRadius": 6,
               "layout": "vertical",
               "justifyContent": "center",
@@ -53672,26 +54063,766 @@
     },
     {
       "type": "frame",
-      "id": "mgzQ7",
+      "id": "eStIM",
+      "x": 5280,
+      "y": -1100,
+      "name": "Login Page — Admin",
+      "clip": true,
+      "width": 1280,
+      "height": 900,
+      "fill": "$color-app-bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "GTO74",
+          "name": "left",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": {
+            "type": "gradient",
+            "gradientType": "linear",
+            "enabled": true,
+            "rotation": 135,
+            "size": {
+              "height": 1
+            },
+            "colors": [
+              {
+                "color": "#6E3AA0",
+                "position": 0
+              },
+              {
+                "color": "#2E1442",
+                "position": 1
+              }
+            ]
+          },
+          "layout": "vertical",
+          "padding": [
+            48,
+            56
+          ],
+          "justifyContent": "space_between",
+          "children": [
+            {
+              "type": "frame",
+              "id": "q0aAX",
+              "name": "brand",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hh8KF",
+                  "name": "logo",
+                  "width": 38,
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "cornerRadius": 10,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Z0ck6",
+                      "fill": "$color-brand",
+                      "content": "GT",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gEXo7",
+                  "name": "brandText",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Y2egUO",
+                      "fill": "#FFFFFF",
+                      "content": "GiTiempo",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "qlVxf",
+                      "fill": "#FFFFFFB3",
+                      "content": "Time tracking for modern product teams",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "V6NlY",
+              "name": "hero",
+              "width": 520,
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "TCoCY",
+                  "fill": "#FFFFFF",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Manage reporting, members, and projects in one workspace.",
+                  "fontFamily": "Inter",
+                  "fontSize": 40,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "W4skJa",
+                  "fill": "#FFFFFFCC",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Sign in with your workspace account to access reports, invoicing, member management, and settings from the admin side of GiTiempo.",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "XYFEq",
+                  "name": "heroCards",
+                  "width": "fill_container",
+                  "height": 132,
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "s5E5rl",
+                      "name": "card1",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "#FFFFFF17",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "#FFFFFF2E",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mtGBD",
+                          "fill": "#FFFFFF",
+                          "content": "Admin-ready reports",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "o622mg",
+                          "fill": "#FFFFFFB3",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Review team time, project summaries, and invoice inputs from a single authenticated workspace.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "O6vmsX",
+                      "name": "card2",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "#FFFFFF17",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "#FFFFFF2E",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "vRyRu",
+                          "fill": "#FFFFFF",
+                          "content": "Shared workspace auth",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "I5Eel",
+                          "fill": "#FFFFFFB3",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Use the same Firebase-backed workspace identity as the user app, without maintaining a second login model.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zhXSg",
+              "name": "footer",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "NjWsb",
+                  "fill": "#FFFFFFB3",
+                  "content": "Guest-only admin entry",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "a44JJ",
+                  "fill": "#FFFFFFB3",
+                  "content": "Shared auth direction with user-web",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "DDP5j",
+                  "name": "loginSwitch",
+                  "fill": "$color-accent-tint",
+                  "content": "Need time tracking? Open the user workspace.",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "yNFU6",
+          "name": "right",
+          "width": 520,
+          "height": "fill_container",
+          "fill": "$color-app-bg",
+          "layout": "vertical",
+          "padding": 48,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "hIgQy",
+              "name": "panel",
+              "width": "fill_container",
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": 20,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "LGbNo",
+                  "name": "panelHeader",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "V6VCSn",
+                      "fill": "$color-text-dark",
+                      "content": "Admin sign in",
+                      "fontFamily": "Inter",
+                      "fontSize": 36,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Q3QyEQ",
+                      "fill": "$color-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Use your workspace account to continue into the admin workspace.",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "i5Wzc5",
+                  "name": "emailField",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zU3AB",
+                      "fill": "$color-text-dark",
+                      "content": "Email",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m7Xuy",
+                      "width": "fill_container",
+                      "height": 42,
+                      "fill": "$color-app-bg",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "path",
+                          "id": "K7lNLP",
+                          "name": "mail-icon",
+                          "geometry": "M20 4h-16c-1.1 0-1.99 0.9-1.99 2l-0.01 12c0 1.1 0.9 2 2 2h16c1.1 0 2-0.9 2-2v-12c0-1.1-0.9-2-2-2z m0 4l-8 5-8-5v-2l8 5 8-5v2z",
+                          "viewBox": [
+                            0,
+                            0,
+                            24,
+                            24
+                          ],
+                          "fill": "$color-text-muted",
+                          "width": 17,
+                          "height": 17
+                        },
+                        {
+                          "type": "text",
+                          "id": "u2QJDB",
+                          "fill": "$color-text-muted",
+                          "content": "admin@workspace.com",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "I5uR7",
+                  "name": "passwordField",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CJChb",
+                      "fill": "$color-text-dark",
+                      "content": "Password",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "J8XOPf",
+                      "width": "fill_container",
+                      "height": 42,
+                      "fill": "$color-app-bg",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "h0oU8R",
+                          "name": "pw-left",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "zj7VE",
+                              "name": "lock-icon",
+                              "geometry": "M18 8h-1v-2c0-2.76-2.24-5-5-5s-5 2.24-5 5v2h-1c-1.1 0-2 0.9-2 2v10c0 1.1 0.9 2 2 2h12c1.1 0 2-0.9 2-2v-10c0-1.1-0.9-2-2-2z m-9-2c0-1.66 1.34-3 3-3s3 1.34 3 3v2h-6v-2z m9 14h-12v-10h12v10z m-6-3c1.1 0 2-0.9 2-2s-0.9-2-2-2-2 0.9-2 2 0.9 2 2 2z",
+                              "viewBox": [
+                                0,
+                                0,
+                                24,
+                                24
+                              ],
+                              "fill": "$color-text-muted",
+                              "width": 16,
+                              "height": 16
+                            },
+                            {
+                              "type": "text",
+                              "id": "qpSmD",
+                              "fill": "$color-text-dark",
+                              "content": "••••••••••",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "DJuFy",
+                          "fill": "$color-brand",
+                          "content": "Forgot?",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "RbrK1",
+                  "name": "actions",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "VUCve",
+                      "width": "fill_container",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "rotation": 135,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "#7A3EA8",
+                            "position": 0
+                          },
+                          {
+                            "color": "#5D2B85",
+                            "position": 1
+                          }
+                        ]
+                      },
+                      "cornerRadius": "$radius-sm",
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "b6K5hr",
+                          "fill": "$color-surface",
+                          "content": "Sign in",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "DkZxf",
+                          "name": "enter-key",
+                          "fill": "#FFFFFF29",
+                          "cornerRadius": 4,
+                          "padding": [
+                            1,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "HjwF2",
+                              "name": "key",
+                              "fill": "#FFFFFF",
+                              "content": "↵ Enter",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "b7KAeo",
+                      "type": "ref",
+                      "ref": "Cp38L",
+                      "name": "oauth divider",
+                      "width": "fill_container",
+                      "padding": [
+                        8,
+                        0
+                      ]
+                    },
+                    {
+                      "id": "q5T1J",
+                      "type": "ref",
+                      "ref": "i95ptt",
+                      "name": "Google button",
+                      "width": "fill_container"
+                    },
+                    {
+                      "id": "FvXaM",
+                      "type": "ref",
+                      "ref": "X2UYhO",
+                      "name": "GitHub button",
+                      "width": "fill_container"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "k6lDU",
+                  "fill": "$color-text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "By continuing, you agree to your workspace authentication policy.",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "i95ptt",
       "x": 0,
-      "y": -1240,
-      "name": "Ext Home Button",
+      "y": -1280,
+      "name": "OAuth Google Button",
       "reusable": true,
-      "width": 28,
-      "height": 28,
-      "cornerRadius": "$radius-md",
+      "width": 340,
+      "fill": "#FFFFFF",
+      "cornerRadius": "$radius-sm",
+      "stroke": "#DADCE0",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "gap": 10,
+      "padding": [
+        12,
+        16
+      ],
       "justifyContent": "center",
       "alignItems": "center",
       "children": [
         {
-          "type": "icon",
-          "id": "B5Ssb",
-          "name": "Home Icon",
+          "type": "frame",
+          "id": "lOwOB",
+          "name": "g-icon",
           "width": 18,
           "height": 18,
-          "icon": "house",
-          "library": "lucide",
-          "fill": "$color-brand"
+          "layout": "none",
+          "children": [
+            {
+              "type": "path",
+              "id": "ddrbR",
+              "x": 0,
+              "y": 0,
+              "name": "blue",
+              "geometry": "M45.12 24.5c0-1.56-0.14-3.06-0.4-4.5h-20.72v8.51h11.84c-0.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z",
+              "viewBox": [
+                0,
+                0,
+                48,
+                48
+              ],
+              "fill": "#4285F4",
+              "width": 18,
+              "height": 18
+            },
+            {
+              "type": "path",
+              "id": "rim16",
+              "x": 0,
+              "y": 0,
+              "name": "green",
+              "geometry": "M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07h-7.35v5.7c3.62 7.19 11.06 12.12 19.66 12.12z",
+              "viewBox": [
+                0,
+                0,
+                48,
+                48
+              ],
+              "fill": "#34A853",
+              "width": 18,
+              "height": 18
+            },
+            {
+              "type": "path",
+              "id": "EHK5B",
+              "x": 0,
+              "y": 0,
+              "name": "yellow",
+              "geometry": "M11.69 28.18c-0.44-1.32-0.69-2.73-0.69-4.18s0.25-2.86 0.69-4.18v-5.7h-7.35c-1.49 2.97-2.34 6.33-2.34 9.88s0.85 6.91 2.34 9.88l7.35-5.7z",
+              "viewBox": [
+                0,
+                0,
+                48,
+                48
+              ],
+              "fill": "#FBBC05",
+              "width": 18,
+              "height": 18
+            },
+            {
+              "type": "path",
+              "id": "eW2eg",
+              "x": 0,
+              "y": 0,
+              "name": "red",
+              "geometry": "M24 9.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31c-3.81-3.55-8.79-5.73-14.72-5.73-8.6 0-16.04 4.93-19.66 12.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z",
+              "viewBox": [
+                0,
+                0,
+                48,
+                48
+              ],
+              "fill": "#EA4335",
+              "width": 18,
+              "height": 18
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "igiTF",
+          "name": "label",
+          "fill": "#3C4043",
+          "content": "Continue with Google",
+          "fontFamily": "Inter",
+          "fontSize": 15,
+          "fontWeight": "600"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "X2UYhO",
+      "x": 440,
+      "y": -1280,
+      "name": "OAuth GitHub Button",
+      "reusable": true,
+      "width": 340,
+      "fill": "#24292F",
+      "cornerRadius": "$radius-sm",
+      "gap": 10,
+      "padding": [
+        12,
+        16
+      ],
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "path",
+          "id": "CQWZp",
+          "name": "github-mark",
+          "geometry": "M8 0c-4.42 0-8 3.58-8 8 0 3.54 2.29 6.53 5.47 7.59 0.4 0.07 0.55-0.17 0.55-0.38 0-0.19-0.01-0.82-0.01-1.49-2.01 0.37-2.53-0.49-2.69-0.94-0.09-0.23-0.48-0.94-0.82-1.13-0.28-0.15-0.68-0.52-0.01-0.53 0.63-0.01 1.08 0.58 1.23 0.82 0.72 1.21 1.87 0.87 2.33 0.66 0.07-0.52 0.28-0.87 0.51-1.07-1.78-0.2-3.64-0.89-3.64-3.95 0-0.87 0.31-1.59 0.82-2.15-0.08-0.2-0.36-1.02 0.08-2.12 0 0 0.67-0.21 2.2 0.82 0.64-0.18 1.32-0.27 2-0.27 0.68 0 1.36 0.09 2 0.27 1.53-1.04 2.2-0.82 2.2-0.82 0.44 1.1 0.16 1.92 0.08 2.12 0.51 0.56 0.82 1.27 0.82 2.15 0 3.07-1.87 3.75-3.65 3.95 0.29 0.25 0.54 0.73 0.54 1.48 0 1.07-0.01 1.93-0.01 2.2 0 0.21 0.15 0.46 0.55 0.38a8.013 8.013 0 0 0 5.45-7.59c0-4.42-3.58-8-8-8z",
+          "viewBox": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "fill": "#FFFFFF",
+          "width": 18,
+          "height": 18
+        },
+        {
+          "type": "text",
+          "id": "XlrnK",
+          "name": "label",
+          "fill": "#FFFFFF",
+          "content": "Continue with GitHub",
+          "fontFamily": "Inter",
+          "fontSize": 15,
+          "fontWeight": "600"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Cp38L",
+      "x": 0,
+      "y": -1380,
+      "name": "Auth Divider",
+      "reusable": true,
+      "width": 320,
+      "gap": 12,
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "IsPxV",
+          "name": "line-left",
+          "width": "fill_container",
+          "height": 1,
+          "fill": "$color-divider"
+        },
+        {
+          "type": "text",
+          "id": "r8J8z",
+          "name": "label",
+          "fill": "$color-text-muted",
+          "content": "or continue with",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "500"
+        },
+        {
+          "type": "frame",
+          "id": "ocwRy",
+          "name": "line-right",
+          "width": "fill_container",
+          "height": 1,
+          "fill": "$color-divider"
         }
       ]
     }

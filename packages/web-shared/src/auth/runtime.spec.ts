@@ -36,6 +36,11 @@ function createRuntime(overrides?: {
         accessTokenExpiresIn: 900,
         refreshToken: "refresh-token",
       }),
+      exchangeGithubSession: async () => ({
+        accessToken: "github-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "github-refresh-token",
+      }),
       logoutAuthSession: async () => undefined,
       registerWorkspaceOwner: async () => ({
         accessToken: "registered-access-token",
@@ -117,6 +122,16 @@ describe("createDefaultAuthRuntime", () => {
 
     await expect(runtime.signInWithGoogle()).resolves.toBe("google-id-token");
     expect(firebaseMocks.signInWithPopup).toHaveBeenCalledOnce();
+  });
+
+  it("exchanges a GitHub sign-in handoff code through the auth client", async () => {
+    const runtime = createRuntime();
+
+    await expect(runtime.exchangeGithubSession("handoff-code")).resolves.toEqual({
+      accessToken: "github-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "github-refresh-token",
+    });
   });
 
   it("delegates workspace registration through the shared auth client", async () => {
