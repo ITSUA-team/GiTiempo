@@ -427,15 +427,25 @@ describe("popup app", () => {
       );
     });
 
-    it("carries the running timer into the menu", async () => {
+    it("warns that a running timer survives sign out, without repeating the clock", async () => {
       await openMenu({ snapshot: signedInSnapshot({ currentTimer: currentTimer() }) });
 
       const menu = document.querySelector('[data-testid="popup-account-menu"]')!;
 
-      // The panel covers the state that would otherwise show the timer, so signing
-      // out must not be offered without it.
-      expect(menu.textContent).toContain("Improve reports filters");
-      expect(menu.textContent).toContain("Keeps running after sign out");
+      // Signing out leaves the timer running, so the menu must say so before
+      // offering the action.
+      expect(menu.textContent).toContain("Timer keeps running after sign out");
+      // But it is a warning, not a second timer: no elapsed readout inside the
+      // panel, which sits directly over the one the popup already shows.
+      expect(menu.querySelector("[data-elapsed]")).toBeNull();
+    });
+
+    it("shows no timer notice when nothing is running", async () => {
+      await openMenu();
+
+      expect(
+        document.querySelector('[data-testid="popup-account-menu"]')!.textContent,
+      ).not.toContain("Timer keeps running");
     });
 
     it("shows the email alone when the snapshot carries no display name", async () => {

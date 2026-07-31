@@ -67,4 +67,4 @@ The extension SHALL end a session on request by revoking it with the backend and
 - **GIVEN** a timer is running for the signed-in member
 - **WHEN** the user signs out
 - **THEN** the timer is left running, because it belongs to the workspace rather than to the client that started it
-- **AND** the menu names the running timer before the user signs out, so the outcome is not a surprise
+- **AND** the menu warns, before the action is taken, that the timer will keep running, so the outcome is not a surprise

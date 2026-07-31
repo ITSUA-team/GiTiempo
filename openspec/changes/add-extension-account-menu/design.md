@@ -39,7 +39,8 @@ The menu renders as a small panel positioned under the avatar, over the state be
 
 - *Rationale*: "modal" was the word used, and at 320×480 the distinction is mostly academic. An anchored panel matches how the web menu behaves and keeps the gesture where the trigger is.
 - *Corrected once drawn*: the original rationale claimed an anchored panel keeps the running timer visible. **It does not, and cannot.** Measured in `GITiempo.pen`: the panel occupies y 56–270 while the status card occupies 68–241, so a panel of usable width under a top-right avatar covers the whole timer — tag, elapsed digits, task, and meta. There is no size that both fits two actions plus an identity and clears the middle band, because the trigger is at the top and the timer is in the centre.
-- *Resolution*: the panel **carries** the timer instead of trying not to cover it. Its running-timer block shows the elapsed time and the task alongside the warning, so opening the menu relocates that context rather than hiding it. This also makes D5's requirement do real work: the timer is named with its actual value, not with a generic sentence.
+- *Resolution, revised after review*: the panel carries a **warning**, not a second clock. It was first built to repeat the elapsed value and task, on the reasoning that relocating the context beats hiding it; in the running popup that read as a second timer sitting on top of the first rather than as a warning about it, and the duplication was removed.
+- *Cost, stated rather than argued away*: while the menu is open the elapsed value is not readable. What matters before signing out is knowing the timer will keep running, and the panel says exactly that; the value itself is one dismissal away. That is a real cost of the anchored position, not something the design gets for free.
 - *Alternative rejected*: floating the panel into the empty band below the card (y 241–418) so nothing is covered. Nothing is covered, but a menu that appears in the middle of the popup while the control that opened it sits in the corner reads as an unrelated dialog.
 - *Note*: no focus trap. A focus trap needs somewhere to trap focus *from*, and the popup is the whole window; `Escape` plus dismiss-on-outside-pointer is the behaviour a two-item menu needs, and it is what a keyboard user will reach for.
 
@@ -55,14 +56,15 @@ The menu renders as a small panel positioned under the avatar, over the state be
 
 An `isAccountMenuOpen` flag on popup state, read by the header renderer and reset on sign-out and on dismiss.
 
-- *Rationale*: the popup re-renders `innerHTML` and re-binds on every snapshot tick — and while a timer runs, that is once a second. Anything holding open state in the DOM would be destroyed by the next tick, so the flag is not a stylistic choice but the only thing that survives. `showEmailForm` already established it.
+- *Rationale*: the popup re-renders `innerHTML` and re-binds on every snapshot update, so anything holding open state in the DOM would be destroyed by the next one. `showEmailForm` already established the flag.
+- *Amended during implementation*: this originally said the rebuild also happened on every timer tick, once a second. It did, and it made an open menu item pulse under a stationary cursor — each replacement started un-hovered and transitioned back. The ticker now advances the elapsed text in place instead of re-rendering, so a tick rebuilds nothing. The flag is still required, because a snapshot update does re-render in full.
 
 ### D5: Signing out does not stop a running timer
 
 The menu is offered in the running state and does not touch the timer.
 
 - *Rationale*: the timer belongs to the workspace, not to the client that started it, and the web app does not stop timers on logout either. Silently ending someone's tracked time because they left a browser would destroy data they cannot recover.
-- *Trade-off, stated plainly*: a member can sign out with a timer running and then have no visible sign it is still running until they sign back in or open the web app. That is a real hole, and the honest fix is telling them — the menu shows the elapsed time, the task, and `Keeps running after sign out` when a timer is active, rather than silently doing something irreversible in either direction.
+- *Trade-off, stated plainly*: a member can sign out with a timer running and then have no visible sign it is still running until they sign back in or open the web app. That is a real hole, and the honest fix is telling them — the menu carries `Timer keeps running after sign out` whenever a timer is active, rather than silently doing something irreversible in either direction.
 
 ### D6: The profile URL is derived once, in config
 

@@ -55027,55 +55027,12 @@
           "width": "fill_container",
           "fill": "$color-status-active-bg",
           "cornerRadius": "$radius-sm",
-          "layout": "vertical",
-          "gap": 4,
           "padding": [
             8,
             10
           ],
+          "alignItems": "center",
           "children": [
-            {
-              "type": "frame",
-              "id": "GQsiV",
-              "name": "timerNoteRow",
-              "width": "fill_container",
-              "gap": 6,
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "icon",
-                  "id": "zl85H",
-                  "name": "timerNoteIcon",
-                  "width": 14,
-                  "height": 14,
-                  "icon": "timer",
-                  "library": "lucide",
-                  "fill": "$color-status-active-text"
-                },
-                {
-                  "type": "text",
-                  "id": "XoFqc",
-                  "name": "timerNoteTime",
-                  "fill": "$color-status-active-text",
-                  "content": "01:42:18",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "700"
-                }
-              ]
-            },
-            {
-              "type": "text",
-              "id": "pE2cQ",
-              "name": "timerNoteTask",
-              "fill": "$color-status-active-text",
-              "textGrowth": "fixed-width",
-              "width": "fill_container",
-              "content": "#184 Improve reports filters",
-              "fontFamily": "Inter",
-              "fontSize": 11,
-              "fontWeight": "normal"
-            },
             {
               "type": "text",
               "id": "P76YAV",
@@ -55083,7 +55040,7 @@
               "fill": "$color-status-active-text",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "Keeps running after sign out",
+              "content": "Timer keeps running after sign out",
               "fontFamily": "Inter",
               "fontSize": 11,
               "fontWeight": "600"

@@ -28,9 +28,9 @@
 
 - The avatar is the account trigger, matching the web apps, where the same menu opens from the avatar rather than from the logo. It reports itself expanded and takes the brand fill while open.
 - Anchored under the avatar, over the state beneath. Dismissed by escape, by a pointer outside it, or by choosing an action; dismissing changes nothing underneath.
-- Contents, in order: the member's identity, the running-timer block when a timer is active, then `Open profile` and `Sign out`. Two actions and no more — workspace switching and settings are out of scope for the popup.
+- Contents, in order: the member's identity, the running-timer notice when a timer is active, then `Open profile` and `Sign out`. Two actions and no more — workspace switching and settings are out of scope for the popup.
 - Identity is the display name over the email, or **the email alone** when the snapshot carries no display name, which is the common case outside a running timer.
-- The running-timer block shows the elapsed time and task, because the panel covers the state that would otherwise show them, and because signing out leaves the timer running. It says so explicitly rather than leaving the outcome to be discovered.
+- When a timer is running the menu carries a one-line notice that it keeps running after sign out. Deliberately a warning and not a second clock: the popup already shows the elapsed value, and repeating it inside a panel sitting directly over it read as a second timer rather than as a warning about the first. While the menu is open that value is not readable, which is the accepted cost of anchoring the panel to the avatar.
 - `Sign out` revokes the session with the backend and then clears extension storage, clearing locally even when the revoke fails. Afterwards the popup and any injected issue control both fall back to their unauthenticated behaviour. It does **not** stop a running timer: the timer belongs to the workspace, not to the client that started it.
 - No menu is reachable in the loading or unauthenticated states, which have no avatar and no session to act on.
 

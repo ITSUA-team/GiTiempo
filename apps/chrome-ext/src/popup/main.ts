@@ -104,28 +104,18 @@ const popupMenuItemClass =
   "flex w-full cursor-pointer items-center gap-2.5 rounded-sm px-2.5 py-2 text-left text-[13px] font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
 /**
- * The running-timer block. It exists because signing out leaves the timer
- * running, and the panel covers the state that would otherwise show it — so the
- * timer is carried in here rather than merely warned about.
+ * Warns that signing out leaves the timer running. Deliberately a sentence and
+ * not a second clock: the popup already shows the elapsed value, and repeating it
+ * inside a panel that sits directly over it made the menu read as a second timer
+ * rather than as a warning about the one already running.
  */
-function renderAccountMenuTimer(
-  timer: NonNullable<RuntimeSnapshot["currentTimer"]>,
-  now: number,
-): string {
-  const task = timer.task?.title
-    ? `#${timer.githubIssue?.issueNumber ?? ""} ${timer.task.title}`.trim()
-    : timer.project.name;
-
+function renderAccountMenuTimerNotice(): string {
   return `
-    <div class="bg-status-active-bg text-status-active-text flex flex-col gap-1 rounded-sm px-2.5 py-2">
-      <p data-elapsed class="m-0 text-[13px] font-bold">${escapeHtml(formatElapsedTime(timer.startedAt, now))}</p>
-      <p class="m-0 text-[11px]">${escapeHtml(task)}</p>
-      <p class="m-0 text-[11px] font-semibold">Keeps running after sign out</p>
-    </div>
+    <p class="bg-status-active-bg text-status-active-text m-0 rounded-sm px-2.5 py-2 text-[11px] font-semibold">Timer keeps running after sign out</p>
   `;
 }
 
-function renderAccountMenu(state: PopupState, now: number): string {
+function renderAccountMenu(state: PopupState): string {
   const user = state.snapshot?.user;
 
   if (!user) {
@@ -141,7 +131,7 @@ function renderAccountMenu(state: PopupState, now: number): string {
         ${displayName ? `<p class="m-0 truncate text-[13px] font-semibold text-text-dark">${escapeHtml(displayName)}</p>` : ""}
         <p class="m-0 truncate text-xs text-text-muted">${escapeHtml(user.email)}</p>
       </div>
-      ${timer ? renderAccountMenuTimer(timer, now) : ""}
+      ${timer ? renderAccountMenuTimerNotice() : ""}
       <div class="bg-divider my-0.5 h-px" aria-hidden="true"></div>
       <a href="${escapeHtml(config.userSpaProfileUrl)}" target="_blank" rel="noreferrer" role="menuitem" data-action="open-profile" class="${popupMenuItemClass} text-text-dark hover:bg-app-bg">${popupProfileIconSvg}Open profile</a>
       <button type="button" role="menuitem" data-action="sign-out" class="${popupMenuItemClass} text-destructive hover:bg-destructive/5" ${state.isSubmitting ? "disabled" : ""}>${popupSignOutIconSvg}Sign out</button>
@@ -237,7 +227,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
     return `
       <div class="flex h-full flex-col gap-6">
-        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state, nowMs) : "", state.isAccountMenuOpen)}
+        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state) : "", state.isAccountMenuOpen)}
         <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
           <div class="bg-status-error-bg text-status-error-text flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
           <p class="m-0 text-lg font-semibold text-text-dark">Connection lost</p>
@@ -256,7 +246,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
     return `
       <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state, nowMs) : "", state.isAccountMenuOpen)}
+        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state) : "", state.isAccountMenuOpen)}
         <div class="bg-app-bg flex flex-col items-center gap-3 rounded-lg p-5 text-center">
           <div class="bg-status-active-bg text-status-active-text flex items-center rounded-sm px-3 py-1 text-xs font-semibold">Running timer</div>
           <p data-elapsed class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
@@ -273,7 +263,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
   if (state.pageContext?.kind === "supported") {
     return `
       <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state, nowMs) : "", state.isAccountMenuOpen)}
+        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state) : "", state.isAccountMenuOpen)}
         ${renderIssueCard(state.pageContext)}
         <div class="mt-auto flex flex-col gap-3">
           <button data-action="start-timer" class="${popupPrimaryButtonClass}">Start Timer</button>
@@ -284,7 +274,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
   return `
     <div class="flex h-full flex-col gap-5">
-      ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state, nowMs) : "", state.isAccountMenuOpen)}
+      ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state) : "", state.isAccountMenuOpen)}
       <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
         <p class="m-0 text-xs font-medium text-text-muted">GitHub issue required</p>
         <p class="m-0 text-lg font-semibold text-text-dark">Open a supported GitHub issue to start a timer.</p>
