@@ -103,7 +103,7 @@ The `Ext Unauthenticated` frame in `GITiempo.pen` gains the GitHub action, and t
 **`apps/chrome-ext`** — verification per `apps/chrome-ext/AGENTS.md`: `pnpm --filter chrome-ext typecheck`, `test`, and `build`.
 
 - `src/lib/github-signin.ts` (new): launches `launchWebAuthFlow` against `${apiBaseUrl}/auth/github/start?app=extension`, reads `code` or `githubError` from the resolved redirect URL, and maps each error indicator to recoverable copy. Kept separate from `lib/firebase.ts`, which stays Firebase-only.
-- `src/lib/api.ts`: an `exchangeGithubSession(code)` client method alongside `loginWithFirebaseToken`, reusing the existing `tokenPairResponseSchema` parsing and `setStoredSession`.
+- `src/lib/api.ts`: an `exchangeGithubSession(code, verifier)` client method alongside `loginWithFirebaseToken`, reusing the existing `tokenPairResponseSchema` parsing and `setStoredSession`. The `verifier` argument arrived with D5's contingency; the original plan had `code` alone.
 - `src/lib/config.ts`: `githubSignInEnabled` from the new flag.
 - `src/popup/main.ts`: the GitHub action in the unauthenticated state, per the approved frame, with the existing injectable-dependency pattern so the flow stays testable.
 - `.env.example`: the new flag.
@@ -117,7 +117,7 @@ The `Ext Unauthenticated` frame in `GITiempo.pen` gains the GitHub action, and t
 The two layers meet at exactly two points, and both are already-shipped endpoints.
 
 1. **Start** — the extension navigates the auth window to an API URL. It contributes only `app=extension`; the redirect destination is the backend's configured value, so the extension needs no knowledge of its own redirect URL beyond what Chrome intercepts. If D5's contingency applies, the extension also contributes `challenge`.
-2. **Exchange** — the extension posts the handoff code to `POST /auth/github/session`, unchanged, and receives `TokenPairResponseDto`.
+2. **Exchange** — the extension posts the handoff code and its `verifier` to `POST /auth/github/session`, and receives `TokenPairResponseDto`. The endpoint was expected to be unchanged and is not: D5's contingency added the `verifier`, without which a challenged handoff is refused.
 
 Ordering matters for deployment but not for development: the extension's button is dark until the flag is turned on, and the backend change is inert until a request arrives with `app=extension`. Either side can ship first.
 

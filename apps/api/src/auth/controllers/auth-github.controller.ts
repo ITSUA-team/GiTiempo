@@ -14,7 +14,9 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
+  ApiServiceUnavailableResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { ZodSerializerDto } from 'nestjs-zod';
@@ -66,10 +68,18 @@ export class AuthGithubController {
       },
       'Set-Cookie': {
         description:
-          '`gh_oauth_state` nonce (HttpOnly, SameSite=Lax) that binds the transaction to this browser.',
+          '`gh_oauth_state` nonce (HttpOnly, SameSite=Lax) that binds the transaction to the browser. **Web targets only.** The `extension` target receives no cookie, because its authorization window does not carry one to the callback; it is bound by the `challenge` above instead.',
         schema: { type: 'string' },
       },
     },
+  })
+  @ApiUnauthorizedResponse({
+    description:
+      'The `extension` target was requested without a well-formed `challenge`. Refused here rather than at the callback, so an unbound extension transaction cannot exist.',
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'GitHub sign-in is not configured: the sign-in OAuth App credentials are missing, or the `extension` target was requested without a configured extension destination. Raised before the browser leaves for GitHub, so the failure is not discovered after the user has already authorized.',
   })
   start(
     @Query('app') app: string | undefined,
@@ -125,16 +135,24 @@ export class AuthGithubController {
     description: 'GitHub error code, present when the user denied the request.',
   })
   @ApiFoundResponse({
-    description:
-      'Redirect back to the originating SPA. On success to its `/auth/github/callback` with a single-use handoff `code`; otherwise to its `/login` with `githubError` set to `denied`, `state`, `email`, or `failed`. Never returns a body, and never fails the request.',
+    description: [
+      'Redirect back to whichever client the signed state names. Never returns a body, and never fails the request — an outcome the caller cannot observe is worse than an error it can.',
+      '',
+      '**Web targets** return to that app: on success to its `/auth/github/callback` SPA route with a single-use handoff `code`, otherwise to its `/login`.',
+      '',
+      "**The `extension` target** returns to the configured extension destination on every outcome, with the same `code` or indicator on that URL's own query. It has no route to load: the browser navigation is intercepted as soon as it matches, and an outcome sent to a web page would leave the extension's authorization window waiting forever.",
+      '',
+      'Failures carry `githubError` set to `denied`, `state`, `email`, or `failed`.',
+    ].join('\n'),
     headers: {
       Location: {
-        description: 'Absolute SPA URL to return the browser to.',
+        description:
+          'Absolute URL to return the browser to: an app route for the web targets, the configured extension destination for `extension`.',
         schema: { type: 'string' },
       },
       'Set-Cookie': {
         description:
-          'Cleared `gh_oauth_state` cookie — the state binding is single-use.',
+          'Cleared `gh_oauth_state` cookie — the state binding is single-use. Web targets only; the `extension` target was never given one.',
         schema: { type: 'string' },
       },
     },
@@ -168,6 +186,10 @@ export class AuthGithubController {
     summary: 'Exchange a GitHub sign-in handoff code for a session',
   })
   @ApiOkResponse({ type: TokenPairResponseDto })
+  @ApiUnauthorizedResponse({
+    description:
+      'The handoff code is unknown, already used, expired, or — for a transaction bound by a `challenge` — presented without the matching `verifier`. The reasons are deliberately indistinguishable to the caller, and a mismatched attempt consumes the code, so this cannot be used to probe one.',
+  })
   @ZodSerializerDto(TokenPairResponseDto)
   session(@Body() body: GithubSessionDto): Promise<TokenPairResponseDto> {
     return this.github.exchangeSession(body.code, body.verifier);

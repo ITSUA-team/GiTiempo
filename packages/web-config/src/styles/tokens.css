@@ -13,6 +13,16 @@
   --color-divider: #eeeeee;
   --color-destructive: #d32f2f;
 
+  /*
+   * Identity-provider brand colours. Not ours to choose, and not themeable —
+   * GitHub's mark has to sit on GitHub's colour to be recognised. They live here
+   * so the web logins and the extension popup render the same button from one
+   * definition instead of repeating the hex, which is what
+   * `docs/ui/INDEX.md` forbids in class attributes.
+   */
+  --color-github: #24292f;
+  --color-github-hover: #32383f;
+
   --color-status-active-bg: #e8f5e9;
   --color-status-active-text: #2e7d32;
   --color-status-warn-bg: #fff8e1;

@@ -184,7 +184,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
           <button
             v-if="props.githubEnabled"
             type="button"
-            class="focus-visible:outline-brand flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm bg-[#24292f] px-4 text-[15px] font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 enabled:hover:bg-[#32383f] disabled:cursor-not-allowed disabled:opacity-60"
+            class="focus-visible:outline-brand flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm bg-github px-4 text-[15px] font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 enabled:hover:bg-github-hover disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="props.isSubmitting"
             data-testid="sign-in-github"
             @click="emit('submitGithub')"
