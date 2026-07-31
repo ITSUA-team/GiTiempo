@@ -56,6 +56,19 @@ The extension SHALL end a session on request by revoking it with the backend and
 - **THEN** the stored session is still cleared
 - **AND** the user is not left signed in against their explicit request
 
+#### Scenario: A revoke that never answers does not hold the session open
+- **GIVEN** a stored extension session
+- **AND** the revoke request stalls rather than failing
+- **WHEN** the user signs out
+- **THEN** the stored session is cleared without waiting for that request to settle
+- **AND** the outcome does not depend on the network answering
+
+#### Scenario: A refresh in flight cannot restore an ended session
+- **GIVEN** a token refresh is in flight when the user signs out
+- **WHEN** that refresh completes afterwards with a rotated token pair
+- **THEN** the pair is not stored, and the session stays ended
+- **AND** the rotated pair is revoked, since the sign-out could only revoke the pair it was given
+
 #### Scenario: Every surface reflects the ended session
 - **GIVEN** the user has just signed out
 - **WHEN** the popup and any injected issue control next render

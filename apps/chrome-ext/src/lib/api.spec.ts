@@ -144,8 +144,11 @@ describe("createExtensionApiClient", () => {
     expect(data).toEqual({});
   });
 
-  it("revokes the session with the backend and then clears it locally", async () => {
-    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+  it("clears the session locally and revokes it with the backend", async () => {
+    const fetchFn = vi.fn(
+      async (..._args: Parameters<typeof fetch>) =>
+        new Response(null, { status: 204 }),
+    );
     const { data, storage } = createStorage({
       [EXTENSION_SESSION_STORAGE_KEY]: {
         accessToken: "access-token",
@@ -161,14 +164,20 @@ describe("createExtensionApiClient", () => {
 
     await client.exitSession();
 
-    expect(fetchFn).toHaveBeenCalledWith("http://localhost:3000/auth/logout", {
-      body: JSON.stringify({ refreshToken: "refresh-token" }),
-      headers: {
-        Authorization: "Bearer access-token",
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-    });
+    expect(fetchFn).toHaveBeenCalledWith(
+      "http://localhost:3000/auth/logout",
+      expect.objectContaining({
+        body: JSON.stringify({ refreshToken: "refresh-token" }),
+        headers: {
+          Authorization: "Bearer access-token",
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
+    );
+    // Bounded, because nothing downstream waits on it and an MV3 worker can be
+    // terminated mid-request.
+    expect(fetchFn.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
     // A 204 with no body is the endpoint's success shape, not a failure.
     expect(data).toEqual({});
   });
@@ -212,6 +221,84 @@ describe("createExtensionApiClient", () => {
     await client.exitSession();
 
     expect(data).toEqual({});
+  });
+
+  it("clears locally without waiting for a revoke that never settles", async () => {
+    const { data, storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      // Never settles: a stalled network, or an MV3 worker about to be terminated.
+      fetchFn: vi.fn(() => new Promise<Response>(() => {})),
+      storage,
+    });
+
+    const pending = client.exitSession();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // The session is gone before the revoke resolves, so a hang cannot leave the
+    // user signed in against an explicit request.
+    expect(data).toEqual({});
+    void pending;
+  });
+
+  it("does not let a refresh that resolves after sign-out restore the session", async () => {
+    const rotated = {
+      accessToken: "rotated-access",
+      accessTokenExpiresIn: 900,
+      refreshToken: "rotated-refresh",
+    };
+    let releaseRefresh: (() => void) | null = null;
+    const fetchFn = vi.fn(async (url: string) => {
+      if (String(url).includes("/auth/refresh")) {
+        await new Promise<void>((resolve) => {
+          releaseRefresh = resolve;
+        });
+        return jsonResponse(rotated);
+      }
+
+      if (String(url).includes("/auth/logout")) {
+        return new Response(null, { status: 204 });
+      }
+
+      return jsonResponse({ timeEntry: null }, { status: 401 });
+    });
+    const { data, storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "expired-access",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn: fetchFn as unknown as typeof fetch,
+      storage,
+    });
+
+    // A request that 401s starts a refresh, which is left in flight.
+    const inFlight = client.getCurrentTimer().catch(() => null);
+    await vi.waitFor(() => expect(releaseRefresh).not.toBeNull());
+
+    await client.exitSession();
+    expect(data).toEqual({});
+
+    releaseRefresh!();
+    await inFlight;
+
+    // The backend rotates on refresh, so the logout revoked the row this refresh
+    // had already replaced and the rotated pair is still valid. Storing it would
+    // hand the session back after the user ended it.
+    expect(data).toEqual({});
+    expect(
+      fetchFn.mock.calls.filter(([url]) => String(url).includes("/auth/logout")),
+    ).toHaveLength(2);
   });
 
   it("does not call the backend when there is no stored session", async () => {

@@ -46,9 +46,10 @@ The menu renders as a small panel positioned under the avatar, over the state be
 
 ### D3: Sign-out revokes first, then always clears
 
-`exitSession` posts the stored refresh token to `POST /auth/logout`, then clears extension storage. A failed or unreachable revoke is swallowed and the local clear still happens.
+`exitSession` reads the stored pair, clears extension storage, and then revokes best-effort. A failed, refused, or timed-out revoke changes nothing about the local clear, which has already happened.
 
-- *Rationale*: this is exactly `logout()` in `packages/web-shared/src/auth/session-core.ts`, whose comment records the reason — the local session still has to go. Reversing the order would leave a live refresh token on the server with no client able to name it; skipping the revoke would leave a usable token behind after the user asked to be signed out.
+- *Rationale*: the property `logout()` in `packages/web-shared/src/auth/session-core.ts` protects — the local session goes whatever the server said — is kept, and strengthened. Skipping the revoke would leave a usable token behind after the user asked to be signed out, so the pair is read before the clear and revoked after it.
+- *Order corrected after review*: revoking first put an unbounded request in front of the clear, so a stalled network or a terminated service worker could leave the session stored. Reading the pair first means clearing early costs nothing, and it makes the local sign-out unconditional rather than conditional on the network.
 - *Consequence*: the revoke cannot go through `requestWithAuth`, which parses a response schema and would choke on `204`. It needs a small authenticated request that tolerates an empty body — a third shape beside `establishSession` and `requestWithAuth`, and the narrowest of the three.
 - *Alternative rejected*: clearing storage only. It is one line and it is what a naive sign-out does; it also means the refresh token stays valid for its full TTL, which is the difference between signing out and hiding the session.
 
@@ -99,8 +100,8 @@ Everything else is extension-local. Nothing crosses `packages/web-shared`, which
 
 - **A timer keeps running after sign-out** → D5. Named in the menu rather than silently stopped or silently ignored.
 - **The popup re-renders every second while a timer runs** → an open menu would flicker or close if it lived anywhere but state (D4). Worth a test that the menu survives a snapshot tick, since this is the failure a reviewer cannot see in a screenshot.
-- **Sign-out races an in-flight refresh** → `refreshSession` de-duplicates concurrent refreshes but does not know about a revoke. Worst case the refresh succeeds against an already-revoked token and stores a pair that the next request rejects, which the existing 401 path already clears. Not worth new coordination for a window measured in milliseconds.
-- **A revoke that hangs** → the local clear must not wait on it indefinitely; the request inherits the client's existing network-error handling rather than growing its own timeout.
+- **Sign-out races an in-flight refresh** → ~~not worth new coordination~~. **That assessment was wrong and is corrected here.** It assumed the refresh would store a pair the next request rejects. The backend *rotates* on refresh, so a logout revokes the row the in-flight refresh had already replaced, and the rotated pair stays valid: storing it hands the session back after the user ended it. Sign-out now bumps a session epoch that a refresh captures before leaving; a refresh whose epoch changed revokes its rotation instead of storing it. Regression-tested.
+- **A revoke that hangs** → the local clear no longer waits on it at all. Storage is cleared first and unconditionally, and the revoke follows best-effort under a 5-second `AbortSignal.timeout`, because inheriting the client's error handling still left an unbounded request standing between the user asking to sign out and the session going.
 - **The profile route could move** → the extension links to a user-web path it does not own. D6 keeps that assumption in one module, and the existing home action already carries the same coupling.
 - **Two actions in a menu invite a third** → workspace switching and settings are explicitly out of scope in the proposal, so the next person adding one has to argue for it rather than assume it belongs.
 
