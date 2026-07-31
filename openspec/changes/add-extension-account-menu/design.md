@@ -44,13 +44,14 @@ The menu renders as a small panel positioned under the avatar, over the state be
 - *Alternative rejected*: floating the panel into the empty band below the card (y 241–418) so nothing is covered. Nothing is covered, but a menu that appears in the middle of the popup while the control that opened it sits in the corner reads as an unrelated dialog.
 - *Note*: no focus trap. A focus trap needs somewhere to trap focus *from*, and the popup is the whole window; `Escape` plus dismiss-on-outside-pointer is the behaviour a two-item menu needs, and it is what a keyboard user will reach for.
 
-### D3: Sign-out revokes first, then always clears
+### D3: Sign-out clears first, then revokes best-effort
 
 `exitSession` reads the stored pair, clears extension storage, and then revokes best-effort. A failed, refused, or timed-out revoke changes nothing about the local clear, which has already happened.
 
 - *Rationale*: the property `logout()` in `packages/web-shared/src/auth/session-core.ts` protects — the local session goes whatever the server said — is kept, and strengthened. Skipping the revoke would leave a usable token behind after the user asked to be signed out, so the pair is read before the clear and revoked after it.
 - *Order corrected after review*: revoking first put an unbounded request in front of the clear, so a stalled network or a terminated service worker could leave the session stored. Reading the pair first means clearing early costs nothing, and it makes the local sign-out unconditional rather than conditional on the network.
 - *Consequence*: the revoke cannot go through `requestWithAuth`, which parses a response schema and would choke on `204`. It needs a small authenticated request that tolerates an empty body — a third shape beside `establishSession` and `requestWithAuth`, and the narrowest of the three.
+- *The popup waits on the bounded revoke, deliberately*: the service worker answers the sign-out message only after the revoke settles, so the popup's spinner can hold for up to the five-second abort on a dead network. That await is load-bearing, not slack — the pending handler keeps the MV3 worker alive long enough for the best-effort revoke to actually leave the machine, where responding first would let the worker idle-terminate mid-request. Local sign-out is unaffected either way, because storage is already clear before the revoke starts.
 - *Alternative rejected*: clearing storage only. It is one line and it is what a naive sign-out does; it also means the refresh token stays valid for its full TTL, which is the difference between signing out and hiding the session.
 
 ### D4: The menu closes through popup state, like the email form
