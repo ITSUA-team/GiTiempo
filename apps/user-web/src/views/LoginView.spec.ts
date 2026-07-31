@@ -277,7 +277,7 @@ describe("LoginView", () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
 
-    const workspaceLink = wrapper.get("a");
+    const workspaceLink = wrapper.get('[data-testid="auth-intro-counterpart"]');
 
     expect(workspaceLink.text()).toContain("Open the admin workspace");
     expect(workspaceLink.attributes("href")).toBe(
@@ -309,5 +309,82 @@ describe("LoginView", () => {
     await routeReady;
 
     expect(router.currentRoute.value.name).toBe(routeNames.register);
+  });
+
+  it("sends the browser extension callout to the install page when configured", async () => {
+    vi.stubEnv(
+      "VITE_EXTENSION_INSTALL_URL",
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    expect(
+      wrapper.get('[data-testid="login-extension-callout"]').attributes("href"),
+    ).toBe("https://chromewebstore.google.com/detail/gitiempo/abc");
+  });
+
+  it("offers the browser extension through the configured install page", async () => {
+    vi.stubEnv(
+      "VITE_EXTENSION_INSTALL_URL",
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    const callout = wrapper.get('[data-testid="login-extension-callout"]');
+
+    expect(callout.attributes("href")).toBe(
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    expect(callout.attributes("target")).toBe("_blank");
+    expect(callout.attributes("rel")).toBe("noreferrer");
+    expect(callout.attributes("aria-label")).toContain("opens in a new tab");
+    expect(callout.text()).toContain("Browser extension");
+    expect(callout.text()).toContain("Track time right from your browser");
+  });
+
+  it("keeps the extension callout out of the sign-in form", async () => {
+    vi.stubEnv(
+      "VITE_EXTENSION_INSTALL_URL",
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    expect(
+      wrapper.find('form [data-testid="login-extension-callout"]').exists(),
+    ).toBe(false);
+    expect(wrapper.find('[data-testid="sign-in-create-workspace"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="sign-in-email"]').exists()).toBe(true);
+  });
+
+  it("paints the whole left half with the auth gradient", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    // Guards the restyle: the gradient belongs to the half, not the inner
+    // column, or a white strip reappears beside the intro copy.
+    const panel = wrapper.get("h1").element.closest('[class*="linear-gradient"]');
+
+    expect(panel).not.toBeNull();
+    expect(panel?.className).toContain("lg:flex-1");
+    expect(panel?.className).not.toContain("lg:min-w-[50vw]");
+    expect(panel?.firstElementChild?.className).not.toContain("max-w-[600px]");
+  });
+
+  it("hides the extension callout when no install page is configured", async () => {
+    // Stub it empty rather than relying on absence: a developer's .env.local
+    // sets this, and the suite must not depend on their machine.
+    vi.stubEnv("VITE_EXTENSION_INSTALL_URL", "");
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    expect(wrapper.find('[data-testid="login-extension-callout"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.text()).not.toContain("Browser extension");
   });
 });
