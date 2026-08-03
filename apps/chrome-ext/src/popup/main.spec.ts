@@ -52,6 +52,7 @@ function currentTimer(): RuntimeSnapshot["currentTimer"] {
 function createRuntimeClient(overrides?: {
   exchangeFirebaseToken?: RuntimeClient["exchangeFirebaseToken"];
   exchangeGithubSession?: RuntimeClient["exchangeGithubSession"];
+  signOut?: RuntimeClient["signOut"];
   snapshot?: RuntimeSnapshot;
   startTimer?: RuntimeClient["startTimer"];
   stopTimer?: () => Promise<RuntimeMutationResult>;
@@ -68,6 +69,12 @@ function createRuntimeClient(overrides?: {
       vi.fn(async (): Promise<RuntimeAuthResult> => ({
         ok: true,
         snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      })),
+    signOut:
+      overrides?.signOut ??
+      vi.fn(async (): Promise<RuntimeAuthResult> => ({
+        ok: true,
+        snapshot: { authenticated: false, currentTimer: null, errorMessage: null, user: null },
       })),
     getSnapshot: vi.fn(async () =>
         overrides?.snapshot ?? {
@@ -289,6 +296,202 @@ describe("popup app", () => {
     expect(
       document.querySelector<HTMLButtonElement>('[data-action="google-sign-in"]')?.disabled,
     ).toBe(false);
+  });
+
+  describe("account menu", () => {
+    const signedInUser = { displayName: "Alexey Tsukanov", email: "alexey@example.com" };
+
+    function signedInSnapshot(
+      overrides?: Partial<RuntimeSnapshot>,
+    ): RuntimeSnapshot {
+      return {
+        authenticated: true,
+        currentTimer: null,
+        errorMessage: null,
+        user: signedInUser,
+        ...overrides,
+      };
+    }
+
+    async function openMenu(
+      overrides?: Parameters<typeof createRuntimeClient>[0],
+      popupOptions?: { now?: () => number; setIntervalFn?: typeof setInterval },
+    ) {
+      const runtimeClient = createRuntimeClient({
+        snapshot: signedInSnapshot(),
+        ...overrides,
+      });
+      const app = createPopupApp({
+        root: document.querySelector<HTMLElement>("#app")!,
+        runtimeClient,
+        pageContextResolver: async () => ({ kind: "unsupported" }),
+        ...popupOptions,
+      });
+
+      await app.load();
+      document
+        .querySelector<HTMLButtonElement>('[data-action="toggle-account-menu"]')!
+        .click();
+
+      return { app, runtimeClient };
+    }
+
+    it("opens from the avatar and reports itself expanded", async () => {
+      await openMenu();
+
+      expect(document.querySelector('[data-testid="popup-account-menu"]')).not.toBeNull();
+      expect(
+        document
+          .querySelector('[data-action="toggle-account-menu"]')
+          ?.getAttribute("aria-expanded"),
+      ).toBe("true");
+      // The session being acted on is identified before it can be ended.
+      expect(document.body.textContent).toContain("alexey@example.com");
+    });
+
+    it("offers the profile page and signing out, and nothing else", async () => {
+      await openMenu();
+
+      const menu = document.querySelector('[data-testid="popup-account-menu"]')!;
+
+      expect(
+        [...menu.querySelectorAll("[role=menuitem]")].map((item) =>
+          item.textContent?.trim(),
+        ),
+      ).toEqual(["Open profile", "Sign out"]);
+      expect(
+        menu.querySelector<HTMLAnchorElement>('[data-action="open-profile"]')?.href,
+      ).toBe("http://localhost:5173/profile");
+      // The header action the menu sits beside stays reachable.
+      expect(document.querySelector('[aria-label="Open GiTiempo dashboard"]')).not.toBeNull();
+    });
+
+    it("closes on escape without touching the state beneath", async () => {
+      await openMenu({ snapshot: signedInSnapshot({ currentTimer: currentTimer() }) });
+      const before = document.querySelector('[data-testid="popup-account-menu"]');
+
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+
+      expect(before).not.toBeNull();
+      expect(document.querySelector('[data-testid="popup-account-menu"]')).toBeNull();
+      expect(document.body.textContent).toContain("Stop Timer");
+    });
+
+    it("closes on a pointer outside it but not on the trigger", async () => {
+      await openMenu();
+
+      document
+        .querySelector('[data-testid="popup-account-menu"]')!
+        .dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      expect(document.querySelector('[data-testid="popup-account-menu"]')).not.toBeNull();
+
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      expect(document.querySelector('[data-testid="popup-account-menu"]')).toBeNull();
+    });
+
+    it("advances the clock on a tick without rebuilding the menu", async () => {
+      let tick: (() => void) | null = null;
+      // Anchored to the fixture's start, since elapsed time is clamped at zero
+      // before it and a clock starting from 0 would read 00:00:00 either way.
+      let clock = Date.parse("2026-04-21T09:00:00.000Z");
+
+      await openMenu(
+        { snapshot: signedInSnapshot({ currentTimer: currentTimer() }) },
+        {
+          now: () => clock,
+          setIntervalFn: ((handler: () => void) => {
+            tick = handler;
+            return 1 as unknown as ReturnType<typeof setInterval>;
+          }) as unknown as typeof setInterval,
+        },
+      );
+
+      // Guard the guard: without a registered ticker the assertions below would
+      // pass while proving nothing.
+      expect(tick).not.toBeNull();
+      const menuBefore = document.querySelector('[data-testid="popup-account-menu"]');
+      const elapsedBefore = document.querySelector("[data-elapsed]")?.textContent;
+
+      clock += 60_000;
+      tick!();
+
+      const menuAfter = document.querySelector('[data-testid="popup-account-menu"]');
+
+      // The same node, not a replacement. A tick that reassigned innerHTML would
+      // take hover, focus, and text selection with it every second — which is what
+      // made an item pulse under a cursor that had never moved.
+      expect(menuAfter).toBe(menuBefore);
+      // And the clock still advanced, so keeping the DOM did not freeze it.
+      expect(document.querySelector("[data-elapsed]")?.textContent).not.toBe(
+        elapsedBefore,
+      );
+    });
+
+    it("warns that a running timer survives sign out, without repeating the clock", async () => {
+      await openMenu({ snapshot: signedInSnapshot({ currentTimer: currentTimer() }) });
+
+      const menu = document.querySelector('[data-testid="popup-account-menu"]')!;
+
+      // Signing out leaves the timer running, so the menu must say so before
+      // offering the action.
+      expect(menu.textContent).toContain("Timer keeps running after sign out");
+      // But it is a warning, not a second timer: no elapsed readout inside the
+      // panel, which sits directly over the one the popup already shows.
+      expect(menu.querySelector("[data-elapsed]")).toBeNull();
+    });
+
+    it("shows no timer notice when nothing is running", async () => {
+      await openMenu();
+
+      expect(
+        document.querySelector('[data-testid="popup-account-menu"]')!.textContent,
+      ).not.toContain("Timer keeps running");
+    });
+
+    it("shows the email alone when the snapshot carries no display name", async () => {
+      await openMenu({
+        snapshot: signedInSnapshot({ user: { displayName: null, email: "alexey@example.com" } }),
+      });
+
+      const menu = document.querySelector('[data-testid="popup-account-menu"]')!;
+
+      expect(menu.textContent).toContain("alexey@example.com");
+      expect(menu.textContent).not.toContain("Alexey Tsukanov");
+    });
+
+    it("signs out through the runtime client and follows the returned snapshot", async () => {
+      const signOut = vi.fn(async () => ({
+        ok: true,
+        snapshot: {
+          authenticated: false,
+          currentTimer: null,
+          errorMessage: null,
+          user: null,
+        },
+      }));
+      await openMenu({ signOut });
+
+      document.querySelector<HTMLButtonElement>('[data-action="sign-out"]')!.click();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(signOut).toHaveBeenCalledOnce();
+      expect(document.querySelector('[data-testid="popup-account-menu"]')).toBeNull();
+      expect(document.body.textContent).toContain("Continue with Google");
+    });
+
+    it("is unreachable before sign-in", async () => {
+      const app = createPopupApp({
+        root: document.querySelector<HTMLElement>("#app")!,
+        runtimeClient: createRuntimeClient(),
+        pageContextResolver: async () => ({ kind: "unsupported" }),
+      });
+
+      await app.load();
+
+      expect(document.querySelector('[data-action="toggle-account-menu"]')).toBeNull();
+      expect(document.querySelector('[data-testid="popup-account-menu"]')).toBeNull();
+    });
   });
 
   it("submits email sign-in through Firebase and exchanges the token", async () => {

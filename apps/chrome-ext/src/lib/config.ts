@@ -8,6 +8,7 @@ export interface ExtensionConfig {
   githubSignInEnabled: boolean;
   googleOAuthClientId: string;
   userSpaHomeUrl: string;
+  userSpaProfileUrl: string;
   userSpaUrl: string;
 }
 
@@ -40,6 +41,16 @@ export function deriveHomeUrl(userSpaUrl: string): string {
   } catch {
     return userSpaUrl;
   }
+}
+
+/**
+ * The member's own profile in the user SPA, derived from the same origin as the
+ * home affordance. Kept here rather than concatenated at the call site so the
+ * assumption both share — that the SPA is served from the root of that origin —
+ * lives in one module instead of being restated wherever a link is rendered.
+ */
+export function deriveProfileUrl(userSpaUrl: string): string {
+  return `${deriveHomeUrl(userSpaUrl)}/profile`;
 }
 
 function isRelaxedEnvironment(env: ExtensionEnv): boolean {
@@ -128,6 +139,7 @@ export function getExtensionConfig(
       env.VITE_EXTENSION_GITHUB_SIGNIN_ENABLED?.trim() === "true",
     googleOAuthClientId,
     userSpaHomeUrl: deriveHomeUrl(userSpaUrl),
+    userSpaProfileUrl: deriveProfileUrl(userSpaUrl),
     userSpaUrl,
   };
 }

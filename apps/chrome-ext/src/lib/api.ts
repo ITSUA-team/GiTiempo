@@ -2,6 +2,7 @@ import {
   currentTimeEntryResponseSchema,
   githubSessionRequestSchema,
   loginRequestSchema,
+  logoutRequestSchema,
   refreshRequestSchema,
   startTimerFromGitHubSchema,
   timeEntryResponseSchema,
@@ -27,6 +28,7 @@ export interface ExtensionApiClient {
     code: string,
     verifier: string,
   ): Promise<TokenPairResponse>;
+  exitSession(): Promise<void>;
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
   loginWithFirebaseToken(firebaseIdToken: string): Promise<TokenPairResponse>;
   startTimerFromGitHub(
@@ -46,6 +48,8 @@ const API_UNAVAILABLE_ERROR_MESSAGE =
   "GiTiempo API is temporarily unavailable. Please try again in a moment.";
 const API_UNREACHABLE_ERROR_MESSAGE =
   "Unable to reach GiTiempo API. Check your connection and try again.";
+/** Nothing waits on a revoke, so it gets a short leash rather than none at all. */
+const REVOKE_TIMEOUT_MS = 5_000;
 
 function getDefaultResponseErrorMessage(status: number): string {
   if ([502, 503, 504].includes(status)) {
@@ -103,6 +107,11 @@ export function createExtensionApiClient({
   storage,
 }: ExtensionApiClientOptions): ExtensionApiClient {
   let refreshPromise: Promise<TokenPairResponse | null> | null = null;
+  /**
+   * Bumped by every deliberate sign-out. A refresh captures it before leaving and
+   * refuses to store its result if it changed while the request was in flight.
+   */
+  let sessionEpoch = 0;
 
   /** Posts an unauthenticated credential and stores the session it mints. */
   async function establishSession(
@@ -153,12 +162,65 @@ export function createExtensionApiClient({
     );
   }
 
+  /**
+   * Best-effort revoke of one token pair. Bounded by a timeout because nothing
+   * downstream may wait on it: the local session is already gone by the time this
+   * runs, and an MV3 service worker can be terminated mid-request regardless.
+   * The response status is not inspected — every outcome leads to the same place.
+   */
+  async function revokeSession(session: TokenPairResponse): Promise<void> {
+    try {
+      await fetchFn(getRequestUrl(config, "/auth/logout"), {
+        body: JSON.stringify(
+          logoutRequestSchema.parse({ refreshToken: session.refreshToken }),
+        ),
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        signal: AbortSignal.timeout(REVOKE_TIMEOUT_MS),
+      });
+    } catch {
+      // Unreachable, refused, or timed out: the token expires on its own.
+    }
+  }
+
+  /**
+   * Ends the session. Storage is cleared **first** and unconditionally, then the
+   * backend revoke runs best-effort.
+   *
+   * The order is deliberate. Revoking first meant an unbounded request stood
+   * between the user asking to sign out and the session actually going, so a
+   * stalled network — or a service worker terminated mid-flight — could leave them
+   * signed in against an explicit request. Reading the pair before clearing keeps
+   * the revoke possible, so nothing is traded away by clearing first.
+   *
+   * Deliberately not routed through `requestWithAuth`: the endpoint answers `204`
+   * with no body, which a response-schema parse cannot consume, and a revoke has
+   * no response worth parsing anyway.
+   */
+  async function exitSession(): Promise<void> {
+    const session = await getStoredSession(storage);
+
+    // Invalidate any refresh already in flight before clearing, so it cannot
+    // store its result afterwards and undo this.
+    sessionEpoch += 1;
+    await clearStoredSession(storage);
+
+    if (session) {
+      await revokeSession(session);
+    }
+  }
+
   async function refreshSession(
     refreshToken: string,
   ): Promise<TokenPairResponse | null> {
     if (refreshPromise) {
       return refreshPromise;
     }
+
+    const epoch = sessionEpoch;
 
     refreshPromise = (async () => {
       try {
@@ -177,6 +239,15 @@ export function createExtensionApiClient({
         }
 
         const tokenPair = tokenPairResponseSchema.parse(body);
+
+        if (epoch !== sessionEpoch) {
+          // A sign-out landed while this was in flight. Storing the pair would
+          // resurrect the session: the backend rotates on refresh, so the logout
+          // revoked the row this request had already replaced, leaving the new one
+          // valid. Revoke the rotation instead of keeping it.
+          await revokeSession(tokenPair);
+          return null;
+        }
 
         await setStoredSession(tokenPair, storage);
 
@@ -241,6 +312,7 @@ export function createExtensionApiClient({
 
   return {
     exchangeGithubSession,
+    exitSession,
     getCurrentTimer() {
       return requestWithAuth({
         path: "/time-entries/current",

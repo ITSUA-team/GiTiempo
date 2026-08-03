@@ -54954,6 +54954,627 @@
           "fill": "$color-brand"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "vzO0K",
+      "x": 1360,
+      "y": -1280,
+      "name": "Ext Account Menu",
+      "reusable": true,
+      "width": 220,
+      "fill": "$color-surface",
+      "cornerRadius": "$radius-md",
+      "stroke": "$color-divider",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "effect": {
+        "type": "shadow",
+        "shadowType": "outer",
+        "color": "#00000024",
+        "offset": {
+          "x": 0,
+          "y": 4
+        },
+        "blur": 12
+      },
+      "layout": "vertical",
+      "gap": 2,
+      "padding": 6,
+      "children": [
+        {
+          "type": "frame",
+          "id": "nX8cf",
+          "name": "identity",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 2,
+          "padding": [
+            8,
+            10
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "xn9Sz",
+              "name": "identityName",
+              "fill": "$color-text-dark",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Alexey Tsukanov",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "jdBjO",
+              "name": "identityEmail",
+              "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "alexey@example.com",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hQUvh",
+          "name": "timerNote",
+          "width": "fill_container",
+          "fill": "$color-status-active-bg",
+          "cornerRadius": "$radius-sm",
+          "padding": [
+            8,
+            10
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "P76YAV",
+              "name": "timerNoteWarn",
+              "fill": "$color-status-active-text",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Timer keeps running after sign out",
+              "fontFamily": "Inter",
+              "fontSize": 11,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "S9mGyB",
+          "name": "menuDivider",
+          "width": "fill_container",
+          "height": 1,
+          "fill": "$color-divider"
+        },
+        {
+          "type": "frame",
+          "id": "fGYlL",
+          "name": "itemProfile",
+          "width": "fill_container",
+          "cornerRadius": "$radius-sm",
+          "gap": 10,
+          "padding": [
+            9,
+            10
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "oktKF",
+              "name": "itemProfileIcon",
+              "width": 16,
+              "height": 16,
+              "icon": "user",
+              "library": "lucide",
+              "fill": "$color-text-muted"
+            },
+            {
+              "type": "text",
+              "id": "x9DgB",
+              "name": "itemProfileText",
+              "fill": "$color-text-dark",
+              "content": "Open profile",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "f7CorD",
+          "name": "itemSignOut",
+          "width": "fill_container",
+          "cornerRadius": "$radius-sm",
+          "gap": 10,
+          "padding": [
+            9,
+            10
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "O6iFej",
+              "name": "itemSignOutIcon",
+              "width": 16,
+              "height": 16,
+              "icon": "log-out",
+              "library": "lucide",
+              "fill": "$color-destructive"
+            },
+            {
+              "type": "text",
+              "id": "nb4jQ",
+              "name": "itemSignOutText",
+              "fill": "$color-destructive",
+              "content": "Sign out",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "cvEiV",
+      "x": 11827,
+      "y": 380,
+      "name": "Ext Account Menu — Running",
+      "width": 320,
+      "height": 480,
+      "fill": "$color-surface",
+      "cornerRadius": "$radius-lg",
+      "effect": {
+        "type": "shadow",
+        "shadowType": "outer",
+        "color": "#00000014",
+        "offset": {
+          "x": 0,
+          "y": 1
+        },
+        "blur": 3
+      },
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 20,
+      "children": [
+        {
+          "type": "frame",
+          "id": "q1meH4",
+          "name": "extCbrand",
+          "width": "fill_container",
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "eBtcP",
+              "name": "extCbLeft",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "KlWRU",
+                  "name": "extCbLogo",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 9,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "DAGG5",
+                      "name": "extCbLogoText",
+                      "fill": "$color-brand",
+                      "content": "GT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "O4ZSg",
+                  "name": "extCbText",
+                  "fill": "$color-text-dark",
+                  "content": "GiTiempo",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "kQHyy",
+              "name": "extCbRight",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "gJoE6",
+                  "type": "ref",
+                  "ref": "dpU0a",
+                  "name": "extChome"
+                },
+                {
+                  "type": "frame",
+                  "id": "YZV1H",
+                  "name": "extCavatar",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-brand",
+                  "cornerRadius": 14,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "R1p3c",
+                      "name": "extBavatarText",
+                      "fill": "$color-surface",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "XSgfr",
+          "name": "extCstatus",
+          "width": "fill_container",
+          "fill": "$color-app-bg",
+          "cornerRadius": "$radius-lg",
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 20,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "J7eoih",
+              "name": "extCtag",
+              "fill": "$color-status-active-bg",
+              "cornerRadius": "$radius-sm",
+              "padding": [
+                6,
+                10
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "wplCE",
+                  "name": "extCtagText",
+                  "fill": "$color-status-active-text",
+                  "content": "Running timer",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "uH0uA",
+              "name": "extCtime",
+              "fill": "$color-brand",
+              "content": "01:42:18",
+              "fontFamily": "Inter",
+              "fontSize": 36,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "JsejH",
+              "name": "extCtask",
+              "fill": "$color-text-dark",
+              "textGrowth": "fixed-width",
+              "width": 220,
+              "content": "#184 Improve reports filters",
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "zJFqT",
+              "name": "extCmeta",
+              "fill": "$color-text-muted",
+              "content": "Project Orion / admin-web",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "QB1Aq",
+          "name": "extCbottom",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "justifyContent": "end",
+          "children": [
+            {
+              "type": "frame",
+              "id": "w3JMq",
+              "name": "extCstop",
+              "width": "fill_container",
+              "fill": "#D32F2F",
+              "cornerRadius": "$radius-sm",
+              "padding": [
+                12,
+                18
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "iFeEM",
+                  "name": "extCstopText",
+                  "fill": "$color-surface",
+                  "content": "Stop Timer",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "PYJ8T",
+          "type": "ref",
+          "ref": "vzO0K",
+          "name": "extEmenu",
+          "layoutPosition": "absolute",
+          "x": 80,
+          "y": 56
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "V6FKLq",
+      "x": 12207,
+      "y": 380,
+      "name": "Ext Account Menu — No Display Name",
+      "width": 320,
+      "height": 480,
+      "fill": "$color-surface",
+      "cornerRadius": "$radius-lg",
+      "effect": {
+        "type": "shadow",
+        "shadowType": "outer",
+        "color": "#00000014",
+        "offset": {
+          "x": 0,
+          "y": 1
+        },
+        "blur": 3
+      },
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 20,
+      "children": [
+        {
+          "type": "frame",
+          "id": "ZWDoR",
+          "name": "extBbrand",
+          "width": "fill_container",
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "WrxLB",
+              "name": "extBbLeft",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "m8zqJw",
+                  "name": "extBbLogo",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 9,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Y3TEuq",
+                      "name": "extBbLogoText",
+                      "fill": "$color-brand",
+                      "content": "GT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "BXLZH",
+                  "name": "extBbText",
+                  "fill": "$color-text-dark",
+                  "content": "GiTiempo",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zNnXW",
+              "name": "extBbRight",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "r5k8ZL",
+                  "type": "ref",
+                  "ref": "dpU0a",
+                  "name": "extBhome"
+                },
+                {
+                  "type": "frame",
+                  "id": "QNJFP",
+                  "name": "extBavatar",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-brand",
+                  "cornerRadius": 14,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "xGgs1",
+                      "name": "extBavatarText",
+                      "fill": "$color-surface",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "RL4lj",
+          "name": "extBissue",
+          "width": "fill_container",
+          "fill": "$color-app-bg",
+          "cornerRadius": "$radius-lg",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "eUMxq",
+              "name": "extBlabel",
+              "fill": "$color-text-muted",
+              "content": "Current task context",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "vdKGF",
+              "name": "extBtitle",
+              "fill": "$color-text-dark",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "#184 Improve reports filters",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "T6fJ7N",
+              "name": "extBmeta",
+              "fill": "$color-text-muted",
+              "content": "admin-web / Project Orion",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "jPPsA",
+          "name": "extBsp",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "justifyContent": "end",
+          "children": [
+            {
+              "type": "frame",
+              "id": "o71lSm",
+              "name": "extBbtn",
+              "width": "fill_container",
+              "fill": "$color-brand",
+              "cornerRadius": "$radius-sm",
+              "padding": [
+                12,
+                18
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "k0mZ0P",
+                  "name": "extBbtnText",
+                  "fill": "$color-surface",
+                  "content": "Start Timer",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "MTRC1",
+          "type": "ref",
+          "ref": "vzO0K",
+          "name": "extFmenu",
+          "layoutPosition": "absolute",
+          "x": 80,
+          "y": 56,
+          "descendants": {
+            "xn9Sz": {
+              "enabled": false
+            },
+            "hQUvh": {
+              "enabled": false
+            }
+          }
+        }
+      ]
     }
   ],
   "variables": {
