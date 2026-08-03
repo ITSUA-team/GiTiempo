@@ -5,7 +5,9 @@ import type { Env } from '../config/env.validation';
 import { MembersModule } from '../members/members.module';
 import { UsersModule } from '../users/users.module';
 import { AuthService } from './services/auth.service';
+import { AuthGithubService } from './services/auth-github.service';
 import { AuthController } from './controllers/auth.controller';
+import { AuthGithubController } from './controllers/auth-github.controller';
 import { TokenService } from './services/token.service';
 import { RealFirebaseAdminService } from './services/firebase-admin.service';
 import { FakeFirebaseAdminService } from './services/firebase-admin.fake';
@@ -30,6 +32,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
   imports: [UsersModule, MembersModule],
   providers: [
     AuthService,
+    AuthGithubService,
     TokenService,
     RefreshTokenRepository,
     {
@@ -45,7 +48,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuthGithubController],
   exports: [TokenService, AuthService, FIREBASE_ADMIN],
 })
 export class AuthModule {}

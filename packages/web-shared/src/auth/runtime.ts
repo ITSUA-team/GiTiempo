@@ -14,6 +14,7 @@ export interface AuthRuntime {
   getCurrentUser: CurrentUserClient["getCurrentUser"];
   listCurrentUserWorkspaces: CurrentUserClient["listCurrentUserWorkspaces"];
   loginWithFirebaseToken: AuthHttpClient["loginWithFirebaseToken"];
+  exchangeGithubSession: AuthHttpClient["exchangeGithubSession"];
   logoutSession: AuthHttpClient["logoutAuthSession"];
   registerWorkspaceOwner: AuthHttpClient["registerWorkspaceOwner"];
   refreshSession: AuthHttpClient["refreshAuthSession"];
@@ -72,6 +73,7 @@ export function createDefaultAuthRuntime({
     getCurrentUser: currentUserClient.getCurrentUser,
     listCurrentUserWorkspaces: currentUserClient.listCurrentUserWorkspaces,
     loginWithFirebaseToken: authClient.loginWithFirebaseToken,
+    exchangeGithubSession: authClient.exchangeGithubSession,
     logoutSession: authClient.logoutAuthSession,
     registerWorkspaceOwner: authClient.registerWorkspaceOwner,
     refreshSession: authClient.refreshAuthSession,

@@ -1,27 +1,35 @@
 <script setup lang="ts">
 import { Form } from "@primevue/forms";
 import { zodResolver } from "@primevue/forms/resolvers/zod";
-import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Message from "primevue/message";
 import Password from "primevue/password";
+import { EnvelopeIcon, LockClosedIcon } from "@heroicons/vue/24/outline";
 
+import AuthDivider from "./AuthDivider.vue";
+import GithubMark from "./GithubMark.vue";
+import GoogleMark from "./GoogleMark.vue";
 import {
   emailPasswordSignInSchema,
   type EmailPasswordSignInInput,
 } from "../validation/auth";
 
-const props = defineProps<{
-  description: string;
-  emailPlaceholder: string;
-  errorMessage?: string | null;
-  isSubmitting: boolean;
-  title: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    description: string;
+    emailPlaceholder: string;
+    errorMessage?: string | null;
+    githubEnabled?: boolean;
+    isSubmitting: boolean;
+    title: string;
+  }>(),
+  { errorMessage: null, githubEnabled: true },
+);
 
 const emit = defineEmits<{
   submitCredentials: [payload: EmailPasswordSignInInput];
   submitGoogle: [];
+  submitGithub: [];
 }>();
 
 const initialValues: EmailPasswordSignInInput = {
@@ -50,7 +58,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
   <div class="bg-surface-primary shadow-card w-full rounded-lg p-6">
     <div class="flex flex-col gap-5">
       <div class="flex flex-col gap-1.5">
-        <p class="text-text-dark text-[28px] font-semibold">
+        <p class="text-text-dark text-4xl font-bold">
           {{ props.title }}
         </p>
         <p class="text-text-muted text-sm">
@@ -72,17 +80,23 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
           >
             Email
           </label>
-          <InputText
-            id="sign-in-email"
-            name="email"
-            type="email"
-            autocomplete="email"
-            :placeholder="props.emailPlaceholder"
-            :invalid="$form.email?.invalid"
-            class="h-[42px] w-full"
-            data-testid="sign-in-email"
-            fluid
-          />
+          <div class="relative">
+            <EnvelopeIcon
+              class="text-text-muted pointer-events-none absolute top-1/2 left-3 size-4.5 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <InputText
+              id="sign-in-email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              :placeholder="props.emailPlaceholder"
+              :invalid="$form.email?.invalid"
+              class="h-[42px] w-full pl-10"
+              data-testid="sign-in-email"
+              fluid
+            />
+          </div>
           <Message
             v-if="$form.email?.invalid"
             severity="error"
@@ -101,18 +115,24 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
           >
             Password
           </label>
-          <Password
-            input-id="sign-in-password"
-            name="password"
-            autocomplete="current-password"
-            placeholder="••••••••••"
-            :feedback="false"
-            :toggle-mask="false"
-            :invalid="$form.password?.invalid"
-            fluid
-            input-class="h-[42px] w-full"
-            :input-props="passwordInputProps"
-          />
+          <div class="relative">
+            <LockClosedIcon
+              class="text-text-muted pointer-events-none absolute top-1/2 left-3 z-10 size-4.5 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Password
+              input-id="sign-in-password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="••••••••••"
+              :feedback="false"
+              :toggle-mask="false"
+              :invalid="$form.password?.invalid"
+              fluid
+              input-class="h-[42px] w-full pl-10"
+              :input-props="passwordInputProps"
+            />
+          </div>
           <Message
             v-if="$form.password?.invalid"
             severity="error"
@@ -133,25 +153,45 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
         </p>
 
         <div class="flex flex-col gap-3 pt-1">
-          <Button
+          <button
             type="submit"
-            label="Sign in"
-            class="h-11"
-            :loading="props.isSubmitting"
+            class="focus-visible:outline-brand flex h-11 cursor-pointer items-center justify-center gap-2 rounded-sm bg-[linear-gradient(135deg,#7a3ea8_0%,#5d2b85_100%)] px-4 text-[15px] font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="props.isSubmitting"
             data-testid="sign-in-submit"
-          />
+          >
+            Sign in
+            <span
+              class="rounded-[4px] bg-white/15 px-1.5 py-px text-[11px] font-semibold"
+              aria-hidden="true"
+            >
+              ↵ Enter
+            </span>
+          </button>
 
-          <Button
+          <AuthDivider label="or continue with" />
+
+          <button
             type="button"
-            label="Continue with Google"
-            severity="secondary"
-            variant="outlined"
-            class="h-11"
+            class="border-divider focus-visible:outline-brand enabled:hover:bg-app-bg flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm border bg-white px-4 text-[15px] font-semibold text-[#3c4043] transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="props.isSubmitting"
             data-testid="sign-in-google"
             @click="emit('submitGoogle')"
-          />
+          >
+            <GoogleMark class="size-4.5 shrink-0" />
+            Continue with Google
+          </button>
+
+          <button
+            v-if="props.githubEnabled"
+            type="button"
+            class="focus-visible:outline-brand flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm bg-[#24292f] px-4 text-[15px] font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 enabled:hover:bg-[#32383f] disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="props.isSubmitting"
+            data-testid="sign-in-github"
+            @click="emit('submitGithub')"
+          >
+            <GithubMark class="size-4.5 shrink-0" />
+            Continue with GitHub
+          </button>
 
           <slot name="secondary-actions" />
         </div>

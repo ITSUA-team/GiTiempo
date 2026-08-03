@@ -286,6 +286,7 @@ export function createInjectedIssueApp({
         authenticated: false,
         currentTimer: null,
         errorMessage: null,
+        user: null,
       };
       state.actionErrorMessage =
         error instanceof Error ? error.message : "Unable to load timer state.";

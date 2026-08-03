@@ -73,12 +73,21 @@ export const envSchema = z
     // --- Application URLs ---
     APP_URL: optionalUrl.default('http://localhost:3000'),
     USER_SPA_URL: z.string().url().default('http://localhost:5173'),
-    ADMIN_SPA_URL: optionalUrl.default('http://localhost:5174'),
+    // No localhost default on purpose: the GitHub sign-in callback redirects the
+    // browser (with a one-time handoff code) to `${ADMIN_SPA_URL}/auth/github/
+    // callback`, so a stale localhost default would silently misroute admin
+    // sign-in in production. It is required in production (below), and
+    // `requireConfig` fails loud if consumed while unset in any environment.
+    ADMIN_SPA_URL: optionalUrl,
 
-    // --- GitHub App ---
+    // --- GitHub App (repo/issue integration) ---
     GITHUB_APP_ID: optionalNonEmptyString,
     GITHUB_APP_CLIENT_ID: optionalNonEmptyString,
     GITHUB_APP_CLIENT_SECRET: optionalNonEmptyString,
+
+    // --- GitHub sign-in OAuth App (identity only, separate from the App above) ---
+    GITHUB_SIGNIN_CLIENT_ID: optionalNonEmptyString,
+    GITHUB_SIGNIN_CLIENT_SECRET: optionalNonEmptyString,
 
     // --- Token encryption ---
     ENCRYPTION_KEY: optionalNonEmptyString,
@@ -156,6 +165,7 @@ export const envSchema = z
         'ENCRYPTION_KEY',
         'APP_URL',
         'USER_SPA_URL',
+        'ADMIN_SPA_URL',
       ];
       for (const key of requiredGithub) {
         if (!env[key]) {

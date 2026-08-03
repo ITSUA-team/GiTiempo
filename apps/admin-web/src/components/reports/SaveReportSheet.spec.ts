@@ -52,6 +52,13 @@ describe('SaveReportSheet', () => {
     expect(text).toContain('Project › Member');
   });
 
+  it('hides the captured-settings block when there is nothing to save', async () => {
+    await mountSheet({ summary: [] });
+
+    expect(query('[data-testid="save-sheet-summary"]')).toBeNull();
+    expect(document.body.textContent ?? '').not.toContain('This report saves');
+  });
+
   it('keeps confirm disabled until a name is entered, then emits the trimmed name', async () => {
     const wrapper = await mountSheet();
 

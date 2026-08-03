@@ -272,6 +272,45 @@ describe('AuthService', () => {
     });
   });
 
+  describe('createSessionForVerifiedEmail', () => {
+    it('issues a token pair for a member found by verified email', async () => {
+      db.select = createSelectMock([[seedUserRow]]);
+
+      const pair =
+        await service.createSessionForVerifiedEmail('admin@example.com');
+
+      expect(members.requireActiveMembershipForUser).toHaveBeenCalledWith(
+        seedUserRow.id,
+      );
+      expect(repo.create).toHaveBeenCalled();
+      expect(pair.accessToken).toBeTruthy();
+      expect(pair.refreshToken).toBeTruthy();
+      expect(pair.accessTokenExpiresIn).toBeGreaterThan(0);
+    });
+
+    it('rejects a verified email with no matching user and skips membership', async () => {
+      db.select = createSelectMock([]); // no user row
+
+      await expect(
+        service.createSessionForVerifiedEmail('nobody@example.com'),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(members.requireActiveMembershipForUser).not.toHaveBeenCalled();
+      expect(repo.create).not.toHaveBeenCalled();
+    });
+
+    it('propagates the error when the user has no active membership', async () => {
+      db.select = createSelectMock([[seedUserRow]]);
+      members.requireActiveMembershipForUser.mockRejectedValueOnce(
+        new ForbiddenException('No active membership'),
+      );
+
+      await expect(
+        service.createSessionForVerifiedEmail('admin@example.com'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repo.create).not.toHaveBeenCalled();
+    });
+  });
+
   describe('register', () => {
     it('creates the Firebase identity, workspace owner session, and token pair', async () => {
       db.select = createSelectMock([[]]);

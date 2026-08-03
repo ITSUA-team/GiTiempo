@@ -5,10 +5,16 @@ import type { CurrentTimeEntryResponse, TimeEntryResponse } from "@gitiempo/shar
 import type { SupportedGitHubIssueContext } from "./github-context";
 
 
+export interface SnapshotUser {
+  displayName: string | null;
+  email: string;
+}
+
 export interface RuntimeSnapshot {
   authenticated: boolean;
   currentTimer: TimeEntryResponse | null;
   errorMessage: string | null;
+  user: SnapshotUser | null;
 }
 
 export interface RuntimeActionResult {
@@ -50,6 +56,7 @@ export function createRuntimeSnapshot(
     authenticated: currentTimerResponse !== null,
     currentTimer: currentTimerResponse?.timeEntry ?? null,
     errorMessage: null,
+    user: null,
     ...overrides,
   };
 }

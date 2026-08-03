@@ -72,14 +72,30 @@ describe("AuthSignInForm", () => {
     expect(wrapper.emitted("submitGoogle")).toEqual([[]]);
   });
 
+  it("emits GitHub submit", async () => {
+    const wrapper = mountForm();
+
+    await wrapper.get('[data-testid="sign-in-github"]').trigger("click");
+
+    expect(wrapper.emitted("submitGithub")).toEqual([[]]);
+  });
+
+  it("hides the GitHub button when GitHub sign-in is disabled", () => {
+    const wrapper = mountForm({ githubEnabled: false });
+
+    expect(wrapper.find('[data-testid="sign-in-github"]').exists()).toBe(false);
+  });
+
   it("reflects submitting state", () => {
     const wrapper = mountForm({ isSubmitting: true });
 
     const submitButton = wrapper.get('[data-testid="sign-in-submit"]');
     const googleButton = wrapper.get('[data-testid="sign-in-google"]');
+    const githubButton = wrapper.get('[data-testid="sign-in-github"]');
 
     expect(submitButton.attributes("disabled")).toBeDefined();
     expect(googleButton.attributes("disabled")).toBeDefined();
+    expect(githubButton.attributes("disabled")).toBeDefined();
   });
 
   it("renders external sign-in errors", () => {

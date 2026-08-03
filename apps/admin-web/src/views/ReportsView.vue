@@ -316,6 +316,7 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
           label="Top Project"
           :value="summary.topProjectName"
           :description="topProjectDescription"
+          truncate-value
         />
       </div>
 

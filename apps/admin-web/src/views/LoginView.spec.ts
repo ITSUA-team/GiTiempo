@@ -63,6 +63,7 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     }),
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
+    exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
@@ -97,6 +98,8 @@ describe("LoginView", () => {
     clearRefreshToken();
     resetAuthRuntimeForTesting();
     vi.stubEnv("VITE_USER_APP_URL", "https://user.example.test/login");
+    // The GitHub button is off by default; opt in so the button renders here.
+    vi.stubEnv("VITE_GITHUB_SIGNIN_ENABLED", "true");
   });
 
   afterEach(() => {
@@ -135,6 +138,65 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
+  it("redirects to the backend GitHub sign-in flow when GitHub is clicked", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    let redirectedTo = "";
+    const original = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        origin: "http://localhost:5174",
+        get href() {
+          return redirectedTo;
+        },
+        set href(value: string) {
+          redirectedTo = value;
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="sign-in-github"]').trigger("click");
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: original,
+    });
+
+    expect(redirectedTo).toContain("/auth/github/start?app=admin");
+  });
+
+  it("carries the protected-route redirect target into the GitHub start URL", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView("/login?redirect=%2Freports");
+
+    let redirectedTo = "";
+    const original = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        origin: "http://localhost:5174",
+        get href() {
+          return redirectedTo;
+        },
+        set href(value: string) {
+          redirectedTo = value;
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="sign-in-github"]').trigger("click");
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: original,
+    });
+
+    expect(redirectedTo).toContain("app=admin");
+    expect(redirectedTo).toContain("redirect=%2Freports");
+  });
+
   it("falls back to the dashboard for unsafe preserved redirects", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { router, wrapper } = await mountLoginView(
@@ -170,15 +232,70 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.login);
   });
 
+  it("shows the GitHub sign-in error from the query and clears it from the URL", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { router, wrapper } = await mountLoginView(
+      "/login?githubError=denied",
+    );
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("GitHub sign-in was cancelled.");
+    expect(router.currentRoute.value.query.githubError).toBeUndefined();
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+  });
+
   it("preserves the visible user workspace link", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
 
-    const workspaceLink = wrapper.get("a");
+    const workspaceLink = wrapper.get('[data-testid="auth-intro-counterpart"]');
 
     expect(workspaceLink.text()).toContain("Open the user workspace");
     expect(workspaceLink.attributes("href")).toBe(
       "https://user.example.test/login",
     );
+  });
+
+  it("offers the browser extension through the configured install page", async () => {
+    vi.stubEnv(
+      "VITE_EXTENSION_INSTALL_URL",
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    const callout = wrapper.get('[data-testid="login-extension-callout"]');
+
+    expect(callout.attributes("href")).toBe(
+      "https://chromewebstore.google.com/detail/gitiempo/abc",
+    );
+    expect(callout.attributes("target")).toBe("_blank");
+    expect(callout.text()).toContain("Browser extension");
+  });
+
+  it("hides the extension callout when no install page is configured", async () => {
+    // Stub it empty rather than relying on absence: a developer's .env.local
+    // sets this, and the suite must not depend on their machine.
+    vi.stubEnv("VITE_EXTENSION_INSTALL_URL", "");
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    expect(wrapper.find('[data-testid="login-extension-callout"]').exists()).toBe(
+      false,
+    );
+  });
+
+  it("paints the whole left half with the auth gradient", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    // Guards the restyle: the gradient belongs to the half, not the inner
+    // column, or a white strip reappears beside the intro copy.
+    const panel = wrapper.get("h1").element.closest('[class*="linear-gradient"]');
+
+    expect(panel).not.toBeNull();
+    expect(panel?.className).toContain("lg:flex-1");
+    expect(panel?.className).not.toContain("lg:min-w-[50vw]");
+    expect(panel?.firstElementChild?.className).not.toContain("max-w-[600px]");
   });
 });

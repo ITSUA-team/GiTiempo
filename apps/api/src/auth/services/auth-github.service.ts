@@ -1,0 +1,398 @@
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import jwt from 'jsonwebtoken';
+import type { Env } from '../../config/env.validation';
+import { AuthService, type TokenPair } from './auth.service';
+
+export type GithubLoginApp = 'user' | 'admin';
+
+/**
+ * Name of the HttpOnly cookie that binds a login transaction to the browser
+ * that started it. The signed `state` carries only the hash of this cookie's
+ * nonce, so a callback is honored only when the same browser presents it.
+ */
+export const GITHUB_OAUTH_STATE_COOKIE = 'gh_oauth_state';
+
+/** Handoff codes are exchanged within seconds; a short TTL bounds the store. */
+const HANDOFF_TTL_MS = 60_000;
+
+interface GithubStateClaims {
+  purpose: 'gh-login-state';
+  app: GithubLoginApp;
+  nonceHash: string;
+  /** Same-app absolute path to return to after login (protected-route redirect). */
+  redirect?: string;
+}
+
+interface GithubEmailEntry {
+  email?: string;
+  primary?: boolean;
+  verified?: boolean;
+}
+
+/**
+ * Backend "Sign in with GitHub": a login-scoped GitHub OAuth flow that uses a
+ * dedicated identity-only OAuth App (`GITHUB_SIGNIN_CLIENT_ID`/`_SECRET`),
+ * separate from the GitHub App integration — it never touches `GITHUB_APP_*` or
+ * `github_connections`. The `state` is a JWT signed with `JWT_ACCESS_SECRET`
+ * that omits the issuer/audience the access-token verifier requires and carries
+ * a distinct `purpose`, so it can never pass as a session token; the handoff is
+ * an opaque single-use code whose email is held server-side, never in the URL.
+ * Only a primary + verified GitHub email is accepted, and the session is minted
+ * for an already-existing member (no provisioning).
+ */
+@Injectable()
+export class AuthGithubService {
+  private readonly logger = new Logger(AuthGithubService.name);
+
+  // Opaque handoff codes: the verified email is held here, keyed by an
+  // unguessable random code, so it never travels in the redirect URL (where it
+  // could leak via history, proxy logs, or telemetry — RFC 9700 §§4.2-4.3).
+  // Codes are single-use and short-lived. In-memory is sufficient for a single
+  // API instance; a shared store would be needed once the API is scaled out.
+  private readonly pendingHandoffs = new Map<
+    string,
+    { email: string; expiresAt: number }
+  >();
+
+  constructor(
+    private readonly config: ConfigService<Env, true>,
+    private readonly auth: AuthService,
+  ) {}
+
+  /**
+   * Starts a login transaction. The returned `stateNonce` MUST be stored by the
+   * caller in an HttpOnly, SameSite=Lax cookie (see `stateCookieOptions`): the
+   * signed `state` carries only the nonce's hash, so `completeCallback` accepts
+   * a callback only when the browser presents a cookie whose nonce matches. This
+   * binds the flow to the user agent that began it (RFC 9700 §4.7.1) — a state
+   * minted in one browser cannot complete a login in another (login CSRF).
+   */
+  startAuthorization(
+    app: GithubLoginApp,
+    redirect?: string,
+  ): { url: string; stateNonce: string } {
+    const stateNonce = randomBytes(32).toString('hex');
+    const state = this.signState(
+      app,
+      this.hashNonce(stateNonce),
+      this.sanitizeRedirect(redirect),
+    );
+    const url = new URL('https://github.com/login/oauth/authorize');
+    url.searchParams.set(
+      'client_id',
+      this.requireConfig('GITHUB_SIGNIN_CLIENT_ID'),
+    );
+    url.searchParams.set('redirect_uri', this.callbackUrl());
+    url.searchParams.set('state', state);
+    // Identity-only: read the user's email so an existing member can be matched.
+    url.searchParams.set('scope', 'user:email');
+    return { url: url.toString(), stateNonce };
+  }
+
+  /**
+   * Cookie options for the state-binding nonce. `SameSite=Lax` so the top-level
+   * GET redirect back from GitHub still carries it (Strict would drop it);
+   * `HttpOnly` so script cannot read it; scoped to `/auth/github` and expiring
+   * with the 10-minute state; `Secure` in production (HTTPS).
+   */
+  stateCookieOptions(): {
+    httpOnly: true;
+    secure: boolean;
+    sameSite: 'lax';
+    path: string;
+    maxAge: number;
+  } {
+    return {
+      httpOnly: true,
+      secure: this.config.get('NODE_ENV', { infer: true }) === 'production',
+      sameSite: 'lax',
+      path: '/auth/github',
+      maxAge: 10 * 60 * 1000,
+    };
+  }
+
+  async completeCallback(input: {
+    code?: string;
+    state?: string;
+    error?: string;
+    /** Nonce from the browser-bound HttpOnly cookie set at `startAuthorization`. */
+    stateNonce?: string;
+  }): Promise<string> {
+    // The state is echoed on every GitHub redirect (including a denial), so its
+    // signed `app` claim — not a hardcoded 'user' — decides which SPA to return
+    // to; a denial from an admin-started flow must reopen the admin app. The user
+    // app is only a fallback for an absent or unverifiable state.
+    const app = this.resolveStateApp(input.state);
+
+    if (input.error) {
+      return this.spaRedirect(app, '/login', { githubError: 'denied' });
+    }
+    if (!input.code || !input.state) {
+      return this.spaRedirect(app, '/login', { githubError: 'state' });
+    }
+
+    // Minting a session additionally requires the state to be bound to THIS
+    // browser: its nonce hash must match the HttpOnly cookie, so a state minted
+    // (and GitHub-authorized) by an attacker cannot log a victim into the
+    // attacker's account (login CSRF). A missing/mismatched cookie is a state error.
+    let claims: GithubStateClaims;
+    try {
+      claims = this.verifyBoundState(input.state, input.stateNonce);
+    } catch {
+      return this.spaRedirect(app, '/login', { githubError: 'state' });
+    }
+
+    try {
+      const accessToken = await this.exchangeCode(input.code);
+      const email = await this.fetchVerifiedPrimaryEmail(accessToken);
+      if (!email) {
+        return this.spaRedirect(app, '/login', { githubError: 'email' });
+      }
+
+      const handoff = this.createHandoff(email);
+      // Round-trip the protected-route redirect (signed into the state at /start)
+      // to the SPA callback so it can return the user where they were headed; the
+      // SPA re-validates it before navigating (email/Google `?redirect=` parity).
+      const query: Record<string, string> = { code: handoff };
+      if (claims.redirect) query.redirect = claims.redirect;
+      return this.spaRedirect(app, '/auth/github/callback', query);
+    } catch (error) {
+      this.logger.warn({
+        event: 'auth.github_login.callback_failed',
+        reason: error instanceof Error ? error.message : String(error),
+      });
+      return this.spaRedirect(app, '/login', { githubError: 'failed' });
+    }
+  }
+
+  async exchangeSession(code: string): Promise<TokenPair> {
+    const email = this.claimHandoff(code);
+    if (email === null) {
+      this.logger.warn({ event: 'auth.github_login.handoff_invalid' });
+      throw new UnauthorizedException('Unauthorized');
+    }
+    return this.auth.createSessionForVerifiedEmail(email);
+  }
+
+  // --- OAuth mechanics -------------------------------------------------------
+
+  private async exchangeCode(code: string): Promise<string> {
+    const response = await fetch(
+      'https://github.com/login/oauth/access_token',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          client_id: this.requireConfig('GITHUB_SIGNIN_CLIENT_ID'),
+          client_secret: this.requireConfig('GITHUB_SIGNIN_CLIENT_SECRET'),
+          code,
+          redirect_uri: this.callbackUrl(),
+        }),
+      },
+    );
+    const body = (await response.json()) as {
+      access_token?: string;
+      error?: string;
+    };
+    if (!response.ok || body.error || !body.access_token) {
+      this.logger.warn({
+        event: 'auth.github_login.token_failed',
+        status: response.status,
+        error: body.error,
+      });
+      throw new ServiceUnavailableException('GitHub OAuth request failed');
+    }
+    return body.access_token;
+  }
+
+  private async fetchVerifiedPrimaryEmail(
+    accessToken: string,
+  ): Promise<string | null> {
+    const response = await fetch('https://api.github.com/user/emails', {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${accessToken}`,
+        'User-Agent': 'gitiempo-api',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+    if (!response.ok) {
+      this.logger.warn({
+        event: 'auth.github_login.email_fetch_failed',
+        status: response.status,
+      });
+      throw new ServiceUnavailableException('GitHub API request failed');
+    }
+    const entries = (await response.json()) as GithubEmailEntry[];
+    const primary = Array.isArray(entries)
+      ? entries.find((e) => e.primary === true && e.verified === true)
+      : undefined;
+    return primary?.email ?? null;
+  }
+
+  // --- Signed tokens ---------------------------------------------------------
+
+  private signState(
+    app: GithubLoginApp,
+    nonceHash: string,
+    redirect?: string,
+  ): string {
+    const claims: GithubStateClaims = {
+      purpose: 'gh-login-state',
+      app,
+      nonceHash,
+    };
+    if (redirect) claims.redirect = redirect;
+    return jwt.sign(claims, this.secret(), { expiresIn: '10m' });
+  }
+
+  /**
+   * A post-login redirect target carried through the signed state. It originates
+   * from the browser, so only a same-app absolute path is kept — never a
+   * protocol-relative (`//host`) or absolute URL — and it is length-bounded. The
+   * SPA still re-validates it (`normalizeRedirectTargetValue`) before navigating.
+   */
+  private sanitizeRedirect(redirect: string | undefined): string | undefined {
+    if (
+      typeof redirect !== 'string' ||
+      redirect.length === 0 ||
+      redirect.length > 2048 ||
+      !redirect.startsWith('/') ||
+      redirect.startsWith('//')
+    ) {
+      return undefined;
+    }
+    return redirect;
+  }
+
+  private verifyBoundState(
+    token: string,
+    cookieNonce: string | undefined,
+  ): GithubStateClaims {
+    const decoded = jwt.verify(token, this.secret()) as GithubStateClaims;
+    if (
+      decoded.purpose !== 'gh-login-state' ||
+      typeof decoded.nonceHash !== 'string'
+    ) {
+      throw new UnauthorizedException('invalid_state');
+    }
+    if (!cookieNonce || !this.nonceMatches(cookieNonce, decoded.nonceHash)) {
+      throw new UnauthorizedException('state_not_bound');
+    }
+    return decoded;
+  }
+
+  /**
+   * The SPA to return to, read from the state's signature-verified `app` claim.
+   * This is a redirect target, not a security decision, so — unlike
+   * `verifyBoundState` — it does not require the browser-nonce binding: a denial
+   * or a failed exchange still lands the user in the app they started from.
+   * Falls back to the user app when the state is absent or unverifiable.
+   */
+  private resolveStateApp(state: string | undefined): GithubLoginApp {
+    if (!state) return 'user';
+    try {
+      const decoded = jwt.verify(state, this.secret()) as GithubStateClaims;
+      if (
+        decoded.purpose === 'gh-login-state' &&
+        (decoded.app === 'user' || decoded.app === 'admin')
+      ) {
+        return decoded.app;
+      }
+    } catch {
+      // Unverifiable state → user-app fallback below.
+    }
+    return 'user';
+  }
+
+  private hashNonce(nonce: string): string {
+    return createHash('sha256').update(nonce).digest('hex');
+  }
+
+  /** Constant-time compare of a cookie nonce against the state's stored hash. */
+  private nonceMatches(nonce: string, expectedHash: string): boolean {
+    const actual = Buffer.from(this.hashNonce(nonce), 'hex');
+    const expected = Buffer.from(expectedHash, 'hex');
+    return (
+      actual.length === expected.length && timingSafeEqual(actual, expected)
+    );
+  }
+
+  /**
+   * Issues an opaque single-use handoff code and stores the email against it.
+   * The code carries no payload, so decoding it (from the URL, history, or
+   * logs) reveals nothing — the email lives only server-side.
+   */
+  private createHandoff(email: string): string {
+    const code = randomBytes(32).toString('hex');
+    this.pendingHandoffs.set(code, {
+      email,
+      expiresAt: Date.now() + HANDOFF_TTL_MS,
+    });
+    return code;
+  }
+
+  /**
+   * Consumes a handoff code, returning its email once, or null when the code is
+   * unknown or expired. Deleting on read makes it single-use, so a replayed
+   * callback URL cannot mint a second session.
+   */
+  private claimHandoff(code: string): string | null {
+    this.purgeExpiredHandoffs();
+    const entry = this.pendingHandoffs.get(code);
+    if (!entry) return null;
+    this.pendingHandoffs.delete(code);
+    return entry.expiresAt > Date.now() ? entry.email : null;
+  }
+
+  private purgeExpiredHandoffs(): void {
+    const now = Date.now();
+    for (const [code, entry] of this.pendingHandoffs) {
+      if (entry.expiresAt <= now) this.pendingHandoffs.delete(code);
+    }
+  }
+
+  // --- Config helpers --------------------------------------------------------
+
+  private callbackUrl(): string {
+    return new URL(
+      '/auth/github/callback',
+      this.requireConfig('APP_URL'),
+    ).toString();
+  }
+
+  private spaRedirect(
+    app: GithubLoginApp,
+    path: string,
+    query: Record<string, string>,
+  ): string {
+    const base = this.requireConfig(
+      app === 'admin' ? 'ADMIN_SPA_URL' : 'USER_SPA_URL',
+    );
+    const url = new URL(path, base);
+    for (const [key, value] of Object.entries(query)) {
+      url.searchParams.set(key, value);
+    }
+    return url.toString();
+  }
+
+  private secret(): string {
+    return this.config.get('JWT_ACCESS_SECRET', { infer: true });
+  }
+
+  private requireConfig(key: keyof Env): string {
+    const value = this.config.get(key, { infer: true });
+    if (typeof value === 'string' && value.length > 0) return value;
+    throw new ServiceUnavailableException('GitHub sign-in is not configured');
+  }
+}

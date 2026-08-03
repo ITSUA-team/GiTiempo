@@ -60,13 +60,14 @@ function createRuntimeClient(overrides?: {
       overrides?.exchangeFirebaseToken ??
       vi.fn(async (): Promise<RuntimeAuthResult> => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
       })),
     getSnapshot: vi.fn(async () =>
         overrides?.snapshot ?? {
           authenticated: false,
           currentTimer: null,
           errorMessage: null,
+          user: null,
         }),
     onSnapshotUpdated: vi.fn(() => () => undefined),
     openExtension: vi.fn(async () => undefined),
@@ -74,13 +75,13 @@ function createRuntimeClient(overrides?: {
       overrides?.startTimer ??
       vi.fn(async () => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
       })),
     stopTimer:
       overrides?.stopTimer ??
       vi.fn(async () => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
       })),
   };
 }
@@ -137,6 +138,7 @@ describe("popup app", () => {
         authenticated: true,
         currentTimer: null,
         errorMessage: null,
+        user: null,
       },
     }));
     const runtimeClient = createRuntimeClient({ exchangeFirebaseToken });
@@ -191,6 +193,7 @@ describe("popup app", () => {
         authenticated: true,
         currentTimer: null,
         errorMessage: null,
+        user: null,
       },
     }));
     const runtimeClient = createRuntimeClient({ exchangeFirebaseToken });
@@ -281,6 +284,7 @@ describe("popup app", () => {
           authenticated: false,
           currentTimer: null,
           errorMessage: null,
+          user: null,
         },
       })),
     });
@@ -307,7 +311,7 @@ describe("popup app", () => {
 
   it("renders the authenticated no-timer popup state on supported issue pages", async () => {
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
     });
     const app = createPopupApp({
       root: document.querySelector<HTMLElement>("#app")!,
@@ -319,12 +323,39 @@ describe("popup app", () => {
 
     expect(document.body.textContent).toContain("Start Timer");
     expect(document.body.textContent).toContain("Improve reports filters");
-    expect(document.body.textContent).toContain("Open full workspace in GiTiempo");
+    expect(
+      document.querySelector('a[aria-label="Open GiTiempo dashboard"]'),
+    ).not.toBeNull();
+  });
+
+  it("renders the avatar from the snapshot user when no timer is running", async () => {
+    const runtimeClient = createRuntimeClient({
+      snapshot: {
+        authenticated: true,
+        currentTimer: null,
+        errorMessage: null,
+        user: {
+          displayName: "Volodymyr Nakonechnyi",
+          email: "volodymyr@example.com",
+        },
+      },
+    });
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient,
+      pageContextResolver: async () => supportedContext(),
+    });
+
+    await app.load();
+
+    expect(
+      document.querySelector('[data-testid="popup-user-avatar"]')?.textContent,
+    ).toBe("VN");
   });
 
   it("renders the authenticated unsupported-page state", async () => {
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
     });
     const app = createPopupApp({
       root: document.querySelector<HTMLElement>("#app")!,
@@ -373,6 +404,7 @@ describe("popup app", () => {
         authenticated: true,
         currentTimer: currentTimer(),
         errorMessage: null,
+        user: { displayName: "Alexey Tsukanov", email: "alexey@example.com" },
       },
     });
     const app = createPopupApp({
@@ -387,6 +419,12 @@ describe("popup app", () => {
     expect(document.body.textContent).toContain("Stop Timer");
     expect(document.body.textContent).toContain("01:00:00");
     expect(document.body.textContent).toContain("Project Orion / octo/timer-repo");
+    expect(
+      document.querySelector('[data-testid="popup-user-avatar"]')?.textContent,
+    ).toBe("AT");
+    expect(
+      document.querySelector('a[aria-label="Open GiTiempo dashboard"]'),
+    ).not.toBeNull();
   });
 
   it("prefers the running timer repo over the active page repo", async () => {
@@ -395,6 +433,7 @@ describe("popup app", () => {
         authenticated: true,
         currentTimer: currentTimer(),
         errorMessage: null,
+        user: null,
       },
     });
     const app = createPopupApp({
@@ -414,7 +453,7 @@ describe("popup app", () => {
 
   it("adds explicit focus-visible styles to popup primary actions", async () => {
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
     });
     const app = createPopupApp({
       root: document.querySelector<HTMLElement>("#app")!,
@@ -434,10 +473,10 @@ describe("popup app", () => {
   it("starts a timer from the supported popup state", async () => {
     const startTimer = vi.fn(async () => ({
       ok: true,
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
     }));
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
       startTimer,
     });
     const app = createPopupApp({
@@ -460,13 +499,14 @@ describe("popup app", () => {
     const stopTimer = vi.fn(async () => ({
       ok: false,
       errorMessage: "Timer stop failed",
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
     }));
     const runtimeClient = createRuntimeClient({
       snapshot: {
         authenticated: true,
         currentTimer: currentTimer(),
         errorMessage: null,
+        user: null,
       },
       stopTimer,
     });
@@ -489,7 +529,7 @@ describe("popup app", () => {
 
   it("shows the retryable error state after a rejected start action", async () => {
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
       startTimer: vi.fn(async () => {
         throw new Error("Runtime unavailable");
       }),

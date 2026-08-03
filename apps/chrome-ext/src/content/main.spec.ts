@@ -132,6 +132,7 @@ function createRuntimeClient(overrides?: {
         authenticated: true,
         currentTimer: null,
         errorMessage: null,
+        user: null,
       },
     })),
     getSnapshot: vi.fn(async () =>
@@ -139,6 +140,7 @@ function createRuntimeClient(overrides?: {
           authenticated: true,
           currentTimer: null,
           errorMessage: null,
+          user: null,
         }),
     onSnapshotUpdated: vi.fn(() => () => undefined),
     openExtension: vi.fn(async () => undefined),
@@ -146,13 +148,13 @@ function createRuntimeClient(overrides?: {
       overrides?.startTimer ??
       vi.fn(async () => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
       })),
     stopTimer:
       overrides?.stopTimer ??
       vi.fn(async () => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
       })),
   };
 }
@@ -220,7 +222,7 @@ describe("injected issue control", () => {
 
   it("renders the auth-missing state with an open-extension action", async () => {
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: false, currentTimer: null, errorMessage: null },
+      snapshot: { authenticated: false, currentTimer: null, errorMessage: null, user: null },
     });
     const mounted = mountInjectedIssueControl(
       document,
@@ -260,7 +262,7 @@ describe("injected issue control", () => {
   it("starts a timer from the idle injected state", async () => {
     const startTimer = vi.fn(async () => ({
       ok: true,
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
     }));
     const mounted = mountInjectedIssueControl(
       document,
@@ -286,6 +288,7 @@ describe("injected issue control", () => {
           authenticated: true,
           currentTimer: currentIssueTimer(),
           errorMessage: null,
+          user: null,
         },
       }),
     )!;
@@ -307,6 +310,7 @@ describe("injected issue control", () => {
           authenticated: true,
           currentTimer: otherIssueTimer(),
           errorMessage: null,
+          user: null,
         },
       }),
     )!;
@@ -330,6 +334,7 @@ describe("injected issue control", () => {
           authenticated: true,
           currentTimer: currentTimer(),
           errorMessage: null,
+          user: null,
         },
       }),
     )!;
@@ -347,7 +352,7 @@ describe("injected issue control", () => {
     const stopTimer = vi.fn(async () => ({
       ok: false,
       errorMessage: "Timer stop failed",
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
     }));
     const mounted = mountInjectedIssueControl(
       document,
@@ -357,6 +362,7 @@ describe("injected issue control", () => {
           authenticated: true,
           currentTimer: currentIssueTimer(),
           errorMessage: null,
+          user: null,
         },
         stopTimer,
       }),
