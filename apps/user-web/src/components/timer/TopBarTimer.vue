@@ -30,6 +30,13 @@ const {
   isDialogPrimaryActionDisabled,
   isDialogOpen,
   isDialogSecondaryActionDisabled,
+  githubProjectDraftCount,
+  githubProjectOptions,
+  githubProjectRepositories,
+  githubTrackedRepositoryKeys,
+  githubProjectsErrorMessage,
+  githubProjectsTruncated,
+  isLoadingGitHubProjects,
   isLoadingProjects,
   isLoadingSummary,
   isLoadingTasks,
@@ -40,11 +47,13 @@ const {
   projectsErrorMessage,
   projectOptions,
   selectedDescription,
+  selectedGitHubProjectId,
   selectedProjectId,
   selectedTaskId,
   selectionUpdateErrorMessage,
   setCreateTaskTitle,
   setSelectedDescription,
+  setSelectedGitHubProjectId,
   setSelectedProjectId,
   setSelectedTaskId,
   summaryErrorMessage,
@@ -224,6 +233,13 @@ watch(
     :is-create-task-disabled="isCreateTaskDisabled"
     :is-creating-task="isCreatingTask"
     :is-cross-workspace-timer="isCrossWorkspaceTimer"
+    :github-project-draft-count="githubProjectDraftCount"
+    :github-project-options="githubProjectOptions"
+    :github-project-repositories="githubProjectRepositories"
+    :github-tracked-repository-keys="githubTrackedRepositoryKeys"
+    :github-projects-error-message="githubProjectsErrorMessage"
+    :github-projects-truncated="githubProjectsTruncated"
+    :is-loading-git-hub-projects="isLoadingGitHubProjects"
     :is-loading-projects="isLoadingProjects"
     :is-loading-tasks="isLoadingTasks"
     :is-open="isDialogOpen"
@@ -233,6 +249,7 @@ watch(
     :project-options="projectOptions"
     :projects-error-message="projectsErrorMessage ?? summaryErrorMessage"
     :selected-description="selectedDescription"
+    :selected-git-hub-project-id="selectedGitHubProjectId"
     :selected-project-id="selectedProjectId"
     :selected-task-id="selectedTaskId"
     :selection-update-error-message="selectionUpdateErrorMessage"
@@ -245,6 +262,7 @@ watch(
     @primary-action="handleDialogPrimaryAction"
     @update:create-task-title="setCreateTaskTitle"
     @update:selected-description="setSelectedDescription"
+    @update:selected-git-hub-project-id="setSelectedGitHubProjectId"
     @update:selected-project-id="setSelectedProjectId"
     @update:selected-task-id="setSelectedTaskId"
   />

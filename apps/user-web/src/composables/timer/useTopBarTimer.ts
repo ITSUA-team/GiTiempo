@@ -9,6 +9,7 @@ import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
 
 import { useTopBarTaskCreation } from './useTopBarTaskCreation';
+import { toTrackedRepositoryKeySet } from "@/lib/timer-github-projects";
 import { useTopBarTaskOptions } from './useTopBarTaskOptions';
 import { useTopBarTaskPicker } from './useTopBarTaskPicker';
 import { useTopBarTimerActions } from './useTopBarTimerActions';
@@ -111,6 +112,15 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isDialogPrimaryActionDisabled: viewModel.isDialogPrimaryActionDisabled,
     isDialogOpen: picker.isDialogOpen,
     isDialogSecondaryActionDisabled: viewModel.isDialogSecondaryActionDisabled,
+    githubProjectDraftCount: picker.githubProjectDraftCount,
+    githubProjectOptions: picker.githubProjects,
+    githubProjectRepositories: picker.githubProjectRepositories,
+    githubTrackedRepositoryKeys: computed(() =>
+      toTrackedRepositoryKeySet(picker.projects.value),
+    ),
+    githubProjectsErrorMessage: picker.githubProjectsErrorMessage,
+    githubProjectsTruncated: picker.githubProjectsTruncated,
+    isLoadingGitHubProjects: taskOptions.isLoadingGitHubProjects,
     isLoadingProjects: taskOptions.isLoadingProjects,
     isLoadingSummary: summary.isLoadingSummary,
     isLoadingTasks: taskOptions.isLoadingTasks,
@@ -120,6 +130,8 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     primaryActionLabel: viewModel.primaryActionLabel,
     projectsErrorMessage: picker.projectsErrorMessage,
     projectOptions: picker.activeProjects,
+    selectedGitHubProjectId: picker.selectedGitHubProjectId,
+    setSelectedGitHubProjectId: dialogFlow.setSelectedGitHubProjectId,
     refreshSummary: summary.refreshSummary,
     selectedContext: summary.selectedContext,
     selectedDescription: picker.selectedDescription,

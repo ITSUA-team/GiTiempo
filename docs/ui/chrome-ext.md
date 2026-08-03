@@ -45,6 +45,7 @@
   - `Continue with GitHub` — full width, on GitHub's own `#24292f`, carrying the GitHub mark. Shown only when `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED` is the string `true` for the build; otherwise omitted entirely, leaving the other two untouched.
   - `Sign in with email` — a brand text action below a labelled `or` divider, revealing the email form in place.
 - The two provider actions wear their own brand marks rather than two identically brand-coloured buttons, so they read as two distinct choices. They are the same marks the web logins use.
+- Starting a timer from a GitHub issue is verified server-side before anything is written: the repository must exist, be readable by the caller's connected GitHub account, and belong to an organization the workspace approves. This applies to the extension and to user-web alike, and the repository is recorded under the name GitHub reports rather than the one sent.
 - GitHub sign-in is **not** Firebase-backed: it leaves for the backend flow and returns a one-time handoff code that the service worker exchanges for the ordinary session. Its failures come back as recoverable copy naming the cause, and an authorization window the user closes reads as a cancelled attempt rather than a configuration error.
 
 ### Authenticated, No Active Timer
