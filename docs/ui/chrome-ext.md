@@ -30,8 +30,12 @@
 
 - Product logo.
 - Heading: `text-lg font-semibold text-text-dark`.
-- Primary `Sign in with Google` button using brand tokens.
-- Secondary `Sign in with email` action using the same popup shell and token language.
+- Three sign-in actions in one hierarchy, matching the approved `Ext Unauthenticated` frame:
+  - `Continue with Google` — full width, white on a divider border, carrying the Google mark.
+  - `Continue with GitHub` — full width, on GitHub's own `#24292f`, carrying the GitHub mark. Shown only when `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED` is the string `true` for the build; otherwise omitted entirely, leaving the other two untouched.
+  - `Sign in with email` — a brand text action below a labelled `or` divider, revealing the email form in place.
+- The two provider actions wear their own brand marks rather than two identically brand-coloured buttons, so they read as two distinct choices. They are the same marks the web logins use.
+- GitHub sign-in is **not** Firebase-backed: it leaves for the backend flow and returns a one-time handoff code that the service worker exchanges for the ordinary session. Its failures come back as recoverable copy naming the cause, and an authorization window the user closes reads as a cancelled attempt rather than a configuration error.
 
 ### Authenticated, No Active Timer
 

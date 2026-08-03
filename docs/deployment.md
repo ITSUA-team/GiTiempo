@@ -119,6 +119,14 @@ The Compose stack passes `.env` to the `api` and one-shot `migrate` services wit
 
 `GITHUB_SIGNIN_CLIENT_ID` and `GITHUB_SIGNIN_CLIENT_SECRET` configure backend GitHub sign-in. They belong to a dedicated, identity-only GitHub **OAuth App** (not the GitHub App integration) whose authorization callback is `<APP_URL>/auth/github/callback`; the `user:email` scope is requested in code. They are independent of `GITHUB_APP_*`. The frontend button is gated by `VITE_GITHUB_SIGNIN_ENABLED`; keep that flag off in any environment where these two values are not set, so the button never shows a flow that cannot complete.
 
+`GITHUB_SIGNIN_EXTENSION_REDIRECT_URL` is optional and extends that same flow to the browser extension. It holds the extension's redirect URL (`https://<extension-id>.chromiumapp.org/`), which is where the callback returns the browser — carrying either the one-time handoff code or an error indicator — instead of a web app route. Three things to know before a release:
+
+- The value is **per-environment**, because the extension id of an unpacked development build differs from a published one. There is deliberately no localhost default: a stale default would silently misroute a handoff code rather than fail.
+- Unset leaves extension GitHub sign-in unavailable and the flow fails closed before the browser leaves for GitHub. Keep the extension's own `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED` off in that case, so the popup never offers an action that cannot complete.
+- Keep the matching `chrome-extension://<extension-id>` origin in `ALLOWED_ORIGINS` alongside the web origins, as `deploy/github-environment.staging.example.env` already shows. The session exchange runs in the extension's service worker against a host in `host_permissions`, so it is not the CORS path a web page would take; listing the origin is belt-and-braces rather than a verified prerequisite.
+
+The extension's transaction is **not** bound by the `gh_oauth_state` cookie the web flow uses. Chrome's authorization window was measured not to carry that cookie through to the callback, so the extension instead sends a challenge when starting and proves possession of the matching verifier when redeeming the handoff code. Nothing to configure, but it explains why the extension may work while a cookie-related change breaks the web flow, or the reverse: the two targets are bound by different mechanisms.
+
 Seed users are optional runtime env values consumed only by the seed command. `SEED_ADMIN_EMAIL` and `SEED_ADMIN_FIREBASE_UID` create or update the initial admin membership. `SEED_MEMBER_EMAIL` and `SEED_MEMBER_FIREBASE_UID` create or update a member and assign that user to the seeded `Demo Client` project so the user app has visible project/task data. These values must match real Firebase Auth users; seed does not create Firebase Auth accounts or passwords.
 
 Staging defaults to `NODE_ENV=development` unless the environment overrides it.

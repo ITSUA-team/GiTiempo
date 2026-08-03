@@ -17092,23 +17092,47 @@
             },
             {
               "type": "frame",
-              "id": "VgqYN",
-              "name": "extAbtn",
-              "fill": "$color-brand",
-              "cornerRadius": "$radius-sm",
-              "padding": [
-                12,
-                18
-              ],
+              "id": "PlUp0",
+              "name": "extAactions",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "alignItems": "center",
               "children": [
                 {
+                  "id": "PH5BY",
+                  "type": "ref",
+                  "ref": "i95ptt",
+                  "name": "extAgoogle",
+                  "width": "fill_container"
+                },
+                {
+                  "id": "O6wEUW",
+                  "type": "ref",
+                  "ref": "X2UYhO",
+                  "name": "extAgithub",
+                  "width": "fill_container"
+                },
+                {
+                  "id": "RznkT",
+                  "type": "ref",
+                  "ref": "Cp38L",
+                  "name": "extAdivider",
+                  "width": "fill_container",
+                  "descendants": {
+                    "r8J8z": {
+                      "content": "or"
+                    }
+                  }
+                },
+                {
                   "type": "text",
-                  "id": "PW03a",
-                  "name": "extAbtnText",
-                  "fill": "$color-surface",
-                  "content": "Sign in with Google",
+                  "id": "eClyp",
+                  "name": "extAemail",
+                  "fill": "$color-brand",
+                  "content": "Sign in with email",
                   "fontFamily": "Inter",
-                  "fontSize": 14,
+                  "fontSize": 13,
                   "fontWeight": "600"
                 }
               ]
@@ -17193,24 +17217,39 @@
             },
             {
               "type": "frame",
-              "id": "n9bR3",
-              "name": "extBavatar",
-              "width": 28,
-              "height": 28,
-              "fill": "$color-accent-tint",
-              "cornerRadius": 14,
-              "justifyContent": "center",
+              "id": "wyOIW",
+              "name": "extBbRight",
+              "gap": 8,
               "alignItems": "center",
               "children": [
                 {
-                  "type": "text",
-                  "id": "dL84a",
-                  "name": "extBavatarText",
-                  "fill": "$color-brand",
-                  "content": "AT",
-                  "fontFamily": "Inter",
-                  "fontSize": 11,
-                  "fontWeight": "600"
+                  "id": "cpy4p",
+                  "type": "ref",
+                  "ref": "dpU0a",
+                  "name": "extBhome"
+                },
+                {
+                  "type": "frame",
+                  "id": "n9bR3",
+                  "name": "extBavatar",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 14,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "dL84a",
+                      "name": "extBavatarText",
+                      "fill": "$color-brand",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
                 }
               ]
             }
@@ -17275,6 +17314,7 @@
               "type": "frame",
               "id": "GMTz1",
               "name": "extBbtn",
+              "width": "fill_container",
               "fill": "$color-brand",
               "cornerRadius": "$radius-sm",
               "padding": [
@@ -17295,19 +17335,6 @@
                   "fontWeight": "600"
                 }
               ]
-            },
-            {
-              "type": "text",
-              "id": "TBqu1",
-              "name": "extBspaLink",
-              "fill": "#5D2B85",
-              "textGrowth": "fixed-width",
-              "width": "fill_container",
-              "content": "Open full workspace in GiTiempo",
-              "textAlign": "center",
-              "fontFamily": "Inter",
-              "fontSize": 13,
-              "fontWeight": "600"
             }
           ]
         }
@@ -17384,6 +17411,44 @@
                   "fontFamily": "Inter",
                   "fontSize": 15,
                   "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "dxTfc",
+              "name": "extCbRight",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "aEFYg",
+                  "type": "ref",
+                  "ref": "dpU0a",
+                  "name": "extChome"
+                },
+                {
+                  "type": "frame",
+                  "id": "qL9DM",
+                  "name": "extCavatar",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 14,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uz0kN",
+                      "name": "extBavatarText",
+                      "fill": "$color-brand",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
                 }
               ]
             }
@@ -17473,6 +17538,7 @@
               "type": "frame",
               "id": "xDJlM",
               "name": "extCstop",
+              "width": "fill_container",
               "fill": "#D32F2F",
               "cornerRadius": "$radius-sm",
               "padding": [
@@ -17569,6 +17635,44 @@
                   "fontFamily": "Inter",
                   "fontSize": 15,
                   "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "kHN5g",
+              "name": "extDbRight",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "u0ygDW",
+                  "type": "ref",
+                  "ref": "dpU0a",
+                  "name": "extDhome"
+                },
+                {
+                  "type": "frame",
+                  "id": "yMZgo",
+                  "name": "extDavatar",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 14,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sw54d",
+                      "name": "extBavatarText",
+                      "fill": "$color-brand",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
                 }
               ]
             }
@@ -54823,6 +54927,31 @@
           "width": "fill_container",
           "height": 1,
           "fill": "$color-divider"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "dpU0a",
+      "x": 860,
+      "y": -1280,
+      "name": "Ext Home Button",
+      "reusable": true,
+      "width": 28,
+      "height": 28,
+      "cornerRadius": "$radius-sm",
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "icon",
+          "id": "SAAzn",
+          "name": "icon",
+          "width": 16,
+          "height": 16,
+          "icon": "house",
+          "library": "lucide",
+          "fill": "$color-brand"
         }
       ]
     }

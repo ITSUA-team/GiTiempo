@@ -1,0 +1,6 @@
+# Pencil design files are encrypted, so a line-level merge corrupts them even in
+# the hunks git reports as merged cleanly. Marking them binary makes git refuse
+# to diff or auto-merge them, turning a silent corruption into an honest conflict
+# that has to be resolved by taking one whole side and re-applying the other in
+# the Pencil editor.
+*.pen -merge -diff

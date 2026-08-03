@@ -38,6 +38,8 @@ function createStorage(initialData?: Record<string, unknown>): {
   };
 }
 
+const VERIFIER = "v".repeat(64);
+
 function createTestConfig() {
   return getExtensionConfig({
     MODE: "test",
@@ -84,6 +86,62 @@ describe("createExtensionApiClient", () => {
         refreshToken: "refresh-token",
       },
     });
+  });
+
+  it("posts the GitHub handoff code and stores the returned session", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      }),
+    );
+    const { data, storage } = createStorage();
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn,
+      storage,
+    });
+
+    await expect(client.exchangeGithubSession("handoff-code", VERIFIER)).resolves.toEqual({
+      accessToken: "access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "refresh-token",
+    });
+    expect(fetchFn).toHaveBeenCalledWith(
+      "http://localhost:3000/auth/github/session",
+      {
+        body: JSON.stringify({ code: "handoff-code", verifier: VERIFIER }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      },
+    );
+    // The stored session is indistinguishable from one established through
+    // Firebase, so refresh, authorization headers, and the runtime snapshot all
+    // behave identically afterwards.
+    expect(data).toEqual({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+  });
+
+  it("surfaces a rejected GitHub handoff code through the API error mapping", async () => {
+    const { data, storage } = createStorage();
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn: vi.fn(async () =>
+        jsonResponse({ message: "Unauthorized" }, { status: 401 }),
+      ),
+      storage,
+    });
+
+    await expect(client.exchangeGithubSession("stale-code", VERIFIER)).rejects.toThrow(
+      "Unauthorized",
+    );
+    expect(data).toEqual({});
   });
 
   it("maps login gateway failures to a temporary API outage message", async () => {

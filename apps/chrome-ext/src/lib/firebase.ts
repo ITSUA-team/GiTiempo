@@ -9,6 +9,7 @@ import {
 } from "firebase/auth";
 
 import { getExtensionConfig, hasFirebaseConfig } from "./config";
+import { launchWebAuthFlow } from "./web-auth-flow";
 
 const extensionConfig = getExtensionConfig();
 const firebaseConfig = extensionConfig.firebase;
@@ -119,38 +120,6 @@ function parseGoogleAuthResponse(redirectedTo: string, expectedState: string): s
   return accessToken;
 }
 
-function launchWebAuthFlow(url: string): Promise<string> {
-  if (!chrome.identity?.launchWebAuthFlow) {
-    throw new Error(
-      "Google sign-in is unavailable because the Chrome identity API is not accessible.",
-    );
-  }
-
-  return new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow(
-      {
-        interactive: true,
-        url,
-      },
-      (responseUrl) => {
-        const runtimeError = chrome.runtime.lastError;
-
-        if (runtimeError) {
-          reject(new Error(runtimeError.message || "Google sign-in was interrupted."));
-          return;
-        }
-
-        if (!responseUrl) {
-          reject(new Error("Google sign-in was cancelled before completion."));
-          return;
-        }
-
-        resolve(responseUrl);
-      },
-    );
-  });
-}
-
 export async function signInWithGoogle(): Promise<string> {
   const state = createGoogleAuthState();
   const responseUrl = await launchWebAuthFlow(
@@ -159,6 +128,7 @@ export async function signInWithGoogle(): Promise<string> {
       redirectUri: createGoogleAuthRedirectUri(),
       state,
     }),
+    "Google",
   );
   const accessToken = parseGoogleAuthResponse(responseUrl, state);
   const credential = await signInWithCredential(

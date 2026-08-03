@@ -88,6 +88,14 @@ export const envSchema = z
     // --- GitHub sign-in OAuth App (identity only, separate from the App above) ---
     GITHUB_SIGNIN_CLIENT_ID: optionalNonEmptyString,
     GITHUB_SIGNIN_CLIENT_SECRET: optionalNonEmptyString,
+    // Where the GitHub sign-in callback returns the browser for the browser
+    // extension, e.g. `https://<extension-id>.chromiumapp.org/`. Read only from
+    // configuration and never from the request: the handoff code travels in this
+    // URL, so a caller-supplied destination would be an exfiltration primitive.
+    // No localhost default, for the same reason recorded for `ADMIN_SPA_URL`, and
+    // the extension id differs between an unpacked build and a published one, so
+    // this is per-environment. `requireConfig` fails loud if consumed while unset.
+    GITHUB_SIGNIN_EXTENSION_REDIRECT_URL: optionalUrl,
 
     // --- Token encryption ---
     ENCRYPTION_KEY: optionalNonEmptyString,
