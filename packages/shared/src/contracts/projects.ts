@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { githubRepoKeySchema } from "./github.js";
 import { workspaceRoleSchema } from "./workspace-members.js";
 
 export const projectVisibilitySchema = z.enum(["public", "private"]);
@@ -145,6 +146,74 @@ export const projectAssignmentListResponseSchema = z.array(
   projectAssignmentResponseSchema,
 );
 
+export const importGitHubRepositoriesSchema = z
+  .object({
+    githubRepos: z.array(githubRepoKeySchema).min(1).max(50),
+  })
+  .strict();
+
+export const importGitHubProjectsSchema = z
+  .object({
+    githubProjects: z
+      .array(
+        z.object({
+          githubProjectId: z.string().min(1).max(255),
+          githubRepos: z.array(githubRepoKeySchema).max(25).default([]),
+          number: z.number().int().positive(),
+          owner: z.string().min(1).max(255),
+          title: z.string().min(1).max(255),
+          url: z.string().nullable(),
+        }),
+      )
+      .min(1)
+      .max(25),
+  })
+  .strict();
+
+export const importedGitHubProjectSchema = z.object({
+  githubProjectId: z.string(),
+  linkedRepository: z.string().nullable(),
+  projectId: z.uuid().nullable(),
+  status: z.enum(["imported", "already-imported", "failed"]),
+  message: z.string().nullable(),
+});
+
+export const importGitHubProjectsResponseSchema = z.object({
+  results: z.array(importedGitHubProjectSchema),
+});
+
+export const projectGitHubProjectListResponseSchema = z.object({
+  items: z.array(
+    z.object({
+      githubProjectId: z.string(),
+      linkedRepository: z.string().nullable(),
+      projectId: z.uuid(),
+      projectIsActive: z.boolean(),
+    }),
+  ),
+});
+
+export const importedGitHubRepositorySchema = z.object({
+  githubRepo: z.string(),
+  projectId: z.uuid().nullable(),
+  status: z.enum(["imported", "already-imported", "failed"]),
+  message: z.string().nullable(),
+});
+
+export const importGitHubRepositoriesResponseSchema = z.object({
+  results: z.array(importedGitHubRepositorySchema),
+});
+
+export const projectGitHubRepositoryListResponseSchema = z.object({
+  items: z.array(
+    z.object({
+      githubRepo: z.string(),
+      projectId: z.uuid(),
+      projectIsActive: z.boolean(),
+    }),
+  ),
+});
+
 export const createProjectAssignmentSchema = z
   .object({
     userId: z.uuid(),
@@ -192,4 +261,26 @@ export type ProjectAssignmentListResponse = z.infer<
 >;
 export type CreateProjectAssignmentInput = z.infer<
   typeof createProjectAssignmentSchema
+>;
+export type ImportGitHubRepositoriesInput = z.infer<
+  typeof importGitHubRepositoriesSchema
+>;
+export type ImportedGitHubRepository = z.infer<
+  typeof importedGitHubRepositorySchema
+>;
+export type ImportGitHubRepositoriesResponse = z.infer<
+  typeof importGitHubRepositoriesResponseSchema
+>;
+export type ProjectGitHubRepositoryListResponse = z.infer<
+  typeof projectGitHubRepositoryListResponseSchema
+>;
+export type ImportGitHubProjectsInput = z.infer<
+  typeof importGitHubProjectsSchema
+>;
+export type ImportedGitHubProject = z.infer<typeof importedGitHubProjectSchema>;
+export type ImportGitHubProjectsResponse = z.infer<
+  typeof importGitHubProjectsResponseSchema
+>;
+export type ProjectGitHubProjectListResponse = z.infer<
+  typeof projectGitHubProjectListResponseSchema
 >;

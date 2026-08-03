@@ -24,6 +24,7 @@ import { routeNames } from '@/router';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
+import GitHubProjectImportPanel from '@/components/projects/GitHubProjectImportPanel.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -33,6 +34,16 @@ const members = ref<WorkspaceMemberListResponse>([]);
 const membersLoading = ref(false);
 const membersError = ref<string | null>(null);
 const isSubmitting = ref(false);
+const sourceMode = ref<'manual' | 'github'>('manual');
+
+function setSourceMode(mode: 'manual' | 'github'): void {
+  sourceMode.value = mode;
+}
+
+function handleImported(): void {
+  successToast('Projects imported');
+  void router.push({ name: routeNames.projects });
+}
 
 const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
@@ -145,10 +156,20 @@ onMounted(loadMembers);
     <div class="flex min-w-0 flex-col gap-6 md:flex-row">
       <div class="bg-surface-primary flex min-w-0 flex-1 flex-col gap-4 rounded-lg p-6">
         <h2 class="text-text-dark text-lg font-semibold">
-          Add Project Manually
+          {{
+            sourceMode === 'github'
+              ? 'Import Projects From GitHub'
+              : 'Add Project Manually'
+          }}
         </h2>
 
+        <GitHubProjectImportPanel
+          v-if="sourceMode === 'github'"
+          @imported="handleImported"
+        />
+
         <Form
+          v-else
           v-slot="$form"
           :resolver="resolver"
           :initial-values="initialValues"
@@ -274,29 +295,57 @@ onMounted(loadMembers);
           Project Source
         </h2>
         <p class="text-text-muted text-[13px] font-normal">
-          Projects can come from connected workspaces or be added manually. This
-          screen covers the manual path.
+          Imported projects are named
+          <span class="text-text-dark font-medium">organization/project</span>,
+          so the owner is visible in the projects list.
         </p>
 
-        <div class="border-brand bg-accent-tint flex flex-col gap-2 rounded-lg border p-4">
+        <button
+          type="button"
+          class="focus-visible:outline-brand flex cursor-pointer flex-col gap-2 rounded-lg border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+          :class="
+            sourceMode === 'manual'
+              ? 'border-brand bg-accent-tint'
+              : 'bg-app-bg hover:border-brand/40 border-transparent'
+          "
+          role="radio"
+          :aria-checked="sourceMode === 'manual'"
+          data-testid="project-source-manual"
+          @click="setSourceMode('manual')"
+        >
           <span class="text-text-dark text-sm font-semibold">
             Manual project
           </span>
           <span class="text-text-muted text-[13px] font-normal">
-            Use this when a project is internal, still being prepared, or not
-            available through a workspace import yet.
+            For internal work, or anything not on GitHub. No
+            organization/repository, source stays
+            <span class="text-text-dark font-medium">Manual</span>.
           </span>
-        </div>
+        </button>
 
-        <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
+        <button
+          type="button"
+          class="focus-visible:outline-brand flex cursor-pointer flex-col gap-2 rounded-lg border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+          :class="
+            sourceMode === 'github'
+              ? 'border-brand bg-accent-tint'
+              : 'bg-app-bg hover:border-brand/40 border-transparent'
+          "
+          role="radio"
+          :aria-checked="sourceMode === 'github'"
+          data-testid="project-source-github"
+          @click="setSourceMode('github')"
+        >
           <span class="text-text-dark text-sm font-semibold">
-            Workspace import
+            Import from GitHub
           </span>
           <span class="text-text-muted text-[13px] font-normal">
-            Use imports when the project already exists in a connected workspace
-            and should keep its external context.
+            Adds a GitHub project as
+            <span class="text-text-dark font-medium">ITSUA-team/Krvn</span>. If
+            all of its issues come from one repository, that repository is
+            linked too.
           </span>
-        </div>
+        </button>
 
         <p class="text-text-muted text-xs font-normal">
           You can still assign the PM, set visibility, and adjust project
