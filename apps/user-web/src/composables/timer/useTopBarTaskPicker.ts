@@ -1,4 +1,5 @@
 import {
+  type GitHubProject,
   type ProjectResponse,
   type SyncedGitHubIssue,
   type TaskResponse,
@@ -7,6 +8,7 @@ import { computed, ref } from "vue";
 
 import { validateInlineNewTaskInput } from "@/lib/inline-new-task";
 import type { SelectedTaskContext } from "@/lib/top-bar-timer-helpers";
+import type { GitHubProjectAvailability } from "@/lib/timer-github-projects";
 
 export interface GitHubIssueTaskOption extends TaskResponse {
   githubIssue: SyncedGitHubIssue;
@@ -14,12 +16,34 @@ export interface GitHubIssueTaskOption extends TaskResponse {
   issueTitle: string;
 }
 
-export type TopBarTaskOption = GitHubIssueTaskOption | TaskResponse;
+export interface GitHubProjectIssueTaskOption extends TaskResponse {
+  githubIssue: SyncedGitHubIssue;
+  isGitHubProjectIssueOption: true;
+  issueTitle: string;
+}
+
+export type TopBarTaskOption =
+  | GitHubIssueTaskOption
+  | GitHubProjectIssueTaskOption
+  | TaskResponse;
+
+export interface GitHubProjectOption extends GitHubProject {
+  isGitHubProjectOption: true;
+}
 
 export function isTopBarGitHubIssueTaskOption(
   task: TopBarTaskOption,
 ): task is GitHubIssueTaskOption {
   return "isGitHubIssueOption" in task && task.isGitHubIssueOption === true;
+}
+
+export function isTopBarGitHubProjectIssueTaskOption(
+  task: TopBarTaskOption,
+): task is GitHubProjectIssueTaskOption {
+  return (
+    "isGitHubProjectIssueOption" in task &&
+    task.isGitHubProjectIssueOption === true
+  );
 }
 
 export function useTopBarTaskPicker() {
@@ -32,6 +56,15 @@ export function useTopBarTaskPicker() {
   const selectedContextGitHubIssue = ref<SyncedGitHubIssue | null>(null);
   const selectedDescription = ref("");
   const createTaskTitle = ref("");
+  const githubProjects = ref<GitHubProjectOption[]>([]);
+  const selectedGitHubProjectId = ref<string | null>(null);
+  const githubProjectAvailability = ref<GitHubProjectAvailability>("available");
+  const githubProjectsErrorMessage = ref<string | null>(null);
+  const githubProjectsTruncated = ref(false);
+  const githubProjectDraftCount = ref(0);
+  const githubProjectRepositories = ref<
+    Record<string, { hasMore: boolean; repositories: string[] }>
+  >({});
   const projectsErrorMessage = ref<string | null>(null);
   const tasksErrorMessage = ref<string | null>(null);
   const createTaskErrorMessage = ref<string | null>(null);
@@ -42,12 +75,26 @@ export function useTopBarTaskPicker() {
   const selectedProject = computed(
     () => activeProjects.value.find((project) => project.id === selectedProjectId.value) ?? null,
   );
+  const selectedGitHubProject = computed(
+    () =>
+      githubProjects.value.find(
+        (project) => project.id === selectedGitHubProjectId.value,
+      ) ?? null,
+  );
   const selectedTask = computed(
     () => activeTasks.value.find((task) => task.id === selectedTaskId.value) ?? null,
   );
-  const isConfirmSelectionDisabled = computed(
-    () => !selectedProject.value || !selectedTask.value,
-  );
+  const isConfirmSelectionDisabled = computed(() => {
+    if (!selectedTask.value) {
+      return true;
+    }
+
+    if (selectedGitHubProject.value) {
+      return !isTopBarGitHubProjectIssueTaskOption(selectedTask.value);
+    }
+
+    return !selectedProject.value;
+  });
   const isCreateTaskTitleEmpty = computed(() => createTaskTitle.value.trim().length === 0);
 
   function setProjects(nextProjects: ProjectResponse[]): void {
@@ -101,6 +148,53 @@ export function useTopBarTaskPicker() {
 
     selectedProjectId.value = projectId;
     selectedContextGitHubIssue.value = null;
+
+    if (projectId !== null) {
+      selectedGitHubProjectId.value = null;
+      githubProjectDraftCount.value = 0;
+    }
+  }
+
+  function setGitHubProjects(nextProjects: GitHubProjectOption[]): void {
+    githubProjects.value = nextProjects;
+  }
+
+  function setSelectedGitHubProjectId(githubProjectId: string | null): void {
+    if (selectedGitHubProjectId.value === githubProjectId) {
+      return;
+    }
+
+    selectedGitHubProjectId.value = githubProjectId;
+    githubProjectDraftCount.value = 0;
+
+    if (githubProjectId !== null) {
+      selectedProjectId.value = null;
+      selectedContextGitHubIssue.value = null;
+    }
+  }
+
+  function setGitHubProjectAvailability(
+    availability: GitHubProjectAvailability,
+  ): void {
+    githubProjectAvailability.value = availability;
+  }
+
+  function setGitHubProjectsError(message: string | null): void {
+    githubProjectsErrorMessage.value = message;
+  }
+
+  function setGitHubProjectsTruncated(isTruncated: boolean): void {
+    githubProjectsTruncated.value = isTruncated;
+  }
+
+  function setGitHubProjectDraftCount(count: number): void {
+    githubProjectDraftCount.value = count;
+  }
+
+  function setGitHubProjectRepositories(
+    next: Record<string, { hasMore: boolean; repositories: string[] }>,
+  ): void {
+    githubProjectRepositories.value = next;
   }
 
   function setSelectedTaskId(taskId: string | null): void {
@@ -145,6 +239,21 @@ export function useTopBarTaskPicker() {
   }
 
   function getSelectedTaskContext(): SelectedTaskContext | null {
+    if (
+      selectedGitHubProject.value &&
+      selectedTask.value &&
+      isTopBarGitHubProjectIssueTaskOption(selectedTask.value)
+    ) {
+      return {
+        githubIssue: selectedTask.value.githubIssue,
+        issueTitle: selectedTask.value.issueTitle,
+        projectName: selectedGitHubProject.value.title,
+        source: "github-project-issue",
+        taskId: selectedTask.value.id,
+        taskTitle: selectedTask.value.title,
+      };
+    }
+
     if (!selectedProject.value || !selectedTask.value) {
       return null;
     }
@@ -178,6 +287,21 @@ export function useTopBarTaskPicker() {
   return {
     activeProjects,
     activeTasks,
+    githubProjectAvailability,
+    githubProjectDraftCount,
+    githubProjectRepositories,
+    githubProjects,
+    githubProjectsErrorMessage,
+    githubProjectsTruncated,
+    selectedGitHubProject,
+    selectedGitHubProjectId,
+    setGitHubProjectAvailability,
+    setGitHubProjectDraftCount,
+    setGitHubProjectRepositories,
+    setGitHubProjects,
+    setGitHubProjectsError,
+    setGitHubProjectsTruncated,
+    setSelectedGitHubProjectId,
     closeDialog,
     createTaskErrorMessage,
     createTaskTitle,

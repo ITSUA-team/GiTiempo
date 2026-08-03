@@ -35,10 +35,7 @@ import {
 } from '../../db/postgres-errors';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
-import {
-  buildGitHubRepoKey,
-  parseGitHubRepoKey,
-} from '../../github/github-repo-key';
+import { parseGitHubRepoKey } from '../../github/github-repo-key';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
@@ -49,6 +46,7 @@ import {
   taskRowSelection,
   tasks as tasksTable,
 } from '../../tasks/schemas/tasks.schema';
+import { GithubService } from '../../github/services/github.service';
 import { GithubTaskMaterializationService } from '../../tasks/services/github-task-materialization.service';
 import { TasksService } from '../../tasks/services/tasks.service';
 import { users } from '../../users/schemas/users.schema';
@@ -96,6 +94,7 @@ export class TimeEntriesService {
     private readonly tasks: TasksService,
     private readonly usersActivity: UsersActivityService,
     private readonly githubTasks: GithubTaskMaterializationService,
+    private readonly github: GithubService,
   ) {}
 
   async listOwnEntries(
@@ -331,12 +330,18 @@ export class TimeEntriesService {
     if (!repoParts) {
       throw new UnprocessableEntityException('GitHub repository is invalid');
     }
-    const githubRepo = buildGitHubRepoKey(repoParts);
 
     const membership = await this.members.requireActiveMembership(
       user.sub,
       user.workspaceId,
     );
+
+    const repository = await this.github.getRepository(
+      user,
+      repoParts.owner,
+      repoParts.repo,
+    );
+    const githubRepo = repository.fullName;
     const issueKey = `${githubRepo}#${input.issueNumber}`;
 
     try {

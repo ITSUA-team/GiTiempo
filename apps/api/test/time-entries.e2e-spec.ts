@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { and, eq, inArray, like, or } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { GithubService } from '../src/github/services/github.service';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import {
@@ -21,6 +22,11 @@ import {
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
+const githubService = {
+  getRepository: (_user: unknown, owner: string, repo: string) =>
+    Promise.resolve({ fullName: `${owner}/${repo}` }),
+};
+
 describe('Time entries (e2e)', () => {
   let app: INestApplication;
   let db: DrizzleDB;
@@ -36,7 +42,10 @@ describe('Time entries (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(GithubService)
+      .useValue(githubService)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();

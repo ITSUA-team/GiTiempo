@@ -7,6 +7,7 @@ import { computed, ref, shallowRef, watch, type ComputedRef } from "vue";
 import {
   toSelectedTaskContext,
   type SelectedTaskContext,
+  isGitHubProjectIssueSelectedTaskContext,
 } from "@/lib/top-bar-timer-helpers";
 import { loadEligibleLastTrackedContext } from "@/lib/top-bar-timer-last-context";
 import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
@@ -83,7 +84,8 @@ export function useTopBarTimerSummary({
           projectId: currentTimer.value.project.id,
           taskId: currentTimer.value.task.id,
         }
-      : selectedContext.value
+      : selectedContext.value &&
+          !isGitHubProjectIssueSelectedTaskContext(selectedContext.value)
         ? {
             description: selectedDescription.value ?? "",
             githubIssue: selectedContext.value.githubIssue,

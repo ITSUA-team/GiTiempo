@@ -19,7 +19,26 @@ import {
   type InlineNewTaskOption,
 } from "@/lib/inline-new-task";
 
-type ProjectAutoCompleteValue = ProjectResponse | string | null;
+interface GitHubProjectRepositoryBadge {
+  fullName: string;
+  isTracked: boolean;
+}
+
+interface GitHubProjectPickerOption {
+  hasMoreRepositories: boolean;
+  id: string;
+  isGitHubProjectOption: true;
+  name: string;
+  repositoryBadges: GitHubProjectRepositoryBadge[];
+}
+
+type ProjectPickerOption = GitHubProjectPickerOption | ProjectResponse;
+type ProjectAutoCompleteValue = ProjectPickerOption | string | null;
+
+interface ProjectOptionGroup {
+  items: ProjectPickerOption[];
+  label: string;
+}
 type TaskPickerOption = TaskResponse | InlineNewTaskOption;
 type TaskAutoCompleteValue = TaskPickerOption | string | null;
 
@@ -35,7 +54,18 @@ const props = defineProps<{
   isCreateTaskDisabled: boolean;
   isCreatingTask: boolean;
   isCrossWorkspaceTimer: boolean;
+  githubProjectDraftCount: number;
+  githubProjectOptions: { id: string; title: string }[];
+  githubProjectRepositories: Record<
+    string,
+    { hasMore: boolean; repositories: string[] }
+  >;
+  githubTrackedRepositoryKeys: Set<string>;
+  githubProjectsErrorMessage: string | null;
+  githubProjectsTruncated: boolean;
+  isLoadingGitHubProjects: boolean;
   isLoadingProjects: boolean;
+  selectedGitHubProjectId: string | null;
   isLoadingTasks: boolean;
   isOpen: boolean;
   isPrimaryActionDisabled: boolean;
@@ -59,6 +89,7 @@ const emit = defineEmits<{
   primaryAction: [];
   "update:createTaskTitle": [value: string];
   "update:selectedDescription": [value: string];
+  "update:selectedGitHubProjectId": [value: string | null];
   "update:selectedProjectId": [value: string | null];
   "update:selectedTaskId": [value: string | null];
 }>();
@@ -104,7 +135,32 @@ const taskPickerOptions = computed<TaskPickerOption[]>(() => [
 ]);
 const mobileProjectModel = shallowRef<ProjectAutoCompleteValue>(null);
 const mobileTaskModel = shallowRef<TaskAutoCompleteValue>(null);
-const projectSuggestions = shallowRef<ProjectResponse[]>([]);
+const projectSuggestions = shallowRef<ProjectOptionGroup[]>([]);
+const githubProjectPickerOptions = computed<GitHubProjectPickerOption[]>(() =>
+  props.githubProjectOptions.map((board) => {
+    const summary = props.githubProjectRepositories[board.id];
+
+    return {
+      hasMoreRepositories: summary?.hasMore ?? false,
+      id: board.id,
+      isGitHubProjectOption: true as const,
+      name: board.title,
+      repositoryBadges: (summary?.repositories ?? []).map((fullName) => ({
+        fullName,
+        isTracked: props.githubTrackedRepositoryKeys.has(
+          fullName.toLowerCase(),
+        ),
+      })),
+    };
+  }),
+);
+const allProjectPickerOptions = computed<ProjectPickerOption[]>(() => [
+  ...props.projectOptions,
+  ...githubProjectPickerOptions.value,
+]);
+const isGitHubProjectSelected = computed(
+  () => props.selectedGitHubProjectId !== null,
+);
 const taskSuggestions = shallowRef<TaskPickerOption[]>([]);
 const isNewTaskSelected = computed(
   () => isInlineNewTaskId(props.selectedTaskId),
@@ -133,6 +189,7 @@ const isTaskAutoCompleteDisabled = computed(
 const isNewTaskTitleInputDisabled = computed(
   () =>
     !hasSelectedProjectOption.value ||
+    isGitHubProjectSelected.value ||
     props.isCreatingTask ||
     props.isConfirmingSelection,
 );
@@ -150,7 +207,9 @@ const isConfirmButtonDisabled = computed(
     isSelectionModelIncomplete.value,
 );
 const selectedProjectName = computed(
-  () => findProjectOption(props.selectedProjectId)?.name ?? null,
+  () =>
+    findProjectOption(props.selectedGitHubProjectId ?? props.selectedProjectId)
+      ?.name ?? null,
 );
 const newTaskHint = computed(() => {
   const projectName = selectedProjectName.value ?? "the selected project";
@@ -158,12 +217,17 @@ const newTaskHint = computed(() => {
 
   return `This task is created in ${projectName} and inherits the project billable default when you ${actionLabel}.`;
 });
-function findProjectOption(projectId: string | null): ProjectResponse | null {
+function findProjectOption(
+  projectId: string | null,
+): ProjectPickerOption | null {
   if (!projectId) {
     return null;
   }
 
-  return props.projectOptions.find((project) => project.id === projectId) ?? null;
+  return (
+    allProjectPickerOptions.value.find((project) => project.id === projectId) ??
+    null
+  );
 }
 
 function findTaskOption(taskId: string | null): TaskPickerOption | null {
@@ -180,8 +244,14 @@ function findTaskOption(taskId: string | null): TaskPickerOption | null {
 
 function isProjectOption(
   value: ProjectAutoCompleteValue | undefined,
-): value is ProjectResponse {
+): value is ProjectPickerOption {
   return typeof value === "object" && value !== null && "name" in value;
+}
+
+function isGitHubProjectPickerOption(
+  value: ProjectPickerOption,
+): value is GitHubProjectPickerOption {
+  return "isGitHubProjectOption" in value;
 }
 
 function isTaskOption(
@@ -196,11 +266,17 @@ function handleMobileProjectUpdate(
   mobileProjectModel.value = value ?? null;
 
   if (isProjectOption(value)) {
+    if (isGitHubProjectPickerOption(value)) {
+      emit("update:selectedGitHubProjectId", value.id);
+      return;
+    }
+
     emit("update:selectedProjectId", value.id);
     return;
   }
 
   if (value === null || value === undefined) {
+    emit("update:selectedGitHubProjectId", null);
     emit("update:selectedProjectId", null);
   }
 }
@@ -218,12 +294,35 @@ function handleMobileTaskUpdate(value: TaskAutoCompleteValue | undefined): void 
   }
 }
 
+function buildProjectGroups(
+  projects: ProjectResponse[],
+  boards: GitHubProjectPickerOption[],
+): ProjectOptionGroup[] {
+  const groups: ProjectOptionGroup[] = [];
+
+  if (projects.length > 0) {
+    groups.push({ items: projects, label: "Projects" });
+  }
+
+  if (boards.length > 0) {
+    groups.push({ items: boards, label: "GitHub Projects" });
+  }
+
+  return groups;
+}
+
 function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
-  projectSuggestions.value = filterAutocompleteOptions(
+  const projects = filterAutocompleteOptions(
     props.projectOptions,
     event.query,
     (project) => project.name,
   );
+  const boards = filterAutocompleteOptions(
+    githubProjectPickerOptions.value,
+    event.query,
+    (board) => board.name,
+  );
+  projectSuggestions.value = buildProjectGroups(projects, boards);
 }
 
 function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
@@ -243,10 +342,20 @@ function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
 }
 
 watch(
-  [() => props.selectedProjectId, () => props.projectOptions],
+  [
+    () => props.selectedProjectId,
+    () => props.selectedGitHubProjectId,
+    () => props.projectOptions,
+    () => props.githubProjectOptions,
+  ],
   () => {
-    mobileProjectModel.value = findProjectOption(props.selectedProjectId);
-    projectSuggestions.value = props.projectOptions;
+    mobileProjectModel.value = findProjectOption(
+      props.selectedGitHubProjectId ?? props.selectedProjectId,
+    );
+    projectSuggestions.value = buildProjectGroups(
+      props.projectOptions,
+      githubProjectPickerOptions.value,
+    );
   },
   { immediate: true },
 );
@@ -344,15 +453,62 @@ watch(
               input-id="top-bar-timer-project"
               :min-length="0"
               option-label="name"
-              :disabled="props.isLoadingProjects || props.isConfirmingSelection"
-              :loading="props.isLoadingProjects"
+              option-group-label="label"
+              option-group-children="items"
+              :disabled="
+                props.isLoadingProjects ||
+                  props.isLoadingGitHubProjects ||
+                  props.isConfirmingSelection
+              "
+              :loading="props.isLoadingProjects || props.isLoadingGitHubProjects"
               :model-value="mobileProjectModel"
               placeholder="Search projects"
               :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
               :suggestions="projectSuggestions"
               @complete="handleProjectComplete"
               @update:model-value="handleMobileProjectUpdate"
-            />
+            >
+              <template #option="slotProps">
+                <div class="flex min-w-0 flex-col gap-1 py-0.5">
+                  <span class="truncate">{{ slotProps.option.name }}</span>
+                  <span
+                    v-if="isGitHubProjectPickerOption(slotProps.option)"
+                    class="flex flex-wrap items-center gap-1"
+                    data-testid="top-bar-timer-board-repositories"
+                  >
+                    <span
+                      v-for="badge in slotProps.option.repositoryBadges"
+                      :key="badge.fullName"
+                      class="inline-flex items-center gap-1 rounded-sm border px-1.5 py-px text-[11px] leading-4"
+                      :class="
+                        badge.isTracked
+                          ? 'border-primary/40 bg-primary/10 text-primary'
+                          : 'border-surface-300 text-text-muted'
+                      "
+                      :data-tracked="badge.isTracked ? 'true' : 'false'"
+                    >
+                      {{ badge.fullName }}
+                      <span
+                        v-if="badge.isTracked"
+                        aria-hidden="true"
+                      >&#10003;</span>
+                    </span>
+                    <span
+                      v-if="slotProps.option.repositoryBadges.length === 0"
+                      class="text-text-muted text-[11px] leading-4"
+                    >
+                      No linked repository
+                    </span>
+                    <span
+                      v-else-if="slotProps.option.hasMoreRepositories"
+                      class="text-text-muted text-[11px] leading-4"
+                    >
+                      and more
+                    </span>
+                  </span>
+                </div>
+              </template>
+            </AutoComplete>
           </div>
         </div>
 

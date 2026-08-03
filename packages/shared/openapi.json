@@ -2533,6 +2533,7 @@
     },
     "/time-entries/timer/start-from-github": {
       "post": {
+        "description": "Verifies the repository through the caller GitHub connection and asserts the workspace GitHub organization policy before any project, task, or time entry is written. The repository is recorded under the name GitHub reports, not the name supplied in the request.",
         "operationId": "TimeEntriesController_startTimerFromGitHub",
         "parameters": [],
         "requestBody": {
@@ -2556,8 +2557,11 @@
               }
             }
           },
+          "403": {
+            "description": "Repository owner is not allowed for the workspace"
+          },
           "404": {
-            "description": "GitHub issue not found"
+            "description": "GitHub connection, repository, or issue not found"
           },
           "409": {
             "description": "Timer already running"

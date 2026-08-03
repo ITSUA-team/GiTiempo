@@ -9,6 +9,7 @@ import { useUpdateTimeEntryMutation } from '@/composables/query';
 import type { UserServerStateScope } from '@/lib/query-keys';
 import {
   isGitHubIssueSelectedTaskContext,
+  isGitHubProjectIssueSelectedTaskContext,
   type SelectedTaskContext,
 } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
@@ -47,6 +48,16 @@ export function useTopBarTimerSelectionUpdate({
   ): Promise<SelectedTaskContext | null> {
     if (!context) {
       return null;
+    }
+
+    if (isGitHubProjectIssueSelectedTaskContext(context)) {
+      if (summary.currentTimer.value) {
+        selectionUpdateErrorMessage.value =
+          'Stop the running timer before starting one from a GitHub project issue.';
+        return null;
+      }
+
+      return context;
     }
 
     if (!isGitHubIssueSelectedTaskContext(context)) {
