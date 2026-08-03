@@ -172,7 +172,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
 
           <button
             type="button"
-            class="border-divider focus-visible:outline-brand enabled:hover:bg-app-bg flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm border bg-white px-4 text-[15px] font-semibold text-[#3c4043] transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            class="border-divider focus-visible:outline-brand enabled:hover:bg-app-bg flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm border bg-white px-4 text-[15px] font-semibold text-google-text transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="props.isSubmitting"
             data-testid="sign-in-google"
             @click="emit('submitGoogle')"

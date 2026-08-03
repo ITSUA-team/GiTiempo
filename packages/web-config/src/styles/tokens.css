@@ -14,14 +14,19 @@
   --color-destructive: #d32f2f;
 
   /*
-   * Identity-provider brand colours. Not ours to choose, and not themeable —
-   * GitHub's mark has to sit on GitHub's colour to be recognised. They live here
-   * so the web logins and the extension popup render the same button from one
-   * definition instead of repeating the hex, which is what
-   * `docs/ui/INDEX.md` forbids in class attributes.
+   * Identity-provider brand colours. Not ours to choose, and not themeable — a
+   * provider's button has to keep the provider's own colours to be recognised,
+   * which is why these are exempt from the app palette rather than mapped into
+   * it. They live here so every sign-in surface renders one definition instead
+   * of repeating the hex, which is what `docs/ui/INDEX.md` forbids in class
+   * attributes.
+   *
+   * `google-text` is the label colour Google's branding prescribes for its
+   * white button; the mark itself is multi-colour and lives in `GoogleMark.vue`.
    */
   --color-github: #24292f;
   --color-github-hover: #32383f;
+  --color-google-text: #3c4043;
 
   --color-status-active-bg: #e8f5e9;
   --color-status-active-text: #2e7d32;
