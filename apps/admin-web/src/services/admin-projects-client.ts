@@ -1,6 +1,12 @@
 import {
 	backfillProjectBillableDefaultSchema,
 	createProjectSchema,
+	importGitHubProjectsResponseSchema,
+	importGitHubProjectsSchema,
+	projectGitHubProjectListResponseSchema,
+	importGitHubRepositoriesResponseSchema,
+	importGitHubRepositoriesSchema,
+	projectGitHubRepositoryListResponseSchema,
 	managementProjectSummaryResponseSchema,
 	projectListResponseSchema,
 	projectBillableDefaultBackfillResponseSchema,
@@ -11,6 +17,12 @@ import {
 	updateProjectSchema,
 	type BackfillProjectBillableDefaultInput,
 	type CreateProjectInput,
+	type ImportGitHubProjectsInput,
+	type ImportGitHubProjectsResponse,
+	type ProjectGitHubProjectListResponse,
+	type ImportGitHubRepositoriesInput,
+	type ImportGitHubRepositoriesResponse,
+	type ProjectGitHubRepositoryListResponse,
 	type ManagementProjectSummaryResponse,
 	type ProjectBillableDefaultBackfillResponse,
 	type ProjectListResponse,
@@ -40,6 +52,14 @@ export interface AdminProjectsClient {
 		projectId: string,
 		input: BackfillProjectBillableDefaultInput,
 	): Promise<ProjectBillableDefaultBackfillResponse>;
+	importGitHubProjects(
+		input: ImportGitHubProjectsInput,
+	): Promise<ImportGitHubProjectsResponse>;
+	listImportedGitHubProjects(): Promise<ProjectGitHubProjectListResponse>;
+	importGitHubRepositories(
+		input: ImportGitHubRepositoriesInput,
+	): Promise<ImportGitHubRepositoriesResponse>;
+	listImportedGitHubRepositories(): Promise<ProjectGitHubRepositoryListResponse>;
 	createProject(
 		input: CreateProjectInput,
 	): Promise<ProjectResponse>;
@@ -84,6 +104,34 @@ export function createAdminProjectsClient({
 			});
 		},
 
+		importGitHubProjects(input) {
+			return apiClient.requestJson({
+				body: importGitHubProjectsSchema.parse(input),
+				method: 'POST',
+				path: '/projects/import/github-projects',
+				responseSchema: importGitHubProjectsResponseSchema,
+			});
+		},
+		listImportedGitHubProjects() {
+			return apiClient.requestJson({
+				path: '/projects/github/projects',
+				responseSchema: projectGitHubProjectListResponseSchema,
+			});
+		},
+		importGitHubRepositories(input) {
+			return apiClient.requestJson({
+				body: importGitHubRepositoriesSchema.parse(input),
+				method: 'POST',
+				path: '/projects/import/github',
+				responseSchema: importGitHubRepositoriesResponseSchema,
+			});
+		},
+		listImportedGitHubRepositories() {
+			return apiClient.requestJson({
+				path: '/projects/github/repositories',
+				responseSchema: projectGitHubRepositoryListResponseSchema,
+			});
+		},
 		createProject(input) {
 			return apiClient.requestJson({
 				body: createProjectSchema.parse(input),
@@ -170,6 +218,18 @@ export const adminProjectsClient: AdminProjectsClient = {
 	},
 	createProject(input) {
 		return createDefaultAdminProjectsClient().createProject(input);
+	},
+	importGitHubProjects(input) {
+		return createDefaultAdminProjectsClient().importGitHubProjects(input);
+	},
+	listImportedGitHubProjects() {
+		return createDefaultAdminProjectsClient().listImportedGitHubProjects();
+	},
+	importGitHubRepositories(input) {
+		return createDefaultAdminProjectsClient().importGitHubRepositories(input);
+	},
+	listImportedGitHubRepositories() {
+		return createDefaultAdminProjectsClient().listImportedGitHubRepositories();
 	},
 	getManagementSummary() {
 		return createDefaultAdminProjectsClient().getManagementSummary();
