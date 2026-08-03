@@ -123,7 +123,9 @@ Do not implement disabled Pencil nodes. Member, Project Manager, and Admin role 
 - Reuse shared semantic tokens from `packages/web-config/src/styles/tokens.css`; do not copy Vue or PrimeVue components.
 - Use Tailwind v4 CSS-first configuration and semantic token utilities. Do not place raw hex values in Astro markup.
 - Inter is the primary typeface. IBM Plex Mono is reserved for eyebrows and workflow metadata shown in Pencil.
-- The authenticated-app typography table in `components.md` does not constrain marketing headlines. Match each landing frame for heading scale, weight, line height, and wrapping.
+- The authenticated-app typography table in `components.md` does not constrain marketing headlines. Match each landing frame for weight, wrapping, and layout.
+- Heading scale is the exception to that frame-matching rule, and is standardised in `global.css` instead. Every section heading uses `section-heading` (30 / 36 / 42px) and every card heading uses `card-heading` (22 / 25px). One definition each, no per-element size, leading, or tracking overrides — a section that needs a different size needs a new utility, not an override, so the next reader can still tell the scale from the class name.
+- This deliberately supersedes the per-frame heading sizes where they differ. The frames drew the final CTA at 48px and card titles at five sizes between 20px and 28px; the Roles heading had also drifted to 40px against the same utility it was already applying.
 - The approved Brand Purple MVP Scope section is a landing-only large-background exception. It does not change the authenticated app rule.
 - Body copy must not be smaller than 14px. Keep paragraph line length near 50–75 characters.
 

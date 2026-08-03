@@ -73,6 +73,10 @@
   @apply text-[30px] font-bold leading-[1.08] tracking-[-0.035em] sm:text-4xl lg:text-[42px];
 }
 
+@utility card-heading {
+  @apply text-[22px] font-bold leading-[1.15] tracking-[-0.035em] sm:text-[25px];
+}
+
 @utility action-primary {
   @apply inline-flex min-h-11 items-center justify-center gap-3 rounded-md bg-brand px-5 py-3 text-sm font-bold text-text-inverse transition-colors hover:bg-brand/90;
 }
