@@ -393,54 +393,56 @@ onMounted(loadMembers);
               </small>
             </div>
 
-            <div class="flex w-full flex-col gap-1.5 sm:w-60">
-              <label
-                for="project-manager"
-                class="text-text-dark text-[13px] font-medium"
-              >
-                Project manager
-              </label>
-              <Select
-                id="project-manager"
-                name="managerUserId"
-                :options="memberOptions()"
-                option-label="label"
-                option-value="value"
-                placeholder="Select"
-                :loading="membersLoading"
-                :disabled="isSubmitting || membersLoading"
-                :pt="giTiempoSelectPt"
-              />
-              <small
-                v-if="membersError"
-                class="text-status-error-text text-xs"
-              >
-                {{ membersError }}
-              </small>
-              <small
-                v-else
-                class="text-text-muted text-xs"
-              >
-                Optional. Assigned right after the project is created.
-              </small>
-            </div>
+            <div class="flex flex-col gap-3 sm:flex-row">
+              <div class="flex flex-1 flex-col gap-1.5">
+                <label
+                  for="project-manager"
+                  class="text-text-dark text-[13px] font-medium"
+                >
+                  Project manager
+                </label>
+                <Select
+                  id="project-manager"
+                  name="managerUserId"
+                  :options="memberOptions()"
+                  option-label="label"
+                  option-value="value"
+                  placeholder="Select"
+                  :loading="membersLoading"
+                  :disabled="isSubmitting || membersLoading"
+                  :pt="giTiempoSelectPt"
+                />
+                <small
+                  v-if="membersError"
+                  class="text-status-error-text text-xs"
+                >
+                  {{ membersError }}
+                </small>
+                <small
+                  v-else
+                  class="text-text-muted text-xs"
+                >
+                  Optional. Assigned right after the project is created.
+                </small>
+              </div>
 
-            <div class="flex w-full flex-col gap-1.5 sm:w-60">
-              <label
-                for="visibility"
-                class="text-text-dark text-[13px] font-medium"
-              >
-                Visibility
-              </label>
-              <Select
-                id="visibility"
-                name="visibility"
-                :options="visibilityOptions"
-                option-label="label"
-                option-value="value"
-                :disabled="isSubmitting"
-                :pt="giTiempoSelectPt"
-              />
+              <div class="flex w-full flex-col gap-1.5 sm:w-48">
+                <label
+                  for="visibility"
+                  class="text-text-dark text-[13px] font-medium"
+                >
+                  Visibility
+                </label>
+                <Select
+                  id="visibility"
+                  name="visibility"
+                  :options="visibilityOptions"
+                  option-label="label"
+                  option-value="value"
+                  :disabled="isSubmitting"
+                  :pt="giTiempoSelectPt"
+                />
+              </div>
             </div>
 
             <div class="flex flex-col gap-1.5">
