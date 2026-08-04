@@ -167,6 +167,7 @@ export const startTimerSchema = z
 
 export const startTimerFromGitHubSchema = z
   .object({
+    githubProjectId: z.string().min(1).max(255).optional(),
     githubRepo: z
       .string()
       .min(3)

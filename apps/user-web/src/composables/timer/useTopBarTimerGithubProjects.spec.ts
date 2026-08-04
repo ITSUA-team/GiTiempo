@@ -138,6 +138,7 @@ describe("timer picker board targets", () => {
     expect(isGitHubProjectIssueSelectedTaskContext(context!)).toBe(true);
     expect(context).toMatchObject({
       githubIssue,
+      githubProjectId: board.id,
       issueTitle: "Timer pulls projects",
       projectName: "GiTimpo",
       source: "github-project-issue",

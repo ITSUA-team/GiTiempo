@@ -99,6 +99,7 @@ export function useTopBarTimerActions({
     try {
       if (isGitHubProjectIssueSelectedTaskContext(draftContext)) {
         summary.currentTimer.value = await client.startTimerFromGitHub({
+          githubProjectId: draftContext.githubProjectId,
           githubRepo: draftContext.githubIssue.githubRepo,
           issueNumber: draftContext.githubIssue.issueNumber,
           issueTitle: draftContext.issueTitle,

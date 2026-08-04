@@ -24,6 +24,7 @@ export interface GitHubIssueSelectedTaskContext {
 
 export interface GitHubProjectIssueSelectedTaskContext {
   githubIssue: SyncedGitHubIssue;
+  githubProjectId: string;
   issueTitle: string;
   projectName: string;
   source: 'github-project-issue';
