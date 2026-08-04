@@ -28,9 +28,14 @@ export type RuntimeMutationResult = RuntimeActionResult;
 
 export interface RuntimeClient {
   exchangeFirebaseToken(firebaseIdToken: string): Promise<RuntimeAuthResult>;
+  exchangeGithubSession(
+    code: string,
+    verifier: string,
+  ): Promise<RuntimeAuthResult>;
   getSnapshot(): Promise<RuntimeSnapshot>;
   onSnapshotUpdated(listener: (snapshot: RuntimeSnapshot) => void): () => void;
   openExtension(): Promise<void>;
+  signOut(): Promise<RuntimeAuthResult>;
   startTimer(pageContext: SupportedGitHubIssueContext): Promise<RuntimeMutationResult>;
   stopTimer(): Promise<RuntimeMutationResult>;
 }
@@ -38,6 +43,8 @@ export interface RuntimeClient {
 
 export type BackgroundMessage =
   | { type: "auth/exchange-firebase-token"; firebaseIdToken: string }
+  | { type: "auth/exchange-github-session"; code: string; verifier: string }
+  | { type: "auth/sign-out" }
   | { type: "runtime/get-snapshot" }
   | { type: "timer/start"; pageContext: SupportedGitHubIssueContext }
   | { type: "timer/stop" }
@@ -75,6 +82,13 @@ export function createRuntimeClient(): RuntimeClient {
         firebaseIdToken,
       });
     },
+    exchangeGithubSession(code, verifier) {
+      return sendRuntimeMessage<RuntimeAuthResult>({
+        type: "auth/exchange-github-session",
+        code,
+        verifier,
+      });
+    },
     getSnapshot() {
       return sendRuntimeMessage<RuntimeSnapshot>({ type: "runtime/get-snapshot" });
     },
@@ -95,6 +109,9 @@ export function createRuntimeClient(): RuntimeClient {
     },
     async openExtension() {
       await sendRuntimeMessage<void>({ type: "ui/open-extension" });
+    },
+    signOut() {
+      return sendRuntimeMessage<RuntimeAuthResult>({ type: "auth/sign-out" });
     },
     startTimer(pageContext) {
       return sendRuntimeMessage<RuntimeMutationResult>({

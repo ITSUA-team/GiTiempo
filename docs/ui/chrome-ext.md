@@ -24,14 +24,28 @@
 - Resolve avatar initials from the session user, falling back to the running timer's user; omit the avatar when neither is available.
 - Loading and unauthenticated states render the header without the trailing slot.
 
+### Account Menu
+
+- The avatar is the account trigger, matching the web apps, where the same menu opens from the avatar rather than from the logo. It reports itself expanded and takes the brand fill while open.
+- Anchored under the avatar, over the state beneath. Dismissed by escape, by a pointer outside it, or by choosing an action; dismissing changes nothing underneath.
+- Contents, in order: the member's identity, the running-timer notice when a timer is active, then `Open profile` and `Sign out`. Two actions and no more — workspace switching and settings are out of scope for the popup.
+- Identity is the display name over the email, or **the email alone** when the snapshot carries no display name, which is the common case outside a running timer.
+- When a timer is running the menu carries a one-line notice that it keeps running after sign out. Deliberately a warning and not a second clock: the popup already shows the elapsed value, and repeating it inside a panel sitting directly over it read as a second timer rather than as a warning about the first. While the menu is open that value is not readable, which is the accepted cost of anchoring the panel to the avatar.
+- `Sign out` revokes the session with the backend and then clears extension storage, clearing locally even when the revoke fails. Afterwards the popup and any injected issue control both fall back to their unauthenticated behaviour. It does **not** stop a running timer: the timer belongs to the workspace, not to the client that started it.
+- No menu is reachable in the loading or unauthenticated states, which have no avatar and no session to act on.
+
 ## States
 
 ### Unauthenticated
 
 - Product logo.
 - Heading: `text-lg font-semibold text-text-dark`.
-- Primary `Sign in with Google` button using brand tokens.
-- Secondary `Sign in with email` action using the same popup shell and token language.
+- Three sign-in actions in one hierarchy, matching the approved `Ext Unauthenticated` frame:
+  - `Continue with Google` — full width, white on a divider border, carrying the Google mark.
+  - `Continue with GitHub` — full width, on GitHub's own `#24292f`, carrying the GitHub mark. Shown only when `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED` is the string `true` for the build; otherwise omitted entirely, leaving the other two untouched.
+  - `Sign in with email` — a brand text action below a labelled `or` divider, revealing the email form in place.
+- The two provider actions wear their own brand marks rather than two identically brand-coloured buttons, so they read as two distinct choices. They are the same marks the web logins use.
+- GitHub sign-in is **not** Firebase-backed: it leaves for the backend flow and returns a one-time handoff code that the service worker exchanges for the ordinary session. Its failures come back as recoverable copy naming the cause, and an authorization window the user closes reads as a cancelled attempt rather than a configuration error.
 
 ### Authenticated, No Active Timer
 

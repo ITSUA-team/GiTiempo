@@ -10,7 +10,24 @@ import jwt from 'jsonwebtoken';
 import type { Env } from '../../config/env.validation';
 import { AuthService, type TokenPair } from './auth.service';
 
-export type GithubLoginApp = 'user' | 'admin';
+export type GithubLoginApp = 'user' | 'admin' | 'extension';
+
+const GITHUB_LOGIN_APPS: readonly GithubLoginApp[] = [
+  'user',
+  'admin',
+  'extension',
+];
+
+/**
+ * Resolves the `app` query value to a login target. Deliberately an explicit
+ * match rather than "anything that is not admin is user": with a third target, a
+ * typo would otherwise deliver a handoff code to the web app, where the
+ * extension's authorization window never sees it and the user waits on a window
+ * that will never resolve. An unrecognized or absent value is the user app.
+ */
+export function parseGithubLoginApp(value: string | undefined): GithubLoginApp {
+  return GITHUB_LOGIN_APPS.find((app) => app === value) ?? 'user';
+}
 
 /**
  * Name of the HttpOnly cookie that binds a login transaction to the browser
@@ -22,10 +39,29 @@ export const GITHUB_OAUTH_STATE_COOKIE = 'gh_oauth_state';
 /** Handoff codes are exchanged within seconds; a short TTL bounds the store. */
 const HANDOFF_TTL_MS = 60_000;
 
+/**
+ * Outcome of redeeming a handoff code. The rejection reasons are for logs only:
+ * the caller turns every one of them into the same opaque 401, so nothing here
+ * tells a client which of them applied.
+ */
+type HandoffClaim =
+  | { email: string }
+  | { reason: 'unknown' | 'expired' | 'verifier' };
+
+/** A challenge is the hex SHA-256 of the client's verifier, so its shape is fixed. */
+function isChallenge(value: string | undefined): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
+}
+
 interface GithubStateClaims {
   purpose: 'gh-login-state';
   app: GithubLoginApp;
   nonceHash: string;
+  /**
+   * SHA-256 of a secret held by a public client, present only for the extension
+   * target. See `startAuthorization` for why that target cannot use the cookie.
+   */
+  challenge?: string;
   /** Same-app absolute path to return to after login (protected-route redirect). */
   redirect?: string;
 }
@@ -58,7 +94,7 @@ export class AuthGithubService {
   // API instance; a shared store would be needed once the API is scaled out.
   private readonly pendingHandoffs = new Map<
     string,
-    { email: string; expiresAt: number }
+    { email: string; expiresAt: number; challenge?: string }
   >();
 
   constructor(
@@ -77,12 +113,31 @@ export class AuthGithubService {
   startAuthorization(
     app: GithubLoginApp,
     redirect?: string,
+    challenge?: string,
   ): { url: string; stateNonce: string } {
+    // Fail before the browser leaves for GitHub rather than at the callback: an
+    // unconfigured destination would otherwise surface as a 503 on an API page
+    // the user never asked to see, after they had already authorized.
+    if (app === 'extension') {
+      this.redirectBase(app);
+      // Chrome's extension authorization window does not carry the HttpOnly
+      // state cookie through to the callback, measured rather than assumed, so
+      // the cookie cannot bind this target. The extension instead proves
+      // possession of a secret at the session exchange, and refusing to start
+      // without a challenge keeps every extension transaction bound to someone.
+      if (!isChallenge(challenge)) {
+        throw new UnauthorizedException('challenge_required');
+      }
+    }
     const stateNonce = randomBytes(32).toString('hex');
     const state = this.signState(
       app,
       this.hashNonce(stateNonce),
-      this.sanitizeRedirect(redirect),
+      // The extension has no in-app route to return to — its outcome is read off
+      // the intercepted redirect URL — so a post-login target is meaningless
+      // there and is dropped rather than signed into the state.
+      app === 'extension' ? undefined : this.sanitizeRedirect(redirect),
+      app === 'extension' ? challenge : undefined,
     );
     const url = new URL('https://github.com/login/oauth/authorize');
     url.searchParams.set(
@@ -126,16 +181,20 @@ export class AuthGithubService {
     stateNonce?: string;
   }): Promise<string> {
     // The state is echoed on every GitHub redirect (including a denial), so its
-    // signed `app` claim — not a hardcoded 'user' — decides which SPA to return
-    // to; a denial from an admin-started flow must reopen the admin app. The user
-    // app is only a fallback for an absent or unverifiable state.
+    // signed `app` claim — not a hardcoded 'user' — decides which app to return
+    // to; a denial from an admin-started flow must reopen the admin app. For the
+    // extension this is load-bearing rather than cosmetic: its authorization
+    // window resolves only once the navigation reaches the extension's own
+    // redirect URL, so an outcome sent to a web login page would leave that
+    // window pending forever. The user app is only a fallback for an absent or
+    // unverifiable state, which by definition cannot be attributed to any client.
     const app = this.resolveStateApp(input.state);
 
     if (input.error) {
-      return this.spaRedirect(app, '/login', { githubError: 'denied' });
+      return this.appRedirect(app, '/login', { githubError: 'denied' });
     }
     if (!input.code || !input.state) {
-      return this.spaRedirect(app, '/login', { githubError: 'state' });
+      return this.appRedirect(app, '/login', { githubError: 'state' });
     }
 
     // Minting a session additionally requires the state to be bound to THIS
@@ -146,39 +205,46 @@ export class AuthGithubService {
     try {
       claims = this.verifyBoundState(input.state, input.stateNonce);
     } catch {
-      return this.spaRedirect(app, '/login', { githubError: 'state' });
+      return this.appRedirect(app, '/login', { githubError: 'state' });
     }
 
     try {
       const accessToken = await this.exchangeCode(input.code);
       const email = await this.fetchVerifiedPrimaryEmail(accessToken);
       if (!email) {
-        return this.spaRedirect(app, '/login', { githubError: 'email' });
+        return this.appRedirect(app, '/login', { githubError: 'email' });
       }
 
-      const handoff = this.createHandoff(email);
+      const handoff = this.createHandoff(email, claims.challenge);
       // Round-trip the protected-route redirect (signed into the state at /start)
       // to the SPA callback so it can return the user where they were headed; the
       // SPA re-validates it before navigating (email/Google `?redirect=` parity).
       const query: Record<string, string> = { code: handoff };
       if (claims.redirect) query.redirect = claims.redirect;
-      return this.spaRedirect(app, '/auth/github/callback', query);
+      return this.appRedirect(app, '/auth/github/callback', query);
     } catch (error) {
       this.logger.warn({
         event: 'auth.github_login.callback_failed',
         reason: error instanceof Error ? error.message : String(error),
       });
-      return this.spaRedirect(app, '/login', { githubError: 'failed' });
+      return this.appRedirect(app, '/login', { githubError: 'failed' });
     }
   }
 
-  async exchangeSession(code: string): Promise<TokenPair> {
-    const email = this.claimHandoff(code);
-    if (email === null) {
-      this.logger.warn({ event: 'auth.github_login.handoff_invalid' });
+  async exchangeSession(code: string, verifier?: string): Promise<TokenPair> {
+    const claim = this.claimHandoff(code, verifier);
+    if (!('email' in claim)) {
+      // The reason never reaches the client — every rejection is an opaque 401 —
+      // but `verifier` is the one value here that indicates an attempt to redeem
+      // someone else's handoff, and it is worth telling apart from a slow client
+      // or a stale code in logs.
+      this.logger.warn({
+        event: 'auth.github_login.handoff_invalid',
+        reason: claim.reason,
+      });
       throw new UnauthorizedException('Unauthorized');
     }
-    return this.auth.createSessionForVerifiedEmail(email);
+    return this.auth.createSessionForVerifiedEmail(claim.email);
   }
 
   // --- OAuth mechanics -------------------------------------------------------
@@ -246,6 +312,7 @@ export class AuthGithubService {
     app: GithubLoginApp,
     nonceHash: string,
     redirect?: string,
+    challenge?: string,
   ): string {
     const claims: GithubStateClaims = {
       purpose: 'gh-login-state',
@@ -253,6 +320,7 @@ export class AuthGithubService {
       nonceHash,
     };
     if (redirect) claims.redirect = redirect;
+    if (challenge) claims.challenge = challenge;
     return jwt.sign(claims, this.secret(), { expiresIn: '10m' });
   }
 
@@ -286,6 +354,16 @@ export class AuthGithubService {
     ) {
       throw new UnauthorizedException('invalid_state');
     }
+    // The extension is bound by proof of possession at the session exchange
+    // instead of by cookie here, because its authorization window does not carry
+    // the cookie. The binding is not skipped, only moved: a state without a
+    // challenge cannot be redeemed, and `exchangeSession` demands the verifier.
+    if (decoded.app === 'extension') {
+      if (!isChallenge(decoded.challenge)) {
+        throw new UnauthorizedException('invalid_state');
+      }
+      return decoded;
+    }
     if (!cookieNonce || !this.nonceMatches(cookieNonce, decoded.nonceHash)) {
       throw new UnauthorizedException('state_not_bound');
     }
@@ -293,7 +371,7 @@ export class AuthGithubService {
   }
 
   /**
-   * The SPA to return to, read from the state's signature-verified `app` claim.
+   * The client to return to, read from the state's signature-verified `app` claim.
    * This is a redirect target, not a security decision, so — unlike
    * `verifyBoundState` — it does not require the browser-nonce binding: a denial
    * or a failed exchange still lands the user in the app they started from.
@@ -305,7 +383,7 @@ export class AuthGithubService {
       const decoded = jwt.verify(state, this.secret()) as GithubStateClaims;
       if (
         decoded.purpose === 'gh-login-state' &&
-        (decoded.app === 'user' || decoded.app === 'admin')
+        GITHUB_LOGIN_APPS.includes(decoded.app)
       ) {
         return decoded.app;
       }
@@ -333,11 +411,12 @@ export class AuthGithubService {
    * The code carries no payload, so decoding it (from the URL, history, or
    * logs) reveals nothing — the email lives only server-side.
    */
-  private createHandoff(email: string): string {
+  private createHandoff(email: string, challenge?: string): string {
     const code = randomBytes(32).toString('hex');
     this.pendingHandoffs.set(code, {
       email,
       expiresAt: Date.now() + HANDOFF_TTL_MS,
+      ...(challenge ? { challenge } : {}),
     });
     return code;
   }
@@ -347,12 +426,41 @@ export class AuthGithubService {
    * unknown or expired. Deleting on read makes it single-use, so a replayed
    * callback URL cannot mint a second session.
    */
-  private claimHandoff(code: string): string | null {
-    this.purgeExpiredHandoffs();
+  private claimHandoff(code: string, verifier?: string): HandoffClaim {
     const entry = this.pendingHandoffs.get(code);
-    if (!entry) return null;
+    // Purged after the lookup rather than before it: purging first would delete
+    // this code as well and report it as `unknown`, collapsing "arrived too late"
+    // into "never existed". The store is still swept on every claim either way.
+    this.purgeExpiredHandoffs();
+    if (!entry) return { reason: 'unknown' };
+    // Delete before any further check, so a wrong verifier burns the code rather
+    // than leaving it available for another guess.
     this.pendingHandoffs.delete(code);
-    return entry.expiresAt > Date.now() ? entry.email : null;
+    if (entry.expiresAt <= Date.now()) return { reason: 'expired' };
+    if (entry.challenge && !this.verifierMatches(verifier, entry.challenge)) {
+      return { reason: 'verifier' };
+    }
+    return { email: entry.email };
+  }
+
+  /**
+   * Constant-time check that the caller holds the secret whose hash was signed
+   * into the state. A challenged handoff without a verifier fails here, so the
+   * extension's binding cannot be dropped by simply omitting the field.
+   */
+  private verifierMatches(
+    verifier: string | undefined,
+    expectedChallenge: string,
+  ): boolean {
+    if (!verifier) return false;
+    const actual = Buffer.from(
+      createHash('sha256').update(verifier).digest('hex'),
+      'hex',
+    );
+    const expected = Buffer.from(expectedChallenge, 'hex');
+    return (
+      actual.length === expected.length && timingSafeEqual(actual, expected)
+    );
   }
 
   private purgeExpiredHandoffs(): void {
@@ -371,15 +479,31 @@ export class AuthGithubService {
     ).toString();
   }
 
-  private spaRedirect(
+  /**
+   * Where a flow's outcome is delivered. Read only from configuration — never
+   * from the request — because the handoff code rides in this URL, so a
+   * caller-supplied destination would let anyone who can reach `/start` have a
+   * code delivered to a host they control (RFC 9700 §4.1 exact-match redirects).
+   */
+  private redirectBase(app: GithubLoginApp): string {
+    if (app === 'extension') {
+      return this.requireConfig('GITHUB_SIGNIN_EXTENSION_REDIRECT_URL');
+    }
+    return this.requireConfig(
+      app === 'admin' ? 'ADMIN_SPA_URL' : 'USER_SPA_URL',
+    );
+  }
+
+  private appRedirect(
     app: GithubLoginApp,
     path: string,
     query: Record<string, string>,
   ): string {
-    const base = this.requireConfig(
-      app === 'admin' ? 'ADMIN_SPA_URL' : 'USER_SPA_URL',
-    );
-    const url = new URL(path, base);
+    const base = this.redirectBase(app);
+    // The extension has no route to load: Chrome intercepts the navigation as
+    // soon as it matches the extension's redirect URL, so the outcome rides on
+    // that URL's own query rather than on a path inside an app.
+    const url = app === 'extension' ? new URL(base) : new URL(path, base);
     for (const [key, value] of Object.entries(query)) {
       url.searchParams.set(key, value);
     }

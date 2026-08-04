@@ -135,6 +135,24 @@ function createRuntimeClient(overrides?: {
         user: null,
       },
     })),
+    exchangeGithubSession: vi.fn(async (): Promise<RuntimeAuthResult> => ({
+      ok: true,
+      snapshot: {
+        authenticated: true,
+        currentTimer: null,
+        errorMessage: null,
+        user: null,
+      },
+    })),
+    signOut: vi.fn(async (): Promise<RuntimeAuthResult> => ({
+      ok: true,
+      snapshot: {
+        authenticated: false,
+        currentTimer: null,
+        errorMessage: null,
+        user: null,
+      },
+    })),
     getSnapshot: vi.fn(async () =>
         overrides?.snapshot ?? {
           authenticated: true,

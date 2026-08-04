@@ -26,10 +26,30 @@ export const logoutRequestSchema = z
   })
   .strict();
 
-/** Body for `POST /auth/github/session`: the one-time GitHub sign-in handoff code. */
+/**
+ * Body for `POST /auth/github/session`: the one-time GitHub sign-in handoff code,
+ * plus the proof of possession required of a public client.
+ *
+ * Web clients omit `verifier`: their transaction is bound to the browser by an
+ * HttpOnly cookie the callback can read. The browser extension cannot rely on
+ * that — its authorization window does not carry the cookie through to the
+ * callback — so it instead sends a challenge when starting the flow and redeems
+ * the handoff with the matching verifier (RFC 9700 proof of possession for
+ * public clients).
+ *
+ * `verifier` is an opaque secret, not a formatted value. The server only hashes
+ * it and compares the digest with the challenge signed into the state, so the
+ * encoding is the client's to choose — today's extension sends 64 lowercase hex
+ * characters, but base64url would work identically, because the challenge is
+ * always the hex digest regardless. The bounds are therefore not the PKCE
+ * `code_verifier` character range they resemble: `min` is an entropy floor that
+ * holds in either encoding (168 bits as hex, 256 as base64url) and `max` only
+ * keeps junk out.
+ */
 export const githubSessionRequestSchema = z
   .object({
     code: z.string().min(1).max(4096),
+    verifier: z.string().min(43).max(128).optional(),
   })
   .strict();
 

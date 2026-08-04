@@ -2,216 +2,30 @@
 
 import "@/styles/extension.css";
 
-import { deriveProfileInitials } from "@gitiempo/shared";
-
 import { getExtensionConfig } from "@/lib/config";
-import { escapeHtml } from "@/lib/html";
-import type { PageContext, SupportedGitHubIssueContext } from "@/lib/github-context";
+import type { PageContext } from "@/lib/github-context";
 import { parseGitHubIssueUrl } from "@/lib/github-context";
 import { signInWithEmailPassword, signInWithGoogle } from "@/lib/firebase";
-import {
-  createRuntimeClient,
-  type RuntimeClient,
-  type RuntimeSnapshot,
-  type SnapshotUser,
-} from "@/lib/runtime";
+import { signInWithGithub } from "@/lib/github-signin";
+import { createRuntimeClient, type RuntimeClient } from "@/lib/runtime";
 import { formatElapsedTime } from "@/lib/time";
+import { renderPopupBody, type PopupState } from "./render";
 
 interface PopupAppOptions {
   clearIntervalFn?: typeof clearInterval;
+  /** Defaults to the build's flag; injectable so both branches are testable. */
+  githubSignInEnabled?: boolean;
   now?: () => number;
   pageContextResolver?: () => Promise<PageContext>;
   root: HTMLElement;
   runtimeClient?: RuntimeClient;
   setIntervalFn?: typeof setInterval;
   signInWithEmailPasswordFn?: typeof signInWithEmailPassword;
+  signInWithGithubFn?: typeof signInWithGithub;
   signInWithGoogleFn?: typeof signInWithGoogle;
 }
 
-interface PopupState {
-  email: string;
-  errorMessage: string | null;
-  isLoading: boolean;
-  isSubmitting: boolean;
-  pageContext: PageContext | null;
-  password: string;
-  showEmailForm: boolean;
-  snapshot: RuntimeSnapshot | null;
-}
-
 const config = getExtensionConfig();
-
-const popupPrimaryButtonClass =
-  "bg-brand text-text-inverse w-full rounded-sm px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60";
-const popupSecondaryButtonClass =
-  "border-brand text-brand w-full rounded-sm border px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60";
-const popupTextActionClass =
-  "text-brand rounded-sm bg-transparent text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
-
-const popupHomeIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10.5 9-7 9 7" /><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" /><path d="M9.5 21v-6a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6" /></svg>`;
-
-function getUserInitials(user: SnapshotUser): string {
-  return deriveProfileInitials(user.displayName?.trim() || user.email, "GT");
-}
-
-function renderHomeButton(): string {
-  return `
-    <a
-      href="${escapeHtml(config.userSpaHomeUrl)}"
-      target="_blank"
-      rel="noreferrer"
-      aria-label="Open GiTiempo dashboard"
-      class="text-brand flex h-7 w-7 items-center justify-center rounded-md transition hover:bg-accent-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-    >${popupHomeIconSvg}</a>
-  `;
-}
-
-function renderUserAvatar(user: SnapshotUser): string {
-  return `<div data-testid="popup-user-avatar" title="${escapeHtml(user.displayName ?? user.email)}" class="bg-accent-tint text-brand flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold">${escapeHtml(getUserInitials(user))}</div>`;
-}
-
-function renderBrandHeader({
-  authenticated = false,
-  user = null,
-}: {
-  authenticated?: boolean;
-  user?: SnapshotUser | null;
-} = {}): string {
-  const headerActions = authenticated
-    ? `<div class="flex items-center gap-2">${renderHomeButton()}${user ? renderUserAvatar(user) : ""}</div>`
-    : "";
-
-  return `
-    <div class="flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <div class="bg-accent-tint text-brand flex h-8 w-8 items-center justify-center rounded-md text-sm font-semibold">GT</div>
-        <div>
-          <p class="m-0 text-sm font-semibold text-text-dark">GiTiempo</p>
-          <p class="m-0 text-xs text-text-muted">GitHub timer</p>
-        </div>
-      </div>
-      ${headerActions}
-    </div>
-  `;
-}
-
-function renderIssueCard(pageContext: SupportedGitHubIssueContext): string {
-  return `
-    <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
-      <p class="m-0 text-xs font-medium text-text-muted">Current task context</p>
-      <p class="m-0 text-lg font-semibold text-text-dark">#${pageContext.issueNumber} ${escapeHtml(pageContext.issueTitle)}</p>
-      <p class="m-0 text-xs text-text-muted">${escapeHtml(pageContext.githubRepo)}</p>
-    </div>
-  `;
-}
-
-function renderPopupBody(state: PopupState, nowMs: number): string {
-  if (state.isLoading || state.snapshot === null) {
-    return `
-      ${renderBrandHeader()}
-      <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-        <p class="m-0 text-lg font-semibold text-text-dark">Loading extension state</p>
-        <p class="m-0 text-sm text-text-muted">Checking your session and timer context.</p>
-      </div>
-    `;
-  }
-
-  if (!state.snapshot.authenticated) {
-    return `
-      <div class="flex h-full flex-col gap-6">
-        ${renderBrandHeader()}
-        <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-          <p class="m-0 text-lg font-semibold text-text-dark">Sign in to continue</p>
-          <p class="m-0 max-w-[220px] text-sm text-text-muted">Connect your workspace account to start tracking time.</p>
-          ${state.errorMessage ? `<p class="m-0 text-sm text-destructive">${escapeHtml(state.errorMessage)}</p>` : ""}
-          <button data-action="google-sign-in" class="${popupPrimaryButtonClass}" ${state.isSubmitting ? "disabled" : ""}>Sign in with Google</button>
-          <button data-action="toggle-email" class="${popupSecondaryButtonClass}" ${state.isSubmitting ? "disabled" : ""}>Sign in with email</button>
-          ${state.showEmailForm ? `
-            <form data-form="email-sign-in" class="flex w-full flex-col gap-3 text-left">
-              <label class="flex flex-col gap-1 text-sm font-medium text-text-dark">
-                <span>Email</span>
-                <input data-field="email" type="email" autocomplete="email" value="${escapeHtml(state.email)}" class="border-divider rounded-sm border px-3 py-2 text-sm text-text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" />
-              </label>
-              <label class="flex flex-col gap-1 text-sm font-medium text-text-dark">
-                <span>Password</span>
-                <input data-field="password" type="password" autocomplete="current-password" value="${escapeHtml(state.password)}" class="border-divider rounded-sm border px-3 py-2 text-sm text-text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" />
-              </label>
-              <button class="${popupPrimaryButtonClass}" ${state.isSubmitting ? "disabled" : ""}>Continue with email</button>
-            </form>
-          ` : ""}
-        </div>
-      </div>
-    `;
-  }
-
-  if (state.errorMessage || state.snapshot.errorMessage || state.pageContext?.kind === "error") {
-    const message =
-      state.errorMessage ??
-      state.snapshot.errorMessage ??
-      (state.pageContext?.kind === "error" ? state.pageContext.message : "Workspace sync is temporarily unavailable.");
-
-    return `
-      <div class="flex h-full flex-col gap-6">
-        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
-        <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-          <div class="bg-status-error-bg text-status-error-text flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
-          <p class="m-0 text-lg font-semibold text-text-dark">Connection lost</p>
-          <p class="m-0 max-w-[220px] text-sm text-text-muted">${escapeHtml(message)}</p>
-          <button data-action="retry" class="${popupTextActionClass}">Retry connection</button>
-        </div>
-      </div>
-    `;
-  }
-
-  if (state.snapshot.currentTimer) {
-    const runningRepo = state.snapshot.currentTimer.githubIssue?.githubRepo;
-    const runningContext = runningRepo
-      ? `${state.snapshot.currentTimer.project.name} / ${runningRepo}`
-      : state.snapshot.currentTimer.project.name;
-
-    return `
-      <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
-        <div class="bg-app-bg flex flex-col items-center gap-3 rounded-lg p-5 text-center">
-          <div class="bg-status-active-bg text-status-active-text flex items-center rounded-sm px-3 py-1 text-xs font-semibold">Running timer</div>
-          <p class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
-          <p class="m-0 text-sm font-medium text-text-dark">${escapeHtml(state.snapshot.currentTimer.task.title)}</p>
-          <p class="m-0 text-xs text-text-muted">${escapeHtml(runningContext)}</p>
-        </div>
-        <div class="mt-auto flex flex-col gap-3">
-          <button data-action="stop-timer" class="bg-destructive text-text-inverse w-full rounded-sm px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Stop Timer</button>
-        </div>
-      </div>
-    `;
-  }
-
-  if (state.pageContext?.kind === "supported") {
-    return `
-      <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
-        ${renderIssueCard(state.pageContext)}
-        <div class="mt-auto flex flex-col gap-3">
-          <button data-action="start-timer" class="${popupPrimaryButtonClass}">Start Timer</button>
-        </div>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="flex h-full flex-col gap-5">
-      ${renderBrandHeader({ authenticated: true, user: state.snapshot.user })}
-      <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
-        <p class="m-0 text-xs font-medium text-text-muted">GitHub issue required</p>
-        <p class="m-0 text-lg font-semibold text-text-dark">Open a supported GitHub issue to start a timer.</p>
-        <p class="m-0 text-xs text-text-muted">Timer start is unavailable on this tab.</p>
-      </div>
-      <div class="mt-auto flex flex-col gap-3">
-        <a href="${escapeHtml(config.userSpaHomeUrl)}" target="_blank" rel="noreferrer" class="bg-brand text-text-inverse rounded-sm px-4 py-3 text-center text-sm font-semibold no-underline transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Open GiTiempo workspace</a>
-        <p class="m-0 text-center text-[13px] font-semibold text-brand">Supported on direct GitHub issue pages and GitHub Projects issue panes.</p>
-      </div>
-    </div>
-  `;
-}
 
 export async function resolveActivePageContext(): Promise<PageContext> {
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -259,17 +73,21 @@ export async function resolveActivePageContext(): Promise<PageContext> {
 
 export function createPopupApp({
   clearIntervalFn = clearInterval,
+  githubSignInEnabled = config.githubSignInEnabled,
   now = () => Date.now(),
   pageContextResolver = resolveActivePageContext,
   root,
   runtimeClient = createRuntimeClient(),
   setIntervalFn = setInterval,
   signInWithEmailPasswordFn = signInWithEmailPassword,
+  signInWithGithubFn = signInWithGithub,
   signInWithGoogleFn = signInWithGoogle,
 }: PopupAppOptions) {
   const state: PopupState = {
     email: "",
     errorMessage: null,
+    githubSignInEnabled,
+    isAccountMenuOpen: false,
     isLoading: true,
     isSubmitting: false,
     pageContext: null,
@@ -284,6 +102,53 @@ export function createPopupApp({
     render();
   });
 
+  function closeAccountMenu(): void {
+    if (!state.isAccountMenuOpen) {
+      return;
+    }
+
+    state.isAccountMenuOpen = false;
+    render();
+  }
+
+  // Registered once on the document rather than inside `bindEvents`, which runs on
+  // every render — once a second while a timer ticks — and would otherwise stack a
+  // new listener per frame.
+  function handleDocumentKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape") {
+      closeAccountMenu();
+    }
+  }
+
+  function handleDocumentPointerDown(event: Event): void {
+    if (!state.isAccountMenuOpen) {
+      return;
+    }
+
+    const target = event.target;
+
+    if (!(target instanceof Node)) {
+      closeAccountMenu();
+      return;
+    }
+
+    // The trigger has its own toggle handler, so ignoring it here keeps a click on
+    // the avatar from closing and reopening in the same gesture.
+    const withinMenu = root
+      .querySelector('[data-region="account-menu"]')
+      ?.contains(target);
+    const withinTrigger = root
+      .querySelector('[data-action="toggle-account-menu"]')
+      ?.contains(target);
+
+    if (!withinMenu && !withinTrigger) {
+      closeAccountMenu();
+    }
+  }
+
+  document.addEventListener("keydown", handleDocumentKeydown);
+  document.addEventListener("pointerdown", handleDocumentPointerDown);
+
   function syncTicker(): void {
     if (intervalHandle) {
       clearIntervalFn(intervalHandle);
@@ -292,14 +157,53 @@ export function createPopupApp({
 
     if (state.snapshot?.currentTimer) {
       intervalHandle = setIntervalFn(() => {
-        render();
+        advanceElapsed();
       }, 1000);
+    }
+  }
+
+  /**
+   * The ticker advances the clock and nothing else. It used to call `render()`,
+   * which reassigns `root.innerHTML` and so destroyed and rebuilt every node once
+   * a second — taking hover, focus, and text selection with it. On the account
+   * menu that showed up as a pulse: each fresh item started at its un-hovered
+   * background and transitioned back under a cursor that had never moved.
+   *
+   * Everything except the elapsed value changes through a snapshot update, which
+   * still renders in full, so there is nothing else for a tick to redraw.
+   */
+  function advanceElapsed(): void {
+    const startedAt = state.snapshot?.currentTimer?.startedAt;
+
+    if (!startedAt) {
+      return;
+    }
+
+    const elapsed = formatElapsedTime(startedAt, now());
+
+    for (const node of root.querySelectorAll<HTMLElement>("[data-elapsed]")) {
+      node.textContent = elapsed;
     }
   }
 
   function bindEvents(): void {
     root.querySelector('[data-action="google-sign-in"]')?.addEventListener("click", () => {
       void handleGoogleSignIn();
+    });
+    root.querySelector('[data-action="github-sign-in"]')?.addEventListener("click", () => {
+      void handleGithubSignIn();
+    });
+    root
+      .querySelector('[data-action="toggle-account-menu"]')
+      ?.addEventListener("click", () => {
+        state.isAccountMenuOpen = !state.isAccountMenuOpen;
+        render();
+      });
+    root.querySelector('[data-action="open-profile"]')?.addEventListener("click", () => {
+      closeAccountMenu();
+    });
+    root.querySelector('[data-action="sign-out"]')?.addEventListener("click", () => {
+      void handleSignOut();
     });
     root.querySelector('[data-action="toggle-email"]')?.addEventListener("click", () => {
       state.showEmailForm = !state.showEmailForm;
@@ -395,6 +299,62 @@ export function createPopupApp({
     }
   }
 
+  async function handleSignOut(): Promise<void> {
+    state.isSubmitting = true;
+    state.errorMessage = null;
+    render();
+
+    try {
+      const result = await runtimeClient.signOut();
+
+      // The snapshot the service worker rebuilt after clearing the session is what
+      // returns the popup to its unauthenticated state, rather than this handler
+      // asserting that state itself and risking a different answer.
+      state.snapshot = result.snapshot;
+      state.errorMessage = result.ok
+        ? null
+        : result.errorMessage ?? "Unable to sign out.";
+    } catch (error) {
+      state.errorMessage =
+        error instanceof Error ? error.message : "Unable to sign out.";
+    } finally {
+      state.isAccountMenuOpen = false;
+      state.isSubmitting = false;
+      render();
+    }
+  }
+
+  async function handleGithubSignIn(): Promise<void> {
+    state.isSubmitting = true;
+    state.errorMessage = null;
+    render();
+
+    try {
+      // Firebase is not involved: the backend owns this flow and returns a
+      // one-time handoff code, which the service worker exchanges for the same
+      // token pair the other two actions produce.
+      const { code, verifier } = await signInWithGithubFn();
+      const result = await runtimeClient.exchangeGithubSession(code, verifier);
+
+      state.snapshot = result.snapshot;
+      state.errorMessage = result.ok
+        ? null
+        : result.errorMessage ?? "Unable to sign in with GitHub.";
+
+      if (result.ok) {
+        await load();
+      }
+    } catch (error) {
+      // A cancelled window and a returned error indicator both land here already
+      // carrying copy that names what happened, so it is surfaced as-is.
+      state.errorMessage =
+        error instanceof Error ? error.message : "Unable to sign in with GitHub.";
+    } finally {
+      state.isSubmitting = false;
+      render();
+    }
+  }
+
   async function handleEmailSignIn(): Promise<void> {
     state.isSubmitting = true;
     state.errorMessage = null;
@@ -461,6 +421,8 @@ export function createPopupApp({
   return {
     destroy() {
       unsubscribe();
+      document.removeEventListener("keydown", handleDocumentKeydown);
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
 
       if (intervalHandle) {
         clearIntervalFn(intervalHandle);

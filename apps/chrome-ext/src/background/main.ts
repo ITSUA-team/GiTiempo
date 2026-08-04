@@ -159,6 +159,28 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse(await handleAuthExchange(request.firebaseIdToken));
         return;
       }
+      case "auth/exchange-github-session": {
+        sendResponse(
+          await handleMutation(() =>
+            apiClient.exchangeGithubSession(request.code, request.verifier),
+          ),
+        );
+        return;
+      }
+      case "auth/sign-out": {
+        // Through the mutation wrapper so the snapshot is rebuilt after the
+        // session is gone and broadcast to the popup and any injected control,
+        // rather than each surface being told separately.
+        //
+        // The await is deliberate, not something to optimise away. Storage is
+        // already clear before the revoke runs, so nothing here waits for
+        // correctness — but a pending handler keeps this MV3 worker alive, which
+        // is what lets the best-effort revoke actually leave the machine.
+        // Responding first would let the worker idle-terminate mid-request, and
+        // the wait is bounded by the revoke's own five-second abort.
+        sendResponse(await handleMutation(() => apiClient.exitSession()));
+        return;
+      }
       case "runtime/get-snapshot": {
         sendResponse(await loadSnapshot());
         return;
