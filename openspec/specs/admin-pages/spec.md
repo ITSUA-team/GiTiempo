@@ -87,15 +87,32 @@ The admin dashboard MUST summarize workspace state through a design-matched stat
 
 ### Requirement: Reports Generation And Export
 
-The reports page MUST support report setup controls for backend CSV export, scoped report summaries for loaded data, table-only discovery filters, and backend CSV generation while preserving project-scope restrictions for PM users.
+The reports page MUST support report setup controls, a configurable ordered grouping builder of one to four levels, scoped report summaries for loaded data, table-only discovery filters, hierarchical grouped results, and client-side CSV and PDF export that mirrors the on-screen report through an export menu (the PDF styled by the backend) while preserving project-scope restrictions for PM users.
 
 #### Scenario: Reports page renders reporting surface
 
 - **WHEN** an admin or PM opens the reports page through the authenticated admin shell
-- **THEN** the page shows a reports header with title, descriptive copy, and a primary `Export CSV` action
-- **AND** the page shows project, member, date range, and group-by report setup controls
+- **THEN** the page shows a reports header with title, descriptive copy, and a primary `Export` menu action offering "Export as CSV" and "Export as PDF"
+- **AND** the page shows project, member, date range, and grouping-builder report setup controls
 - **AND** the page shows summary totals above the results table
-- **AND** the results table shows report rows with project, member, hours, and billable columns
+- **AND** the results table shows report rows with grouping identity, hours, billable, billable share, and last activity columns
+
+#### Scenario: Grouping builder configures an ordered multi-level grouping
+
+- **WHEN** the user edits the grouping builder
+- **THEN** the builder shows the current grouping as an ordered sequence of level chips drawn from project, member, task, and billable
+- **AND** the user can add a level (only dimensions not already selected are offered), remove a level, and reorder levels
+- **AND** the builder enforces at least one and at most four unique levels
+- **AND** a `billable` level splits each level it sits under into a billable and a non-billable bucket
+- **AND** the default grouping is a single project level
+
+#### Scenario: Results table renders grouped rows as an expandable hierarchy
+
+- **WHEN** report data loads for a multi-level grouping
+- **THEN** the results table renders one row per group node, indented by its level in the grouping order
+- **AND** non-leaf rows show subtotals aggregated from their subtree and can be expanded and collapsed
+- **AND** subtotals shown for a parent row equal the sum of its visible subtree leaf rows
+- **AND** the table shows an overall total row for the loaded result set
 
 #### Scenario: Initial report loading uses skeleton surface
 
@@ -103,18 +120,19 @@ The reports page MUST support report setup controls for backend CSV export, scop
 - **THEN** it shows a loading skeleton that matches the reports header, filter bar, summary cards, and results table structure
 - **AND** it does not render an empty report message before the initial request finishes
 
-#### Scenario: Header setup controls define backend CSV export scope
+#### Scenario: Header setup controls define the exported report scope
 
-- **WHEN** the user changes project, member, date range, or group-by values in the header setup controls
+- **WHEN** the user changes project, member, date range, or grouping-builder values in the header setup controls
 - **THEN** those values are kept as report-generation setup state
 - **AND** currently loaded table rows and summary cards do not change solely because those setup controls changed
-- **AND** activating `Export CSV` requests backend CSV generation with the current setup state
+- **AND** activating an export builds the file in the browser from the report currently on screen, reflecting the setup state, the ordered grouping path, and every active table filter
+- **AND** the `Export` menu stays enabled whenever the date range is valid and is not disabled by active table filters, because the exported file reflects those filters
 
-#### Scenario: Results table keeps project-member time breakdowns
+#### Scenario: Results table keeps grouped identity breakdowns
 
 - **WHEN** report data loads successfully for the table
-- **THEN** rows identify the member, project, tracked hours, and billable hours represented by that row
-- **AND** project rows do not collapse member identity into aggregate placeholder labels
+- **THEN** each row identifies the project, member, or task context for every dimension on its grouping path, plus tracked hours and billable hours
+- **AND** rows do not collapse identities of requested grouping dimensions into aggregate placeholder labels
 
 #### Scenario: Date range input uses controlled validation
 
@@ -122,7 +140,7 @@ The reports page MUST support report setup controls for backend CSV export, scop
 - **THEN** the page uses a PrimeVue range date picker with manual input disabled
 - **AND** the page shows a validation message if an end-before-start range is represented
 - **AND** an invalid date range does not trigger report fetch or CSV export generation
-- **AND** validation remains aligned with the shared report export query contract
+- **AND** validation remains aligned with the shared report export request contract
 
 #### Scenario: Summary totals reflect loaded report data
 
@@ -135,30 +153,45 @@ The reports page MUST support report setup controls for backend CSV export, scop
 - **WHEN** a PM uses the reports page
 - **THEN** project and member choices are limited to active projects and users visible through the PM's existing report scope
 - **AND** the PM cannot expand filters beyond active public projects plus active private projects assigned to that PM from the reports UI
-- **AND** the existing scoped project and report APIs remain responsible for enforcing PM scope on loaded rows and CSV export
+- **AND** the existing scoped project and report APIs remain responsible for enforcing PM scope on loaded report rows, which the client-side CSV and PDF exports then mirror
 
 #### Scenario: Admin can explicitly report inactive or empty visible projects
 
 - **WHEN** an admin explicitly selects a project returned by the existing project list endpoint
-- **THEN** the backend CSV export request includes that project filter even when it is inactive or has zero tracked hours
-- **AND** the backend export response determines whether any aggregate rows exist for that selection
+- **THEN** the report data request includes that project filter even when it is inactive or has zero tracked hours
+- **AND** the loaded report response determines whether any aggregate rows exist for that selection
 
 #### Scenario: Results table supports discovery controls
 
 - **WHEN** report rows are rendered
 - **THEN** it exposes a global search control with placeholder `Search report rows`
-- **AND** it exposes column filters for project, member, hours, and billable columns when matching controls are available
+- **AND** it exposes a column filter for every table column: project, member, hours, billable, billable share, and last activity
+- **AND** the billable share filter offers Any, Below 50%, 50%+, and 90%+; the last activity filter offers Any time, Today, Last 7 days, and Last 30 days
+- **AND** table-only filters apply to leaf rows and the visible hierarchy with its subtotals is rebuilt from the surviving leaf rows
 - **AND** clearing global search or column filters restores the rows loaded for the current report data state and role scope
 - **AND** table-only search and column filters do not call report data endpoints
 
-#### Scenario: CSV export uses backend report endpoint
+#### Scenario: Aggregate column filters compare displayed group totals
 
-- **WHEN** the user activates `Export CSV`
-- **THEN** the page requests `GET /reports/time/export` with the current report setup controls
-- **AND** the browser downloads the CSV returned by the backend
-- **AND** the downloaded CSV contains backend-generated detailed project-task-user rows for the selected setup controls
-- **AND** table global search and column filters do not change the CSV export scope
-- **AND** no browser-side report row aggregation or CSV serialization is required
+- **WHEN** the user sets the hours, billable, billable share, or last activity filter
+- **THEN** top-level groups whose displayed totals satisfy the selected threshold remain, together with their whole subtree
+- **AND** the comparison uses the group subtotals shown in the rows, never the invisible leaf aggregates underneath
+- **AND** a group without a billable share only passes the Any option of the billable share filter
+- **AND** Today matches groups whose last activity falls on the current local calendar day, and Last 7/30 days match activity within that many days of now
+- **AND** the total row sums only the groups that remain visible
+
+#### Scenario: CSV export is serialized in the browser
+
+- **WHEN** the user activates "Export as CSV"
+- **THEN** the page serializes the CSV in the browser from the filtered, grouped report tree currently shown, including its subtotal and total rows
+- **AND** the browser downloads that CSV without any backend export request
+- **AND** the active global search and column filters are reflected in the exported rows
+
+#### Scenario: PDF export styles a client-built document
+
+- **WHEN** the user activates "Export as PDF"
+- **THEN** the page builds the on-screen report as a document and sends it to `POST /reports/time/export/pdf`, which only styles it into a PDF without re-querying report data
+- **AND** the browser downloads the returned PDF, which matches the table including active filters
 
 #### Scenario: Report request errors stay distinct from empty results
 
