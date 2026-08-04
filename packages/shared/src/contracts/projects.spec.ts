@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   backfillProjectBillableDefaultSchema,
   createProjectSchema,
+  importGitHubProjectsSchema,
   projectBillableDefaultBackfillResponseSchema,
   projectDetailResponseSchema,
   projectListResponseSchema,
@@ -136,5 +137,44 @@ describe("projectDetailResponseSchema", () => {
 
     expect(result.totalSeconds).toBe(43200);
     expect(result.trackedSummary.totalSeconds).toBe(43200);
+  });
+});
+
+describe("importGitHubProjectsSchema", () => {
+  const baseBoard = {
+    githubProjectId: "PVT_kwDO",
+    number: 9,
+    owner: "ITSUA-team",
+    title: "Krvn",
+    url: "https://github.com/orgs/ITSUA-team/projects/9",
+  };
+
+  it("carries per-project visibility and billable default", () => {
+    const result = importGitHubProjectsSchema.parse({
+      githubProjects: [
+        { ...baseBoard, defaultBillableForTasks: false, visibility: "public" },
+      ],
+    });
+
+    expect(result.githubProjects[0]?.visibility).toBe("public");
+    expect(result.githubProjects[0]?.defaultBillableForTasks).toBe(false);
+  });
+
+  it("leaves both settings undefined so the server keeps its defaults", () => {
+    const result = importGitHubProjectsSchema.parse({
+      githubProjects: [baseBoard],
+    });
+
+    expect(result.githubProjects[0]?.visibility).toBeUndefined();
+    expect(result.githubProjects[0]?.defaultBillableForTasks).toBeUndefined();
+    expect(result.githubProjects[0]?.githubRepos).toEqual([]);
+  });
+
+  it("rejects a visibility the projects table cannot store", () => {
+    expect(() =>
+      importGitHubProjectsSchema.parse({
+        githubProjects: [{ ...baseBoard, visibility: "internal" }],
+      }),
+    ).toThrow();
   });
 });

@@ -157,12 +157,14 @@ export const importGitHubProjectsSchema = z
     githubProjects: z
       .array(
         z.object({
+          defaultBillableForTasks: z.boolean().optional(),
           githubProjectId: z.string().min(1).max(255),
           githubRepos: z.array(githubRepoKeySchema).max(25).default([]),
           number: z.number().int().positive(),
           owner: z.string().min(1).max(255),
           title: z.string().min(1).max(255),
           url: z.string().nullable(),
+          visibility: projectVisibilitySchema.optional(),
         }),
       )
       .min(1)
