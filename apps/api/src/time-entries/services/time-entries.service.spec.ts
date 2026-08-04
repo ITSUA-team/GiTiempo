@@ -857,7 +857,7 @@ describe('TimeEntriesService', () => {
       requireActiveMembership: vi.fn().mockResolvedValue({ role: 'member' }),
     };
     const githubTasks = {
-      findOrCreateProjectForRepo: vi.fn().mockResolvedValue({
+      resolveProjectForIssue: vi.fn().mockResolvedValue({
         project: {
           id: 'project-1',
           defaultBillableForTasks: false,
@@ -926,7 +926,7 @@ describe('TimeEntriesService', () => {
       requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
     const githubTasks = {
-      findOrCreateProjectForRepo: vi.fn().mockResolvedValue({
+      resolveProjectForIssue: vi.fn().mockResolvedValue({
         project: {
           id: 'project-1',
           defaultBillableForTasks: true,
@@ -974,7 +974,7 @@ describe('TimeEntriesService GitHub start authorization', () => {
       requireActiveMembership: vi.fn().mockResolvedValue({ role: 'member' }),
     };
     const githubTasks = {
-      findOrCreateProjectForRepo: vi.fn(),
+      resolveProjectForIssue: vi.fn(),
       findOrCreateTaskForIssue: vi.fn(),
     };
     const service = new TimeEntriesService(
@@ -1017,7 +1017,7 @@ describe('TimeEntriesService GitHub start authorization', () => {
     ).rejects.toBe(error);
 
     expect(db.transaction).not.toHaveBeenCalled();
-    expect(githubTasks.findOrCreateProjectForRepo).not.toHaveBeenCalled();
+    expect(githubTasks.resolveProjectForIssue).not.toHaveBeenCalled();
     expect(githubTasks.findOrCreateTaskForIssue).not.toHaveBeenCalled();
   });
 
@@ -1066,7 +1066,7 @@ describe('TimeEntriesService GitHub start authorization', () => {
       requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
     const githubTasks = {
-      findOrCreateProjectForRepo: vi.fn().mockResolvedValue({
+      resolveProjectForIssue: vi.fn().mockResolvedValue({
         project: {
           id: 'project-1',
           defaultBillableForTasks: true,
@@ -1099,11 +1099,11 @@ describe('TimeEntriesService GitHub start authorization', () => {
       issueTitle: 'Issue title',
     });
 
-    expect(githubTasks.findOrCreateProjectForRepo).toHaveBeenCalledWith(
-      tx,
-      user,
-      'Org/Repo',
-    );
+    expect(githubTasks.resolveProjectForIssue).toHaveBeenCalledWith(tx, user, {
+      githubProjectId: undefined,
+      githubRepo: 'Org/Repo',
+      issueKey: 'Org/Repo#7',
+    });
     expect(githubTasks.findOrCreateTaskForIssue).toHaveBeenCalledWith(
       tx,
       expect.objectContaining({ issueKey: 'Org/Repo#7' }),

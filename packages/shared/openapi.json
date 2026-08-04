@@ -6005,6 +6005,11 @@
       "StartTimerFromGitHubDto": {
         "type": "object",
         "properties": {
+          "githubProjectId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
           "githubRepo": {
             "type": "string",
             "minLength": 3,

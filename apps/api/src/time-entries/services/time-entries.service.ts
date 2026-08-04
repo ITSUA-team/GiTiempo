@@ -347,11 +347,11 @@ export class TimeEntriesService {
     try {
       const entryId = await this.db.transaction(async (tx) => {
         const { project, created } =
-          await this.githubTasks.findOrCreateProjectForRepo(
-            tx,
-            user,
+          await this.githubTasks.resolveProjectForIssue(tx, user, {
+            githubProjectId: input.githubProjectId,
             githubRepo,
-          );
+            issueKey,
+          });
         if (!project.isActive) {
           throw new UnprocessableEntityException('Project is inactive');
         }
