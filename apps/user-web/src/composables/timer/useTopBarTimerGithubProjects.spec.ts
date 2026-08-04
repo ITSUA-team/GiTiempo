@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getGitHubProjectIssueTaskOptionId,
   isGitHubProjectIssueSelectedTaskContext,
+  TOP_BAR_TIMER_NEW_TASK_ID,
 } from "@/lib/top-bar-timer-helpers";
 
 import {
@@ -82,6 +83,19 @@ describe("timer picker board targets", () => {
     expect(picker.selectedProjectId.value).toBeNull();
     expect(picker.selectedProject.value).toBeNull();
     expect(picker.selectedGitHubProject.value?.id).toBe(board.id);
+  });
+
+  it("drops a task selected under the previous project when a board is chosen", () => {
+    const picker = useTopBarTaskPicker();
+
+    picker.setProjects([project]);
+    picker.setGitHubProjects([board]);
+    picker.setSelectedProjectId(project.id);
+    picker.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    picker.setSelectedGitHubProjectId(board.id);
+
+    expect(picker.selectedTaskId.value).toBeNull();
+    expect(picker.isConfirmSelectionDisabled.value).toBe(true);
   });
 
   it("clears the selected board when a project is chosen", () => {
