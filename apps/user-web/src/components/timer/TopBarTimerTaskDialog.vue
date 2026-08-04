@@ -129,10 +129,11 @@ const primaryButtonLabel = computed(() =>
   props.primaryActionLabel === "Stop" ? "Stop timer" : "Start timer",
 );
 const newTaskOption = createInlineNewTaskOption();
-const taskPickerOptions = computed<TaskPickerOption[]>(() => [
-  ...props.taskOptions,
-  newTaskOption,
-]);
+const taskPickerOptions = computed<TaskPickerOption[]>(() =>
+  isGitHubProjectSelected.value
+    ? [...props.taskOptions]
+    : [...props.taskOptions, newTaskOption],
+);
 const mobileProjectModel = shallowRef<ProjectAutoCompleteValue>(null);
 const mobileTaskModel = shallowRef<TaskAutoCompleteValue>(null);
 const projectSuggestions = shallowRef<ProjectOptionGroup[]>([]);
@@ -331,14 +332,15 @@ function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
     : null;
   const query = event.query === selectedTaskTitle ? "" : event.query;
 
-  taskSuggestions.value = [
-    ...filterAutocompleteOptions(
-      props.taskOptions,
-      query,
-      (task) => task.title,
-    ),
-    newTaskOption,
-  ];
+  const matches = filterAutocompleteOptions(
+    props.taskOptions,
+    query,
+    (task) => task.title,
+  );
+
+  taskSuggestions.value = isGitHubProjectSelected.value
+    ? matches
+    : [...matches, newTaskOption];
 }
 
 watch(
@@ -590,14 +592,22 @@ watch(
         />
 
         <div
-          v-else-if="!props.isLoadingTasks && props.selectedProjectId && !props.taskOptions.length && !isNewTaskSelected"
+          v-else-if="!props.isLoadingTasks && (props.selectedProjectId || isGitHubProjectSelected) && !props.taskOptions.length && !isNewTaskSelected"
           class="bg-app-bg rounded-lg p-3"
         >
           <p class="text-text-dark text-sm font-medium">
-            No existing active tasks in this project.
+            {{
+              isGitHubProjectSelected
+                ? 'This GitHub project has no issues to track yet.'
+                : 'No existing active tasks in this project.'
+            }}
           </p>
           <p class="text-text-muted mt-1 text-xs">
-            Pick New task to create one, or choose a different project.
+            {{
+              isGitHubProjectSelected
+                ? 'Add an issue to it on GitHub, or choose a different project.'
+                : 'Pick New task to create one, or choose a different project.'
+            }}
           </p>
         </div>
 

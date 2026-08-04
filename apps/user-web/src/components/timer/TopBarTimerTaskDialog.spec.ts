@@ -404,6 +404,44 @@ describe("TopBarTimerTaskDialog", () => {
     );
   });
 
+  it("does not offer New task while a GitHub project is selected", async () => {
+    const wrapper = mountDialog({
+      githubProjectOptions: [{ id: "PVT_board", title: "Test project without repository" }],
+      selectedGitHubProjectId: "PVT_board",
+      selectedProjectId: null,
+      selectedTaskId: null,
+      taskOptions: [reportsTask],
+    });
+    const taskAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1];
+
+    await taskAutoComplete?.vm.$emit("complete", { query: "" });
+    await nextTick();
+
+    const taskSuggestions = taskAutoComplete?.props("suggestions") as Array<{
+      title: string;
+    }>;
+
+    expect(taskSuggestions.map((task) => task.title)).toEqual([
+      "Improve reports filters",
+    ]);
+  });
+
+  it("explains an empty GitHub project instead of offering New task", () => {
+    const wrapper = mountDialog({
+      githubProjectOptions: [{ id: "PVT_board", title: "Test project without repository" }],
+      selectedGitHubProjectId: "PVT_board",
+      selectedProjectId: null,
+      selectedTaskId: null,
+      taskOptions: [],
+    });
+
+    expect(wrapper.text()).toContain(
+      "This GitHub project has no issues to track yet.",
+    );
+    expect(wrapper.text()).toContain("Add an issue to it on GitHub");
+    expect(wrapper.text()).not.toContain("Pick New task to create one");
+  });
+
   it("renders create-task validation feedback and keeps start disabled for invalid New task", () => {
     const wrapper = mountDialog({
       createTaskErrorMessage: "Task title is required.",

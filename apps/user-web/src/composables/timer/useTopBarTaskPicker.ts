@@ -166,6 +166,7 @@ export function useTopBarTaskPicker() {
 
     selectedGitHubProjectId.value = githubProjectId;
     githubProjectDraftCount.value = 0;
+    selectedTaskId.value = null;
 
     if (githubProjectId !== null) {
       selectedProjectId.value = null;
