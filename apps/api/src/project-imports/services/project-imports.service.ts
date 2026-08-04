@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import type {
   ImportGitHubProjectsInput,
@@ -94,7 +94,21 @@ export class ProjectImportsService {
         user.workspaceId,
         board.owner,
       );
+    } catch (error) {
+      if (!(error instanceof NotFoundException)) {
+        throw error;
+      }
 
+      return {
+        githubProjectId: board.githubProjectId,
+        linkedRepository: null,
+        message: `The ${board.owner} organization is not approved for this workspace.`,
+        projectId: null,
+        status: 'failed',
+      };
+    }
+
+    try {
       const repository =
         board.githubRepos.length === 1
           ? await this.resolveRepository(user, board.githubRepos[0]!)
@@ -130,6 +144,12 @@ export class ProjectImportsService {
             workspaceId: user.workspaceId,
             name: `${board.owner}/${board.title}`,
             color: null,
+            ...(board.visibility === undefined
+              ? {}
+              : { visibility: board.visibility }),
+            ...(board.defaultBillableForTasks === undefined
+              ? {}
+              : { defaultBillableForTasks: board.defaultBillableForTasks }),
           })
           .returning({ id: projects.id });
 

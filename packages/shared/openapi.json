@@ -5339,6 +5339,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "defaultBillableForTasks": {
+                  "type": "boolean"
+                },
                 "githubProjectId": {
                   "type": "string",
                   "minLength": 1,
@@ -5373,6 +5376,13 @@
                 "url": {
                   "type": "string",
                   "nullable": true
+                },
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "public",
+                    "private"
+                  ]
                 }
               },
               "required": [
