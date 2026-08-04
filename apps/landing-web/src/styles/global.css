@@ -36,7 +36,6 @@
   --color-landing-purple-panel: #6b3a94;
   --color-landing-purple-ink: #d9ceff;
   --color-landing-faint: #99999f;
-  --color-landing-status: #a88dff;
 }
 
 @layer base {
@@ -66,11 +65,15 @@
 }
 
 @utility eyebrow {
-  @apply font-mono text-[11px] font-bold tracking-[0.1em] sm:text-xs;
+  @apply flex items-center gap-2 font-mono text-[11px] font-bold tracking-[0.1em] before:size-2 before:shrink-0 before:rounded-full before:bg-current before:content-[''] sm:text-xs;
 }
 
 @utility section-heading {
   @apply text-[30px] font-bold leading-[1.08] tracking-[-0.035em] sm:text-4xl lg:text-[42px];
+}
+
+@utility card-heading {
+  @apply text-[22px] font-bold leading-[1.15] tracking-[-0.035em] sm:text-[25px];
 }
 
 @utility action-primary {

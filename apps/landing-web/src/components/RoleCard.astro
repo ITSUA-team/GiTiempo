@@ -46,10 +46,8 @@ const variant = variantClasses[role.variant];
   <p class:list={['eyebrow', variant.eyebrow]}>{role.eyebrow}</p>
   <h3
     class:list={[
-      'font-bold tracking-[-0.035em]',
-      compact
-        ? 'mt-3 text-[22px] leading-[1.15] sm:text-[25px]'
-        : 'mt-4 max-w-[540px] text-[27px] leading-[1.12]',
+      'card-heading',
+      compact ? 'mt-3' : 'mt-4 max-w-[540px]',
     ]}
   >
     {role.title}
