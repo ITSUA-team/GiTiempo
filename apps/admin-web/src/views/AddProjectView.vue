@@ -41,7 +41,7 @@ function setSourceMode(mode: 'manual' | 'github'): void {
 }
 
 function handleImported(): void {
-  successToast('Projects imported');
+  successToast('Project imported');
   void router.push({ name: routeNames.projects });
 }
 
@@ -158,13 +158,14 @@ onMounted(loadMembers);
         <h2 class="text-text-dark text-lg font-semibold">
           {{
             sourceMode === 'github'
-              ? 'Import Projects From GitHub'
+              ? 'Import Project From GitHub'
               : 'Add Project Manually'
           }}
         </h2>
 
         <GitHubProjectImportPanel
           v-if="sourceMode === 'github'"
+          @back="handleBack"
           @imported="handleImported"
         />
 
