@@ -84,7 +84,7 @@ The extension popup SHALL render the documented fixed-size GiTiempo popup states
 - **AND** it provides a retry action without hiding the branded popup shell
 
 ### Requirement: Extension Authenticates With Workspace Session
-The extension SHALL authenticate users through Firebase and the existing backend auth exchange, storing GiTiempo JWT session tokens in Chrome extension storage, and SHALL surface the signed-in user on its runtime snapshot for display.
+The extension SHALL authenticate users either through Firebase and the existing backend auth exchange or through the backend GitHub sign-in handoff, storing GiTiempo JWT session tokens in Chrome extension storage, and SHALL surface the signed-in user on its runtime snapshot for display.
 
 #### Scenario: User signs in from popup
 - **GIVEN** the user is unauthenticated in the extension
@@ -103,6 +103,19 @@ The extension SHALL authenticate users through Firebase and the existing backend
 - **WHEN** the user submits email/password credentials
 - **THEN** the extension completes Firebase email sign-in inside the popup-owned auth boundary
 - **AND** it exchanges the resulting Firebase identity with the backend auth API
+
+#### Scenario: GitHub sign-in exchanges a backend handoff code
+- **GIVEN** the user chooses GitHub sign-in from the popup
+- **WHEN** the extension completes the backend GitHub sign-in flow and receives a one-time handoff code
+- **THEN** it posts that code to the backend GitHub session endpoint
+- **AND** it stores the returned GiTiempo access and refresh tokens in `chrome.storage`
+- **AND** the exchange involves no Firebase identity
+
+#### Scenario: GitHub sign-in reuses the same session shape
+- **GIVEN** a member signs in to the extension with GitHub
+- **WHEN** the extension stores the resulting session
+- **THEN** the stored token pair is indistinguishable from one produced by Google or email sign-in
+- **AND** subsequent authenticated requests, refreshes, and the runtime snapshot behave identically regardless of which action established the session
 
 #### Scenario: Missing extension auth prerequisites fail explicitly
 - **GIVEN** the extension auth flow is initialized without required identity permissions, redirect configuration, or Firebase origin support
@@ -340,3 +353,32 @@ The extension SHALL end a session on request by revoking it with the backend and
 - **WHEN** the user signs out
 - **THEN** the timer is left running, because it belongs to the workspace rather than to the client that started it
 - **AND** the menu warns, before the action is taken, that the timer will keep running, so the outcome is not a surprise
+
+### Requirement: Popup Offers GitHub Sign-In When Enabled For The Build
+The extension popup SHALL offer a GitHub sign-in action in its unauthenticated state when GitHub sign-in is enabled for the build, SHALL omit that action otherwise, and SHALL follow the approved popup authorization design for how the available sign-in actions are presented.
+
+#### Scenario: GitHub action appears alongside the existing actions
+- **GIVEN** GitHub sign-in is enabled for the extension build
+- **AND** no valid extension session is available
+- **WHEN** the user opens the extension popup
+- **THEN** the unauthenticated state offers a GitHub sign-in action together with the Google and email actions
+- **AND** the arrangement follows the approved popup authorization design
+
+#### Scenario: GitHub action is hidden when not enabled
+- **GIVEN** GitHub sign-in is not enabled for the extension build
+- **WHEN** the user opens the extension popup unauthenticated
+- **THEN** no GitHub sign-in action is shown
+- **AND** the Google and email actions are unaffected
+
+#### Scenario: Returned error indicator becomes recoverable copy
+- **GIVEN** the user started GitHub sign-in from the popup
+- **WHEN** the flow returns to the extension carrying an error indicator instead of a handoff code
+- **THEN** the popup shows recoverable sign-in error copy naming the failure it can distinguish
+- **AND** no session is stored
+- **AND** the user can retry sign-in from the same state
+
+#### Scenario: Abandoned authorization window is not an error state
+- **GIVEN** the user started GitHub sign-in from the popup
+- **WHEN** the authorization window closes without reaching the extension redirect destination
+- **THEN** the popup returns to its unauthenticated state reporting a cancelled attempt
+- **AND** it does not present the attempt as a backend or configuration failure
