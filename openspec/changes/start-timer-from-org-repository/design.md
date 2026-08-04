@@ -70,8 +70,27 @@ A `GitHubProjectOption` discriminated by `isGitHubProjectOption: true`, rendered
 Boards and GiTiempo projects are different axes, so there is nothing to deduplicate.
 
 - *Rationale*: a board is a view over issues that may span several repositories, and one repository's issues may appear on several boards. A GiTiempo project maps to exactly one repository. Hiding a board because "its repository already has a project" would hide the board's other repositories with it.
-- *Consequence*: the picker shows both groups in full. Selecting a board issue whose repository already has a GiTiempo project reuses that project on the server, which is correct and invisible to the member.
+- *Consequence*: the picker shows both groups in full. Selecting a board issue whose repository already has a GiTiempo project reuses that project on the server, which is correct and invisible to the member. D8 later extends that reuse to the project a board itself was imported as.
 - *Corrected from the first draft of this design*, which specified dedup by comparing a repository name against project names. That was written when this change was still about repositories, and it was a heuristic that would have been wrong for any renamed project.
+
+### D7: Source is a field of the Add Project form, not a mode around it
+
+The Add Project page keeps one `<Form>`. Source is its first field; the GitHub branch swaps the typed name for an organization plus a project autocomplete and a derived read-only name, and Project manager, Visibility and Default billable are the same fields for both branches.
+
+- *Rationale*: the two source tiles were a mode switch pretending to be content. They forced the GitHub branch to replace the whole form, which is why an imported project could not be given the settings a manual one gets. Making Source a field is what lets the three settings be shared rather than duplicated.
+- *Project manager costs nothing on the server*: `/projects/new` is admin-only and `createAssignment` requires admin, so the form imports and then assigns, exactly as the manual path already does.
+- *Visibility and billable do cost something*: `importBoard` inserted only `{workspaceId, name, color}`, so imported projects silently took the column defaults. They are added to the import request per project rather than per request, because the schema already accepts up to 25 and a future multi-select import should be able to differ between them.
+- *The form must not keep a value it stops showing*: `@primevue/forms` never unregisters a field on unmount, so the `v-if` around the name input leaves the typed value in form state while the remounted input renders empty. Left alone, switching source and back creates a project under a name the user cannot see. The name is cleared whenever Source changes, and the regression test mounts the real Form rather than a stub, because a stub is exactly what hid it.
+
+### D8: An issue joins an existing project before one is created, repository first
+
+Resolution order when a timer starts from a GitHub issue: the project tracking the repository, then the project imported for the board the caller named, then create one named after the repository.
+
+- *Rationale*: importing a board and then tracking its issues otherwise produced two projects for the same work — the board the admin deliberately added, and a second one the timer created for the repository. The repository stays first because that key is what the Chrome extension already uses; putting the board first would strand an existing repository's history in one project while new entries went to another.
+- *Consequence for a multi-repository board*: it does not collect the time of repositories that already have projects. That follows from repository-first and is the price of not splitting existing histories.
+- *The guard this needs*: `task_external_refs` is unique per workspace, not per project, and the conflict recovery in `findOrCreateTaskForIssue` refuses when the winning reference belongs to a different project. Without care, tracking an issue through a board and then gaining a repository project would make that one issue permanently unstartable.
+- *How the guard stays narrow*: continuity applies only when the issue is already tracked in the very board the caller named. Two projects disagreeing about one issue for any other reason still refuses — that refusal is an existing behaviour with an existing test, and an earlier attempt at this ordering removed it by accident.
+- *Contract*: the board id travels as an optional field on the existing start request, so the required list is unchanged and the extension is untouched.
 
 ## Risks / Trade-offs
 
@@ -91,4 +110,6 @@ Deploy the API first. A client that offers repositories against an API without D
 ## Open Questions
 
 - Should a board be offered when the workspace approves its organization but the member's own token cannot see the board? Board visibility is per token, so two members can be offered different rows in one workspace. Left as-is because it mirrors what the extension already does.
-- Should the GiTiempo project created this way be public rather than private? It is private today, so a second member starting a timer on another issue from the same repository gets `requireVisibleProject` and a not-found instead of the existing project. That is a real edge, and it is the strongest argument for revisiting the visibility default — but it predates this change and is not fixed here.
+- Should the GiTiempo project created this way be public rather than private? It is private today, so a second member starting a timer on another issue from the same repository gets `requireVisibleProject` and a not-found instead of the existing project. That is a real edge, and it is the strongest argument for revisiting the visibility default — but it predates this change and is not fixed here. D7 makes it answerable for a deliberately imported board, where an admin now chooses the visibility; it stays unanswered for a project the timer creates on its own.
+- A board imported as a private project now refuses a member who is not assigned to it, instead of creating them their own project and assigning them. That already held for repository-backed projects and now holds for boards too. It is the same question as above seen from the other side, and it is the reason the visibility choice on the import form matters more than it looks.
+- `project_external_refs` is still unique on the raw `external_key` while lookups go through `lower(...)`; `task_external_refs` was migrated to `lower(external_key)` in `0015`. Two spellings of one repository can therefore still produce two projects. Importing in bulk makes it reachable more often, but the fix is a migration and belongs to its own change.
