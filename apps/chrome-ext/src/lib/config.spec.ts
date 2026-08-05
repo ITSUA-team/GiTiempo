@@ -11,7 +11,7 @@ describe("getExtensionConfig", () => {
         authDomain: "test-project.firebaseapp.com",
         projectId: "test-project",
       },
-      githubSignInEnabled: false,
+      githubSignInEnabled: true,
       googleOAuthClientId: "test-google-client-id.apps.googleusercontent.com",
       userSpaHomeUrl: "http://localhost:5173",
       userSpaProfileUrl: "http://localhost:5173/profile",
@@ -62,7 +62,7 @@ describe("getExtensionConfig", () => {
         authDomain: "project.firebaseapp.com",
         projectId: "project-id",
       },
-      githubSignInEnabled: false,
+      githubSignInEnabled: true,
       googleOAuthClientId: "google-client-id.apps.googleusercontent.com",
       userSpaHomeUrl: "https://app.example.com",
       userSpaProfileUrl: "https://app.example.com/profile",
@@ -89,32 +89,30 @@ describe("getExtensionConfig", () => {
   });
 
   describe("githubSignInEnabled", () => {
-    it("is off when the flag is absent", () => {
+    it("is on when the flag is absent", () => {
       expect(
         getExtensionConfig({ MODE: "test" }).githubSignInEnabled,
-      ).toBe(false);
+      ).toBe(true);
     });
 
-    it.each(["true", " true "])("is on for the strict value %o", (value) => {
+    it.each(["false", " false "])("is off for the strict value %o", (value) => {
       expect(
         getExtensionConfig({
           MODE: "test",
           VITE_EXTENSION_GITHUB_SIGNIN_ENABLED: value,
         }).githubSignInEnabled,
-      ).toBe(true);
+      ).toBe(false);
     });
 
-    it.each(["false", "TRUE", "1", "yes", ""])(
-      "stays off for the non-strict value %o",
+    it.each(["true", "FALSE", "0", "no", ""])(
+      "stays on for the non-strict value %o",
       (value) => {
-        // An action that opens a window ending in an error is worse than an
-        // action that is not offered, so anything ambiguous keeps it hidden.
         expect(
           getExtensionConfig({
             MODE: "test",
             VITE_EXTENSION_GITHUB_SIGNIN_ENABLED: value,
           }).githubSignInEnabled,
-        ).toBe(false);
+        ).toBe(true);
       },
     );
 
