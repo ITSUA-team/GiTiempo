@@ -4,6 +4,8 @@ import type { TimeEntryResponse, TokenPairResponse } from "@gitiempo/shared";
 
 import { getExtensionConfig } from "@/lib/config";
 import { createExtensionApiClient } from "@/lib/api";
+import { signInWithGoogle } from "@/lib/firebase";
+import { signInWithGithub } from "@/lib/github-signin";
 import type {
   BackgroundMessage,
   RuntimeAuthResult,
@@ -137,6 +139,41 @@ async function handleAuthExchange(
   return handleMutation(() => apiClient.loginWithFirebaseToken(firebaseIdToken));
 }
 
+/**
+ * Runs an interactive provider flow here rather than in the popup. Chrome tears
+ * the popup down the moment the provider's authorization window takes focus, so
+ * a flow awaited there dies mid-redirect and the session is never exchanged even
+ * though the provider succeeded. The worker outlives the popup, and reopening it
+ * afterwards is what makes the round trip look uninterrupted.
+ */
+async function handleInteractiveSignIn(
+  exchange: () => Promise<RuntimeAuthResult>,
+): Promise<RuntimeAuthResult> {
+  const result = await exchange();
+
+  if (result.ok) {
+    await reopenPopupIfPossible();
+  }
+
+  return result;
+}
+
+/**
+ * Best-effort only, and deliberately without the tab fallback `openExtension`
+ * carries. `chrome.action.openPopup` needs a user gesture, which is long gone by
+ * the time an interactive flow returns, so it usually throws here. Falling back
+ * to the web app would land a member who just signed in on a login page, which
+ * reads as the sign-in having failed. Their session already exists; the popup
+ * shows it the next time they open it.
+ */
+async function reopenPopupIfPossible(): Promise<void> {
+  try {
+    await chrome.action.openPopup?.();
+  } catch {
+    // Nothing to recover: the session is stored and the snapshot broadcast.
+  }
+}
+
 async function openExtension(): Promise<void> {
   try {
     if (chrome.action.openPopup) {
@@ -163,6 +200,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse(
           await handleMutation(() =>
             apiClient.exchangeGithubSession(request.code, request.verifier),
+          ),
+        );
+        return;
+      }
+      case "auth/sign-in-github": {
+        sendResponse(
+          await handleInteractiveSignIn(async () => {
+            const { code, verifier } = await signInWithGithub();
+
+            return handleMutation(() =>
+              apiClient.exchangeGithubSession(code, verifier),
+            );
+          }),
+        );
+        return;
+      }
+      case "auth/sign-in-google": {
+        sendResponse(
+          await handleInteractiveSignIn(async () =>
+            handleAuthExchange(await signInWithGoogle()),
           ),
         );
         return;
