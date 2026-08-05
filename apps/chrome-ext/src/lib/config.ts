@@ -131,12 +131,12 @@ export function getExtensionConfig(
       authDomain: firebaseAuthDomain,
       projectId: firebaseProjectId,
     },
-    // Default off, and only a strict `"true"` enables it. The extension cannot
-    // tell whether the API has its GitHub sign-in credentials and extension
-    // redirect destination configured, and an action that opens a window ending
-    // in an error is worse than an action that is not offered.
+    // Default on, and only a strict `"false"` disables it. A deployment is
+    // expected to configure the API GitHub sign-in credentials, so the flag
+    // exists to switch the action off where it is deliberately unwanted rather
+    // than to switch it on everywhere else.
     githubSignInEnabled:
-      env.VITE_EXTENSION_GITHUB_SIGNIN_ENABLED?.trim() === "true",
+      env.VITE_EXTENSION_GITHUB_SIGNIN_ENABLED?.trim() !== "false",
     googleOAuthClientId,
     userSpaHomeUrl: deriveHomeUrl(userSpaUrl),
     userSpaProfileUrl: deriveProfileUrl(userSpaUrl),
