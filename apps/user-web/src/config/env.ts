@@ -27,10 +27,10 @@ export const appEnv: UserWebEnv = {
   },
 
   get githubSignInEnabled() {
-    // Default off: the button shows only when a deployment explicitly opts in
-    // (VITE_GITHUB_SIGNIN_ENABLED='true'), so an environment that has not wired
-    // the backend GITHUB_SIGNIN_* secrets never surfaces a flow that cannot complete.
-    return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED === 'true';
+    // Default on: a deployment is expected to wire the backend GITHUB_SIGNIN_*
+    // secrets, so the flag exists to hide the button where GitHub sign-in is
+    // deliberately unwanted (VITE_GITHUB_SIGNIN_ENABLED='false').
+    return import.meta.env.VITE_GITHUB_SIGNIN_ENABLED !== 'false';
   },
   firebase: {
     get apiKey() {
