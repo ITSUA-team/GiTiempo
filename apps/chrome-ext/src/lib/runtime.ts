@@ -28,6 +28,8 @@ export type RuntimeMutationResult = RuntimeActionResult;
 
 export interface RuntimeClient {
   exchangeFirebaseToken(firebaseIdToken: string): Promise<RuntimeAuthResult>;
+  signInWithGithub(): Promise<RuntimeAuthResult>;
+  signInWithGoogle(): Promise<RuntimeAuthResult>;
   exchangeGithubSession(
     code: string,
     verifier: string,
@@ -44,6 +46,8 @@ export interface RuntimeClient {
 export type BackgroundMessage =
   | { type: "auth/exchange-firebase-token"; firebaseIdToken: string }
   | { type: "auth/exchange-github-session"; code: string; verifier: string }
+  | { type: "auth/sign-in-github" }
+  | { type: "auth/sign-in-google" }
   | { type: "auth/sign-out" }
   | { type: "runtime/get-snapshot" }
   | { type: "timer/start"; pageContext: SupportedGitHubIssueContext }
@@ -87,6 +91,16 @@ export function createRuntimeClient(): RuntimeClient {
         type: "auth/exchange-github-session",
         code,
         verifier,
+      });
+    },
+    signInWithGithub() {
+      return sendRuntimeMessage<RuntimeAuthResult>({
+        type: "auth/sign-in-github",
+      });
+    },
+    signInWithGoogle() {
+      return sendRuntimeMessage<RuntimeAuthResult>({
+        type: "auth/sign-in-google",
       });
     },
     getSnapshot() {
