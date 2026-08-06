@@ -201,6 +201,7 @@ jobs:
           GITHUB_SIGNIN_CLIENT_ID: ${{ vars.SIGNIN_GITHUB_CLIENT_ID }}
           GITHUB_SIGNIN_CLIENT_SECRET: ${{ secrets.SIGNIN_GITHUB_CLIENT_SECRET }}
           GITHUB_SIGNIN_EXTENSION_REDIRECT_URL: ${{ vars.SIGNIN_GITHUB_EXTENSION_REDIRECT_URL }}
+          ADMIN_SPA_URL: ${{ vars.ADMIN_SPA_URL }}
         run: |
           set -euo pipefail
 
@@ -217,6 +218,7 @@ jobs:
           remote_signin_client_id="$(remote_quote "$GITHUB_SIGNIN_CLIENT_ID")"
           remote_signin_client_secret="$(remote_quote "$GITHUB_SIGNIN_CLIENT_SECRET")"
           remote_signin_redirect_url="$(remote_quote "$GITHUB_SIGNIN_EXTENSION_REDIRECT_URL")"
+          remote_admin_spa_url="$(remote_quote "$ADMIN_SPA_URL")"
 
           ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
             "set -eu
@@ -228,7 +230,8 @@ jobs:
              awk -v allowed_origins=$remote_allowed_origins \
                  -v signin_client_id=$remote_signin_client_id \
                  -v signin_client_secret=$remote_signin_client_secret \
-                 -v signin_redirect_url=$remote_signin_redirect_url '
+                 -v signin_redirect_url=$remote_signin_redirect_url \
+                 -v admin_spa_url=$remote_admin_spa_url '
                function manage(name, value) {
                  if (value != \"\") {
                    names[++count] = name
@@ -241,6 +244,7 @@ jobs:
                  manage(\"GITHUB_SIGNIN_CLIENT_ID\", signin_client_id)
                  manage(\"GITHUB_SIGNIN_CLIENT_SECRET\", signin_client_secret)
                  manage(\"GITHUB_SIGNIN_EXTENSION_REDIRECT_URL\", signin_redirect_url)
+                 manage(\"ADMIN_SPA_URL\", admin_spa_url)
                }
                {
                  eq = index(\$0, \"=\")
