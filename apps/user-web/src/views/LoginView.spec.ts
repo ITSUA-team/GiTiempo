@@ -246,6 +246,29 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.login);
   });
 
+  it("offers the GitHub email settings link when no account matched", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView("/login?githubError=nomember");
+    await flushPromises();
+
+    const help = wrapper.get('[data-testid="sign-in-error-help"]');
+    expect(help.attributes("href")).toBe("https://github.com/settings/emails");
+    expect(wrapper.text()).toContain("verified email");
+  });
+
+  it("explains an ambiguous match without offering a GitHub link", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView("/login?githubError=ambiguous");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="sign-in-error"]').text()).toContain(
+      "more than one GiTiempo account",
+    );
+    expect(wrapper.find('[data-testid="sign-in-error-help"]').exists()).toBe(
+      false,
+    );
+  });
+
   it("keeps login actions disabled while Firebase sign-in is still in progress", async () => {
     let releaseProviderStep!: () => void;
     const providerStep = new Promise<void>((resolve) => {

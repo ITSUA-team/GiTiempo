@@ -1,9 +1,32 @@
 /** User-facing messages for the backend GitHub sign-in `?githubError=` codes. */
 export const githubCallbackErrorMessages: Record<string, string> = {
+  ambiguous:
+    "Your GitHub account matches more than one GiTiempo account, so we cannot tell which one you meant. Sign in with your email address instead.",
   denied: "GitHub sign-in was cancelled.",
-  email: "Your GitHub account has no verified primary email to sign in with.",
+  email: "Your GitHub account has no verified email to sign in with.",
+  nomember:
+    "No GiTiempo account matches any verified email on your GitHub account. Add your work address to GitHub and verify it, then try again.",
   state: "GitHub sign-in could not be verified. Please try again.",
   failed: "Something went wrong while signing in with GitHub.",
+};
+
+export interface GithubSignInErrorHelpLink {
+  href: string;
+  label: string;
+}
+
+export const githubCallbackErrorLinks: Record<
+  string,
+  GithubSignInErrorHelpLink
+> = {
+  email: {
+    href: "https://github.com/settings/emails",
+    label: "Manage your GitHub emails",
+  },
+  nomember: {
+    href: "https://github.com/settings/emails",
+    label: "Manage your GitHub emails",
+  },
 };
 
 // Empty and non-string query values count as absent, so a bare `?githubError=`
@@ -27,6 +50,14 @@ export function resolveGithubSignInError(value: unknown): string | null {
   const code = firstQueryValue(value);
   if (code === null) return null;
   return githubCallbackErrorMessages[normalizeGithubErrorCode(code)];
+}
+
+export function resolveGithubSignInErrorLink(
+  value: unknown,
+): GithubSignInErrorHelpLink | null {
+  const code = firstQueryValue(value);
+  if (code === null) return null;
+  return githubCallbackErrorLinks[normalizeGithubErrorCode(code)] ?? null;
 }
 
 export interface GithubSignInCallbackHandlers {
