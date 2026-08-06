@@ -52,24 +52,32 @@ When GitHub sign-in cannot resolve a member, the login surfaces MUST show copy t
 - **THEN** it shows its generic recoverable sign-in failure copy
 - **AND** it does not present the attempt as a successful sign-in
 
-### Requirement: Ambiguous GitHub Sign-In Is Refused
+### Requirement: Ambiguous GitHub Sign-In Prefers The Primary Address
 
-When more than one member with an active membership matches the verified emails on a single GitHub account, the backend MUST refuse the sign-in and MUST NOT select a member by any ordering or heuristic. The login surfaces MUST explain the refusal and direct the member to sign in with their email address instead.
+When more than one member with an active membership matches the verified emails on a single GitHub account, the backend MUST sign in as the member matched by the account's primary address. When the primary address resolves no member, or resolves one that is not among the matches, the backend MUST refuse the sign-in rather than select by any other ordering, and the login surfaces MUST direct the member to sign in with their email address instead.
 
-#### Scenario: Several matching members refuse the sign-in
+#### Scenario: Primary address breaks the tie
 
-- **WHEN** the verified emails on the GitHub account match more than one member with an active membership
+- **WHEN** the verified emails match more than one member with an active membership
+- **AND** the account's primary address matches one of those members
+- **THEN** the backend issues the handoff for that member
+- **AND** the sign-in completes as it would for a single match
+
+#### Scenario: Several matches without a usable primary refuse the sign-in
+
+- **WHEN** the verified emails match more than one member with an active membership
+- **AND** the account's primary address matches no member among them
 - **THEN** the callback redirects to the login page with an ambiguous-account error indicator
 - **AND** no handoff code is issued and no session is created
+
+#### Scenario: No other ordering is consulted
+
+- **WHEN** the sign-in is refused as ambiguous
+- **THEN** no member is chosen by list order, recency, or any other property
+- **AND** the primary address is the only tie-break the backend applies
 
 #### Scenario: Ambiguous copy directs to email sign-in
 
 - **WHEN** a login surface receives the ambiguous-account error indicator
 - **THEN** it explains that the GitHub account matches more than one GiTiempo account
 - **AND** it directs the member to sign in with their email address instead
-
-#### Scenario: Primary address does not break the tie
-
-- **WHEN** more than one member matches and one of the matching emails is the account's primary address
-- **THEN** the sign-in is still refused
-- **AND** the primary address carries no precedence in resolution

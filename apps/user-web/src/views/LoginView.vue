@@ -11,6 +11,7 @@ import {
   getErrorMessage,
   getExtensionInstallHref,
   resolveGithubSignInError,
+  resolveGithubSignInErrorLink,
   StandaloneSplitPage,
   type EmailPasswordSignInInput,
 } from "@gitiempo/web-shared";
@@ -26,6 +27,14 @@ const route = useRoute();
 const router = useRouter();
 
 const errorMessage = ref<string | null>(null);
+const errorHelpHref = ref<string | null>(null);
+const errorHelpLabel = ref<string | null>(null);
+
+function clearSignInError(): void {
+  errorMessage.value = null;
+  errorHelpHref.value = null;
+  errorHelpLabel.value = null;
+}
 const adminWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.adminAppUrl,
   fallbackPath: "/login",
@@ -54,7 +63,10 @@ onMounted(() => {
   // into a message and clear the param so a refresh or back-nav does not re-show it.
   const message = resolveGithubSignInError(route.query.githubError);
   if (message === null) return;
+  const help = resolveGithubSignInErrorLink(route.query.githubError);
   errorMessage.value = message;
+  errorHelpHref.value = help?.href ?? null;
+  errorHelpLabel.value = help?.label ?? null;
   void router.replace({ query: { ...route.query, githubError: undefined } });
 });
 
@@ -66,7 +78,7 @@ async function handleEmailSignIn({
   email,
   password,
 }: EmailPasswordSignInInput): Promise<void> {
-  errorMessage.value = null;
+  clearSignInError();
 
   try {
     await authStore.loginWithEmailPassword(email, password);
@@ -80,7 +92,7 @@ async function handleEmailSignIn({
 }
 
 async function handleGoogleSignIn(): Promise<void> {
-  errorMessage.value = null;
+  clearSignInError();
 
   try {
     await authStore.loginWithGoogle();
@@ -145,6 +157,8 @@ function goToRegister(): void {
           title="Sign in"
           description="Use your workspace account to continue into GiTiempo."
           email-placeholder="you@workspace.com"
+          :error-help-href="errorHelpHref"
+          :error-help-label="errorHelpLabel"
           :error-message="errorMessage"
           :github-enabled="appEnv.githubSignInEnabled"
           :is-submitting="authStore.isSubmitting"

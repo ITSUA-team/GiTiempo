@@ -9,7 +9,7 @@ The refusal is also unhelpful. It arrives as an opaque 401 that says nothing, so
 - Member resolution considers **every verified** email on the GitHub account instead of only the primary one. An unverified address never matches.
 - Member resolution moves into the callback, before the handoff is created, so a failure can be explained instead of surfacing later as an opaque 401.
 - A failure to match returns a distinguishable indicator, and the login surfaces turn it into copy that names the cause and links to `https://github.com/settings/emails`.
-- When several verified emails match several different members, sign-in is refused with its own indicator and copy. No account is entered and no guess is made.
+- When several verified emails match several different members, the member matched by the account's **primary** address is signed in. If the primary address settles nothing, sign-in is refused with its own indicator and copy rather than picked by any other ordering.
 - The existing checks are unchanged: the member must already exist with an active membership, and no user is ever provisioned.
 
 ## Capabilities

@@ -38,11 +38,15 @@ This is what makes the improved message possible at all: the exchange happens af
 
 *Alternative considered:* keep resolution in the exchange and return a typed error body. Rejected — the exchange is deliberately opaque so that a leaked or replayed handoff reveals nothing, and adding reasons to it would trade that away for a message the callback can deliver better.
 
-### Several matching members is a refusal, not a guess
+### The primary address breaks a tie, and nothing else does
 
-Two verified addresses on one GitHub account can belong to two different GiTiempo members. There is no ordering — primary first, most recent, anything — that is defensible when the wrong outcome is entering someone else's account. The flow refuses with its own indicator and tells the member to sign in with their email instead.
+Two verified addresses on one GitHub account can belong to two different GiTiempo members. The primary address is the one the account holder has designated as their main identity on GitHub, which makes it the one deliberate signal available — unlike list order or recency, which are accidents of storage. When it resolves to one of the matched members, that member is signed in.
 
-*Alternative considered:* let the member pick. It is the better end state and it is what the refusal copy points toward, but it needs a two-step exchange, a shared contract union, and a chooser in three surfaces. Refusing keeps this change small and never signs anyone into the wrong place.
+It is a tie-break, not a priority: the primary address is never consulted while a single member matches, so widening the match set still does the work. When the primary address resolves no member, or resolves one outside the match set, the flow refuses with its own indicator rather than falling back to another ordering.
+
+*Alternative considered:* refuse on any ambiguity. Safer in the abstract, but it turns the ordinary case — a personal primary plus a work address, both registered — into a dead end, and the signal to resolve it correctly is right there.
+
+*Alternative considered:* let the member pick. It is still the better end state for the cases the tie-break cannot settle, and it remains an open question, but it needs a two-step exchange, a shared contract union, and a chooser in three surfaces.
 
 ### The failure copy names the cause and links to GitHub
 

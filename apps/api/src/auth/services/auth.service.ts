@@ -10,7 +10,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { sql } from 'drizzle-orm';
+import { inArray, sql } from 'drizzle-orm';
 import type { RegisterRequest } from '@gitiempo/shared';
 import type { Env } from '../../config/env.validation';
 import { normalizeEmail } from '../../commons/utils/normalize-email';
@@ -240,30 +240,54 @@ export class AuthService {
    * authenticates existing members only — it never provisions a user, so the
    * Firebase-UID identity model stays intact.
    */
-  async createSessionForVerifiedEmail(email: string): Promise<TokenPair> {
-    const normalized = normalizeEmail(email);
-    const existingUser = await this.findUserByEmail(normalized);
+  async resolveActiveMemberIdsByEmails(emails: string[]): Promise<string[]> {
+    const normalized = [
+      ...new Set(emails.map((email) => normalizeEmail(email))),
+    ].filter((email) => email.length > 0);
+
+    if (normalized.length === 0) {
+      return [];
+    }
+
+    const rows = await this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(inArray(sql`lower(btrim(${users.email}))`, normalized));
+
+    const memberIds: string[] = [];
+    for (const row of rows) {
+      const membership = await this.members.resolveActiveMembershipForUser(
+        row.id,
+      );
+
+      if (membership) {
+        memberIds.push(row.id);
+      }
+    }
+
+    return memberIds;
+  }
+
+  async createSessionForMember(memberId: string): Promise<TokenPair> {
+    const existingUser = await this.users.findRowById(memberId);
     if (!existingUser) {
-      // Log only the domain, not the address, to keep PII out of logs.
       this.logger.warn({
         event: 'auth.github_login.no_user',
-        emailDomain: normalized.split('@')[1] ?? null,
       });
       throw new UnauthorizedException('Unauthorized');
     }
 
-    let membership;
-    try {
-      membership = await this.members.requireActiveMembershipForUser(
-        existingUser.id,
-      );
-    } catch (error) {
+    const membership = await this.members.resolveActiveMembershipForUser(
+      existingUser.id,
+    );
+    if (!membership) {
       this.logger.warn({
         event: 'auth.github_login.no_membership',
         userId: existingUser.id,
       });
-      throw error;
+      throw new UnauthorizedException('Unauthorized');
     }
+
     const pair = await this.issueTokenPair(
       {
         sub: existingUser.id,

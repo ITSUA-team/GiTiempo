@@ -3,6 +3,7 @@ import {
   completeGithubSignInCallback,
   githubCallbackErrorMessages,
   resolveGithubSignInError,
+  resolveGithubSignInErrorLink,
 } from "./github-callback";
 
 describe("resolveGithubSignInError", () => {
@@ -28,6 +29,45 @@ describe("resolveGithubSignInError", () => {
     expect(resolveGithubSignInError(undefined)).toBeNull();
     expect(resolveGithubSignInError(null)).toBeNull();
     expect(resolveGithubSignInError("")).toBeNull();
+  });
+
+  it("explains an unmatched account rather than repeating a generic failure", () => {
+    const message = resolveGithubSignInError("nomember");
+
+    expect(message).toBe(githubCallbackErrorMessages.nomember);
+    expect(message).not.toBe(githubCallbackErrorMessages.failed);
+  });
+
+  it("tells an ambiguous match apart from an unmatched one", () => {
+    expect(resolveGithubSignInError("ambiguous")).toBe(
+      githubCallbackErrorMessages.ambiguous,
+    );
+    expect(githubCallbackErrorMessages.ambiguous).not.toBe(
+      githubCallbackErrorMessages.nomember,
+    );
+  });
+});
+
+describe("resolveGithubSignInErrorLink", () => {
+  it("points an unmatched account at the GitHub email settings", () => {
+    expect(resolveGithubSignInErrorLink("nomember")).toEqual({
+      href: "https://github.com/settings/emails",
+      label: expect.any(String),
+    });
+  });
+
+  it("offers no link for a failure GitHub settings cannot fix", () => {
+    expect(resolveGithubSignInErrorLink("ambiguous")).toBeNull();
+    expect(resolveGithubSignInErrorLink("state")).toBeNull();
+  });
+
+  it("offers no link for an unrecognised code, which falls back to failed", () => {
+    expect(resolveGithubSignInErrorLink("weird")).toBeNull();
+  });
+
+  it("returns null when there is no error at all", () => {
+    expect(resolveGithubSignInErrorLink(undefined)).toBeNull();
+    expect(resolveGithubSignInErrorLink("")).toBeNull();
   });
 });
 
