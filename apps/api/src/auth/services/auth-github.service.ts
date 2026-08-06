@@ -45,8 +45,13 @@ const HANDOFF_TTL_MS = 60_000;
  * tells a client which of them applied.
  */
 type HandoffClaim =
-  | { email: string }
+  | { memberId: string }
   | { reason: 'unknown' | 'expired' | 'verifier' };
+
+interface VerifiedGithubEmails {
+  emails: string[];
+  primaryEmail: string | null;
+}
 
 /** A challenge is the hex SHA-256 of the client's verifier, so its shape is fixed. */
 function isChallenge(value: string | undefined): value is string {
@@ -94,7 +99,7 @@ export class AuthGithubService {
   // API instance; a shared store would be needed once the API is scaled out.
   private readonly pendingHandoffs = new Map<
     string,
-    { email: string; expiresAt: number; challenge?: string }
+    { memberId: string; expiresAt: number; challenge?: string }
   >();
 
   constructor(
@@ -210,12 +215,34 @@ export class AuthGithubService {
 
     try {
       const accessToken = await this.exchangeCode(input.code);
-      const email = await this.fetchVerifiedPrimaryEmail(accessToken);
-      if (!email) {
+      const { emails, primaryEmail } =
+        await this.fetchVerifiedEmails(accessToken);
+      if (emails.length === 0) {
         return this.appRedirect(app, '/login', { githubError: 'email' });
       }
 
-      const handoff = this.createHandoff(email, claims.challenge);
+      const memberIds = await this.auth.resolveActiveMemberIdsByEmails(emails);
+      if (memberIds.length === 0) {
+        this.logger.warn({
+          event: 'auth.github_login.no_member',
+          verifiedEmailCount: emails.length,
+        });
+        return this.appRedirect(app, '/login', { githubError: 'nomember' });
+      }
+
+      const memberId =
+        memberIds.length === 1
+          ? memberIds[0]
+          : await this.resolvePreferredMemberId(memberIds, primaryEmail);
+      if (!memberId) {
+        this.logger.warn({
+          event: 'auth.github_login.ambiguous',
+          matchedMemberCount: memberIds.length,
+        });
+        return this.appRedirect(app, '/login', { githubError: 'ambiguous' });
+      }
+
+      const handoff = this.createHandoff(memberId, claims.challenge);
       // Round-trip the protected-route redirect (signed into the state at /start)
       // to the SPA callback so it can return the user where they were headed; the
       // SPA re-validates it before navigating (email/Google `?redirect=` parity).
@@ -233,7 +260,7 @@ export class AuthGithubService {
 
   async exchangeSession(code: string, verifier?: string): Promise<TokenPair> {
     const claim = this.claimHandoff(code, verifier);
-    if (!('email' in claim)) {
+    if (!('memberId' in claim)) {
       // The reason never reaches the client — every rejection is an opaque 401 —
       // but `verifier` is the one value here that indicates an attempt to redeem
       // someone else's handoff, and it is worth telling apart from a slow client
@@ -244,7 +271,7 @@ export class AuthGithubService {
       });
       throw new UnauthorizedException('Unauthorized');
     }
-    return this.auth.createSessionForVerifiedEmail(claim.email);
+    return this.auth.createSessionForMember(claim.memberId);
   }
 
   // --- OAuth mechanics -------------------------------------------------------
@@ -281,9 +308,25 @@ export class AuthGithubService {
     return body.access_token;
   }
 
-  private async fetchVerifiedPrimaryEmail(
-    accessToken: string,
+  private async resolvePreferredMemberId(
+    matchedMemberIds: string[],
+    primaryEmail: string | null,
   ): Promise<string | null> {
+    if (!primaryEmail) {
+      return null;
+    }
+
+    const primaryMemberIds = await this.auth.resolveActiveMemberIdsByEmails([
+      primaryEmail,
+    ]);
+    const [preferred] = primaryMemberIds;
+
+    return preferred && matchedMemberIds.includes(preferred) ? preferred : null;
+  }
+
+  private async fetchVerifiedEmails(
+    accessToken: string,
+  ): Promise<VerifiedGithubEmails> {
     const response = await fetch('https://api.github.com/user/emails', {
       headers: {
         Accept: 'application/vnd.github+json',
@@ -300,10 +343,19 @@ export class AuthGithubService {
       throw new ServiceUnavailableException('GitHub API request failed');
     }
     const entries = (await response.json()) as GithubEmailEntry[];
-    const primary = Array.isArray(entries)
-      ? entries.find((e) => e.primary === true && e.verified === true)
-      : undefined;
-    return primary?.email ?? null;
+    if (!Array.isArray(entries)) {
+      return { emails: [], primaryEmail: null };
+    }
+
+    const verified = entries.filter(
+      (entry) => entry.verified === true && Boolean(entry.email),
+    );
+
+    return {
+      emails: verified.map((entry) => entry.email as string),
+      primaryEmail:
+        verified.find((entry) => entry.primary === true)?.email ?? null,
+    };
   }
 
   // --- Signed tokens ---------------------------------------------------------
@@ -411,10 +463,10 @@ export class AuthGithubService {
    * The code carries no payload, so decoding it (from the URL, history, or
    * logs) reveals nothing — the email lives only server-side.
    */
-  private createHandoff(email: string, challenge?: string): string {
+  private createHandoff(memberId: string, challenge?: string): string {
     const code = randomBytes(32).toString('hex');
     this.pendingHandoffs.set(code, {
-      email,
+      memberId,
       expiresAt: Date.now() + HANDOFF_TTL_MS,
       ...(challenge ? { challenge } : {}),
     });
@@ -440,7 +492,7 @@ export class AuthGithubService {
     if (entry.challenge && !this.verifierMatches(verifier, entry.challenge)) {
       return { reason: 'verifier' };
     }
-    return { email: entry.email };
+    return { memberId: entry.memberId };
   }
 
   /**

@@ -71,9 +71,11 @@ describe("readGithubSignInResult", () => {
   });
 
   it.each([
+    ["ambiguous", "more than one GiTiempo account"],
     ["denied", "declined"],
-    ["email", "verified primary email"],
+    ["email", "verified email"],
     ["failed", "try again"],
+    ["nomember", "github.com/settings/emails"],
     ["state", "verified"],
   ])("maps the %o indicator to copy naming the cause", (indicator, fragment) => {
     expect(() =>
@@ -82,7 +84,14 @@ describe("readGithubSignInResult", () => {
   });
 
   it("gives each indicator its own message", () => {
-    const messages = ["denied", "email", "failed", "state"].map((indicator) => {
+    const messages = [
+      "ambiguous",
+      "denied",
+      "email",
+      "failed",
+      "nomember",
+      "state",
+    ].map((indicator) => {
       try {
         readGithubSignInResult(`${EXT}?githubError=${indicator}`);
         return "";

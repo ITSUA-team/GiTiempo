@@ -8,10 +8,14 @@ import { launchWebAuthFlow } from "./web-auth-flow";
  * would hide the only actionable part.
  */
 const GITHUB_SIGN_IN_ERROR_COPY: Record<string, string> = {
+  ambiguous:
+    "Your GitHub account matches more than one GiTiempo account. Sign in with your email address instead.",
   denied: "GitHub sign-in was declined. Authorize GiTiempo to continue.",
   email:
-    "GitHub has no verified primary email for your account. Verify one on GitHub, then try again.",
+    "GitHub has no verified email for your account. Verify one on GitHub, then try again.",
   failed: "GitHub sign-in could not be completed. Please try again in a moment.",
+  nomember:
+    "No GiTiempo account matches any verified email on your GitHub account. Add your work address at https://github.com/settings/emails and verify it, then try again.",
   state: "GitHub sign-in could not be verified. Please start again.",
 };
 
