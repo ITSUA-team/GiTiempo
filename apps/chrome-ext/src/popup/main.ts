@@ -5,8 +5,7 @@ import "@/styles/extension.css";
 import { getExtensionConfig } from "@/lib/config";
 import type { PageContext } from "@/lib/github-context";
 import { parseGitHubIssueUrl } from "@/lib/github-context";
-import { signInWithEmailPassword, signInWithGoogle } from "@/lib/firebase";
-import { signInWithGithub } from "@/lib/github-signin";
+import { signInWithEmailPassword } from "@/lib/firebase";
 import { createRuntimeClient, type RuntimeClient } from "@/lib/runtime";
 import { formatElapsedTime } from "@/lib/time";
 import { renderPopupBody, type PopupState } from "./render";
@@ -21,8 +20,6 @@ interface PopupAppOptions {
   runtimeClient?: RuntimeClient;
   setIntervalFn?: typeof setInterval;
   signInWithEmailPasswordFn?: typeof signInWithEmailPassword;
-  signInWithGithubFn?: typeof signInWithGithub;
-  signInWithGoogleFn?: typeof signInWithGoogle;
 }
 
 const config = getExtensionConfig();
@@ -80,8 +77,6 @@ export function createPopupApp({
   runtimeClient = createRuntimeClient(),
   setIntervalFn = setInterval,
   signInWithEmailPasswordFn = signInWithEmailPassword,
-  signInWithGithubFn = signInWithGithub,
-  signInWithGoogleFn = signInWithGoogle,
 }: PopupAppOptions) {
   const state: PopupState = {
     email: "",
@@ -279,8 +274,10 @@ export function createPopupApp({
     render();
 
     try {
-      const firebaseIdToken = await signInWithGoogleFn();
-      const result = await runtimeClient.exchangeFirebaseToken(firebaseIdToken);
+      // Delegated to the service worker rather than awaited here: Chrome closes
+      // this popup as soon as Google's window takes focus, and a flow owned by a
+      // destroyed page never reaches the token exchange.
+      const result = await runtimeClient.signInWithGoogle();
 
       state.snapshot = result.snapshot;
       state.errorMessage = result.ok
@@ -331,10 +328,9 @@ export function createPopupApp({
 
     try {
       // Firebase is not involved: the backend owns this flow and returns a
-      // one-time handoff code, which the service worker exchanges for the same
-      // token pair the other two actions produce.
-      const { code, verifier } = await signInWithGithubFn();
-      const result = await runtimeClient.exchangeGithubSession(code, verifier);
+      // one-time handoff code. The service worker runs it and exchanges the code,
+      // because this popup is gone the moment the authorization window opens.
+      const result = await runtimeClient.signInWithGithub();
 
       state.snapshot = result.snapshot;
       state.errorMessage = result.ok

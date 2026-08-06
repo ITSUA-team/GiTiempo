@@ -26,6 +26,14 @@ vi.mock("@/lib/api", () => ({
   createExtensionApiClient: () => backgroundApiMocks,
 }));
 
+vi.mock("@/lib/firebase", () => ({
+  signInWithGoogle: vi.fn(async () => "firebase-google-token"),
+}));
+
+vi.mock("@/lib/github-signin", () => ({
+  signInWithGithub: vi.fn(async () => ({ code: "code", verifier: "verifier" })),
+}));
+
 vi.mock("@/lib/session", () => ({
   getStoredSession: sessionMocks.getStoredSession,
 }));

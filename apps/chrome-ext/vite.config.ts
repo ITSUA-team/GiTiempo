@@ -29,6 +29,7 @@ function createManifestPlugin(mode: string): Plugin {
         env.VITE_EXTENSION_GOOGLE_CLIENT_ID,
         "VITE_EXTENSION_GOOGLE_CLIENT_ID",
       );
+      const extensionKey = env.VITE_EXTENSION_KEY?.trim();
 
       this.emitFile({
         type: "asset",
@@ -37,6 +38,7 @@ function createManifestPlugin(mode: string): Plugin {
           {
             manifest_version: 3,
             name: "GiTiempo",
+            ...(extensionKey ? { key: extensionKey } : {}),
             version: "0.0.0",
             description:
               "Track GiTiempo timers directly from supported GitHub issue surfaces.",

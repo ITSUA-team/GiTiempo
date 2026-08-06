@@ -19,7 +19,7 @@ vi.mock("firebase/app", () => ({
   initializeApp,
 }));
 
-vi.mock("firebase/auth", () => ({
+vi.mock("firebase/auth/web-extension", () => ({
   GoogleAuthProvider: {
     credential: googleCredential,
   },
