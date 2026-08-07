@@ -18,6 +18,7 @@ import {
   isInlineNewTaskId,
   type InlineNewTaskOption,
 } from "@/lib/inline-new-task";
+import type { GitHubProjectAvailability } from "@/lib/timer-github-projects";
 
 interface GitHubProjectRepositoryBadge {
   fullName: string;
@@ -54,6 +55,7 @@ const props = defineProps<{
   isCreateTaskDisabled: boolean;
   isCreatingTask: boolean;
   isCrossWorkspaceTimer: boolean;
+  githubProjectAvailability: GitHubProjectAvailability;
   githubProjectDraftCount: number;
   githubProjectOptions: { id: string; title: string }[];
   githubProjectRepositories: Record<
@@ -410,6 +412,40 @@ watch(
       />
 
       <InlineRequestMessage
+        v-if="props.githubProjectsErrorMessage"
+        :message="props.githubProjectsErrorMessage"
+        data-testid="top-bar-timer-github-projects-error"
+        title="Could not load GitHub project boards."
+      />
+
+      <p
+        v-else-if="props.githubProjectAvailability === 'no-connection'"
+        class="text-text-muted text-xs"
+        data-testid="top-bar-timer-github-no-connection"
+      >
+        Connect your GitHub account in your profile to track issues from
+        organization project boards.
+      </p>
+
+      <p
+        v-else-if="props.githubProjectAvailability === 'no-organization'"
+        class="text-text-muted text-xs"
+        data-testid="top-bar-timer-github-no-organization"
+      >
+        No GitHub organization is approved for this workspace yet, so no
+        project boards are offered.
+      </p>
+
+      <p
+        v-else-if="props.githubProjectsTruncated"
+        class="text-text-muted text-xs"
+        data-testid="top-bar-timer-github-projects-truncated"
+      >
+        Showing the first project boards we could load. This organization has
+        more than are listed here.
+      </p>
+
+      <InlineRequestMessage
         v-if="props.timerActionErrorMessage"
         :message="props.timerActionErrorMessage"
         :title="`Could not ${props.primaryActionLabel === 'Stop' ? 'stop' : 'start'} the timer.`"
@@ -602,7 +638,19 @@ watch(
                 : 'No existing active tasks in this project.'
             }}
           </p>
-          <p class="text-text-muted mt-1 text-xs">
+          <p
+            v-if="isGitHubProjectSelected && props.githubProjectDraftCount > 0"
+            class="text-text-muted mt-1 text-xs"
+            data-testid="top-bar-timer-github-draft-count"
+          >
+            It holds {{ props.githubProjectDraftCount }} draft
+            {{ props.githubProjectDraftCount === 1 ? 'item' : 'items' }} with no
+            repository behind them, which cannot be tracked.
+          </p>
+          <p
+            v-else
+            class="text-text-muted mt-1 text-xs"
+          >
             {{
               isGitHubProjectSelected
                 ? 'Add an issue to it on GitHub, or choose a different project.'

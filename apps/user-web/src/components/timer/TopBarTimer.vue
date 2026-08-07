@@ -30,6 +30,7 @@ const {
   isDialogPrimaryActionDisabled,
   isDialogOpen,
   isDialogSecondaryActionDisabled,
+  githubProjectAvailability,
   githubProjectDraftCount,
   githubProjectOptions,
   githubProjectRepositories,
@@ -233,6 +234,7 @@ watch(
     :is-create-task-disabled="isCreateTaskDisabled"
     :is-creating-task="isCreatingTask"
     :is-cross-workspace-timer="isCrossWorkspaceTimer"
+    :github-project-availability="githubProjectAvailability"
     :github-project-draft-count="githubProjectDraftCount"
     :github-project-options="githubProjectOptions"
     :github-project-repositories="githubProjectRepositories"

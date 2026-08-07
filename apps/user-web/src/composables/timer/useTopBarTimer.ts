@@ -112,6 +112,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isDialogPrimaryActionDisabled: viewModel.isDialogPrimaryActionDisabled,
     isDialogOpen: picker.isDialogOpen,
     isDialogSecondaryActionDisabled: viewModel.isDialogSecondaryActionDisabled,
+    githubProjectAvailability: picker.githubProjectAvailability,
     githubProjectDraftCount: picker.githubProjectDraftCount,
     githubProjectOptions: picker.githubProjects,
     githubProjectRepositories: picker.githubProjectRepositories,

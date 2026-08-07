@@ -61,6 +61,7 @@ function mountDialog(overrides: DialogProps = {}) {
       isCreateTaskDisabled: false,
       isCreatingTask: false,
       isCrossWorkspaceTimer: false,
+      githubProjectAvailability: 'available' as const,
       githubProjectDraftCount: 0,
     githubProjectOptions: [],
       githubProjectRepositories: {},
@@ -653,5 +654,71 @@ describe("TopBarTimerTaskDialog", () => {
 
     expect(wrapper.emitted("confirm")?.length).toBeGreaterThan(0);
     expect(wrapper.emitted("primaryAction")?.length).toBeGreaterThan(0);
+  });
+
+  it("explains a missing GitHub connection instead of showing a failure", () => {
+    const wrapper = mountDialog({ githubProjectAvailability: "no-connection" });
+
+    expect(
+      wrapper.find('[data-testid="top-bar-timer-github-no-connection"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="top-bar-timer-github-projects-error"]').exists(),
+    ).toBe(false);
+  });
+
+  it("tells an unapproved organization apart from a missing connection", () => {
+    const wrapper = mountDialog({
+      githubProjectAvailability: "no-organization",
+    });
+
+    expect(
+      wrapper
+        .find('[data-testid="top-bar-timer-github-no-organization"]')
+        .exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="top-bar-timer-github-no-connection"]').exists(),
+    ).toBe(false);
+  });
+
+  it("reports a board load failure as a failure, not as an absence", () => {
+    const wrapper = mountDialog({
+      githubProjectAvailability: "no-connection",
+      githubProjectsErrorMessage: "GitHub is unavailable.",
+    });
+
+    expect(
+      wrapper.find('[data-testid="top-bar-timer-github-projects-error"]').text(),
+    ).toContain("GitHub is unavailable.");
+    expect(
+      wrapper.find('[data-testid="top-bar-timer-github-no-connection"]').exists(),
+    ).toBe(false);
+  });
+
+  it("says the board list is not exhaustive when it was truncated", () => {
+    const wrapper = mountDialog({ githubProjectsTruncated: true });
+
+    expect(
+      wrapper
+        .find('[data-testid="top-bar-timer-github-projects-truncated"]')
+        .exists(),
+    ).toBe(true);
+  });
+
+  it("reports how many draft items a board holds when it lists no issues", () => {
+    const wrapper = mountDialog({
+      githubProjectDraftCount: 3,
+      selectedGitHubProjectId: "PVT_board",
+      selectedProjectId: null,
+      taskOptions: [],
+    });
+
+    const draftNote = wrapper.find(
+      '[data-testid="top-bar-timer-github-draft-count"]',
+    );
+
+    expect(draftNote.exists()).toBe(true);
+    expect(draftNote.text()).toContain("3 draft items");
   });
 });
