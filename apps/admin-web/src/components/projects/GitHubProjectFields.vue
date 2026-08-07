@@ -54,8 +54,10 @@ const summaries = ref<Record<string, BoardRepositorySummary>>({});
 const importedByBoardId = ref(new Map<string, ImportedBoard>());
 const importedRepositoryKeys = ref(new Map<string, string>());
 const typedProjectQuery = ref<string | null>(null);
+const boardsTruncated = ref(false);
 const projectSuggestions = ref<BoardOption[]>([]);
 const isScanningBoard = defineModel<boolean>('scanning', { required: true });
+let pendingScans = 0;
 
 const organizationOptions = computed(() =>
   organizations.value.map((login) => ({ label: login, value: login })),
@@ -90,11 +92,17 @@ const projectPlaceholder = computed(() =>
     : 'Search projects',
 );
 
-const projectHint = computed(() =>
-  selectedOrganization.value === null
-    ? 'Pick an organization to list its open projects.'
-    : `Open projects of ${selectedOrganization.value}. Type to filter.`,
-);
+const projectHint = computed(() => {
+  if (selectedOrganization.value === null) {
+    return 'Pick an organization to list its open projects.';
+  }
+
+  if (boardsTruncated.value) {
+    return `Open projects of ${selectedOrganization.value}. Type to filter. This organization has more projects than we list here, so a missing one may need to be imported by its own request.`;
+  }
+
+  return `Open projects of ${selectedOrganization.value}. Type to filter.`;
+});
 
 function handleOrganizationUpdate(value: string | null): void {
   selectedOrganization.value = value;
@@ -129,6 +137,7 @@ async function handleProjectUpdate(
     return;
   }
 
+  pendingScans += 1;
   isScanningBoard.value = true;
 
   try {
@@ -136,10 +145,14 @@ async function handleProjectUpdate(
       ...summaries.value,
       ...(await adminGithubBrowsingClient.listBoardRepositories([boardId])),
     };
-    selection.value =
-      boardOptions.value.find((option) => option.id === boardId) ?? null;
+
+    if (selection.value?.board.id === boardId) {
+      selection.value =
+        boardOptions.value.find((option) => option.id === boardId) ?? null;
+    }
   } finally {
-    isScanningBoard.value = false;
+    pendingScans -= 1;
+    isScanningBoard.value = pendingScans > 0;
   }
 }
 
@@ -177,7 +190,8 @@ async function load(): Promise<void> {
         adminProjectsClient.listImportedGitHubRepositories(),
       ]);
 
-    boards.value = listedBoards;
+    boards.value = listedBoards.items;
+    boardsTruncated.value = listedBoards.hasMore;
     importedByBoardId.value = new Map(
       importedProjects.items.map((item) => [
         item.githubProjectId,
@@ -191,13 +205,13 @@ async function load(): Promise<void> {
       ]),
     );
 
-    if (listedBoards.length === 0) {
+    if (listedBoards.items.length === 0) {
       availability.value = 'no-projects';
       return;
     }
 
     summaries.value = await adminGithubBrowsingClient.listBoardRepositories(
-      listedBoards.map((board) => board.id),
+      listedBoards.items.map((board) => board.id),
     );
     availability.value = 'available';
   } catch (error) {

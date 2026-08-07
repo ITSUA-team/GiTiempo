@@ -6,10 +6,16 @@ import {
 
 import { getAuthenticatedAppApiClient } from './api-client';
 
-const PROJECT_PAGE_SIZE = 50;
+const PROJECT_PAGE_SIZE = 100;
+const MAX_PROJECT_PAGES = 10;
 const ISSUE_PROBE_PAGE_SIZE = 100;
 const MAX_ISSUE_PROBE_PAGES = 10;
 const MAX_BOARDS = 12;
+
+export interface OrganizationProjectList {
+	hasMore: boolean;
+	items: GitHubProject[];
+}
 
 export interface BoardRepositorySummary {
 	errorMessage: string | null;
@@ -35,33 +41,58 @@ export interface AdminGithubBrowsingClient {
 	listBoardRepositories(
 		boardIds: string[],
 	): Promise<Record<string, BoardRepositorySummary>>;
-	listOrganizationProjects(owners: string[]): Promise<GitHubProject[]>;
+	listOrganizationProjects(
+		owners: string[],
+	): Promise<OrganizationProjectList>;
 }
 
 export const adminGithubBrowsingClient: AdminGithubBrowsingClient = {
 	async listOrganizationProjects(owners) {
 		const apiClient = getAuthenticatedAppApiClient();
-		const projects: GitHubProject[] = [];
+		const items: GitHubProject[] = [];
+		let hasMore = false;
 
 		for (const owner of owners) {
-			const search = new URLSearchParams({
-				ownerType: 'organization',
-				owner,
-				limit: String(PROJECT_PAGE_SIZE),
-			});
-			const response = await apiClient.requestJson({
-				path: `/github/projects?${search.toString()}`,
-				responseSchema: githubProjectListResponseSchema,
-			});
+			let pageToken: string | undefined = undefined;
+			let pagesLoaded = 0;
 
-			for (const project of response.items) {
-				if (project.state === 'open') {
-					projects.push(project);
+			do {
+				const search = new URLSearchParams({
+					ownerType: 'organization',
+					owner,
+					limit: String(PROJECT_PAGE_SIZE),
+				});
+
+				if (pageToken !== undefined) {
+					search.set('pageToken', pageToken);
 				}
-			}
+
+				const response = await apiClient.requestJson({
+					path: `/github/projects?${search.toString()}`,
+					responseSchema: githubProjectListResponseSchema,
+				});
+
+				for (const project of response.items) {
+					if (project.state === 'open') {
+						items.push(project);
+					}
+				}
+
+				pagesLoaded += 1;
+				const nextPageToken = response.pagination.nextPageToken;
+
+				if (nextPageToken === null) {
+					pageToken = undefined;
+				} else if (pagesLoaded >= MAX_PROJECT_PAGES) {
+					hasMore = true;
+					pageToken = undefined;
+				} else {
+					pageToken = nextPageToken;
+				}
+			} while (pageToken !== undefined);
 		}
 
-		return projects;
+		return { hasMore, items };
 	},
 	async listBoardRepositories(boardIds) {
 		const apiClient = getAuthenticatedAppApiClient();

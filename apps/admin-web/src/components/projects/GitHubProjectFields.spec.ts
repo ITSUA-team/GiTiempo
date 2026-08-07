@@ -102,6 +102,10 @@ const gitimpo = {
 
 const krvn = { ...gitimpo, id: 'PVT_Krvn', number: 9, title: 'Krvn' };
 
+function projectList(items: unknown[], hasMore = false) {
+	return { hasMore, items };
+}
+
 const noSkipped = {
 	draftIssues: 0,
 	pullRequests: 0,
@@ -169,7 +173,7 @@ beforeEach(() => {
 	listWorkspaceGitHubOrganizations.mockResolvedValue({
 		items: [{ organizationLogin: 'ITSUA-team' }],
 	});
-	listOrganizationProjects.mockResolvedValue([gitimpo]);
+	listOrganizationProjects.mockResolvedValue(projectList([gitimpo]));
 	listImportedGitHubRepositories.mockResolvedValue({ items: [] });
 	listImportedGitHubProjects.mockResolvedValue({ items: [] });
 	listBoardRepositories.mockResolvedValue({ PVT_GiTimpo: summary() });
@@ -214,10 +218,9 @@ describe('GitHubProjectFields', () => {
 	});
 
 	it('offers only the projects of the selected organization', async () => {
-		listOrganizationProjects.mockResolvedValue([
-			gitimpo,
-			{ ...krvn, owner: 'other-org' },
-		]);
+		listOrganizationProjects.mockResolvedValue(
+			projectList([gitimpo, { ...krvn, owner: 'other-org' }]),
+		);
 		listWorkspaceGitHubOrganizations.mockResolvedValue({
 			items: [
 				{ organizationLogin: 'ITSUA-team' },
@@ -282,7 +285,7 @@ describe('GitHubProjectFields', () => {
 	});
 
 	it('marks and counts the projects already imported', async () => {
-		listOrganizationProjects.mockResolvedValue([gitimpo, krvn]);
+		listOrganizationProjects.mockResolvedValue(projectList([gitimpo, krvn]));
 		listBoardRepositories.mockResolvedValue({
 			PVT_GiTimpo: summary(),
 			PVT_Krvn: summary(),
@@ -344,6 +347,48 @@ describe('GitHubProjectFields', () => {
 		);
 		const scanning = wrapper.emitted('update:scanning');
 		expect(scanning?.map((event) => event[0])).toEqual([true, false]);
+	});
+
+	it('ignores a scan that lands after the user picked another project', async () => {
+		listOrganizationProjects.mockResolvedValue(projectList([gitimpo, krvn]));
+		const pending = new Map<string, () => void>();
+		listBoardRepositories.mockImplementation(
+			(ids: string[]) =>
+				new Promise((resolve) => {
+					const id = ids[0] as string;
+					pending.set(id, () => resolve({ [id]: summary() }));
+				}),
+		);
+		listBoardRepositories.mockResolvedValueOnce({});
+		const wrapper = mountFields();
+		await flushPromises();
+
+		await wrapper
+			.find('[data-testid="github-import-project"]')
+			.trigger('focus');
+		await wrapper
+			.find('[data-testid="suggestion-PVT_GiTimpo"]')
+			.trigger('click');
+		await wrapper.find('[data-testid="suggestion-PVT_Krvn"]').trigger('click');
+
+		pending.get('PVT_GiTimpo')?.();
+		await flushPromises();
+
+		expect(lastSelection(wrapper)?.id).toBe('PVT_Krvn');
+		expect(
+			wrapper.emitted('update:scanning')?.map((event) => event[0]),
+		).not.toContain(false);
+
+		pending.get('PVT_Krvn')?.();
+		await flushPromises();
+
+		expect(lastSelection(wrapper)?.id).toBe('PVT_Krvn');
+		expect(lastSelection(wrapper)?.linkedRepository).toBe(
+			'ITSUA-team/GiTiempo',
+		);
+		expect(
+			wrapper.emitted('update:scanning')?.at(-1)?.[0],
+		).toBe(false);
 	});
 
 	it('keeps the typed query instead of blanking the field', async () => {
@@ -420,7 +465,7 @@ describe('GitHubProjectFields', () => {
 	});
 
 	it('says when the approved organizations hold no open project', async () => {
-		listOrganizationProjects.mockResolvedValue([]);
+		listOrganizationProjects.mockResolvedValue(projectList([]));
 		const wrapper = mountFields();
 		await flushPromises();
 
