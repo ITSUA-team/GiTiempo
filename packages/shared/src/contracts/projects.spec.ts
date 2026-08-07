@@ -143,10 +143,6 @@ describe("projectDetailResponseSchema", () => {
 describe("importGitHubProjectsSchema", () => {
   const baseBoard = {
     githubProjectId: "PVT_kwDO",
-    number: 9,
-    owner: "ITSUA-team",
-    title: "Krvn",
-    url: "https://github.com/orgs/ITSUA-team/projects/9",
   };
 
   it("carries per-project visibility and billable default", () => {
@@ -177,4 +173,15 @@ describe("importGitHubProjectsSchema", () => {
       }),
     ).toThrow();
   });
+
+  it.each(["owner", "title", "number", "url"])(
+    "refuses %s from the caller, because the server reads it from GitHub",
+    (field) => {
+      expect(() =>
+        importGitHubProjectsSchema.parse({
+          githubProjects: [{ ...baseBoard, [field]: "anything" }],
+        }),
+      ).toThrow();
+    },
+  );
 });

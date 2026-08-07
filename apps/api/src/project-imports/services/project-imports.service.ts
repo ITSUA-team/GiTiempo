@@ -15,7 +15,6 @@ import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { parseGitHubRepoKey } from '../../github/github-repo-key';
 import { GithubService } from '../../github/services/github.service';
-import { WorkspaceGitHubOrganizationsService } from '../../github/services/workspace-github-organizations.service';
 import { MembersService } from '../../members/services/members.service';
 import { GithubTaskMaterializationService } from '../../tasks/services/github-task-materialization.service';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
@@ -28,7 +27,6 @@ export class ProjectImportsService {
     private readonly members: MembersService,
     private readonly github: GithubService,
     private readonly githubTasks: GithubTaskMaterializationService,
-    private readonly organizations: WorkspaceGitHubOrganizationsService,
   ) {}
 
   async listImportedGitHubProjects(
@@ -89,10 +87,13 @@ export class ProjectImportsService {
     user: AuthUser,
     board: ImportGitHubProjectsInput['githubProjects'][number],
   ): Promise<ImportedGitHubProject> {
+    let verified: Awaited<
+      ReturnType<GithubService['resolveImportableProject']>
+    >;
     try {
-      await this.organizations.assertOrganizationAllowed(
-        user.workspaceId,
-        board.owner,
+      verified = await this.github.resolveImportableProject(
+        user,
+        board.githubProjectId,
       );
     } catch (error) {
       if (!(error instanceof NotFoundException)) {
@@ -102,7 +103,8 @@ export class ProjectImportsService {
       return {
         githubProjectId: board.githubProjectId,
         linkedRepository: null,
-        message: `The ${board.owner} organization is not approved for this workspace.`,
+        message:
+          'This GitHub project could not be verified for your workspace. It may belong to an organization that is not approved, or be one your GitHub account cannot see.',
         projectId: null,
         status: 'failed',
       };
@@ -142,7 +144,7 @@ export class ProjectImportsService {
           .insert(projects)
           .values({
             workspaceId: user.workspaceId,
-            name: `${board.owner}/${board.title}`,
+            name: `${verified.ownerLogin}/${verified.title}`,
             color: null,
             ...(board.visibility === undefined
               ? {}
@@ -161,11 +163,11 @@ export class ProjectImportsService {
             provider: 'github',
             externalType: 'project',
             externalKey: board.githubProjectId,
-            externalUrl: board.url,
+            externalUrl: verified.url,
             metadata: {
-              githubProjectNumber: board.number,
-              githubProjectOwner: board.owner,
-              githubProjectTitle: board.title,
+              githubProjectNumber: verified.number,
+              githubProjectOwner: verified.ownerLogin,
+              githubProjectTitle: verified.title,
             },
             syncedAt: new Date(),
           })

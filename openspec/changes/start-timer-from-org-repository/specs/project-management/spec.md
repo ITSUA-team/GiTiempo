@@ -4,6 +4,8 @@
 
 An admin or PM SHALL be able to add an organization's GitHub Project as a GiTiempo project through a dedicated import request, and MUST be able to supply the same visibility and default-billable settings a directly created project takes. A project that is already imported MUST be reported without being modified, and one refused project MUST NOT abort the rest of the request.
 
+The caller MUST supply only the GitHub project id and those local settings. The system MUST read the project's owner, title, number, and URL from GitHub using the caller's connected account, and MUST decide the organization policy from the owner GitHub reports rather than any value in the request.
+
 #### Scenario: Import stores the settings the caller chose
 
 - **GIVEN** an admin importing a GitHub project with a visibility and a billable default
@@ -20,13 +22,25 @@ An admin or PM SHALL be able to add an organization's GitHub Project as a GiTiem
 - **WHEN** the request carries a visibility outside the supported values
 - **THEN** the request is refused before anything is written
 
+#### Scenario: Stored provenance comes from GitHub, not the request
+
+- **WHEN** a GitHub project is imported
+- **THEN** the project name, external URL, and stored owner, title, and number are the values GitHub reported for that project id
+- **AND** a request carrying any of those values is refused rather than having them ignored
+
 #### Scenario: An organization outside the policy is reported per project
 
-- **GIVEN** a request holding one project in an approved organization and one outside it
+- **GIVEN** a request holding one project whose GitHub owner is an approved organization and one whose owner is not
 - **WHEN** the request is processed
 - **THEN** the approved project is imported
-- **AND** the other is reported as failed, naming the organization rather than a repository
+- **AND** the other is reported as failed, without being written
 - **AND** the failure does not abort the request
+
+#### Scenario: A project the caller cannot see is refused
+
+- **WHEN** the supplied project id resolves to nothing for the caller's connected GitHub account
+- **THEN** the project is reported as failed
+- **AND** no project, external reference, or organization decision is derived from the request
 
 #### Scenario: Importing twice does not modify the existing project
 
