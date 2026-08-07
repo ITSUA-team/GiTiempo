@@ -388,6 +388,21 @@ export class GithubApiClientService {
     };
   }
 
+  async getRepository(input: {
+    accessToken: string;
+    owner: string;
+    repo: string;
+  }): Promise<GitHubRepository> {
+    const result = await this.rest<GitHubRepoRest>(
+      input.accessToken,
+      `/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}`,
+      {},
+      null,
+    );
+
+    return this.toRepository(result.body);
+  }
+
   async getRepositoryIssue(input: {
     accessToken: string;
     owner: string;

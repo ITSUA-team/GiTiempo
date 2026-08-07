@@ -231,6 +231,9 @@ function createClientMock(): TimeEntriesClient & {
       createTask(TEST_IDS.task, TEST_IDS.project, 'GitHub issue'),
     ),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    listGitHubOwners: vi.fn(),
+    listGitHubProjectIssues: vi.fn(),
+    listGitHubProjects: vi.fn(),
     listProjectGitHubIssues: vi.fn(async () => ({
       items: [],
       pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
@@ -239,6 +242,7 @@ function createClientMock(): TimeEntriesClient & {
     listProjectTimeEntries: vi.fn(async () => createOwnEntriesResponse([])),
     listProjectTasks: vi.fn(async () => []),
     listVisibleProjects: vi.fn(async () => []),
+    startTimerFromGitHub: vi.fn(),
     startTimer: vi.fn(async () => createRunningEntry()),
     stopTimer: vi.fn(async () => createCompletedEntry()),
     updateEntry: vi.fn(async () => createRunningEntry()),
@@ -508,7 +512,7 @@ describe('useTopBarTimer', () => {
     });
   });
 
-  it('refreshes project source before loading task options so newly connected GitHub projects show issues', async () => {
+  it('serves cached options on reopen and refreshes project source once the cache is invalidated, so newly connected GitHub projects show issues', async () => {
     const client = createClientMock();
     const localTask = createTask(
       TEST_IDS.task,
@@ -552,7 +556,7 @@ describe('useTopBarTimer', () => {
 
     wrappers.push(mounted.wrapper);
 
-    const { topBarTimer } = mounted;
+    const { queryClient, topBarTimer } = mounted;
 
     await flushPromises();
     await topBarTimer.openDialog();
@@ -564,12 +568,23 @@ describe('useTopBarTimer', () => {
       'Improve reports filters',
     ]);
 
+    const callsBeforeReopen = client.listVisibleProjects.mock.calls.length;
+
+    topBarTimer.closeDialog();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(client.listVisibleProjects).toHaveBeenCalledTimes(callsBeforeReopen);
+
+    await queryClient.invalidateQueries();
     topBarTimer.closeDialog();
     await topBarTimer.openDialog();
     topBarTimer.setSelectedProjectId(TEST_IDS.project);
     await flushPromises();
 
-    expect(client.listVisibleProjects).toHaveBeenCalledTimes(2);
+    expect(client.listVisibleProjects.mock.calls.length).toBeGreaterThan(
+      callsBeforeReopen,
+    );
     expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
       TEST_IDS.project,
       { limit: 30, state: 'open' },

@@ -1,14 +1,17 @@
 import type { ToastLike } from '@gitiempo/web-shared';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
+import { useQueryClient } from '@tanstack/vue-query';
 
 import { createDefaultTimeEntriesClient } from '@/config/clients';
 import { getUserServerStateScope } from '@/lib/server-state-scope';
 import { isRunningTimer } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
+import { prefetchTimerOptions } from '@/lib/timer-options-cache';
 import { useAuthStore } from '@/stores/auth';
 
 import { useTopBarTaskCreation } from './useTopBarTaskCreation';
+import { toTrackedRepositoryKeySet } from "@/lib/timer-github-projects";
 import { useTopBarTaskOptions } from './useTopBarTaskOptions';
 import { useTopBarTaskPicker } from './useTopBarTaskPicker';
 import { useTopBarTimerActions } from './useTopBarTimerActions';
@@ -82,6 +85,18 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     taskCreation,
     timerActions,
   });
+  const queryClient = useQueryClient();
+
+  watch(
+    isAuthenticated,
+    (authenticated) => {
+      if (authenticated) {
+        void prefetchTimerOptions({ client, queryClient, scope: scope.value });
+      }
+    },
+    { immediate: true },
+  );
+
   const dialogFlow = useTopBarTimerDialogFlow({
     isNewTaskSelected: viewModel.isNewTaskSelected,
     isTimerRunning,
@@ -111,6 +126,16 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isDialogPrimaryActionDisabled: viewModel.isDialogPrimaryActionDisabled,
     isDialogOpen: picker.isDialogOpen,
     isDialogSecondaryActionDisabled: viewModel.isDialogSecondaryActionDisabled,
+    githubProjectAvailability: picker.githubProjectAvailability,
+    githubProjectDraftCount: picker.githubProjectDraftCount,
+    githubProjectOptions: picker.githubProjects,
+    githubProjectRepositories: picker.githubProjectRepositories,
+    githubTrackedRepositoryKeys: computed(() =>
+      toTrackedRepositoryKeySet(picker.projects.value),
+    ),
+    githubProjectsErrorMessage: picker.githubProjectsErrorMessage,
+    githubProjectsTruncated: picker.githubProjectsTruncated,
+    isLoadingGitHubProjects: taskOptions.isLoadingGitHubProjects,
     isLoadingProjects: taskOptions.isLoadingProjects,
     isLoadingSummary: summary.isLoadingSummary,
     isLoadingTasks: taskOptions.isLoadingTasks,
@@ -120,6 +145,8 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     primaryActionLabel: viewModel.primaryActionLabel,
     projectsErrorMessage: picker.projectsErrorMessage,
     projectOptions: picker.activeProjects,
+    selectedGitHubProjectId: picker.selectedGitHubProjectId,
+    setSelectedGitHubProjectId: dialogFlow.setSelectedGitHubProjectId,
     refreshSummary: summary.refreshSummary,
     selectedContext: summary.selectedContext,
     selectedDescription: picker.selectedDescription,

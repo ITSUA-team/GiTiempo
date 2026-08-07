@@ -233,6 +233,9 @@ function createClientMock(options: {
     deleteTask: vi.fn(async () => undefined),
     ensureGitHubIssueTask: vi.fn(async () => createTask()),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    listGitHubOwners: vi.fn(),
+    listGitHubProjectIssues: vi.fn(),
+    listGitHubProjects: vi.fn(),
     listProjectGitHubIssues: vi.fn(async () => ({
       items: [],
       pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
@@ -254,6 +257,7 @@ function createClientMock(options: {
         name: "Admin Web",
       }),
     ]),
+    startTimerFromGitHub: vi.fn(),
     startTimer: vi.fn(async () => createEntry({ endedAt: null, id: TEST_IDS.runningEntry })),
     stopTimer: vi.fn(async () => createEntry()),
     updateEntry: vi.fn(async () => createEntry({ id: TEST_IDS.updatedEntry })),

@@ -22,8 +22,19 @@ export interface GitHubIssueSelectedTaskContext {
   taskTitle: string;
 }
 
+export interface GitHubProjectIssueSelectedTaskContext {
+  githubIssue: SyncedGitHubIssue;
+  githubProjectId: string;
+  issueTitle: string;
+  projectName: string;
+  source: 'github-project-issue';
+  taskId: string;
+  taskTitle: string;
+}
+
 export type SelectedTaskContext =
   | GitHubIssueSelectedTaskContext
+  | GitHubProjectIssueSelectedTaskContext
   | LocalSelectedTaskContext;
 
 export const TOP_BAR_TIMER_GITHUB_ISSUE_TASK_ID_PREFIX =
@@ -41,6 +52,21 @@ export function isGitHubIssueSelectedTaskContext(
 
 export function isGitHubIssueTaskOptionId(taskId: string): boolean {
   return taskId.startsWith(TOP_BAR_TIMER_GITHUB_ISSUE_TASK_ID_PREFIX);
+}
+
+export const TOP_BAR_TIMER_GITHUB_PROJECT_ISSUE_TASK_ID_PREFIX =
+  '__top-bar-timer-github-project-issue__';
+
+export function getGitHubProjectIssueTaskOptionId(
+  issue: SyncedGitHubIssue,
+): string {
+  return `${TOP_BAR_TIMER_GITHUB_PROJECT_ISSUE_TASK_ID_PREFIX}${issue.githubRepo}#${issue.issueNumber}`;
+}
+
+export function isGitHubProjectIssueSelectedTaskContext(
+  context: SelectedTaskContext,
+): context is GitHubProjectIssueSelectedTaskContext {
+  return context.source === 'github-project-issue';
 }
 export function formatElapsedTime(
   startedAt: string | null,

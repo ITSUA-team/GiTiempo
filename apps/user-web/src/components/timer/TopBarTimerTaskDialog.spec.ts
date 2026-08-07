@@ -61,7 +61,15 @@ function mountDialog(overrides: DialogProps = {}) {
       isCreateTaskDisabled: false,
       isCreatingTask: false,
       isCrossWorkspaceTimer: false,
-      isLoadingProjects: false,
+      githubProjectAvailability: 'available' as const,
+      githubProjectDraftCount: 0,
+    githubProjectOptions: [],
+      githubProjectRepositories: {},
+      githubTrackedRepositoryKeys: new Set<string>(),
+    githubProjectsErrorMessage: null,
+    githubProjectsTruncated: false,
+    isLoadingGitHubProjects: false,
+    isLoadingProjects: false,
       isLoadingTasks: false,
       isOpen: true,
       isPrimaryActionDisabled: false,
@@ -70,6 +78,7 @@ function mountDialog(overrides: DialogProps = {}) {
       projectOptions: [projectOrion],
       projectsErrorMessage: null,
       selectedDescription: "",
+      selectedGitHubProjectId: null,
       selectedProjectId: "project-1",
       selectedTaskId: "task-1",
       selectionUpdateErrorMessage: null,
@@ -302,7 +311,10 @@ describe("TopBarTimerTaskDialog", () => {
     await nextTick();
 
     expect(
-      autoCompletes[0]?.props("suggestions").map((project: typeof projectOrion) => project.name),
+      autoCompletes[0]
+        ?.props("suggestions")
+        .flatMap((group: { items: (typeof projectOrion)[] }) => group.items)
+        .map((project: typeof projectOrion) => project.name),
     ).toEqual(["Internal Ops"]);
     expect(
       autoCompletes[1]?.props("suggestions").map((task: typeof reportsTask) => task.title),
@@ -391,6 +403,44 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.text()).toContain(
       "Pick New task to create one, or choose a different project.",
     );
+  });
+
+  it("does not offer New task while a GitHub project is selected", async () => {
+    const wrapper = mountDialog({
+      githubProjectOptions: [{ id: "PVT_board", title: "Test project without repository" }],
+      selectedGitHubProjectId: "PVT_board",
+      selectedProjectId: null,
+      selectedTaskId: null,
+      taskOptions: [reportsTask],
+    });
+    const taskAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1];
+
+    await taskAutoComplete?.vm.$emit("complete", { query: "" });
+    await nextTick();
+
+    const taskSuggestions = taskAutoComplete?.props("suggestions") as Array<{
+      title: string;
+    }>;
+
+    expect(taskSuggestions.map((task) => task.title)).toEqual([
+      "Improve reports filters",
+    ]);
+  });
+
+  it("explains an empty GitHub project instead of offering New task", () => {
+    const wrapper = mountDialog({
+      githubProjectOptions: [{ id: "PVT_board", title: "Test project without repository" }],
+      selectedGitHubProjectId: "PVT_board",
+      selectedProjectId: null,
+      selectedTaskId: null,
+      taskOptions: [],
+    });
+
+    expect(wrapper.text()).toContain(
+      "This GitHub project has no issues to track yet.",
+    );
+    expect(wrapper.text()).toContain("Add an issue to it on GitHub");
+    expect(wrapper.text()).not.toContain("Pick New task to create one");
   });
 
   it("renders create-task validation feedback and keeps start disabled for invalid New task", () => {
@@ -604,5 +654,71 @@ describe("TopBarTimerTaskDialog", () => {
 
     expect(wrapper.emitted("confirm")?.length).toBeGreaterThan(0);
     expect(wrapper.emitted("primaryAction")?.length).toBeGreaterThan(0);
+  });
+
+  it("explains a missing GitHub connection instead of showing a failure", () => {
+    const wrapper = mountDialog({ githubProjectAvailability: "no-connection" });
+
+    expect(
+      wrapper.find('[data-testid="top-bar-timer-github-no-connection"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="top-bar-timer-github-projects-error"]').exists(),
+    ).toBe(false);
+  });
+
+  it("tells an unapproved organization apart from a missing connection", () => {
+    const wrapper = mountDialog({
+      githubProjectAvailability: "no-organization",
+    });
+
+    expect(
+      wrapper
+        .find('[data-testid="top-bar-timer-github-no-organization"]')
+        .exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="top-bar-timer-github-no-connection"]').exists(),
+    ).toBe(false);
+  });
+
+  it("reports a board load failure as a failure, not as an absence", () => {
+    const wrapper = mountDialog({
+      githubProjectAvailability: "no-connection",
+      githubProjectsErrorMessage: "GitHub is unavailable.",
+    });
+
+    expect(
+      wrapper.find('[data-testid="top-bar-timer-github-projects-error"]').text(),
+    ).toContain("GitHub is unavailable.");
+    expect(
+      wrapper.find('[data-testid="top-bar-timer-github-no-connection"]').exists(),
+    ).toBe(false);
+  });
+
+  it("says the board list is not exhaustive when it was truncated", () => {
+    const wrapper = mountDialog({ githubProjectsTruncated: true });
+
+    expect(
+      wrapper
+        .find('[data-testid="top-bar-timer-github-projects-truncated"]')
+        .exists(),
+    ).toBe(true);
+  });
+
+  it("reports how many draft items a board holds when it lists no issues", () => {
+    const wrapper = mountDialog({
+      githubProjectDraftCount: 3,
+      selectedGitHubProjectId: "PVT_board",
+      selectedProjectId: null,
+      taskOptions: [],
+    });
+
+    const draftNote = wrapper.find(
+      '[data-testid="top-bar-timer-github-draft-count"]',
+    );
+
+    expect(draftNote.exists()).toBe(true);
+    expect(draftNote.text()).toContain("3 draft items");
   });
 });

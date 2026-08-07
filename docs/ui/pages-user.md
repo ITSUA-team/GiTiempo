@@ -31,6 +31,13 @@
 - A completed timer entry or manual entry may seed the last tracked task context if that task is still visible and active.
 - Starting from the popup creates a fresh running time entry. It must not resume or update the previous time entry record.
 - The task-picker dialog includes visible `Project -> Task` selection plus an optional time-entry `Description` field under `Task`.
+- The `Project` select lists the member's visible projects first, then a separate `GitHub Projects` group holding the open Project V2 boards of the organizations the workspace approves. Boards come from the same owner list that governs GitHub browsing, so a board from an unapproved organization can never appear.
+- Boards are a different axis from projects and are never hidden because one of their repositories already has a project: a board is a view over issues that may span several repositories.
+- Each board row lists the repositories its issues belong to, and marks the ones a GiTiempo project already tracks. The board list response carries no repository field, so the repositories are derived from the first page of each board's issues; a board whose page did not exhaust its issues says so rather than implying the list is complete. A board with no trackable issues shows `No linked repository`.
+- Selecting a board lists that board's open issues in `Task`, each carrying the repository it belongs to. Draft board items have no repository and cannot be tracked; their count is reported instead of being silently dropped.
+- Starting a timer on a board issue creates the GiTiempo project for that issue's own repository, materializes the task and starts the timer in one server request. The member does not need an admin to prepare anything first.
+- While a board is selected there is no project to create a task in, so the inline `New task` field is unavailable, and a running timer cannot be reassigned to a board issue without starting from it first.
+- Board loading, a board with only draft items, a missing GitHub connection, a workspace with no approved organization, and a request failure are five distinct states and must not be collapsed into one another.
 - The `Task` select lists visible tasks first and appends `New task` as the last option.
 - When `Task = New task`, the created task inherits the selected project's default `isBillable` value.
 - When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description. Time Entries completed rows may also start a fresh timer directly for that row's task without opening the task-picker popup.

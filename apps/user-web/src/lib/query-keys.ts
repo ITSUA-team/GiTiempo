@@ -81,6 +81,21 @@ export const timerKeys = {
     [...timerKeys.all(scope), "project-tasks", normalizeString(projectId)] as const,
   visibleProjects: (scope: UserServerStateScope) =>
     [...timerKeys.all(scope), "visible-projects"] as const,
+  githubOwners: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "github-owners"] as const,
+  githubProjects: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "github-projects"] as const,
+  githubProjectRepositories: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "github-project-repositories"] as const,
+  githubProjectIssues: (
+    scope: UserServerStateScope,
+    githubProjectId: string | null | undefined,
+  ) =>
+    [
+      ...timerKeys.all(scope),
+      "github-project-issues",
+      normalizeString(githubProjectId),
+    ] as const,
 };
 
 export const userProjectsKeys = {

@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { and, eq, inArray, like, or } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { GithubService } from '../src/github/services/github.service';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import {
@@ -21,6 +22,11 @@ import {
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
+const githubService = {
+  getRepository: (_user: unknown, owner: string, repo: string) =>
+    Promise.resolve({ fullName: `${owner}/${repo}` }),
+};
+
 describe('Time entries (e2e)', () => {
   let app: INestApplication;
   let db: DrizzleDB;
@@ -36,7 +42,10 @@ describe('Time entries (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(GithubService)
+      .useValue(githubService)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
@@ -773,6 +782,269 @@ describe('Time entries (e2e)', () => {
         .where(
           eq(workspaceGitHubOrganizations.normalizedLogin, 'gitiempo-test'),
         );
+    }
+  });
+
+  async function readTaskProjectId(taskId: string): Promise<string> {
+    const [row] = await db
+      .select({ projectId: tasks.projectId })
+      .from(tasks)
+      .where(eq(tasks.id, taskId))
+      .limit(1);
+    if (!row) throw new Error('Expected the materialized task');
+
+    return row.projectId;
+  }
+
+  async function seedBoardProject(
+    suffix: string,
+  ): Promise<{ boardId: string; projectId: string }> {
+    const boardId = `PVT_board_${suffix}`;
+    const [boardProject] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `gitiempo-test/Board ${suffix}`,
+        color: null,
+      })
+      .returning({ id: projects.id });
+
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId: boardProject!.id,
+      provider: 'github',
+      externalType: 'project',
+      externalKey: boardId,
+      externalUrl: `https://github.com/orgs/gitiempo-test/projects/1`,
+      metadata: { githubProjectOwner: 'gitiempo-test' },
+      syncedAt: new Date(),
+    });
+
+    return { boardId, projectId: boardProject!.id };
+  }
+
+  async function dropBoardProject(projectId: string): Promise<void> {
+    await db
+      .delete(projectExternalRefs)
+      .where(eq(projectExternalRefs.projectId, projectId));
+    const seeded = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.projectId, projectId));
+    const taskIds = seeded.map((row) => row.id);
+    if (taskIds.length > 0) {
+      await db.delete(timeEntries).where(inArray(timeEntries.taskId, taskIds));
+      await db
+        .delete(taskExternalRefs)
+        .where(inArray(taskExternalRefs.taskId, taskIds));
+      await db.delete(tasks).where(inArray(tasks.id, taskIds));
+    }
+    await db.delete(projects).where(eq(projects.id, projectId));
+  }
+
+  it('creates a project for the issue repository even when a board lists it', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const { boardId, projectId } = await seedBoardProject(suffix);
+    const githubRepo = `gitiempo-test/repo-${suffix}`;
+
+    try {
+      const started = await request(app.getHttpServer())
+        .post('/time-entries/timer/start-from-github')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          githubProjectId: boardId,
+          githubRepo,
+          issueNumber: 12,
+          issueTitle: 'Board issue',
+        });
+      expect(started.status).toBe(201);
+
+      await request(app.getHttpServer())
+        .post('/time-entries/timer/stop')
+        .set('Authorization', bearer(adminToken));
+
+      expect(await readTaskProjectId(started.body.task.id)).not.toBe(projectId);
+
+      const created = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(eq(projects.name, githubRepo));
+      expect(created).toHaveLength(1);
+      expect(await readTaskProjectId(started.body.task.id)).toBe(
+        created[0]!.id,
+      );
+    } finally {
+      const repositoryProjects = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(eq(projects.name, githubRepo));
+
+      for (const repositoryProject of repositoryProjects) {
+        await dropBoardProject(repositoryProject.id);
+      }
+
+      await dropBoardProject(projectId);
+    }
+  });
+
+  it('sends issues from two repositories on one board to their own projects', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const { boardId, projectId } = await seedBoardProject(suffix);
+    const firstRepo = `gitiempo-test/first-${suffix}`;
+    const secondRepo = `gitiempo-test/second-${suffix}`;
+
+    try {
+      const taskProjectIds: string[] = [];
+
+      for (const [index, githubRepo] of [firstRepo, secondRepo].entries()) {
+        const started = await request(app.getHttpServer())
+          .post('/time-entries/timer/start-from-github')
+          .set('Authorization', bearer(adminToken))
+          .send({
+            githubProjectId: boardId,
+            githubRepo,
+            issueNumber: 20 + index,
+            issueTitle: `Board issue ${index}`,
+          });
+        expect(started.status).toBe(201);
+
+        await request(app.getHttpServer())
+          .post('/time-entries/timer/stop')
+          .set('Authorization', bearer(adminToken));
+
+        taskProjectIds.push(await readTaskProjectId(started.body.task.id));
+      }
+
+      expect(taskProjectIds[0]).not.toBe(taskProjectIds[1]);
+      expect(taskProjectIds).not.toContain(projectId);
+    } finally {
+      const repositoryProjects = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(inArray(projects.name, [firstRepo, secondRepo]));
+
+      for (const repositoryProject of repositoryProjects) {
+        await dropBoardProject(repositoryProject.id);
+      }
+
+      await dropBoardProject(projectId);
+    }
+  });
+
+  it('prefers the repository project over the board that lists the issue', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const { boardId, projectId } = await seedBoardProject(suffix);
+    const githubRepo = `gitiempo-test/repo-${suffix}`;
+    const [repositoryProject] = await db
+      .insert(projects)
+      .values({ workspaceId, name: githubRepo, color: null })
+      .returning({ id: projects.id });
+
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId: repositoryProject!.id,
+      provider: 'github',
+      externalType: 'repository',
+      externalKey: githubRepo,
+      externalUrl: `https://github.com/${githubRepo}`,
+      metadata: { githubRepo },
+      syncedAt: new Date(),
+    });
+
+    try {
+      const started = await request(app.getHttpServer())
+        .post('/time-entries/timer/start-from-github')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          githubProjectId: boardId,
+          githubRepo,
+          issueNumber: 13,
+          issueTitle: 'Repository wins',
+        });
+      expect(started.status).toBe(201);
+
+      await request(app.getHttpServer())
+        .post('/time-entries/timer/stop')
+        .set('Authorization', bearer(adminToken));
+
+      expect(await readTaskProjectId(started.body.task.id)).toBe(
+        repositoryProject!.id,
+      );
+    } finally {
+      await dropBoardProject(projectId);
+    }
+  });
+
+  it('keeps tracking an issue in the project that already holds it', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const { boardId, projectId } = await seedBoardProject(suffix);
+    const githubRepo = `gitiempo-test/repo-${suffix}`;
+
+    try {
+      const [boardTask] = await db
+        .insert(tasks)
+        .values({
+          workspaceId,
+          projectId,
+          title: 'Sticky issue',
+          status: 'open',
+        })
+        .returning({ id: tasks.id });
+
+      await db.insert(taskExternalRefs).values({
+        workspaceId,
+        projectId,
+        taskId: boardTask!.id,
+        provider: 'github',
+        externalType: 'issue',
+        externalKey: `${githubRepo}#14`,
+        externalUrl: `https://github.com/${githubRepo}/issues/14`,
+        metadata: { githubRepo, issueNumber: 14 },
+        syncedAt: new Date(),
+      });
+
+      const [repositoryProject] = await db
+        .insert(projects)
+        .values({ workspaceId, name: githubRepo, color: null })
+        .returning({ id: projects.id });
+      await db.insert(projectExternalRefs).values({
+        workspaceId,
+        projectId: repositoryProject!.id,
+        provider: 'github',
+        externalType: 'repository',
+        externalKey: githubRepo,
+        externalUrl: `https://github.com/${githubRepo}`,
+        metadata: { githubRepo },
+        syncedAt: new Date(),
+      });
+
+      const started = await request(app.getHttpServer())
+        .post('/time-entries/timer/start-from-github')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          githubProjectId: boardId,
+          githubRepo,
+          issueNumber: 14,
+          issueTitle: 'Sticky issue',
+        });
+
+      expect(started.status).toBe(201);
+      expect(await readTaskProjectId(started.body.task.id)).toBe(projectId);
+
+      await request(app.getHttpServer())
+        .post('/time-entries/timer/stop')
+        .set('Authorization', bearer(adminToken));
+    } finally {
+      const repositoryProjects = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(eq(projects.name, githubRepo));
+
+      for (const repositoryProject of repositoryProjects) {
+        await dropBoardProject(repositoryProject.id);
+      }
+
+      await dropBoardProject(projectId);
     }
   });
 
