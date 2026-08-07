@@ -14,6 +14,7 @@ import {
   getGitHubProjectIssueTaskOptionId,
 } from "@/lib/top-bar-timer-helpers";
 import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
+import { TIMER_OPTIONS_STALE_TIME } from "@/lib/timer-options-cache";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import type {
@@ -61,6 +62,7 @@ export function useTopBarTaskOptions({
       const projects = await queryClient.fetchQuery({
         queryKey: timerKeys.visibleProjects(scope.value),
         queryFn: () => client.listVisibleProjects(),
+        staleTime: TIMER_OPTIONS_STALE_TIME,
       });
 
       for (const project of projects) {
@@ -93,6 +95,7 @@ export function useTopBarTaskOptions({
       const result = await queryClient.fetchQuery({
         queryKey: timerKeys.githubProjects(scope.value),
         queryFn: () => loadOrganizationGitHubProjects({ client }),
+        staleTime: TIMER_OPTIONS_STALE_TIME,
       });
 
       picker.setGitHubProjectAvailability(result.availability);
@@ -113,6 +116,7 @@ export function useTopBarTaskOptions({
               client,
               projects: result.projects,
             }),
+          staleTime: TIMER_OPTIONS_STALE_TIME,
         });
 
         picker.setGitHubProjectRepositories(repositories);

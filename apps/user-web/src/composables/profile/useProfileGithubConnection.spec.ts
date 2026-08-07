@@ -6,6 +6,7 @@ import { defineComponent, h } from "vue";
 import type { GitHubConnectionStatusResponse } from "@gitiempo/shared";
 
 import { useProfileGithubConnection } from "./useProfileGithubConnection";
+import { queryClient } from "@/query-client";
 import type { ProfileGitHubClient } from "@/services/profile-github-client";
 
 function createConnectedStatus(avatarUrl: string | null = "https://avatars.example.test/octo.png"): GitHubConnectionStatusResponse {
@@ -301,5 +302,37 @@ describe("useProfileGithubConnection", () => {
       context: { action: "disconnect", feature: "profile-github" },
       error: expect.any(Error),
     });
+  });
+
+  it("drops cached timer options when the connection status changes", async () => {
+    const client = createClientMock();
+
+    client.getConnectionStatus
+      .mockResolvedValueOnce(createConnectedStatus())
+      .mockResolvedValueOnce({ account: null, status: "disconnected" });
+
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { profileGithub } = mountProfileGithub({ client });
+
+    await flushPromises();
+    expect(invalidate).not.toHaveBeenCalled();
+
+    await profileGithub.refreshConnectionStatus();
+
+    expect(invalidate).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves cached timer options alone when the status is unchanged", async () => {
+    const client = createClientMock();
+
+    client.getConnectionStatus.mockResolvedValue(createConnectedStatus());
+
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { profileGithub } = mountProfileGithub({ client });
+
+    await flushPromises();
+    await profileGithub.refreshConnectionStatus();
+
+    expect(invalidate).not.toHaveBeenCalled();
   });
 });
