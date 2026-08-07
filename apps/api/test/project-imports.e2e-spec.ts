@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, NotFoundException } from '@nestjs/common';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { eq, inArray, like } from 'drizzle-orm';
 import request from 'supertest';
@@ -17,12 +17,36 @@ import {
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
+const ORGANIZATION = 'gitiempo-import-test';
+const UNVERIFIABLE_OWNER = 'not-approved-org';
+
+/**
+ * Stands in for the GitHub lookup the import now performs. Boards register the
+ * provenance the server would read, so a test can only influence the stored
+ * project through what GitHub reports, exactly as the endpoint does.
+ */
+const boardProvenance = new Map<
+  string,
+  { number: number; ownerLogin: string; title: string; url: string | null }
+>();
+
 const githubService = {
   getRepository: (_user: unknown, owner: string, repo: string) =>
     Promise.resolve({ fullName: `${owner}/${repo}` }),
-};
+  resolveImportableProject: (_user: unknown, githubProjectId: string) => {
+    const known = boardProvenance.get(githubProjectId);
 
-const ORGANIZATION = 'gitiempo-import-test';
+    if (!known || known.ownerLogin === UNVERIFIABLE_OWNER) {
+      return Promise.reject(
+        new NotFoundException(
+          'GitHub project could not be verified for this workspace',
+        ),
+      );
+    }
+
+    return Promise.resolve(known);
+  },
+};
 
 describe('Project imports (e2e)', () => {
   let app: INestApplication;
@@ -30,18 +54,27 @@ describe('Project imports (e2e)', () => {
   let adminToken: string;
   let workspaceId: string;
 
-  function board(overrides: Record<string, unknown> = {}) {
+  function board(
+    overrides: {
+      defaultBillableForTasks?: boolean;
+      githubRepos?: string[];
+      owner?: string;
+      title?: string;
+      visibility?: string;
+    } = {},
+  ) {
     const suffix = randomUUID().slice(0, 8);
+    const githubProjectId = `PVT_import_${suffix}`;
+    const { owner, title, ...payload } = overrides;
 
-    return {
-      githubProjectId: `PVT_import_${suffix}`,
-      githubRepos: [],
+    boardProvenance.set(githubProjectId, {
       number: 9,
-      owner: ORGANIZATION,
-      title: `Board ${suffix}`,
-      url: `https://github.com/orgs/${ORGANIZATION}/projects/9`,
-      ...overrides,
-    };
+      ownerLogin: owner ?? ORGANIZATION,
+      title: title ?? `Board ${suffix}`,
+      url: `https://github.com/orgs/${owner ?? ORGANIZATION}/projects/9`,
+    });
+
+    return { githubProjectId, githubRepos: [], ...payload };
   }
 
   async function importBoards(
@@ -165,16 +198,16 @@ describe('Project imports (e2e)', () => {
     expect(response.status).toBe(400);
   });
 
-  it('reports an organization outside the allowlist without aborting the batch', async () => {
+  it('reports a board it cannot verify without aborting the batch', async () => {
     const allowed = board();
     const response = await importBoards([
-      board({ owner: 'not-approved-org' }),
+      board({ owner: UNVERIFIABLE_OWNER }),
       allowed,
     ]);
 
     expect(response.status).toBe(200);
     expect(response.body.results[0].status).toBe('failed');
-    expect(response.body.results[0].message).toContain('not approved');
+    expect(response.body.results[0].projectId).toBeNull();
     expect(response.body.results[1].status).toBe('imported');
   });
 

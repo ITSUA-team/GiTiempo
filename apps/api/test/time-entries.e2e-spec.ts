@@ -25,6 +25,16 @@ import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 const githubService = {
   getRepository: (_user: unknown, owner: string, repo: string) =>
     Promise.resolve({ fullName: `${owner}/${repo}` }),
+  getRepositoryIssue: (
+    _user: unknown,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+  ) =>
+    Promise.resolve({
+      number: issueNumber,
+      title: `GitHub issue ${issueNumber} in ${owner}/${repo}`,
+    }),
 };
 
 describe('Time entries (e2e)', () => {
@@ -760,7 +770,7 @@ describe('Time entries (e2e)', () => {
       const started = await request(app.getHttpServer())
         .post('/time-entries/timer/start-from-github')
         .set('Authorization', bearer(otherMemberToken))
-        .send({ githubRepo, issueNumber, issueTitle: 'Org anchored issue' });
+        .send({ githubRepo, issueNumber });
       expect(started.status).toBe(201);
 
       await request(app.getHttpServer())
@@ -855,7 +865,6 @@ describe('Time entries (e2e)', () => {
           githubProjectId: boardId,
           githubRepo,
           issueNumber: 12,
-          issueTitle: 'Board issue',
         });
       expect(started.status).toBe(201);
 
@@ -903,7 +912,6 @@ describe('Time entries (e2e)', () => {
           githubProjectId: boardId,
           githubRepo,
           issueNumber: 13,
-          issueTitle: 'Repository wins',
         });
       expect(started.status).toBe(201);
 
@@ -932,7 +940,6 @@ describe('Time entries (e2e)', () => {
           githubProjectId: boardId,
           githubRepo,
           issueNumber: 14,
-          issueTitle: 'Sticky issue',
         });
       expect(first.status).toBe(201);
       await request(app.getHttpServer())
@@ -961,7 +968,6 @@ describe('Time entries (e2e)', () => {
           githubProjectId: boardId,
           githubRepo,
           issueNumber: 14,
-          issueTitle: 'Sticky issue',
         });
 
       expect(second.status).toBe(201);
@@ -987,7 +993,7 @@ describe('Time entries (e2e)', () => {
     const started = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github')
       .set('Authorization', bearer(otherMemberToken))
-      .send({ githubRepo, issueNumber, issueTitle: 'Casing issue' });
+      .send({ githubRepo, issueNumber });
     expect(started.status).toBe(201);
 
     await request(app.getHttpServer())
@@ -1014,12 +1020,13 @@ describe('Time entries (e2e)', () => {
       .send({
         githubRepo,
         issueNumber,
-        issueTitle: 'Chrome extension issue',
       });
     expect(started.status).toBe(201);
     expect(started.body.source).toBe('extension');
     expect(started.body.project.name).toBe(githubRepo);
-    expect(started.body.task.title).toBe('Chrome extension issue');
+    expect(started.body.task.title).toBe(
+      `GitHub issue ${issueNumber} in ${githubRepo}`,
+    );
     expect(started.body.githubIssue).toEqual({ githubRepo, issueNumber });
 
     const current = await request(app.getHttpServer())
@@ -1097,7 +1104,6 @@ describe('Time entries (e2e)', () => {
       .send({
         githubRepo,
         issueNumber,
-        issueTitle: 'Existing billable issue',
       });
 
     expect(started.status).toBe(201);
@@ -1119,7 +1125,6 @@ describe('Time entries (e2e)', () => {
       .send({
         githubRepo: requestedGitHubRepo,
         issueNumber,
-        issueTitle: 'Mixed case issue',
       });
 
     expect(started.status).toBe(201);
@@ -1198,7 +1203,6 @@ describe('Time entries (e2e)', () => {
       .send({
         githubRepo,
         issueNumber,
-        issueTitle: 'Chrome extension issue',
       });
 
     expect(started.status).toBe(201);
@@ -1226,7 +1230,6 @@ describe('Time entries (e2e)', () => {
       .send({
         githubRepo,
         issueNumber,
-        issueTitle: 'Existing private issue',
       });
     expect(started.status).toBe(404);
 
@@ -1256,7 +1259,6 @@ describe('Time entries (e2e)', () => {
       .send({
         githubRepo,
         issueNumber,
-        issueTitle: 'Assigned issue',
       });
     expect(started.status).toBe(201);
     expect(started.body.projectId).toBe(platformProjectId);
@@ -1295,7 +1297,6 @@ describe('Time entries (e2e)', () => {
       .send({
         githubRepo,
         issueNumber,
-        issueTitle: 'Closed GitHub issue',
       });
 
     expect(started.status).toBe(422);
@@ -1340,7 +1341,6 @@ describe('Time entries (e2e)', () => {
       .send({
         githubRepo,
         issueNumber,
-        issueTitle: 'Mismatched issue',
       });
     expect(started.status).toBe(404);
   });
@@ -1394,7 +1394,6 @@ describe('Time entries (e2e)', () => {
       .send({
         githubRepo,
         issueNumber,
-        issueTitle: 'Wrong project issue',
       });
     expect(started.status).toBe(404);
   });
