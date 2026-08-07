@@ -287,10 +287,6 @@ export class GithubTaskMaterializationService {
       };
     }
 
-    if (boardProject) {
-      return { project: boardProject, created: false };
-    }
-
     return this.findOrCreateProjectForRepo(executor, user, input.githubRepo);
   }
 

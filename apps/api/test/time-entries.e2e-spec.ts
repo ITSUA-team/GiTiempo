@@ -842,7 +842,7 @@ describe('Time entries (e2e)', () => {
     await db.delete(projects).where(eq(projects.id, projectId));
   }
 
-  it('tracks a board issue in the imported board project when the repository has none', async () => {
+  it('creates a project for the issue repository even when a board lists it', async () => {
     const suffix = randomUUID().slice(0, 8);
     const { boardId, projectId } = await seedBoardProject(suffix);
     const githubRepo = `gitiempo-test/repo-${suffix}`;
@@ -863,14 +863,70 @@ describe('Time entries (e2e)', () => {
         .post('/time-entries/timer/stop')
         .set('Authorization', bearer(adminToken));
 
-      expect(await readTaskProjectId(started.body.task.id)).toBe(projectId);
+      expect(await readTaskProjectId(started.body.task.id)).not.toBe(projectId);
 
       const created = await db
         .select({ id: projects.id })
         .from(projects)
         .where(eq(projects.name, githubRepo));
-      expect(created).toHaveLength(0);
+      expect(created).toHaveLength(1);
+      expect(await readTaskProjectId(started.body.task.id)).toBe(
+        created[0]!.id,
+      );
     } finally {
+      const repositoryProjects = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(eq(projects.name, githubRepo));
+
+      for (const repositoryProject of repositoryProjects) {
+        await dropBoardProject(repositoryProject.id);
+      }
+
+      await dropBoardProject(projectId);
+    }
+  });
+
+  it('sends issues from two repositories on one board to their own projects', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const { boardId, projectId } = await seedBoardProject(suffix);
+    const firstRepo = `gitiempo-test/first-${suffix}`;
+    const secondRepo = `gitiempo-test/second-${suffix}`;
+
+    try {
+      const taskProjectIds: string[] = [];
+
+      for (const [index, githubRepo] of [firstRepo, secondRepo].entries()) {
+        const started = await request(app.getHttpServer())
+          .post('/time-entries/timer/start-from-github')
+          .set('Authorization', bearer(adminToken))
+          .send({
+            githubProjectId: boardId,
+            githubRepo,
+            issueNumber: 20 + index,
+            issueTitle: `Board issue ${index}`,
+          });
+        expect(started.status).toBe(201);
+
+        await request(app.getHttpServer())
+          .post('/time-entries/timer/stop')
+          .set('Authorization', bearer(adminToken));
+
+        taskProjectIds.push(await readTaskProjectId(started.body.task.id));
+      }
+
+      expect(taskProjectIds[0]).not.toBe(taskProjectIds[1]);
+      expect(taskProjectIds).not.toContain(projectId);
+    } finally {
+      const repositoryProjects = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(inArray(projects.name, [firstRepo, secondRepo]));
+
+      for (const repositoryProject of repositoryProjects) {
+        await dropBoardProject(repositoryProject.id);
+      }
+
       await dropBoardProject(projectId);
     }
   });
@@ -925,19 +981,27 @@ describe('Time entries (e2e)', () => {
     const githubRepo = `gitiempo-test/repo-${suffix}`;
 
     try {
-      const first = await request(app.getHttpServer())
-        .post('/time-entries/timer/start-from-github')
-        .set('Authorization', bearer(adminToken))
-        .send({
-          githubProjectId: boardId,
-          githubRepo,
-          issueNumber: 14,
-          issueTitle: 'Sticky issue',
-        });
-      expect(first.status).toBe(201);
-      await request(app.getHttpServer())
-        .post('/time-entries/timer/stop')
-        .set('Authorization', bearer(adminToken));
+      const [boardTask] = await db
+        .insert(tasks)
+        .values({
+          workspaceId,
+          projectId,
+          title: 'Sticky issue',
+          status: 'open',
+        })
+        .returning({ id: tasks.id });
+
+      await db.insert(taskExternalRefs).values({
+        workspaceId,
+        projectId,
+        taskId: boardTask!.id,
+        provider: 'github',
+        externalType: 'issue',
+        externalKey: `${githubRepo}#14`,
+        externalUrl: `https://github.com/${githubRepo}/issues/14`,
+        metadata: { githubRepo, issueNumber: 14 },
+        syncedAt: new Date(),
+      });
 
       const [repositoryProject] = await db
         .insert(projects)
@@ -954,7 +1018,7 @@ describe('Time entries (e2e)', () => {
         syncedAt: new Date(),
       });
 
-      const second = await request(app.getHttpServer())
+      const started = await request(app.getHttpServer())
         .post('/time-entries/timer/start-from-github')
         .set('Authorization', bearer(adminToken))
         .send({
@@ -964,13 +1028,22 @@ describe('Time entries (e2e)', () => {
           issueTitle: 'Sticky issue',
         });
 
-      expect(second.status).toBe(201);
-      expect(await readTaskProjectId(second.body.task.id)).toBe(projectId);
+      expect(started.status).toBe(201);
+      expect(await readTaskProjectId(started.body.task.id)).toBe(projectId);
 
       await request(app.getHttpServer())
         .post('/time-entries/timer/stop')
         .set('Authorization', bearer(adminToken));
     } finally {
+      const repositoryProjects = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(eq(projects.name, githubRepo));
+
+      for (const repositoryProject of repositoryProjects) {
+        await dropBoardProject(repositoryProject.id);
+      }
+
       await dropBoardProject(projectId);
     }
   });
