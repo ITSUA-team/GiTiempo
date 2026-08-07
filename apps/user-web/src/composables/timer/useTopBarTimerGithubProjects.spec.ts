@@ -160,6 +160,38 @@ describe("timer picker board targets", () => {
     });
   });
 
+  it("restores a project on reopen, never the board that started it", () => {
+    const picker = useTopBarTaskPicker();
+
+    picker.setGitHubProjects([board]);
+    picker.setSelectedGitHubProjectId(board.id);
+    picker.setGitHubProjectDraftCount(4);
+
+    expect(picker.selectedGitHubProjectId.value).toBe(board.id);
+
+    picker.openTaskPicker({
+      description: "",
+      projectId: project.id,
+      taskId: "task-1",
+    });
+
+    expect(picker.selectedGitHubProjectId.value).toBeNull();
+    expect(picker.selectedProjectId.value).toBe(project.id);
+    expect(picker.githubProjectDraftCount.value).toBe(0);
+  });
+
+  it("clears a board selection when reopened with no running timer", () => {
+    const picker = useTopBarTaskPicker();
+
+    picker.setGitHubProjects([board]);
+    picker.setSelectedGitHubProjectId(board.id);
+
+    picker.openTaskPicker(null);
+
+    expect(picker.selectedGitHubProjectId.value).toBeNull();
+    expect(picker.selectedProjectId.value).toBeNull();
+  });
+
   it("recognises board issue options", () => {
     expect(isTopBarGitHubProjectIssueTaskOption(boardIssueOption())).toBe(true);
   });
