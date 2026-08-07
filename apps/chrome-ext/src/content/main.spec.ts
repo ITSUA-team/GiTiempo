@@ -126,6 +126,14 @@ function createRuntimeClient(overrides?: {
   stopTimer?: () => Promise<RuntimeMutationResult>;
 }): RuntimeClient {
   return {
+    signInWithGithub: vi.fn(async (): Promise<RuntimeAuthResult> => ({
+      ok: true,
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+    })),
+    signInWithGoogle: vi.fn(async (): Promise<RuntimeAuthResult> => ({
+      ok: true,
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+    })),
     exchangeFirebaseToken: vi.fn(async (): Promise<RuntimeAuthResult> => ({
       ok: true,
       snapshot: {

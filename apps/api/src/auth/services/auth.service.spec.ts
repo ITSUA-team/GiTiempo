@@ -77,6 +77,10 @@ function createSelectMock(queue: unknown[][]) {
     from: vi.fn(() => ({
       where: vi.fn(() => ({
         limit: vi.fn().mockImplementation(async () => queue.shift() ?? []),
+        then: (
+          resolve: (rows: unknown[]) => unknown,
+          reject?: (reason: unknown) => unknown,
+        ) => Promise.resolve(queue.shift() ?? []).then(resolve, reject),
       })),
     })),
   }));
@@ -133,6 +137,7 @@ describe('AuthService', () => {
     requireActiveMembershipForUser: ReturnType<typeof vi.fn>;
     requireActiveMembership: ReturnType<typeof vi.fn>;
     resolveActiveMembership: ReturnType<typeof vi.fn>;
+    resolveActiveMembershipForUser: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -190,6 +195,7 @@ describe('AuthService', () => {
       requireActiveMembershipForUser: vi.fn().mockResolvedValue(seedMembership),
       requireActiveMembership: vi.fn().mockResolvedValue(seedMembership),
       resolveActiveMembership: vi.fn().mockResolvedValue(seedMembership),
+      resolveActiveMembershipForUser: vi.fn().mockResolvedValue(seedMembership),
     };
 
     service = new AuthService(
@@ -272,41 +278,86 @@ describe('AuthService', () => {
     });
   });
 
-  describe('createSessionForVerifiedEmail', () => {
-    it('issues a token pair for a member found by verified email', async () => {
-      db.select = createSelectMock([[seedUserRow]]);
+  describe('resolveActiveMemberIdsByEmails', () => {
+    it('resolves every address, not only the first one that matches', async () => {
+      db.select = createSelectMock([
+        [{ id: seedUserRow.id }, { id: 'user-2' }],
+      ]);
 
-      const pair =
-        await service.createSessionForVerifiedEmail('admin@example.com');
+      await expect(
+        service.resolveActiveMemberIdsByEmails([
+          'personal@example.com',
+          'admin@example.com',
+        ]),
+      ).resolves.toEqual([seedUserRow.id, 'user-2']);
+    });
 
-      expect(members.requireActiveMembershipForUser).toHaveBeenCalledWith(
-        seedUserRow.id,
+    it('drops a matched user that has no active membership', async () => {
+      db.select = createSelectMock([
+        [{ id: seedUserRow.id }, { id: 'user-2' }],
+      ]);
+      members.resolveActiveMembershipForUser
+        .mockResolvedValueOnce(seedMembership)
+        .mockResolvedValueOnce(null);
+
+      await expect(
+        service.resolveActiveMemberIdsByEmails([
+          'admin@example.com',
+          'former@example.com',
+        ]),
+      ).resolves.toEqual([seedUserRow.id]);
+    });
+
+    it('normalises and de-duplicates before querying', async () => {
+      const select = createSelectMock([[{ id: seedUserRow.id }]]);
+      db.select = select;
+
+      await service.resolveActiveMemberIdsByEmails([
+        ' Admin@Example.com ',
+        'admin@example.com',
+      ]);
+
+      expect(select).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns nothing without querying when no addresses are supplied', async () => {
+      const select = createSelectMock([]);
+      db.select = select;
+
+      await expect(service.resolveActiveMemberIdsByEmails([])).resolves.toEqual(
+        [],
       );
+      expect(select).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createSessionForMember', () => {
+    it('issues a token pair for a resolved member', async () => {
+      const pair = await service.createSessionForMember(seedUserRow.id);
+
+      expect(users.findRowById).toHaveBeenCalledWith(seedUserRow.id);
       expect(repo.create).toHaveBeenCalled();
       expect(pair.accessToken).toBeTruthy();
       expect(pair.refreshToken).toBeTruthy();
       expect(pair.accessTokenExpiresIn).toBeGreaterThan(0);
     });
 
-    it('rejects a verified email with no matching user and skips membership', async () => {
-      db.select = createSelectMock([]); // no user row
+    it('rejects a member that no longer exists and skips membership', async () => {
+      users.findRowById.mockResolvedValueOnce(null);
 
       await expect(
-        service.createSessionForVerifiedEmail('nobody@example.com'),
+        service.createSessionForMember('gone'),
       ).rejects.toBeInstanceOf(UnauthorizedException);
-      expect(members.requireActiveMembershipForUser).not.toHaveBeenCalled();
+      expect(members.resolveActiveMembershipForUser).not.toHaveBeenCalled();
       expect(repo.create).not.toHaveBeenCalled();
     });
 
-    it('propagates the error when the user has no active membership', async () => {
-      db.select = createSelectMock([[seedUserRow]]);
-      members.requireActiveMembershipForUser.mockRejectedValueOnce(
-        new ForbiddenException('No active membership'),
-      );
+    it('rejects a member whose membership was revoked after resolution', async () => {
+      members.resolveActiveMembershipForUser.mockResolvedValueOnce(null);
 
       await expect(
-        service.createSessionForVerifiedEmail('admin@example.com'),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+        service.createSessionForMember(seedUserRow.id),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
       expect(repo.create).not.toHaveBeenCalled();
     });
   });

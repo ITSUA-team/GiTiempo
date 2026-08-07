@@ -18,7 +18,7 @@ const config = { get: (key: string) => env[key] } as never;
 function createServiceWithout(...omitted: string[]) {
   const partial = { ...env };
   for (const key of omitted) delete partial[key];
-  const auth = { createSessionForVerifiedEmail: vi.fn(async () => pair) };
+  const auth = createAuthStub();
   return new AuthGithubService(
     { get: (key: string) => partial[key] } as never,
     auth as never,
@@ -27,8 +27,15 @@ function createServiceWithout(...omitted: string[]) {
 
 const pair = { accessToken: 'a', refreshToken: 'r', accessTokenExpiresIn: 900 };
 
+function createAuthStub() {
+  return {
+    resolveActiveMemberIdsByEmails: vi.fn(async () => ['member-1']),
+    createSessionForMember: vi.fn(async () => pair),
+  };
+}
+
 function createService() {
-  const auth = { createSessionForVerifiedEmail: vi.fn(async () => pair) };
+  const auth = createAuthStub();
   return { svc: new AuthGithubService(config, auth as never), auth };
 }
 
@@ -109,7 +116,7 @@ describe('AuthGithubService', () => {
       {
         get: (key: string) => (key === 'NODE_ENV' ? 'production' : env[key]),
       } as never,
-      { createSessionForVerifiedEmail: vi.fn() } as never,
+      createAuthStub() as never,
     );
     expect(prod.stateCookieOptions().secure).toBe(true);
   });
@@ -186,6 +193,157 @@ describe('AuthGithubService', () => {
     expect(redirect.searchParams.get('githubError')).toBe('email');
   });
 
+  it('matches on a verified address that is not the primary one', async () => {
+    const { svc, auth } = createService();
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'personal@gmail.com', primary: true, verified: true },
+        { email: 'work@itsua.com', primary: false, verified: true },
+      ]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(auth.resolveActiveMemberIdsByEmails).toHaveBeenCalledWith([
+      'personal@gmail.com',
+      'work@itsua.com',
+    ]);
+    expect(redirect.searchParams.get('code')).toBeTruthy();
+  });
+
+  it('never offers an unverified address for matching', async () => {
+    const { svc, auth } = createService();
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'work@itsua.com', primary: true, verified: true },
+        { email: 'someone-elses@itsua.com', primary: false, verified: false },
+      ]),
+    );
+
+    await svc.completeCallback({ code: 'abc', state, stateNonce });
+
+    expect(auth.resolveActiveMemberIdsByEmails).toHaveBeenCalledWith([
+      'work@itsua.com',
+    ]);
+  });
+
+  it('redirects with githubError=nomember when no verified address matches a member', async () => {
+    const { svc, auth } = createService();
+    auth.resolveActiveMemberIdsByEmails.mockResolvedValueOnce([]);
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(redirect.pathname).toBe('/login');
+    expect(redirect.searchParams.get('githubError')).toBe('nomember');
+    expect(redirect.searchParams.get('code')).toBeNull();
+    expect(auth.createSessionForMember).not.toHaveBeenCalled();
+  });
+
+  it('breaks a tie with the primary address instead of refusing', async () => {
+    const { svc, auth } = createService();
+    auth.resolveActiveMemberIdsByEmails
+      .mockResolvedValueOnce(['member-1', 'member-2'])
+      .mockResolvedValueOnce(['member-2']);
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'personal@gmail.com', primary: true, verified: true },
+        { email: 'work@itsua.com', primary: false, verified: true },
+      ]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(auth.resolveActiveMemberIdsByEmails).toHaveBeenLastCalledWith([
+      'personal@gmail.com',
+    ]);
+    expect(redirect.searchParams.get('code')).toBeTruthy();
+    expect(redirect.searchParams.get('githubError')).toBeNull();
+
+    await svc.exchangeSession(redirect.searchParams.get('code')!);
+
+    expect(auth.createSessionForMember).toHaveBeenCalledWith('member-2');
+  });
+
+  it('does not consult the primary address while a single member matches', async () => {
+    const { svc, auth } = createService();
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'personal@gmail.com', primary: true, verified: true },
+        { email: 'work@itsua.com', primary: false, verified: true },
+      ]),
+    );
+
+    await svc.completeCallback({ code: 'abc', state, stateNonce });
+
+    expect(auth.resolveActiveMemberIdsByEmails).toHaveBeenCalledTimes(1);
+  });
+
+  it('redirects with githubError=ambiguous when the primary address settles nothing', async () => {
+    const { svc, auth } = createService();
+    auth.resolveActiveMemberIdsByEmails
+      .mockResolvedValueOnce(['member-1', 'member-2'])
+      .mockResolvedValueOnce([]);
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'personal@gmail.com', primary: true, verified: true },
+        { email: 'work@itsua.com', primary: false, verified: true },
+      ]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(redirect.pathname).toBe('/login');
+    expect(redirect.searchParams.get('githubError')).toBe('ambiguous');
+    expect(redirect.searchParams.get('code')).toBeNull();
+    expect(auth.createSessionForMember).not.toHaveBeenCalled();
+  });
+
+  it('refuses rather than picking when there is no primary address at all', async () => {
+    const { svc, auth } = createService();
+    auth.resolveActiveMemberIdsByEmails.mockResolvedValueOnce([
+      'member-1',
+      'member-2',
+    ]);
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'one@example.com', primary: false, verified: true },
+        { email: 'two@example.com', primary: false, verified: true },
+      ]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(redirect.searchParams.get('githubError')).toBe('ambiguous');
+    expect(auth.resolveActiveMemberIdsByEmails).toHaveBeenCalledTimes(1);
+  });
+
   it('redirects with githubError=state on a bad state, defaulting to the user app', async () => {
     const { svc } = createService();
 
@@ -245,7 +403,7 @@ describe('AuthGithubService', () => {
     expect(redirect.searchParams.get('githubError')).toBe('denied');
   });
 
-  it('exchanges a handoff code into a session for the verified email', async () => {
+  it('exchanges a handoff code into a session for the resolved member', async () => {
     const { svc, auth } = createService();
     const { state, stateNonce } = startTransaction(svc, 'admin');
     vi.stubGlobal(
@@ -262,9 +420,10 @@ describe('AuthGithubService', () => {
 
     const result = await svc.exchangeSession(handoff);
 
-    expect(auth.createSessionForVerifiedEmail).toHaveBeenCalledWith(
+    expect(auth.resolveActiveMemberIdsByEmails).toHaveBeenCalledWith([
       'admin@example.com',
-    );
+    ]);
+    expect(auth.createSessionForMember).toHaveBeenCalledWith('member-1');
     expect(result).toEqual(pair);
   });
 

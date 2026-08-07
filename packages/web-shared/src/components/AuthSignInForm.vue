@@ -18,12 +18,19 @@ const props = withDefaults(
   defineProps<{
     description: string;
     emailPlaceholder: string;
+    errorHelpHref?: string | null;
+    errorHelpLabel?: string | null;
     errorMessage?: string | null;
     githubEnabled?: boolean;
     isSubmitting: boolean;
     title: string;
   }>(),
-  { errorMessage: null, githubEnabled: true },
+  {
+    errorHelpHref: null,
+    errorHelpLabel: null,
+    errorMessage: null,
+    githubEnabled: true,
+  },
 );
 
 const emit = defineEmits<{
@@ -144,13 +151,23 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
           </Message>
         </div>
 
-        <p
+        <div
           v-if="props.errorMessage"
           class="border-destructive/20 bg-destructive/5 text-destructive rounded-sm border px-3 py-2 text-sm"
           data-testid="sign-in-error"
         >
           {{ props.errorMessage }}
-        </p>
+          <a
+            v-if="props.errorHelpHref"
+            :href="props.errorHelpHref"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="focus-visible:outline-destructive mt-1 block font-semibold underline focus-visible:outline-2 focus-visible:outline-offset-2"
+            data-testid="sign-in-error-help"
+          >
+            {{ props.errorHelpLabel ?? props.errorHelpHref }}
+          </a>
+        </div>
 
         <div class="flex flex-col gap-3 pt-1">
           <button
