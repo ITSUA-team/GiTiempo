@@ -64,5 +64,5 @@
 
 ## 10. Close out
 
-- [ ] 10.1 Confirm the `github-signin` capability has since gone live under `openspec/specs/`, and if so re-home the backend requirements this change added to `chrome-extension` into that capability, as `design.md` and `proposal.md` both record.
+- [x] 10.1 Confirm the `github-signin` capability has since gone live under `openspec/specs/`, and if so re-home the backend requirements this change added to `chrome-extension` into that capability, as `design.md` and `proposal.md` both record. — Done at archive time: `add-github-signin` was archived first so the capability exists, and the two backend requirements went to `github-signin` while the two extension ones stayed in `chrome-extension`.
 - [ ] 10.2 After deploy verification, archive this OpenSpec change.

@@ -52,6 +52,8 @@ function currentTimer(): RuntimeSnapshot["currentTimer"] {
 function createRuntimeClient(overrides?: {
   exchangeFirebaseToken?: RuntimeClient["exchangeFirebaseToken"];
   exchangeGithubSession?: RuntimeClient["exchangeGithubSession"];
+  signInWithGithub?: RuntimeClient["signInWithGithub"];
+  signInWithGoogle?: RuntimeClient["signInWithGoogle"];
   signOut?: RuntimeClient["signOut"];
   snapshot?: RuntimeSnapshot;
   startTimer?: RuntimeClient["startTimer"];
@@ -66,6 +68,18 @@ function createRuntimeClient(overrides?: {
       })),
     exchangeGithubSession:
       overrides?.exchangeGithubSession ??
+      vi.fn(async (): Promise<RuntimeAuthResult> => ({
+        ok: true,
+        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      })),
+    signInWithGithub:
+      overrides?.signInWithGithub ??
+      vi.fn(async (): Promise<RuntimeAuthResult> => ({
+        ok: true,
+        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      })),
+    signInWithGoogle:
+      overrides?.signInWithGoogle ??
       vi.fn(async (): Promise<RuntimeAuthResult> => ({
         ok: true,
         snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
@@ -187,17 +201,19 @@ describe("popup app", () => {
         user: null,
       },
     }));
-    const runtimeClient = createRuntimeClient({ exchangeGithubSession });
-    const signInWithGithubFn = vi.fn(async () => ({
-      code: "handoff-code",
-      verifier: "v".repeat(64),
+    const signInWithGithub = vi.fn(async (): Promise<RuntimeAuthResult> => ({
+      ok: true,
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
     }));
+    const runtimeClient = createRuntimeClient({
+      exchangeGithubSession,
+      signInWithGithub,
+    });
     const app = createPopupApp({
       githubSignInEnabled: true,
       root: document.querySelector<HTMLElement>("#app")!,
       runtimeClient,
       pageContextResolver: async () => ({ kind: "unsupported" }),
-      signInWithGithubFn,
     });
 
     await app.load();
@@ -208,12 +224,10 @@ describe("popup app", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(signInWithGithubFn).toHaveBeenCalledOnce();
-    expect(exchangeGithubSession).toHaveBeenCalledWith(
-      "handoff-code",
-      "v".repeat(64),
-    );
-    // Firebase is not part of this path.
+    // The worker owns the flow, so the popup asks once and never touches the
+    // provider or the handoff code itself.
+    expect(signInWithGithub).toHaveBeenCalledOnce();
+    expect(exchangeGithubSession).not.toHaveBeenCalled();
     expect(runtimeClient.exchangeFirebaseToken).not.toHaveBeenCalled();
   });
 
@@ -221,11 +235,12 @@ describe("popup app", () => {
     const app = createPopupApp({
       githubSignInEnabled: true,
       root: document.querySelector<HTMLElement>("#app")!,
-      runtimeClient: createRuntimeClient(),
-      pageContextResolver: async () => ({ kind: "unsupported" }),
-      signInWithGithubFn: vi.fn(async () => {
-        throw new Error("GitHub sign-in was declined. Authorize GiTiempo to continue.");
+      runtimeClient: createRuntimeClient({
+        signInWithGithub: vi.fn(async () => {
+          throw new Error("GitHub sign-in was declined. Authorize GiTiempo to continue.");
+        }),
       }),
+      pageContextResolver: async () => ({ kind: "unsupported" }),
     });
 
     await app.load();
@@ -253,13 +268,18 @@ describe("popup app", () => {
         user: null,
       },
     }));
-    const runtimeClient = createRuntimeClient({ exchangeFirebaseToken });
-    const signInWithGoogleFn = vi.fn(async () => "firebase-google-token");
+    const signInWithGoogle = vi.fn(async (): Promise<RuntimeAuthResult> => ({
+      ok: true,
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+    }));
+    const runtimeClient = createRuntimeClient({
+      exchangeFirebaseToken,
+      signInWithGoogle,
+    });
     const app = createPopupApp({
       root: document.querySelector<HTMLElement>("#app")!,
       runtimeClient,
       pageContextResolver: async () => ({ kind: "unsupported" }),
-      signInWithGoogleFn,
     });
 
     await app.load();
@@ -270,18 +290,21 @@ describe("popup app", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(signInWithGoogleFn).toHaveBeenCalledOnce();
-    expect(exchangeFirebaseToken).toHaveBeenCalledWith("firebase-google-token");
+    // The worker runs the provider flow and the exchange, so the popup makes one
+    // call and never handles a Firebase token itself.
+    expect(signInWithGoogle).toHaveBeenCalledOnce();
+    expect(exchangeFirebaseToken).not.toHaveBeenCalled();
   });
 
   it("shows a retryable error and re-enables actions after Google sign-in fails", async () => {
     const app = createPopupApp({
       root: document.querySelector<HTMLElement>("#app")!,
-      runtimeClient: createRuntimeClient(),
-      pageContextResolver: async () => ({ kind: "unsupported" }),
-      signInWithGoogleFn: vi.fn(async () => {
-        throw new Error("Google popup blocked");
+      runtimeClient: createRuntimeClient({
+        signInWithGoogle: vi.fn(async () => {
+          throw new Error("Google popup blocked");
+        }),
       }),
+      pageContextResolver: async () => ({ kind: "unsupported" }),
     });
 
     await app.load();
@@ -584,7 +607,7 @@ describe("popup app", () => {
 
   it("shows an inline auth error when the background token exchange fails", async () => {
     const runtimeClient = createRuntimeClient({
-      exchangeFirebaseToken: vi.fn(async () => ({
+      signInWithGoogle: vi.fn(async () => ({
         errorMessage:
           "GiTiempo API is temporarily unavailable. Please try again in a moment.",
         ok: false,
@@ -600,7 +623,6 @@ describe("popup app", () => {
       root: document.querySelector<HTMLElement>("#app")!,
       runtimeClient,
       pageContextResolver: async () => ({ kind: "unsupported" }),
-      signInWithGoogleFn: vi.fn(async () => "firebase-google-token"),
     });
 
     await app.load();

@@ -6,7 +6,7 @@ import {
   getAuth,
   signInWithEmailAndPassword,
   signInWithCredential,
-} from "firebase/auth";
+} from "firebase/auth/web-extension";
 
 import { getExtensionConfig, hasFirebaseConfig } from "./config";
 import { launchWebAuthFlow } from "./web-auth-flow";
