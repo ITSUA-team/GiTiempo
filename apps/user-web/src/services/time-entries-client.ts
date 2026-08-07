@@ -4,11 +4,16 @@ import {
   createTaskSchema,
   currentTimeEntryResponseSchema,
   ensureGitHubIssueTaskSchema,
+  githubOwnerListResponseSchema,
   githubRepositoryIssueListResponseSchema,
+  githubProjectIssueListResponseSchema,
+  githubProjectListResponseSchema,
   projectListResponseSchema,
+  type StartTimerFromGitHubInput,
   type StartTimerInput,
   taskResponseSchema,
   taskBillableDefaultBackfillResponseSchema,
+  startTimerFromGitHubSchema,
   startTimerSchema,
   taskListResponseSchema,
   timeEntryListResponseSchema,
@@ -21,6 +26,9 @@ import {
   type CurrentTimeEntryResponse,
   type EnsureGitHubIssueTaskInput,
   type GitHubIssueListQuery,
+  type GitHubOwnerListResponse,
+  type GitHubProjectIssueListResponse,
+  type GitHubProjectListResponse,
   type GitHubRepositoryIssueListResponse,
   type ProjectResponse,
   type TaskBillableDefaultBackfillResponse,
@@ -55,6 +63,15 @@ export interface TimeEntriesClient {
   deleteEntry(entryId: string): Promise<void>;
   ensureGitHubIssueTask(input: EnsureGitHubIssueTaskInput): Promise<TaskResponse>;
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
+  listGitHubOwners(): Promise<GitHubOwnerListResponse>;
+  listGitHubProjects(
+    owner: string,
+    query?: { limit?: number; pageToken?: string },
+  ): Promise<GitHubProjectListResponse>;
+  listGitHubProjectIssues(
+    githubProjectId: string,
+    query?: Partial<GitHubIssueListQuery>,
+  ): Promise<GitHubProjectIssueListResponse>;
   listProjectGitHubIssues(
     projectId: string,
     query?: Partial<GitHubIssueListQuery>,
@@ -70,6 +87,9 @@ export interface TimeEntriesClient {
   listProjectTasks(projectId: string): Promise<TaskResponse[]>;
   listVisibleProjects(): Promise<ProjectResponse[]>;
   startTimer(input: StartTimerInput): Promise<TimeEntryResponse>;
+  startTimerFromGitHub(
+    input: StartTimerFromGitHubInput,
+  ): Promise<TimeEntryResponse>;
   stopTimer(): Promise<TimeEntryResponse>;
   updateEntry(
     entryId: string,
@@ -81,6 +101,8 @@ export interface TimeEntriesClient {
   ): Promise<TaskResponse>;
 }
 
+
+const GITHUB_PROJECT_PAGE_SIZE = 50;
 
 export function createTimeEntriesClient({
   apiClient,
@@ -136,6 +158,35 @@ export function createTimeEntriesClient({
         responseSchema: currentTimeEntryResponseSchema,
       });
     },
+    listGitHubOwners() {
+      return apiClient.requestJson({
+        path: "/github/owners?type=organization",
+        responseSchema: githubOwnerListResponseSchema,
+      });
+    },
+    listGitHubProjects(owner, query) {
+      const search = new URLSearchParams({
+        ownerType: "organization",
+        owner,
+        limit: String(query?.limit ?? GITHUB_PROJECT_PAGE_SIZE),
+      });
+      if (query?.pageToken !== undefined) {
+        search.set("pageToken", query.pageToken);
+      }
+
+      return apiClient.requestJson({
+        path: `/github/projects?${search.toString()}`,
+        responseSchema: githubProjectListResponseSchema,
+      });
+    },
+    listGitHubProjectIssues(githubProjectId, query) {
+      const search = buildGitHubIssueQueryString(query);
+
+      return apiClient.requestJson({
+        path: `/github/projects/${encodeURIComponent(githubProjectId)}/issues?${search}`,
+        responseSchema: githubProjectIssueListResponseSchema,
+      });
+    },
     listProjectGitHubIssues(projectId, query) {
       const search = buildGitHubIssueQueryString(query);
 
@@ -178,6 +229,14 @@ export function createTimeEntriesClient({
         body: startTimerSchema.parse(input),
         method: "POST",
         path: "/time-entries/timer/start",
+        responseSchema: timeEntryResponseSchema,
+      });
+    },
+    startTimerFromGitHub(input) {
+      return apiClient.requestJson({
+        body: startTimerFromGitHubSchema.parse(input),
+        method: "POST",
+        path: "/time-entries/timer/start-from-github",
         responseSchema: timeEntryResponseSchema,
       });
     },

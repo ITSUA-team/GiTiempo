@@ -9,6 +9,12 @@ export const createProjectFormSchema = createProjectSchema.extend({
 
 export type CreateProjectFormInput = z.infer<typeof createProjectFormSchema>;
 
+export const importProjectFormSchema = createProjectFormSchema.extend({
+  name: z.string().optional(),
+});
+
+export type ImportProjectFormInput = z.infer<typeof importProjectFormSchema>;
+
 export const projectEditFormSchema = z.object({
   defaultBillableForTasks: z.boolean(),
   visibility: z.enum(["public", "private"]),

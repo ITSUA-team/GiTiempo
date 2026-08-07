@@ -35,10 +35,7 @@ import {
 } from '../../db/postgres-errors';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
-import {
-  buildGitHubRepoKey,
-  parseGitHubRepoKey,
-} from '../../github/github-repo-key';
+import { parseGitHubRepoKey } from '../../github/github-repo-key';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
@@ -49,6 +46,7 @@ import {
   taskRowSelection,
   tasks as tasksTable,
 } from '../../tasks/schemas/tasks.schema';
+import { GithubService } from '../../github/services/github.service';
 import { GithubTaskMaterializationService } from '../../tasks/services/github-task-materialization.service';
 import { TasksService } from '../../tasks/services/tasks.service';
 import { users } from '../../users/schemas/users.schema';
@@ -96,6 +94,7 @@ export class TimeEntriesService {
     private readonly tasks: TasksService,
     private readonly usersActivity: UsersActivityService,
     private readonly githubTasks: GithubTaskMaterializationService,
+    private readonly github: GithubService,
   ) {}
 
   async listOwnEntries(
@@ -331,22 +330,34 @@ export class TimeEntriesService {
     if (!repoParts) {
       throw new UnprocessableEntityException('GitHub repository is invalid');
     }
-    const githubRepo = buildGitHubRepoKey(repoParts);
 
     const membership = await this.members.requireActiveMembership(
       user.sub,
       user.workspaceId,
     );
-    const issueKey = `${githubRepo}#${input.issueNumber}`;
+
+    const repository = await this.github.getRepository(
+      user,
+      repoParts.owner,
+      repoParts.repo,
+    );
+    const githubRepo = repository.fullName;
+    const issue = await this.github.getRepositoryIssue(
+      user,
+      repoParts.owner,
+      repoParts.repo,
+      input.issueNumber,
+    );
+    const issueKey = `${githubRepo}#${issue.number}`;
 
     try {
       const entryId = await this.db.transaction(async (tx) => {
         const { project, created } =
-          await this.githubTasks.findOrCreateProjectForRepo(
-            tx,
-            user,
+          await this.githubTasks.resolveProjectForIssue(tx, user, {
+            githubProjectId: input.githubProjectId,
             githubRepo,
-          );
+            issueKey,
+          });
         if (!project.isActive) {
           throw new UnprocessableEntityException('Project is inactive');
         }
@@ -376,7 +387,7 @@ export class TimeEntriesService {
           workspaceId: user.workspaceId,
           projectId: project.id,
           issueKey,
-          issueTitle: input.issueTitle,
+          issueTitle: issue.title,
           defaultBillableForTimeEntries: project.defaultBillableForTasks,
         });
         const lockedTask = await this.requireTaskRowForUpdate(

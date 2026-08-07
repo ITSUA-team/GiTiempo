@@ -10,6 +10,7 @@ import type {
   GitHubProjectIssueListResponse,
   GitHubProjectListQuery,
   GitHubProjectListResponse,
+  GitHubRepository,
   GitHubRepositoryIssueListResponse,
   GitHubRepositoryListQuery,
   GitHubRepositoryListResponse,
@@ -171,6 +172,24 @@ export class GithubService {
     });
   }
 
+  async getRepository(
+    user: AuthUser,
+    owner: string,
+    repo: string,
+  ): Promise<GitHubRepository> {
+    const connection = await this.connectedConnection(user.sub);
+    await this.assertRepositoryOwnerAllowed(
+      user.workspaceId,
+      owner,
+      connection,
+    );
+    return this.apiClient.getRepository({
+      accessToken: connection.accessToken,
+      owner,
+      repo,
+    });
+  }
+
   async getRepositoryIssue(
     user: AuthUser,
     owner: string,
@@ -189,6 +208,41 @@ export class GithubService {
       repo,
       issueNumber,
     });
+  }
+
+  async resolveImportableProject(
+    user: AuthUser,
+    projectId: string,
+  ): Promise<{
+    number: number;
+    ownerLogin: string;
+    title: string;
+    url: string | null;
+  }> {
+    const connection = await this.connectedConnection(user.sub);
+    const project = await this.apiClient.getProject({
+      accessToken: connection.accessToken,
+      projectId,
+    });
+
+    if (!project.found || !project.title || project.number === null) {
+      throw new NotFoundException(
+        'GitHub project could not be verified for this workspace',
+      );
+    }
+
+    await this.assertProjectOwnerAllowed(
+      user.workspaceId,
+      project.owner,
+      connection.account.login,
+    );
+
+    return {
+      number: project.number,
+      ownerLogin: project.owner.login ?? connection.account.login,
+      title: project.title,
+      url: project.url,
+    };
   }
 
   async listProjectIssues(

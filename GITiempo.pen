@@ -55575,6 +55575,4520 @@
           }
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "hbaaa",
+      "x": 0,
+      "y": 9600,
+      "name": "Add Project — Import From GitHub",
+      "clip": true,
+      "width": 1280,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "hcaaa",
+          "name": "topbar",
+          "width": "fill_container",
+          "height": 64,
+          "fill": "$color-surface",
+          "stroke": "$color-divider",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "strokeAlignment": "inner",
+          "gap": 16,
+          "padding": [
+            0,
+            24
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "hdaaa",
+              "name": "brand",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "heaaa",
+                  "name": "logo",
+                  "width": 32,
+                  "height": 32,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 10,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hfaaa",
+                      "fill": "$color-brand",
+                      "content": "GT",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hgaaa",
+                  "name": "brandText",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hhaaa",
+                      "name": "appName",
+                      "fill": "#1A1A1A",
+                      "content": "GiTiempo",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "hiaaa",
+                      "name": "crumbSeparator",
+                      "fill": "#999999",
+                      "content": "/",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "hjaaa",
+                      "name": "pageName",
+                      "fill": "#1A1A1A",
+                      "content": "Add Project",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hkaaa",
+              "name": "uyCenter",
+              "width": "fill_container",
+              "height": "fill_container",
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hlaaa",
+                  "name": "surface",
+                  "fill": "#F4F4F5",
+                  "cornerRadius": 10,
+                  "stroke": "#EEEEEE",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hmaaa",
+                      "name": "info",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hnaaa",
+                          "name": "projectName",
+                          "fill": "#666666",
+                          "content": "Project Orion",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hoaaa",
+                          "name": "taskName",
+                          "fill": "#1A1A1A",
+                          "content": "Confirm release notes",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hpaaa",
+              "name": "userInfo",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hqaaa",
+                  "name": "avatar",
+                  "width": 32,
+                  "height": 32,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 16,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hraaa",
+                      "fill": "$color-brand",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hsaaa",
+          "name": "main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "htaaa",
+              "name": "sidebar",
+              "height": "fill_container",
+              "fill": "$color-surface",
+              "stroke": "$color-divider",
+              "strokeWidth": {
+                "right": 1
+              },
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                16,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "huaaa",
+                  "name": "nav1",
+                  "height": 44,
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "hvaaa",
+                      "name": "Dashboard icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hwaaa",
+                  "name": "nav2",
+                  "height": 44,
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "hxaaa",
+                      "name": "Timer icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "timer",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hyaaa",
+                  "name": "nav3",
+                  "height": 44,
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "hzaaa",
+                      "name": "Time Entries icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "clock-3",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hAaaa",
+                  "name": "nav4",
+                  "height": 44,
+                  "fill": "$color-accent-tint",
+                  "stroke": "$color-brand",
+                  "strokeWidth": {
+                    "left": 3
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "hBaaa",
+                      "name": "Projects icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "folder-kanban",
+                      "library": "lucide",
+                      "fill": "$color-brand"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hCaaa",
+                  "name": "nav5",
+                  "height": 44,
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "hDaaa",
+                      "name": "Profile icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "user-circle",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hEaaa",
+              "name": "content",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "#F4F4F5",
+              "layout": "vertical",
+              "gap": 20,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hFaaa",
+                  "name": "backRow",
+                  "width": "fill_container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hGaaa",
+                      "name": "backText",
+                      "fill": "#5D2B85",
+                      "content": "← Back to projects",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hecaa",
+                  "name": "body",
+                  "width": "fill_container",
+                  "gap": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "h3baa",
+                      "name": "form",
+                      "width": "fill_container",
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-lg",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hnbaa",
+                          "fill": "$color-text-dark",
+                          "content": "Import Project From GitHub",
+                          "fontFamily": "Inter",
+                          "fontSize": 18,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hXbaa",
+                          "name": "fields",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 10,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "hubaa",
+                              "name": "fOrganization",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "hsbaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "Organization",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "hqbaa",
+                                  "name": "organizationInput",
+                                  "width": "fill_container",
+                                  "height": 38,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "hrbaa",
+                                      "name": "value",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "hobaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "ITSUA-team",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "hpbaa",
+                                      "name": "caret",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$color-text-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "htbaa",
+                                  "fill": "$color-text-muted",
+                                  "content": "Organizations approved for this workspace in Settings.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "hCbaa",
+                              "name": "fProject",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "hAbaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "GitHub project",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "hybaa",
+                                  "name": "projectInput",
+                                  "width": "fill_container",
+                                  "height": 38,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "hzbaa",
+                                      "name": "value",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "hvbaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "Krvn",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "600",
+                                          "name": "title"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "hwbaa",
+                                          "fill": "$color-text-muted",
+                                          "content": "#9",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "500",
+                                          "name": "number"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "hxbaa",
+                                      "fill": "$color-brand",
+                                      "content": "AutoComplete",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "500",
+                                      "name": "control"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "hBbaa",
+                                  "fill": "$color-text-muted",
+                                  "content": "Open projects of ITSUA-team. Type to filter.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "hWbaa",
+                              "name": "details",
+                              "width": "fill_container",
+                              "fill": "$color-app-bg",
+                              "cornerRadius": "$radius-lg",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "padding": 14,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "hSbaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "What will be added",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "hTbaa",
+                                  "name": "rows",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "hFbaa",
+                                      "name": "row",
+                                      "width": "fill_container",
+                                      "gap": 16,
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "hDbaa",
+                                          "fill": "$color-text-muted",
+                                          "content": "Project name in GiTiempo",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "hEbaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "ITSUA-team/Krvn",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "hIbaa",
+                                      "name": "row",
+                                      "width": "fill_container",
+                                      "gap": 16,
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "hGbaa",
+                                          "fill": "$color-text-muted",
+                                          "content": "Source",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "hHbaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "GitHub",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "hLbaa",
+                                      "name": "row",
+                                      "width": "fill_container",
+                                      "gap": 16,
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "hJbaa",
+                                          "fill": "$color-text-muted",
+                                          "content": "Linked repository",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "hKbaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "ITSUA-team/GiTiempo",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "hObaa",
+                                      "name": "row",
+                                      "width": "fill_container",
+                                      "gap": 16,
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "hMbaa",
+                                          "fill": "$color-text-muted",
+                                          "content": "Issues scanned",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "hNbaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "24 issues, all from ITSUA-team/GiTiempo",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "hRbaa",
+                                      "name": "row",
+                                      "width": "fill_container",
+                                      "gap": 16,
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "hPbaa",
+                                          "fill": "$color-text-muted",
+                                          "content": "Status",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "hQbaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "Not added yet",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "hVbaa",
+                                  "name": "descWrap",
+                                  "width": "fill_container",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": {
+                                    "top": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "padding": [
+                                    10,
+                                    0,
+                                    0,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "hUbaa",
+                                      "fill": "$color-text-muted",
+                                      "content": "Adds ITSUA-team/Krvn and links ITSUA-team/GiTiempo. A timer started from any issue of that repository reuses this project instead of creating a second one.",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal",
+                                      "name": "description",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "h2baa",
+                          "name": "actions",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "justifyContent": "end",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "hZbaa",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "hYbaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "Back",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ],
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "h1baa",
+                              "name": "submit",
+                              "fill": "$color-brand",
+                              "cornerRadius": "$radius-sm",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "h0baa",
+                                  "fill": "$color-surface",
+                                  "content": "Add project",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hdcaa",
+                      "name": "sourceCard",
+                      "width": 320,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-lg",
+                      "layout": "vertical",
+                      "gap": 14,
+                      "padding": 20,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h4baa",
+                          "fill": "$color-text-dark",
+                          "content": "Project Source",
+                          "fontFamily": "Inter",
+                          "fontSize": 18,
+                          "fontWeight": "600",
+                          "name": "sideTitle"
+                        },
+                        {
+                          "type": "text",
+                          "id": "h5baa",
+                          "fill": "$color-text-muted",
+                          "content": "Imported projects are named organization/project, so the owner is visible in the projects list.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal",
+                          "name": "sideCopy",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "h8baa",
+                          "name": "manualOption",
+                          "width": "fill_container",
+                          "fill": "$color-app-bg",
+                          "cornerRadius": "$radius-lg",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": 14,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "h6baa",
+                              "fill": "$color-text-dark",
+                              "content": "Manual project",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600",
+                              "name": "manualTitle"
+                            },
+                            {
+                              "type": "text",
+                              "id": "h7baa",
+                              "fill": "$color-text-muted",
+                              "content": "For internal work, or anything not on GitHub. No organization/repository, source stays Manual.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "name": "manualCopy",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hbcaa",
+                          "name": "importOption",
+                          "width": "fill_container",
+                          "fill": "#F7F2FC",
+                          "cornerRadius": "$radius-lg",
+                          "stroke": "$color-brand",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": 14,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "h9baa",
+                              "fill": "$color-text-dark",
+                              "content": "Import from GitHub",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600",
+                              "name": "importTitle"
+                            },
+                            {
+                              "type": "text",
+                              "id": "hacaa",
+                              "fill": "$color-text-muted",
+                              "content": "Adds a GitHub project as ITSUA-team/Krvn. If all of its issues come from one repository, that repository is linked too.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "name": "importCopy",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "hccaa",
+                          "fill": "$color-text-muted",
+                          "content": "You can still assign the PM, set visibility, and adjust project details after creation.",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal",
+                          "name": "note",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container"
+                        }
+                      ],
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000014",
+                        "offset": {
+                          "x": 0,
+                          "y": 1
+                        },
+                        "blur": 3
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "hfcaa",
+      "name": "GitHub Import Form — States",
+      "width": 680,
+      "fill": "$color-app-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "frame",
+          "id": "hvcaa",
+          "name": "Organization—closedandopen",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "hucaa",
+              "fill": "$color-text-dark",
+              "content": "1. Organization — closed and open",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "hicaa",
+              "width": "fill_container",
+              "height": 38,
+              "padding": [
+                0,
+                12
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hjcaa",
+                  "name": "value",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hgcaa",
+                      "fill": "$color-text-dark",
+                      "content": "ITSUA-team",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "icon",
+                  "id": "hhcaa",
+                  "name": "caret",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "chevron-down",
+                  "library": "lucide",
+                  "fill": "$color-text-muted"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hscaa",
+              "name": "menu",
+              "width": "fill_container",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "padding": [
+                6,
+                0
+              ],
+              "gap": 0,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hncaa",
+                  "name": "option",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$color-app-bg",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hmcaa",
+                      "name": "label",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hkcaa",
+                          "fill": "$color-text-dark",
+                          "content": "ITSUA-team",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "hlcaa",
+                      "fill": "$color-text-muted",
+                      "content": "4 open projects",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hrcaa",
+                  "name": "option",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$color-surface",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hqcaa",
+                      "name": "label",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hocaa",
+                          "fill": "$color-text-dark",
+                          "content": "kesher-app",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "hpcaa",
+                      "fill": "$color-text-muted",
+                      "content": "2 open projects",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ],
+              "fill": "$color-surface",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00000014",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                },
+                "blur": 12
+              }
+            },
+            {
+              "type": "text",
+              "id": "htcaa",
+              "fill": "$color-text-muted",
+              "content": "Only organizations approved for the workspace appear. With exactly one approved, it is preselected and the field stays visible so the scope is never implicit.",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "textGrowth": "fixed-width",
+              "width": "fill_container"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hBcaa",
+          "name": "Project—waitingfortheorganization",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "hAcaa",
+              "fill": "$color-text-dark",
+              "content": "2. Project — waiting for the organization",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "hycaa",
+              "width": "fill_container",
+              "height": 38,
+              "padding": [
+                0,
+                12
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "fill": "$color-app-bg",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hzcaa",
+                  "name": "value",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hwcaa",
+                      "fill": "$color-text-muted",
+                      "content": "Select an organization first",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "hxcaa",
+                  "fill": "$color-text-muted",
+                  "content": "Disabled",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "name": "control"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hcdaa",
+          "name": "Project—open",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "hbdaa",
+              "fill": "$color-text-dark",
+              "content": "3. Project — open",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "hEcaa",
+              "width": "fill_container",
+              "height": 38,
+              "padding": [
+                0,
+                12
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-brand",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hFcaa",
+                  "name": "value",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hCcaa",
+                      "fill": "$color-text-dark",
+                      "content": "|",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "hDcaa",
+                  "fill": "$color-brand",
+                  "content": "AutoComplete",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "name": "control"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "h9caa",
+              "name": "menu",
+              "width": "fill_container",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "padding": [
+                6,
+                0
+              ],
+              "gap": 0,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hKcaa",
+                  "name": "option",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$color-app-bg",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hJcaa",
+                      "name": "label",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hGcaa",
+                          "fill": "$color-text-dark",
+                          "content": "Krvn",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600",
+                          "name": "title"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hHcaa",
+                          "fill": "$color-text-muted",
+                          "content": "#9",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500",
+                          "name": "number"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "hIcaa",
+                      "fill": "$color-text-muted",
+                      "content": "1 repository — ITSUA-team/GiTiempo",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hPcaa",
+                  "name": "option",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$color-surface",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hOcaa",
+                      "name": "label",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hLcaa",
+                          "fill": "$color-text-dark",
+                          "content": "GiTimpo",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600",
+                          "name": "title"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hMcaa",
+                          "fill": "$color-text-muted",
+                          "content": "#7",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500",
+                          "name": "number"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "hNcaa",
+                      "fill": "$color-text-muted",
+                      "content": "1 repository — ITSUA-team/GiTiempo",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hUcaa",
+                  "name": "option",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$color-surface",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hTcaa",
+                      "name": "label",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hQcaa",
+                          "fill": "$color-text-dark",
+                          "content": "@akholod's untitled project",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600",
+                          "name": "title"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hRcaa",
+                          "fill": "$color-text-muted",
+                          "content": "#10",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500",
+                          "name": "number"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "hScaa",
+                      "fill": "$color-text-muted",
+                      "content": "No issues yet",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "h0caa",
+                  "name": "option",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$color-surface",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hZcaa",
+                      "name": "label",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hVcaa",
+                          "fill": "$color-text-muted",
+                          "content": "Kesher",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600",
+                          "name": "title"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hWcaa",
+                          "fill": "$color-text-muted",
+                          "content": "#12",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500",
+                          "name": "number"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hYcaa",
+                      "name": "pill",
+                      "cornerRadius": 4,
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        2,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hXcaa",
+                          "fill": "$color-text-muted",
+                          "content": "Already added",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "h6caa",
+                  "name": "option",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$color-surface",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "h5caa",
+                      "name": "label",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h1caa",
+                          "fill": "$color-text-muted",
+                          "content": "Test project without repository",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600",
+                          "name": "title"
+                        },
+                        {
+                          "type": "text",
+                          "id": "h2caa",
+                          "fill": "$color-text-muted",
+                          "content": "#8",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500",
+                          "name": "number"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h4caa",
+                      "name": "pill",
+                      "cornerRadius": 4,
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        2,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h3caa",
+                          "fill": "$color-text-muted",
+                          "content": "Already added",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "h8caa",
+                  "name": "menuFooter",
+                  "width": "fill_container",
+                  "height": 32,
+                  "stroke": "$color-divider",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "h7caa",
+                      "fill": "$color-text-muted",
+                      "content": "2 of 5 already added",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ],
+              "fill": "$color-surface",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00000014",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                },
+                "blur": 12
+              }
+            },
+            {
+              "type": "text",
+              "id": "hadaa",
+              "fill": "$color-text-muted",
+              "content": "No owner prefix in the rows — the organization above already says it. The right column is the reason to pick, not decoration.",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "textGrowth": "fixed-width",
+              "width": "fill_container"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hydaa",
+          "name": "Details—onerepository",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "hxdaa",
+              "fill": "$color-text-dark",
+              "content": "4. Details — one repository",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "hwdaa",
+              "name": "detailsOneRepo",
+              "width": "fill_container",
+              "fill": "$color-app-bg",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "hsdaa",
+                  "fill": "$color-text-dark",
+                  "content": "What will be added",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "htdaa",
+                  "name": "rows",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hfdaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hddaa",
+                          "fill": "$color-text-muted",
+                          "content": "Project name in GiTiempo",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hedaa",
+                          "fill": "$color-text-dark",
+                          "content": "ITSUA-team/Krvn",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hidaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hgdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Source",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hhdaa",
+                          "fill": "$color-text-dark",
+                          "content": "GitHub",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hldaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hjdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Linked repository",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hkdaa",
+                          "fill": "$color-text-dark",
+                          "content": "ITSUA-team/GiTiempo",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hodaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hmdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Issues scanned",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hndaa",
+                          "fill": "$color-text-dark",
+                          "content": "24 issues, all from ITSUA-team/GiTiempo",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hrdaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hpdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Status",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hqdaa",
+                          "fill": "$color-text-dark",
+                          "content": "Not added yet",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hvdaa",
+                  "name": "descWrap",
+                  "width": "fill_container",
+                  "stroke": "$color-divider",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    10,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hudaa",
+                      "fill": "$color-text-muted",
+                      "content": "Adds ITSUA-team/Krvn and links ITSUA-team/GiTiempo. A timer started from any issue of that repository reuses this project instead of creating a second one.",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "name": "description",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hUdaa",
+          "name": "Details—severalrepositories",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "hTdaa",
+              "fill": "$color-text-dark",
+              "content": "5. Details — several repositories",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "hSdaa",
+              "name": "detailsManyRepos",
+              "width": "fill_container",
+              "fill": "$color-app-bg",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "hOdaa",
+                  "fill": "$color-text-dark",
+                  "content": "What will be added",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "hPdaa",
+                  "name": "rows",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hBdaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hzdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Project name in GiTiempo",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hAdaa",
+                          "fill": "$color-text-dark",
+                          "content": "ITSUA-team/Platform",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hEdaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hCdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Source",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hDdaa",
+                          "fill": "$color-text-dark",
+                          "content": "GitHub",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hHdaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hFdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Linked repository",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hGdaa",
+                          "fill": "$color-text-dark",
+                          "content": "None — issues come from 3 repositories",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hKdaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hIdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Issues scanned",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hJdaa",
+                          "fill": "$color-text-dark",
+                          "content": "41 issues from GiTiempo, Kesher and landing",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hNdaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hLdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Status",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hMdaa",
+                          "fill": "$color-text-dark",
+                          "content": "Not added yet",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hRdaa",
+                  "name": "descWrap",
+                  "width": "fill_container",
+                  "stroke": "$color-divider",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    10,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hQdaa",
+                      "fill": "$color-text-muted",
+                      "content": "Adds ITSUA-team/Platform without a repository. Linking one of the three would misrepresent the other two, so timers started from those issues keep creating their own projects.",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "name": "description",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hgeaa",
+          "name": "Details—nothingtolink",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "hfeaa",
+              "fill": "$color-text-dark",
+              "content": "6. Details — nothing to link",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "heeaa",
+              "name": "detailsNoRepo",
+              "width": "fill_container",
+              "fill": "$color-app-bg",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "haeaa",
+                  "fill": "$color-text-dark",
+                  "content": "What will be added",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "hbeaa",
+                  "name": "rows",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hXdaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hVdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Project name in GiTiempo",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hWdaa",
+                          "fill": "$color-text-dark",
+                          "content": "ITSUA-team/Krvn",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h0daa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hYdaa",
+                          "fill": "$color-text-muted",
+                          "content": "Source",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hZdaa",
+                          "fill": "$color-text-dark",
+                          "content": "GitHub",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h3daa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h1daa",
+                          "fill": "$color-text-muted",
+                          "content": "Linked repository",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "h2daa",
+                          "fill": "$color-text-dark",
+                          "content": "None — no issue to read a repository from",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h6daa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h4daa",
+                          "fill": "$color-text-muted",
+                          "content": "Issues scanned",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "h5daa",
+                          "fill": "$color-text-dark",
+                          "content": "None. 6 draft items skipped",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h9daa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "h7daa",
+                          "fill": "$color-text-muted",
+                          "content": "Status",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "h8daa",
+                          "fill": "$color-text-dark",
+                          "content": "Not added yet",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hdeaa",
+                  "name": "descWrap",
+                  "width": "fill_container",
+                  "stroke": "$color-divider",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    10,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hceaa",
+                      "fill": "$color-text-muted",
+                      "content": "Adds ITSUA-team/Krvn as an empty project. Draft items live only on the board and belong to no repository, so nothing can be linked until real issues are added.",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "name": "description",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hHeaa",
+          "name": "Details—alreadyadded",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "hGeaa",
+              "fill": "$color-text-dark",
+              "content": "7. Details — already added",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "hAeaa",
+              "name": "detailsAlreadyAdded",
+              "width": "fill_container",
+              "fill": "$color-app-bg",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "hweaa",
+                  "fill": "$color-text-dark",
+                  "content": "What will be added",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "hxeaa",
+                  "name": "rows",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hjeaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hheaa",
+                          "fill": "$color-text-muted",
+                          "content": "Project name in GiTiempo",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hieaa",
+                          "fill": "$color-text-dark",
+                          "content": "ITSUA-team/Kesher",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hmeaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hkeaa",
+                          "fill": "$color-text-muted",
+                          "content": "Source",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hleaa",
+                          "fill": "$color-text-dark",
+                          "content": "GitHub",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hpeaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hneaa",
+                          "fill": "$color-text-muted",
+                          "content": "Linked repository",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hoeaa",
+                          "fill": "$color-text-dark",
+                          "content": "None",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hseaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hqeaa",
+                          "fill": "$color-text-muted",
+                          "content": "Issues scanned",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hreaa",
+                          "fill": "$color-text-dark",
+                          "content": "No issues yet",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hveaa",
+                      "name": "row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hteaa",
+                          "fill": "$color-text-muted",
+                          "content": "Status",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hueaa",
+                          "fill": "$color-text-muted",
+                          "content": "Already added",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hzeaa",
+                  "name": "descWrap",
+                  "width": "fill_container",
+                  "stroke": "$color-divider",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    10,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hyeaa",
+                      "fill": "$color-text-muted",
+                      "content": "This project is already in GiTiempo as ITSUA-team/Kesher. Adding never modifies an existing project, so Add project stays disabled.",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "name": "description",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hFeaa",
+              "name": "disabledActions",
+              "width": "fill_container",
+              "gap": 10,
+              "justifyContent": "end",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hCeaa",
+                  "padding": [
+                    8,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hBeaa",
+                      "fill": "$color-text-dark",
+                      "content": "Back",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    }
+                  ],
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "hEeaa",
+                  "name": "submitDisabled",
+                  "fill": "$color-app-bg",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    8,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hDeaa",
+                      "fill": "$color-text-muted",
+                      "content": "Add project",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hPeaa",
+          "name": "Unavailable",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "hOeaa",
+              "fill": "$color-text-dark",
+              "content": "8. Unavailable",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "hKeaa",
+              "width": "fill_container",
+              "height": 38,
+              "padding": [
+                0,
+                12
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "fill": "$color-app-bg",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hLeaa",
+                  "name": "value",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hIeaa",
+                      "fill": "$color-text-muted",
+                      "content": "No GitHub account connected",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "hJeaa",
+                  "fill": "$color-text-muted",
+                  "content": "Disabled",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "name": "control"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "hMeaa",
+              "fill": "$color-text-muted",
+              "content": "Connect a GitHub account in Settings to import projects.",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "hNeaa",
+              "fill": "$color-text-muted",
+              "content": "The same slot carries the other refusal: no organization is approved for this workspace yet — approve one in Settings to import its projects.",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "textGrowth": "fixed-width",
+              "width": "fill_container"
+            }
+          ]
+        }
+      ],
+      "x": 1400,
+      "y": 9600
+    },
+    {
+      "type": "note",
+      "id": "hQeaa",
+      "x": 2160,
+      "y": 9600,
+      "name": "githubImportFormNote",
+      "width": 340,
+      "height": 340,
+      "content": "GitHub import as a form\n\nTwo fields, then a verdict. Organization scopes the search; project chooses; the block below states exactly what pressing Add project will create.\n\nEverything the old cards crammed into one tile is now a labelled row, and the sentence under the rows names the consequence rather than the fact — why a repository is linked or why none is.\n\nProject name, Source and Linked repository are derived, never typed: the import endpoint accepts none of them.\n\nAlready-added projects stay listed and greyed, so an admin sees the project exists rather than wondering why it is missing."
+    },
+    {
+      "type": "frame",
+      "id": "uIbaa",
+      "x": 0,
+      "y": 10600,
+      "name": "Add Project — Unified Form",
+      "clip": true,
+      "width": 1280,
+      "height": 1180,
+      "fill": "#FFFFFF",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "uJbaa",
+          "name": "topbar",
+          "width": "fill_container",
+          "height": 64,
+          "fill": "$color-surface",
+          "stroke": "$color-divider",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "strokeAlignment": "inner",
+          "gap": 16,
+          "padding": [
+            0,
+            24
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "uKbaa",
+              "name": "brand",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uLbaa",
+                  "name": "logo",
+                  "width": 32,
+                  "height": 32,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 10,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uMbaa",
+                      "fill": "$color-brand",
+                      "content": "GT",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "uNbaa",
+                  "name": "brandText",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uObaa",
+                      "name": "appName",
+                      "fill": "#1A1A1A",
+                      "content": "GiTiempo",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "uPbaa",
+                      "name": "crumbSeparator",
+                      "fill": "#999999",
+                      "content": "/",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "uQbaa",
+                      "name": "pageName",
+                      "fill": "#1A1A1A",
+                      "content": "Add Project",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "uRbaa",
+              "name": "uyCenter",
+              "width": "fill_container",
+              "height": "fill_container",
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uSbaa",
+                  "name": "surface",
+                  "fill": "#F4F4F5",
+                  "cornerRadius": 10,
+                  "stroke": "#EEEEEE",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uTbaa",
+                      "name": "info",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uUbaa",
+                          "name": "projectName",
+                          "fill": "#666666",
+                          "content": "Project Orion",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "uVbaa",
+                          "name": "taskName",
+                          "fill": "#1A1A1A",
+                          "content": "Confirm release notes",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "uWbaa",
+              "name": "userInfo",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uXbaa",
+                  "name": "avatar",
+                  "width": 32,
+                  "height": 32,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 16,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uYbaa",
+                      "fill": "$color-brand",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "uZbaa",
+          "name": "main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "u0baa",
+              "name": "sidebar",
+              "height": "fill_container",
+              "fill": "$color-surface",
+              "stroke": "$color-divider",
+              "strokeWidth": {
+                "right": 1
+              },
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                16,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "u1baa",
+                  "name": "nav1",
+                  "height": 44,
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "u2baa",
+                      "name": "Dashboard icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "layout-dashboard",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u3baa",
+                  "name": "nav2",
+                  "height": 44,
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "u4baa",
+                      "name": "Timer icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "timer",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u5baa",
+                  "name": "nav3",
+                  "height": 44,
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "u6baa",
+                      "name": "Time Entries icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "clock-3",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u7baa",
+                  "name": "nav4",
+                  "height": 44,
+                  "fill": "$color-accent-tint",
+                  "stroke": "$color-brand",
+                  "strokeWidth": {
+                    "left": 3
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "u8baa",
+                      "name": "Projects icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "folder-kanban",
+                      "library": "lucide",
+                      "fill": "$color-brand"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u9baa",
+                  "name": "nav5",
+                  "height": 44,
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "uacaa",
+                      "name": "Profile icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "user-circle",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ubcaa",
+              "name": "content",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "#F4F4F5",
+              "layout": "vertical",
+              "gap": 20,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uccaa",
+                  "name": "backRow",
+                  "width": "fill_container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "udcaa",
+                      "name": "backText",
+                      "fill": "#5D2B85",
+                      "content": "← Back to projects",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ubdaa",
+                  "name": "body",
+                  "width": "fill_container",
+                  "gap": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uadaa",
+                      "name": "form",
+                      "width": "fill_container",
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-lg",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "u3caa",
+                          "fill": "$color-text-dark",
+                          "content": "Add Project",
+                          "fontFamily": "Inter",
+                          "fontSize": 18,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "u4caa",
+                          "name": "fields",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 10,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "uhaaa",
+                              "name": "fSource",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ufaaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "Source",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "udaaa",
+                                  "name": "fSourceInput",
+                                  "width": "fill_container",
+                                  "height": 38,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "ueaaa",
+                                      "name": "value",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "ubaaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "Import from GitHub",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "ucaaa",
+                                      "name": "caret",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$color-text-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ugaaa",
+                                  "fill": "$color-text-muted",
+                                  "content": "Manual keeps the project local. Import pulls an organization project.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "uoaaa",
+                              "name": "fOrganization",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "umaaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "Organization",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ukaaa",
+                                  "name": "fOrganizationInput",
+                                  "width": "fill_container",
+                                  "height": 38,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "ulaaa",
+                                      "name": "value",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "uiaaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "ITSUA-team",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "ujaaa",
+                                      "name": "caret",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$color-text-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "unaaa",
+                                  "fill": "$color-text-muted",
+                                  "content": "Organizations approved for this workspace in Settings.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "uwaaa",
+                              "name": "fProject",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "uuaaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "GitHub project",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "usaaa",
+                                  "name": "projectInput",
+                                  "width": "fill_container",
+                                  "height": 38,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "utaaa",
+                                      "name": "value",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "upaaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "Krvn",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "uqaaa",
+                                          "fill": "$color-text-muted",
+                                          "content": "#9",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "uraaa",
+                                      "fill": "$color-brand",
+                                      "content": "AutoComplete",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "500",
+                                      "name": "control"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "uvaaa",
+                                  "fill": "$color-text-muted",
+                                  "content": "Open projects of ITSUA-team. Type to filter.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "uDaaa",
+                              "name": "fName",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "uBaaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "Project name",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "uzaaa",
+                                  "name": "fNameInput",
+                                  "width": "fill_container",
+                                  "height": 38,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "fill": "$color-app-bg",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "uAaaa",
+                                      "name": "value",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "uxaaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "ITSUA-team/Krvn",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "uyaaa",
+                                      "fill": "$color-text-muted",
+                                      "content": "Read-only",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "500",
+                                      "name": "control"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "uCaaa",
+                                  "fill": "$color-text-muted",
+                                  "content": "Derived from the organization and the project.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "uRaaa",
+                              "name": "fRow",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "uKaaa",
+                                  "name": "fManager",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 6,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "uIaaa",
+                                      "fill": "$color-text-dark",
+                                      "content": "Project manager",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "uGaaa",
+                                      "name": "fManagerInput",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "padding": [
+                                        0,
+                                        12
+                                      ],
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "fill": "$color-surface",
+                                      "cornerRadius": "$radius-sm",
+                                      "stroke": "$color-divider",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "uHaaa",
+                                          "name": "value",
+                                          "gap": 8,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "uEaaa",
+                                              "fill": "$color-text-dark",
+                                              "content": "Alexey T.",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 14,
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "icon",
+                                          "id": "uFaaa",
+                                          "name": "caret",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "chevron-down",
+                                          "library": "lucide",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "uJaaa",
+                                      "fill": "$color-text-muted",
+                                      "content": "Optional. Assigned right after the project is created.",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "uQaaa",
+                                  "name": "fVisibility",
+                                  "width": 200,
+                                  "layout": "vertical",
+                                  "gap": 6,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "uPaaa",
+                                      "fill": "$color-text-dark",
+                                      "content": "Visibility",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "uNaaa",
+                                      "name": "fVisibilityInput",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "padding": [
+                                        0,
+                                        12
+                                      ],
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "fill": "$color-surface",
+                                      "cornerRadius": "$radius-sm",
+                                      "stroke": "$color-divider",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "uOaaa",
+                                          "name": "value",
+                                          "gap": 8,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "uLaaa",
+                                              "fill": "$color-text-dark",
+                                              "content": "Private",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 14,
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "icon",
+                                          "id": "uMaaa",
+                                          "name": "caret",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "chevron-down",
+                                          "library": "lucide",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "uXaaa",
+                              "name": "fBillable",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "uSaaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "Default billable for new tasks",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "uVaaa",
+                                  "name": "billableInput",
+                                  "width": "fill_container",
+                                  "height": 38,
+                                  "gap": 10,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "uTaaa",
+                                      "name": "billableCheck",
+                                      "width": 16,
+                                      "height": 16,
+                                      "fill": "$color-brand",
+                                      "cornerRadius": 4,
+                                      "children": []
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "uUaaa",
+                                      "fill": "$color-text-dark",
+                                      "content": "Billable by default",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 14,
+                                      "fontWeight": "500"
+                                    }
+                                  ],
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "uWaaa",
+                                  "fill": "$color-text-muted",
+                                  "content": "New tasks in this project inherit this value unless changed later.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ubbaa",
+                              "name": "details",
+                              "width": "fill_container",
+                              "fill": "$color-app-bg",
+                              "cornerRadius": "$radius-lg",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "padding": 14,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "u7aaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "What will be added",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "u8aaa",
+                                  "name": "rows",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "u0aaa",
+                                      "name": "row",
+                                      "width": "fill_container",
+                                      "gap": 16,
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "uYaaa",
+                                          "fill": "$color-text-muted",
+                                          "content": "Linked repository",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "uZaaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "ITSUA-team/GiTiempo",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "u3aaa",
+                                      "name": "row",
+                                      "width": "fill_container",
+                                      "gap": 16,
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "u1aaa",
+                                          "fill": "$color-text-muted",
+                                          "content": "Issues scanned",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "u2aaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "24 issues, all from ITSUA-team/GiTiempo",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "u6aaa",
+                                      "name": "row",
+                                      "width": "fill_container",
+                                      "gap": 16,
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "u4aaa",
+                                          "fill": "$color-text-muted",
+                                          "content": "Status",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "u5aaa",
+                                          "fill": "$color-text-dark",
+                                          "content": "Not added yet",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "uabaa",
+                                  "name": "descWrap",
+                                  "width": "fill_container",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": {
+                                    "top": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "padding": [
+                                    10,
+                                    0,
+                                    0,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "u9aaa",
+                                      "fill": "$color-text-muted",
+                                      "content": "Adds ITSUA-team/Krvn as a private project, billable by default, with Alexey T. as manager, and links ITSUA-team/GiTiempo. A timer started from any issue of that repository reuses this project instead of creating a second one.",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal",
+                                      "name": "description",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "u9caa",
+                          "name": "actions",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "justifyContent": "end",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "u6caa",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "u5caa",
+                                  "fill": "$color-text-dark",
+                                  "content": "Back",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ],
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "u8caa",
+                              "name": "submit",
+                              "fill": "$color-brand",
+                              "cornerRadius": "$radius-sm",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "u7caa",
+                                  "fill": "$color-surface",
+                                  "content": "Add project",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "u2caa",
+                      "name": "sourceCard",
+                      "width": 320,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-lg",
+                      "layout": "vertical",
+                      "gap": 14,
+                      "padding": 20,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uUcaa",
+                          "fill": "$color-text-dark",
+                          "content": "Project Source",
+                          "fontFamily": "Inter",
+                          "fontSize": 18,
+                          "fontWeight": "600",
+                          "name": "sideTitle"
+                        },
+                        {
+                          "type": "text",
+                          "id": "uVcaa",
+                          "fill": "$color-text-muted",
+                          "content": "Source is a field in the form now, so both kinds of project are created the same way and carry the same settings.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "uYcaa",
+                          "name": "namingNote",
+                          "width": "fill_container",
+                          "fill": "$color-app-bg",
+                          "cornerRadius": "$radius-lg",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": 14,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "uWcaa",
+                              "fill": "$color-text-dark",
+                              "content": "Naming",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "uXcaa",
+                              "fill": "$color-text-muted",
+                              "content": "Imported projects are named organization/project, so the owner is visible in the projects list. Manual projects keep the name you type.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "u1caa",
+                          "name": "repoNote",
+                          "width": "fill_container",
+                          "fill": "$color-app-bg",
+                          "cornerRadius": "$radius-lg",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": 14,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "uZcaa",
+                              "fill": "$color-text-dark",
+                              "content": "Repository link",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "u0caa",
+                              "fill": "$color-text-muted",
+                              "content": "A GitHub project whose issues all come from one repository is linked to it. That link is what makes a timer reuse this project instead of creating another.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container"
+                            }
+                          ]
+                        }
+                      ],
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000014",
+                        "offset": {
+                          "x": 0,
+                          "y": 1
+                        },
+                        "blur": 3
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "ucdaa",
+      "name": "Unified Form — Manual Branch",
+      "width": 680,
+      "fill": "$color-app-bg",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "uddaa",
+          "fill": "$color-text-dark",
+          "content": "Manual branch — same form, three fields hidden",
+          "fontFamily": "Inter",
+          "fontSize": 14,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "uedaa",
+          "fill": "$color-text-muted",
+          "content": "Organization, GitHub project and the \"What will be added\" block are the only parts that belong to the import branch. Project name becomes editable; everything below it is identical.",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal",
+          "textGrowth": "fixed-width",
+          "width": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "umdaa",
+          "name": "manualForm",
+          "width": "fill_container",
+          "fill": "$color-surface",
+          "cornerRadius": "$radius-lg",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "ufdaa",
+              "fill": "$color-text-dark",
+              "content": "Add Project",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "ugdaa",
+              "name": "fields",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uibaa",
+                  "name": "fSource",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ugbaa",
+                      "fill": "$color-text-dark",
+                      "content": "Source",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uebaa",
+                      "name": "fSourceInput",
+                      "width": "fill_container",
+                      "height": 38,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ufbaa",
+                          "name": "value",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ucbaa",
+                              "fill": "$color-text-dark",
+                              "content": "Manual project",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "icon",
+                          "id": "udbaa",
+                          "name": "caret",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "chevron-down",
+                          "library": "lucide",
+                          "fill": "$color-text-muted"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "uhbaa",
+                      "fill": "$color-text-muted",
+                      "content": "Manual keeps the project local. Import pulls an organization project.",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "unbaa",
+                  "name": "fName",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "umbaa",
+                      "fill": "$color-text-dark",
+                      "content": "Project name",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ukbaa",
+                      "name": "nameInput",
+                      "width": "fill_container",
+                      "height": 38,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ulbaa",
+                          "name": "value",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ujbaa",
+                              "fill": "$color-text-dark",
+                              "content": "Customer Portal",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "uBbaa",
+                  "name": "fRow",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uubaa",
+                      "name": "fManager",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "usbaa",
+                          "fill": "$color-text-dark",
+                          "content": "Project manager",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "uqbaa",
+                          "name": "fManagerInput",
+                          "width": "fill_container",
+                          "height": 38,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "urbaa",
+                              "name": "value",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "uobaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "Alexey T.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "icon",
+                              "id": "upbaa",
+                              "name": "caret",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevron-down",
+                              "library": "lucide",
+                              "fill": "$color-text-muted"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "utbaa",
+                          "fill": "$color-text-muted",
+                          "content": "Optional. Assigned right after the project is created.",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uAbaa",
+                      "name": "fVisibility",
+                      "width": 200,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uzbaa",
+                          "fill": "$color-text-dark",
+                          "content": "Visibility",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "uxbaa",
+                          "name": "fVisibilityInput",
+                          "width": "fill_container",
+                          "height": 38,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "uybaa",
+                              "name": "value",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "uvbaa",
+                                  "fill": "$color-text-dark",
+                                  "content": "Private",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "icon",
+                              "id": "uwbaa",
+                              "name": "caret",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevron-down",
+                              "library": "lucide",
+                              "fill": "$color-text-muted"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "uHbaa",
+                  "name": "fBillable",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uCbaa",
+                      "fill": "$color-text-dark",
+                      "content": "Default billable for new tasks",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uFbaa",
+                      "name": "billableInput",
+                      "width": "fill_container",
+                      "height": 38,
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "uDbaa",
+                          "name": "billableCheck",
+                          "width": 16,
+                          "height": 16,
+                          "fill": "$color-brand",
+                          "cornerRadius": 4,
+                          "children": []
+                        },
+                        {
+                          "type": "text",
+                          "id": "uEbaa",
+                          "fill": "$color-text-dark",
+                          "content": "Billable by default",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ],
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "text",
+                      "id": "uGbaa",
+                      "fill": "$color-text-muted",
+                      "content": "New tasks in this project inherit this value unless changed later.",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "uldaa",
+              "name": "actions",
+              "width": "fill_container",
+              "gap": 10,
+              "justifyContent": "end",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uidaa",
+                  "padding": [
+                    8,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uhdaa",
+                      "fill": "$color-text-dark",
+                      "content": "Back",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    }
+                  ],
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner"
+                },
+                {
+                  "type": "frame",
+                  "id": "ukdaa",
+                  "name": "submit",
+                  "fill": "$color-brand",
+                  "cornerRadius": "$radius-sm",
+                  "padding": [
+                    8,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ujdaa",
+                      "fill": "$color-surface",
+                      "content": "Add project",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "x": 1400,
+      "y": 10600
+    },
+    {
+      "type": "note",
+      "id": "undaa",
+      "x": 2160,
+      "y": 10600,
+      "name": "unifiedAddProjectNote",
+      "width": 360,
+      "height": 420,
+      "content": "One form, Source as a field\n\nThe two source tiles were a mode switch pretending to be content. Making Source the first field removes the switch and lets both branches share Project manager, Visibility and Default billable — which is the whole point of the change.\n\nWHAT THIS COSTS\n\nProject manager: nothing. /projects/new is admin-only and createAssignment requires admin, so the form can import and then assign, exactly as the manual path already does.\n\nVisibility and Default billable: the import endpoint must accept them. Today importBoard inserts only {workspaceId, name, color}, so imported projects silently take the column defaults private and billable=true. Showing the fields without that change would be a lie.\n\nAdd them per project in importGitHubProjectsSchema (it is .strict() and takes up to 25), not top-level, so a future multi-select import can still differ per project.\n\nSEPARATE, NOT FIXED HERE\n\ncreateProject assigns the creator when the caller is a PM; importBoard does not. No PM reaches this page today, so nothing breaks, but the two paths disagree."
     }
   ],
   "variables": {

@@ -167,13 +167,13 @@ export const startTimerSchema = z
 
 export const startTimerFromGitHubSchema = z
   .object({
+    githubProjectId: z.string().min(1).max(255).optional(),
     githubRepo: z
       .string()
       .min(3)
       .max(200)
       .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
     issueNumber: z.number().int().positive(),
-    issueTitle: z.string().min(1).max(500),
   })
   .strict();
 

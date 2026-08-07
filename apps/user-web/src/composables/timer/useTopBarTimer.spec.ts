@@ -231,6 +231,9 @@ function createClientMock(): TimeEntriesClient & {
       createTask(TEST_IDS.task, TEST_IDS.project, 'GitHub issue'),
     ),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    listGitHubOwners: vi.fn(),
+    listGitHubProjectIssues: vi.fn(),
+    listGitHubProjects: vi.fn(),
     listProjectGitHubIssues: vi.fn(async () => ({
       items: [],
       pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
@@ -239,6 +242,7 @@ function createClientMock(): TimeEntriesClient & {
     listProjectTimeEntries: vi.fn(async () => createOwnEntriesResponse([])),
     listProjectTasks: vi.fn(async () => []),
     listVisibleProjects: vi.fn(async () => []),
+    startTimerFromGitHub: vi.fn(),
     startTimer: vi.fn(async () => createRunningEntry()),
     stopTimer: vi.fn(async () => createCompletedEntry()),
     updateEntry: vi.fn(async () => createRunningEntry()),

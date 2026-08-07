@@ -13,6 +13,7 @@ import {
 import {
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiForbiddenResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -94,10 +95,23 @@ export class TimeEntriesController {
 
   @Post('time-entries/timer/start-from-github')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Start timer from GitHub issue data' })
+  @ApiOperation({
+    summary: 'Start timer from GitHub issue data',
+    description: [
+      'Verifies the repository through the caller GitHub connection and asserts',
+      'the workspace GitHub organization policy before any project, task, or',
+      'time entry is written. The repository is recorded under the name GitHub',
+      'reports, not the name supplied in the request.',
+    ].join(' '),
+  })
   @ApiCreatedResponse({ type: TimeEntryResponseDto })
   @ApiConflictResponse({ description: 'Timer already running' })
-  @ApiNotFoundResponse({ description: 'GitHub issue not found' })
+  @ApiForbiddenResponse({
+    description: 'Repository owner is not allowed for the workspace',
+  })
+  @ApiNotFoundResponse({
+    description: 'GitHub connection, repository, or issue not found',
+  })
   @ApiUnprocessableEntityResponse({ description: 'Project or task inactive' })
   @ZodSerializerDto(TimeEntryResponseDto)
   startTimerFromGitHub(
