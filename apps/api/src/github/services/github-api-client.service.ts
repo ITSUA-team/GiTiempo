@@ -425,6 +425,7 @@ export class GithubApiClientService {
       `/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}/issues/${input.issueNumber}`,
       {},
       null,
+      'GitHub issue not found',
     ).then((result) => result.body);
 
     if (issue.pull_request !== undefined) {
@@ -602,6 +603,7 @@ export class GithubApiClientService {
     path: string,
     query: Record<string, string>,
     paginationKind: 'rest-page' | 'rest-cursor' | null,
+    notFoundMessage?: string,
   ): Promise<RestResult<T>> {
     const url = new URL(path, GITHUB_API);
     for (const [key, value] of Object.entries(query)) {
@@ -611,6 +613,9 @@ export class GithubApiClientService {
       headers: this.headers(accessToken),
     });
     const body = (await this.readJson(response)) as T;
+    if (response.status === 404 && notFoundMessage) {
+      throw new NotFoundException(notFoundMessage);
+    }
     if (!response.ok) {
       this.logger.warn({
         event: 'github.api.request_failed',
