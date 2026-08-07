@@ -135,7 +135,7 @@ function renderBrandHeader(
   return `
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="bg-accent-tint text-brand flex h-8 w-8 items-center justify-center rounded-md text-sm font-semibold">GT</div>
+        <div class="bg-accent-tint text-brand flex size-8 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold" data-testid="popup-logo">GT</div>
         <div>
           <p class="m-0 text-sm font-semibold text-text-dark">GiTiempo</p>
           <p class="m-0 text-xs text-text-muted">GitHub timer</p>
