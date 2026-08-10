@@ -86,6 +86,20 @@ export function useTopBarTaskOptions({
       const hasProjectMetadata = picker.projects.value.some(
         (project) => project.id === projectId,
       );
+      const taskQueryOptions = {
+        queryKey: timerKeys.projectTasks(scope.value, projectId),
+        queryFn: () => client.listProjectTasks(projectId),
+      };
+      const taskQueryState = queryClient.getQueryState(
+        taskQueryOptions.queryKey,
+      );
+      const hasCurrentTaskData =
+        taskQueryState !== undefined && !taskQueryState.isInvalidated;
+
+      if (!hasCurrentTaskData) {
+        picker.invalidateCachedTasks(projectId);
+      }
+
       const cachedTasks = picker.getCachedTasks(projectId);
 
       if (cachedTasks && hasProjectMetadata) {
@@ -94,10 +108,9 @@ export function useTopBarTaskOptions({
         return cachedTasks;
       }
 
-      const localTasks = await queryClient.ensureQueryData({
-        queryKey: timerKeys.projectTasks(scope.value, projectId),
-        queryFn: () => client.listProjectTasks(projectId),
-      });
+      const localTasks = hasCurrentTaskData
+        ? await queryClient.ensureQueryData(taskQueryOptions)
+        : await queryClient.fetchQuery(taskQueryOptions);
       const { errorMessage, taskOptions } = await appendGitHubIssueOptions(
         projectId,
         localTasks,

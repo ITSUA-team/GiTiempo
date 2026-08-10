@@ -11,7 +11,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
 
 import { useTopBarTimer } from './useTopBarTimer';
-import { timeEntriesKeys } from '@/lib/query-keys';
+import {
+  timeEntriesKeys,
+  userMutationInvalidationKeys,
+} from '@/lib/query-keys';
 import { TOP_BAR_TIMER_NEW_TASK_ID } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
@@ -2309,4 +2312,108 @@ describe('useTopBarTimer', () => {
     );
     expect(topBarTimer.currentTimer.value?.taskId).toBe(TEST_IDS.task);
   });
+
+  it('lists a task created elsewhere the next time the dialog opens', async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listOwnEntries.mockResolvedValue(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Write release checklist'),
+    ]);
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { queryClient, topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    const callsAfterFirstOpen = client.listProjectTasks.mock.calls.length;
+
+    topBarTimer.closeDialog();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(callsAfterFirstOpen);
+
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Write release checklist'),
+      createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'Review PM scope rules'),
+    ]);
+
+    await Promise.all(
+      userMutationInvalidationKeys
+        .afterTaskMutation(TEST_SCOPE, TEST_IDS.project)
+        .map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    );
+
+    topBarTimer.closeDialog();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(client.listProjectTasks.mock.calls.length).toBeGreaterThan(
+      callsAfterFirstOpen,
+    );
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'Write release checklist',
+      'Review PM scope rules',
+    ]);
+  });
+
+  it('drops a task deleted elsewhere the next time the dialog opens', async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listOwnEntries.mockResolvedValue(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Write release checklist'),
+      createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'Review PM scope rules'),
+    ]);
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { queryClient, topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'Write release checklist',
+      'Review PM scope rules',
+    ]);
+
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Write release checklist'),
+    ]);
+
+    await Promise.all(
+      userMutationInvalidationKeys
+        .afterTaskMutation(TEST_SCOPE, TEST_IDS.project)
+        .map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    );
+
+    topBarTimer.closeDialog();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'Write release checklist',
+    ]);
+  });
+
 });
