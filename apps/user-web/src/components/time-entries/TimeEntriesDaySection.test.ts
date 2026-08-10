@@ -76,6 +76,7 @@ describe('TimeEntriesDaySection', () => {
           dateKey: '2026-04-21',
           heading: 'Today, Apr 21',
           items: [createEntry()],
+          totalSeconds: 3_600,
         },
         isDeletingEntry: null,
         showHeader: true,

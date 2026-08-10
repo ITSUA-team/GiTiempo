@@ -11,6 +11,7 @@ import {
   formatTimeEntryTimeRange,
   getEntryTrackedSecondsWithinRange,
   getLocalDateKey,
+  getTimeEntryDurationSeconds,
   groupTimeEntriesByLocalDay,
   nextLocalDay,
   startOfLocalDay,
@@ -180,5 +181,45 @@ describe('time-entry-display', () => {
         nowMs,
       ),
     ).toBe(0);
+  });
+
+  it('totals each day, counting a running entry up to the current moment', () => {
+    const nowMs = new Date('2026-04-21T12:00:00.000Z').getTime();
+    const groups = groupTimeEntriesByLocalDay(
+      [
+        createEntry({ durationSeconds: 5400, id: 'entry-1' }),
+        createEntry({
+          durationSeconds: null,
+          endedAt: null,
+          id: 'entry-running',
+          startedAt: '2026-04-21T11:30:00.000Z',
+        }),
+        createEntry({
+          createdAt: '2026-04-20T08:00:00.000Z',
+          durationSeconds: 600,
+          endedAt: '2026-04-20T08:10:00.000Z',
+          id: 'entry-previous-day',
+          startedAt: '2026-04-20T08:00:00.000Z',
+        }),
+      ],
+      nowMs,
+    );
+
+    expect(groups.map((group) => group.totalSeconds)).toEqual([7200, 600]);
+    expect(formatCompactDuration(groups[0]?.totalSeconds)).toBe('2h');
+  });
+
+  it('derives a duration when the stored one is missing', () => {
+    const nowMs = new Date('2026-04-21T12:00:00.000Z').getTime();
+
+    expect(
+      getTimeEntryDurationSeconds(createEntry({ durationSeconds: null }), nowMs),
+    ).toBe(5400);
+    expect(
+      getTimeEntryDurationSeconds(
+        createEntry({ durationSeconds: null, endedAt: null }),
+        nowMs,
+      ),
+    ).toBe(10_800);
   });
 });

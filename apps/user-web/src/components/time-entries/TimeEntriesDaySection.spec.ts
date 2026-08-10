@@ -68,6 +68,7 @@ const group: TimeEntriesDayGroup = {
       workspaceId: 'workspace-1',
     },
   ],
+  totalSeconds: 7_200,
 };
 
 function setTooltipValueAttribute(
@@ -304,5 +305,13 @@ describe('TimeEntriesDaySection', () => {
     expect(wrapper.text()).not.toContain('Time');
     expect(wrapper.text()).not.toContain('Actions');
     expect(wrapper.text()).not.toContain('Stop from the top bar');
+  });
+
+  it('shows the tracked total for the day', () => {
+    const wrapper = mountSection();
+
+    expect(
+      wrapper.get('[data-testid="time-entries-day-total-2026-04-21"]').text(),
+    ).toBe('2h');
   });
 });
