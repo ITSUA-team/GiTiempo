@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PlusIcon } from "@heroicons/vue/24/outline";
+import { ClockIcon, PlusIcon } from "@heroicons/vue/24/outline";
 import Column from "primevue/column";
 
 import type { TimeEntryResponse } from "@gitiempo/shared";
@@ -13,7 +13,12 @@ import {
   type ManagementTableColumn,
 } from "@gitiempo/web-shared";
 
-import type { TimeEntriesDayGroup } from "@/lib/time-entry-display";
+import { computed } from "vue";
+
+import {
+  formatCompactDuration,
+  type TimeEntriesDayGroup,
+} from "@/lib/time-entry-display";
 import TimeEntryTimerAction from "@/components/time-entries/TimeEntryTimerAction.vue";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
@@ -36,6 +41,9 @@ const emit = defineEmits<{
   stopTimer: [entry: TimeEntryResponse];
 }>();
 const isMobileViewport = useIsMobileViewport();
+const dayTotalLabel = computed(() =>
+  formatCompactDuration(props.group.totalSeconds),
+);
 
 const timeEntriesTableBodyRowClass =
   'border-divider h-[52px] border-b transition-colors last:border-b-0';
@@ -121,8 +129,18 @@ function handleStartTimer(entry: TimeEntryResponse): void {
 <template>
   <section class="flex flex-col gap-3">
     <div class="flex items-center justify-between gap-3">
-      <h2 class="text-text-dark text-base font-semibold">
-        {{ props.group.heading }}
+      <h2 class="text-text-dark flex min-w-0 items-center gap-2.5 text-base font-semibold">
+        <span class="truncate">{{ props.group.heading }}</span>
+        <span
+          class="bg-accent-tint text-brand inline-flex shrink-0 items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-[13px] tabular-nums"
+          :data-testid="`time-entries-day-total-${props.group.dateKey}`"
+        >
+          <ClockIcon
+            aria-hidden="true"
+            class="size-3.5"
+          />
+          <span>{{ dayTotalLabel }}</span>
+        </span>
       </h2>
       <EntryActionButton
         :data-testid="`time-entries-day-create-${props.group.dateKey}`"
