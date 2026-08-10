@@ -160,6 +160,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           input-id="time-entries-task-filter"
           option-label="title"
           placeholder="Search tasks"
+          show-clear
           :model-value="selectedTask"
           :suggestions="taskSuggestions"
           @complete="emitTaskSearch"

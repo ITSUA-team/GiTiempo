@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import PrimeVue from "primevue/config";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
+import type { TaskLookupOption } from "@/composables/time-entries/time-entry-task-lookup";
+
 import TimeEntriesFilters from "./TimeEntriesFilters.vue";
 
 const AUTOCOMPLETE_SEARCH_DELAY_MS = 300;
@@ -28,6 +30,13 @@ const demoCorp: ProjectResponse = {
   ...demoClient,
   id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9302",
   name: "Demo Corp",
+};
+
+const demoTask: TaskLookupOption = {
+  id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9303",
+  isActive: true,
+  projectId: demoClient.id,
+  title: "Prepare monthly report",
 };
 
 describe("TimeEntriesFilters", () => {
@@ -115,6 +124,30 @@ describe("TimeEntriesFilters", () => {
     await clearControl.trigger("click");
 
     expect(wrapper.emitted("update:projectValue")?.[0]).toEqual([null]);
+  });
+
+  it("clears the task filter from the clear control", async () => {
+    const wrapper = mount(TimeEntriesFilters, {
+      props: {
+        isLoadingProjects: false,
+        projectSuggestions: [],
+        projectsErrorMessage: null,
+        selectedDateRange: null,
+        selectedProject: null,
+        selectedTask: demoTask,
+        taskSuggestions: [demoTask],
+      },
+      global: {
+        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+      },
+    });
+    const clearControl = wrapper.find(".p-autocomplete-clear-icon");
+
+    expect(clearControl.exists()).toBe(true);
+
+    await clearControl.trigger("click");
+
+    expect(wrapper.emitted("update:taskValue")?.[0]).toEqual([null]);
   });
 
   it("applies a suggestion clicked after typing", async () => {
