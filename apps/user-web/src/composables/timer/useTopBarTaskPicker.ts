@@ -117,6 +117,8 @@ export function useTopBarTaskPicker() {
     projectsErrorMessage.value = null;
     tasksErrorMessage.value = null;
     selectedProjectId.value = context?.projectId ?? null;
+    selectedGitHubProjectId.value = null;
+    githubProjectDraftCount.value = 0;
     selectedTaskId.value = context?.taskId ?? null;
     selectedContextGitHubIssue.value = context?.githubIssue ?? null;
     selectedDescription.value = context?.description ?? "";

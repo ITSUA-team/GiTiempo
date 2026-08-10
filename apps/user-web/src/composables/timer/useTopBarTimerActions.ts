@@ -3,6 +3,7 @@ import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 import type { StartTimerInput } from "@gitiempo/shared";
 import { isGitHubProjectIssueSelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 import {
+  useStartTimerFromGitHubMutation,
   useStartTimerMutation,
   useStopTimerMutation,
 } from "@/composables/query";
@@ -33,11 +34,19 @@ export function useTopBarTimerActions({
     client,
     scope,
   });
+  const startTimerFromGitHubMutation = useStartTimerFromGitHubMutation({
+    client,
+    scope,
+  });
   const stopTimerMutation = useStopTimerMutation({
     client,
     scope,
   });
-  const isStartingTimer = computed(() => startTimerMutation.isPending.value);
+  const isStartingTimer = computed(
+    () =>
+      startTimerMutation.isPending.value ||
+      startTimerFromGitHubMutation.isPending.value,
+  );
   const isStoppingTimer = computed(() => stopTimerMutation.isPending.value);
   const isPrimaryActionPending = computed(
     () => isStartingTimer.value || isStoppingTimer.value,
@@ -98,7 +107,8 @@ export function useTopBarTimerActions({
 
     try {
       if (isGitHubProjectIssueSelectedTaskContext(draftContext)) {
-        summary.currentTimer.value = await client.startTimerFromGitHub({
+        summary.currentTimer.value =
+          await startTimerFromGitHubMutation.mutateAsync({
           githubProjectId: draftContext.githubProjectId,
           githubRepo: draftContext.githubIssue.githubRepo,
           issueNumber: draftContext.githubIssue.issueNumber,
