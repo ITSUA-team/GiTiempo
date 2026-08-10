@@ -10,6 +10,7 @@ import type {
   GitHubProjectIssueListResponse,
   GitHubProjectListQuery,
   GitHubProjectListResponse,
+  GitHubRepository,
   GitHubRepositoryIssueListResponse,
   GitHubRepositoryListQuery,
   GitHubRepositoryListResponse,
@@ -168,6 +169,24 @@ export class GithubService {
       q: query.q,
       limit: query.limit,
       pageToken: query.pageToken,
+    });
+  }
+
+  async getRepository(
+    user: AuthUser,
+    owner: string,
+    repo: string,
+  ): Promise<GitHubRepository> {
+    const connection = await this.connectedConnection(user.sub);
+    await this.assertRepositoryOwnerAllowed(
+      user.workspaceId,
+      owner,
+      connection,
+    );
+    return this.apiClient.getRepository({
+      accessToken: connection.accessToken,
+      owner,
+      repo,
     });
   }
 

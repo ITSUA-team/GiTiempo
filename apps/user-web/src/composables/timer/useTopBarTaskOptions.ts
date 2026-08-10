@@ -4,12 +4,21 @@ import { useQueryClient, type QueryKey } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
 import { appendUnsyncedProjectGitHubIssueOptions } from "@/lib/project-github-issues";
-import { getGitHubIssueTaskOptionId } from "@/lib/top-bar-timer-helpers";
+import {
+  loadGitHubProjectIssues,
+  loadGitHubProjectRepositories,
+  loadOrganizationGitHubProjects,
+} from "@/lib/timer-github-projects";
+import {
+  getGitHubIssueTaskOptionId,
+  getGitHubProjectIssueTaskOptionId,
+} from "@/lib/top-bar-timer-helpers";
 import {
   timerKeys,
   userProjectsKeys,
   type UserServerStateScope,
 } from "@/lib/query-keys";
+import { TIMER_OPTIONS_STALE_TIME } from "@/lib/timer-options-cache";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import type {
@@ -38,6 +47,7 @@ export function useTopBarTaskOptions({
 }: UseTopBarTaskOptionsOptions) {
   const queryClient = useQueryClient();
   const isLoadingProjects = ref(false);
+  const isLoadingGitHubProjects = ref(false);
   const isLoadingTasks = ref(false);
   let taskRequestId = 0;
 
@@ -82,6 +92,7 @@ export function useTopBarTaskOptions({
       const projects = await queryClient.fetchQuery({
         queryKey: userProjectsKeys.visibleProjects(scope.value),
         queryFn: () => client.listVisibleProjects(),
+        staleTime: TIMER_OPTIONS_STALE_TIME,
       });
 
       for (const project of projects) {
@@ -101,6 +112,103 @@ export function useTopBarTaskOptions({
       throw error;
     } finally {
       isLoadingProjects.value = false;
+    }
+  }
+
+  async function ensureGitHubProjectsLoaded(): Promise<void> {
+    if (!enabled.value) {
+      return;
+    }
+
+    isLoadingGitHubProjects.value = true;
+    picker.setGitHubProjectsError(null);
+
+    try {
+      const result = await queryClient.fetchQuery({
+        queryKey: timerKeys.githubProjects(scope.value),
+        queryFn: () => loadOrganizationGitHubProjects({ client }),
+        staleTime: TIMER_OPTIONS_STALE_TIME,
+      });
+
+      picker.setGitHubProjectAvailability(result.availability);
+      picker.setGitHubProjectsError(result.errorMessage);
+      picker.setGitHubProjectsTruncated(result.isTruncated);
+      picker.setGitHubProjects(
+        result.projects.map((project) => ({
+          ...project,
+          isGitHubProjectOption: true as const,
+        })),
+      );
+
+      if (result.projects.length > 0) {
+        const repositories = await queryClient.fetchQuery({
+          queryKey: timerKeys.githubProjectRepositories(scope.value),
+          queryFn: () =>
+            loadGitHubProjectRepositories({
+              client,
+              projects: result.projects,
+            }),
+          staleTime: TIMER_OPTIONS_STALE_TIME,
+        });
+
+        picker.setGitHubProjectRepositories(repositories);
+      }
+    } catch (error) {
+      picker.setGitHubProjects([]);
+      picker.setGitHubProjectsError(getErrorMessage(error));
+    } finally {
+      isLoadingGitHubProjects.value = false;
+    }
+  }
+
+  async function loadIssuesForGitHubProject(
+    githubProjectId: string,
+  ): Promise<TopBarTaskOption[]> {
+    const requestId = ++taskRequestId;
+
+    isLoadingTasks.value = true;
+    picker.setTasksError(null);
+
+    try {
+      const result = await queryClient.fetchQuery({
+        queryKey: timerKeys.githubProjectIssues(scope.value, githubProjectId),
+        queryFn: () => loadGitHubProjectIssues({ client, githubProjectId }),
+      });
+
+      if (requestId !== taskRequestId) {
+        return picker.tasks.value;
+      }
+
+      const options: TopBarTaskOption[] = result.issues.map((issue) => ({
+        createdAt: issue.updatedAt,
+        defaultBillableForTimeEntries: true,
+        githubIssue: issue.githubIssue,
+        id: getGitHubProjectIssueTaskOptionId(issue.githubIssue),
+        isActive: true,
+        isGitHubProjectIssueOption: true as const,
+        issueTitle: issue.issueTitle,
+        projectId: "",
+        status: "open",
+        title: issue.issueTitle,
+        updatedAt: issue.updatedAt,
+        workspaceId: "",
+      }));
+
+      picker.setGitHubProjectDraftCount(result.draftCount);
+      picker.setTasks(options);
+      picker.setTasksError(result.errorMessage);
+      return options;
+    } catch (error) {
+      if (requestId === taskRequestId) {
+        picker.setTasks([]);
+        picker.setTasksError(getErrorMessage(error));
+      }
+
+      throw error;
+    } finally {
+      if (requestId === taskRequestId) {
+        isLoadingTasks.value = false;
+      }
     }
   }
 
@@ -211,10 +319,13 @@ export function useTopBarTaskOptions({
   }
 
   return {
+    ensureGitHubProjectsLoaded,
     ensureProjectsLoaded,
     getCachedTaskOptions,
+    isLoadingGitHubProjects,
     isLoadingProjects,
     isLoadingTasks,
+    loadIssuesForGitHubProject,
     loadTasksForProject,
     setCachedTaskOptions,
   };

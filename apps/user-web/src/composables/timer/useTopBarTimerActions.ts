@@ -1,7 +1,9 @@
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
 import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 import type { StartTimerInput } from "@gitiempo/shared";
+import { isGitHubProjectIssueSelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 import {
+  useStartTimerFromGitHubMutation,
   useStartTimerMutation,
   useStopTimerMutation,
 } from "@/composables/query";
@@ -32,11 +34,19 @@ export function useTopBarTimerActions({
     client,
     scope,
   });
+  const startTimerFromGitHubMutation = useStartTimerFromGitHubMutation({
+    client,
+    scope,
+  });
   const stopTimerMutation = useStopTimerMutation({
     client,
     scope,
   });
-  const isStartingTimer = computed(() => startTimerMutation.isPending.value);
+  const isStartingTimer = computed(
+    () =>
+      startTimerMutation.isPending.value ||
+      startTimerFromGitHubMutation.isPending.value,
+  );
   const isStoppingTimer = computed(() => stopTimerMutation.isPending.value);
   const isPrimaryActionPending = computed(
     () => isStartingTimer.value || isStoppingTimer.value,
@@ -96,15 +106,25 @@ export function useTopBarTimerActions({
     }
 
     try {
-      const input: StartTimerInput = {
-        taskId: draftContext.taskId,
-      };
+      if (isGitHubProjectIssueSelectedTaskContext(draftContext)) {
+        summary.currentTimer.value =
+          await startTimerFromGitHubMutation.mutateAsync({
+          githubProjectId: draftContext.githubProjectId,
+          githubRepo: draftContext.githubIssue.githubRepo,
+          issueNumber: draftContext.githubIssue.issueNumber,
+          issueTitle: draftContext.issueTitle,
+        });
+      } else {
+        const input: StartTimerInput = {
+          taskId: draftContext.taskId,
+        };
 
-      if (draftDescription !== null) {
-        input.description = draftDescription;
+        if (draftDescription !== null) {
+          input.description = draftDescription;
+        }
+
+        summary.currentTimer.value = await startTimerMutation.mutateAsync(input);
       }
-
-      summary.currentTimer.value = await startTimerMutation.mutateAsync(input);
       if (summary.currentTimer.value) {
         summary.setSelectedContextFromTimer(summary.currentTimer.value);
         summary.setSelectedDescriptionFromTimer(summary.currentTimer.value);
@@ -113,7 +133,9 @@ export function useTopBarTimerActions({
       return true;
     } catch (error) {
       const message = getErrorMessage(error);
-      const toastCopy = getStartTimerErrorToastCopy(message);
+      const toastCopy = isGitHubProjectIssueSelectedTaskContext(draftContext)
+        ? getGitHubProjectStartErrorToastCopy(error, message)
+        : getStartTimerErrorToastCopy(message);
 
       timerActionErrorMessage.value = message;
       appToast.showErrorToast({
@@ -128,6 +150,36 @@ export function useTopBarTimerActions({
       }
       return false;
     }
+  }
+
+  function getGitHubProjectStartErrorToastCopy(
+    error: unknown,
+    message: string,
+  ): { detail: string; summary: string } {
+    if (isApiErrorStatus(error, [403])) {
+      return {
+        detail:
+          "This repository belongs to an organization your workspace has not approved.",
+        summary: "Organization not allowed",
+      };
+    }
+
+    if (isApiErrorStatus(error, [404])) {
+      return {
+        detail:
+          "Connect GitHub, or check that you can still open this repository on GitHub.",
+        summary: "Repository unavailable",
+      };
+    }
+
+    if (isApiErrorStatus(error, [422])) {
+      return {
+        detail: "The project tracking this repository is no longer active.",
+        summary: "Project is inactive",
+      };
+    }
+
+    return { detail: message, summary: "Could not start the timer" };
   }
 
   return {

@@ -4,6 +4,7 @@ import type {
   CreateTaskInput,
   CurrentTimeEntryResponse,
   ProjectResponse,
+  StartTimerFromGitHubInput,
   StartTimerInput,
   TaskResponse,
   TimeEntryListQuery,
@@ -63,6 +64,12 @@ interface ProjectTasksClient {
 
 interface StartTimerClient {
   startTimer(input: StartTimerInput): Promise<TimeEntryResponse>;
+}
+
+interface StartTimerFromGitHubClient {
+  startTimerFromGitHub(
+    input: StartTimerFromGitHubInput,
+  ): Promise<TimeEntryResponse>;
 }
 
 interface StopTimerClient {
@@ -136,6 +143,11 @@ interface UseDeleteTimeEntryMutationOptions extends UserScopedMutationOptions {
 
 interface UseStartTimerMutationOptions extends UserScopedMutationOptions {
   client: StartTimerClient;
+}
+
+interface UseStartTimerFromGitHubMutationOptions
+  extends UserScopedMutationOptions {
+  client: StartTimerFromGitHubClient;
 }
 
 interface UseStopTimerMutationOptions extends UserScopedMutationOptions {
@@ -334,6 +346,28 @@ export const useStartTimerMutation = (options: UseStartTimerMutationOptions) => 
   return useMutation({
     mutationFn: (input: StartTimerInput) =>
       options.client.startTimer(input),
+    onSuccess: async (timer) => {
+      await reconcileTimeEntryCachesAfterTimeEntryMutation(
+        queryClient,
+        toValue(options.scope),
+        timer,
+      );
+      await invalidateQueryKeys(
+        queryClient,
+        userMutationInvalidationKeys.afterTimerMutation(toValue(options.scope)),
+      );
+    },
+  });
+};
+
+export const useStartTimerFromGitHubMutation = (
+  options: UseStartTimerFromGitHubMutationOptions,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: StartTimerFromGitHubInput) =>
+      options.client.startTimerFromGitHub(input),
     onSuccess: async (timer) => {
       await reconcileTimeEntryCachesAfterTimeEntryMutation(
         queryClient,
