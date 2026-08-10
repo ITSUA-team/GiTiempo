@@ -66,7 +66,10 @@ export function useTimeEntriesData({
       return projects.value;
     }
 
-    const result = await visibleProjectsQuery.refetch({ throwOnError: true });
+    const result = await visibleProjectsQuery.refetch({
+      cancelRefetch: false,
+      throwOnError: true,
+    });
 
     if (!result.data) {
       throw result.error ?? new Error("Could not load visible projects.");
@@ -78,7 +81,10 @@ export function useTimeEntriesData({
   async function loadEntries(): Promise<void> {
     try {
       await nextTick();
-      const result = await timeEntriesQuery.refetch({ throwOnError: true });
+      const result = await timeEntriesQuery.refetch({
+        cancelRefetch: false,
+        throwOnError: true,
+      });
 
       if (!result.data) {
         throw result.error ?? new Error("Could not load time entries.");
