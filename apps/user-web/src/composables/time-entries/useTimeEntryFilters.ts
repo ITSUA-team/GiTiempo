@@ -1,6 +1,6 @@
-import type { TimeEntryListQuery } from '@gitiempo/shared';
+import type { ProjectResponse, TimeEntryListQuery } from '@gitiempo/shared';
 import { nextLocalDay, startOfLocalDay } from '@gitiempo/web-shared/time';
-import { computed, ref, shallowRef } from 'vue';
+import { computed, onScopeDispose, ref, shallowRef } from 'vue';
 
 import {
   buildTaskLookupSuggestions,
@@ -37,26 +37,57 @@ function normalizeDateRange(
   return startDate || endDate ? [startDate, endDate] : null;
 }
 
+const FILTER_TYPING_DEBOUNCE_MS = 1000;
+
+function createTypingDebounce() {
+  let pending: ReturnType<typeof setTimeout> | null = null;
+
+  function cancel(): void {
+    if (pending !== null) {
+      clearTimeout(pending);
+      pending = null;
+    }
+  }
+
+  function commit(apply: () => void): void {
+    cancel();
+    apply();
+  }
+
+  function schedule(apply: () => void): void {
+    cancel();
+    pending = setTimeout(() => {
+      pending = null;
+      apply();
+    }, FILTER_TYPING_DEBOUNCE_MS);
+  }
+
+  return { cancel, commit, schedule };
+}
+
 export function useTimeEntryFilters() {
   const currentPage = ref(1);
   const pageSize = ref(20);
   const selectedDateRange = shallowRef<TimeEntryDateRange>(null);
   const selectedProjectId = ref<string | null>(null);
   const selectedTaskFilter = shallowRef<TaskLookupValue>(null);
+  const appliedTaskFilter = shallowRef<TaskLookupValue>(null);
   const filterTaskSuggestions = ref<TaskLookupOption[]>([]);
+  const projectFilterDebounce = createTypingDebounce();
+  const taskFilterDebounce = createTypingDebounce();
 
   const selectedTaskId = computed(() =>
-    isTaskLookupOption(selectedTaskFilter.value)
-      ? selectedTaskFilter.value.id
+    isTaskLookupOption(appliedTaskFilter.value)
+      ? appliedTaskFilter.value.id
       : null,
   );
   const entryListQuery = computed<Partial<TimeEntryListQuery>>(() => {
     const [startDate, endDate] = selectedDateRange.value ?? [];
     const searchValue =
-      typeof selectedTaskFilter.value === 'string'
-        ? selectedTaskFilter.value.trim()
-        : isTaskLookupOption(selectedTaskFilter.value)
-          ? selectedTaskFilter.value.title
+      typeof appliedTaskFilter.value === 'string'
+        ? appliedTaskFilter.value.trim()
+        : isTaskLookupOption(appliedTaskFilter.value)
+          ? appliedTaskFilter.value.title
           : '';
 
     return {
@@ -82,14 +113,41 @@ export function useTimeEntryFilters() {
     selectedDateRange.value = normalizeDateRange(range);
   }
 
-  function setProjectId(projectId: string | null): void {
+  function applyProjectId(projectId: string | null): void {
     selectedProjectId.value = projectId;
+    taskFilterDebounce.cancel();
     selectedTaskFilter.value = null;
+    appliedTaskFilter.value = null;
     filterTaskSuggestions.value = [];
+    currentPage.value = 1;
+  }
+
+  function setProjectValue(value: ProjectResponse | string | null): void {
+    if (typeof value === 'string') {
+      if (value.trim().length === 0) {
+        projectFilterDebounce.schedule(() => applyProjectId(null));
+      }
+
+      return;
+    }
+
+    projectFilterDebounce.commit(() => applyProjectId(value?.id ?? null));
+  }
+
+  function applyTaskFilter(value: TaskLookupValue): void {
+    appliedTaskFilter.value = value;
+    currentPage.value = 1;
   }
 
   function setTaskValue(value: TaskLookupValue): void {
     selectedTaskFilter.value = value;
+
+    if (typeof value === 'string') {
+      taskFilterDebounce.schedule(() => applyTaskFilter(value));
+      return;
+    }
+
+    taskFilterDebounce.commit(() => applyTaskFilter(value));
   }
 
   function updateTaskSuggestions(
@@ -98,6 +156,11 @@ export function useTimeEntryFilters() {
   ): void {
     filterTaskSuggestions.value = buildTaskLookupSuggestions(query, options);
   }
+
+  onScopeDispose(() => {
+    projectFilterDebounce.cancel();
+    taskFilterDebounce.cancel();
+  });
 
   return {
     currentPage,
@@ -111,7 +174,7 @@ export function useTimeEntryFilters() {
     selectedTaskId,
     setDateRange,
     setPage,
-    setProjectId,
+    setProjectValue,
     setTaskValue,
     updateTaskSuggestions,
   };
