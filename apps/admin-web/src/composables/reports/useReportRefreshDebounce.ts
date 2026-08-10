@@ -1,3 +1,4 @@
+import { INPUT_DEBOUNCE_MS } from '@gitiempo/web-shared';
 import { onUnmounted, watch, type ComputedRef, type Ref } from 'vue';
 
 import type { ReportDateRange } from '@/lib/report-view-model';
@@ -31,7 +32,7 @@ export function useReportRefreshDebounce({
 
     onRefreshScheduled();
     clearDebounceTimer();
-    debounceTimer = setTimeout(applyCurrentFilters, 300);
+    debounceTimer = setTimeout(applyCurrentFilters, INPUT_DEBOUNCE_MS);
   }
 
   // Only the date range refetches. Grouping is absent by design: it regroups

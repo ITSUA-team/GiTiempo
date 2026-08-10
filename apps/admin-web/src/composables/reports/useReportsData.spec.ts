@@ -2,6 +2,7 @@
 import { defineComponent, ref, shallowRef } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { INPUT_DEBOUNCE_MS } from '@gitiempo/web-shared';
 import type {
   ProjectListResponse,
   ProjectResponse,
@@ -423,7 +424,7 @@ describe('useReportsData', () => {
       new Date('2026-05-02T12:00:00.000Z'),
     ];
 
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(INPUT_DEBOUNCE_MS);
     await flushPromises();
 
     expect(reportsClient.getTimeReport).toHaveBeenCalledWith(
@@ -461,7 +462,7 @@ describe('useReportsData', () => {
     reportsClient.getTimeReport.mockClear();
 
     reports.grouping.value = ['member', 'project'];
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(INPUT_DEBOUNCE_MS);
     await flushPromises();
 
     // Every grouping path is presented from the same leaf rows, so changing it
@@ -535,7 +536,7 @@ describe('useReportsData', () => {
       new Date('2026-05-02T12:00:00.000Z'),
     ];
 
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(INPUT_DEBOUNCE_MS);
     await flushPromises();
 
     expect(reportsClient.getTimeReport).not.toHaveBeenCalled();
