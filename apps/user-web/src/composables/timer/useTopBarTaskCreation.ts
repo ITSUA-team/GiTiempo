@@ -5,12 +5,14 @@ import { computed, type ComputedRef } from "vue";
 import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
+import type { TopBarTaskOptions } from "./useTopBarTaskOptions";
 import type { TopBarTaskPicker } from "./useTopBarTaskPicker";
 
 interface UseTopBarTaskCreationOptions {
   client: TimeEntriesClient;
   picker: TopBarTaskPicker;
   scope: ComputedRef<UserServerStateScope>;
+  taskOptions: TopBarTaskOptions;
   toast: ToastLike;
 }
 
@@ -18,6 +20,7 @@ export function useTopBarTaskCreation({
   client,
   picker,
   scope,
+  taskOptions,
   toast,
 }: UseTopBarTaskCreationOptions) {
   const appToast = createAppToast(toast);
@@ -45,10 +48,10 @@ export function useTopBarTaskCreation({
         input: parsed,
         projectId,
       });
-      const cachedTasks = picker.getCachedTasks(projectId) ?? [];
+      const cachedTasks = taskOptions.getCachedTaskOptions(projectId) ?? [];
       const nextTasks = [...cachedTasks, task];
 
-      picker.setCachedTasks(projectId, nextTasks);
+      taskOptions.setCachedTaskOptions(projectId, nextTasks);
       picker.setTasks(nextTasks);
       picker.setSelectedTaskId(task.id);
       picker.setCreateTaskTitle("");

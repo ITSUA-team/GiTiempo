@@ -13,6 +13,7 @@ import {
 } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 
+import type { TopBarTaskOptions } from './useTopBarTaskOptions';
 import type { TopBarTaskPicker } from './useTopBarTaskPicker';
 import type { TopBarTimerSummary } from './useTopBarTimerSummary';
 
@@ -21,6 +22,7 @@ interface UseTopBarTimerSelectionUpdateOptions {
   picker: TopBarTaskPicker;
   scope: ComputedRef<UserServerStateScope>;
   summary: TopBarTimerSummary;
+  taskOptions: TopBarTaskOptions;
   toast: ToastLike;
 }
 
@@ -29,6 +31,7 @@ export function useTopBarTimerSelectionUpdate({
   picker,
   scope,
   summary,
+  taskOptions,
   toast,
 }: UseTopBarTimerSelectionUpdateOptions) {
   const appToast = createAppToast(toast);
@@ -58,14 +61,15 @@ export function useTopBarTimerSelectionUpdate({
         projectId: context.projectId,
         issueNumber: context.githubIssue.issueNumber,
       });
-      const cachedTasks = picker.getCachedTasks(context.projectId) ?? picker.tasks.value;
+      const cachedTasks =
+        taskOptions.getCachedTaskOptions(context.projectId) ?? picker.tasks.value;
       const nextTasks = replaceGitHubIssueOptionWithTask(
         cachedTasks,
         context.taskId,
         task,
       );
 
-      picker.setCachedTasks(context.projectId, nextTasks);
+      taskOptions.setCachedTaskOptions(context.projectId, nextTasks);
       picker.setTasks(nextTasks);
       picker.setSelectedTaskId(task.id);
 

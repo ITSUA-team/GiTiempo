@@ -1,11 +1,15 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
-import { useQueryClient } from "@tanstack/vue-query";
+import { useQueryClient, type QueryKey } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
 import { appendUnsyncedProjectGitHubIssueOptions } from "@/lib/project-github-issues";
 import { getGitHubIssueTaskOptionId } from "@/lib/top-bar-timer-helpers";
-import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
+import {
+  timerKeys,
+  userProjectsKeys,
+  type UserServerStateScope,
+} from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import type {
@@ -37,6 +41,32 @@ export function useTopBarTaskOptions({
   const isLoadingTasks = ref(false);
   let taskRequestId = 0;
 
+  function isQueryDataCurrent(queryKey: QueryKey): boolean {
+    const queryState = queryClient.getQueryState(queryKey);
+
+    return queryState !== undefined && !queryState.isInvalidated;
+  }
+
+  function getTaskOptionsQueryKey(projectId: string): QueryKey {
+    return timerKeys.projectTaskOptions(scope.value, projectId);
+  }
+
+  function getCachedTaskOptions(projectId: string): TopBarTaskOption[] | undefined {
+    return queryClient.getQueryData<LoadedTopBarTaskOptions>(
+      getTaskOptionsQueryKey(projectId),
+    )?.taskOptions;
+  }
+
+  function setCachedTaskOptions(
+    projectId: string,
+    taskOptions: TopBarTaskOption[],
+  ): void {
+    queryClient.setQueryData<LoadedTopBarTaskOptions>(
+      getTaskOptionsQueryKey(projectId),
+      { errorMessage: null, taskOptions },
+    );
+  }
+
   async function ensureProjectsLoaded(): Promise<ProjectResponse[]> {
     if (!enabled.value) {
       throw new Error("Authentication is required to load visible projects.");
@@ -50,7 +80,7 @@ export function useTopBarTaskOptions({
         picker.projects.value.map((project) => [project.id, project]),
       );
       const projects = await queryClient.fetchQuery({
-        queryKey: timerKeys.visibleProjects(scope.value),
+        queryKey: userProjectsKeys.visibleProjects(scope.value),
         queryFn: () => client.listVisibleProjects(),
       });
 
@@ -58,7 +88,9 @@ export function useTopBarTaskOptions({
         const previousProject = previousProjectsById.get(project.id);
 
         if (previousProject && previousProject.source !== project.source) {
-          picker.invalidateCachedTasks(project.id);
+          queryClient.removeQueries({
+            queryKey: getTaskOptionsQueryKey(project.id),
+          });
         }
       }
 
@@ -86,18 +118,25 @@ export function useTopBarTaskOptions({
       const hasProjectMetadata = picker.projects.value.some(
         (project) => project.id === projectId,
       );
-      const cachedTasks = picker.getCachedTasks(projectId);
+      const cachedTaskOptions = isQueryDataCurrent(
+        getTaskOptionsQueryKey(projectId),
+      )
+        ? getCachedTaskOptions(projectId)
+        : undefined;
 
-      if (cachedTasks && hasProjectMetadata) {
+      if (cachedTaskOptions && hasProjectMetadata) {
         picker.setTasksError(null);
-        picker.setTasks(cachedTasks);
-        return cachedTasks;
+        picker.setTasks(cachedTaskOptions);
+        return cachedTaskOptions;
       }
 
-      const localTasks = await queryClient.ensureQueryData({
-        queryKey: timerKeys.projectTasks(scope.value, projectId),
+      const localTaskQueryOptions = {
+        queryKey: userProjectsKeys.projectTasks(scope.value, projectId),
         queryFn: () => client.listProjectTasks(projectId),
-      });
+      };
+      const localTasks = isQueryDataCurrent(localTaskQueryOptions.queryKey)
+        ? await queryClient.ensureQueryData(localTaskQueryOptions)
+        : await queryClient.fetchQuery(localTaskQueryOptions);
       const { errorMessage, taskOptions } = await appendGitHubIssueOptions(
         projectId,
         localTasks,
@@ -108,7 +147,7 @@ export function useTopBarTaskOptions({
       }
 
       if (errorMessage === null && hasProjectMetadata) {
-        picker.setCachedTasks(projectId, taskOptions);
+        setCachedTaskOptions(projectId, taskOptions);
       }
       picker.setTasks(taskOptions);
       picker.setTasksError(errorMessage);
@@ -173,8 +212,12 @@ export function useTopBarTaskOptions({
 
   return {
     ensureProjectsLoaded,
+    getCachedTaskOptions,
     isLoadingProjects,
     isLoadingTasks,
     loadTasksForProject,
+    setCachedTaskOptions,
   };
 }
+
+export type TopBarTaskOptions = ReturnType<typeof useTopBarTaskOptions>;
