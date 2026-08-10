@@ -2,7 +2,6 @@
 import Skeleton from "primevue/skeleton";
 import { SurfaceCard } from "@gitiempo/web-shared";
 
-const filterSkeletons = ["7rem", "4.5rem", "3rem"] as const;
 const groupSkeletons = [
   {
     headingWidth: "10rem",
@@ -22,24 +21,6 @@ const groupSkeletons = [
     class="flex flex-col gap-6"
     data-testid="time-entries-loading"
   >
-    <SurfaceCard
-      body-class="grid gap-3 xl:grid-cols-[220px_220px_minmax(0,1fr)]"
-      data-testid="time-entries-loading-filters"
-      padding-class="p-6"
-    >
-      <div
-        v-for="width in filterSkeletons"
-        :key="width"
-        class="flex flex-col gap-1.5"
-      >
-        <Skeleton
-          :width="width"
-          height="0.875rem"
-        />
-        <Skeleton height="2.375rem" />
-      </div>
-    </SurfaceCard>
-
     <div
       class="flex flex-col gap-6"
       data-testid="time-entries-loading-groups"

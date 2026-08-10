@@ -16,6 +16,7 @@ const props = withDefaults(
   defineProps<{
     appendTo?: 'self';
     ariaLabel?: string;
+    autoOptionFocus?: boolean;
     disabled?: boolean;
     forceSelection?: boolean;
     inputId?: string;
@@ -29,6 +30,7 @@ const props = withDefaults(
   {
     appendTo: undefined,
     ariaLabel: undefined,
+    autoOptionFocus: false,
     disabled: false,
     forceSelection: false,
     inputId: undefined,
@@ -108,6 +110,7 @@ const mutableSuggestions = computed(() => [...props.suggestions]);
     v-model="model"
     :append-to="appendTo"
     :aria-label="ariaLabel"
+    :auto-option-focus="autoOptionFocus"
     complete-on-focus
     :disabled="disabled"
     dropdown

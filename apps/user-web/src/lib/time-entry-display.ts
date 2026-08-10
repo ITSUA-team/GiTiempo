@@ -20,6 +20,22 @@ export interface TimeEntriesDayGroup {
   dateKey: string;
   heading: string;
   items: TimeEntryResponse[];
+  totalSeconds: number;
+}
+
+export function getTimeEntryDurationSeconds(
+  entry: TimeEntryResponse,
+  nowMs: number,
+): number {
+  const startedAtMs = new Date(entry.startedAt).getTime();
+  const endedAtMs =
+    entry.endedAt === null ? nowMs : new Date(entry.endedAt).getTime();
+
+  if (entry.endedAt !== null && entry.durationSeconds !== null) {
+    return entry.durationSeconds;
+  }
+
+  return Math.max(0, Math.floor((endedAtMs - startedAtMs) / 1000));
 }
 
 export function groupTimeEntriesByLocalDay(
@@ -40,6 +56,10 @@ export function groupTimeEntriesByLocalDay(
     dateKey,
     heading: formatLocalDayLabel(dateKey, nowMs),
     items,
+    totalSeconds: items.reduce(
+      (total, entry) => total + getTimeEntryDurationSeconds(entry, nowMs),
+      0,
+    ),
   }));
 }
 

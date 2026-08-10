@@ -3122,13 +3122,56 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "text",
-                              "id": "ctTdh",
-                              "fill": "$color-text-dark",
-                              "content": "Today, Apr 21",
-                              "fontFamily": "Inter",
-                              "fontSize": 16,
-                              "fontWeight": "600"
+                              "type": "frame",
+                              "id": "u8dwa",
+                              "name": "dayOneHeading",
+                              "alignItems": "center",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ctTdh",
+                                  "fill": "$color-text-dark",
+                                  "content": "Today, Apr 21",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "EdKMA",
+                                  "name": "dayOneTotal",
+                                  "fill": "$color-accent-tint",
+                                  "cornerRadius": "$radius-sm",
+                                  "padding": [
+                                    6,
+                                    10
+                                  ],
+                                  "alignItems": "center",
+                                  "gap": 6,
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "gaAhy",
+                                      "name": "dayOneTotalIcon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "clock",
+                                      "library": "lucide",
+                                      "fill": "$color-brand"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "1rYct",
+                                      "fill": "$color-brand",
+                                      "content": "2h 22m",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
                             },
                             {
                               "type": "frame",
@@ -3571,13 +3614,56 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "text",
-                              "id": "benVz",
-                              "fill": "$color-text-dark",
-                              "content": "Yesterday, Apr 20",
-                              "fontFamily": "Inter",
-                              "fontSize": 16,
-                              "fontWeight": "600"
+                              "type": "frame",
+                              "id": "QHM1L",
+                              "name": "dayTwoHeading",
+                              "alignItems": "center",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "benVz",
+                                  "fill": "$color-text-dark",
+                                  "content": "Yesterday, Apr 20",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Fmsa7",
+                                  "name": "dayTwoTotal",
+                                  "fill": "$color-accent-tint",
+                                  "cornerRadius": "$radius-sm",
+                                  "padding": [
+                                    6,
+                                    10
+                                  ],
+                                  "alignItems": "center",
+                                  "gap": 6,
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "upEsE",
+                                      "name": "dayTwoTotalIcon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "clock",
+                                      "library": "lucide",
+                                      "fill": "$color-brand"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "I7HaX",
+                                      "fill": "$color-brand",
+                                      "content": "2h 40m",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
                             },
                             {
                               "type": "frame",

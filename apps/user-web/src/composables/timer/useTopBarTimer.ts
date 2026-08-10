@@ -56,6 +56,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     client,
     picker,
     scope,
+    taskOptions,
     toast,
   });
   const timerActions = useTopBarTimerActions({
@@ -70,6 +71,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     picker,
     scope,
     summary,
+    taskOptions,
     toast,
   });
   const viewModel = useTopBarTimerViewModel({
