@@ -654,4 +654,54 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.emitted("confirm")?.length).toBeGreaterThan(0);
     expect(wrapper.emitted("primaryAction")?.length).toBeGreaterThan(0);
   });
+
+  it("restores the selected task when force selection rejects a partial query", async () => {
+    const wrapper = mountDialog({
+      selectedTaskId: "task-1",
+      taskOptions: [reportsTask, alertTask],
+    });
+    const taskAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1];
+
+    await taskAutoComplete?.vm.$emit("update:modelValue", "Fix al");
+    await taskAutoComplete?.vm.$emit("update:modelValue", null);
+
+    expect(wrapper.emitted("update:selectedTaskId")).toBeUndefined();
+    expect(taskAutoComplete?.props("modelValue")).toEqual(reportsTask);
+  });
+
+  it("leaves the field empty when force selection rejects free text and nothing was selected", async () => {
+    const wrapper = mountDialog({
+      selectedTaskId: null,
+      taskOptions: [reportsTask, alertTask],
+    });
+    const taskAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1];
+
+    await taskAutoComplete?.vm.$emit("update:modelValue", "Fix al");
+    await taskAutoComplete?.vm.$emit("update:modelValue", null);
+
+    expect(wrapper.emitted("update:selectedTaskId")).toBeUndefined();
+    expect(taskAutoComplete?.props("modelValue")).toBeNull();
+  });
+
+  it("keeps the suggestion list untouched while force selection rejects free text", async () => {
+    const wrapper = mountDialog({
+      selectedTaskId: "task-1",
+      taskOptions: [reportsTask, alertTask],
+    });
+    const taskAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1];
+
+    await taskAutoComplete?.vm.$emit("complete", { query: "Fix al" });
+    const narrowedSuggestions = taskAutoComplete?.props("suggestions");
+
+    await taskAutoComplete?.vm.$emit("update:modelValue", null);
+
+    const requestedSelections = wrapper.emitted("update:selectedTaskId") ?? [];
+    const lastRequest = requestedSelections[requestedSelections.length - 1];
+
+    if (lastRequest) {
+      await wrapper.setProps({ selectedTaskId: lastRequest[0] as string | null });
+    }
+
+    expect(taskAutoComplete?.props("suggestions")).toBe(narrowedSuggestions);
+  });
 });
