@@ -1,4 +1,5 @@
 import type { ProjectResponse, TimeEntryListQuery } from '@gitiempo/shared';
+import { INPUT_DEBOUNCE_MS } from '@gitiempo/web-shared';
 import { nextLocalDay, startOfLocalDay } from '@gitiempo/web-shared/time';
 import { computed, onScopeDispose, ref, shallowRef } from 'vue';
 
@@ -37,8 +38,6 @@ function normalizeDateRange(
   return startDate || endDate ? [startDate, endDate] : null;
 }
 
-const FILTER_TYPING_DEBOUNCE_MS = 1000;
-
 function createTypingDebounce() {
   let pending: ReturnType<typeof setTimeout> | null = null;
 
@@ -59,7 +58,7 @@ function createTypingDebounce() {
     pending = setTimeout(() => {
       pending = null;
       apply();
-    }, FILTER_TYPING_DEBOUNCE_MS);
+    }, INPUT_DEBOUNCE_MS);
   }
 
   return { cancel, commit, schedule };

@@ -9,6 +9,7 @@ import type {
   TimeEntryResponse,
 } from "@gitiempo/shared";
 
+import { INPUT_DEBOUNCE_MS } from "@gitiempo/web-shared";
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
 import { TIME_ENTRY_NEW_TASK_ID } from "@/composables/time-entries/time-entry-task-lookup";
 import { topBarTimerDialogControllerKey } from "@/composables/timer/useTopBarTimerDialogController";
@@ -564,8 +565,6 @@ async function mountView(
 
   return { client, pinia, queryClient, topBarTimerDialogController, wrapper };
 }
-
-const FILTER_TYPING_DEBOUNCE_MS = 1000;
 
 describe("TimeEntriesView", () => {
   beforeEach(() => {
@@ -1973,7 +1972,7 @@ describe("TimeEntriesView", () => {
 
     expect(client.listOwnEntries.mock.calls.length).toBe(callsBeforeTyping);
 
-    vi.advanceTimersByTime(FILTER_TYPING_DEBOUNCE_MS);
+    vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
     await flushPromises();
 
     expect(client.listOwnEntries.mock.calls.length).toBe(callsBeforeTyping + 1);
@@ -2011,7 +2010,7 @@ describe("TimeEntriesView", () => {
 
     expect(client.listOwnEntries.mock.calls.length).toBe(callsBeforeClearing);
 
-    vi.advanceTimersByTime(FILTER_TYPING_DEBOUNCE_MS);
+    vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
     await flushPromises();
 
     expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toEqual(
@@ -2030,7 +2029,7 @@ describe("TimeEntriesView", () => {
     );
 
     await wrapper.get('[data-testid="filter-task-type"]').trigger("click");
-    vi.advanceTimersByTime(FILTER_TYPING_DEBOUNCE_MS);
+    vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
     await flushPromises();
 
     expect(wrapper.find('[data-testid="time-entries-loading"]').exists()).toBe(true);
