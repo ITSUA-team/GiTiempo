@@ -133,12 +133,12 @@ function handleStartTimer(entry: TimeEntryResponse): void {
         <span>{{ props.group.heading }}</span>
         <span class="text-text-muted font-normal">—</span>
         <span
-          class="inline-flex items-center gap-1.5 tabular-nums"
+          class="text-brand inline-flex items-center gap-1.5 tabular-nums"
           :data-testid="`time-entries-day-total-${props.group.dateKey}`"
         >
           <ClockIcon
             aria-hidden="true"
-            class="text-text-muted size-4"
+            class="size-4"
           />
           <span>{{ dayTotalLabel }}</span>
         </span>
