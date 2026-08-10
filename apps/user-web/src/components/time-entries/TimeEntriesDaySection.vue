@@ -129,16 +129,15 @@ function handleStartTimer(entry: TimeEntryResponse): void {
 <template>
   <section class="flex flex-col gap-3">
     <div class="flex items-center justify-between gap-3">
-      <h2 class="text-text-dark flex items-center gap-2 text-base font-semibold">
-        <span>{{ props.group.heading }}</span>
-        <span class="text-text-muted font-normal">—</span>
+      <h2 class="text-text-dark flex min-w-0 items-center gap-2.5 text-base font-semibold">
+        <span class="truncate">{{ props.group.heading }}</span>
         <span
-          class="text-brand inline-flex items-center gap-1.5 tabular-nums"
+          class="bg-accent-tint text-brand inline-flex shrink-0 items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-[13px] tabular-nums"
           :data-testid="`time-entries-day-total-${props.group.dateKey}`"
         >
           <ClockIcon
             aria-hidden="true"
-            class="size-4"
+            class="size-3.5"
           />
           <span>{{ dayTotalLabel }}</span>
         </span>
