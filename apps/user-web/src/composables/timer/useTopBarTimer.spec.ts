@@ -14,6 +14,7 @@ import { useTopBarTimer } from './useTopBarTimer';
 import {
   timeEntriesKeys,
   userMutationInvalidationKeys,
+  userProjectsKeys,
 } from '@/lib/query-keys';
 import { TOP_BAR_TIMER_NEW_TASK_ID } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
@@ -2416,4 +2417,44 @@ describe('useTopBarTimer', () => {
     ]);
   });
 
+  it('reuses project tasks already cached by the projects page', async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listOwnEntries.mockResolvedValue(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Write release checklist'),
+    ]);
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { queryClient, topBarTimer } = mounted;
+
+    await flushPromises();
+
+    queryClient.setQueryData(
+      userProjectsKeys.projectTasks(TEST_SCOPE, TEST_IDS.project),
+      [
+        createTask(TEST_IDS.task, TEST_IDS.project, 'Write release checklist'),
+        createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'Review PM scope rules'),
+      ],
+    );
+
+    const callsBeforeDialog = client.listProjectTasks.mock.calls.length;
+
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(callsBeforeDialog);
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'Write release checklist',
+      'Review PM scope rules',
+    ]);
+  });
 });

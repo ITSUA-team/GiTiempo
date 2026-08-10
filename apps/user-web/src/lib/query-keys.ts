@@ -77,17 +77,20 @@ export const timerKeys = {
     scope: UserServerStateScope,
     query?: Partial<TimeEntryListQuery>,
   ) => [...timerKeys.all(scope), "eligible-last-entry", normalizeTimeEntryListQuery(query)] as const,
-  projectTasks: (scope: UserServerStateScope, projectId: string | null | undefined) =>
-    [...timerKeys.all(scope), "project-tasks", normalizeString(projectId)] as const,
-  visibleProjects: (scope: UserServerStateScope) =>
-    [...timerKeys.all(scope), "visible-projects"] as const,
+  projectTaskOptions: (
+    scope: UserServerStateScope,
+    projectId: string | null | undefined,
+  ) =>
+    [
+      ...timerKeys.all(scope),
+      "project-task-options",
+      normalizeString(projectId),
+    ] as const,
 };
 
 export const userProjectsKeys = {
   all: (scope?: UserServerStateScope) =>
     ["user-web", normalizeScope(scope), "projects"] as const,
-  page: (scope: UserServerStateScope) =>
-    [...userProjectsKeys.all(scope), "page"] as const,
   projectTasks: (scope: UserServerStateScope, projectId: string | null | undefined) =>
     [...userProjectsKeys.all(scope), "project-tasks", normalizeString(projectId)] as const,
   visibleProjects: (scope: UserServerStateScope) =>
