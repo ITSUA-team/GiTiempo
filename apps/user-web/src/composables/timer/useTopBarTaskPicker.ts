@@ -49,7 +49,6 @@ export function isTopBarGitHubProjectIssueTaskOption(
 export function useTopBarTaskPicker() {
   const projects = ref<ProjectResponse[]>([]);
   const tasks = ref<TopBarTaskOption[]>([]);
-  const taskCache = new Map<string, TopBarTaskOption[]>();
   const isDialogOpen = ref(false);
   const selectedProjectId = ref<string | null>(null);
   const selectedTaskId = ref<string | null>(null);
@@ -103,18 +102,6 @@ export function useTopBarTaskPicker() {
 
   function setTasks(nextTasks: TopBarTaskOption[]): void {
     tasks.value = nextTasks;
-  }
-
-  function getCachedTasks(projectId: string): TopBarTaskOption[] | undefined {
-    return taskCache.get(projectId);
-  }
-
-  function setCachedTasks(projectId: string, nextTasks: TopBarTaskOption[]): void {
-    taskCache.set(projectId, nextTasks);
-  }
-
-  function invalidateCachedTasks(projectId: string): void {
-    taskCache.delete(projectId);
   }
 
   function openTaskPicker(
@@ -309,10 +296,8 @@ export function useTopBarTaskPicker() {
     closeDialog,
     createTaskErrorMessage,
     createTaskTitle,
-    getCachedTasks,
     getNormalizedDescription,
     getSelectedTaskContext,
-    invalidateCachedTasks,
     isConfirmSelectionDisabled,
     isCreateTaskTitleEmpty,
     isDialogOpen,
@@ -325,7 +310,6 @@ export function useTopBarTaskPicker() {
     selectedProjectId,
     selectedTask,
     selectedTaskId,
-    setCachedTasks,
     setCreateTaskError,
     setCreateTaskTitle,
     setProjects,

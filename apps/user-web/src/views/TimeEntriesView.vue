@@ -230,28 +230,14 @@ async function setDateRange(
   await applyFilters();
 }
 
-async function setSelectedProjectId(projectId: string | null): Promise<void> {
-  filters.setProjectId(projectId);
-  await applyFilters();
-}
-
-async function setSelectedProjectFilterValue(
+function setSelectedProjectFilterValue(
   value: ProjectResponse | string | null,
-): Promise<void> {
-  if (typeof value === "string") {
-    if (value.trim().length === 0) {
-      await setSelectedProjectId(null);
-    }
-
-    return;
-  }
-
-  await setSelectedProjectId(value?.id ?? null);
+): void {
+  filters.setProjectValue(value);
 }
 
-async function setSelectedTaskFilter(value: TaskLookupValue): Promise<void> {
+function setSelectedTaskFilter(value: TaskLookupValue): void {
   filters.setTaskValue(value);
-  await applyFilters();
 }
 
 function handleFilterTaskSearch(query: string): void {
@@ -278,24 +264,24 @@ onMounted(async () => {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
+    <TimeEntriesFilters
+      :is-loading-projects="isLoadingProjects"
+      :project-suggestions="projectFilterSuggestions"
+      :projects-error-message="projectsErrorMessage"
+      :selected-date-range="selectedDateRange"
+      :selected-project="selectedProjectFilterOption"
+      :selected-task="selectedTaskFilter"
+      :task-suggestions="filterTaskSuggestions"
+      @project-complete="handleProjectFilterComplete"
+      @task-search="handleFilterTaskSearch"
+      @update:date-range="(value) => void setDateRange(value)"
+      @update:project-value="(value) => void setSelectedProjectFilterValue(value)"
+      @update:task-value="(value) => void setSelectedTaskFilter(value)"
+    />
+
     <TimeEntriesLoadingState v-if="pageState === 'loading'" />
 
     <template v-else>
-      <TimeEntriesFilters
-        :is-loading-projects="isLoadingProjects"
-        :project-suggestions="projectFilterSuggestions"
-        :projects-error-message="projectsErrorMessage"
-        :selected-date-range="selectedDateRange"
-        :selected-project="selectedProjectFilterOption"
-        :selected-task="selectedTaskFilter"
-        :task-suggestions="filterTaskSuggestions"
-        @project-complete="handleProjectFilterComplete"
-        @task-search="handleFilterTaskSearch"
-        @update:date-range="(value) => void setDateRange(value)"
-        @update:project-value="(value) => void setSelectedProjectFilterValue(value)"
-        @update:task-value="(value) => void setSelectedTaskFilter(value)"
-      />
-
       <RequestStateCard
         v-if="pageState === 'request-error'"
         data-testid="time-entries-request-error"

@@ -285,15 +285,15 @@ function handleMobileProjectUpdate(
 }
 
 function handleMobileTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
-  mobileTaskModel.value = value ?? null;
-
-  if (isTaskOption(value)) {
-    emit("update:selectedTaskId", value.id);
+  if (value === null || value === undefined) {
+    mobileTaskModel.value = findTaskOption(props.selectedTaskId);
     return;
   }
 
-  if (value === null || value === undefined) {
-    emit("update:selectedTaskId", null);
+  mobileTaskModel.value = value;
+
+  if (isTaskOption(value)) {
+    emit("update:selectedTaskId", value.id);
   }
 }
 

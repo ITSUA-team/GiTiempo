@@ -3,6 +3,7 @@ import DatePicker from "primevue/datepicker";
 import type { ProjectResponse } from "@gitiempo/shared";
 import { giTiempoDatePickerPt } from "@gitiempo/web-config/theme";
 import { FilterAutoComplete, SurfaceCard } from "@gitiempo/web-shared";
+import { shallowRef, watch } from "vue";
 
 import type {
   TaskLookupOption,
@@ -23,7 +24,9 @@ interface TimeEntriesFiltersProps {
   taskSuggestions: TaskLookupOption[];
 }
 
-defineProps<TimeEntriesFiltersProps>();
+const props = defineProps<TimeEntriesFiltersProps>();
+
+const projectModel = shallowRef<ProjectResponse | string | null>(null);
 
 const emit = defineEmits<{
   projectComplete: [query: string];
@@ -32,6 +35,14 @@ const emit = defineEmits<{
   "update:projectValue": [value: ProjectResponse | string | null];
   "update:taskValue": [value: TaskLookupValue];
 }>();
+
+watch(
+  () => props.selectedProject,
+  (project) => {
+    projectModel.value = project;
+  },
+  { immediate: true },
+);
 
 function emitProjectComplete(event: { query: string }): void {
   emit("projectComplete", event.query);
@@ -48,7 +59,32 @@ function updateDateRange(value: TimeEntryDatePickerRangeValue): void {
 function updateProjectValue(
   value: ProjectResponse | string | null | undefined,
 ): void {
+  projectModel.value = value ?? null;
   emit("update:projectValue", value ?? null);
+}
+
+function commitProjectQuery(): void {
+  const typedQuery = projectModel.value;
+
+  if (typeof typedQuery !== "string") {
+    return;
+  }
+
+  const normalizedQuery = typedQuery.trim().toLocaleLowerCase();
+  const matchedProject = props.projectSuggestions.find(
+    (project) => project.name.trim().toLocaleLowerCase() === normalizedQuery,
+  );
+
+  if (!matchedProject) {
+    projectModel.value = props.selectedProject;
+    return;
+  }
+
+  projectModel.value = matchedProject;
+
+  if (matchedProject.id !== props.selectedProject?.id) {
+    emit("update:projectValue", matchedProject);
+  }
 }
 
 function updateTaskValue(value: TaskLookupValue | undefined): void {
@@ -94,16 +130,18 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
         </label>
         <FilterAutoComplete
           append-to="self"
+          auto-option-focus
           class="w-full max-w-full min-w-0"
           input-id="time-entries-project-filter"
           option-label="name"
           placeholder="All projects"
           :suggestions="projectSuggestions"
           :disabled="isLoadingProjects"
-          force-selection
           :loading="isLoadingProjects"
-          :model-value="selectedProject"
+          :model-value="projectModel"
           show-clear
+          @blur="commitProjectQuery"
+          @keydown.enter="commitProjectQuery"
           @complete="emitProjectComplete"
           @update:model-value="updateProjectValue"
         />
@@ -122,6 +160,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           input-id="time-entries-task-filter"
           option-label="title"
           placeholder="Search tasks"
+          show-clear
           :model-value="selectedTask"
           :suggestions="taskSuggestions"
           @complete="emitTaskSearch"

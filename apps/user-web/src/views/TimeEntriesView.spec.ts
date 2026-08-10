@@ -9,6 +9,7 @@ import type {
   TimeEntryResponse,
 } from "@gitiempo/shared";
 
+import { INPUT_DEBOUNCE_MS } from "@gitiempo/web-shared";
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
 import { TIME_ENTRY_NEW_TASK_ID } from "@/composables/time-entries/time-entry-task-lookup";
 import { topBarTimerDialogControllerKey } from "@/composables/timer/useTopBarTimerDialogController";
@@ -314,6 +315,7 @@ async function mountView(
               </p>
               <template v-if="inputId === 'time-entries-project-filter'">
                 <button data-testid="project-filter-search" type="button" @click="$emit('complete', { query: 'Project' })">Search project</button>
+                <button data-testid="project-filter-clear-typing" type="button" @click="$emit('update:modelValue', '')">Clear project text</button>
                 <button data-testid="project-filter-select" type="button" @click="$emit('update:modelValue', {
                   id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
                   name: 'Project Orion'
@@ -322,6 +324,7 @@ async function mountView(
               <template v-else>
                 <button data-testid="filter-task-focus" type="button" @click="$emit('complete', { query: '' })">Focus task</button>
                 <button data-testid="filter-task-search" type="button" @click="$emit('complete', { query: 'ship' })">Search task</button>
+                <button data-testid="filter-task-type" type="button" @click="$emit('update:modelValue', 'shi')">Type task</button>
                 <button data-testid="filter-task-select" type="button" @click="$emit('update:modelValue', {
                   id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
                   isActive: true,
@@ -586,7 +589,7 @@ describe("TimeEntriesView", () => {
     vi.useRealTimers();
   });
 
-  it("renders a structured skeleton while initial entries load", async () => {
+  it("keeps the filters mounted and skeletons only the list while entries load", async () => {
     const client = createClientMock();
 
     client.listOwnEntries.mockReturnValue(
@@ -598,14 +601,14 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(wrapper.find('[data-testid="time-entries-loading"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="time-entries-loading-filters"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entries-loading-filters"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="time-entries-loading-groups"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="time-entries-loading-day"]')).toHaveLength(2);
     expect(wrapper.findAll('[data-testid="time-entries-loading-entry-row"]')).toHaveLength(2);
     expect(wrapper.find('[data-testid="time-entries-loading-pagination"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="time-entries-skeleton"]').length).toBeGreaterThan(10);
     expect(wrapper.findAll('[data-testid="time-entries-skeleton"]').length).toBeLessThanOrEqual(20);
-    expect(wrapper.find('[data-testid="date-range-filter"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="date-range-filter"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="time-entries-loading-desktop-table"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="time-entries-loading-mobile-card"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="time-entries-groups"]').exists()).toBe(false);
@@ -1958,5 +1961,83 @@ describe("TimeEntriesView", () => {
         summary: "Could not delete time entry",
       }),
     );
+  });
+
+  it("debounces the task search before requesting entries", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    const callsBeforeTyping = client.listOwnEntries.mock.calls.length;
+
+    await wrapper.get('[data-testid="filter-task-type"]').trigger("click");
+    await flushPromises();
+
+    expect(client.listOwnEntries.mock.calls.length).toBe(callsBeforeTyping);
+
+    vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
+    await flushPromises();
+
+    expect(client.listOwnEntries.mock.calls.length).toBe(callsBeforeTyping + 1);
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ page: 1, search: "shi" }),
+    );
+  });
+
+  it("requests entries at once for a task picked from the list", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    const callsBeforeSelect = client.listOwnEntries.mock.calls.length;
+
+    await wrapper.get('[data-testid="filter-task-select"]').trigger("click");
+    await flushPromises();
+
+    expect(client.listOwnEntries.mock.calls.length).toBe(callsBeforeSelect + 1);
+  });
+
+  it("debounces clearing the project filter by emptying the field", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-filter-select"]').trigger("click");
+    await flushPromises();
+
+    const callsBeforeClearing = client.listOwnEntries.mock.calls.length;
+
+    await wrapper.get('[data-testid="project-filter-clear-typing"]').trigger("click");
+    await flushPromises();
+
+    expect(client.listOwnEntries.mock.calls.length).toBe(callsBeforeClearing);
+
+    vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
+    await flushPromises();
+
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ projectId: undefined }),
+    );
+  });
+
+  it("keeps the filter form mounted while a filter change reloads the list", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    client.listOwnEntries.mockReturnValue(
+      new Promise<TimeEntryListResponse>(() => undefined),
+    );
+
+    await wrapper.get('[data-testid="filter-task-type"]').trigger("click");
+    vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="time-entries-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="date-range-filter"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="filter-task-autocomplete"]').exists()).toBe(true);
   });
 });
