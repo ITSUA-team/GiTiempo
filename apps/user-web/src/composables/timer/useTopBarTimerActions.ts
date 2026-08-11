@@ -112,7 +112,6 @@ export function useTopBarTimerActions({
           githubProjectId: draftContext.githubProjectId,
           githubRepo: draftContext.githubIssue.githubRepo,
           issueNumber: draftContext.githubIssue.issueNumber,
-          issueTitle: draftContext.issueTitle,
         });
       } else {
         const input: StartTimerInput = {

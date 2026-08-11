@@ -60,6 +60,37 @@ Each of these is a path that assumes a real project id. They are listed separate
 - [x] 6.2 Record that starting a timer from a GitHub issue now verifies the repository and the organization policy, and that this applies to the extension as well
 - [x] 6.3 State plainly that a member can create a workspace project this way, and that the boundary is the workspace organization policy
 
+## 8. Add Project becomes one form
+
+- [x] 8.1 Make Source the first field of the existing Add Project form and drop the two source tiles that switched mode from the sidebar
+- [x] 8.2 Swap the typed name for an organization field plus a GitHub project autocomplete in the import branch, and derive a read-only project name from them
+- [x] 8.3 Share Project manager, Visibility and Default billable across both branches, with one submit that creates or imports and then assigns the manager
+- [x] 8.4 Move the derived copy — name, linked repository, issues scanned, status, outcome sentence — into a pure module and cover its branches without mounting anything
+- [x] 8.5 Reduce the import panel to a fieldset that reports a selection, so it no longer imports anything itself
+- [x] 8.6 Clear the name field whenever Source changes, since the form library keeps a value for an input that has unmounted
+- [x] 8.7 Add a regression spec that mounts the real form components rather than stubs, and confirm it fails without 8.6
+
+## 9. The import request carries the project settings
+
+- [x] 9.1 Add optional visibility and default-billable to the import request, per project rather than per request
+- [x] 9.2 Pass them into the insert only when supplied, so an omitted value still takes the column default
+- [x] 9.3 Report an organization outside the policy as a refused organization rather than a repository that could not be found
+- [x] 9.4 Rethrow anything that is not the policy refusal, so an unrelated failure cannot be reported as one
+- [x] 9.5 Add contract specs for both settings and for a visibility the table cannot store
+- [x] 9.6 Add the first server-side coverage of the import routes: settings stored, defaults kept, unstorable visibility refused, one refused organization not aborting the batch, a second import not modifying the existing project
+- [x] 9.7 Regenerate the OpenAPI document and confirm the required list is unchanged
+
+## 10. A timer joins an existing project before creating one
+
+- [x] 10.1 Carry the board id on the existing GitHub start request as an optional field, and send it from the picker's board issue context
+- [x] 10.2 Resolve the project as repository first, then the project imported for the named board, then create
+- [x] 10.3 Keep an issue in the project that already holds it when that project is the named board's, so gaining a repository project later cannot make the issue unstartable
+- [x] 10.4 Leave the existing refusal intact for two projects disagreeing about one issue for any other reason
+- [x] 10.5 Stop listing the inline new-task option while a board is selected, in both places that build the task options
+- [x] 10.6 Clear a task selected under the previous project when a board is chosen
+- [x] 10.7 Explain a board with no issues instead of inviting a task that cannot be created
+- [x] 10.8 Add e2e coverage for each resolution branch, and specs proving the new-task option is absent and the selection is cleared
+
 ## 7. Verification
 
 - [ ] 7.1 As a member, open the timer picker and confirm approved organization boards appear grouped separately from projects
@@ -69,3 +100,8 @@ Each of these is a path that assumes a real project id. They are listed separate
 - [ ] 7.5 Confirm the Chrome extension still starts timers from a GitHub issue unchanged
 - [ ] 7.6 Attempt the start request directly for a repository outside the organization policy and confirm it is refused with nothing written
 - [ ] 7.7 Open the board that holds only draft items and confirm the draft count is explained rather than shown as an empty or failed list
+- [ ] 7.8 On `/projects/new`, import a GitHub project with a chosen manager, visibility and billable default, and confirm all three landed on the created project
+- [ ] 7.9 Type a project name, switch Source to GitHub and back, and confirm the name is empty rather than silently retained
+- [ ] 7.10 Start a timer from an issue of an imported board whose repository has no project, and confirm the time lands in the board's project rather than a new one
+- [ ] 7.11 Create a project for that repository, start the same issue again, and confirm it still runs against the project that already holds it
+- [ ] 7.12 Select a board in the timer picker and confirm New task is not offered at all
