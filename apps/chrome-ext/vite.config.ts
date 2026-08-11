@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 import { defineConfig, loadEnv, type UserConfig } from "vite";
 import webExtension from "vite-plugin-web-extension";
 
-const GECKO_EXTENSION_ID = "gitiempo@itsua.dev";
 const GECKO_MIN_VERSION = "112.0";
 
 type ExtensionTarget = "chrome" | "firefox";
@@ -32,6 +31,10 @@ function buildManifest(mode: string): Record<string, unknown> {
     normalizeBaseUrl(env.VITE_EXTENSION_API_BASE_URL),
   ).origin;
   const extensionKey = env.VITE_EXTENSION_KEY?.trim();
+  const geckoExtensionId = getRequiredEnvValue(
+    env.VITE_EXTENSION_GECKO_ID,
+    "VITE_EXTENSION_GECKO_ID",
+  );
 
   getRequiredEnvValue(
     env.VITE_EXTENSION_GOOGLE_CLIENT_ID,
@@ -49,7 +52,7 @@ function buildManifest(mode: string): Record<string, unknown> {
     host_permissions: [`${apiOrigin}/*`, "https://github.com/*"],
     "{{firefox}}.browser_specific_settings": {
       gecko: {
-        id: GECKO_EXTENSION_ID,
+        id: geckoExtensionId,
         strict_min_version: GECKO_MIN_VERSION,
         data_collection_permissions: {
           required: ["websiteActivity"],
