@@ -913,7 +913,6 @@ describe('Time entries (e2e)', () => {
             githubProjectId: boardId,
             githubRepo,
             issueNumber: 20 + index,
-            issueTitle: `Board issue ${index}`,
           });
         expect(started.status).toBe(201);
 
