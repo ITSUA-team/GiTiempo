@@ -130,9 +130,12 @@ type ProjectIssueGraphqlResponse = {
   errors?: unknown[];
 };
 
-type ProjectOwnerGraphqlResponse = {
+type ProjectGraphqlResponse = {
   data?: {
     node?: {
+      title?: string;
+      number?: number;
+      url?: string;
       owner?: {
         __typename?: 'Organization' | 'User';
         login?: string;
@@ -141,6 +144,14 @@ type ProjectOwnerGraphqlResponse = {
   };
   errors?: unknown[];
 };
+
+export interface GithubProjectSummary {
+  found: boolean;
+  owner: { type: 'personal' | 'organization'; login: string | null };
+  title: string | null;
+  number: number | null;
+  url: string | null;
+}
 
 @Injectable()
 export class GithubApiClientService {
@@ -414,6 +425,7 @@ export class GithubApiClientService {
       `/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}/issues/${input.issueNumber}`,
       {},
       null,
+      'GitHub issue not found',
     ).then((result) => result.body);
 
     if (issue.pull_request !== undefined) {
@@ -506,14 +518,17 @@ export class GithubApiClientService {
     };
   }
 
-  async getProjectOwner(input: {
+  async getProject(input: {
     accessToken: string;
     projectId: string;
-  }): Promise<{ type: 'personal' | 'organization'; login: string | null }> {
+  }): Promise<GithubProjectSummary> {
     const query = `
       query($id: ID!) {
         node(id: $id) {
           ... on ProjectV2 {
+            title
+            number
+            url
             owner {
               __typename
               ... on Organization { login }
@@ -523,20 +538,35 @@ export class GithubApiClientService {
         }
       }
     `;
-    const body = await this.graphql<ProjectOwnerGraphqlResponse>(
+    const body = await this.graphql<ProjectGraphqlResponse>(
       input.accessToken,
       query,
       { id: input.projectId },
     );
-    const owner = body.data?.node?.owner;
-    if (!owner?.__typename) {
-      return { type: 'organization', login: null };
-    }
+    const node = body.data?.node;
+    const owner = node?.owner;
 
     return {
-      type: owner.__typename === 'User' ? 'personal' : 'organization',
-      login: owner.login ?? null,
+      found: Boolean(node),
+      owner: owner?.__typename
+        ? {
+            type: owner.__typename === 'User' ? 'personal' : 'organization',
+            login: owner.login ?? null,
+          }
+        : { type: 'organization', login: null },
+      title: node?.title ?? null,
+      number: node?.number ?? null,
+      url: node?.url ?? null,
     };
+  }
+
+  async getProjectOwner(input: {
+    accessToken: string;
+    projectId: string;
+  }): Promise<{ type: 'personal' | 'organization'; login: string | null }> {
+    const project = await this.getProject(input);
+
+    return project.owner;
   }
 
   private async searchRepositoryIssues(input: {
@@ -573,6 +603,7 @@ export class GithubApiClientService {
     path: string,
     query: Record<string, string>,
     paginationKind: 'rest-page' | 'rest-cursor' | null,
+    notFoundMessage?: string,
   ): Promise<RestResult<T>> {
     const url = new URL(path, GITHUB_API);
     for (const [key, value] of Object.entries(query)) {
@@ -582,6 +613,9 @@ export class GithubApiClientService {
       headers: this.headers(accessToken),
     });
     const body = (await this.readJson(response)) as T;
+    if (response.status === 404 && notFoundMessage) {
+      throw new NotFoundException(notFoundMessage);
+    }
     if (!response.ok) {
       this.logger.warn({
         event: 'github.api.request_failed',

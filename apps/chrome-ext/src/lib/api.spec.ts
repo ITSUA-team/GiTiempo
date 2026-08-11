@@ -451,7 +451,6 @@ describe("createExtensionApiClient", () => {
         body: JSON.stringify({
           githubRepo: "octo/repo",
           issueNumber: 184,
-          issueTitle: "Improve reports filters",
         }),
         headers: {
           Authorization: "Bearer access-token",
@@ -647,7 +646,6 @@ describe("createExtensionApiClient", () => {
         body: JSON.stringify({
           githubRepo: "octo/repo",
           issueNumber: 184,
-          issueTitle: "Improve reports filters",
         }),
         headers: {
           Authorization: "Bearer access-token-next",

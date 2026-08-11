@@ -75,6 +75,30 @@ The picker MUST NOT hide a board because a GiTiempo project already tracks one o
 - **THEN** the existing project is reused
 - **AND** no duplicate project is created
 
+#### Scenario: A board that was imported as a project receives its own issues
+
+- **GIVEN** a board that an admin added as a GiTiempo project
+- **AND** no GiTiempo project tracks the repository of one of its issues
+- **WHEN** the member starts a timer on that issue from the board
+- **THEN** the timer runs against the project that was added for the board
+- **AND** no second project is created for the repository
+
+#### Scenario: The repository decides when both exist
+
+- **GIVEN** a board that was added as a project
+- **AND** a separate GiTiempo project tracking the repository of one of its issues
+- **WHEN** the member starts a timer on that issue from the board
+- **THEN** the timer runs against the project tracking the repository
+- **AND** time already recorded against that repository is not split away from it
+
+#### Scenario: An issue keeps the project that already holds it
+
+- **GIVEN** an issue already tracked in the project added for its board
+- **AND** a project for that issue's repository appears afterwards
+- **WHEN** the member starts a timer on the same issue from the same board again
+- **THEN** the timer runs against the project that already holds it
+- **AND** the request is not refused
+
 ### Requirement: Selecting A Board Lists Its Trackable Issues
 
 Selecting a board SHALL list that board's open issues in the task field. Each listed issue MUST carry the repository it belongs to, since that repository is what the timer is started against. Board items that are not trackable issues MUST be reported rather than silently dropped.
@@ -142,12 +166,27 @@ Starting a timer against a board issue SHALL use the existing GitHub start-timer
 
 The picker MUST keep board targets out of the state that represents selected GiTiempo projects, so that no code path expecting a project identifier can receive a board.
 
-#### Scenario: Creating a task inline is unavailable for a board
+#### Scenario: Creating a task inline is not offered for a board
 
 - **GIVEN** a board is selected in the picker
-- **WHEN** the member looks for the inline new-task action
-- **THEN** the action is unavailable
-- **AND** the picker explains that a task can be created once a timer has been started from the board
+- **WHEN** the member opens the task field
+- **THEN** the new-task option is not listed at all
+- **AND** the task options are the board's issues only
+
+#### Scenario: A board with no issues explains itself rather than offering a dead action
+
+- **GIVEN** a board whose items yield no trackable issue
+- **WHEN** the member opens the task field
+- **THEN** the picker states that the board has no issues to track yet
+- **AND** it points at GitHub as the place that changes it
+- **AND** it does not invite the member to create a task
+
+#### Scenario: Choosing a board drops a task selected under the previous project
+
+- **GIVEN** a GiTiempo project is selected with a task chosen
+- **WHEN** the member selects a board instead
+- **THEN** the chosen task is cleared
+- **AND** the timer cannot be started until one of the board's issues is chosen
 
 #### Scenario: A running timer cannot be reassigned to a board issue directly
 

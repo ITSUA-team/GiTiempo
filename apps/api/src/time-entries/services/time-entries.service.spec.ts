@@ -27,9 +27,21 @@ const mockGithubTasks = {} as never;
 
 function mockGithub(
   repository: { fullName: string } = { fullName: 'octo-org/repo-name' },
+  issue?: { number?: number; title?: string },
 ) {
   return {
     getRepository: vi.fn().mockResolvedValue(repository),
+    getRepositoryIssue: vi.fn(
+      async (
+        _user: unknown,
+        _owner: string,
+        _repo: string,
+        issueNumber: number,
+      ) => ({
+        number: issue?.number ?? issueNumber,
+        title: issue?.title ?? 'Issue title from GitHub',
+      }),
+    ),
   } as never;
 }
 
@@ -891,7 +903,6 @@ describe('TimeEntriesService', () => {
     await service.startTimerFromGitHub(user, {
       githubRepo: 'org/repo',
       issueNumber: 123,
-      issueTitle: 'Issue title',
     });
 
     expect(db.transaction).toHaveBeenCalledOnce();
@@ -900,7 +911,7 @@ describe('TimeEntriesService', () => {
       workspaceId: user.workspaceId,
       projectId: 'project-1',
       issueKey: 'org/repo#123',
-      issueTitle: 'Issue title',
+      issueTitle: 'Issue title from GitHub',
       defaultBillableForTimeEntries: false,
     });
     expect(timeEntryValues).toHaveBeenCalledWith(
@@ -958,7 +969,6 @@ describe('TimeEntriesService', () => {
       service.startTimerFromGitHub(user, {
         githubRepo: 'org/repo',
         issueNumber: 123,
-        issueTitle: 'Issue title',
       }),
     ).rejects.toThrow('Task is closed');
     expect(tx.insert).not.toHaveBeenCalled();
@@ -1016,7 +1026,6 @@ describe('TimeEntriesService GitHub start authorization', () => {
       service.startTimerFromGitHub(user, {
         githubRepo: 'org/repo',
         issueNumber: 1,
-        issueTitle: 'Issue title',
       }),
     ).rejects.toBe(error);
 
@@ -1036,7 +1045,6 @@ describe('TimeEntriesService GitHub start authorization', () => {
       service.startTimerFromGitHub(user, {
         githubRepo: 'org/repo',
         issueNumber: 1,
-        issueTitle: 'Issue title',
       }),
     ).rejects.toThrow('transaction must not run in this test');
 
@@ -1044,6 +1052,107 @@ describe('TimeEntriesService GitHub start authorization', () => {
       github as unknown as { getRepository: { mock: { calls: unknown[][] } } }
     ).getRepository;
     expect(getRepository.mock.calls[0]?.slice(1)).toEqual(['org', 'repo']);
+  });
+
+  it('titles the task from GitHub, not from anything the caller could send', async () => {
+    const tx = {
+      insert: vi.fn().mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: 'entry-1' }]),
+        }),
+      }),
+      select: vi.fn().mockReturnValue(
+        selectRowsForUpdate([
+          {
+            id: 'task-1',
+            isActive: true,
+            projectId: 'project-1',
+            status: 'open',
+            workspaceId: user.workspaceId,
+          },
+        ]),
+      ),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const githubTasks = {
+      resolveProjectForIssue: vi.fn().mockResolvedValue({
+        project: {
+          id: 'project-1',
+          defaultBillableForTasks: true,
+          isActive: true,
+        },
+        created: false,
+      }),
+      findOrCreateTaskForIssue: vi.fn().mockResolvedValue({
+        id: 'task-1',
+        isActive: true,
+        status: 'open',
+      }),
+    };
+    const github = mockGithub(
+      { fullName: 'org/repo' },
+      { title: 'Real title' },
+    );
+    const service = new TimeEntriesService(
+      db as never,
+      {
+        requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
+      } as never,
+      { requireVisibleProject: vi.fn() } as never,
+      {} as never,
+      mockUsersActivity as never,
+      githubTasks as never,
+      github,
+    );
+    Object.defineProperty(service, 'requireEntryResponse', {
+      value: vi.fn().mockResolvedValue(completedEntry),
+    });
+
+    await service.startTimerFromGitHub(user, {
+      githubRepo: 'org/repo',
+      issueNumber: 7,
+    });
+
+    expect(githubTasks.findOrCreateTaskForIssue).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ issueTitle: 'Real title' }),
+    );
+  });
+
+  it('refuses an issue GitHub does not have before opening the transaction', async () => {
+    const db = { transaction: vi.fn() };
+    const githubTasks = {
+      resolveProjectForIssue: vi.fn(),
+      findOrCreateTaskForIssue: vi.fn(),
+    };
+    const github = mockGithub();
+    (
+      github as unknown as {
+        getRepositoryIssue: { mockRejectedValue: (e: unknown) => void };
+      }
+    ).getRepositoryIssue.mockRejectedValue(
+      new NotFoundException('GitHub issue not found'),
+    );
+    const service = new TimeEntriesService(
+      db as never,
+      {
+        requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
+      } as never,
+      { requireVisibleProject: vi.fn() } as never,
+      {} as never,
+      mockUsersActivity as never,
+      githubTasks as never,
+      github,
+    );
+
+    await expect(
+      service.startTimerFromGitHub(user, {
+        githubRepo: 'org/repo',
+        issueNumber: 999,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(githubTasks.findOrCreateTaskForIssue).not.toHaveBeenCalled();
   });
 
   it('records the repository name GitHub reports, not the caller casing', async () => {
@@ -1100,7 +1209,6 @@ describe('TimeEntriesService GitHub start authorization', () => {
     await service.startTimerFromGitHub(user, {
       githubRepo: 'org/repo',
       issueNumber: 7,
-      issueTitle: 'Issue title',
     });
 
     expect(githubTasks.resolveProjectForIssue).toHaveBeenCalledWith(tx, user, {

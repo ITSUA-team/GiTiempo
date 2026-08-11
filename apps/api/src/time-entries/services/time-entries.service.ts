@@ -343,7 +343,13 @@ export class TimeEntriesService {
       repoParts.repo,
     );
     const githubRepo = repository.fullName;
-    const issueKey = `${githubRepo}#${input.issueNumber}`;
+    const issue = await this.github.getRepositoryIssue(
+      user,
+      repoParts.owner,
+      repoParts.repo,
+      input.issueNumber,
+    );
+    const issueKey = `${githubRepo}#${issue.number}`;
 
     try {
       const entryId = await this.db.transaction(async (tx) => {
@@ -382,7 +388,7 @@ export class TimeEntriesService {
           workspaceId: user.workspaceId,
           projectId: project.id,
           issueKey,
-          issueTitle: input.issueTitle,
+          issueTitle: issue.title,
           defaultBillableForTimeEntries: project.defaultBillableForTasks,
         });
         const lockedTask = await this.requireTaskRowForUpdate(
