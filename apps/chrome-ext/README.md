@@ -51,20 +51,30 @@ The plugin also discovers entry points from the manifest, which is why it lists 
 
 `browser_specific_settings.gecko.id` is not cosmetic. Firefox derives the `identity.getRedirectURL()` value from the extension id, and without a fixed id that redirect changes on every temporary install, so no Google OAuth client could ever match it.
 
-## Google sign-in redirect URIs
+## Sign-in redirect URIs
 
-Each browser has its own redirect URI, and both must be registered on the Google OAuth client:
+Both sign-in paths return through a browser-specific URL, and each browser needs its own registration.
+
+**Google** — register both on the OAuth client:
 
 - Chrome: `https://<extension-id>.chromiumapp.org/oauth2`
 - Firefox: derived from the gecko id, on `extensions.allizom.org`
 
+**GitHub** — the backend owns the destination and never takes one from the request, so it needs a configured value per browser:
+
+- `GITHUB_SIGNIN_EXTENSION_REDIRECT_URL` — Chrome
+- `GITHUB_SIGNIN_EXTENSION_FIREFOX_REDIRECT_URL` — Firefox
+
+The build stamps its target into the extension, which sends `browser=chrome` or `browser=firefox` on `/auth/github/start`. That names one of the two configured destinations rather than supplying one, so a caller still cannot steer where a handoff code is delivered.
+
 Firefox's value cannot be predicted from the id by hand. Load the extension, open the background console from `about:debugging`, and read it:
 
 ```js
-browser.identity.getRedirectURL("oauth2");
+browser.identity.getRedirectURL("oauth2");   // Google
+browser.identity.getRedirectURL();           // GitHub
 ```
 
-Register whatever that prints. It stays stable as long as `gecko.id` does — which is why that id must never change once an OAuth client is registered against it.
+Register the first with Google and set the second as the Firefox backend variable. Both stay stable as long as `gecko.id` does — which is why that id must never change once anything is registered against it.
 
 ## Data collection
 

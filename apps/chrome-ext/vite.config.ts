@@ -99,6 +99,9 @@ export default defineConfig(({ mode }): UserConfig => {
       emptyOutDir: true,
       outDir: `dist/${browser}`,
     },
+    define: {
+      "import.meta.env.VITE_EXTENSION_BROWSER": JSON.stringify(browser),
+    },
     plugins: [
       tailwindcss(),
       webExtension({

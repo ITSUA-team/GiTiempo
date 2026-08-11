@@ -6,6 +6,7 @@ describe("getExtensionConfig", () => {
   it("allows localhost defaults in test mode", () => {
     expect(getExtensionConfig({ MODE: "test" })).toEqual({
       apiBaseUrl: "http://localhost:3000",
+      browser: "chrome",
       firebase: {
         apiKey: "test-firebase-api-key",
         authDomain: "test-project.firebaseapp.com",
@@ -57,6 +58,7 @@ describe("getExtensionConfig", () => {
       }),
     ).toEqual({
       apiBaseUrl: "https://api.example.com",
+      browser: "chrome",
       firebase: {
         apiKey: "firebase-api-key",
         authDomain: "project.firebaseapp.com",
@@ -127,5 +129,15 @@ describe("getExtensionConfig", () => {
       );
       expect(config.firebase).not.toBeNull();
     });
+  });
+  it("reports the browser the build targeted", () => {
+    expect(
+      getExtensionConfig({ MODE: "test", VITE_EXTENSION_BROWSER: "firefox" })
+        .browser,
+    ).toBe("firefox");
+    expect(
+      getExtensionConfig({ MODE: "test", VITE_EXTENSION_BROWSER: "safari" })
+        .browser,
+    ).toBe("chrome");
   });
 });

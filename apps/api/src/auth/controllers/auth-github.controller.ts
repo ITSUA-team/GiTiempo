@@ -26,6 +26,7 @@ import { TokenPairResponseDto } from '../dto/token-pair-response.dto';
 import {
   AuthGithubService,
   GITHUB_OAUTH_STATE_COOKIE,
+  parseGithubExtensionBrowser,
   parseGithubLoginApp,
 } from '../services/auth-github.service';
 
@@ -50,6 +51,13 @@ export class AuthGithubController {
     type: String,
     description:
       'Same-app absolute path to return to after sign-in. Re-sanitized server-side, then signed into the OAuth state. Ignored for the `extension` target, which has no in-app route to return to.',
+  })
+  @ApiQuery({
+    name: 'browser',
+    required: false,
+    enum: ['chrome', 'firefox'],
+    description:
+      'Which browser the `extension` target began in, selecting between destinations the operator configured. An absent or unrecognized value resolves to `chrome`. Ignored for web targets. It names a configured destination rather than supplying one, so the callback still only ever redirects to a URL the server owns.',
   })
   @ApiQuery({
     name: 'challenge',
@@ -85,6 +93,7 @@ export class AuthGithubController {
     @Query('app') app: string | undefined,
     @Query('redirect') redirect: string | undefined,
     @Query('challenge') challenge: string | undefined,
+    @Query('browser') browser: string | undefined,
     @Res() response: Response,
   ): void {
     const target = parseGithubLoginApp(app);
@@ -94,6 +103,7 @@ export class AuthGithubController {
       target,
       redirect,
       challenge,
+      parseGithubExtensionBrowser(browser),
     );
     // Bind the transaction to this browser: the callback is only honored when it
     // presents this HttpOnly cookie whose nonce matches the signed state. Skipped

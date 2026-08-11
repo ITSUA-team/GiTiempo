@@ -12,6 +12,33 @@ import { AuthService, type TokenPair } from './auth.service';
 
 export type GithubLoginApp = 'user' | 'admin' | 'extension';
 
+/**
+ * Which browser's extension began the flow. It selects among destinations the
+ * operator configured — never a caller-supplied URL — so the exact-match
+ * guarantee `redirectBase` documents still holds. Firefox needs its own entry
+ * because its `identity.getRedirectURL()` host is derived from the extension id
+ * by the browser and cannot be computed server side.
+ */
+export type GithubExtensionBrowser = 'chrome' | 'firefox';
+
+const GITHUB_EXTENSION_BROWSERS: readonly GithubExtensionBrowser[] = [
+  'chrome',
+  'firefox',
+];
+
+export function parseGithubExtensionBrowser(
+  value: string | undefined,
+): GithubExtensionBrowser {
+  return GITHUB_EXTENSION_BROWSERS.includes(value as GithubExtensionBrowser)
+    ? (value as GithubExtensionBrowser)
+    : 'chrome';
+}
+
+export interface GithubRedirectTarget {
+  app: GithubLoginApp;
+  browser: GithubExtensionBrowser;
+}
+
 const GITHUB_LOGIN_APPS: readonly GithubLoginApp[] = [
   'user',
   'admin',
@@ -69,6 +96,11 @@ interface GithubStateClaims {
   challenge?: string;
   /** Same-app absolute path to return to after login (protected-route redirect). */
   redirect?: string;
+  /**
+   * Present only when the extension flow began in a browser other than Chrome.
+   * Absent means Chrome, which keeps states signed before Firefox support valid.
+   */
+  browser?: GithubExtensionBrowser;
 }
 
 interface GithubEmailEntry {
@@ -119,12 +151,13 @@ export class AuthGithubService {
     app: GithubLoginApp,
     redirect?: string,
     challenge?: string,
+    browser: GithubExtensionBrowser = 'chrome',
   ): { url: string; stateNonce: string } {
     // Fail before the browser leaves for GitHub rather than at the callback: an
     // unconfigured destination would otherwise surface as a 503 on an API page
     // the user never asked to see, after they had already authorized.
     if (app === 'extension') {
-      this.redirectBase(app);
+      this.redirectBase({ app, browser });
       // Chrome's extension authorization window does not carry the HttpOnly
       // state cookie through to the callback, measured rather than assumed, so
       // the cookie cannot bind this target. The extension instead proves
@@ -143,6 +176,7 @@ export class AuthGithubService {
       // there and is dropped rather than signed into the state.
       app === 'extension' ? undefined : this.sanitizeRedirect(redirect),
       app === 'extension' ? challenge : undefined,
+      app === 'extension' ? browser : undefined,
     );
     const url = new URL('https://github.com/login/oauth/authorize');
     url.searchParams.set(
@@ -365,6 +399,7 @@ export class AuthGithubService {
     nonceHash: string,
     redirect?: string,
     challenge?: string,
+    browser?: GithubExtensionBrowser,
   ): string {
     const claims: GithubStateClaims = {
       purpose: 'gh-login-state',
@@ -373,6 +408,7 @@ export class AuthGithubService {
     };
     if (redirect) claims.redirect = redirect;
     if (challenge) claims.challenge = challenge;
+    if (browser && browser !== 'chrome') claims.browser = browser;
     return jwt.sign(claims, this.secret(), { expiresIn: '10m' });
   }
 
@@ -429,20 +465,23 @@ export class AuthGithubService {
    * or a failed exchange still lands the user in the app they started from.
    * Falls back to the user app when the state is absent or unverifiable.
    */
-  private resolveStateApp(state: string | undefined): GithubLoginApp {
-    if (!state) return 'user';
+  private resolveStateApp(state: string | undefined): GithubRedirectTarget {
+    if (!state) return { app: 'user', browser: 'chrome' };
     try {
       const decoded = jwt.verify(state, this.secret()) as GithubStateClaims;
       if (
         decoded.purpose === 'gh-login-state' &&
         GITHUB_LOGIN_APPS.includes(decoded.app)
       ) {
-        return decoded.app;
+        return {
+          app: decoded.app,
+          browser: parseGithubExtensionBrowser(decoded.browser),
+        };
       }
     } catch {
       // Unverifiable state → user-app fallback below.
     }
-    return 'user';
+    return { app: 'user', browser: 'chrome' };
   }
 
   private hashNonce(nonce: string): string {
@@ -537,25 +576,31 @@ export class AuthGithubService {
    * caller-supplied destination would let anyone who can reach `/start` have a
    * code delivered to a host they control (RFC 9700 §4.1 exact-match redirects).
    */
-  private redirectBase(app: GithubLoginApp): string {
-    if (app === 'extension') {
-      return this.requireConfig('GITHUB_SIGNIN_EXTENSION_REDIRECT_URL');
+  private redirectBase(target: GithubRedirectTarget): string {
+    if (target.app === 'extension') {
+      return this.requireConfig(
+        target.browser === 'firefox'
+          ? 'GITHUB_SIGNIN_EXTENSION_FIREFOX_REDIRECT_URL'
+          : 'GITHUB_SIGNIN_EXTENSION_REDIRECT_URL',
+      );
     }
+    const app = target.app;
     return this.requireConfig(
       app === 'admin' ? 'ADMIN_SPA_URL' : 'USER_SPA_URL',
     );
   }
 
   private appRedirect(
-    app: GithubLoginApp,
+    target: GithubRedirectTarget,
     path: string,
     query: Record<string, string>,
   ): string {
-    const base = this.redirectBase(app);
+    const base = this.redirectBase(target);
     // The extension has no route to load: Chrome intercepts the navigation as
     // soon as it matches the extension's redirect URL, so the outcome rides on
     // that URL's own query rather than on a path inside an app.
-    const url = app === 'extension' ? new URL(base) : new URL(path, base);
+    const url =
+      target.app === 'extension' ? new URL(base) : new URL(path, base);
     for (const [key, value] of Object.entries(query)) {
       url.searchParams.set(key, value);
     }

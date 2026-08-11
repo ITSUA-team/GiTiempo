@@ -1,5 +1,8 @@
+export type ExtensionBrowser = "chrome" | "firefox";
+
 export interface ExtensionConfig {
   apiBaseUrl: string;
+  browser: ExtensionBrowser;
   firebase: {
     apiKey: string;
     authDomain: string;
@@ -16,6 +19,7 @@ interface ExtensionEnv {
   DEV?: boolean;
   MODE?: string;
   VITE_EXTENSION_API_BASE_URL?: string;
+  VITE_EXTENSION_BROWSER?: string;
   VITE_EXTENSION_FIREBASE_API_KEY?: string;
   VITE_EXTENSION_FIREBASE_AUTH_DOMAIN?: string;
   VITE_EXTENSION_FIREBASE_PROJECT_ID?: string;
@@ -126,6 +130,10 @@ export function getExtensionConfig(
 
   return {
     apiBaseUrl,
+    // Baked in at build time by the target that produced this bundle. The
+    // backend keeps one configured GitHub redirect per browser, and this is how
+    // a build names which of them its flow should come back to.
+    browser: env.VITE_EXTENSION_BROWSER === "firefox" ? "firefox" : "chrome",
     firebase: {
       apiKey: firebaseApiKey,
       authDomain: firebaseAuthDomain,
