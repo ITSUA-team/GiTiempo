@@ -77,6 +77,21 @@ export const timerKeys = {
     scope: UserServerStateScope,
     query?: Partial<TimeEntryListQuery>,
   ) => [...timerKeys.all(scope), "eligible-last-entry", normalizeTimeEntryListQuery(query)] as const,
+  githubOwners: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "github-owners"] as const,
+  githubProjects: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "github-projects"] as const,
+  githubProjectRepositories: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "github-project-repositories"] as const,
+  githubProjectIssues: (
+    scope: UserServerStateScope,
+    githubProjectId: string | null | undefined,
+  ) =>
+    [
+      ...timerKeys.all(scope),
+      "github-project-issues",
+      normalizeString(githubProjectId),
+    ] as const,
   projectTaskOptions: (
     scope: UserServerStateScope,
     projectId: string | null | undefined,

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -23,6 +24,14 @@ const mockUsersActivity = {
 };
 
 const mockGithubTasks = {} as never;
+
+function mockGithub(
+  repository: { fullName: string } = { fullName: 'octo-org/repo-name' },
+) {
+  return {
+    getRepository: vi.fn().mockResolvedValue(repository),
+  } as never;
+}
 
 const completedEntry = {
   id: 'entry-1',
@@ -117,6 +126,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
 
     Object.defineProperty(service, 'requireEntryResponse', {
@@ -179,6 +189,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({
@@ -230,6 +241,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
 
     await expect(
@@ -271,6 +283,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
 
     await expect(
@@ -308,6 +321,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
 
     await expect(
@@ -344,6 +358,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({ ...runningEntry, taskId: 'task-2' }),
@@ -390,6 +405,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
 
     await expect(
@@ -419,6 +435,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
 
     await expect(
@@ -450,6 +467,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
     const requireEntryResponse = vi
       .fn()
@@ -478,6 +496,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
 
     await expect(service.getCurrentTimer(user)).resolves.toEqual({
@@ -507,6 +526,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({
@@ -572,6 +592,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
     const requireEntryResponse = vi.fn().mockResolvedValue(stoppedEntry);
     Object.defineProperty(service, 'requireEntryResponse', {
@@ -611,6 +632,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
 
     await expect(service.stopTimer(user)).rejects.toBeInstanceOf(
@@ -631,6 +653,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
 
     await expect(service.stopTimer(user)).rejects.toBeInstanceOf(
@@ -657,6 +680,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue(completedEntry),
@@ -700,6 +724,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue(completedEntry),
@@ -744,6 +769,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({ ...completedEntry, taskId: 'task-2' }),
@@ -786,6 +812,7 @@ describe('TimeEntriesService', () => {
       tasks as never,
       mockUsersActivity as never,
       mockGithubTasks,
+      mockGithub(),
     );
 
     await expect(
@@ -830,7 +857,7 @@ describe('TimeEntriesService', () => {
       requireActiveMembership: vi.fn().mockResolvedValue({ role: 'member' }),
     };
     const githubTasks = {
-      findOrCreateProjectForRepo: vi.fn().mockResolvedValue({
+      resolveProjectForIssue: vi.fn().mockResolvedValue({
         project: {
           id: 'project-1',
           defaultBillableForTasks: false,
@@ -851,6 +878,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
       githubTasks as never,
+      mockGithub({ fullName: 'org/repo' }),
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue(completedEntry),
@@ -898,7 +926,7 @@ describe('TimeEntriesService', () => {
       requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
     const githubTasks = {
-      findOrCreateProjectForRepo: vi.fn().mockResolvedValue({
+      resolveProjectForIssue: vi.fn().mockResolvedValue({
         project: {
           id: 'project-1',
           defaultBillableForTasks: true,
@@ -919,6 +947,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
       githubTasks as never,
+      mockGithub({ fullName: 'org/repo' }),
     );
 
     await expect(
@@ -929,5 +958,155 @@ describe('TimeEntriesService', () => {
       }),
     ).rejects.toThrow('Task is closed');
     expect(tx.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe('TimeEntriesService GitHub start authorization', () => {
+  function rejectingGithub(error: Error) {
+    return {
+      getRepository: vi.fn().mockRejectedValue(error),
+    } as never;
+  }
+
+  function authorizationService(github: never) {
+    const db = { transaction: vi.fn() };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'member' }),
+    };
+    const githubTasks = {
+      resolveProjectForIssue: vi.fn(),
+      findOrCreateTaskForIssue: vi.fn(),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      githubTasks as never,
+      github,
+    );
+
+    return { db, githubTasks, service };
+  }
+
+  it.each([
+    [
+      'a missing GitHub connection',
+      new NotFoundException('GitHub connection not found'),
+    ],
+    [
+      'an owner outside the workspace organization policy',
+      new ForbiddenException('Organization not allowed'),
+    ],
+    [
+      'an unknown repository',
+      new NotFoundException('GitHub repository not found'),
+    ],
+  ])('writes nothing when verification fails for %s', async (_label, error) => {
+    const { db, githubTasks, service } = authorizationService(
+      rejectingGithub(error),
+    );
+
+    await expect(
+      service.startTimerFromGitHub(user, {
+        githubRepo: 'org/repo',
+        issueNumber: 1,
+        issueTitle: 'Issue title',
+      }),
+    ).rejects.toBe(error);
+
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(githubTasks.resolveProjectForIssue).not.toHaveBeenCalled();
+    expect(githubTasks.findOrCreateTaskForIssue).not.toHaveBeenCalled();
+  });
+
+  it('verifies the repository before opening the creating transaction', async () => {
+    const github = mockGithub({ fullName: 'org/repo' });
+    const { db, service } = authorizationService(github);
+    db.transaction.mockImplementation(() => {
+      throw new Error('transaction must not run in this test');
+    });
+
+    await expect(
+      service.startTimerFromGitHub(user, {
+        githubRepo: 'org/repo',
+        issueNumber: 1,
+        issueTitle: 'Issue title',
+      }),
+    ).rejects.toThrow('transaction must not run in this test');
+
+    const getRepository = (
+      github as unknown as { getRepository: { mock: { calls: unknown[][] } } }
+    ).getRepository;
+    expect(getRepository.mock.calls[0]?.slice(1)).toEqual(['org', 'repo']);
+  });
+
+  it('records the repository name GitHub reports, not the caller casing', async () => {
+    const tx = {
+      insert: vi.fn().mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: 'entry-1' }]),
+        }),
+      }),
+      select: vi.fn().mockReturnValue(
+        selectRowsForUpdate([
+          {
+            id: 'task-1',
+            isActive: true,
+            projectId: 'project-1',
+            status: 'open',
+            workspaceId: user.workspaceId,
+          },
+        ]),
+      ),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const githubTasks = {
+      resolveProjectForIssue: vi.fn().mockResolvedValue({
+        project: {
+          id: 'project-1',
+          defaultBillableForTasks: true,
+          isActive: true,
+        },
+        created: false,
+      }),
+      findOrCreateTaskForIssue: vi.fn().mockResolvedValue({
+        id: 'task-1',
+        isActive: true,
+        status: 'open',
+      }),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      { requireVisibleProject: vi.fn() } as never,
+      {} as never,
+      mockUsersActivity as never,
+      githubTasks as never,
+      mockGithub({ fullName: 'Org/Repo' }),
+    );
+    Object.defineProperty(service, 'requireEntryResponse', {
+      value: vi.fn().mockResolvedValue(completedEntry),
+    });
+
+    await service.startTimerFromGitHub(user, {
+      githubRepo: 'org/repo',
+      issueNumber: 7,
+      issueTitle: 'Issue title',
+    });
+
+    expect(githubTasks.resolveProjectForIssue).toHaveBeenCalledWith(tx, user, {
+      githubProjectId: undefined,
+      githubRepo: 'Org/Repo',
+      issueKey: 'Org/Repo#7',
+    });
+    expect(githubTasks.findOrCreateTaskForIssue).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ issueKey: 'Org/Repo#7' }),
+    );
   });
 });

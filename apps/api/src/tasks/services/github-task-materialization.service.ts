@@ -240,6 +240,111 @@ export class GithubTaskMaterializationService {
     return task;
   }
 
+  async resolveProjectForIssue(
+    executor: QueryExecutor,
+    user: AuthUser,
+    input: {
+      githubProjectId?: string | undefined;
+      githubRepo: string;
+      issueKey: string;
+    },
+  ): Promise<{ created: boolean; project: ProjectRow }> {
+    const boardProject =
+      input.githubProjectId === undefined
+        ? null
+        : await this.findBoardProject(
+            executor,
+            user.workspaceId,
+            input.githubProjectId,
+          );
+
+    if (boardProject) {
+      const trackedIssue = await this.findGitHubTaskRefInWorkspace(
+        executor,
+        user.workspaceId,
+        await this.canonicalizeIssueKey(user.workspaceId, input.issueKey),
+      );
+
+      if (trackedIssue?.projectId === boardProject.id) {
+        return { project: boardProject, created: false };
+      }
+    }
+
+    const repositoryRef = await this.findGitHubProjectRef(
+      executor,
+      user.workspaceId,
+      input.githubRepo,
+    );
+
+    if (repositoryRef) {
+      return {
+        project: await this.requireProjectRow(
+          executor,
+          user.workspaceId,
+          repositoryRef.projectId,
+        ),
+        created: false,
+      };
+    }
+
+    return this.findOrCreateProjectForRepo(executor, user, input.githubRepo);
+  }
+
+  private async findBoardProject(
+    executor: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    githubProjectId: string,
+  ): Promise<ProjectRow | null> {
+    const boardRef = await this.findGitHubBoardRef(
+      executor,
+      workspaceId,
+      githubProjectId,
+    );
+
+    if (!boardRef) {
+      return null;
+    }
+
+    return this.findProjectRow(executor, workspaceId, boardRef.projectId);
+  }
+
+  private async findGitHubBoardRef(
+    executor: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    githubProjectId: string,
+  ): Promise<{ projectId: string } | null> {
+    const [row] = await executor
+      .select({ projectId: projectExternalRefs.projectId })
+      .from(projectExternalRefs)
+      .where(
+        and(
+          eq(projectExternalRefs.workspaceId, workspaceId),
+          eq(projectExternalRefs.provider, 'github'),
+          eq(projectExternalRefs.externalType, 'project'),
+          eq(projectExternalRefs.externalKey, githubProjectId),
+        ),
+      )
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  private async findProjectRow(
+    executor: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    projectId: string,
+  ): Promise<ProjectRow | null> {
+    const [row] = await executor
+      .select(projectRowSelection)
+      .from(projects)
+      .where(
+        and(eq(projects.workspaceId, workspaceId), eq(projects.id, projectId)),
+      )
+      .limit(1);
+
+    return row ?? null;
+  }
+
   async findProjectRepoKey(
     workspaceId: string,
     projectId: string,

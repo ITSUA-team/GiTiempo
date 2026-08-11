@@ -48,7 +48,10 @@ export function useTopBarTimerDialogFlow({
     }
 
     try {
-      await taskOptions.ensureProjectsLoaded();
+      await Promise.all([
+        taskOptions.ensureProjectsLoaded(),
+        taskOptions.ensureGitHubProjectsLoaded(),
+      ]);
 
       if (picker.selectedProjectId.value) {
         await taskOptions.loadTasksForProject(picker.selectedProjectId.value);
@@ -68,6 +71,35 @@ export function useTopBarTimerDialogFlow({
   function closeDialog(): void {
     clearDialogActionErrors();
     picker.closeDialog();
+  }
+
+  function setSelectedGitHubProjectId(githubProjectId: string | null): void {
+    if (summary.isCrossWorkspaceTimer.value) {
+      return;
+    }
+
+    clearDialogActionErrors();
+    picker.setSelectedTaskId(null);
+    picker.setSelectedGitHubProjectId(githubProjectId);
+
+    if (githubProjectId === null) {
+      picker.setTasks([]);
+      return;
+    }
+
+    void taskOptions
+      .loadIssuesForGitHubProject(githubProjectId)
+      .catch((error: unknown) => {
+        appToast.showErrorToast({
+          detail: 'Refresh and try again.',
+          error,
+          logContext: {
+            action: 'load-github-project-issues',
+            feature: 'top-bar-timer',
+          },
+          summary: 'Could not load GitHub project issues',
+        });
+      });
   }
 
   function setSelectedProjectId(projectId: string | null): void {
@@ -195,6 +227,10 @@ export function useTopBarTimerDialogFlow({
       return;
     }
 
+    if (picker.selectedGitHubProjectId.value !== null) {
+      return;
+    }
+
     if (!nextProjectId) {
       picker.setTasks([]);
       picker.setTasksError(null);
@@ -224,6 +260,7 @@ export function useTopBarTimerDialogFlow({
     handleDialogPrimaryAction,
     openDialog,
     setSelectedDescription,
+    setSelectedGitHubProjectId,
     setSelectedProjectId,
     setSelectedTaskId,
     startTimerFromDialog,

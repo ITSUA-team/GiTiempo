@@ -16,6 +16,10 @@ import {
 } from "@gitiempo/web-shared";
 
 import { createDefaultProfileGitHubClient } from "@/config/clients";
+import { timerKeys } from "@/lib/query-keys";
+import { getUserServerStateScope } from "@/lib/server-state-scope";
+import { queryClient } from "@/query-client";
+import { useAuthStore } from "@/stores/auth";
 import type { ProfileGitHubClient } from "@/services/profile-github-client";
 
 import { useProfileGithubAuthorizationRedirect } from "./useProfileGithubAuthorizationRedirect";
@@ -82,8 +86,21 @@ export function useProfileGithubConnection(
     isLoading.value = true;
     requestErrorMessage.value = null;
 
+    const previousStatus = connection.value?.status ?? null;
+
     try {
       connection.value = await client.getConnectionStatus();
+
+      if (
+        previousStatus !== null &&
+        previousStatus !== connection.value.status
+      ) {
+        await queryClient.invalidateQueries({
+          queryKey: timerKeys.all(
+            getUserServerStateScope(useAuthStore().accessToken),
+          ),
+        });
+      }
     } catch (error) {
       const message = getErrorMessage(error);
 
