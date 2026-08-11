@@ -61,9 +61,14 @@ export function useTopBarTimerActions({
 
     if (isTimerRunning.value) {
       const wasCrossWorkspaceTimer = summary.isCrossWorkspaceTimer.value;
+      const expectedTimerId = summary.currentTimer.value?.id;
+
+      if (!expectedTimerId) {
+        return false;
+      }
 
       try {
-        const stoppedTimer = await stopTimerMutation.mutateAsync();
+        const stoppedTimer = await stopTimerMutation.mutateAsync({ expectedTimerId });
 
         summary.currentTimer.value = null;
         if (wasCrossWorkspaceTimer) {

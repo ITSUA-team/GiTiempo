@@ -16,10 +16,15 @@ import {
 
 import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
+import TimeEntryTimerAction from "@/components/time-entries/TimeEntryTimerAction.vue";
 
 interface ProjectsTaskSectionProps {
+  activeTimerTaskId?: string | null;
   formatUpdatedLabel: (updatedAt: string) => string;
+  isCurrentTimerLoading?: boolean;
   project: ProjectResponse;
+  startingTimerTaskId?: string | null;
+  stoppingTimerTaskId?: string | null;
   tasks: TaskResponse[];
 }
 
@@ -29,6 +34,9 @@ const isMobileViewport = useIsMobileViewport();
 const emit = defineEmits<{
   addTask: [projectId: string];
   editTask: [task: TaskResponse];
+  openActiveTimer: [];
+  startTimer: [task: TaskResponse];
+  stopTimer: [task: TaskResponse];
 }>();
 
 const statusColumnWidth = "8.125rem";
@@ -60,6 +68,53 @@ function getStatusPt(task: TaskResponse) {
         : "rounded-sm bg-accent-tint px-2 py-1 text-brand",
     label: "text-xs font-semibold",
   };
+}
+
+function isTaskTimerRunning(task: TaskResponse): boolean {
+  return props.activeTimerTaskId === task.id;
+}
+
+function isTimerOperationPending(): boolean {
+  return (
+    props.isCurrentTimerLoading === true ||
+    props.startingTimerTaskId != null ||
+    props.stoppingTimerTaskId != null
+  );
+}
+
+function isStartTimerDisabled(): boolean {
+  return isTimerOperationPending() || props.activeTimerTaskId != null;
+}
+
+function isTimerActionDisabled(task: TaskResponse): boolean {
+  return isTaskTimerRunning(task)
+    ? isTimerOperationPending()
+    : isStartTimerDisabled();
+}
+
+function opensStopFirstGuidance(task: TaskResponse): boolean {
+  return props.activeTimerTaskId != null && !isTaskTimerRunning(task);
+}
+
+function getTimerActionEntry(task: TaskResponse) {
+  return {
+    id: task.id,
+    task: { title: task.title },
+  };
+}
+
+function handleTimerAction(task: TaskResponse): void {
+  if (isTaskTimerRunning(task)) {
+    emit("stopTimer", task);
+    return;
+  }
+
+  if (opensStopFirstGuidance(task)) {
+    emit("openActiveTimer");
+    return;
+  }
+
+  emit("startTimer", task);
 }
 </script>
 
@@ -93,7 +148,18 @@ function getStatusPt(task: TaskResponse) {
         data-testid="project-task-mobile-card"
       >
         <div class="flex min-w-0 flex-col gap-2">
-          <div class="flex max-w-full min-w-0 items-center gap-1">
+          <div class="flex max-w-full min-w-0 items-center gap-2">
+            <TimeEntryTimerAction
+              v-if="task.status !== 'closed'"
+              :action="isTaskTimerRunning(task) ? 'stop' : 'start'"
+              :disabled="isTimerActionDisabled(task)"
+              :entry="getTimerActionEntry(task)"
+              :is-loading="props.startingTimerTaskId === task.id ||
+                props.stoppingTimerTaskId === task.id"
+              :show-stop-first-guidance="opensStopFirstGuidance(task)"
+              test-id-prefix="project-task-mobile"
+              @trigger="() => handleTimerAction(task)"
+            />
             <TaskNameLink
               :label="task.title"
               :open-label="`Edit task ${task.title}`"
@@ -150,7 +216,18 @@ function getStatusPt(task: TaskResponse) {
 
       <Column :pt="managementTableColumnPt">
         <template #body="slotProps">
-          <div class="flex max-w-full min-w-0 items-center gap-1">
+          <div class="flex max-w-full min-w-0 items-center gap-2">
+            <TimeEntryTimerAction
+              v-if="slotProps.data.status !== 'closed'"
+              :action="isTaskTimerRunning(slotProps.data) ? 'stop' : 'start'"
+              :disabled="isTimerActionDisabled(slotProps.data)"
+              :entry="getTimerActionEntry(slotProps.data)"
+              :is-loading="props.startingTimerTaskId === slotProps.data.id ||
+                props.stoppingTimerTaskId === slotProps.data.id"
+              :show-stop-first-guidance="opensStopFirstGuidance(slotProps.data)"
+              test-id-prefix="project-task"
+              @trigger="() => handleTimerAction(slotProps.data)"
+            />
             <TaskNameLink
               :label="slotProps.data.title"
               :open-label="`Edit task ${slotProps.data.title}`"

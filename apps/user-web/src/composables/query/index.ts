@@ -6,6 +6,7 @@ import type {
   ProjectResponse,
   StartTimerFromGitHubInput,
   StartTimerInput,
+  StopTimerInput,
   TaskResponse,
   TimeEntryListQuery,
   TimeEntryListResponse,
@@ -73,7 +74,7 @@ interface StartTimerFromGitHubClient {
 }
 
 interface StopTimerClient {
-  stopTimer(): Promise<TimeEntryResponse>;
+  stopTimer(input: StopTimerInput): Promise<TimeEntryResponse>;
 }
 
 interface UpdateTaskClient {
@@ -386,7 +387,7 @@ export const useStopTimerMutation = (options: UseStopTimerMutationOptions) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => options.client.stopTimer(),
+    mutationFn: (input: StopTimerInput) => options.client.stopTimer(input),
     onSuccess: async (timer) => {
       await reconcileTimeEntryCachesAfterTimeEntryMutation(
         queryClient,

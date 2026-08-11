@@ -108,6 +108,7 @@ function openTimeEntries(): void {
       <DashboardRecentEntriesCard
         :entries="recentEntryRows"
         :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
+        :show-stop-first-guidance="isDirectStartBlockedByCurrentTimer"
         :starting-timer-entry-id="startingTimerEntryId"
         :stopping-timer-entry-id="stoppingTimerEntryId"
         @start-timer="(entry) => void startTimerForEntry(entry)"

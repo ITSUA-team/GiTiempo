@@ -29,6 +29,7 @@ import { CreateManualTimeEntryDto } from '../dto/create-manual-time-entry.dto';
 import { CurrentTimeEntryResponseDto } from '../dto/current-time-entry-response.dto';
 import { StartTimerFromGitHubDto } from '../dto/start-timer-from-github.dto';
 import { StartTimerDto } from '../dto/start-timer.dto';
+import { StopTimerDto } from '../dto/stop-timer.dto';
 import { TimeEntryListQueryDto } from '../dto/time-entry-list-query.dto';
 import { TimeEntryListResponseDto } from '../dto/time-entry-list-response.dto';
 import { TimeEntryResponseDto } from '../dto/time-entry-response.dto';
@@ -125,10 +126,13 @@ export class TimeEntriesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Stop current running timer' })
   @ApiOkResponse({ type: TimeEntryResponseDto })
-  @ApiNotFoundResponse({ description: 'Running timer not found' })
+  @ApiConflictResponse({ description: 'Running timer changed' })
   @ZodSerializerDto(TimeEntryResponseDto)
-  stopTimer(@CurrentUser() user: AuthUser): Promise<TimeEntryResponseDto> {
-    return this.timeEntries.stopTimer(user);
+  stopTimer(
+    @CurrentUser() user: AuthUser,
+    @Body() body: StopTimerDto,
+  ): Promise<TimeEntryResponseDto> {
+    return this.timeEntries.stopTimer(user, body);
   }
 
   @Get('time-entries/:id')

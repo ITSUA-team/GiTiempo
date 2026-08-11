@@ -21,6 +21,7 @@ import type {
   CurrentTimeEntryResponse,
   StartTimerFromGitHubInput,
   StartTimerInput,
+  StopTimerInput,
   TimeEntryListQuery,
   TimeEntryListResponse,
   TimeEntryResponse,
@@ -426,17 +427,24 @@ export class TimeEntriesService {
     }
   }
 
-  async stopTimer(user: AuthUser): Promise<TimeEntryResponse> {
+  async stopTimer(
+    user: AuthUser,
+    input: StopTimerInput,
+  ): Promise<TimeEntryResponse> {
     const entryId = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .select(timeEntryRowSelection)
         .from(timeEntries)
         .where(
-          and(eq(timeEntries.userId, user.sub), isNull(timeEntries.endedAt)),
+          and(
+            eq(timeEntries.id, input.expectedTimerId),
+            eq(timeEntries.userId, user.sub),
+            isNull(timeEntries.endedAt),
+          ),
         )
         .limit(1)
         .for('update');
-      if (!row) throw new NotFoundException('Running timer not found');
+      if (!row) throw new ConflictException('Running timer changed');
 
       const endedAt = new Date();
       const durationSeconds = calculateDurationSeconds(row.startedAt, endedAt);
@@ -447,10 +455,16 @@ export class TimeEntriesService {
           durationSeconds,
           updatedAt: endedAt,
         })
-        .where(eq(timeEntries.id, row.id))
+        .where(
+          and(
+            eq(timeEntries.id, row.id),
+            eq(timeEntries.userId, user.sub),
+            isNull(timeEntries.endedAt),
+          ),
+        )
         .returning({ id: timeEntries.id });
       if (!updated) {
-        throw DomainError.internal('timer_stop_failed', 'Failed to stop timer');
+        throw new ConflictException('Running timer changed');
       }
       return updated.id;
     });

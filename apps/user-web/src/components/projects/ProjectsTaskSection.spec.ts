@@ -42,13 +42,22 @@ function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
   };
 }
 
-function mountSection(tasks: TaskResponse[] = [createTask()]) {
+function mountSection(
+  tasks: TaskResponse[] = [createTask()],
+  timerProps: Partial<{
+    activeTimerTaskId: string | null;
+    isCurrentTimerLoading: boolean;
+    startingTimerTaskId: string | null;
+    stoppingTimerTaskId: string | null;
+  }> = {},
+) {
   return mount(ProjectsTaskSection, {
     props: {
       formatUpdatedLabel: (updatedAt: string) =>
         updatedAt === "2026-04-21T10:00:00.000Z" ? "Today, 10:00" : "Yesterday, 15:30",
       project: createProject(),
       tasks,
+      ...timerProps,
     },
     global: {
       plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
@@ -97,6 +106,81 @@ describe("ProjectsTaskSection", () => {
     expect(wrapper.emitted("addTask")?.[0]).toEqual(["project-1"]);
   });
 
+  it("starts a fresh timer from a desktop project task", async () => {
+    const task = createTask();
+    const wrapper = mountSection([task]);
+    const timerButton = wrapper.get(
+      '[data-testid="project-task-start-timer-task-1"]',
+    );
+
+    expect(timerButton.attributes("aria-label")).toBe(
+      "Start timer for Improve reports filters",
+    );
+    expect(timerButton.attributes("disabled")).toBeUndefined();
+
+    await timerButton.trigger("click");
+
+    expect(wrapper.emitted("startTimer")).toEqual([[task]]);
+  });
+
+  it("opens the top-bar timer dialog before starting when another task is running", async () => {
+    const wrapper = mountSection([createTask()], {
+      activeTimerTaskId: "task-other",
+    });
+    const timerButton = wrapper.get(
+      '[data-testid="project-task-start-timer-task-1"]',
+    );
+
+    expect(timerButton.attributes("aria-disabled")).toBe("true");
+    expect(timerButton.attributes("disabled")).toBeUndefined();
+
+    await timerButton.trigger("click");
+
+    expect(wrapper.emitted("openActiveTimer")).toHaveLength(1);
+    expect(wrapper.emitted("startTimer")).toBeUndefined();
+  });
+
+  it("stops the active timer from its matching project task", async () => {
+    const task = createTask();
+    const wrapper = mountSection([task], { activeTimerTaskId: task.id });
+    const timerButton = wrapper.get(
+      '[data-testid="project-task-stop-timer-task-1"]',
+    );
+
+    expect(timerButton.attributes("aria-label")).toBe(
+      "Stop timer for Improve reports filters",
+    );
+
+    await timerButton.trigger("click");
+
+    expect(wrapper.emitted("stopTimer")).toEqual([[task]]);
+  });
+
+  it("locks every task while a start is in flight and shows pending feedback on its initiator", () => {
+    const task = createTask();
+    const otherTask = createTask({ id: "task-2", title: "Review feedback" });
+    const wrapper = mountSection([task, otherTask], { startingTimerTaskId: task.id });
+    const timerButton = wrapper.get(
+      '[data-testid="project-task-start-timer-task-1"]',
+    );
+
+    expect(timerButton.attributes("disabled")).toBeDefined();
+    expect(timerButton.attributes("aria-busy")).toBe("true");
+    expect(
+      timerButton.find('[data-testid="time-entry-timer-action-spinner"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.get('[data-testid="project-task-start-timer-task-2"]').attributes("disabled"),
+    ).toBeDefined();
+  });
+
+  it("does not render a timer action for closed tasks", () => {
+    const closedTask = createTask({ status: "closed" });
+    const wrapper = mountSection([closedTask]);
+
+    expect(wrapper.find('[data-testid="project-task-start-timer-task-1"]').exists()).toBe(false);
+  });
+
   it("renders mobile cards with clickable task titles and no row actions", async () => {
     mockMatchMedia(true);
 
@@ -142,6 +226,20 @@ describe("ProjectsTaskSection", () => {
 
     expect(wrapper.emitted("editTask")?.[0]).toEqual([tasks[0]]);
     expect(wrapper.emitted("deleteTask")).toBeUndefined();
+  });
+
+  it("keeps the direct timer action on mobile task cards", async () => {
+    mockMatchMedia(true);
+
+    const task = createTask();
+    const wrapper = mountSection([task]);
+    const timerButton = wrapper.get(
+      '[data-testid="project-task-mobile-start-timer-task-1"]',
+    );
+
+    await timerButton.trigger("click");
+
+    expect(wrapper.emitted("startTimer")).toEqual([[task]]);
   });
 
   it("renders the desktop task table branch without column headers", () => {

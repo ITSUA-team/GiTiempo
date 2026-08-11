@@ -28,6 +28,7 @@ const props = defineProps<{
   formatTimeRange: (entry: TimeEntryResponse) => string;
   group: TimeEntriesDayGroup;
   isStartTimerDisabled?: boolean;
+  showStopFirstGuidance?: boolean;
   showHeader: boolean;
   startingTimerEntryId?: string | null;
   stoppingTimerEntryId?: string | null;
@@ -167,6 +168,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
             :disabled="isDirectStartDisabled()"
             :entry="entry"
             :is-loading="isStartTimerPending(entry)"
+            :show-stop-first-guidance="props.showStopFirstGuidance === true"
             test-id-prefix="time-entry-mobile"
             @trigger="() => handleStartTimer(entry)"
           />
@@ -252,6 +254,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
               :disabled="isDirectStartDisabled()"
               :entry="entry"
               :is-loading="isStartTimerPending(entry)"
+              :show-stop-first-guidance="props.showStopFirstGuidance === true"
               test-id-prefix="time-entry"
               @trigger="() => handleStartTimer(entry)"
             />

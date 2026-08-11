@@ -4,6 +4,7 @@ import {
   createManualTimeEntryDraftSchema,
   createManualTimeEntrySchema,
   startTimerSchema,
+  stopTimerSchema,
   timeEntryResponseSchema,
   updateTimeEntrySchema,
 } from "./time-entries.js";
@@ -234,5 +235,22 @@ describe("startTimerSchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["description"]);
+  });
+});
+
+describe("stopTimerSchema", () => {
+  it("requires the authoritative timer identity", () => {
+    expect(
+      stopTimerSchema.parse({
+        expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      }),
+    ).toEqual({
+      expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    });
+  });
+
+  it("rejects targetless or malformed stop requests", () => {
+    expect(stopTimerSchema.safeParse({}).success).toBe(false);
+    expect(stopTimerSchema.safeParse({ expectedTimerId: "not-a-uuid" }).success).toBe(false);
   });
 });

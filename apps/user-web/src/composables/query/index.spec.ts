@@ -317,7 +317,7 @@ describe("query timer reconciliation", () => {
     wrappers.push(mounted.wrapper);
 
     await flushPromises();
-    await mounted.stopTimerMutation.mutateAsync();
+    await mounted.stopTimerMutation.mutateAsync({ expectedTimerId: runningEntry.id });
     await flushPromises();
 
     const firstSignal = client.listOwnEntries.mock.calls[0]?.[1]?.signal;
@@ -370,7 +370,9 @@ describe("query timer reconciliation", () => {
     wrappers.push(mounted.wrapper);
 
     await flushPromises();
-    await mounted.stopTimerMutation.mutateAsync();
+    await mounted.stopTimerMutation.mutateAsync({
+      expectedTimerId: stoppedOtherWorkspaceEntry.id,
+    });
     await flushPromises();
 
     expect(reconcileSpy).not.toHaveBeenCalled();

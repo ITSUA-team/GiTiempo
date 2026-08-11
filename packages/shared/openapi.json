@@ -2585,6 +2585,16 @@
       "post": {
         "operationId": "TimeEntriesController_stopTimer",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StopTimerDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2596,8 +2606,8 @@
               }
             }
           },
-          "404": {
-            "description": "Running timer not found"
+          "409": {
+            "description": "Running timer changed"
           }
         },
         "security": [
@@ -6031,6 +6041,20 @@
           "githubRepo",
           "issueNumber",
           "issueTitle"
+        ],
+        "additionalProperties": false
+      },
+      "StopTimerDto": {
+        "type": "object",
+        "properties": {
+          "expectedTimerId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "expectedTimerId"
         ],
         "additionalProperties": false
       },

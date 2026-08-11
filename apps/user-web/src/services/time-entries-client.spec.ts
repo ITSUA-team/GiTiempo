@@ -684,12 +684,17 @@ describe("createTimeEntriesClient", () => {
     );
     const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.stopTimer();
+    await client.stopTimer({
+      expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    });
 
     expect(fetchFn).toHaveBeenCalledWith("/time-entries/timer/stop", {
-      body: undefined,
+      body: JSON.stringify({
+        expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      }),
       headers: {
         Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
       },
       method: "POST",
     });

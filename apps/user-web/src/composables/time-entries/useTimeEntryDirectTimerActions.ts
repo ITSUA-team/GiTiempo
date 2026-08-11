@@ -125,7 +125,7 @@ export function useTimeEntryDirectTimerActions({
         return;
       }
 
-      await stopTimerMutation.mutateAsync();
+      await stopTimerMutation.mutateAsync({ expectedTimerId: entry.id });
       appToast.showSuccessToast(
         "Timer stopped",
         `Stopped tracking ${entry.task.title}.`,

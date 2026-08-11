@@ -19,6 +19,7 @@ import TimeEntryTimerAction from "@/components/time-entries/TimeEntryTimerAction
 const props = defineProps<{
   entries: DashboardRecentEntryRow[];
   isStartTimerDisabled?: boolean;
+  showStopFirstGuidance?: boolean;
   startingTimerEntryId?: string | null;
   stoppingTimerEntryId?: string | null;
 }>();
@@ -114,6 +115,7 @@ function handleStopTimer(entry: DashboardRecentEntryRow): void {
             :disabled="isDirectStartDisabled()"
             :entry="entry.timerEntry"
             :is-loading="isStartTimerPending(entry)"
+            :show-stop-first-guidance="props.showStopFirstGuidance === true"
             test-id-prefix="dashboard-recent-entry-mobile"
             @trigger="() => handleStartTimer(entry)"
           />
@@ -185,6 +187,7 @@ function handleStopTimer(entry: DashboardRecentEntryRow): void {
               :disabled="isDirectStartDisabled()"
               :entry="entry.timerEntry"
               :is-loading="isStartTimerPending(entry)"
+              :show-stop-first-guidance="props.showStopFirstGuidance === true"
               test-id-prefix="dashboard-recent-entry"
               @trigger="() => handleStartTimer(entry)"
             />

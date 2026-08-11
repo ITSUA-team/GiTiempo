@@ -4,7 +4,6 @@ import { PlayIcon, StopIcon } from "@heroicons/vue/24/solid";
 import Button from "primevue/button";
 
 interface TimerActionEntry {
-  endedAt: string | null;
   id: string;
   task: {
     title: string;
@@ -19,8 +18,11 @@ const props = defineProps<{
   testIdPrefix:
     | "dashboard-recent-entry"
     | "dashboard-recent-entry-mobile"
+    | "project-task"
+    | "project-task-mobile"
     | "time-entry"
     | "time-entry-mobile";
+  showStopFirstGuidance?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -56,7 +58,7 @@ const opensStopFirstGuidance = computed(
   () =>
     isStartAction.value &&
     props.disabled === true &&
-    (props.testIdPrefix === "time-entry" || props.testIdPrefix === "time-entry-mobile"),
+    props.showStopFirstGuidance === true,
 );
 const isNativeDisabled = computed(
   () =>

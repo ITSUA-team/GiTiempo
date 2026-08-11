@@ -1640,7 +1640,9 @@ describe('useTopBarTimer', () => {
     await topBarTimer.stopTimerFromDialog();
     await flushPromises();
 
-    expect(client.stopTimer).toHaveBeenCalledWith();
+    expect(client.stopTimer).toHaveBeenCalledWith({
+      expectedTimerId: TEST_IDS.runningEntry,
+    });
     expect(topBarTimer.primaryActionLabel.value).toBe('Start');
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({

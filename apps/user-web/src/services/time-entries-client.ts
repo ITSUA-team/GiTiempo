@@ -11,10 +11,12 @@ import {
   projectListResponseSchema,
   type StartTimerFromGitHubInput,
   type StartTimerInput,
+  type StopTimerInput,
   taskResponseSchema,
   taskBillableDefaultBackfillResponseSchema,
   startTimerFromGitHubSchema,
   startTimerSchema,
+  stopTimerSchema,
   taskListResponseSchema,
   timeEntryListResponseSchema,
   timeEntryResponseSchema,
@@ -90,7 +92,7 @@ export interface TimeEntriesClient {
   startTimerFromGitHub(
     input: StartTimerFromGitHubInput,
   ): Promise<TimeEntryResponse>;
-  stopTimer(): Promise<TimeEntryResponse>;
+  stopTimer(input: StopTimerInput): Promise<TimeEntryResponse>;
   updateEntry(
     entryId: string,
     input: UpdateTimeEntryInput,
@@ -240,8 +242,9 @@ export function createTimeEntriesClient({
         responseSchema: timeEntryResponseSchema,
       });
     },
-    stopTimer() {
+    stopTimer(input) {
       return apiClient.requestJson({
+        body: stopTimerSchema.parse(input),
         method: "POST",
         path: "/time-entries/timer/stop",
         responseSchema: timeEntryResponseSchema,
