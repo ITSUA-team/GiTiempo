@@ -432,19 +432,28 @@ export class TimeEntriesService {
     input: StopTimerInput,
   ): Promise<TimeEntryResponse> {
     const entryId = await this.db.transaction(async (tx) => {
+      const expectedTimerId = input.expectedTimerId;
       const [row] = await tx
         .select(timeEntryRowSelection)
         .from(timeEntries)
         .where(
           and(
-            eq(timeEntries.id, input.expectedTimerId),
             eq(timeEntries.userId, user.sub),
             isNull(timeEntries.endedAt),
+            ...(expectedTimerId === undefined
+              ? []
+              : [eq(timeEntries.id, expectedTimerId)]),
           ),
         )
         .limit(1)
         .for('update');
-      if (!row) throw new ConflictException('Running timer changed');
+      if (!row) {
+        if (expectedTimerId !== undefined) {
+          throw new ConflictException('Running timer changed');
+        }
+
+        throw new NotFoundException('No running timer found');
+      }
 
       const endedAt = new Date();
       const durationSeconds = calculateDurationSeconds(row.startedAt, endedAt);
@@ -464,7 +473,11 @@ export class TimeEntriesService {
         )
         .returning({ id: timeEntries.id });
       if (!updated) {
-        throw new ConflictException('Running timer changed');
+        if (expectedTimerId !== undefined) {
+          throw new ConflictException('Running timer changed');
+        }
+
+        throw new NotFoundException('No running timer found');
       }
       return updated.id;
     });

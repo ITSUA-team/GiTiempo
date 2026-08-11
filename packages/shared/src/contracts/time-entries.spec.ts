@@ -239,7 +239,7 @@ describe("startTimerSchema", () => {
 });
 
 describe("stopTimerSchema", () => {
-  it("requires the authoritative timer identity", () => {
+  it("accepts the authoritative timer identity", () => {
     expect(
       stopTimerSchema.parse({
         expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
@@ -249,8 +249,9 @@ describe("stopTimerSchema", () => {
     });
   });
 
-  it("rejects targetless or malformed stop requests", () => {
-    expect(stopTimerSchema.safeParse({}).success).toBe(false);
+  it("accepts targetless legacy stop requests but rejects malformed identities", () => {
+    expect(stopTimerSchema.parse({})).toEqual({});
+    expect(stopTimerSchema.parse(undefined)).toEqual({});
     expect(stopTimerSchema.safeParse({ expectedTimerId: "not-a-uuid" }).success).toBe(false);
   });
 });

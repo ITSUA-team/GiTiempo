@@ -167,9 +167,10 @@ export const startTimerSchema = z
 
 export const stopTimerSchema = z
   .object({
-    expectedTimerId: z.uuid(),
+    expectedTimerId: z.uuid().optional(),
   })
-  .strict();
+  .strict()
+  .default({});
 
 export const startTimerFromGitHubSchema = z
   .object({

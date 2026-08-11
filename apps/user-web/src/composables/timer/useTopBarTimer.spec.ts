@@ -1827,7 +1827,7 @@ describe('useTopBarTimer', () => {
       createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
     ]);
     client.stopTimer.mockRejectedValueOnce(
-      new ApiError('Running timer not found', { status: 404 }),
+      new ApiError('Running timer changed', { status: 409 }),
     );
 
     const mounted = mountTopBarTimer({ client, toast });

@@ -32,4 +32,4 @@
 - [x] 5.2 Run `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `pnpm --filter user-web test`
 - [x] 5.3 Compare desktop and mobile implementation with the approved `.pen` checklist and document any remaining delta or PrimeVue-only compromise
 - [x] 5.4 Complete the reusable-pattern review, make stop-first guidance explicit for every caller, and preserve test IDs as observational metadata
-- [x] 5.5 Add and verify the identity-bound API/shared-contract stop change; no database migration, dependency, `packages/web-config`, or `packages/web-shared` change is required
+- [x] 5.5 Add and verify the identity-bound API/shared-contract stop change, including current Chrome extension callers and a temporary bodyless legacy-client compatibility path; no database migration, dependency, `packages/web-config`, or `packages/web-shared` change is required

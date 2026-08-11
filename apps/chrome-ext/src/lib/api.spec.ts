@@ -462,6 +462,44 @@ describe("createExtensionApiClient", () => {
     );
   });
 
+  it("posts the authoritative timer identity when stopping a timer", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({ message: "Running timer changed" }, { status: 409 }),
+    );
+    const { storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn,
+      storage,
+    });
+
+    await expect(
+      client.stopTimer({
+        expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      }),
+    ).rejects.toThrow("Running timer changed");
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      "http://localhost:3000/time-entries/timer/stop",
+      {
+        body: JSON.stringify({
+          expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        }),
+        headers: {
+          Authorization: "Bearer access-token",
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      },
+    );
+  });
+
   it("refreshes the session once after a 401 and retries the original request", async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
@@ -645,7 +683,7 @@ describe("createExtensionApiClient", () => {
       storage,
     });
 
-    await expect(client.stopTimer()).rejects.toThrow(
+    await expect(client.stopTimer({ expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001" })).rejects.toThrow(
       "Your session has expired. Please sign in again.",
     );
     await expect(storage.get()).resolves.toEqual({});
@@ -669,7 +707,7 @@ describe("createExtensionApiClient", () => {
       storage,
     });
 
-    await expect(client.stopTimer()).rejects.toThrow(
+    await expect(client.stopTimer({ expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001" })).rejects.toThrow(
       "Your session has expired. Please sign in again.",
     );
     await expect(storage.get()).resolves.toEqual({});

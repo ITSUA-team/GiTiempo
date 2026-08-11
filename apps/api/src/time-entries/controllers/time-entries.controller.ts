@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBody,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiForbiddenResponse,
@@ -124,9 +125,14 @@ export class TimeEntriesController {
 
   @Post('time-entries/timer/stop')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Stop current running timer' })
+  @ApiOperation({
+    summary:
+      'Stop current running timer (conditionally when expectedTimerId is provided)',
+  })
+  @ApiBody({ type: StopTimerDto, required: false })
   @ApiOkResponse({ type: TimeEntryResponseDto })
   @ApiConflictResponse({ description: 'Running timer changed' })
+  @ApiNotFoundResponse({ description: 'No running timer found' })
   @ZodSerializerDto(TimeEntryResponseDto)
   stopTimer(
     @CurrentUser() user: AuthUser,

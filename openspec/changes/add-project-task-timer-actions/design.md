@@ -2,7 +2,7 @@
 
 `apps/user-web` already supports direct task timer actions on Time Entries and Dashboard. The presentational control lives in `components/time-entries/TimeEntryTimerAction.vue`, while `useTimeEntryDirectTimerActions` owns current-timer guarding, start/stop mutations, cache invalidation, and feedback for entry-backed rows. `ProjectsTaskSection.vue` renders the same task concept in desktop rows and mobile cards but currently exposes only task editing, GitHub links, status, and updated metadata.
 
-Starting requires a visible task id. Current-timer state identifies the authoritative running entry and task. Stopping is identity-bound: the client sends the expected running entry id, and the API conditionally stops only that active entry for the authenticated member. A changed or already stopped entry returns `409 Conflict`. The frontend must continue to respect the cross-workspace single-running-timer invariant and the top-bar timer as the recovery surface.
+Starting requires a visible task id. Current-timer state identifies the authoritative running entry and task. Stopping is identity-bound for current clients: they send the expected running entry id, and the API conditionally stops only that active entry for the authenticated member. A changed or already stopped entry returns `409 Conflict`. To support already-installed browser-extension builds, the same endpoint temporarily accepts a bodyless legacy request with its previous user-global stop behavior. The frontend must continue to respect the cross-workspace single-running-timer invariant and the top-bar timer as the recovery surface.
 
 The change follows `apps/user-web/AGENTS.md`, `docs/ui/INDEX.md`, and `docs/ui/pages-user.md`. The checked-in `GITiempo.pen` contains the approved GiTiempo Projects and Time Entries screens. The Projects screen now carries the timer-state reference below; no unrelated canvas content was replaced.
 
@@ -97,7 +97,7 @@ The conditional stop contract changes `apps/api` and `packages/shared`. No chang
 
 ## Migration Plan
 
-No data or deployment migration is required. Ship the API, shared-contract, user-web, docs, and design changes together after tests pass. Rollback consists of reverting that compatible set of changes.
+No data migration is required. Ship the API, shared-contract, user-web, Chrome extension, docs, and design changes together after tests pass. The stop endpoint remains backward-compatible with bodyless requests while installed extension builds roll forward; current clients always send `expectedTimerId` and retain the conditional-stop guarantee. Rollback consists of reverting that compatible set of changes.
 
 ## Open Questions
 

@@ -2586,7 +2586,7 @@
         "operationId": "TimeEntriesController_stopTimer",
         "parameters": [],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -2606,6 +2606,9 @@
               }
             }
           },
+          "404": {
+            "description": "No running timer found"
+          },
           "409": {
             "description": "Running timer changed"
           }
@@ -2615,7 +2618,7 @@
             "bearer": []
           }
         ],
-        "summary": "Stop current running timer",
+        "summary": "Stop current running timer (conditionally when expectedTimerId is provided)",
         "tags": [
           "time-entries"
         ]
@@ -6053,9 +6056,7 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           }
         },
-        "required": [
-          "expectedTimerId"
-        ],
+        "default": {},
         "additionalProperties": false
       },
       "UpdateTimeEntryDto": {

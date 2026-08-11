@@ -82,7 +82,7 @@ export function useTopBarTimerActions({
       } catch (error) {
         const message = getErrorMessage(error);
 
-        if (isApiErrorStatus(error, [404])) {
+        if (isApiErrorStatus(error, [404, 409])) {
           await summary.refreshSummaryAfterConflict(error);
           timerActionErrorMessage.value = null;
           appToast.showInfoToast(

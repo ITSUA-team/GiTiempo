@@ -148,7 +148,24 @@ function handleTimerAction(task: TaskResponse): void {
         data-testid="project-task-mobile-card"
       >
         <div class="flex min-w-0 flex-col gap-2">
-          <div class="flex max-w-full min-w-0 items-center gap-2">
+          <div
+            class="flex min-w-0 items-center justify-between gap-3"
+            data-testid="project-task-mobile-header"
+          >
+            <div class="flex max-w-full min-w-0 items-center gap-2">
+              <TaskNameLink
+                :label="task.title"
+                :open-label="`Edit task ${task.title}`"
+                test-id="project-task-mobile-title"
+                @open="emit('editTask', task)"
+              />
+              <TaskGitHubIssueLink
+                v-if="task.githubIssue"
+                :issue="task.githubIssue"
+                show-number
+                :test-id="`project-task-mobile-github-${task.id}`"
+              />
+            </div>
             <TimeEntryTimerAction
               v-if="task.status !== 'closed'"
               :action="isTaskTimerRunning(task) ? 'stop' : 'start'"
@@ -159,18 +176,6 @@ function handleTimerAction(task: TaskResponse): void {
               :show-stop-first-guidance="opensStopFirstGuidance(task)"
               test-id-prefix="project-task-mobile"
               @trigger="() => handleTimerAction(task)"
-            />
-            <TaskNameLink
-              :label="task.title"
-              :open-label="`Edit task ${task.title}`"
-              test-id="project-task-mobile-title"
-              @open="emit('editTask', task)"
-            />
-            <TaskGitHubIssueLink
-              v-if="task.githubIssue"
-              :issue="task.githubIssue"
-              show-number
-              :test-id="`project-task-mobile-github-${task.id}`"
             />
           </div>
 

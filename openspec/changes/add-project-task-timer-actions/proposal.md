@@ -28,4 +28,4 @@ None.
 - `apps/user-web/src/views/ProjectView.vue` and focused view/integration tests for timer state wiring.
 - A small reusable user-web timer-action leaf currently owned by the Time Entries surface, plus Projects-specific timer orchestration built on the existing current-timer/start/stop query mutations.
 - `docs/ui/pages-user.md` and the approved GiTiempo `.pen` Projects screen.
-- Extend the existing stop-timer contract with the expected running entry id. The API conditionally stops that exact active timer and returns `409 Conflict` when it has changed; no database migration or dependency change is required.
+- Extend the existing stop-timer contract with the expected running entry id. Current clients conditionally stop that exact active timer and receive `409 Conflict` when it has changed; bodyless legacy extension clients remain temporarily compatible. No database migration or dependency change is required.

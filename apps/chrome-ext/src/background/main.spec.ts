@@ -209,6 +209,27 @@ describe("background snapshot broadcast", () => {
     });
   });
 
+  it("refetches the current timer and stops it by its authoritative identity", async () => {
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({
+      timeEntry: { id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002" },
+    });
+    backgroundApiMocks.stopTimer.mockResolvedValue({});
+
+    await import("./main");
+
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]?.[0];
+    const sendResponse = vi.fn();
+
+    expect(onMessage).toBeTypeOf("function");
+    expect(onMessage({ type: "timer/stop" }, {}, sendResponse)).toBe(true);
+
+    await vi.waitFor(() => {
+      expect(backgroundApiMocks.stopTimer).toHaveBeenCalledWith({
+        expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      });
+    });
+  });
+
   it("includes the signed-in user decoded from the session token", async () => {
     sessionMocks.getStoredSession.mockResolvedValue({
       accessToken: makeAccessToken({ sub: "user-1", email: "alexey@example.com" }),

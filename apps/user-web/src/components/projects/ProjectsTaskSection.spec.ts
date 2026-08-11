@@ -242,6 +242,46 @@ describe("ProjectsTaskSection", () => {
     expect(wrapper.emitted("startTimer")).toEqual([[task]]);
   });
 
+  it("places the mobile timer action after the title group", () => {
+    mockMatchMedia(true);
+
+    const wrapper = mountSection([createTask()]);
+    const header = wrapper.get('[data-testid="project-task-mobile-header"]');
+    const title = wrapper.get('[data-testid="project-task-mobile-title"]');
+    const action = wrapper.get('[data-testid="project-task-mobile-start-timer-task-1"]');
+
+    expect(header.element.contains(title.element)).toBe(true);
+    expect(header.element.contains(action.element)).toBe(true);
+    expect(
+      title.element.compareDocumentPosition(action.element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("keeps mobile stop, blocked, and pending timer states interactive only when allowed", async () => {
+    mockMatchMedia(true);
+
+    const task = createTask();
+    const running = mountSection([task], { activeTimerTaskId: task.id });
+    const blocked = mountSection([task], { activeTimerTaskId: "task-other" });
+    const pending = mountSection([task], { startingTimerTaskId: task.id });
+
+    await running
+      .get('[data-testid="project-task-mobile-stop-timer-task-1"]')
+      .trigger("click");
+    await blocked
+      .get('[data-testid="project-task-mobile-start-timer-task-1"]')
+      .trigger("click");
+
+    expect(running.emitted("stopTimer")).toEqual([[task]]);
+    expect(blocked.emitted("openActiveTimer")).toHaveLength(1);
+    expect(
+      pending
+        .get('[data-testid="project-task-mobile-start-timer-task-1"]')
+        .attributes("disabled"),
+    ).toBeDefined();
+  });
+
   it("renders the desktop task table branch without column headers", () => {
     const wrapper = mountSection();
     const tableShell = wrapper.getComponent(ManagementTableShell);
