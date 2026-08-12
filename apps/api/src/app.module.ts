@@ -17,6 +17,7 @@ import { CommonsModule } from './commons/commons.module';
 import { MembersModule } from './members/members.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { InvitesModule } from './invites/invites.module';
+import { ProjectImportsModule } from './project-imports/project-imports.module';
 import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TimeEntriesModule } from './time-entries/time-entries.module';
@@ -49,6 +50,7 @@ import { AppThrottlerGuard } from './commons/guards/app-throttler.guard';
     WorkspacesModule,
     InvitesModule,
     ProjectsModule,
+    ProjectImportsModule,
     TasksModule,
     TimeEntriesModule,
     ReportsModule,

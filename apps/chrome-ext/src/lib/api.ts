@@ -325,7 +325,6 @@ export function createExtensionApiClient({
         body: startTimerFromGitHubSchema.parse({
           githubRepo: pageContext.githubRepo,
           issueNumber: pageContext.issueNumber,
-          issueTitle: pageContext.issueTitle,
         }),
         method: "POST",
         path: "/time-entries/timer/start-from-github",

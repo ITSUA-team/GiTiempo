@@ -210,6 +210,41 @@ export class GithubService {
     });
   }
 
+  async resolveImportableProject(
+    user: AuthUser,
+    projectId: string,
+  ): Promise<{
+    number: number;
+    ownerLogin: string;
+    title: string;
+    url: string | null;
+  }> {
+    const connection = await this.connectedConnection(user.sub);
+    const project = await this.apiClient.getProject({
+      accessToken: connection.accessToken,
+      projectId,
+    });
+
+    if (!project.found || !project.title || project.number === null) {
+      throw new NotFoundException(
+        'GitHub project could not be verified for this workspace',
+      );
+    }
+
+    await this.assertProjectOwnerAllowed(
+      user.workspaceId,
+      project.owner,
+      connection.account.login,
+    );
+
+    return {
+      number: project.number,
+      ownerLogin: project.owner.login ?? connection.account.login,
+      title: project.title,
+      url: project.url,
+    };
+  }
+
   async listProjectIssues(
     user: AuthUser,
     projectId: string,
