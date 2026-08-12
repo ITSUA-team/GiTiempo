@@ -828,7 +828,9 @@ describe("TimeEntriesView", () => {
       `[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`,
     );
 
-    expect(client.getCurrentTimer).toHaveBeenCalledWith();
+    expect(client.getCurrentTimer).toHaveBeenCalledWith(
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
     expect(startTimerButton.attributes("disabled")).toBeDefined();
 
     await startTimerButton.trigger("click");

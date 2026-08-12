@@ -562,6 +562,11 @@ describe('Time entries (e2e)', () => {
       .set('Authorization', bearer(memberToken))
       .send({ expectedTimerId: started.body.id });
     expect(stopAgain.status).toBe(409);
+
+    const legacyStopWithoutTimer = await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(memberToken));
+    expect(legacyStopWithoutTimer.status).toBe(404);
   });
 
   it('allows task and description updates but rejects interval and delete for running entries before stop', async () => {

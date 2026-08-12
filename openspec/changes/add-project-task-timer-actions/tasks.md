@@ -33,3 +33,6 @@
 - [x] 5.3 Compare desktop and mobile implementation with the approved `.pen` checklist and document any remaining delta or PrimeVue-only compromise
 - [x] 5.4 Complete the reusable-pattern review, make stop-first guidance explicit for every caller, and preserve test IDs as observational metadata
 - [x] 5.5 Add and verify the identity-bound API/shared-contract stop change, including current Chrome extension callers and a temporary bodyless legacy-client compatibility path; no database migration, dependency, `packages/web-config`, or `packages/web-shared` change is required
+- [x] 5.6 Add the missing API, shared-contract, and Chrome-extension OpenSpec deltas; synchronize the canonical stop-timer requirement; and cover bodyless legacy stop with no running timer returning `404 Not Found`
+- [x] 5.7 Remove duplicate Projects timer invalidations, make failed authoritative refresh feedback reachable, and propagate query cancellation to the current-timer HTTP request
+- [x] 5.8 Cover the assembled Projects Stop action from the task section through authoritative identity verification to the conditional stop API request

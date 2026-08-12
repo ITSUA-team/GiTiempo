@@ -20,6 +20,9 @@ None.
 
 ### Modified Capabilities
 
+- `chrome-extension`: Extension timer stops fetch the authoritative current timer and submit its identity to the conditional stop contract.
+- `contracts`: The shared stop-timer request accepts an optional expected running-entry identity for conditional stops while retaining bodyless legacy compatibility.
+- `time-tracking-api`: Timer stop supports conditional identity matching and returns `409 Conflict` rather than stopping a replacement timer when the supplied identity is stale.
 - `user-projects-list-page`: Project task rows and mobile cards gain direct start/stop timer behavior, conflict guidance, and task-specific accessible labels.
 
 ## Impact

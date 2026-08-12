@@ -41,7 +41,7 @@ interface CreateTaskClient {
 }
 
 interface CurrentTimerClient {
-  getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
+  getCurrentTimer(options?: { signal?: AbortSignal }): Promise<CurrentTimeEntryResponse>;
 }
 
 interface DeleteTaskClient {
@@ -225,7 +225,7 @@ export const useCurrentTimerQuery = (options: UseCurrentTimerQueryOptions) =>
       toValue(options.queryKey) ?? timerKeys.currentRaw(toValue(options.scope)),
     ),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () => options.client.getCurrentTimer(),
+    queryFn: ({ signal }) => options.client.getCurrentTimer({ signal }),
   });
 
 export const useOwnTimeEntriesQuery = (options: UseOwnTimeEntriesQueryOptions) =>

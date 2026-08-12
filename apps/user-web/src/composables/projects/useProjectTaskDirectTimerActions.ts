@@ -4,7 +4,6 @@ import {
   getErrorMessage,
   type ToastLike,
 } from "@gitiempo/web-shared";
-import { useQueryClient } from "@tanstack/vue-query";
 import { computed, shallowRef, type ComputedRef } from "vue";
 
 import {
@@ -13,7 +12,7 @@ import {
   useStopTimerMutation,
 } from "@/composables/query";
 import { isRunningTimer } from "@/lib/top-bar-timer-helpers";
-import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
+import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 
@@ -37,7 +36,6 @@ export function useProjectTaskDirectTimerActions({
   toast,
 }: UseProjectTaskDirectTimerActionsOptions) {
   const appToast = createAppToast(toast);
-  const queryClient = useQueryClient();
   const currentTimerQuery = useCurrentTimerQuery({ client, enabled, scope });
   const startTimerMutation = useStartTimerMutation({ client, scope });
   const stopTimerMutation = useStopTimerMutation({ client, scope });
@@ -56,12 +54,9 @@ export function useProjectTaskDirectTimerActions({
   );
 
   async function refreshTimer(): Promise<void> {
-    const results = await Promise.allSettled([
-      queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) }),
-      currentTimerQuery.refetch(),
-    ]);
-
-    if (results.some((result) => result.status === "rejected")) {
+    try {
+      await currentTimerQuery.refetch({ throwOnError: true });
+    } catch {
       appToast.showErrorToast({
         detail: "Please retry your timer action.",
         error: new Error("Could not refresh the current timer"),
@@ -82,6 +77,7 @@ export function useProjectTaskDirectTimerActions({
 
     timerOperation.value = { kind: "start", taskId: task.id };
     let shouldOpenStopFirstGuidance = false;
+    let shouldRefreshTimer = false;
 
     try {
       await startTimerMutation.mutateAsync({ taskId: task.id });
@@ -89,6 +85,7 @@ export function useProjectTaskDirectTimerActions({
     } catch (error) {
       const message = getErrorMessage(error);
       shouldOpenStopFirstGuidance = isApiErrorStatus(error, [409]);
+      shouldRefreshTimer = true;
       appToast.showErrorToast({
         detail: message,
         error,
@@ -96,7 +93,9 @@ export function useProjectTaskDirectTimerActions({
         summary: "Could not start timer",
       });
     } finally {
-      await refreshTimer();
+      if (shouldRefreshTimer) {
+        await refreshTimer();
+      }
       if (shouldOpenStopFirstGuidance) {
         onStartConflict();
       }
@@ -116,6 +115,7 @@ export function useProjectTaskDirectTimerActions({
     }
 
     timerOperation.value = { kind: "stop", taskId: task.id };
+    let shouldRefreshTimer = false;
 
     try {
       const result = await currentTimerQuery.refetch({ throwOnError: true });
@@ -137,6 +137,7 @@ export function useProjectTaskDirectTimerActions({
       await stopTimerMutation.mutateAsync({ expectedTimerId: expectedTimer.id });
       appToast.showSuccessToast("Timer stopped", `Stopped tracking ${task.title}.`);
     } catch (error) {
+      shouldRefreshTimer = true;
       appToast.showErrorToast({
         detail: getErrorMessage(error),
         error,
@@ -144,7 +145,9 @@ export function useProjectTaskDirectTimerActions({
         summary: "Could not stop timer",
       });
     } finally {
-      await refreshTimer();
+      if (shouldRefreshTimer) {
+        await refreshTimer();
+      }
       timerOperation.value = null;
     }
   }

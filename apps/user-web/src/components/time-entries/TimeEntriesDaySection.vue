@@ -19,7 +19,7 @@ import {
   formatCompactDuration,
   type TimeEntriesDayGroup,
 } from "@/lib/time-entry-display";
-import TimeEntryTimerAction from "@/components/time-entries/TimeEntryTimerAction.vue";
+import TimerActionButton from "@/components/timer/TimerActionButton.vue";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
 
@@ -162,21 +162,21 @@ function handleStartTimer(entry: TimeEntryResponse): void {
         :tone="entry.endedAt === null ? 'highlighted' : 'default'"
       >
         <div class="flex min-w-0 items-start gap-3">
-          <TimeEntryTimerAction
+          <TimerActionButton
             v-if="entry.endedAt !== null"
             action="start"
             :disabled="isDirectStartDisabled()"
-            :entry="entry"
+            :target="{ id: entry.id, title: entry.task.title }"
             :is-loading="isStartTimerPending(entry)"
             :show-stop-first-guidance="props.showStopFirstGuidance === true"
             test-id-prefix="time-entry-mobile"
             @trigger="() => handleStartTimer(entry)"
           />
-          <TimeEntryTimerAction
+          <TimerActionButton
             v-else
             action="stop"
             :disabled="isStopTimerDisabled()"
-            :entry="entry"
+            :target="{ id: entry.id, title: entry.task.title }"
             :is-loading="isStopTimerPending(entry)"
             test-id-prefix="time-entry-mobile"
             @trigger="() => handleStopTimer(entry)"
@@ -248,21 +248,21 @@ function handleStartTimer(entry: TimeEntryResponse): void {
       <Column :pt="managementTableColumnPt">
         <template #body="{ data: entry }">
           <div class="flex min-w-0 items-center gap-2">
-            <TimeEntryTimerAction
+            <TimerActionButton
               v-if="entry.endedAt !== null"
               action="start"
               :disabled="isDirectStartDisabled()"
-              :entry="entry"
+              :target="{ id: entry.id, title: entry.task.title }"
               :is-loading="isStartTimerPending(entry)"
               :show-stop-first-guidance="props.showStopFirstGuidance === true"
               test-id-prefix="time-entry"
               @trigger="() => handleStartTimer(entry)"
             />
-            <TimeEntryTimerAction
+            <TimerActionButton
               v-else
               action="stop"
               :disabled="isStopTimerDisabled()"
-              :entry="entry"
+              :target="{ id: entry.id, title: entry.task.title }"
               :is-loading="isStopTimerPending(entry)"
               test-id-prefix="time-entry"
               @trigger="() => handleStopTimer(entry)"

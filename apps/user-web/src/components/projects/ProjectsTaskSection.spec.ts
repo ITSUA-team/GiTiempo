@@ -167,7 +167,7 @@ describe("ProjectsTaskSection", () => {
     expect(timerButton.attributes("disabled")).toBeDefined();
     expect(timerButton.attributes("aria-busy")).toBe("true");
     expect(
-      timerButton.find('[data-testid="time-entry-timer-action-spinner"]').exists(),
+      timerButton.find('[data-testid="timer-action-spinner"]').exists(),
     ).toBe(true);
     expect(
       wrapper.get('[data-testid="project-task-start-timer-task-2"]').attributes("disabled"),

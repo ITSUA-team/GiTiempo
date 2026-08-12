@@ -95,7 +95,7 @@ describe("useProjectTaskDirectTimerActions", () => {
     }
   });
 
-  it("starts a fresh timer and refreshes the authoritative timer", async () => {
+  it("starts a fresh timer and leaves refresh to mutation invalidation", async () => {
     const mounted = mountHarness();
     wrappers.push(mounted.wrapper);
 
@@ -108,7 +108,7 @@ describe("useProjectTaskDirectTimerActions", () => {
     ).toHaveBeenCalledWith({ taskId: task.id });
     expect(
       (queryMocks.currentTimerQuery as { refetch: ReturnType<typeof vi.fn> }).refetch,
-    ).toHaveBeenCalled();
+    ).not.toHaveBeenCalled();
   });
 
   it("prevents a second start while a timer is already running", async () => {
@@ -204,6 +204,26 @@ describe("useProjectTaskDirectTimerActions", () => {
     );
   });
 
+  it("reports a failed authoritative refresh after a failed start", async () => {
+    const startTimerMutation = queryMocks.startTimerMutation as {
+      mutateAsync: ReturnType<typeof vi.fn>;
+    };
+    const currentTimerQuery = queryMocks.currentTimerQuery as {
+      refetch: ReturnType<typeof vi.fn>;
+    };
+    startTimerMutation.mutateAsync.mockRejectedValueOnce(new Error("Network unavailable"));
+    currentTimerQuery.refetch.mockRejectedValueOnce(new Error("Refresh unavailable"));
+    const mounted = mountHarness();
+    wrappers.push(mounted.wrapper);
+
+    await mounted.actions.startTimerForTask(task);
+
+    expect(currentTimerQuery.refetch).toHaveBeenCalledWith({ throwOnError: true });
+    expect(mounted.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Could not refresh timer status" }),
+    );
+  });
+
   it("stops the matching authoritative timer", async () => {
     const currentTimerQuery = queryMocks.currentTimerQuery as {
       data: { value: { timeEntry: TimeEntryResponse | null } };
@@ -218,6 +238,9 @@ describe("useProjectTaskDirectTimerActions", () => {
       (queryMocks.stopTimerMutation as { mutateAsync: ReturnType<typeof vi.fn> })
         .mutateAsync,
     ).toHaveBeenCalledWith({ expectedTimerId: "entry-1" });
+    expect(
+      (queryMocks.currentTimerQuery as { refetch: ReturnType<typeof vi.fn> }).refetch,
+    ).toHaveBeenCalledTimes(1);
   });
 
   it("does not stop a timer when its identity changed before confirmation", async () => {
@@ -239,7 +262,7 @@ describe("useProjectTaskDirectTimerActions", () => {
       (queryMocks.stopTimerMutation as { mutateAsync: ReturnType<typeof vi.fn> })
         .mutateAsync,
     ).not.toHaveBeenCalled();
-    expect(currentTimerQuery.refetch).toHaveBeenCalledTimes(2);
+    expect(currentTimerQuery.refetch).toHaveBeenCalledTimes(1);
   });
 
   it("does not stop a timer reassigned to another task before confirmation", async () => {

@@ -238,7 +238,7 @@ describe('TimeEntriesDaySection', () => {
   it('disables active timer stops while a stop request is pending', async () => {
     const wrapper = mountSection({ stoppingTimerEntryId: 'entry-running' });
     const stopTimerButton = wrapper.get('[data-testid="time-entry-stop-timer-entry-running"]');
-    const spinner = stopTimerButton.get('[data-testid="time-entry-timer-action-spinner"]');
+    const spinner = stopTimerButton.get('[data-testid="timer-action-spinner"]');
 
     expect(stopTimerButton.attributes('disabled')).toBeDefined();
     expect(stopTimerButton.attributes('aria-busy')).toBe('true');

@@ -64,7 +64,7 @@ export interface TimeEntriesClient {
   deleteTask(taskId: string): Promise<void>;
   deleteEntry(entryId: string): Promise<void>;
   ensureGitHubIssueTask(input: EnsureGitHubIssueTaskInput): Promise<TaskResponse>;
-  getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
+  getCurrentTimer(options?: { signal?: AbortSignal }): Promise<CurrentTimeEntryResponse>;
   listGitHubOwners(): Promise<GitHubOwnerListResponse>;
   listGitHubProjects(
     owner: string,
@@ -154,10 +154,11 @@ export function createTimeEntriesClient({
         responseSchema: taskResponseSchema,
       });
     },
-    getCurrentTimer() {
+    getCurrentTimer(options) {
       return apiClient.requestJson({
         path: "/time-entries/current",
         responseSchema: currentTimeEntryResponseSchema,
+        signal: options?.signal,
       });
     },
     listGitHubOwners() {

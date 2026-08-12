@@ -1,6 +1,6 @@
 ## Context
 
-`apps/user-web` already supports direct task timer actions on Time Entries and Dashboard. The presentational control lives in `components/time-entries/TimeEntryTimerAction.vue`, while `useTimeEntryDirectTimerActions` owns current-timer guarding, start/stop mutations, cache invalidation, and feedback for entry-backed rows. `ProjectsTaskSection.vue` renders the same task concept in desktop rows and mobile cards but currently exposes only task editing, GitHub links, status, and updated metadata.
+`apps/user-web` already supports direct task timer actions on Time Entries and Dashboard. The presentational control lives in `components/timer/TimerActionButton.vue`, while `useTimeEntryDirectTimerActions` owns current-timer guarding, start/stop mutations, cache invalidation, and feedback for entry-backed rows. `ProjectsTaskSection.vue` renders the same task concept in desktop rows and mobile cards but currently exposes only task editing, GitHub links, status, and updated metadata.
 
 Starting requires a visible task id. Current-timer state identifies the authoritative running entry and task. Stopping is identity-bound for current clients: they send the expected running entry id, and the API conditionally stops only that active entry for the authenticated member. A changed or already stopped entry returns `409 Conflict`. To support already-installed browser-extension builds, the same endpoint temporarily accepts a bodyless legacy request with its previous user-global stop behavior. The frontend must continue to respect the cross-workspace single-running-timer invariant and the top-bar timer as the recovery surface.
 
@@ -42,11 +42,13 @@ This mirrors the behavior members already see on Time Entries while adapting ide
 
 Add a focused Projects timer composable that uses the existing current-timer query plus start/stop mutations and `timerKeys` invalidation. Starting submits the selected task id. Stopping first refetches current-timer state and proceeds only when the authoritative timer still has both the selected task and the expected entry id. It then submits that entry id to the conditional stop mutation; otherwise it reconciles the UI and reports that the timer changed.
 
+Successful start and stop mutations rely on their shared mutation invalidation to refresh active timer consumers exactly once. A failed direct mutation performs one explicit current-timer refetch with error propagation so the Projects action can surface a retryable refresh error without issuing a duplicate invalidation or cancelling its own request.
+
 The alternative is to broaden `useTimeEntryDirectTimerActions` around a union of entry-backed and task-backed targets. That would mix two different refresh and identity rules: Time Entries verifies an exact running entry and reloads entry lists, while Projects verifies a task and does not need to reload project/task data. Separate orchestration keeps those lifecycles explicit.
 
 ### Extract only the stable presentational timer-action leaf
 
-Move or generalize the current Time Entries button into a user-web timer component that accepts an explicit action, task title, target/test identity, disabled/guidance state, and pending state. Stop-first guidance is an explicit behavior prop; test identifiers remain observational. Time Entries, Dashboard, and Projects keep their own event handling and domain data mapping.
+Move or generalize the current Time Entries button into a user-web timer component that accepts an explicit action, `target: { id, title }` for its task label and target/test identity, disabled/guidance state, and pending state. Stop-first guidance is an explicit behavior prop; test identifiers remain observational. Time Entries, Dashboard, and Projects keep their own event handling and domain data mapping.
 
 This satisfies the frontend reuse rule without moving an app-local control to `packages/web-shared` or forcing Projects-specific behavior into a generic package. The button continues to use PrimeVue, Heroicons, existing design tokens, task-specific tooltip copy, and accessible labels.
 

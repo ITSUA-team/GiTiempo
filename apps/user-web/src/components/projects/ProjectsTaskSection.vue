@@ -16,7 +16,7 @@ import {
 
 import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
-import TimeEntryTimerAction from "@/components/time-entries/TimeEntryTimerAction.vue";
+import TimerActionButton from "@/components/timer/TimerActionButton.vue";
 
 interface ProjectsTaskSectionProps {
   activeTimerTaskId?: string | null;
@@ -96,10 +96,10 @@ function opensStopFirstGuidance(task: TaskResponse): boolean {
   return props.activeTimerTaskId != null && !isTaskTimerRunning(task);
 }
 
-function getTimerActionEntry(task: TaskResponse) {
+function getTimerActionTarget(task: TaskResponse) {
   return {
     id: task.id,
-    task: { title: task.title },
+    title: task.title,
   };
 }
 
@@ -166,11 +166,11 @@ function handleTimerAction(task: TaskResponse): void {
                 :test-id="`project-task-mobile-github-${task.id}`"
               />
             </div>
-            <TimeEntryTimerAction
+            <TimerActionButton
               v-if="task.status !== 'closed'"
               :action="isTaskTimerRunning(task) ? 'stop' : 'start'"
               :disabled="isTimerActionDisabled(task)"
-              :entry="getTimerActionEntry(task)"
+              :target="getTimerActionTarget(task)"
               :is-loading="props.startingTimerTaskId === task.id ||
                 props.stoppingTimerTaskId === task.id"
               :show-stop-first-guidance="opensStopFirstGuidance(task)"
@@ -222,11 +222,11 @@ function handleTimerAction(task: TaskResponse): void {
       <Column :pt="managementTableColumnPt">
         <template #body="slotProps">
           <div class="flex max-w-full min-w-0 items-center gap-2">
-            <TimeEntryTimerAction
+            <TimerActionButton
               v-if="slotProps.data.status !== 'closed'"
               :action="isTaskTimerRunning(slotProps.data) ? 'stop' : 'start'"
               :disabled="isTimerActionDisabled(slotProps.data)"
-              :entry="getTimerActionEntry(slotProps.data)"
+              :target="getTimerActionTarget(slotProps.data)"
               :is-loading="props.startingTimerTaskId === slotProps.data.id ||
                 props.stoppingTimerTaskId === slotProps.data.id"
               :show-stop-first-guidance="opensStopFirstGuidance(slotProps.data)"

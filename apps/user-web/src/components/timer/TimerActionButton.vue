@@ -3,18 +3,17 @@ import { computed } from "vue";
 import { PlayIcon, StopIcon } from "@heroicons/vue/24/solid";
 import Button from "primevue/button";
 
-interface TimerActionEntry {
+interface TimerActionTarget {
   id: string;
-  task: {
-    title: string;
-  };
+  title: string;
 }
 
 const props = defineProps<{
   action: "start" | "stop";
   disabled?: boolean;
-  entry: TimerActionEntry;
   isLoading?: boolean;
+  showStopFirstGuidance?: boolean;
+  target: TimerActionTarget;
   testIdPrefix:
     | "dashboard-recent-entry"
     | "dashboard-recent-entry-mobile"
@@ -22,11 +21,10 @@ const props = defineProps<{
     | "project-task-mobile"
     | "time-entry"
     | "time-entry-mobile";
-  showStopFirstGuidance?: boolean;
 }>();
 
 const emit = defineEmits<{
-  trigger: [entry: TimerActionEntry];
+  trigger: [target: TimerActionTarget];
 }>();
 
 const buttonBaseClass =
@@ -39,8 +37,8 @@ const timerActionSpinnerClass =
 const isStartAction = computed(() => props.action === "start");
 const label = computed(() =>
   isStartAction.value
-    ? `Start timer for ${props.entry.task.title}`
-    : `Stop timer for ${props.entry.task.title}`,
+    ? `Start timer for ${props.target.title}`
+    : `Stop timer for ${props.target.title}`,
 );
 const rootClass = computed(() =>
   props.isLoading === true
@@ -71,7 +69,7 @@ const tooltip = computed(() =>
     : label.value,
 );
 const testId = computed(() =>
-  `${props.testIdPrefix}-${props.action}-timer-${props.entry.id}`,
+  `${props.testIdPrefix}-${props.action}-timer-${props.target.id}`,
 );
 
 function handleClick(): void {
@@ -79,7 +77,7 @@ function handleClick(): void {
     return;
   }
 
-  emit("trigger", props.entry);
+  emit("trigger", props.target);
 }
 </script>
 
@@ -101,7 +99,7 @@ function handleClick(): void {
       v-if="props.isLoading"
       aria-hidden="true"
       :class="timerActionSpinnerClass"
-      data-testid="time-entry-timer-action-spinner"
+      data-testid="timer-action-spinner"
     />
     <span
       v-else
