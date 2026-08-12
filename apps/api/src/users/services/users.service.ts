@@ -15,7 +15,11 @@ import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
-import { userRowSelection, users } from '../schemas/users.schema';
+import {
+  userRowSelection,
+  users,
+  type UserAvatarSource,
+} from '../schemas/users.schema';
 
 type UserRow = typeof users.$inferSelect;
 
@@ -30,6 +34,34 @@ function firebaseDisplayNameFallback(displayName: string | null | undefined) {
   const nextDisplayName = displayName ?? null;
 
   return sql<string | null>`COALESCE(${users.displayName}, ${nextDisplayName})`;
+}
+
+function resolveProviderAvatarWrite(
+  current: Pick<UserRow, 'avatarSource' | 'avatarUrl'>,
+  avatarUrl: string | null | undefined,
+): string | null {
+  const nextAvatarUrl = avatarUrl?.trim();
+
+  if (
+    !nextAvatarUrl ||
+    current.avatarSource !== 'provider' ||
+    current.avatarUrl === nextAvatarUrl
+  ) {
+    return null;
+  }
+
+  return nextAvatarUrl;
+}
+
+function avatarOwnershipPatch(avatarUrl: string | null | undefined) {
+  if (avatarUrl === undefined) {
+    return {};
+  }
+
+  const avatarSource: UserAvatarSource =
+    avatarUrl === null ? 'provider' : 'user';
+
+  return { avatarUrl, avatarSource };
 }
 
 @Injectable()
@@ -88,9 +120,7 @@ export class UsersService {
         ...(input.displayName !== undefined
           ? { displayName: input.displayName }
           : {}),
-        ...(input.avatarUrl !== undefined
-          ? { avatarUrl: input.avatarUrl }
-          : {}),
+        ...avatarOwnershipPatch(input.avatarUrl),
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
@@ -128,6 +158,9 @@ export class UsersService {
     id: string,
     input: UpsertFromFirebaseInput,
   ): Promise<UserRow> {
+    const current = await this.findRowById(id);
+    if (!current) throw new UnauthorizedException('Unauthorized');
+
     const [updated] = await this.db
       .update(users)
       .set({
@@ -138,7 +171,22 @@ export class UsersService {
       .where(eq(users.id, id))
       .returning();
     if (!updated) throw new UnauthorizedException('Unauthorized');
-    return updated;
+    return this.applyProviderAvatar(updated, input.avatarUrl);
+  }
+
+  private async applyProviderAvatar(
+    row: UserRow,
+    avatarUrl: string | null | undefined,
+  ): Promise<UserRow> {
+    const nextAvatarUrl = resolveProviderAvatarWrite(row, avatarUrl);
+    if (nextAvatarUrl === null) return row;
+
+    const [updated] = await this.db
+      .update(users)
+      .set({ avatarUrl: nextAvatarUrl, updatedAt: new Date() })
+      .where(and(eq(users.id, row.id), eq(users.avatarSource, 'provider')))
+      .returning();
+    return updated ?? row;
   }
 
   /** Upserts the local user keyed by `firebase_uid` while preserving local profile edits. */
@@ -151,7 +199,7 @@ export class UsersService {
           firebaseUid: input.firebaseUid,
           email: input.email,
           displayName: input.displayName ?? null,
-          avatarUrl: input.avatarUrl ?? null,
+          avatarUrl: input.avatarUrl?.trim() || null,
         })
         .onConflictDoUpdate({
           target: users.firebaseUid,
@@ -163,7 +211,8 @@ export class UsersService {
         })
         .returning()
     )[0]!;
-    return row;
+
+    return this.applyProviderAvatar(row, input.avatarUrl);
   }
 
   /** Maps a DB row to the public response shape. */

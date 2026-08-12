@@ -135,6 +135,7 @@ watch(
       :settings-to="{ name: routeNames.profile }"
       :show-display-name="false"
       :switching-workspace-id="authStore.switchingWorkspaceId"
+      :user-avatar-url="authStore.avatarUrl"
       :user-initials="authStore.userInitials"
       :workspace-memberships="authStore.workspaceMemberships"
       :workspace-name="authStore.workspaceName"

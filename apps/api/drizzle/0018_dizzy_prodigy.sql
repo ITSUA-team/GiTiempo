@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "avatar_source" varchar(20) DEFAULT 'provider' NOT NULL;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_avatar_source_check" CHECK ("users"."avatar_source" IN ('provider', 'user'));

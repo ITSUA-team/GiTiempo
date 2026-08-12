@@ -37,9 +37,12 @@ Expected frontend-visible registration error codes: `duplicate_email`, `weak_pas
 | ------ | ----------- | ---- | ---- | ----------------------------------------- |
 | GET    | `/users/me` | JWT  | Any  | Get current user profile + workspace role |
 | GET    | `/users/me/workspaces` | JWT | Any | List the authenticated user's accessible workspace memberships |
-| PATCH  | `/users/me` | JWT  | Any  | Update display name, avatar               |
+| PATCH  | `/users/me` | JWT  | Any  | Update display name, avatar (setting an avatar stops identity sync from replacing it) |
 
 **GET /users/me/workspaces** response: `{ items: Array<{ workspaceId: string, workspaceName: string, role: "admin" | "pm" | "member", isCurrent: boolean }> }`
+
+- The user record tracks whether its avatar is owned by the identity provider or by the member. Login and invite sync fill or refresh the avatar from the verified Firebase `picture` claim only while it is provider-owned, and never clear it when a sign-in carries no picture.
+- `PATCH /users/me` with a non-null `avatarUrl` makes the avatar member-owned, so later logins leave it alone. Sending `avatarUrl: null` clears it and returns ownership to the provider, letting the next login refill it. The ownership marker is internal and is not part of the public user contract.
 
 ---
 
