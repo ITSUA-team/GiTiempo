@@ -611,7 +611,11 @@ describe('TimeEntriesService', () => {
       value: requireEntryResponse,
     });
 
-    await expect(service.stopTimer(user)).resolves.toEqual(stoppedEntry);
+    await expect(
+      service.stopTimer(user, {
+        expectedTimerId: otherWorkspaceRunningEntry.id,
+      }),
+    ).resolves.toEqual(stoppedEntry);
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
         durationSeconds: expect.any(Number),
@@ -624,7 +628,7 @@ describe('TimeEntriesService', () => {
     );
   });
 
-  it('returns not found when stopping without a running timer', async () => {
+  it('returns a conflict when the expected running timer changed', async () => {
     const tx = {
       select: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -647,9 +651,9 @@ describe('TimeEntriesService', () => {
       mockGithub(),
     );
 
-    await expect(service.stopTimer(user)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.stopTimer(user, { expectedTimerId: completedEntry.id }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('does not stop another user timer', async () => {
@@ -668,9 +672,9 @@ describe('TimeEntriesService', () => {
       mockGithub(),
     );
 
-    await expect(service.stopTimer(user)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.stopTimer(user, { expectedTimerId: completedEntry.id }),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(tx.update).not.toHaveBeenCalled();
   });
 

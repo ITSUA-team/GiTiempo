@@ -1,10 +1,15 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import type { TimeEntryListResponse, TimeEntryResponse } from "@gitiempo/shared";
+import type {
+  CurrentTimeEntryResponse,
+  TimeEntryListResponse,
+  TimeEntryResponse,
+} from "@gitiempo/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, defineComponent, h } from "vue";
 
 import {
+  useCurrentTimerQuery,
   useRecentOwnTimeEntriesQuery,
   useStartTimerMutation,
   useStopTimerMutation,
@@ -38,6 +43,7 @@ const ACTIVE_WORKSPACE_SCOPE = {
 };
 
 type ListOwnEntriesOptions = Parameters<TimeEntriesClient["listOwnEntries"]>[1];
+type CurrentTimerOptions = Parameters<TimeEntriesClient["getCurrentTimer"]>[0];
 
 function createDeferred<T>() {
   const deferred = {} as {
@@ -134,13 +140,15 @@ function createOwnEntriesResponse(
 
 function createClientMock(): Pick<
   TimeEntriesClient,
-  "listOwnEntries" | "startTimer" | "stopTimer"
+  "getCurrentTimer" | "listOwnEntries" | "startTimer" | "stopTimer"
 > & {
+  getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
   startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
   stopTimer: ReturnType<typeof vi.fn<TimeEntriesClient["stopTimer"]>>;
 } {
   return {
+    getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
     startTimer: vi.fn(async () =>
       createEntry({
@@ -180,6 +188,7 @@ function mountQueryHarness(options?: {
   }
 
   let recentEntriesQuery!: ReturnType<typeof useRecentOwnTimeEntriesQuery>;
+  let currentTimerQuery!: ReturnType<typeof useCurrentTimerQuery>;
   let startTimerMutation!: ReturnType<typeof useStartTimerMutation>;
   let stopTimerMutation!: ReturnType<typeof useStopTimerMutation>;
 
@@ -188,6 +197,11 @@ function mountQueryHarness(options?: {
       const accessToken = computed(() => authStore.accessToken);
       const scope = computed(() => scopeValue);
 
+      currentTimerQuery = useCurrentTimerQuery({
+        client,
+        enabled: computed(() => Boolean(accessToken.value)),
+        scope,
+      });
       recentEntriesQuery = useRecentOwnTimeEntriesQuery({
         client,
         enabled: computed(() => Boolean(accessToken.value)),
@@ -215,6 +229,7 @@ function mountQueryHarness(options?: {
 
   return {
     client,
+    currentTimerQuery,
     listKey,
     queryClient,
     recentEntriesQuery,
@@ -237,6 +252,26 @@ describe("query timer reconciliation", () => {
     }
 
     vi.restoreAllMocks();
+  });
+
+  it("passes the current timer query abort signal to its client", async () => {
+    const request = createAbortableDeferred<CurrentTimeEntryResponse>();
+    const client = createClientMock();
+    client.getCurrentTimer.mockImplementation((options?: CurrentTimerOptions) =>
+      request.wait(options?.signal),
+    );
+    const mounted = mountQueryHarness({ client });
+    wrappers.push(mounted.wrapper);
+
+    await flushPromises();
+
+    const signal = client.getCurrentTimer.mock.calls[0]?.[0]?.signal;
+
+    expect(signal).toBeInstanceOf(AbortSignal);
+
+    mounted.wrapper.unmount();
+
+    expect(signal?.aborted).toBe(true);
   });
 
   it("keeps a started timer entry authoritative when a stale recent-list request resolves late", async () => {
@@ -317,7 +352,7 @@ describe("query timer reconciliation", () => {
     wrappers.push(mounted.wrapper);
 
     await flushPromises();
-    await mounted.stopTimerMutation.mutateAsync();
+    await mounted.stopTimerMutation.mutateAsync({ expectedTimerId: runningEntry.id });
     await flushPromises();
 
     const firstSignal = client.listOwnEntries.mock.calls[0]?.[1]?.signal;
@@ -370,7 +405,9 @@ describe("query timer reconciliation", () => {
     wrappers.push(mounted.wrapper);
 
     await flushPromises();
-    await mounted.stopTimerMutation.mutateAsync();
+    await mounted.stopTimerMutation.mutateAsync({
+      expectedTimerId: stoppedOtherWorkspaceEntry.id,
+    });
     await flushPromises();
 
     expect(reconcileSpy).not.toHaveBeenCalled();

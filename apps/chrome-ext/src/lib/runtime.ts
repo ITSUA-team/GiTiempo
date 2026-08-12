@@ -39,7 +39,7 @@ export interface RuntimeClient {
   openExtension(): Promise<void>;
   signOut(): Promise<RuntimeAuthResult>;
   startTimer(pageContext: SupportedGitHubIssueContext): Promise<RuntimeMutationResult>;
-  stopTimer(): Promise<RuntimeMutationResult>;
+  stopTimer(expectedTimerId: string): Promise<RuntimeMutationResult>;
 }
 
 
@@ -51,7 +51,7 @@ export type BackgroundMessage =
   | { type: "auth/sign-out" }
   | { type: "runtime/get-snapshot" }
   | { type: "timer/start"; pageContext: SupportedGitHubIssueContext }
-  | { type: "timer/stop" }
+  | { type: "timer/stop"; expectedTimerId: string }
   | { type: "ui/open-extension" };
 
 type BackgroundEvent = {
@@ -133,8 +133,11 @@ export function createRuntimeClient(): RuntimeClient {
         pageContext,
       });
     },
-    stopTimer() {
-      return sendRuntimeMessage<RuntimeMutationResult>({ type: "timer/stop" });
+    stopTimer(expectedTimerId) {
+      return sendRuntimeMessage<RuntimeMutationResult>({
+        type: "timer/stop",
+        expectedTimerId,
+      });
     },
   };
 }

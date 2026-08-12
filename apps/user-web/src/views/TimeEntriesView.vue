@@ -318,6 +318,7 @@ onMounted(async () => {
           :format-time-range="formatTimeRange"
           :group="group"
           :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
+          :show-stop-first-guidance="isDirectStartBlockedByCurrentTimer"
           :show-header="false"
           :starting-timer-entry-id="startingTimerEntryId"
           :stopping-timer-entry-id="stoppingTimerEntryId"

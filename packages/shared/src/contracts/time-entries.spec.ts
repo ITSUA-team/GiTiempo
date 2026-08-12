@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   createManualTimeEntryDraftSchema,
   createManualTimeEntrySchema,
+  conditionalStopTimerSchema,
   startTimerSchema,
+  stopTimerSchema,
   timeEntryResponseSchema,
   updateTimeEntrySchema,
 } from "./time-entries.js";
@@ -234,5 +236,34 @@ describe("startTimerSchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["description"]);
+  });
+});
+
+describe("stopTimerSchema", () => {
+  it("accepts the authoritative timer identity", () => {
+    expect(
+      stopTimerSchema.parse({
+        expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      }),
+    ).toEqual({
+      expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    });
+  });
+
+  it("accepts targetless legacy stop requests but rejects malformed identities", () => {
+    expect(stopTimerSchema.parse({})).toEqual({});
+    expect(stopTimerSchema.parse(undefined)).toEqual({});
+    expect(stopTimerSchema.safeParse({ expectedTimerId: "not-a-uuid" }).success).toBe(false);
+  });
+
+  it("requires the authoritative identity for current clients", () => {
+    expect(conditionalStopTimerSchema.safeParse({}).success).toBe(false);
+    expect(
+      conditionalStopTimerSchema.parse({
+        expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      }),
+    ).toEqual({
+      expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    });
   });
 });

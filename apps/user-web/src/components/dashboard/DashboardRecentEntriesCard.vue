@@ -14,7 +14,7 @@ import {
 
 import type { DashboardRecentEntryRow } from "@/composables/dashboard/useDashboardOverview";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
-import TimeEntryTimerAction from "@/components/time-entries/TimeEntryTimerAction.vue";
+import TimerActionButton from "@/components/timer/TimerActionButton.vue";
 
 const props = defineProps<{
   entries: DashboardRecentEntryRow[];
@@ -108,20 +108,21 @@ function handleStopTimer(entry: DashboardRecentEntryRow): void {
         :tone="entry.isHighlighted ? 'highlighted' : 'default'"
       >
         <div class="flex min-w-0 items-start gap-3">
-          <TimeEntryTimerAction
+          <TimerActionButton
             v-if="entry.timerEntry.endedAt !== null"
             action="start"
             :disabled="isDirectStartDisabled()"
-            :entry="entry.timerEntry"
+            :target="{ id: entry.timerEntry.id, title: entry.timerEntry.task.title }"
             :is-loading="isStartTimerPending(entry)"
+            :show-stop-first-guidance="false"
             test-id-prefix="dashboard-recent-entry-mobile"
             @trigger="() => handleStartTimer(entry)"
           />
-          <TimeEntryTimerAction
+          <TimerActionButton
             v-else
             action="stop"
             :disabled="isStopTimerDisabled()"
-            :entry="entry.timerEntry"
+            :target="{ id: entry.timerEntry.id, title: entry.timerEntry.task.title }"
             :is-loading="isStopTimerPending(entry)"
             test-id-prefix="dashboard-recent-entry-mobile"
             @trigger="() => handleStopTimer(entry)"
@@ -179,20 +180,21 @@ function handleStopTimer(entry: DashboardRecentEntryRow): void {
       <Column :pt="managementTableColumnPt">
         <template #body="{ data: entry }">
           <div class="flex min-w-0 items-center gap-2">
-            <TimeEntryTimerAction
+            <TimerActionButton
               v-if="entry.timerEntry.endedAt !== null"
               action="start"
               :disabled="isDirectStartDisabled()"
-              :entry="entry.timerEntry"
+              :target="{ id: entry.timerEntry.id, title: entry.timerEntry.task.title }"
               :is-loading="isStartTimerPending(entry)"
+              :show-stop-first-guidance="false"
               test-id-prefix="dashboard-recent-entry"
               @trigger="() => handleStartTimer(entry)"
             />
-            <TimeEntryTimerAction
+            <TimerActionButton
               v-else
               action="stop"
               :disabled="isStopTimerDisabled()"
-              :entry="entry.timerEntry"
+              :target="{ id: entry.timerEntry.id, title: entry.timerEntry.task.title }"
               :is-loading="isStopTimerPending(entry)"
               test-id-prefix="dashboard-recent-entry"
               @trigger="() => handleStopTimer(entry)"
