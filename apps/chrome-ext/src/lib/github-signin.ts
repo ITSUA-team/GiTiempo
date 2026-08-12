@@ -1,4 +1,4 @@
-import { getExtensionConfig } from "./config";
+import { getExtensionConfig, type ExtensionBrowser } from "./config";
 import { launchWebAuthFlow } from "./web-auth-flow";
 
 /**
@@ -54,11 +54,16 @@ export async function deriveChallenge(verifier: string): Promise<string> {
 export function buildGithubSignInStartUrl(
   apiBaseUrl: string,
   challenge: string,
+  browser: ExtensionBrowser,
 ): string {
-  // The extension contributes its target and a challenge, never a destination:
-  // where the outcome is delivered is resolved by the backend from its own
-  // configuration, so nothing here can steer where the handoff code is sent.
-  return `${apiBaseUrl}/auth/github/start?app=extension&challenge=${challenge}`;
+  // The extension contributes its target, a challenge and which browser it is,
+  // never a destination: where the outcome is delivered is still resolved by the
+  // backend from its own configuration. `browser` names one of the destinations
+  // the operator configured rather than supplying one, so nothing here can steer
+  // where the handoff code is sent. Firefox needs this because its redirect host
+  // is derived from the extension id by the browser and cannot be computed
+  // server side, so one configured value cannot serve both.
+  return `${apiBaseUrl}/auth/github/start?app=extension&challenge=${challenge}&browser=${browser}`;
 }
 
 /**
@@ -90,7 +95,7 @@ export function readGithubSignInResult(redirectedTo: string): string {
  * and mints the same token pair the Firebase paths produce.
  */
 export async function signInWithGithub(): Promise<GithubSignInHandoff> {
-  const { apiBaseUrl } = getExtensionConfig();
+  const { apiBaseUrl, browser } = getExtensionConfig();
   // Proof of possession rather than a cookie: Chrome's authorization window does
   // not carry the backend's HttpOnly state cookie through to the callback, so the
   // verifier stays here and is presented when redeeming the handoff code.
@@ -100,7 +105,7 @@ export async function signInWithGithub(): Promise<GithubSignInHandoff> {
   return {
     code: readGithubSignInResult(
       await launchWebAuthFlow(
-        buildGithubSignInStartUrl(apiBaseUrl, challenge),
+        buildGithubSignInStartUrl(apiBaseUrl, challenge, browser),
         "GitHub",
       ),
     ),
