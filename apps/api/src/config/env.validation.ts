@@ -96,6 +96,7 @@ export const envSchema = z
     // the extension id differs between an unpacked build and a published one, so
     // this is per-environment. `requireConfig` fails loud if consumed while unset.
     GITHUB_SIGNIN_EXTENSION_REDIRECT_URL: optionalUrl,
+    GITHUB_SIGNIN_EXTENSION_FIREFOX_REDIRECT_URL: optionalUrl,
 
     // --- Token encryption ---
     ENCRYPTION_KEY: optionalNonEmptyString,

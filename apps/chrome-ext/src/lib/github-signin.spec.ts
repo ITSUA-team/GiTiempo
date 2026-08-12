@@ -12,7 +12,7 @@ const CHALLENGE = "a".repeat(64);
 describe("buildGithubSignInStartUrl", () => {
   it("targets the backend start endpoint as the extension, carrying the challenge", () => {
     const url = new URL(
-      buildGithubSignInStartUrl("https://api.example.test", CHALLENGE),
+      buildGithubSignInStartUrl("https://api.example.test", CHALLENGE, "chrome"),
     );
 
     expect(url.origin + url.pathname).toBe(
@@ -24,13 +24,21 @@ describe("buildGithubSignInStartUrl", () => {
 
   it("contributes nothing that could steer the destination", () => {
     const url = new URL(
-      buildGithubSignInStartUrl("https://api.example.test", CHALLENGE),
+      buildGithubSignInStartUrl("https://api.example.test", CHALLENGE, "chrome"),
     );
 
     // The destination is resolved by the backend from its own configuration. If
     // the extension could name it, anyone reaching the start endpoint could have
     // a handoff code delivered to a host they control.
-    expect([...url.searchParams.keys()].sort()).toEqual(["app", "challenge"]);
+    expect([...url.searchParams.keys()].sort()).toEqual([
+      "app",
+      "browser",
+      "challenge",
+    ]);
+    expect(url.searchParams.get("browser")).toBe("chrome");
+    for (const value of url.searchParams.values()) {
+      expect(value).not.toMatch(/^[a-z]+:|\/\//);
+    }
   });
 });
 
@@ -57,6 +65,7 @@ describe("proof of possession", () => {
     const url = buildGithubSignInStartUrl(
       "https://api.example.test",
       await deriveChallenge(verifier),
+      "chrome",
     );
 
     expect(url).not.toContain(verifier);
