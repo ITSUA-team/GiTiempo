@@ -209,10 +209,7 @@ describe("background snapshot broadcast", () => {
     });
   });
 
-  it("refetches the current timer and stops it by its authoritative identity", async () => {
-    backgroundApiMocks.getCurrentTimer.mockResolvedValue({
-      timeEntry: { id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002" },
-    });
+  it("stops only the timer identity supplied by the caller", async () => {
     backgroundApiMocks.stopTimer.mockResolvedValue({});
 
     await import("./main");
@@ -221,13 +218,23 @@ describe("background snapshot broadcast", () => {
     const sendResponse = vi.fn();
 
     expect(onMessage).toBeTypeOf("function");
-    expect(onMessage({ type: "timer/stop" }, {}, sendResponse)).toBe(true);
+    expect(
+      onMessage(
+        {
+          type: "timer/stop",
+          expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        },
+        {},
+        sendResponse,
+      ),
+    ).toBe(true);
 
     await vi.waitFor(() => {
       expect(backgroundApiMocks.stopTimer).toHaveBeenCalledWith({
         expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
       });
     });
+    expect(backgroundApiMocks.getCurrentTimer).not.toHaveBeenCalled();
   });
 
   it("includes the signed-in user decoded from the session token", async () => {

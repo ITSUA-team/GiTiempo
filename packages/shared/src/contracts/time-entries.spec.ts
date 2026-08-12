@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createManualTimeEntryDraftSchema,
   createManualTimeEntrySchema,
+  conditionalStopTimerSchema,
   startTimerSchema,
   stopTimerSchema,
   timeEntryResponseSchema,
@@ -253,5 +254,16 @@ describe("stopTimerSchema", () => {
     expect(stopTimerSchema.parse({})).toEqual({});
     expect(stopTimerSchema.parse(undefined)).toEqual({});
     expect(stopTimerSchema.safeParse({ expectedTimerId: "not-a-uuid" }).success).toBe(false);
+  });
+
+  it("requires the authoritative identity for current clients", () => {
+    expect(conditionalStopTimerSchema.safeParse({}).success).toBe(false);
+    expect(
+      conditionalStopTimerSchema.parse({
+        expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      }),
+    ).toEqual({
+      expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    });
   });
 });

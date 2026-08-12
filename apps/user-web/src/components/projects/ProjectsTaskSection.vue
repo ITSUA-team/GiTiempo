@@ -93,7 +93,11 @@ function isTimerActionDisabled(task: TaskResponse): boolean {
 }
 
 function opensStopFirstGuidance(task: TaskResponse): boolean {
-  return props.activeTimerTaskId != null && !isTaskTimerRunning(task);
+  return (
+    !isTimerOperationPending() &&
+    props.activeTimerTaskId != null &&
+    !isTaskTimerRunning(task)
+  );
 }
 
 function getTimerActionTarget(task: TaskResponse) {
@@ -104,6 +108,10 @@ function getTimerActionTarget(task: TaskResponse) {
 }
 
 function handleTimerAction(task: TaskResponse): void {
+  if (isTimerOperationPending()) {
+    return;
+  }
+
   if (isTaskTimerRunning(task)) {
     emit("stopTimer", task);
     return;

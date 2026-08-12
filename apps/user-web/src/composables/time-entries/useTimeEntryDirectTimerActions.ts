@@ -138,7 +138,7 @@ export function useTimeEntryDirectTimerActions({
         summary: "Could not stop timer",
       });
 
-      await invalidateTimer();
+      await refreshTimerAndEntries();
     } finally {
       stoppingTimerEntryId.value = null;
     }

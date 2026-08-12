@@ -250,15 +250,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       case "timer/stop": {
         sendResponse(
-          await handleMutation(async () => {
-            const { timeEntry } = await apiClient.getCurrentTimer();
-
-            if (!timeEntry) {
-              throw new Error("No running timer found.");
-            }
-
-            return apiClient.stopTimer({ expectedTimerId: timeEntry.id });
-          }),
+          await handleMutation(() =>
+            apiClient.stopTimer({ expectedTimerId: request.expectedTimerId }),
+          ),
         );
         return;
       }

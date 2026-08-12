@@ -1861,6 +1861,54 @@ describe('useTopBarTimer', () => {
     );
   });
 
+  it('keeps the dialog open when a conflicting stop reveals a replacement timer', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+    const replacementTimer = createRunningEntry({
+      id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005',
+      task: { id: TEST_IDS.taskAlt, title: 'Ship admin polish' },
+      taskId: TEST_IDS.taskAlt,
+    });
+
+    client.getCurrentTimer
+      .mockResolvedValueOnce({ timeEntry: createRunningEntry() })
+      .mockResolvedValueOnce({ timeEntry: replacementTimer });
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+      createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'Ship admin polish'),
+    ]);
+    client.stopTimer.mockRejectedValueOnce(
+      new ApiError('Running timer changed', { status: 409 }),
+    );
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+    await topBarTimer.stopTimerFromDialog();
+    await flushPromises();
+
+    expect(topBarTimer.currentTimer.value).toEqual(replacementTimer);
+    expect(topBarTimer.primaryActionLabel.value).toBe('Stop');
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
+    expect(topBarTimer.timerActionErrorMessage.value).toBeNull();
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: 'The running timer changed. Please stop the current timer first.',
+        severity: 'info',
+        summary: 'Timer status refreshed',
+      }),
+    );
+  });
+
   it('advances the rendered elapsed timer display while a timer is running', async () => {
     const client = createClientMock();
 

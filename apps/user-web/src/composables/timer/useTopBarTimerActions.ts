@@ -85,6 +85,15 @@ export function useTopBarTimerActions({
         if (isApiErrorStatus(error, [404, 409])) {
           await summary.refreshSummaryAfterConflict(error);
           timerActionErrorMessage.value = null;
+
+          if (summary.currentTimer.value !== null) {
+            appToast.showInfoToast(
+              "Timer status refreshed",
+              "The running timer changed. Please stop the current timer first.",
+            );
+            return false;
+          }
+
           appToast.showInfoToast(
             "Timer already stopped",
             "The timer status has been refreshed.",

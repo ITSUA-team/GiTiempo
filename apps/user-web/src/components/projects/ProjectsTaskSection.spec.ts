@@ -140,6 +140,23 @@ describe("ProjectsTaskSection", () => {
     expect(wrapper.emitted("startTimer")).toBeUndefined();
   });
 
+  it("disables blocked starts while the timer state is refreshing", async () => {
+    const wrapper = mountSection([createTask()], {
+      activeTimerTaskId: "task-other",
+      isCurrentTimerLoading: true,
+    });
+    const timerButton = wrapper.get(
+      '[data-testid="project-task-start-timer-task-1"]',
+    );
+
+    expect(timerButton.attributes("disabled")).toBeDefined();
+
+    await timerButton.trigger("click");
+
+    expect(wrapper.emitted("openActiveTimer")).toBeUndefined();
+    expect(wrapper.emitted("startTimer")).toBeUndefined();
+  });
+
   it("stops the active timer from its matching project task", async () => {
     const task = createTask();
     const wrapper = mountSection([task], { activeTimerTaskId: task.id });

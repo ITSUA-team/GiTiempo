@@ -172,6 +172,12 @@ export const stopTimerSchema = z
   .strict()
   .default({});
 
+export const conditionalStopTimerSchema = z
+  .object({
+    expectedTimerId: z.uuid(),
+  })
+  .strict();
+
 export const startTimerFromGitHubSchema = z
   .object({
     githubProjectId: z.string().min(1).max(255).optional(),
@@ -202,6 +208,7 @@ export type CreateManualTimeEntryDraftInput = z.infer<
 export type UpdateTimeEntryInput = z.infer<typeof updateTimeEntrySchema>;
 export type StartTimerInput = z.infer<typeof startTimerSchema>;
 export type StopTimerInput = z.infer<typeof stopTimerSchema>;
+export type ConditionalStopTimerInput = z.infer<typeof conditionalStopTimerSchema>;
 export type StartTimerFromGitHubInput = z.infer<
   typeof startTimerFromGitHubSchema
 >;

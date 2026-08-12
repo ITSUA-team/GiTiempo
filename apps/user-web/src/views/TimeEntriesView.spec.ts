@@ -773,6 +773,7 @@ describe("TimeEntriesView", () => {
     expect(client.stopTimer).toHaveBeenCalledWith({
       expectedTimerId: TEST_IDS.runningEntry,
     });
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
     expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
         detail: "Timer is not running",
