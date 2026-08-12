@@ -457,12 +457,12 @@ onBeforeUnmount(() => {
             },
             image: {
               class: avatarImagePtClass,
-              onError: handleImageError,
             },
             label: {
               class: 'leading-[14px]',
             },
           }"
+          @error="handleImageError"
         />
       </Button>
 

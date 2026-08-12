@@ -121,14 +121,15 @@ const AvatarStub = defineComponent({
       type: Object as PropType<TestPassThrough>,
     },
   },
-  setup(props, { attrs }) {
+  emits: ["error"],
+  setup(props, { attrs, emit }) {
     return () =>
       h("span", { ...attrs, class: [attrs.class, props.pt?.root?.class] }, [
         props.image
           ? h("img", {
               class: props.pt?.image?.class,
               "data-testid": "profile-avatar-image",
-              onError: props.pt?.image?.onError,
+              onError: (event: Event) => emit("error", event),
               src: props.image,
             })
           : props.label,

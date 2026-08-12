@@ -47,6 +47,23 @@ function evaluateSetValue(value: unknown, currentRow: UserRowMock): unknown {
   return null;
 }
 
+function collectPredicateColumns(
+  value: unknown,
+  found: string[] = [],
+): string[] {
+  if (typeof value !== 'object' || value === null) return found;
+
+  const columnName = (value as { name?: unknown }).name;
+  if (typeof columnName === 'string') found.push(columnName);
+
+  const chunks = (value as { queryChunks?: unknown }).queryChunks;
+  if (Array.isArray(chunks)) {
+    for (const chunk of chunks) collectPredicateColumns(chunk, found);
+  }
+
+  return found;
+}
+
 function applySet(
   row: UserRowMock,
   setArg: Record<string, unknown>,
@@ -390,8 +407,44 @@ describe('UsersService', () => {
         unknown
       >;
       expect(setArg).not.toHaveProperty('avatarUrl');
+      expect(dbMock._spies.set).toHaveBeenCalledTimes(1);
       expect(result.displayName).toBe('Alice');
       expect(result.avatarUrl).toBe('https://cdn.example.com/local-avatar.png');
+    });
+
+    it('guards the provider avatar write with an ownership condition in the database', async () => {
+      const providerOwnedRow = {
+        ...sampleRow,
+        avatarUrl: 'https://cdn.example.com/old-google-avatar.png',
+      };
+      await build({
+        selectRows: [providerOwnedRow],
+        updateRows: [providerOwnedRow],
+      });
+
+      await service.updateFromFirebase(sampleRow.id, {
+        avatarUrl: 'https://cdn.example.com/new-google-avatar.png',
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      expect(dbMock._spies.set).toHaveBeenCalledTimes(2);
+
+      const avatarSetArg = dbMock._spies.set.mock.calls[1][0] as Record<
+        string,
+        unknown
+      >;
+      expect(avatarSetArg).toHaveProperty(
+        'avatarUrl',
+        'https://cdn.example.com/new-google-avatar.png',
+      );
+      expect(avatarSetArg).not.toHaveProperty('email');
+
+      const avatarWhereArg = dbMock._spies.whereUpdate.mock.calls[1]?.[0];
+      expect(collectPredicateColumns(avatarWhereArg)).toContain(
+        'avatar_source',
+      );
     });
 
     it('refreshes a provider-owned avatar from the Firebase picture claim', async () => {

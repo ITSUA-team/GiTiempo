@@ -114,9 +114,9 @@ async function handleSaveProfile(): Promise<void> {
               root: 'bg-accent-tint text-brand text-xs font-semibold overflow-hidden',
               image: {
                 class: avatarImagePtClass,
-                onError: handleImageError,
               },
             }"
+            @error="handleImageError"
           />
           <div class="flex flex-col gap-0.5">
             <p class="text-text-dark text-sm font-semibold">

@@ -121,6 +121,7 @@ async function mountProfileView(options: { profile?: UserResponse | null } = {})
       stubs: {
         Avatar: {
           props: ["image", "label", "pt"],
+          emits: ["error"],
           template: `
             <div data-testid="profile-avatar">
               <img
@@ -128,7 +129,7 @@ async function mountProfileView(options: { profile?: UserResponse | null } = {})
                 data-testid="profile-avatar-image"
                 :class="pt?.image?.class"
                 :src="image"
-                @error="pt?.image?.onError?.()"
+                @error="$emit('error', $event)"
               >
               <template v-else>{{ label }}</template>
             </div>

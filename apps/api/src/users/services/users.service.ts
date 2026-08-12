@@ -36,10 +36,10 @@ function firebaseDisplayNameFallback(displayName: string | null | undefined) {
   return sql<string | null>`COALESCE(${users.displayName}, ${nextDisplayName})`;
 }
 
-function providerAvatarPatch(
+function resolveProviderAvatarWrite(
   current: Pick<UserRow, 'avatarSource' | 'avatarUrl'>,
   avatarUrl: string | null | undefined,
-) {
+): string | null {
   const nextAvatarUrl = avatarUrl?.trim();
 
   if (
@@ -47,10 +47,10 @@ function providerAvatarPatch(
     current.avatarSource !== 'provider' ||
     current.avatarUrl === nextAvatarUrl
   ) {
-    return {};
+    return null;
   }
 
-  return { avatarUrl: nextAvatarUrl };
+  return nextAvatarUrl;
 }
 
 function avatarOwnershipPatch(avatarUrl: string | null | undefined) {
@@ -166,13 +166,27 @@ export class UsersService {
       .set({
         email: input.email,
         displayName: firebaseDisplayNameFallback(input.displayName),
-        ...providerAvatarPatch(current, input.avatarUrl),
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
       .returning();
     if (!updated) throw new UnauthorizedException('Unauthorized');
-    return updated;
+    return this.applyProviderAvatar(updated, input.avatarUrl);
+  }
+
+  private async applyProviderAvatar(
+    row: UserRow,
+    avatarUrl: string | null | undefined,
+  ): Promise<UserRow> {
+    const nextAvatarUrl = resolveProviderAvatarWrite(row, avatarUrl);
+    if (nextAvatarUrl === null) return row;
+
+    const [updated] = await this.db
+      .update(users)
+      .set({ avatarUrl: nextAvatarUrl, updatedAt: new Date() })
+      .where(and(eq(users.id, row.id), eq(users.avatarSource, 'provider')))
+      .returning();
+    return updated ?? row;
   }
 
   /** Upserts the local user keyed by `firebase_uid` while preserving local profile edits. */
@@ -198,15 +212,7 @@ export class UsersService {
         .returning()
     )[0]!;
 
-    const avatarPatch = providerAvatarPatch(row, input.avatarUrl);
-    if (Object.keys(avatarPatch).length === 0) return row;
-
-    const [updated] = await this.db
-      .update(users)
-      .set({ ...avatarPatch, updatedAt: now })
-      .where(eq(users.id, row.id))
-      .returning();
-    return updated ?? row;
+    return this.applyProviderAvatar(row, input.avatarUrl);
   }
 
   /** Maps a DB row to the public response shape. */

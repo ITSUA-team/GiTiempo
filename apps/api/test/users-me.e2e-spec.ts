@@ -288,6 +288,55 @@ describe('Users (e2e)', () => {
       expect(afterSecond.body.avatarUrl).toBe(chosen);
     });
 
+    it('never leaves a user-owned avatar holding a provider url under concurrency', async () => {
+      const { email, uid, user } = await provisionMember('avatar-race');
+      const chosen = 'https://cdn.example.com/chosen-under-race.png';
+
+      const firstLogin = await login(
+        app,
+        `test:${uid}:${email}:Member:https://cdn.example.com/google-first.png`,
+      );
+
+      const [, patched] = await Promise.all([
+        login(
+          app,
+          `test:${uid}:${email}:Member:https://cdn.example.com/google-race.png`,
+        ),
+        request(app.getHttpServer())
+          .patch('/users/me')
+          .set('Authorization', bearer(firstLogin.accessToken))
+          .send({ avatarUrl: chosen }),
+      ]);
+      expect(patched.status).toBe(200);
+
+      const [stored] = await db
+        .select({
+          avatarSource: users.avatarSource,
+          avatarUrl: users.avatarUrl,
+        })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1);
+
+      if (stored!.avatarSource === 'user') {
+        expect(stored!.avatarUrl).toBe(chosen);
+      } else {
+        expect(stored!.avatarUrl).not.toBe(chosen);
+      }
+
+      const finalLogin = await login(
+        app,
+        `test:${uid}:${email}:Member:https://cdn.example.com/google-final.png`,
+      );
+      const afterFinal = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', bearer(finalLogin.accessToken));
+
+      if (stored!.avatarSource === 'user') {
+        expect(afterFinal.body.avatarUrl).toBe(chosen);
+      }
+    });
+
     it('lets a member hand the avatar back to the provider by clearing it', async () => {
       const { email, uid } = await provisionMember('avatar-reset');
       const google = 'https://cdn.example.com/google-reset.png';
