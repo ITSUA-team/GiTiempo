@@ -123,7 +123,7 @@ function supportedContext() {
 function createRuntimeClient(overrides?: {
   snapshot?: RuntimeSnapshot;
   startTimer?: () => Promise<RuntimeMutationResult>;
-  stopTimer?: () => Promise<RuntimeMutationResult>;
+  stopTimer?: RuntimeClient["stopTimer"];
 }): RuntimeClient {
   return {
     signInWithGithub: vi.fn(async (): Promise<RuntimeAuthResult> => ({
@@ -401,6 +401,7 @@ describe("injected issue control", () => {
     root.querySelector<HTMLButtonElement>('[data-action="stop-timer"]')!.click();
     await Promise.resolve();
 
+    expect(stopTimer).toHaveBeenCalledWith("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002");
     expect(root.textContent).toContain("Improve reports filters");
     expect(root.textContent).toContain("Timer stop failed");
     expect(root.textContent).toContain("Retry");

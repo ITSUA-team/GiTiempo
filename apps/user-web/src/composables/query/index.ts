@@ -6,6 +6,7 @@ import type {
   ProjectResponse,
   StartTimerFromGitHubInput,
   StartTimerInput,
+  ConditionalStopTimerInput,
   TaskResponse,
   TimeEntryListQuery,
   TimeEntryListResponse,
@@ -40,7 +41,7 @@ interface CreateTaskClient {
 }
 
 interface CurrentTimerClient {
-  getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
+  getCurrentTimer(options?: { signal?: AbortSignal }): Promise<CurrentTimeEntryResponse>;
 }
 
 interface DeleteTaskClient {
@@ -73,7 +74,7 @@ interface StartTimerFromGitHubClient {
 }
 
 interface StopTimerClient {
-  stopTimer(): Promise<TimeEntryResponse>;
+  stopTimer(input: ConditionalStopTimerInput): Promise<TimeEntryResponse>;
 }
 
 interface UpdateTaskClient {
@@ -224,7 +225,7 @@ export const useCurrentTimerQuery = (options: UseCurrentTimerQueryOptions) =>
       toValue(options.queryKey) ?? timerKeys.currentRaw(toValue(options.scope)),
     ),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () => options.client.getCurrentTimer(),
+    queryFn: ({ signal }) => options.client.getCurrentTimer({ signal }),
   });
 
 export const useOwnTimeEntriesQuery = (options: UseOwnTimeEntriesQueryOptions) =>
@@ -386,7 +387,7 @@ export const useStopTimerMutation = (options: UseStopTimerMutationOptions) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => options.client.stopTimer(),
+    mutationFn: (input: ConditionalStopTimerInput) => options.client.stopTimer(input),
     onSuccess: async (timer) => {
       await reconcileTimeEntryCachesAfterTimeEntryMutation(
         queryClient,

@@ -238,7 +238,7 @@ describe('TimeEntriesDaySection', () => {
   it('disables active timer stops while a stop request is pending', async () => {
     const wrapper = mountSection({ stoppingTimerEntryId: 'entry-running' });
     const stopTimerButton = wrapper.get('[data-testid="time-entry-stop-timer-entry-running"]');
-    const spinner = stopTimerButton.get('[data-testid="time-entry-timer-action-spinner"]');
+    const spinner = stopTimerButton.get('[data-testid="timer-action-spinner"]');
 
     expect(stopTimerButton.attributes('disabled')).toBeDefined();
     expect(stopTimerButton.attributes('aria-busy')).toBe('true');
@@ -253,7 +253,10 @@ describe('TimeEntriesDaySection', () => {
   });
 
   it('routes blocked direct timer starts to the active timer picker on desktop', async () => {
-    const wrapper = mountSection({ isStartTimerDisabled: true });
+    const wrapper = mountSection({
+      isStartTimerDisabled: true,
+      showStopFirstGuidance: true,
+    });
     const startTimerButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
 
     expect(startTimerButton.attributes('disabled')).toBeUndefined();
@@ -275,7 +278,10 @@ describe('TimeEntriesDaySection', () => {
   it('routes blocked mobile direct timer starts to the active timer picker', async () => {
     mockMatchMedia(true);
 
-    const wrapper = mountSection({ isStartTimerDisabled: true });
+    const wrapper = mountSection({
+      isStartTimerDisabled: true,
+      showStopFirstGuidance: true,
+    });
     const startTimerButton = wrapper.get('[data-testid="time-entry-mobile-start-timer-entry-completed"]');
 
     expect(startTimerButton.attributes('disabled')).toBeUndefined();

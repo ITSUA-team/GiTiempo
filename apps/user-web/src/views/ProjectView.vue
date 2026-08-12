@@ -18,6 +18,8 @@ import { useProjectsData } from "@/composables/projects/useProjectsData";
 import { useProjectsSearch } from "@/composables/projects/useProjectsSearch";
 import { useProjectTaskDialog } from "@/composables/projects/useProjectTaskDialog";
 import { useProjectTaskMutations } from "@/composables/projects/useProjectTaskMutations";
+import { useProjectTaskDirectTimerActions } from "@/composables/projects/useProjectTaskDirectTimerActions";
+import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
 import { resolveDataPageState } from "@/lib/page-state";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
@@ -29,6 +31,7 @@ const client = createDefaultTimeEntriesClient();
 const confirm = useConfirm();
 const toast = useToast();
 const appToast = createAppToast(toast);
+const topBarTimerDialogController = useTopBarTimerDialogController();
 const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const data = useProjectsData({
@@ -62,6 +65,20 @@ const mutations = useProjectTaskMutations({
   toast,
 });
 const taskBackfill = useProjectTaskBackfillFlow({ client, toast });
+const {
+  activeTimerTaskId,
+  isCurrentTimerLoading,
+  startingTimerTaskId,
+  startTimerForTask,
+  stoppingTimerTaskId,
+  stopTimerForTask,
+} = useProjectTaskDirectTimerActions({
+  client,
+  enabled: isAuthenticated,
+  onStartConflict: openActiveTimerDialog,
+  scope,
+  toast,
+});
 const taskActions = useProjectTaskActions({
   confirm,
   dialog,
@@ -127,6 +144,10 @@ async function retryLoadPage(): Promise<void> {
   await data.loadPage();
 }
 
+function openActiveTimerDialog(): void {
+  topBarTimerDialogController.requestOpen();
+}
+
 </script>
 
 <template>
@@ -174,10 +195,17 @@ async function retryLoadPage(): Promise<void> {
           v-for="group in filteredProjectGroups"
           :key="group.project.id"
           :format-updated-label="formatUpdatedLabel"
+          :active-timer-task-id="activeTimerTaskId"
+          :is-current-timer-loading="isCurrentTimerLoading"
           :project="group.project"
+          :starting-timer-task-id="startingTimerTaskId"
+          :stopping-timer-task-id="stoppingTimerTaskId"
           :tasks="group.tasks"
           @add-task="openTaskCreateDialog"
           @edit-task="openEditDialog"
+          @open-active-timer="openActiveTimerDialog"
+          @start-timer="(task) => void startTimerForTask(task)"
+          @stop-timer="(task) => void stopTimerForTask(task)"
         />
       </div>
     </template>
