@@ -21,6 +21,7 @@ import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Menu from "primevue/menu";
 import type { MenuItem as PrimeMenuItem } from "primevue/menuitem";
+import { avatarImagePtClass, useAvatarImage } from "../avatar";
 import {
   getWorkspaceRoleLabel,
   getWorkspaceSwitchStatus,
@@ -85,6 +86,7 @@ const props = withDefaults(
     showSettings?: boolean;
     settingsTo: RouteLocationRaw;
     switchingWorkspaceId?: string | null;
+    userAvatarUrl?: string | null;
     userInitials: string;
     workspaceMemberships?: CurrentUserWorkspaceMembershipResponse[];
     workspaceName: string;
@@ -100,6 +102,7 @@ const props = withDefaults(
     showDisplayName: false,
     showSettings: true,
     switchingWorkspaceId: null,
+    userAvatarUrl: null,
     workspaceMemberships: () => [],
     workspaceShortName: "GT",
   },
@@ -130,6 +133,10 @@ const profileTriggerRootClass = computed(() =>
       ? openProfileTriggerClass
       : "size-8 rounded-full border-0 bg-transparent p-0 hover:bg-app-bg",
   ].join(" "),
+);
+
+const { handleImageError, imageUrl } = useAvatarImage(
+  () => props.userAvatarUrl,
 );
 
 const profileAvatarRootClass = computed(() =>
@@ -438,7 +445,8 @@ onBeforeUnmount(() => {
         </span>
         <Avatar
           unstyled
-          :label="props.userInitials"
+          :image="imageUrl"
+          :label="imageUrl ? undefined : props.userInitials"
           shape="circle"
           class="size-8"
           data-testid="profile-avatar"
@@ -446,6 +454,10 @@ onBeforeUnmount(() => {
           :pt="{
             root: {
               class: profileAvatarRootClass,
+            },
+            image: {
+              class: avatarImagePtClass,
+              onError: handleImageError,
             },
             label: {
               class: 'leading-[14px]',

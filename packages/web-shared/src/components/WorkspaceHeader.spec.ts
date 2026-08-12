@@ -28,6 +28,7 @@ type HeaderProps = typeof baseProps & {
   showDisplayName?: boolean;
   showSettings?: boolean;
   switchingWorkspaceId?: string | null;
+  userAvatarUrl?: string | null;
   workspaceMemberships?: CurrentUserWorkspaceMembershipResponse[];
 };
 
@@ -77,6 +78,10 @@ const longWorkspaceMemberships: CurrentUserWorkspaceMembershipResponse[] = [
 ];
 
 type TestPassThrough = {
+  image?: {
+    class?: string;
+    onError?: () => void;
+  };
   root?: {
     class?: string;
   };
@@ -103,8 +108,12 @@ const ButtonStub = defineComponent({
 const AvatarStub = defineComponent({
   name: "Avatar",
   props: {
+    image: {
+      default: undefined,
+      type: String,
+    },
     label: {
-      required: true,
+      default: undefined,
       type: String,
     },
     pt: {
@@ -114,7 +123,16 @@ const AvatarStub = defineComponent({
   },
   setup(props, { attrs }) {
     return () =>
-      h("span", { ...attrs, class: [attrs.class, props.pt?.root?.class] }, props.label);
+      h("span", { ...attrs, class: [attrs.class, props.pt?.root?.class] }, [
+        props.image
+          ? h("img", {
+              class: props.pt?.image?.class,
+              "data-testid": "profile-avatar-image",
+              onError: props.pt?.image?.onError,
+              src: props.image,
+            })
+          : props.label,
+      ]);
   },
 });
 
@@ -319,6 +337,39 @@ describe("WorkspaceHeader", () => {
     expect(wrapper.text()).not.toContain("Alexey Tsukanov");
     expect(wrapper.get('[data-testid="profile-menu-trigger"]').text()).toContain("AT");
     expect(wrapper.get('[data-testid="profile-avatar"]')).toBeTruthy();
+  });
+
+  it("renders the member avatar image in the profile trigger when one is supplied", () => {
+    const wrapper = mountHeader({
+      props: {
+        userAvatarUrl: "https://cdn.example.test/avatar.png",
+      },
+    });
+
+    const image = wrapper.get('[data-testid="profile-avatar-image"]');
+
+    expect(image.attributes("src")).toBe("https://cdn.example.test/avatar.png");
+    expect(wrapper.get('[data-testid="profile-avatar"]').text()).not.toContain("AT");
+  });
+
+  it("keeps the initials trigger when no avatar image is supplied", () => {
+    const wrapper = mountHeader();
+
+    expect(wrapper.find('[data-testid="profile-avatar-image"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="profile-avatar"]').text()).toContain("AT");
+  });
+
+  it("falls back to initials when the avatar image fails to load", async () => {
+    const wrapper = mountHeader({
+      props: {
+        userAvatarUrl: "https://cdn.example.test/broken.png",
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-avatar-image"]').trigger("error");
+
+    expect(wrapper.find('[data-testid="profile-avatar-image"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="profile-avatar"]').text()).toContain("AT");
   });
 
   it("keeps mobile timer actions usable beside the top-right profile menu overlay", async () => {

@@ -1,5 +1,6 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
@@ -210,6 +211,120 @@ describe('Users (e2e)', () => {
         .get('/users/me')
         .set('Authorization', bearer(deletedUserTokens.accessToken));
       expect(getRes2.status).toBe(401);
+    });
+  });
+
+  describe('avatar ownership', () => {
+    async function provisionMember(label: string) {
+      const uid = `${label}-${Date.now()}`;
+      const email = `${uid}@example.com`;
+      const { workspace } = await getSeededAdminWorkspace(db);
+      const [user] = await db
+        .insert(users)
+        .values({ firebaseUid: uid, email, displayName: 'Avatar Member' })
+        .returning();
+      await db.insert(workspaceMembers).values({
+        workspaceId: workspace.id,
+        userId: user!.id,
+        role: 'member',
+      });
+
+      return { email, uid, user: user! };
+    }
+
+    it('defaults a row inserted without an avatar source to provider ownership', async () => {
+      const { user } = await provisionMember('avatar-default');
+
+      expect(user.avatarSource).toBe('provider');
+      expect(user.avatarUrl).toBeNull();
+    });
+
+    it('fills then refreshes a provider-owned avatar across logins', async () => {
+      const { email, uid } = await provisionMember('avatar-refresh');
+      const first = 'https://cdn.example.com/google-first.png';
+      const second = 'https://cdn.example.com/google-second.png';
+
+      const firstLogin = await login(
+        app,
+        `test:${uid}:${email}:Member:${first}`,
+      );
+      const afterFirst = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', bearer(firstLogin.accessToken));
+      expect(afterFirst.body.avatarUrl).toBe(first);
+
+      const secondLogin = await login(
+        app,
+        `test:${uid}:${email}:Member:${second}`,
+      );
+      const afterSecond = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', bearer(secondLogin.accessToken));
+      expect(afterSecond.body.avatarUrl).toBe(second);
+    });
+
+    it('never replaces a user-owned avatar on a later login', async () => {
+      const { email, uid } = await provisionMember('avatar-owned');
+      const chosen = 'https://cdn.example.com/chosen-by-member.png';
+
+      const firstLogin = await login(
+        app,
+        `test:${uid}:${email}:Member:https://cdn.example.com/google-first.png`,
+      );
+      const patched = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', bearer(firstLogin.accessToken))
+        .send({ avatarUrl: chosen });
+      expect(patched.status).toBe(200);
+      expect(patched.body.avatarUrl).toBe(chosen);
+
+      const secondLogin = await login(
+        app,
+        `test:${uid}:${email}:Member:https://cdn.example.com/google-second.png`,
+      );
+      const afterSecond = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', bearer(secondLogin.accessToken));
+      expect(afterSecond.body.avatarUrl).toBe(chosen);
+    });
+
+    it('lets a member hand the avatar back to the provider by clearing it', async () => {
+      const { email, uid } = await provisionMember('avatar-reset');
+      const google = 'https://cdn.example.com/google-reset.png';
+
+      const firstLogin = await login(
+        app,
+        `test:${uid}:${email}:Member:${google}`,
+      );
+      await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', bearer(firstLogin.accessToken))
+        .send({ avatarUrl: 'https://cdn.example.com/chosen.png' });
+      await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', bearer(firstLogin.accessToken))
+        .send({ avatarUrl: null });
+
+      const secondLogin = await login(
+        app,
+        `test:${uid}:${email}:Member:${google}`,
+      );
+      const afterSecond = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', bearer(secondLogin.accessToken));
+      expect(afterSecond.body.avatarUrl).toBe(google);
+    });
+
+    it('does not clear a stored avatar when a login carries no picture', async () => {
+      const { email, uid } = await provisionMember('avatar-nopicture');
+      const google = 'https://cdn.example.com/google-kept.png';
+
+      await login(app, `test:${uid}:${email}:Member:${google}`);
+      const withoutPicture = await login(app, `test:${uid}:${email}:Member`);
+      const afterSecond = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', bearer(withoutPicture.accessToken));
+      expect(afterSecond.body.avatarUrl).toBe(google);
     });
   });
 });

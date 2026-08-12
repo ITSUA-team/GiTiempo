@@ -24,14 +24,16 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
     if (typeof idToken !== 'string' || !idToken.startsWith('test:')) {
       throw new UnauthorizedException('Unauthorized');
     }
-    const [, uid, email, name] = idToken.split(':');
+    const [, uid, email, name, ...pictureParts] = idToken.split(':');
     if (!uid || !email) {
       throw new UnauthorizedException('Unauthorized');
     }
+    const picture = pictureParts.join(':');
     return {
       uid,
       email,
       ...(name ? { name } : {}),
+      ...(picture ? { picture } : {}),
       email_verified: true,
     };
   }

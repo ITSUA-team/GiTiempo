@@ -13,6 +13,7 @@ export function createAuthProfilePresentation(
     initialsFallback = "GT",
   }: AuthProfilePresentationOptions,
 ) {
+  const avatarUrl = computed(() => profile.value?.avatarUrl ?? null);
   const displayName = computed(
     () => profile.value?.displayName ?? displayNameFallback,
   );
@@ -26,6 +27,7 @@ export function createAuthProfilePresentation(
   );
 
   return {
+    avatarUrl,
     displayName,
     userInitials,
   };

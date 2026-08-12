@@ -33,7 +33,7 @@ const useProfileGithubConnectionMock = vi.hoisted(() =>
 );
 let ProfileView: Component;
 
-function createUserProfile(): UserResponse {
+function createUserProfile(overrides: Partial<UserResponse> = {}): UserResponse {
   return {
     avatarUrl: null,
     createdAt: "2026-01-01T00:00:00.000Z",
@@ -42,6 +42,7 @@ function createUserProfile(): UserResponse {
     id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
     role: "member",
     updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
   };
 }
 
@@ -119,8 +120,19 @@ async function mountProfileView(options: { profile?: UserResponse | null } = {})
       plugins: [pinia],
       stubs: {
         Avatar: {
-          props: ["label"],
-          template: '<div data-testid="profile-avatar">{{ label }}</div>',
+          props: ["image", "label", "pt"],
+          template: `
+            <div data-testid="profile-avatar">
+              <img
+                v-if="image"
+                data-testid="profile-avatar-image"
+                :class="pt?.image?.class"
+                :src="image"
+                @error="pt?.image?.onError?.()"
+              >
+              <template v-else>{{ label }}</template>
+            </div>
+          `,
         },
         Button: {
           props: ["disabled", "label", "loading"],
@@ -179,6 +191,55 @@ describe("ProfileView", () => {
     while (mountedWrappers.length > 0) {
       mountedWrappers.pop()?.unmount();
     }
+  });
+
+  it("renders the stored avatar image in the account card", async () => {
+    const { wrapper } = await mountProfileView({
+      profile: createUserProfile({
+        avatarUrl: "https://cdn.example.test/member.png",
+      }),
+    });
+
+    const image = wrapper.get('[data-testid="profile-avatar-image"]');
+
+    expect(image.attributes("src")).toBe("https://cdn.example.test/member.png");
+    expect(wrapper.get('[data-testid="profile-account-avatar"]').text()).not.toContain("AT");
+  });
+
+  it("crops a non-square avatar to the circle instead of distorting it", async () => {
+    const { wrapper } = await mountProfileView({
+      profile: createUserProfile({
+        avatarUrl: "https://cdn.example.test/wide.png",
+      }),
+    });
+
+    const imageClass =
+      wrapper.get('[data-testid="profile-avatar-image"]').attributes("class") ?? "";
+
+    expect(imageClass).toContain("object-cover");
+    expect(imageClass).toContain("size-full");
+  });
+
+  it("falls back to initials when the account card has no avatar", async () => {
+    const { wrapper } = await mountProfileView({
+      profile: createUserProfile({ avatarUrl: null }),
+    });
+
+    expect(wrapper.find('[data-testid="profile-avatar-image"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="profile-account-avatar"]').text()).toBeTruthy();
+  });
+
+  it("falls back to initials when the account card avatar fails to load", async () => {
+    const { wrapper } = await mountProfileView({
+      profile: createUserProfile({
+        avatarUrl: "https://cdn.example.test/broken.png",
+      }),
+    });
+
+    await wrapper.get('[data-testid="profile-avatar-image"]').trigger("error");
+
+    expect(wrapper.find('[data-testid="profile-avatar-image"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="profile-account-avatar"]').text()).toBeTruthy();
   });
 
   it("renders full profile skeletons while the profile prerequisite loads", async () => {

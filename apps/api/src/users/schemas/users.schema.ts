@@ -1,5 +1,6 @@
 import { getTableColumns, sql } from 'drizzle-orm';
 import {
+  check,
   pgTable,
   text,
   timestamp,
@@ -7,6 +8,8 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+
+export type UserAvatarSource = 'provider' | 'user';
 
 export const users = pgTable(
   'users',
@@ -16,6 +19,10 @@ export const users = pgTable(
     email: varchar('email', { length: 255 }).notNull(),
     displayName: varchar('display_name', { length: 255 }),
     avatarUrl: text('avatar_url'),
+    avatarSource: varchar('avatar_source', { length: 20 })
+      .$type<UserAvatarSource>()
+      .default('provider')
+      .notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -27,6 +34,10 @@ export const users = pgTable(
   (table) => [
     uniqueIndex('users_email_lookup_unique').on(
       sql`lower(btrim(${table.email}))`,
+    ),
+    check(
+      'users_avatar_source_check',
+      sql`${table.avatarSource} IN ('provider', 'user')`,
     ),
   ],
 );

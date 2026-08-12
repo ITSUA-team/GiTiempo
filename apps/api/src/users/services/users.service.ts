@@ -15,7 +15,11 @@ import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
-import { userRowSelection, users } from '../schemas/users.schema';
+import {
+  userRowSelection,
+  users,
+  type UserAvatarSource,
+} from '../schemas/users.schema';
 
 type UserRow = typeof users.$inferSelect;
 
@@ -30,6 +34,34 @@ function firebaseDisplayNameFallback(displayName: string | null | undefined) {
   const nextDisplayName = displayName ?? null;
 
   return sql<string | null>`COALESCE(${users.displayName}, ${nextDisplayName})`;
+}
+
+function providerAvatarPatch(
+  current: Pick<UserRow, 'avatarSource' | 'avatarUrl'>,
+  avatarUrl: string | null | undefined,
+) {
+  const nextAvatarUrl = avatarUrl?.trim();
+
+  if (
+    !nextAvatarUrl ||
+    current.avatarSource !== 'provider' ||
+    current.avatarUrl === nextAvatarUrl
+  ) {
+    return {};
+  }
+
+  return { avatarUrl: nextAvatarUrl };
+}
+
+function avatarOwnershipPatch(avatarUrl: string | null | undefined) {
+  if (avatarUrl === undefined) {
+    return {};
+  }
+
+  const avatarSource: UserAvatarSource =
+    avatarUrl === null ? 'provider' : 'user';
+
+  return { avatarUrl, avatarSource };
 }
 
 @Injectable()
@@ -88,9 +120,7 @@ export class UsersService {
         ...(input.displayName !== undefined
           ? { displayName: input.displayName }
           : {}),
-        ...(input.avatarUrl !== undefined
-          ? { avatarUrl: input.avatarUrl }
-          : {}),
+        ...avatarOwnershipPatch(input.avatarUrl),
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
@@ -128,11 +158,15 @@ export class UsersService {
     id: string,
     input: UpsertFromFirebaseInput,
   ): Promise<UserRow> {
+    const current = await this.findRowById(id);
+    if (!current) throw new UnauthorizedException('Unauthorized');
+
     const [updated] = await this.db
       .update(users)
       .set({
         email: input.email,
         displayName: firebaseDisplayNameFallback(input.displayName),
+        ...providerAvatarPatch(current, input.avatarUrl),
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
@@ -151,7 +185,7 @@ export class UsersService {
           firebaseUid: input.firebaseUid,
           email: input.email,
           displayName: input.displayName ?? null,
-          avatarUrl: input.avatarUrl ?? null,
+          avatarUrl: input.avatarUrl?.trim() || null,
         })
         .onConflictDoUpdate({
           target: users.firebaseUid,
@@ -163,7 +197,16 @@ export class UsersService {
         })
         .returning()
     )[0]!;
-    return row;
+
+    const avatarPatch = providerAvatarPatch(row, input.avatarUrl);
+    if (Object.keys(avatarPatch).length === 0) return row;
+
+    const [updated] = await this.db
+      .update(users)
+      .set({ ...avatarPatch, updatedAt: now })
+      .where(eq(users.id, row.id))
+      .returning();
+    return updated ?? row;
   }
 
   /** Maps a DB row to the public response shape. */

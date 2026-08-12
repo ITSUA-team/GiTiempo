@@ -46,6 +46,16 @@ This means the sync rule is "fill or refresh when a picture is present", not "mi
 
 `updateFromFirebase` and the `upsertFromFirebase` conflict branch already receive the value and already own the merge policy for `displayName`; the avatar rule belongs beside it. A separate avatar-sync service or a post-login hook would add a second place where identity data reaches the user row, which is exactly the ambiguity this change is trying to remove.
 
+### Decide ownership in the service, not in SQL
+
+The natural expression of the rule is a conditional column update — `CASE WHEN avatar_source = 'provider' THEN <incoming> ELSE avatar_url END` — which is atomic and needs no extra read. It was implemented that way first and then replaced, because the unit suite cannot verify it: the Drizzle test double in `users.service.spec.ts` is a hand-written expression evaluator that only models `COALESCE`, returning the first non-null chunk. Against the conditional expression it returned the incoming picture regardless of ownership, so the two tests pinning "preserves locally saved profile fields" would have passed or failed for reasons unrelated to the production behaviour.
+
+Three options were weighed: verify the conditional SQL in Docker-backed e2e only, teach the double to evaluate `CASE`, or move the decision into the service. Teaching the double more SQL was rejected as growing a second, drifting implementation of Postgres inside the tests. Relying on e2e alone was rejected because the rule would then have no fast feedback at all.
+
+The service therefore reads the current row and decides in JavaScript. `updateFromFirebase` loads the row by id before updating; `upsertFromFirebase` keeps its atomic insert-on-conflict for row existence — so concurrent invite acceptance still cannot produce a duplicate-key failure — and applies the avatar as a second, JS-decided write using the row the upsert returns. The costs are one extra indexed read per login and a short TOCTOU window in which a concurrent ownership change could be missed; the sync is idempotent and self-corrects on the next login, so the worst outcome is one skipped refresh.
+
+The decision also gives a free improvement: because the service compares the incoming picture with the stored one, an unchanged avatar produces no write at all, so the common login path no longer touches the column.
+
 ### Share the image-failure rule, not the avatar component
 
 PrimeVue's `Avatar` exposes an `image` prop and emits no events, so a provider URL that 404s renders a broken image with no automatic fallback. The fallback therefore has to be written, and it has to exist at both render sites.
@@ -76,6 +86,8 @@ The top-bar trigger and the profile account card already render a circular avata
 The `avatar_source` column is additive and defaulted, so it can ship ahead of the code that reads it. Order: migration, then API, then `packages/web-shared`, then both apps, since the shared package is a build dependency of the two SPAs.
 
 Rollback is reverting the code; the column can stay in place unused, because nothing else reads it and its default keeps the pre-change sync behaviour reachable. No data backfill is required in either direction.
+
+The rollout note must say two things, because both will otherwise arrive as bug reports. Members keep seeing initials until their next login, since the sync runs during login and no backfill job is part of this change. Members whose Firebase user carries no `photoURL` — which includes everyone the backend created through `createUser`, and anyone who signs in through GitHub or email rather than Google — will still see initials afterwards, because there is no picture to read.
 
 ## Open Questions
 
