@@ -704,7 +704,9 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(client.getCurrentTimer).toHaveBeenCalled();
-    expect(client.stopTimer).toHaveBeenCalledWith();
+    expect(client.stopTimer).toHaveBeenCalledWith({
+      expectedTimerId: TEST_IDS.runningEntry,
+    });
     expect(topBarTimerDialogController.requestOpen).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
     expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
@@ -768,7 +770,10 @@ describe("TimeEntriesView", () => {
     await wrapper.get(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
     await flushPromises();
 
-    expect(client.stopTimer).toHaveBeenCalledWith();
+    expect(client.stopTimer).toHaveBeenCalledWith({
+      expectedTimerId: TEST_IDS.runningEntry,
+    });
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
     expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
         detail: "Timer is not running",
@@ -824,7 +829,9 @@ describe("TimeEntriesView", () => {
       `[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`,
     );
 
-    expect(client.getCurrentTimer).toHaveBeenCalledWith();
+    expect(client.getCurrentTimer).toHaveBeenCalledWith(
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
     expect(startTimerButton.attributes("disabled")).toBeDefined();
 
     await startTimerButton.trigger("click");

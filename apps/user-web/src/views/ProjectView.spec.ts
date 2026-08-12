@@ -1,15 +1,18 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { readonly, shallowRef } from "vue";
 import type {
   ProjectResponse,
   TaskResponse,
   TimeEntryListResponse,
+  TimeEntryResponse,
 } from "@gitiempo/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { createTestQueryPlugin } from "@/test/query-client";
 import { useAuthStore } from "@/stores/auth";
+import { topBarTimerDialogControllerKey } from "@/composables/timer/useTopBarTimerDialogController";
 
 const clientRef = vi.hoisted(() => ({
   current: null as unknown,
@@ -18,6 +21,13 @@ const primeVueMocks = vi.hoisted(() => ({
   confirmRequire: vi.fn(),
   toastAdd: vi.fn(),
 }));
+const topBarTimerDialogMocks = vi.hoisted(() => ({
+  requestOpen: vi.fn(),
+}));
+const topBarTimerDialogController = {
+  openRequestId: readonly(shallowRef(0)),
+  requestOpen: topBarTimerDialogMocks.requestOpen,
+};
 const mountedWrappers: Array<{ unmount: () => void }> = [];
 
 vi.mock("@/config/clients", () => ({
@@ -74,6 +84,14 @@ function createTask(
     workspaceId: "workspace-1",
     ...overrides,
   };
+}
+
+function createRunningTimer(taskId: string): TimeEntryResponse {
+  return {
+    endedAt: null,
+    id: "entry-1",
+    taskId,
+  } as TimeEntryResponse;
 }
 
 function createClientMock(): TimeEntriesClient & {
@@ -282,19 +300,25 @@ async function mountView(client = createClientMock()) {
           `,
         },
         ProjectsTaskSection: {
-          emits: ["addTask", "editTask"],
-          props: ["project", "tasks"],
+          emits: ["addTask", "editTask", "openActiveTimer", "startTimer", "stopTimer"],
+          props: ["activeTimerTaskId", "project", "tasks"],
           template: `
             <section>
               <p>{{ project.name }}</p>
               <p v-for="task in tasks" :key="task.id">{{ task.title }}</p>
               <button data-testid="project-section-add" type="button" @click="$emit('addTask', project.id)">Add</button>
               <button data-testid="project-section-title" type="button" @click="$emit('editTask', tasks[0])">{{ tasks[0]?.title }}</button>
+              <button data-testid="project-section-open-active-timer" type="button" @click="$emit('openActiveTimer')">Open timer</button>
+              <button data-testid="project-section-start-timer" type="button" @click="$emit('startTimer', tasks[0])">Start timer</button>
+              <button v-if="activeTimerTaskId === tasks[0]?.id" data-testid="project-section-stop-timer" type="button" @click="$emit('stopTimer', tasks[0])">Stop timer</button>
             </section>
           `,
         },
         Skeleton: { template: '<div data-testid="projects-skeleton" />' },
         SurfaceCard: { template: "<section><slot /></section>" },
+      },
+      provide: {
+        [topBarTimerDialogControllerKey]: topBarTimerDialogController,
       },
     },
   });
@@ -317,6 +341,7 @@ describe("ProjectView", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     primeVueMocks.confirmRequire.mockClear();
     primeVueMocks.toastAdd.mockClear();
+    topBarTimerDialogMocks.requestOpen.mockClear();
   });
 
   afterEach(() => {
@@ -474,6 +499,85 @@ describe("ProjectView", () => {
 
     expect(emptyWrapper.text()).toContain("No projects or tasks match this view");
     expect(emptyWrapper.text()).not.toContain("Could not load projects");
+  });
+
+  it("opens the top-bar timer dialog when a project task start is blocked", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters"),
+    ]);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await waitForProjectsReady(wrapper);
+    await wrapper.get('[data-testid="project-section-open-active-timer"]').trigger("click");
+
+    expect(topBarTimerDialogMocks.requestOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops the matching project timer through the identity-bound API", async () => {
+    const client = createClientMock();
+    const task = createTask("task-1", "project-1", "Improve reports filters");
+
+    client.getCurrentTimer.mockResolvedValue({ timeEntry: createRunningTimer(task.id) });
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([task]);
+    client.stopTimer.mockResolvedValueOnce(
+      createRunningTimer(task.id),
+    );
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await waitForProjectsReady(wrapper);
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="project-section-stop-timer"]').exists()).toBe(true);
+    });
+
+    await wrapper.get('[data-testid="project-section-stop-timer"]').trigger("click");
+
+    await vi.waitFor(() => {
+      expect(client.stopTimer).toHaveBeenCalledWith({ expectedTimerId: "entry-1" });
+    });
+    expect(client.startTimer).not.toHaveBeenCalled();
+  });
+
+  it("keeps filtered project tasks visible after a direct timer request failure", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters"),
+    ]);
+    client.startTimer.mockRejectedValueOnce(new Error("Network unavailable"));
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await waitForProjectsReady(wrapper);
+    const searchInput = wrapper.get('input[placeholder="Search projects or tasks"]');
+    await searchInput.setValue("Improve");
+    await wrapper.get('[data-testid="project-section-start-timer"]').trigger("click");
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: "task-1" });
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Could not start timer" }),
+    );
+    expect((searchInput.element as HTMLInputElement).value).toBe("Improve");
+    expect(wrapper.text()).toContain("Improve reports filters");
+    expect(client.listVisibleProjects).toHaveBeenCalledTimes(1);
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(1);
+    expect(client.getCurrentTimer.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it("creates a task from a preselected project dialog with the project billable default", async () => {

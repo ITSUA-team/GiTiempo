@@ -249,7 +249,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return;
       }
       case "timer/stop": {
-        sendResponse(await handleMutation(() => apiClient.stopTimer()));
+        sendResponse(
+          await handleMutation(() =>
+            apiClient.stopTimer({ expectedTimerId: request.expectedTimerId }),
+          ),
+        );
         return;
       }
       case "ui/open-extension": {

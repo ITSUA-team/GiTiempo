@@ -401,8 +401,16 @@ export function createPopupApp({
   }
 
   async function handleStopTimer(): Promise<void> {
+    const expectedTimerId = state.snapshot?.currentTimer?.id;
+
+    if (!expectedTimerId) {
+      state.errorMessage = "Timer status changed. Please retry.";
+      render();
+      return;
+    }
+
     try {
-      const result = await runtimeClient.stopTimer();
+      const result = await runtimeClient.stopTimer(expectedTimerId);
 
       state.snapshot = result.snapshot;
       state.errorMessage = result.ok ? null : result.errorMessage ?? "Unable to stop timer.";

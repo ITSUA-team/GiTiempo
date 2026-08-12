@@ -313,8 +313,16 @@ export function createInjectedIssueApp({
   }
 
   async function handleStopTimer(): Promise<void> {
+    const expectedTimerId = state.snapshot?.currentTimer?.id;
+
+    if (!expectedTimerId) {
+      state.actionErrorMessage = "Timer status changed. Please retry.";
+      render();
+      return;
+    }
+
     try {
-      const result = await runtimeClient.stopTimer();
+      const result = await runtimeClient.stopTimer(expectedTimerId);
 
       state.snapshot = result.snapshot;
       state.actionErrorMessage = result.ok

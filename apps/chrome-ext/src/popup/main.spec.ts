@@ -4,7 +4,6 @@ import type { PageContext } from "@/lib/github-context";
 import type {
   RuntimeAuthResult,
   RuntimeClient,
-  RuntimeMutationResult,
   RuntimeSnapshot,
 } from "@/lib/runtime";
 import { createPopupApp, resolveActivePageContext } from "./main";
@@ -57,7 +56,7 @@ function createRuntimeClient(overrides?: {
   signOut?: RuntimeClient["signOut"];
   snapshot?: RuntimeSnapshot;
   startTimer?: RuntimeClient["startTimer"];
-  stopTimer?: () => Promise<RuntimeMutationResult>;
+  stopTimer?: RuntimeClient["stopTimer"];
 }): RuntimeClient {
   return {
     exchangeFirebaseToken:
@@ -853,6 +852,7 @@ describe("popup app", () => {
 
     await Promise.resolve();
 
+    expect(stopTimer).toHaveBeenCalledWith("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002");
     expect(document.body.textContent).toContain("Timer stop failed");
     expect(document.body.textContent).toContain("Retry connection");
   });

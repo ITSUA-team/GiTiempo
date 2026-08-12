@@ -551,15 +551,22 @@ describe('Time entries (e2e)', () => {
 
     const stopped = await request(app.getHttpServer())
       .post('/time-entries/timer/stop')
-      .set('Authorization', bearer(memberToken));
+      .set('Authorization', bearer(memberToken))
+      .send({ expectedTimerId: started.body.id });
     expect(stopped.status).toBe(200);
     expect(stopped.body.endedAt).toBeTruthy();
     expect(stopped.body.durationSeconds).toBeGreaterThan(0);
 
     const stopAgain = await request(app.getHttpServer())
       .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(memberToken))
+      .send({ expectedTimerId: started.body.id });
+    expect(stopAgain.status).toBe(409);
+
+    const legacyStopWithoutTimer = await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
       .set('Authorization', bearer(memberToken));
-    expect(stopAgain.status).toBe(404);
+    expect(legacyStopWithoutTimer.status).toBe(404);
   });
 
   it('allows task and description updates but rejects interval and delete for running entries before stop', async () => {

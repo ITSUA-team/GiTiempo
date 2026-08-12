@@ -5,10 +5,12 @@ import {
   logoutRequestSchema,
   refreshRequestSchema,
   startTimerFromGitHubSchema,
+  conditionalStopTimerSchema,
   timeEntryResponseSchema,
   tokenPairResponseSchema,
   type CurrentTimeEntryResponse,
   type TimeEntryResponse,
+  type ConditionalStopTimerInput,
   type TokenPairResponse,
 } from "@gitiempo/shared";
 import type { ZodType } from "zod";
@@ -34,7 +36,7 @@ export interface ExtensionApiClient {
   startTimerFromGitHub(
     pageContext: SupportedGitHubIssueContext,
   ): Promise<TimeEntryResponse>;
-  stopTimer(): Promise<TimeEntryResponse>;
+  stopTimer(input: ConditionalStopTimerInput): Promise<TimeEntryResponse>;
 }
 
 interface ExtensionApiClientOptions {
@@ -331,8 +333,9 @@ export function createExtensionApiClient({
         responseSchema: timeEntryResponseSchema,
       });
     },
-    stopTimer() {
+    stopTimer(input) {
       return requestWithAuth({
+        body: conditionalStopTimerSchema.parse(input),
         method: "POST",
         path: "/time-entries/timer/stop",
         responseSchema: timeEntryResponseSchema,
