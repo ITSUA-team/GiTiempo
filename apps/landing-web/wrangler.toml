@@ -16,3 +16,15 @@ directory = "./dist"
 pattern = "gitiempo-landing.itsua.dev"
 zone_name = "itsua.dev"
 custom_domain = true
+
+[env.production]
+name = "gitiempo-landing-web-production"
+workers_dev = false
+
+[env.production.assets]
+directory = "./dist"
+
+[[env.production.routes]]
+pattern = "gitiempo.com"
+zone_name = "gitiempo.com"
+custom_domain = true
