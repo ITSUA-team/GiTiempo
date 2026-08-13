@@ -88,6 +88,14 @@
   @apply inline-flex min-h-11 items-center justify-center gap-3 rounded-md border border-white/30 bg-landing-dark-soft px-5 py-3 text-sm font-semibold text-text-inverse transition-colors hover:bg-white/10;
 }
 
+@utility action-consent-primary {
+  @apply inline-flex min-h-11 items-center justify-center rounded-md bg-brand px-4 py-3 text-sm font-bold text-text-inverse transition-colors hover:bg-brand/90;
+}
+
+@utility action-consent-secondary {
+  @apply inline-flex min-h-11 items-center justify-center rounded-md border border-divider bg-surface-primary px-4 py-3 text-sm font-bold text-text-dark transition-colors hover:bg-app-bg;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     scroll-behavior: auto;

@@ -26,7 +26,26 @@ test('accepts complete public app entry URLs', () => {
       siteUrl: 'https://gitiempo-landing.itsua.dev/',
       userAppUrl: 'https://gitiempo.itsua.dev/login',
       adminAppUrl: 'https://gitiempo-admin.itsua.dev/',
+      analyticsMeasurementId: undefined,
     },
+  );
+});
+
+test('accepts an optional valid GA4 Measurement ID and rejects invalid values', () => {
+  const environment = {
+    PUBLIC_SITE_URL: 'https://gitiempo-landing.itsua.dev',
+    PUBLIC_USER_APP_URL: 'https://gitiempo.itsua.dev/login',
+    PUBLIC_ADMIN_APP_URL: 'https://gitiempo-admin.itsua.dev',
+  };
+
+  assert.equal(
+    getPublicConfig({ ...environment, PUBLIC_GA_MEASUREMENT_ID: ' G-AB12CD34 ' }).analyticsMeasurementId,
+    'G-AB12CD34',
+  );
+  assert.equal(getPublicConfig({ ...environment, PUBLIC_GA_MEASUREMENT_ID: '   ' }).analyticsMeasurementId, undefined);
+  assert.throws(
+    () => getPublicConfig({ ...environment, PUBLIC_GA_MEASUREMENT_ID: 'UA-12345-1' }),
+    /PUBLIC_GA_MEASUREMENT_ID/,
   );
 });
 
@@ -68,12 +87,13 @@ test('page preserves the approved section order and direct-entry CTA labels', ()
 test('page keeps required anchors, semantic foundations, and no hydrated islands', () => {
   const page = source('../src/pages/index.astro');
   const layout = source('../src/layouts/BaseLayout.astro');
+  const analyticsConsent = source('../src/components/AnalyticsConsent.astro');
   const product = source('../src/components/ProductBenefits.astro');
   const workflow = source('../src/components/WorkflowSteps.astro');
   const roles = source('../src/components/Roles.astro');
   const roleCard = source('../src/components/RoleCard.astro');
   const faq = source('../src/components/Faq.astro');
-  const appSources = [page, layout, product, workflow, roles, roleCard, faq];
+  const appSources = [page, layout, analyticsConsent, product, workflow, roles, roleCard, faq];
 
   assert.match(product, /id="product"/);
   assert.match(product, /id="github-workflow"/);
@@ -88,8 +108,9 @@ test('page keeps required anchors, semantic foundations, and no hydrated islands
   assert.equal((source('../src/components/Hero.astro').match(/<h1/g) ?? []).length, 1);
 });
 
-test('active preview timers are the only approved framework-free browser script', () => {
+test('keeps browser scripts framework-free and only renders analytics with a valid ID', () => {
   const layout = source('../src/layouts/BaseLayout.astro');
+  const analyticsConsent = source('../src/components/AnalyticsConsent.astro');
   const dashboard = markup('../src/components/DashboardPreview.astro');
   const product = markup('../src/components/ProductBenefits.astro');
 
@@ -98,6 +119,23 @@ test('active preview timers are the only approved framework-free browser script'
   assert.match(layout, /prefers-reduced-motion: reduce/);
   assert.match(layout, /window\.setInterval/);
   assert.equal((layout.match(/<script>/g) ?? []).length, 1);
+  assert.match(layout, /measurementId && <AnalyticsConsent/);
+  assert.equal((analyticsConsent.match(/<script>/g) ?? []).length, 1);
+  assert.doesNotMatch(analyticsConsent, /client:/);
+  assert.match(analyticsConsent, /data-analytics-consent-root/);
+});
+
+test('marks every user/admin entry CTA and exposes consent settings only when configured', () => {
+  const navigation = markup('../src/components/Navigation.astro');
+  const hero = markup('../src/components/Hero.astro');
+  const finalCta = markup('../src/components/FinalCta.astro');
+
+  const ctas = `${navigation}${hero}${finalCta}`;
+  assert.equal((ctas.match(/data-analytics-cta=/g) ?? []).length, 5);
+  assert.equal((ctas.match(/data-analytics-destination="user_app"/g) ?? []).length, 3);
+  assert.equal((ctas.match(/data-analytics-destination="admin_app"/g) ?? []).length, 2);
+  assert.match(finalCta, /analyticsEnabled && <button/);
+  assert.match(finalCta, /data-analytics-settings/);
 });
 
 test('switches desktop role details with native radio controls', () => {

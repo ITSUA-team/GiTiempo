@@ -20,8 +20,8 @@ const { userAppUrl, adminAppUrl } = Astro.props;
         Start timers from GitHub or GITiempo, keep manual tasks alongside synced issues, and turn tracked hours into reports and invoice records.
       </p>
       <div class="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center">
-        <a class="action-primary" href={userAppUrl}>Start tracking now <span aria-hidden="true">→</span></a>
-        <a class="action-secondary w-full sm:w-auto lg:min-h-0 lg:border-0 lg:bg-transparent lg:px-2 lg:py-3" href={adminAppUrl}>
+        <a class="action-primary" href={userAppUrl} data-analytics-cta="hero" data-analytics-destination="user_app">Start tracking now <span aria-hidden="true">→</span></a>
+        <a class="action-secondary w-full sm:w-auto lg:min-h-0 lg:border-0 lg:bg-transparent lg:px-2 lg:py-3" href={adminAppUrl} data-analytics-cta="hero" data-analytics-destination="admin_app">
           Open admin workspace
         </a>
       </div>

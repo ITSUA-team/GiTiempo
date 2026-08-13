@@ -39918,6 +39918,58 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "gaConsentDesktop",
+          "x": 920,
+          "y": 4776,
+          "name": "Analytics consent — desktop default and settings state",
+          "width": 432,
+          "height": 184,
+          "fill": "$color-surface",
+          "cornerRadius": "$radius-lg",
+          "stroke": "$color-divider",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [16, 18],
+          "children": [
+            {
+              "type": "text",
+              "id": "gaConsentDesktopTitle",
+              "name": "Analytics consent title",
+              "fill": "$color-text-dark",
+              "content": "Help us improve GITiempo",
+              "fontFamily": "$font-sans",
+              "fontSize": 16,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "gaConsentDesktopCopy",
+              "name": "Analytics consent copy",
+              "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Allow anonymous analytics to understand useful landing pages and entry points.",
+              "lineHeight": 1.4,
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "gaConsentDesktopActions",
+              "name": "Analytics consent actions and footer settings state",
+              "fill": "$color-brand",
+              "content": "Allow analytics    Decline    Analytics settings",
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "700"
+            }
+          ]
         }
       ]
     },
@@ -39929,7 +39981,7 @@
       "name": "GITiempo Landing Page — Tablet",
       "clip": true,
       "width": 768,
-      "height": 5252,
+      "height": 5424,
       "fill": "$color-surface",
       "layout": "vertical",
       "children": [
@@ -42110,6 +42162,42 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "gaConsentTablet",
+          "name": "Analytics consent — tablet default and settings state",
+          "width": "fill_container",
+          "height": 172,
+          "fill": "$color-surface",
+          "stroke": "$color-divider",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [16, 32],
+          "children": [
+            {
+              "type": "text",
+              "id": "gaConsentTabletTitle",
+              "name": "Analytics consent title",
+              "fill": "$color-text-dark",
+              "content": "Help us improve GITiempo",
+              "fontFamily": "$font-sans",
+              "fontSize": 16,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "gaConsentTabletCopy",
+              "name": "Analytics consent copy",
+              "fill": "$color-text-muted",
+              "content": "Allow analytics    Decline    Analytics settings",
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            }
+          ]
         }
       ]
     },
@@ -42121,7 +42209,7 @@
       "name": "GITiempo Landing Page — Mobile",
       "clip": true,
       "width": 390,
-      "height": 5787,
+      "height": 5967,
       "fill": "$color-surface",
       "layout": "vertical",
       "children": [
@@ -44225,6 +44313,45 @@
                   "fontWeight": "normal"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "gaConsentMobile",
+          "name": "Analytics consent — mobile default and settings state",
+          "width": "fill_container",
+          "height": 180,
+          "fill": "$color-surface",
+          "stroke": "$color-divider",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [16, 24],
+          "children": [
+            {
+              "type": "text",
+              "id": "gaConsentMobileTitle",
+              "name": "Analytics consent title",
+              "fill": "$color-text-dark",
+              "content": "Help us improve GITiempo",
+              "fontFamily": "$font-sans",
+              "fontSize": 16,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "gaConsentMobileCopy",
+              "name": "Analytics consent actions and footer settings state",
+              "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Allow analytics\nDecline\nAnalytics settings",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
             }
           ]
         }
@@ -56967,17 +57094,17 @@
                                   "name": "organizationInput",
                                   "width": "fill_container",
                                   "height": 38,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
                                   "padding": [
                                     0,
                                     12
                                   ],
                                   "justifyContent": "space_between",
                                   "alignItems": "center",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "stroke": "$color-divider",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
                                   "children": [
                                     {
                                       "type": "frame",
@@ -57013,12 +57140,12 @@
                                   "type": "text",
                                   "id": "htbaa",
                                   "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
                                   "content": "Organizations approved for this workspace in Settings.",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
-                                  "fontWeight": "normal",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container"
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -57045,17 +57172,17 @@
                                   "name": "projectInput",
                                   "width": "fill_container",
                                   "height": 38,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
                                   "padding": [
                                     0,
                                     12
                                   ],
                                   "justifyContent": "space_between",
                                   "alignItems": "center",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "stroke": "$color-divider",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
                                   "children": [
                                     {
                                       "type": "frame",
@@ -57067,34 +57194,34 @@
                                         {
                                           "type": "text",
                                           "id": "hvbaa",
+                                          "name": "title",
                                           "fill": "$color-text-dark",
                                           "content": "Krvn",
                                           "fontFamily": "Inter",
                                           "fontSize": 14,
-                                          "fontWeight": "600",
-                                          "name": "title"
+                                          "fontWeight": "600"
                                         },
                                         {
                                           "type": "text",
                                           "id": "hwbaa",
+                                          "name": "number",
                                           "fill": "$color-text-muted",
                                           "content": "#9",
                                           "fontFamily": "Inter",
                                           "fontSize": 12,
-                                          "fontWeight": "500",
-                                          "name": "number"
+                                          "fontWeight": "500"
                                         }
                                       ]
                                     },
                                     {
                                       "type": "text",
                                       "id": "hxbaa",
+                                      "name": "control",
                                       "fill": "$color-brand",
                                       "content": "AutoComplete",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
-                                      "fontWeight": "500",
-                                      "name": "control"
+                                      "fontWeight": "500"
                                     }
                                   ]
                                 },
@@ -57102,12 +57229,12 @@
                                   "type": "text",
                                   "id": "hBbaa",
                                   "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
                                   "content": "Open projects of ITSUA-team. Type to filter.",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
-                                  "fontWeight": "normal",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container"
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -57306,14 +57433,14 @@
                                     {
                                       "type": "text",
                                       "id": "hUbaa",
+                                      "name": "description",
                                       "fill": "$color-text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
                                       "content": "Adds ITSUA-team/Krvn and links ITSUA-team/GiTiempo. A timer started from any issue of that repository reuses this project instead of creating a second one.",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
-                                      "fontWeight": "normal",
-                                      "name": "description",
-                                      "textGrowth": "fixed-width",
-                                      "width": "fill_container"
+                                      "fontWeight": "normal"
                                     }
                                   ]
                                 }
@@ -57332,6 +57459,11 @@
                             {
                               "type": "frame",
                               "id": "hZbaa",
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
                               "padding": [
                                 8,
                                 14
@@ -57346,12 +57478,7 @@
                                   "fontSize": 13,
                                   "fontWeight": "500"
                                 }
-                              ],
-                              "fill": "$color-surface",
-                              "cornerRadius": "$radius-sm",
-                              "stroke": "$color-divider",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner"
+                              ]
                             },
                             {
                               "type": "frame",
@@ -57386,6 +57513,16 @@
                       "width": 320,
                       "fill": "$color-surface",
                       "cornerRadius": "$radius-lg",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000014",
+                        "offset": {
+                          "x": 0,
+                          "y": 1
+                        },
+                        "blur": 3
+                      },
                       "layout": "vertical",
                       "gap": 14,
                       "padding": 20,
@@ -57393,24 +57530,24 @@
                         {
                           "type": "text",
                           "id": "h4baa",
+                          "name": "sideTitle",
                           "fill": "$color-text-dark",
                           "content": "Project Source",
                           "fontFamily": "Inter",
                           "fontSize": 18,
-                          "fontWeight": "600",
-                          "name": "sideTitle"
+                          "fontWeight": "600"
                         },
                         {
                           "type": "text",
                           "id": "h5baa",
+                          "name": "sideCopy",
                           "fill": "$color-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
                           "content": "Imported projects are named organization/project, so the owner is visible in the projects list.",
                           "fontFamily": "Inter",
                           "fontSize": 13,
-                          "fontWeight": "normal",
-                          "name": "sideCopy",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container"
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "frame",
@@ -57426,24 +57563,24 @@
                             {
                               "type": "text",
                               "id": "h6baa",
+                              "name": "manualTitle",
                               "fill": "$color-text-dark",
                               "content": "Manual project",
                               "fontFamily": "Inter",
                               "fontSize": 14,
-                              "fontWeight": "600",
-                              "name": "manualTitle"
+                              "fontWeight": "600"
                             },
                             {
                               "type": "text",
                               "id": "h7baa",
+                              "name": "manualCopy",
                               "fill": "$color-text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
                               "content": "For internal work, or anything not on GitHub. No organization/repository, source stays Manual.",
                               "fontFamily": "Inter",
                               "fontSize": 13,
-                              "fontWeight": "normal",
-                              "name": "manualCopy",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container"
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -57464,50 +57601,40 @@
                             {
                               "type": "text",
                               "id": "h9baa",
+                              "name": "importTitle",
                               "fill": "$color-text-dark",
                               "content": "Import from GitHub",
                               "fontFamily": "Inter",
                               "fontSize": 14,
-                              "fontWeight": "600",
-                              "name": "importTitle"
+                              "fontWeight": "600"
                             },
                             {
                               "type": "text",
                               "id": "hacaa",
+                              "name": "importCopy",
                               "fill": "$color-text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
                               "content": "Adds a GitHub project as ITSUA-team/Krvn. If all of its issues come from one repository, that repository is linked too.",
                               "fontFamily": "Inter",
                               "fontSize": 13,
-                              "fontWeight": "normal",
-                              "name": "importCopy",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container"
+                              "fontWeight": "normal"
                             }
                           ]
                         },
                         {
                           "type": "text",
                           "id": "hccaa",
+                          "name": "note",
                           "fill": "$color-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
                           "content": "You can still assign the PM, set visibility, and adjust project details after creation.",
                           "fontFamily": "Inter",
                           "fontSize": 12,
-                          "fontWeight": "normal",
-                          "name": "note",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container"
+                          "fontWeight": "normal"
                         }
-                      ],
-                      "effect": {
-                        "type": "shadow",
-                        "shadowType": "outer",
-                        "color": "#00000014",
-                        "offset": {
-                          "x": 0,
-                          "y": 1
-                        },
-                        "blur": 3
-                      }
+                      ]
                     }
                   ]
                 }
@@ -57520,6 +57647,8 @@
     {
       "type": "frame",
       "id": "hfcaa",
+      "x": 1400,
+      "y": 9600,
       "name": "GitHub Import Form — States",
       "width": 680,
       "fill": "$color-app-bg",
@@ -57549,17 +57678,17 @@
               "id": "hicaa",
               "width": "fill_container",
               "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
               "padding": [
                 0,
                 12
               ],
               "justifyContent": "space_between",
               "alignItems": "center",
-              "fill": "$color-surface",
-              "cornerRadius": "$radius-sm",
-              "stroke": "$color-divider",
-              "strokeWidth": 1,
-              "strokeAlignment": "inner",
               "children": [
                 {
                   "type": "frame",
@@ -57596,13 +57725,26 @@
               "id": "hscaa",
               "name": "menu",
               "width": "fill_container",
+              "fill": "$color-surface",
               "cornerRadius": "$radius-lg",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00000014",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                },
+                "blur": 12
+              },
               "layout": "vertical",
               "padding": [
                 6,
                 0
               ],
-              "gap": 0,
               "children": [
                 {
                   "type": "frame",
@@ -57690,32 +57832,18 @@
                     }
                   ]
                 }
-              ],
-              "fill": "$color-surface",
-              "stroke": "$color-divider",
-              "strokeWidth": 1,
-              "strokeAlignment": "inner",
-              "effect": {
-                "type": "shadow",
-                "shadowType": "outer",
-                "color": "#00000014",
-                "offset": {
-                  "x": 0,
-                  "y": 4
-                },
-                "blur": 12
-              }
+              ]
             },
             {
               "type": "text",
               "id": "htcaa",
               "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
               "content": "Only organizations approved for the workspace appear. With exactly one approved, it is preselected and the field stays visible so the scope is never implicit.",
               "fontFamily": "Inter",
               "fontSize": 12,
-              "fontWeight": "normal",
-              "textGrowth": "fixed-width",
-              "width": "fill_container"
+              "fontWeight": "normal"
             }
           ]
         },
@@ -57741,17 +57869,17 @@
               "id": "hycaa",
               "width": "fill_container",
               "height": 38,
+              "fill": "$color-app-bg",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
               "padding": [
                 0,
                 12
               ],
               "justifyContent": "space_between",
               "alignItems": "center",
-              "fill": "$color-app-bg",
-              "cornerRadius": "$radius-sm",
-              "stroke": "$color-divider",
-              "strokeWidth": 1,
-              "strokeAlignment": "inner",
               "children": [
                 {
                   "type": "frame",
@@ -57774,12 +57902,12 @@
                 {
                   "type": "text",
                   "id": "hxcaa",
+                  "name": "control",
                   "fill": "$color-text-muted",
                   "content": "Disabled",
                   "fontFamily": "Inter",
                   "fontSize": 12,
-                  "fontWeight": "500",
-                  "name": "control"
+                  "fontWeight": "500"
                 }
               ]
             }
@@ -57807,17 +57935,17 @@
               "id": "hEcaa",
               "width": "fill_container",
               "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-brand",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
               "padding": [
                 0,
                 12
               ],
               "justifyContent": "space_between",
               "alignItems": "center",
-              "fill": "$color-surface",
-              "cornerRadius": "$radius-sm",
-              "stroke": "$color-brand",
-              "strokeWidth": 2,
-              "strokeAlignment": "inner",
               "children": [
                 {
                   "type": "frame",
@@ -57840,12 +57968,12 @@
                 {
                   "type": "text",
                   "id": "hDcaa",
+                  "name": "control",
                   "fill": "$color-brand",
                   "content": "AutoComplete",
                   "fontFamily": "Inter",
                   "fontSize": 12,
-                  "fontWeight": "500",
-                  "name": "control"
+                  "fontWeight": "500"
                 }
               ]
             },
@@ -57854,13 +57982,26 @@
               "id": "h9caa",
               "name": "menu",
               "width": "fill_container",
+              "fill": "$color-surface",
               "cornerRadius": "$radius-lg",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00000014",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                },
+                "blur": 12
+              },
               "layout": "vertical",
               "padding": [
                 6,
                 0
               ],
-              "gap": 0,
               "children": [
                 {
                   "type": "frame",
@@ -57886,22 +58027,22 @@
                         {
                           "type": "text",
                           "id": "hGcaa",
+                          "name": "title",
                           "fill": "$color-text-dark",
                           "content": "Krvn",
                           "fontFamily": "Inter",
                           "fontSize": 14,
-                          "fontWeight": "600",
-                          "name": "title"
+                          "fontWeight": "600"
                         },
                         {
                           "type": "text",
                           "id": "hHcaa",
+                          "name": "number",
                           "fill": "$color-text-muted",
                           "content": "#9",
                           "fontFamily": "Inter",
                           "fontSize": 12,
-                          "fontWeight": "500",
-                          "name": "number"
+                          "fontWeight": "500"
                         }
                       ]
                     },
@@ -57940,22 +58081,22 @@
                         {
                           "type": "text",
                           "id": "hLcaa",
+                          "name": "title",
                           "fill": "$color-text-dark",
                           "content": "GiTimpo",
                           "fontFamily": "Inter",
                           "fontSize": 14,
-                          "fontWeight": "600",
-                          "name": "title"
+                          "fontWeight": "600"
                         },
                         {
                           "type": "text",
                           "id": "hMcaa",
+                          "name": "number",
                           "fill": "$color-text-muted",
                           "content": "#7",
                           "fontFamily": "Inter",
                           "fontSize": 12,
-                          "fontWeight": "500",
-                          "name": "number"
+                          "fontWeight": "500"
                         }
                       ]
                     },
@@ -57994,22 +58135,22 @@
                         {
                           "type": "text",
                           "id": "hQcaa",
+                          "name": "title",
                           "fill": "$color-text-dark",
                           "content": "@akholod's untitled project",
                           "fontFamily": "Inter",
                           "fontSize": 14,
-                          "fontWeight": "600",
-                          "name": "title"
+                          "fontWeight": "600"
                         },
                         {
                           "type": "text",
                           "id": "hRcaa",
+                          "name": "number",
                           "fill": "$color-text-muted",
                           "content": "#10",
                           "fontFamily": "Inter",
                           "fontSize": 12,
-                          "fontWeight": "500",
-                          "name": "number"
+                          "fontWeight": "500"
                         }
                       ]
                     },
@@ -58048,22 +58189,22 @@
                         {
                           "type": "text",
                           "id": "hVcaa",
+                          "name": "title",
                           "fill": "$color-text-muted",
                           "content": "Kesher",
                           "fontFamily": "Inter",
                           "fontSize": 14,
-                          "fontWeight": "600",
-                          "name": "title"
+                          "fontWeight": "600"
                         },
                         {
                           "type": "text",
                           "id": "hWcaa",
+                          "name": "number",
                           "fill": "$color-text-muted",
                           "content": "#12",
                           "fontFamily": "Inter",
                           "fontSize": 12,
-                          "fontWeight": "500",
-                          "name": "number"
+                          "fontWeight": "500"
                         }
                       ]
                     },
@@ -58118,22 +58259,22 @@
                         {
                           "type": "text",
                           "id": "h1caa",
+                          "name": "title",
                           "fill": "$color-text-muted",
                           "content": "Test project without repository",
                           "fontFamily": "Inter",
                           "fontSize": 14,
-                          "fontWeight": "600",
-                          "name": "title"
+                          "fontWeight": "600"
                         },
                         {
                           "type": "text",
                           "id": "h2caa",
+                          "name": "number",
                           "fill": "$color-text-muted",
                           "content": "#8",
                           "fontFamily": "Inter",
                           "fontSize": 12,
-                          "fontWeight": "500",
-                          "name": "number"
+                          "fontWeight": "500"
                         }
                       ]
                     },
@@ -58192,32 +58333,18 @@
                     }
                   ]
                 }
-              ],
-              "fill": "$color-surface",
-              "stroke": "$color-divider",
-              "strokeWidth": 1,
-              "strokeAlignment": "inner",
-              "effect": {
-                "type": "shadow",
-                "shadowType": "outer",
-                "color": "#00000014",
-                "offset": {
-                  "x": 0,
-                  "y": 4
-                },
-                "blur": 12
-              }
+              ]
             },
             {
               "type": "text",
               "id": "hadaa",
               "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
               "content": "No owner prefix in the rows — the organization above already says it. The right column is the reason to pick, not decoration.",
               "fontFamily": "Inter",
               "fontSize": 12,
-              "fontWeight": "normal",
-              "textGrowth": "fixed-width",
-              "width": "fill_container"
+              "fontWeight": "normal"
             }
           ]
         },
@@ -58433,14 +58560,14 @@
                     {
                       "type": "text",
                       "id": "hudaa",
+                      "name": "description",
                       "fill": "$color-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
                       "content": "Adds ITSUA-team/Krvn and links ITSUA-team/GiTiempo. A timer started from any issue of that repository reuses this project instead of creating a second one.",
                       "fontFamily": "Inter",
                       "fontSize": 12,
-                      "fontWeight": "normal",
-                      "name": "description",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container"
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -58660,14 +58787,14 @@
                     {
                       "type": "text",
                       "id": "hQdaa",
+                      "name": "description",
                       "fill": "$color-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
                       "content": "Adds ITSUA-team/Platform without a repository. Linking one of the three would misrepresent the other two, so timers started from those issues keep creating their own projects.",
                       "fontFamily": "Inter",
                       "fontSize": 12,
-                      "fontWeight": "normal",
-                      "name": "description",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container"
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -58887,14 +59014,14 @@
                     {
                       "type": "text",
                       "id": "hceaa",
+                      "name": "description",
                       "fill": "$color-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
                       "content": "Adds ITSUA-team/Krvn as an empty project. Draft items live only on the board and belong to no repository, so nothing can be linked until real issues are added.",
                       "fontFamily": "Inter",
                       "fontSize": 12,
-                      "fontWeight": "normal",
-                      "name": "description",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container"
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -59114,14 +59241,14 @@
                     {
                       "type": "text",
                       "id": "hyeaa",
+                      "name": "description",
                       "fill": "$color-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
                       "content": "This project is already in GiTiempo as ITSUA-team/Kesher. Adding never modifies an existing project, so Add project stays disabled.",
                       "fontFamily": "Inter",
                       "fontSize": 12,
-                      "fontWeight": "normal",
-                      "name": "description",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container"
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -59138,6 +59265,11 @@
                 {
                   "type": "frame",
                   "id": "hCeaa",
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
                   "padding": [
                     8,
                     14
@@ -59152,12 +59284,7 @@
                       "fontSize": 13,
                       "fontWeight": "500"
                     }
-                  ],
-                  "fill": "$color-surface",
-                  "cornerRadius": "$radius-sm",
-                  "stroke": "$color-divider",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner"
+                  ]
                 },
                 {
                   "type": "frame",
@@ -59210,17 +59337,17 @@
               "id": "hKeaa",
               "width": "fill_container",
               "height": 38,
+              "fill": "$color-app-bg",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
               "padding": [
                 0,
                 12
               ],
               "justifyContent": "space_between",
               "alignItems": "center",
-              "fill": "$color-app-bg",
-              "cornerRadius": "$radius-sm",
-              "stroke": "$color-divider",
-              "strokeWidth": 1,
-              "strokeAlignment": "inner",
               "children": [
                 {
                   "type": "frame",
@@ -59243,12 +59370,12 @@
                 {
                   "type": "text",
                   "id": "hJeaa",
+                  "name": "control",
                   "fill": "$color-text-muted",
                   "content": "Disabled",
                   "fontFamily": "Inter",
                   "fontSize": 12,
-                  "fontWeight": "500",
-                  "name": "control"
+                  "fontWeight": "500"
                 }
               ]
             },
@@ -59265,18 +59392,16 @@
               "type": "text",
               "id": "hNeaa",
               "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
               "content": "The same slot carries the other refusal: no organization is approved for this workspace yet — approve one in Settings to import its projects.",
               "fontFamily": "Inter",
               "fontSize": 12,
-              "fontWeight": "normal",
-              "textGrowth": "fixed-width",
-              "width": "fill_container"
+              "fontWeight": "normal"
             }
           ]
         }
-      ],
-      "x": 1400,
-      "y": 9600
+      ]
     },
     {
       "type": "note",
@@ -59715,17 +59840,17 @@
                                   "name": "fSourceInput",
                                   "width": "fill_container",
                                   "height": 38,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
                                   "padding": [
                                     0,
                                     12
                                   ],
                                   "justifyContent": "space_between",
                                   "alignItems": "center",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "stroke": "$color-divider",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
                                   "children": [
                                     {
                                       "type": "frame",
@@ -59761,12 +59886,12 @@
                                   "type": "text",
                                   "id": "ugaaa",
                                   "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
                                   "content": "Manual keeps the project local. Import pulls an organization project.",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
-                                  "fontWeight": "normal",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container"
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -59793,17 +59918,17 @@
                                   "name": "fOrganizationInput",
                                   "width": "fill_container",
                                   "height": 38,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
                                   "padding": [
                                     0,
                                     12
                                   ],
                                   "justifyContent": "space_between",
                                   "alignItems": "center",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "stroke": "$color-divider",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
                                   "children": [
                                     {
                                       "type": "frame",
@@ -59839,12 +59964,12 @@
                                   "type": "text",
                                   "id": "unaaa",
                                   "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
                                   "content": "Organizations approved for this workspace in Settings.",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
-                                  "fontWeight": "normal",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container"
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -59871,17 +59996,17 @@
                                   "name": "projectInput",
                                   "width": "fill_container",
                                   "height": 38,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
                                   "padding": [
                                     0,
                                     12
                                   ],
                                   "justifyContent": "space_between",
                                   "alignItems": "center",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "stroke": "$color-divider",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
                                   "children": [
                                     {
                                       "type": "frame",
@@ -59913,12 +60038,12 @@
                                     {
                                       "type": "text",
                                       "id": "uraaa",
+                                      "name": "control",
                                       "fill": "$color-brand",
                                       "content": "AutoComplete",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
-                                      "fontWeight": "500",
-                                      "name": "control"
+                                      "fontWeight": "500"
                                     }
                                   ]
                                 },
@@ -59926,12 +60051,12 @@
                                   "type": "text",
                                   "id": "uvaaa",
                                   "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
                                   "content": "Open projects of ITSUA-team. Type to filter.",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
-                                  "fontWeight": "normal",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container"
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -59958,17 +60083,17 @@
                                   "name": "fNameInput",
                                   "width": "fill_container",
                                   "height": 38,
+                                  "fill": "$color-app-bg",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
                                   "padding": [
                                     0,
                                     12
                                   ],
                                   "justifyContent": "space_between",
                                   "alignItems": "center",
-                                  "fill": "$color-app-bg",
-                                  "cornerRadius": "$radius-sm",
-                                  "stroke": "$color-divider",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
                                   "children": [
                                     {
                                       "type": "frame",
@@ -59991,12 +60116,12 @@
                                     {
                                       "type": "text",
                                       "id": "uyaaa",
+                                      "name": "control",
                                       "fill": "$color-text-muted",
                                       "content": "Read-only",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
-                                      "fontWeight": "500",
-                                      "name": "control"
+                                      "fontWeight": "500"
                                     }
                                   ]
                                 },
@@ -60004,12 +60129,12 @@
                                   "type": "text",
                                   "id": "uCaaa",
                                   "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
                                   "content": "Derived from the organization and the project.",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
-                                  "fontWeight": "normal",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container"
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -60043,17 +60168,17 @@
                                       "name": "fManagerInput",
                                       "width": "fill_container",
                                       "height": 38,
+                                      "fill": "$color-surface",
+                                      "cornerRadius": "$radius-sm",
+                                      "stroke": "$color-divider",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
                                       "padding": [
                                         0,
                                         12
                                       ],
                                       "justifyContent": "space_between",
                                       "alignItems": "center",
-                                      "fill": "$color-surface",
-                                      "cornerRadius": "$radius-sm",
-                                      "stroke": "$color-divider",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
                                       "children": [
                                         {
                                           "type": "frame",
@@ -60089,12 +60214,12 @@
                                       "type": "text",
                                       "id": "uJaaa",
                                       "fill": "$color-text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
                                       "content": "Optional. Assigned right after the project is created.",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
-                                      "fontWeight": "normal",
-                                      "textGrowth": "fixed-width",
-                                      "width": "fill_container"
+                                      "fontWeight": "normal"
                                     }
                                   ]
                                 },
@@ -60121,17 +60246,17 @@
                                       "name": "fVisibilityInput",
                                       "width": "fill_container",
                                       "height": 38,
+                                      "fill": "$color-surface",
+                                      "cornerRadius": "$radius-sm",
+                                      "stroke": "$color-divider",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
                                       "padding": [
                                         0,
                                         12
                                       ],
                                       "justifyContent": "space_between",
                                       "alignItems": "center",
-                                      "fill": "$color-surface",
-                                      "cornerRadius": "$radius-sm",
-                                      "stroke": "$color-divider",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
                                       "children": [
                                         {
                                           "type": "frame",
@@ -60190,6 +60315,11 @@
                                   "name": "billableInput",
                                   "width": "fill_container",
                                   "height": 38,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
                                   "gap": 10,
                                   "padding": [
                                     0,
@@ -60204,8 +60334,7 @@
                                       "width": 16,
                                       "height": 16,
                                       "fill": "$color-brand",
-                                      "cornerRadius": 4,
-                                      "children": []
+                                      "cornerRadius": 4
                                     },
                                     {
                                       "type": "text",
@@ -60216,23 +60345,18 @@
                                       "fontSize": 14,
                                       "fontWeight": "500"
                                     }
-                                  ],
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "stroke": "$color-divider",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner"
+                                  ]
                                 },
                                 {
                                   "type": "text",
                                   "id": "uWaaa",
                                   "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
                                   "content": "New tasks in this project inherit this value unless changed later.",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
-                                  "fontWeight": "normal",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container"
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -60373,14 +60497,14 @@
                                     {
                                       "type": "text",
                                       "id": "u9aaa",
+                                      "name": "description",
                                       "fill": "$color-text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
                                       "content": "Adds ITSUA-team/Krvn as a private project, billable by default, with Alexey T. as manager, and links ITSUA-team/GiTiempo. A timer started from any issue of that repository reuses this project instead of creating a second one.",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
-                                      "fontWeight": "normal",
-                                      "name": "description",
-                                      "textGrowth": "fixed-width",
-                                      "width": "fill_container"
+                                      "fontWeight": "normal"
                                     }
                                   ]
                                 }
@@ -60399,6 +60523,11 @@
                             {
                               "type": "frame",
                               "id": "u6caa",
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
                               "padding": [
                                 8,
                                 14
@@ -60413,12 +60542,7 @@
                                   "fontSize": 13,
                                   "fontWeight": "500"
                                 }
-                              ],
-                              "fill": "$color-surface",
-                              "cornerRadius": "$radius-sm",
-                              "stroke": "$color-divider",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner"
+                              ]
                             },
                             {
                               "type": "frame",
@@ -60453,6 +60577,16 @@
                       "width": 320,
                       "fill": "$color-surface",
                       "cornerRadius": "$radius-lg",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000014",
+                        "offset": {
+                          "x": 0,
+                          "y": 1
+                        },
+                        "blur": 3
+                      },
                       "layout": "vertical",
                       "gap": 14,
                       "padding": 20,
@@ -60460,23 +60594,23 @@
                         {
                           "type": "text",
                           "id": "uUcaa",
+                          "name": "sideTitle",
                           "fill": "$color-text-dark",
                           "content": "Project Source",
                           "fontFamily": "Inter",
                           "fontSize": 18,
-                          "fontWeight": "600",
-                          "name": "sideTitle"
+                          "fontWeight": "600"
                         },
                         {
                           "type": "text",
                           "id": "uVcaa",
                           "fill": "$color-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
                           "content": "Source is a field in the form now, so both kinds of project are created the same way and carry the same settings.",
                           "fontFamily": "Inter",
                           "fontSize": 13,
-                          "fontWeight": "normal",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container"
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "frame",
@@ -60502,12 +60636,12 @@
                               "type": "text",
                               "id": "uXcaa",
                               "fill": "$color-text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
                               "content": "Imported projects are named organization/project, so the owner is visible in the projects list. Manual projects keep the name you type.",
                               "fontFamily": "Inter",
                               "fontSize": 13,
-                              "fontWeight": "normal",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container"
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -60535,26 +60669,16 @@
                               "type": "text",
                               "id": "u0caa",
                               "fill": "$color-text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
                               "content": "A GitHub project whose issues all come from one repository is linked to it. That link is what makes a timer reuse this project instead of creating another.",
                               "fontFamily": "Inter",
                               "fontSize": 13,
-                              "fontWeight": "normal",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container"
+                              "fontWeight": "normal"
                             }
                           ]
                         }
-                      ],
-                      "effect": {
-                        "type": "shadow",
-                        "shadowType": "outer",
-                        "color": "#00000014",
-                        "offset": {
-                          "x": 0,
-                          "y": 1
-                        },
-                        "blur": 3
-                      }
+                      ]
                     }
                   ]
                 }
@@ -60567,6 +60691,8 @@
     {
       "type": "frame",
       "id": "ucdaa",
+      "x": 1400,
+      "y": 10600,
       "name": "Unified Form — Manual Branch",
       "width": 680,
       "fill": "$color-app-bg",
@@ -60587,12 +60713,12 @@
           "type": "text",
           "id": "uedaa",
           "fill": "$color-text-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
           "content": "Organization, GitHub project and the \"What will be added\" block are the only parts that belong to the import branch. Project name becomes editable; everything below it is identical.",
           "fontFamily": "Inter",
           "fontSize": 12,
-          "fontWeight": "normal",
-          "textGrowth": "fixed-width",
-          "width": "fill_container"
+          "fontWeight": "normal"
         },
         {
           "type": "frame",
@@ -60645,17 +60771,17 @@
                       "name": "fSourceInput",
                       "width": "fill_container",
                       "height": 38,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
                       "padding": [
                         0,
                         12
                       ],
                       "justifyContent": "space_between",
                       "alignItems": "center",
-                      "fill": "$color-surface",
-                      "cornerRadius": "$radius-sm",
-                      "stroke": "$color-divider",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
                       "children": [
                         {
                           "type": "frame",
@@ -60691,12 +60817,12 @@
                       "type": "text",
                       "id": "uhbaa",
                       "fill": "$color-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
                       "content": "Manual keeps the project local. Import pulls an organization project.",
                       "fontFamily": "Inter",
                       "fontSize": 12,
-                      "fontWeight": "normal",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container"
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -60723,17 +60849,17 @@
                       "name": "nameInput",
                       "width": "fill_container",
                       "height": 38,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
                       "padding": [
                         0,
                         12
                       ],
                       "justifyContent": "space_between",
                       "alignItems": "center",
-                      "fill": "$color-surface",
-                      "cornerRadius": "$radius-sm",
-                      "stroke": "$color-divider",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
                       "children": [
                         {
                           "type": "frame",
@@ -60787,17 +60913,17 @@
                           "name": "fManagerInput",
                           "width": "fill_container",
                           "height": 38,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
                           "padding": [
                             0,
                             12
                           ],
                           "justifyContent": "space_between",
                           "alignItems": "center",
-                          "fill": "$color-surface",
-                          "cornerRadius": "$radius-sm",
-                          "stroke": "$color-divider",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
                           "children": [
                             {
                               "type": "frame",
@@ -60833,12 +60959,12 @@
                           "type": "text",
                           "id": "utbaa",
                           "fill": "$color-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
                           "content": "Optional. Assigned right after the project is created.",
                           "fontFamily": "Inter",
                           "fontSize": 12,
-                          "fontWeight": "normal",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container"
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -60865,17 +60991,17 @@
                           "name": "fVisibilityInput",
                           "width": "fill_container",
                           "height": 38,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
                           "padding": [
                             0,
                             12
                           ],
                           "justifyContent": "space_between",
                           "alignItems": "center",
-                          "fill": "$color-surface",
-                          "cornerRadius": "$radius-sm",
-                          "stroke": "$color-divider",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
                           "children": [
                             {
                               "type": "frame",
@@ -60934,6 +61060,11 @@
                       "name": "billableInput",
                       "width": "fill_container",
                       "height": 38,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
                       "gap": 10,
                       "padding": [
                         0,
@@ -60948,8 +61079,7 @@
                           "width": 16,
                           "height": 16,
                           "fill": "$color-brand",
-                          "cornerRadius": 4,
-                          "children": []
+                          "cornerRadius": 4
                         },
                         {
                           "type": "text",
@@ -60960,23 +61090,18 @@
                           "fontSize": 14,
                           "fontWeight": "500"
                         }
-                      ],
-                      "fill": "$color-surface",
-                      "cornerRadius": "$radius-sm",
-                      "stroke": "$color-divider",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner"
+                      ]
                     },
                     {
                       "type": "text",
                       "id": "uGbaa",
                       "fill": "$color-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
                       "content": "New tasks in this project inherit this value unless changed later.",
                       "fontFamily": "Inter",
                       "fontSize": 12,
-                      "fontWeight": "normal",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container"
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -60993,6 +61118,11 @@
                 {
                   "type": "frame",
                   "id": "uidaa",
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
                   "padding": [
                     8,
                     14
@@ -61007,12 +61137,7 @@
                       "fontSize": 13,
                       "fontWeight": "500"
                     }
-                  ],
-                  "fill": "$color-surface",
-                  "cornerRadius": "$radius-sm",
-                  "stroke": "$color-divider",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner"
+                  ]
                 },
                 {
                   "type": "frame",
@@ -61040,9 +61165,7 @@
             }
           ]
         }
-      ],
-      "x": 1400,
-      "y": 10600
+      ]
     },
     {
       "type": "note",
