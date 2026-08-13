@@ -34,7 +34,7 @@ Current workspace setup:
   --color-text-inverse: #ffffff;
   --color-text-inverse-muted: rgba(255, 255, 255, 0.7);
   --color-divider: #eeeeee;
-  --color-destructive: #d32f2f;
+  --color-destructive: #c62828;
 
   --color-status-active-bg: #e8f5e9;
   --color-status-active-text: #2e7d32;

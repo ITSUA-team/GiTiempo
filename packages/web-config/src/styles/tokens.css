@@ -11,7 +11,7 @@
   --color-text-inverse: #ffffff;
   --color-text-inverse-muted: rgba(255, 255, 255, 0.7);
   --color-divider: #eeeeee;
-  --color-destructive: #d32f2f;
+  --color-destructive: #c62828;
 
   /*
    * Identity-provider brand colours. Not ours to choose, and not themeable — a

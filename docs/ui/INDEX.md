@@ -47,7 +47,7 @@ Read this file first. Load only the linked section files needed for the task.
 | Text Subtle | `text-text-subtle` | `#999999` | Low-emphasis separators and tertiary chrome |
 | Text Inverse | `text-text-inverse` / `text-text-inverse-muted` | `#FFFFFF` / `rgba(255,255,255,0.7)` | Text on brand/destructive/dark surfaces |
 | Divider | `border-divider` | `#EEEEEE` | Borders and separators |
-| Destructive | `text-destructive`, `border-destructive` | `#D32F2F` | Delete and disconnect actions |
+| Destructive | `text-destructive`, `border-destructive` | `#C62828` | Delete and disconnect actions |
 
 ## Typography Summary
 

@@ -46,6 +46,21 @@ function contrastRatio(foreground: string, background: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function composite(hex: string, alpha: number, backdrop: string): string {
+  const channels = [1, 3, 5].map((offset) => {
+    const over = Number.parseInt(hex.slice(offset, offset + 2), 16);
+    const under = Number.parseInt(backdrop.slice(offset, offset + 2), 16);
+
+    return Math.round(alpha * over + (1 - alpha) * under)
+      .toString(16)
+      .padStart(2, "0");
+  });
+
+  return `#${channels.join("")}`;
+}
+
+const surfacesBehindAlerts = ["--color-surface-primary", "--color-app-bg"];
+
 describe("status token contrast", () => {
   it.each(statusPairs)(
     "keeps $name status text readable on its own background",
@@ -56,8 +71,40 @@ describe("status token contrast", () => {
     },
   );
 
+  it.each(surfacesBehindAlerts)(
+    "keeps destructive alert text readable over its own tint on %s",
+    (surface) => {
+      const destructive = readToken("--color-destructive");
+      const tint = composite(destructive, 0.05, readToken(surface));
+
+      expect(contrastRatio(destructive, tint)).toBeGreaterThanOrEqual(
+        WCAG_AA_NORMAL_TEXT,
+      );
+    },
+  );
+
+  it.each(surfacesBehindAlerts)(
+    "keeps untinted destructive text readable on %s",
+    (surface) => {
+      expect(
+        contrastRatio(readToken("--color-destructive"), readToken(surface)),
+      ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+    },
+  );
+
+  it("keeps inverse text readable on a solid destructive button", () => {
+    expect(
+      contrastRatio(readToken("--color-text-inverse"), readToken("--color-destructive")),
+    ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+  });
+
   it("computes a known contrast ratio", () => {
     expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 5);
     expect(contrastRatio("#ffffff", "#ffffff")).toBeCloseTo(1, 5);
+  });
+
+  it("composites a translucent tint the way the browser does", () => {
+    expect(composite("#000000", 0.5, "#ffffff")).toBe("#808080");
+    expect(composite("#d32f2f", 0.05, "#ffffff")).toBe("#fdf5f5");
   });
 });
