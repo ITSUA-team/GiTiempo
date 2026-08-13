@@ -27,7 +27,7 @@ Frontend builds use build-time environment values. The existing SPAs use `VITE_*
 
 | App | Required deployment values |
 |---|---|
-| `landing-web` | Public site URL/canonical origin, user-app entry URL, and admin-app entry URL |
+| `landing-web` | Public site URL/canonical origin, user-app entry URL, admin-app entry URL, and optional GA4 Measurement ID |
 | `user-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_ADMIN_APP_URL`, and optionally `VITE_EXTENSION_INSTALL_URL` (browser-extension install page; the login extension link is hidden when unset) |
 | `admin-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_USER_APP_URL` |
 
@@ -42,7 +42,7 @@ The landing implementation must receive all three values from environment-aware 
 
 Do not read production frontend config from repository `.env` files. GitHub Actions must inject environment-specific values from GitHub Environments or repository secrets/variables. The staging Environment example at `deploy/github-environment.staging.example.env` documents the frontend and API values.
 
-For Cloudflare staging deployment, `CLOUDFLARE_ACCOUNT_ID` and the landing `PUBLIC_*` values are GitHub Environment variables. `CLOUDFLARE_API_TOKEN` is a GitHub Environment secret. The example file separates those categories so operators do not duplicate the account ID as a secret.
+For Cloudflare staging deployment, `CLOUDFLARE_ACCOUNT_ID` and the landing `PUBLIC_*` values are GitHub Environment variables. `CLOUDFLARE_API_TOKEN` is a GitHub Environment secret. The example file separates those categories so operators do not duplicate the account ID as a secret. `PUBLIC_GA_MEASUREMENT_ID` is optional: set a valid `G-...` value to compile the consent-gated GA4 integration, or leave it blank to compile no analytics prompt or Google tag.
 
 ### Frontend Manual Triggers
 
@@ -66,11 +66,17 @@ Recommended path filters:
 | `deploy-frontend-staging` | `apps/user-web/**`, `apps/admin-web/**`, `packages/shared/**`, `packages/web-config/**`, `packages/web-shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, shared CI/deploy workflow files |
 | `deploy-landing-staging` | `apps/landing-web/**`, `packages/web-config/**`, workspace manifests, Turbo configuration, workspace check action, landing target detector, and landing workflow files |
 
-Landing-only changes do not enter the two-SPA deployment matrix. The landing workflow validates `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, and `PUBLIC_ADMIN_APP_URL`, then runs the landing lint, typecheck, test, and build gates before invoking Wrangler. It does not require Firebase or API values.
+Landing-only changes do not enter the two-SPA deployment matrix. The landing workflow validates `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, and `PUBLIC_ADMIN_APP_URL`, then runs the landing lint, typecheck, test, and build gates before invoking Wrangler. It does not require Firebase or API values. It passes optional `PUBLIC_GA_MEASUREMENT_ID` through without making it a deployment prerequisite.
 
 Each deployment workflow runs lint/typecheck/tests/build for its affected app before deployment. Shared frontend package changes deploy both SPAs after both app gates pass.
 
 Implementation and local verification do not invoke a live deployment; publishing occurs only through an authorized GitHub Actions staging workflow run.
+
+### Landing GA4 verification and rollback
+
+The landing uses GA4 only when a valid optional `PUBLIC_GA_MEASUREMENT_ID` is present at build time and a visitor grants analytics consent. Before consent, Consent Mode v2 defaults storage and advertising fields to denied and the page does not request `gtag.js`. The integration sends one manual `page_view` with the document title and a location limited to the origin, path, and approved campaign parameters; CTA events are named `landing_cta_click` and contain only fixed `cta_location` (`header`, `hero`, or `final_cta`) and `destination_app` (`user_app` or `admin_app`) values. It must not send account, workspace, project, task, repository, form, URL-query, click-label, or other personal data.
+
+After an authorized non-production deployment, verify a non-personal test URL in Google Tag Assistant and GA4 DebugView: confirm no tag request before consent, then confirm one sanitized `page_view` and the fixed CTA event fields after consent. Record the result with the deployment. Do not use production visitor data for this check. To disable analytics, remove `PUBLIC_GA_MEASUREMENT_ID` from the GitHub Environment and redeploy the landing; alternatively redeploy the prior landing Worker version. Neither path changes the API or authenticated applications.
 
 ## API Deploys
 
@@ -200,6 +206,7 @@ GitHub Actions stores deploy credentials and environment-specific values.
 | Cloudflare API token/account/zone data | GitHub Environment | Used by Wrangler deploys |
 | `VITE_*` frontend values | GitHub Environment | Injected at frontend build time |
 | `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, `PUBLIC_ADMIN_APP_URL` | GitHub Environment | Injected at landing build time; canonical origin and direct user/admin app entry URLs |
+| `PUBLIC_GA_MEASUREMENT_ID` | GitHub Environment variable (optional) | Valid public GA4 `G-...` Measurement ID; enables consent-gated landing analytics at build time |
 | `PUBLIC_API_URL` | GitHub Environment variable | Public API base URL used for readiness checks |
 | `API_DEPLOY_PATH` | GitHub Environment variable | Remote VPS deploy directory |
 | `ALLOWED_ORIGINS` | GitHub Environment variable / VPS runtime env | Comma-separated CORS allow-list written into the VPS `.env`; include web app origins and exact Chrome extension origins such as `chrome-extension://<extension-id>` |
@@ -217,6 +224,10 @@ GitHub Actions stores deploy credentials and environment-specific values.
 | `SEED_ADMIN_*`, `SEED_MEMBER_*` | VPS runtime env | Optional DB seed users matched to existing Firebase Auth UIDs |
 
 Repository `.env.example` files document names and safe placeholders only. They must not contain real credentials. The VPS runtime example lives in `deploy/api/.env.example`; the shared staging GitHub Environment example lives in `deploy/github-environment.staging.example.env`.
+
+### Landing GA4 verification
+
+Before assigning `PUBLIC_GA_MEASUREMENT_ID` to a staging or production environment, disable every GA4 Enhanced Measurement option for that web data stream and disable automatic event detection for its Google tag. The landing application sends only manual `page_view` events with `page_title` and a sanitized `page_location`, plus `landing_cta_click` with fixed `cta_location` and `destination_app` values. Verify this in a non-production environment with a non-personal URL using Google Tag Assistant and GA4 DebugView; do not deploy solely to perform this check. To disable landing analytics, remove `PUBLIC_GA_MEASUREMENT_ID` and rebuild the landing application, or roll back the landing Worker version.
 
 ## Health Checks
 
