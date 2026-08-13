@@ -11,6 +11,7 @@
 - All form fields need associated `<label>` elements.
 - A form-level or request-level error that appears without moving focus must be a live region, so give its container `role="alert"` the way `InlineRequestMessage` and the sign-in form do. Field-level validation messages are already covered by PrimeVue `<Message>`; this rule is about the summary error a submit or redirect produces.
 - Icon-only buttons need `aria-label`.
+- Every authenticated shell must render `SkipToContentLink` as its first focusable element and give its `<main>` the shared `MAIN_CONTENT_ELEMENT_ID` plus `tabindex="-1"`. The `tabindex` is what makes `<main>` a focus target; without it the link only moves the scroll position. The link is `sr-only` until focused, and every style it needs when visible has to be a `focus:` variant, because `focus:not-sr-only` resets position and padding at a specificity plain utilities cannot beat.
 - Custom interactive elements must support keyboard navigation.
 - For the compact top-bar timer, the shell surface or mobile opener must expose an accessible name that clearly opens timer actions, such as `Open timer` or `Task and timer`.
 - Do not make the live `HH:MM:SS` timer assertive; avoid announcing every second to screen readers.
