@@ -369,8 +369,28 @@ The Time Entries page MUST allow authenticated users to review, filter, create, 
 - **GIVEN** the own-entry list request succeeds with entries across multiple dates
 - **WHEN** the page renders results
 - **THEN** entries are grouped by their started-at day
-- **AND** each day group shows a day heading and a primary icon-only `New time entry` action with explicit tooltip and accessible label copy `New time entry`
+- **AND** each day group shows a day heading, the total time tracked that day, and a primary icon-only `New time entry` action with explicit tooltip and accessible label copy `New time entry`
 - **AND** each entry row shows task, project, time range, duration, edit, and delete affordances according to entry state.
+
+#### Scenario: Day heading shows the tracked total for that day
+
+- **GIVEN** a day group renders with one or more own time entries
+- **WHEN** the page renders the day heading
+- **THEN** the heading shows the sum of the durations of that group's entries beside the day label
+- **AND** the total uses the same compact duration format as the entry rows
+- **AND** each entry contributes its full duration, matching the duration its own row displays
+
+#### Scenario: Day total advances while an entry in that day is running
+
+- **GIVEN** a day group contains a running entry
+- **WHEN** the running duration advances
+- **THEN** that day's total advances with it without requiring a page reload
+
+#### Scenario: Day total is presented as the approved chip
+
+- **WHEN** the page renders a day heading total
+- **THEN** it renders as a tinted chip carrying a clock glyph and the duration
+- **AND** the heading does not place a separator character between the day label and the total
 
 #### Scenario: Running entries stay visible but not editable
 
