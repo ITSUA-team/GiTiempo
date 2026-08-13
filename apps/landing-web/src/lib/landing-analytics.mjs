@@ -66,7 +66,13 @@ function loadGoogleTag(documentObject, measurementId) {
 }
 
 export function getStoredAnalyticsConsent(windowObject) {
-  const storedValue = getStorage(windowObject)?.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
+  let storedValue;
+
+  try {
+    storedValue = getStorage(windowObject)?.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
 
   return storedValue === 'granted' || storedValue === 'denied' ? storedValue : null;
 }
@@ -126,6 +132,8 @@ export function initializeLandingAnalytics({ documentObject = document, windowOb
       allow_google_signals: false,
       allow_ad_personalization_signals: false,
     });
+    // The GA4 stream must also have Enhanced Measurement and automatic event
+    // detection disabled; those stream-side settings cannot be overridden here.
     loadGoogleTag(documentObject, measurementId);
   }
 

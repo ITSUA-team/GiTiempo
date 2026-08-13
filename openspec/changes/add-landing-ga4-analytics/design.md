@@ -51,7 +51,7 @@ Alternative considered: add a third-party consent or analytics package. Rejected
 
 ### `apps/landing-web`: send one sanitized page view after consent
 
-The GA4 configuration disables its automatic initial page view. The landing script then sends one manual `page_view` after analytics becomes active. `page_location` is reconstructed from origin and pathname with only approved campaign keys retained: `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, `gclid`, `dclid`, and `gbraid`/`wbraid`. Hashes and all other query parameters are excluded. The event uses the rendered document title and never sets GA User-ID.
+The GA4 configuration disables its automatic initial page view. The landing script then sends one manual `page_view` after analytics becomes active. The Measurement ID's GA4 web data stream must have all Enhanced Measurement options disabled and its Google tag must have automatic event detection disabled, because stream-side automatic events cannot be suppressed by the landing `gtag()` configuration. `page_location` is reconstructed from origin and pathname with only approved campaign keys retained: `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, `gclid`, `dclid`, and `gbraid`/`wbraid`. Hashes and all other query parameters are excluded. The event uses the rendered document title and never sets GA User-ID.
 
 Alternative considered: use GA4's default page view. Rejected because it would transmit the complete browser URL, including arbitrary query parameters that could contain personal data, and could duplicate the manual event.
 

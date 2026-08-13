@@ -39,3 +39,16 @@ test('persists only recognised analytics-consent choices', () => {
   setStoredAnalyticsConsent(windowObject, 'denied');
   assert.equal(getStoredAnalyticsConsent(windowObject), 'denied');
 });
+
+test('treats unavailable local storage as an unset consent choice', () => {
+  assert.equal(
+    getStoredAnalyticsConsent({
+      localStorage: {
+        getItem() {
+          throw new Error('Storage access is blocked.');
+        },
+      },
+    }),
+    null,
+  );
+});

@@ -43,6 +43,8 @@ The prompt is not a modal: page content stays available while it is visible. It 
 
 The implementation is framework-free and uses basic Consent Mode v2: analytics storage and all advertising consent values default to denied. It loads `gtag.js` asynchronously only after a visitor grants analytics consent. It must not enable advertising consent, Google Signals, User-ID, remarketing, or cross-domain tracking. With a configured Measurement ID, the consent and analytics scripts are the only approved browser-script exception in addition to the illustrative preview timer.
 
+The GA4 web data stream for this Measurement ID must have every Enhanced Measurement option disabled, and the associated Google tag must have automatic event detection disabled. These are stream-side settings, so `send_page_view: false` in the landing code suppresses only the initial automatic page view; it cannot suppress stream-generated scroll, outbound-click, or history events.
+
 Only the following analytics events are approved:
 
 | Event | Fields |

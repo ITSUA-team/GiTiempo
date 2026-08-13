@@ -85,6 +85,12 @@ The landing application SHALL send exactly one manual GA4 `page_view` for the cu
 - **THEN** one `page_view` event is sent with the rendered page title and a sanitized page location
 - **AND** no duplicate initial page view is sent for that visit
 
+#### Scenario: Measurement stream is configured without automatic events
+
+- **WHEN** an operator configures the Measurement ID for a deployment environment
+- **THEN** every GA4 Enhanced Measurement option and Google tag automatic event detection are disabled for that Measurement ID
+- **AND** the landing application remains the only source of approved `page_view` and `landing_cta_click` events
+
 #### Scenario: Campaign parameters are present
 
 - **WHEN** the landing URL contains approved campaign attribution parameters

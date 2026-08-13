@@ -225,6 +225,10 @@ GitHub Actions stores deploy credentials and environment-specific values.
 
 Repository `.env.example` files document names and safe placeholders only. They must not contain real credentials. The VPS runtime example lives in `deploy/api/.env.example`; the shared staging GitHub Environment example lives in `deploy/github-environment.staging.example.env`.
 
+### Landing GA4 verification
+
+Before assigning `PUBLIC_GA_MEASUREMENT_ID` to a staging or production environment, disable every GA4 Enhanced Measurement option for that web data stream and disable automatic event detection for its Google tag. The landing application sends only manual `page_view` events with `page_title` and a sanitized `page_location`, plus `landing_cta_click` with fixed `cta_location` and `destination_app` values. Verify this in a non-production environment with a non-personal URL using Google Tag Assistant and GA4 DebugView; do not deploy solely to perform this check. To disable landing analytics, remove `PUBLIC_GA_MEASUREMENT_ID` and rebuild the landing application, or roll back the landing Worker version.
+
 ## Health Checks
 
 The API exposes:
