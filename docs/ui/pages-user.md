@@ -45,6 +45,7 @@
 - When the timer is already running, the popup uses a secondary `Change task` action for task reassignment and a primary `Stop timer` action to its right.
 - When the timer is running in another workspace, the popup switches to a stop-first state that explains the timer is active in that workspace, hides or makes unavailable active-workspace Project -> Task selection and `Change task`, and keeps popup-owned `Stop timer` as the primary recovery action.
 - The authenticated user-web profile trigger is avatar-only in the top bar; visible member-name text does not appear beside the avatar.
+- The profile trigger shows the member's stored avatar image when one is available, cropped to the existing circle without distorting a non-square source, and falls back to member initials when no avatar is stored or the image fails to load. Trigger sizing, the open-state border, and the dropdown actions are unchanged by which of the two renders.
 - If there is no eligible last tracked task context, keep the same not-running top-bar layout and keep the compact timer surface clickable so the popup can seed a new startable task context.
 - While the top-bar timer summary is loading, keep the layout visible with the popup entry point intact.
 - If the top-bar timer summary fails to load, keep the layout visible in a disabled fallback state and surface the failure through toast feedback.
@@ -101,7 +102,9 @@
 - Tasks for that project render beneath the project header inside the same section card.
 - At and above `640px`, each project section keeps the existing task table layout.
 - Below `640px`, each project section renders stacked mobile task cards instead of the fixed-width desktop task table.
-- Task rows/cards include a clickable task title, status, and updated metadata. The task title opens the shared task edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the title that opens the source issue in a new browser tab. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
+- Task rows/cards include a direct timer action immediately beside the task-title group, plus the clickable task title, status, and updated metadata. With no running timer it starts a fresh timer and uses `Start timer for <task title>` tooltip/accessibility copy; the matching running task shows `Stop timer for <task title>` and stops only after rechecking the authoritative current timer.
+- When another task or workspace owns the running timer, a task's start action remains visibly blocked but opens the existing top-bar task-and-timer stop-first guidance instead of issuing a start request or duplicating cross-workspace copy in Projects. A stale start conflict refreshes shared timer state and opens that same guidance. Pending or still-loading timer state is natively disabled to avoid duplicate requests.
+- When the task is backed by a synced GitHub issue, show a separate external-link icon beside the title that opens the source issue in a new browser tab. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
 - Clicking the task title opens the shared task PrimeVue `<Dialog>` in update mode.
 - The same task dialog is used for both create and update flows.
 - The project-level add-task icon action opens the same dialog in create mode with that project already selected.
@@ -120,6 +123,7 @@
 ## Profile Page
 
 - Initial page load uses a skeleton matching the profile form and GitHub connection card before rendering disconnected, empty, or request-error states.
+- The account card avatar shows the member's stored avatar image when one is available and falls back to member initials when it is absent or fails to load. This is the member's own avatar and is independent of the GitHub connection card avatar below it.
 - Editable display name backed by `PATCH /users/me`.
 - Display-name input is enabled and prefilled from the current user profile.
 - `Save changes` persists the latest valid display name and `Cancel` restores the latest persisted value.

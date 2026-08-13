@@ -125,7 +125,7 @@ export function useTimeEntryDirectTimerActions({
         return;
       }
 
-      await stopTimerMutation.mutateAsync();
+      await stopTimerMutation.mutateAsync({ expectedTimerId: entry.id });
       appToast.showSuccessToast(
         "Timer stopped",
         `Stopped tracking ${entry.task.title}.`,
@@ -138,7 +138,7 @@ export function useTimeEntryDirectTimerActions({
         summary: "Could not stop timer",
       });
 
-      await invalidateTimer();
+      await refreshTimerAndEntries();
     } finally {
       stoppingTimerEntryId.value = null;
     }

@@ -27,6 +27,19 @@ describe('FakeFirebaseAdminService', () => {
     expect(decoded.email).toBe('alice@example.com');
   });
 
+  it('includes the optional picture segment, keeping its scheme colon', async () => {
+    const decoded = await fake.verifyIdToken(
+      'test:u1:alice@example.com:Alice:https://cdn.example.com/a.png',
+    );
+    expect(decoded.picture).toBe('https://cdn.example.com/a.png');
+    expect(decoded.name).toBe('Alice');
+  });
+
+  it('omits the picture when the token carries no fifth segment', async () => {
+    const decoded = await fake.verifyIdToken('test:u1:alice@example.com:Alice');
+    expect(decoded.picture).toBeUndefined();
+  });
+
   it('rejects tokens without the `test:` prefix', async () => {
     await expect(
       fake.verifyIdToken('eyJhbGciOiJSUzI1NiI...'),

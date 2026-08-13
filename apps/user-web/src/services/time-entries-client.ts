@@ -11,10 +11,12 @@ import {
   projectListResponseSchema,
   type StartTimerFromGitHubInput,
   type StartTimerInput,
+  type ConditionalStopTimerInput,
   taskResponseSchema,
   taskBillableDefaultBackfillResponseSchema,
   startTimerFromGitHubSchema,
   startTimerSchema,
+  conditionalStopTimerSchema,
   taskListResponseSchema,
   timeEntryListResponseSchema,
   timeEntryResponseSchema,
@@ -62,7 +64,7 @@ export interface TimeEntriesClient {
   deleteTask(taskId: string): Promise<void>;
   deleteEntry(entryId: string): Promise<void>;
   ensureGitHubIssueTask(input: EnsureGitHubIssueTaskInput): Promise<TaskResponse>;
-  getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
+  getCurrentTimer(options?: { signal?: AbortSignal }): Promise<CurrentTimeEntryResponse>;
   listGitHubOwners(): Promise<GitHubOwnerListResponse>;
   listGitHubProjects(
     owner: string,
@@ -90,7 +92,7 @@ export interface TimeEntriesClient {
   startTimerFromGitHub(
     input: StartTimerFromGitHubInput,
   ): Promise<TimeEntryResponse>;
-  stopTimer(): Promise<TimeEntryResponse>;
+  stopTimer(input: ConditionalStopTimerInput): Promise<TimeEntryResponse>;
   updateEntry(
     entryId: string,
     input: UpdateTimeEntryInput,
@@ -152,10 +154,11 @@ export function createTimeEntriesClient({
         responseSchema: taskResponseSchema,
       });
     },
-    getCurrentTimer() {
+    getCurrentTimer(options) {
       return apiClient.requestJson({
         path: "/time-entries/current",
         responseSchema: currentTimeEntryResponseSchema,
+        signal: options?.signal,
       });
     },
     listGitHubOwners() {
@@ -240,8 +243,9 @@ export function createTimeEntriesClient({
         responseSchema: timeEntryResponseSchema,
       });
     },
-    stopTimer() {
+    stopTimer(input) {
       return apiClient.requestJson({
+        body: conditionalStopTimerSchema.parse(input),
         method: "POST",
         path: "/time-entries/timer/stop",
         responseSchema: timeEntryResponseSchema,

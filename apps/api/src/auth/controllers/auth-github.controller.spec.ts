@@ -45,12 +45,19 @@ describe('AuthGithubController', () => {
     });
     const res = makeRes();
 
-    controller.start('admin', undefined, undefined, res as unknown as Response);
+    controller.start(
+      'admin',
+      undefined,
+      undefined,
+      undefined,
+      res as unknown as Response,
+    );
 
     expect(github.startAuthorization).toHaveBeenCalledWith(
       'admin',
       undefined,
       undefined,
+      'chrome',
     );
     expect(res.cookie).toHaveBeenCalledWith(
       GITHUB_OAUTH_STATE_COOKIE,
@@ -70,6 +77,7 @@ describe('AuthGithubController', () => {
       undefined,
       undefined,
       undefined,
+      undefined,
       makeRes() as unknown as Response,
     );
 
@@ -77,6 +85,7 @@ describe('AuthGithubController', () => {
       'user',
       undefined,
       undefined,
+      'chrome',
     );
   });
 
@@ -88,6 +97,7 @@ describe('AuthGithubController', () => {
       'extension',
       undefined,
       'a'.repeat(64),
+      undefined,
       res as unknown as Response,
     );
 
@@ -105,6 +115,7 @@ describe('AuthGithubController', () => {
       'extension',
       undefined,
       'a'.repeat(64),
+      undefined,
       makeRes() as unknown as Response,
     );
 
@@ -112,6 +123,7 @@ describe('AuthGithubController', () => {
       'extension',
       undefined,
       'a'.repeat(64),
+      'chrome',
     );
   });
 
@@ -124,6 +136,7 @@ describe('AuthGithubController', () => {
         app,
         undefined,
         undefined,
+        undefined,
         makeRes() as unknown as Response,
       );
 
@@ -134,6 +147,7 @@ describe('AuthGithubController', () => {
         'user',
         undefined,
         undefined,
+        'chrome',
       );
     },
   );
@@ -145,6 +159,7 @@ describe('AuthGithubController', () => {
       'user',
       '/time-entries',
       undefined,
+      undefined,
       makeRes() as unknown as Response,
     );
 
@@ -152,6 +167,7 @@ describe('AuthGithubController', () => {
       'user',
       '/time-entries',
       undefined,
+      'chrome',
     );
   });
 

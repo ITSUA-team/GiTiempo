@@ -47,6 +47,23 @@ function evaluateSetValue(value: unknown, currentRow: UserRowMock): unknown {
   return null;
 }
 
+function collectPredicateColumns(
+  value: unknown,
+  found: string[] = [],
+): string[] {
+  if (typeof value !== 'object' || value === null) return found;
+
+  const columnName = (value as { name?: unknown }).name;
+  if (typeof columnName === 'string') found.push(columnName);
+
+  const chunks = (value as { queryChunks?: unknown }).queryChunks;
+  if (Array.isArray(chunks)) {
+    for (const chunk of chunks) collectPredicateColumns(chunk, found);
+  }
+
+  return found;
+}
+
 function applySet(
   row: UserRowMock,
   setArg: Record<string, unknown>,
@@ -137,6 +154,7 @@ const sampleRow = {
   email: 'alice@gitiempo.dev',
   displayName: 'Alice',
   avatarUrl: null,
+  avatarSource: 'provider' as const,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
 };
@@ -253,6 +271,64 @@ describe('UsersService', () => {
         service.updateById(sampleRow.id, workspaceId, { displayName: 'x' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
+
+    it('takes avatar ownership away from the provider when one is set', async () => {
+      await build({
+        selectRows: [{ role: sampleRole }],
+        updateRows: [
+          {
+            ...sampleRow,
+            avatarSource: 'user' as const,
+            avatarUrl: 'https://cdn.example.com/chosen.png',
+          },
+        ],
+      });
+
+      await service.updateById(sampleRow.id, workspaceId, {
+        avatarUrl: 'https://cdn.example.com/chosen.png',
+      });
+
+      expect(dbMock._spies.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          avatarSource: 'user',
+          avatarUrl: 'https://cdn.example.com/chosen.png',
+        }),
+      );
+    });
+
+    it('returns avatar ownership to the provider when it is cleared', async () => {
+      await build({
+        selectRows: [{ role: sampleRole }],
+        updateRows: [sampleRow],
+      });
+
+      await service.updateById(sampleRow.id, workspaceId, { avatarUrl: null });
+
+      expect(dbMock._spies.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          avatarSource: 'provider',
+          avatarUrl: null,
+        }),
+      );
+    });
+
+    it('leaves avatar ownership untouched when the payload omits the avatar', async () => {
+      await build({
+        selectRows: [{ role: sampleRole }],
+        updateRows: [{ ...sampleRow, displayName: 'Renamed' }],
+      });
+
+      await service.updateById(sampleRow.id, workspaceId, {
+        displayName: 'Renamed',
+      });
+
+      const setArg = dbMock._spies.set.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(setArg).not.toHaveProperty('avatarUrl');
+      expect(setArg).not.toHaveProperty('avatarSource');
+    });
   });
 
   describe('listCurrentUserWorkspaces', () => {
@@ -309,13 +385,14 @@ describe('UsersService', () => {
 
   describe('updateFromFirebase', () => {
     it('preserves locally saved profile fields during Firebase login sync', async () => {
+      const userOwnedRow = {
+        ...sampleRow,
+        avatarSource: 'user' as const,
+        avatarUrl: 'https://cdn.example.com/local-avatar.png',
+      };
       await build({
-        updateRows: [
-          {
-            ...sampleRow,
-            avatarUrl: 'https://cdn.example.com/local-avatar.png',
-          },
-        ],
+        selectRows: [userOwnedRow],
+        updateRows: [userOwnedRow],
       });
 
       const result = await service.updateFromFirebase(sampleRow.id, {
@@ -325,8 +402,138 @@ describe('UsersService', () => {
         firebaseUid: sampleRow.firebaseUid,
       });
 
+      const setArg = dbMock._spies.set.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(setArg).not.toHaveProperty('avatarUrl');
+      expect(dbMock._spies.set).toHaveBeenCalledTimes(1);
       expect(result.displayName).toBe('Alice');
       expect(result.avatarUrl).toBe('https://cdn.example.com/local-avatar.png');
+    });
+
+    it('guards the provider avatar write with an ownership condition in the database', async () => {
+      const providerOwnedRow = {
+        ...sampleRow,
+        avatarUrl: 'https://cdn.example.com/old-google-avatar.png',
+      };
+      await build({
+        selectRows: [providerOwnedRow],
+        updateRows: [providerOwnedRow],
+      });
+
+      await service.updateFromFirebase(sampleRow.id, {
+        avatarUrl: 'https://cdn.example.com/new-google-avatar.png',
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      expect(dbMock._spies.set).toHaveBeenCalledTimes(2);
+
+      const avatarSetArg = dbMock._spies.set.mock.calls[1][0] as Record<
+        string,
+        unknown
+      >;
+      expect(avatarSetArg).toHaveProperty(
+        'avatarUrl',
+        'https://cdn.example.com/new-google-avatar.png',
+      );
+      expect(avatarSetArg).not.toHaveProperty('email');
+
+      const avatarWhereArg = dbMock._spies.whereUpdate.mock.calls[1]?.[0];
+      expect(collectPredicateColumns(avatarWhereArg)).toContain(
+        'avatar_source',
+      );
+    });
+
+    it('refreshes a provider-owned avatar from the Firebase picture claim', async () => {
+      const providerOwnedRow = {
+        ...sampleRow,
+        avatarUrl: 'https://cdn.example.com/old-google-avatar.png',
+      };
+      await build({
+        selectRows: [providerOwnedRow],
+        updateRows: [providerOwnedRow],
+      });
+
+      await service.updateFromFirebase(sampleRow.id, {
+        avatarUrl: 'https://cdn.example.com/new-google-avatar.png',
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      expect(dbMock._spies.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          avatarUrl: 'https://cdn.example.com/new-google-avatar.png',
+        }),
+      );
+    });
+
+    it('fills a missing avatar from the Firebase picture claim', async () => {
+      await build({ selectRows: [sampleRow], updateRows: [sampleRow] });
+
+      await service.updateFromFirebase(sampleRow.id, {
+        avatarUrl: 'https://cdn.example.com/google-avatar.png',
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      expect(dbMock._spies.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          avatarUrl: 'https://cdn.example.com/google-avatar.png',
+        }),
+      );
+    });
+
+    it('leaves the stored avatar alone when the identity has no picture claim', async () => {
+      const providerOwnedRow = {
+        ...sampleRow,
+        avatarUrl: 'https://cdn.example.com/google-avatar.png',
+      };
+      await build({
+        selectRows: [providerOwnedRow],
+        updateRows: [providerOwnedRow],
+      });
+
+      await service.updateFromFirebase(sampleRow.id, {
+        avatarUrl: null,
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      const setArg = dbMock._spies.set.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(setArg).not.toHaveProperty('avatarUrl');
+    });
+
+    it('does not rewrite an unchanged provider avatar', async () => {
+      const providerOwnedRow = {
+        ...sampleRow,
+        avatarUrl: 'https://cdn.example.com/google-avatar.png',
+      };
+      await build({
+        selectRows: [providerOwnedRow],
+        updateRows: [providerOwnedRow],
+      });
+
+      await service.updateFromFirebase(sampleRow.id, {
+        avatarUrl: 'https://cdn.example.com/google-avatar.png',
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      const setArg = dbMock._spies.set.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(setArg).not.toHaveProperty('avatarUrl');
     });
   });
 
@@ -336,6 +543,7 @@ describe('UsersService', () => {
         insertRows: [
           {
             ...sampleRow,
+            avatarSource: 'user' as const,
             avatarUrl: 'https://cdn.example.com/local-avatar.png',
           },
         ],
@@ -348,8 +556,86 @@ describe('UsersService', () => {
         firebaseUid: sampleRow.firebaseUid,
       });
 
+      expect(dbMock.update).not.toHaveBeenCalled();
       expect(result.displayName).toBe('Alice');
       expect(result.avatarUrl).toBe('https://cdn.example.com/local-avatar.png');
+    });
+
+    it('refreshes a provider-owned avatar on Firebase conflict sync', async () => {
+      const refreshedRow = {
+        ...sampleRow,
+        avatarUrl: 'https://cdn.example.com/new-google-avatar.png',
+      };
+      await build({
+        insertRows: [
+          {
+            ...sampleRow,
+            avatarUrl: 'https://cdn.example.com/old-google-avatar.png',
+          },
+        ],
+        updateRows: [refreshedRow],
+      });
+
+      const result = await service.upsertFromFirebase({
+        avatarUrl: 'https://cdn.example.com/new-google-avatar.png',
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      expect(dbMock._spies.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          avatarUrl: 'https://cdn.example.com/new-google-avatar.png',
+        }),
+      );
+      expect(result.avatarUrl).toBe(
+        'https://cdn.example.com/new-google-avatar.png',
+      );
+    });
+
+    it('leaves the avatar alone on conflict sync without a picture claim', async () => {
+      await build({
+        insertRows: [
+          {
+            ...sampleRow,
+            avatarUrl: 'https://cdn.example.com/google-avatar.png',
+          },
+        ],
+      });
+
+      await service.upsertFromFirebase({
+        avatarUrl: null,
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      expect(dbMock.update).not.toHaveBeenCalled();
+    });
+
+    it('stores the picture claim as a provider-owned avatar on first insert', async () => {
+      await build({
+        insertRows: [
+          {
+            ...sampleRow,
+            avatarUrl: 'https://cdn.example.com/google-avatar.png',
+          },
+        ],
+      });
+
+      await service.upsertFromFirebase({
+        avatarUrl: 'https://cdn.example.com/google-avatar.png',
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      expect(dbMock._spies.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          avatarUrl: 'https://cdn.example.com/google-avatar.png',
+        }),
+      );
+      expect(dbMock.update).not.toHaveBeenCalled();
     });
   });
 });

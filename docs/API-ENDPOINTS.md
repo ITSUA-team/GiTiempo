@@ -37,9 +37,12 @@ Expected frontend-visible registration error codes: `duplicate_email`, `weak_pas
 | ------ | ----------- | ---- | ---- | ----------------------------------------- |
 | GET    | `/users/me` | JWT  | Any  | Get current user profile + workspace role |
 | GET    | `/users/me/workspaces` | JWT | Any | List the authenticated user's accessible workspace memberships |
-| PATCH  | `/users/me` | JWT  | Any  | Update display name, avatar               |
+| PATCH  | `/users/me` | JWT  | Any  | Update display name, avatar (setting an avatar stops identity sync from replacing it) |
 
 **GET /users/me/workspaces** response: `{ items: Array<{ workspaceId: string, workspaceName: string, role: "admin" | "pm" | "member", isCurrent: boolean }> }`
+
+- The user record tracks whether its avatar is owned by the identity provider or by the member. Login and invite sync fill or refresh the avatar from the verified Firebase `picture` claim only while it is provider-owned, and never clear it when a sign-in carries no picture.
+- `PATCH /users/me` with a non-null `avatarUrl` makes the avatar member-owned, so later logins leave it alone. Sending `avatarUrl: null` clears it and returns ownership to the provider, letting the next login refill it. The ownership marker is internal and is not part of the public user contract.
 
 ---
 
@@ -150,7 +153,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | GET    | `/time-entries/current`                 | JWT  | Any  | Get the authenticated user's currently running timer across workspaces, if any                      |
 | POST   | `/time-entries/timer/start`             | JWT  | Any  | Start timer against an existing task                                                               |
 | POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Start timer from GitHub issue — auto-creates project and task if needed (used by Chrome extension) |
-| POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop the authenticated user's running timer across workspaces                                       |
+| POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop the authenticated user's running timer across workspaces; supports conditional identity checks |
 
 **GET /time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `projectId?`, `taskId?`, `search?`
 
@@ -178,7 +181,7 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 - `/time-entries/timer/start` requires `taskId` to reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`.
 - `/time-entries/timer/start` remains scoped to the active JWT workspace through task visibility. If the user already has any running timer in any workspace, it rejects with `409 Conflict` and leaves the existing running timer unchanged.
 - `/time-entries/timer/start-from-github` creates or reuses the local GitHub issue mapping, but an existing closed mapped task is rejected with `422 Unprocessable Entity` and no running entry is created.
-- `/time-entries/timer/stop` stops only the caller's own running timer, but the lookup is user-global and can stop a running entry from another workspace while preserving that entry's original workspace identity in the response.
+- `/time-entries/timer/stop` accepts an optional `{ expectedTimerId: string }` body. Current web and extension clients send the authoritative id; the API conditionally stops only that still-running entry and returns `409 Conflict` if it changed. A bodyless request remains temporarily supported for installed legacy extension builds and retains the previous user-global stop behavior. Both forms stop only the caller's own timer and can stop a timer from another workspace while preserving its original workspace identity in the response.
 
 **GET /projects/:id/time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `taskId?`, `search?`
 

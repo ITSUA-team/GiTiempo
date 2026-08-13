@@ -3,7 +3,12 @@ import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import { updateUserSchema } from "@gitiempo/shared";
-import { createAppToast, runWithFeedback } from "@gitiempo/web-shared";
+import {
+  avatarImagePtClass,
+  createAppToast,
+  runWithFeedback,
+  useAvatarImage,
+} from "@gitiempo/web-shared";
 import { computed, ref, watch } from "vue";
 
 import { SurfaceCard } from "@gitiempo/web-shared";
@@ -15,6 +20,10 @@ import { useToast } from "primevue/usetoast";
 const authStore = useAuthStore();
 const toast = useToast();
 const appToast = createAppToast(toast);
+
+const { handleImageError, imageUrl } = useAvatarImage(
+  () => authStore.avatarUrl,
+);
 
 const displayNameDraft = ref(authStore.profile?.displayName ?? "");
 const displayNameErrorMessage = ref<string | null>(null);
@@ -96,12 +105,18 @@ async function handleSaveProfile(): Promise<void> {
       <SurfaceCard border body-class="flex flex-col gap-4">
         <div class="flex items-center gap-4">
           <Avatar
-            :label="authStore.userInitials"
+            :image="imageUrl"
+            :label="imageUrl ? undefined : authStore.userInitials"
             shape="circle"
             class="size-10"
+            data-testid="profile-account-avatar"
             :pt="{
-              root: 'bg-accent-tint text-brand text-xs font-semibold',
+              root: 'bg-accent-tint text-brand text-xs font-semibold overflow-hidden',
+              image: {
+                class: avatarImagePtClass,
+              },
             }"
+            @error="handleImageError"
           />
           <div class="flex flex-col gap-0.5">
             <p class="text-text-dark text-sm font-semibold">

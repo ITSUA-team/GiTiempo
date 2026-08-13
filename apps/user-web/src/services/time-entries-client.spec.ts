@@ -8,6 +8,7 @@ type RecordedRequestInit = {
   body?: string;
   headers?: Record<string, string>;
   method?: string;
+  signal?: AbortSignal;
 };
 
 function getRecordedFetchRequest(fetchFn: ReturnType<typeof vi.fn<FetchMock>>) {
@@ -684,12 +685,17 @@ describe("createTimeEntriesClient", () => {
     );
     const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.stopTimer();
+    await client.stopTimer({
+      expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    });
 
     expect(fetchFn).toHaveBeenCalledWith("/time-entries/timer/stop", {
-      body: undefined,
+      body: JSON.stringify({
+        expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      }),
       headers: {
         Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
       },
       method: "POST",
     });
@@ -839,6 +845,26 @@ describe("createTimeEntriesClient", () => {
 
     expect(fetchFn).toHaveBeenCalledWith(
       "/time-entries?page=1&limit=10",
+      {
+        body: undefined,
+        headers: {
+          Authorization: "Bearer access-token",
+        },
+        method: "GET",
+        signal: controller.signal,
+      },
+    );
+  });
+
+  it("passes abort signals through current timer requests", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ timeEntry: null }));
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+    const controller = new AbortController();
+
+    await client.getCurrentTimer({ signal: controller.signal });
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/time-entries/current",
       {
         body: undefined,
         headers: {

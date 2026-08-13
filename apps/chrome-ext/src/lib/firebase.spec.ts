@@ -105,35 +105,38 @@ describe("extension firebase auth", () => {
     );
   });
 
-  it("fails explicitly when the manifest does not expose an OAuth client", async () => {
+  it("fails explicitly when the extension has no identity permission", async () => {
     setChromeRuntime({
       launchWebAuthFlow: vi.fn(),
-      manifest: { permissions: ["identity", "storage", "tabs"] },
+      manifest: { permissions: ["storage", "tabs"] },
     });
 
     const { signInWithGoogle } = await import("./firebase");
 
     await expect(signInWithGoogle()).rejects.toThrow(
-      "Google sign-in is unavailable because the extension OAuth client is not configured.",
+      "Google sign-in is unavailable because the extension manifest is missing the identity permission.",
     );
     expect(signInWithCredential).not.toHaveBeenCalled();
   });
 
-  it("fails explicitly when the manifest OAuth client drifts from extension config", async () => {
+  it("reads the OAuth client from config rather than the manifest", async () => {
     setChromeRuntime({
-      launchWebAuthFlow: vi.fn(),
-      manifest: {
-        oauth2: { client_id: "different-client-id.apps.googleusercontent.com" },
-        permissions: ["identity", "storage", "tabs"],
-      },
+      launchWebAuthFlow: vi.fn(
+        (_details: unknown, callback: (responseUrl?: string) => void) => {
+          callback(
+            "https://extension-id.chromiumapp.org/oauth2#access_token=google-access-token&state=11111111-1111-4111-8111-111111111111",
+          );
+        },
+      ),
+      manifest: { permissions: ["identity", "storage", "tabs"] },
+    });
+    signInWithCredential.mockResolvedValue({
+      user: { getIdToken: vi.fn().mockResolvedValue("firebase-id-token") },
     });
 
     const { signInWithGoogle } = await import("./firebase");
 
-    await expect(signInWithGoogle()).rejects.toThrow(
-      "Google sign-in is unavailable because the extension OAuth client configuration is inconsistent.",
-    );
-    expect(signInWithCredential).not.toHaveBeenCalled();
+    await expect(signInWithGoogle()).resolves.toBe("firebase-id-token");
   });
 
   it("keeps email sign-in inside the popup-owned auth boundary", async () => {

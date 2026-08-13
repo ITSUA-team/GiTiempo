@@ -1,5 +1,6 @@
 export * from "./auth";
 export * from "./autocomplete";
+export * from "./avatar";
 export * from "./browser-history";
 export * from "./debounce";
 export * from "./feedback";
