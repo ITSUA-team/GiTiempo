@@ -98,6 +98,22 @@ describe("AuthSignInForm", () => {
     expect(githubButton.attributes("disabled")).toBeDefined();
   });
 
+  it("exposes the input purpose on the rendered password input", () => {
+    const wrapper = mountForm();
+    const password = wrapper.get('[data-testid="sign-in-password"]');
+
+    expect(password.element.tagName).toBe("INPUT");
+    expect(password.attributes("autocomplete")).toBe("current-password");
+  });
+
+  it("exposes the input purpose on the rendered email input", () => {
+    const wrapper = mountForm();
+    const email = wrapper.get('[data-testid="sign-in-email"]');
+
+    expect(email.element.tagName).toBe("INPUT");
+    expect(email.attributes("autocomplete")).toBe("email");
+  });
+
   it("renders external sign-in errors", () => {
     const wrapper = mountForm({ errorMessage: "Invalid credentials" });
 

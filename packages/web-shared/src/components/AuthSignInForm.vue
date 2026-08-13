@@ -44,6 +44,7 @@ const initialValues: EmailPasswordSignInInput = {
   password: "",
 };
 const passwordInputProps: Record<string, string> = {
+  autocomplete: "current-password",
   "data-testid": "sign-in-password",
 };
 const resolver = zodResolver(emailPasswordSignInSchema);
@@ -130,7 +131,6 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
             <Password
               input-id="sign-in-password"
               name="password"
-              autocomplete="current-password"
               placeholder="••••••••••"
               :feedback="false"
               :toggle-mask="false"
