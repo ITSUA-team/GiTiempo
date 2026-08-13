@@ -39918,6 +39918,58 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "gaConsentDesktop",
+          "x": 920,
+          "y": 4776,
+          "name": "Analytics consent — desktop default and settings state",
+          "width": 432,
+          "height": 184,
+          "fill": "$color-surface",
+          "cornerRadius": "$radius-lg",
+          "stroke": "$color-divider",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [16, 18],
+          "children": [
+            {
+              "type": "text",
+              "id": "gaConsentDesktopTitle",
+              "name": "Analytics consent title",
+              "fill": "$color-text-dark",
+              "content": "Help us improve GITiempo",
+              "fontFamily": "$font-sans",
+              "fontSize": 16,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "gaConsentDesktopCopy",
+              "name": "Analytics consent copy",
+              "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Allow anonymous analytics to understand useful landing pages and entry points.",
+              "lineHeight": 1.4,
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "gaConsentDesktopActions",
+              "name": "Analytics consent actions and footer settings state",
+              "fill": "$color-brand",
+              "content": "Allow analytics    Decline    Analytics settings",
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "700"
+            }
+          ]
         }
       ]
     },
@@ -39929,7 +39981,7 @@
       "name": "GITiempo Landing Page — Tablet",
       "clip": true,
       "width": 768,
-      "height": 5252,
+      "height": 5424,
       "fill": "$color-surface",
       "layout": "vertical",
       "children": [
@@ -42110,6 +42162,42 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "gaConsentTablet",
+          "name": "Analytics consent — tablet default and settings state",
+          "width": "fill_container",
+          "height": 172,
+          "fill": "$color-surface",
+          "stroke": "$color-divider",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [16, 32],
+          "children": [
+            {
+              "type": "text",
+              "id": "gaConsentTabletTitle",
+              "name": "Analytics consent title",
+              "fill": "$color-text-dark",
+              "content": "Help us improve GITiempo",
+              "fontFamily": "$font-sans",
+              "fontSize": 16,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "gaConsentTabletCopy",
+              "name": "Analytics consent copy",
+              "fill": "$color-text-muted",
+              "content": "Allow analytics    Decline    Analytics settings",
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            }
+          ]
         }
       ]
     },
@@ -42121,7 +42209,7 @@
       "name": "GITiempo Landing Page — Mobile",
       "clip": true,
       "width": 390,
-      "height": 5787,
+      "height": 5967,
       "fill": "$color-surface",
       "layout": "vertical",
       "children": [
@@ -44225,6 +44313,45 @@
                   "fontWeight": "normal"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "gaConsentMobile",
+          "name": "Analytics consent — mobile default and settings state",
+          "width": "fill_container",
+          "height": 180,
+          "fill": "$color-surface",
+          "stroke": "$color-divider",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [16, 24],
+          "children": [
+            {
+              "type": "text",
+              "id": "gaConsentMobileTitle",
+              "name": "Analytics consent title",
+              "fill": "$color-text-dark",
+              "content": "Help us improve GITiempo",
+              "fontFamily": "$font-sans",
+              "fontSize": 16,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "gaConsentMobileCopy",
+              "name": "Analytics consent actions and footer settings state",
+              "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Allow analytics\nDecline\nAnalytics settings",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
             }
           ]
         }

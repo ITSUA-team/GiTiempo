@@ -1,97 +1,95 @@
-import { spawn, spawnSync } from 'node:child_process';
-import { setTimeout as delay } from 'node:timers/promises';
+import { spawnSync } from 'node:child_process';
 
-const port = Number(process.env.LANDING_BROWSER_TEST_PORT ?? '4322');
-const origin = `http://127.0.0.1:${port}`;
+import { createBrowserTestRunner } from './browser-test-runner.mjs';
+import { startStaticPreview } from './static-preview.mjs';
 
-function run(command, args) {
-  const result = spawnSync(command, args, {
-    cwd: process.cwd(),
-    stdio: 'inherit',
-  });
+const browser = createBrowserTestRunner('landing-roles-browser');
 
-  if (result.status !== 0) {
-    throw new Error(`${command} ${args.join(' ')} failed.`);
-  }
-}
-
-async function waitForPreview() {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    try {
-      const response = await fetch(origin);
-      if (response.ok) return;
-    } catch {
-      // The static preview has not started yet.
-    }
-
-    await delay(250);
-  }
-
-  throw new Error(`Landing preview did not start at ${origin}.`);
-}
-
-function assertInBrowser(message, condition) {
-  run('agent-browser', [
+function assertInBrowser(commands, message, condition) {
+  commands.push([
     'eval',
     `(() => { if (!(${condition})) throw new Error(${JSON.stringify(message)}); })()`,
   ]);
 }
 
-function setViewport(width, height) {
-  run('agent-browser', ['set', 'viewport', String(width), String(height)]);
-  run('agent-browser', ['reload']);
-  run('agent-browser', ['wait', '--load', 'networkidle']);
+function setViewport(commands, width, height) {
+  commands.push(
+    ['set', 'viewport', String(width), String(height)],
+    ['reload'],
+    ['wait', '--load', 'networkidle'],
+  );
 }
 
-run('pnpm', ['build']);
-
-const preview = spawn('pnpm', ['exec', 'astro', 'preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
+const buildResult = spawnSync('pnpm', ['build'], {
   cwd: process.cwd(),
   stdio: 'inherit',
 });
 
-try {
-  await waitForPreview();
+if (buildResult.status !== 0) {
+  throw new Error('pnpm build failed.');
+}
 
-  run('agent-browser', ['set', 'viewport', '1440', '1000']);
-  run('agent-browser', ['open', origin]);
-  run('agent-browser', ['wait', '--load', 'networkidle']);
+const preview = await startStaticPreview();
+const { origin } = preview;
+
+try {
+  const commands = [
+    ['set', 'viewport', '1440', '1000'],
+    ['open', origin],
+    ['wait', '--load', 'networkidle'],
+  ];
   assertInBrowser(
+    commands,
     'Member must be the default desktop role.',
     "document.querySelector('#role-member').checked && getComputedStyle(document.querySelector('.role-panel--member')).display === 'flex'",
   );
   assertInBrowser(
+    commands,
     'The 1440px desktop layout must not overflow horizontally.',
     'document.documentElement.scrollWidth <= innerWidth',
   );
 
-  run('agent-browser', ['snapshot', '-i', '-s', '.roles-interaction']);
-  run('agent-browser', ['check', '#role-admin']);
+  commands.push(
+    ['snapshot', '-i', '-s', '.roles-interaction'],
+    ['check', '#role-admin'],
+  );
   assertInBrowser(
+    commands,
     'Selecting Admin must reveal its information panel.',
     "document.querySelector('#role-admin').checked && getComputedStyle(document.querySelector('.role-panel--admin')).display === 'flex' && getComputedStyle(document.querySelector('.role-panel--member')).display === 'none'",
   );
 
-  run('agent-browser', ['focus', '#role-manager']);
-  run('agent-browser', ['press', 'ArrowRight']);
+  commands.push(
+    ['focus', '#role-manager'],
+    ['press', 'ArrowRight'],
+  );
   assertInBrowser(
+    commands,
     'The Admin role must be reachable with native radio keyboard navigation.',
     "document.activeElement.id === 'role-admin' && document.querySelector('#role-admin').checked",
   );
 
-  setViewport(1024, 900);
+  setViewport(commands, 1024, 900);
   assertInBrowser(
+    commands,
     'Desktop must show all three selectable roles without horizontal overflow.',
     "getComputedStyle(document.querySelector('.roles-interaction')).display === 'grid' && document.querySelectorAll('input[name=workspace-role]').length === 3 && document.documentElement.scrollWidth <= innerWidth",
   );
 
   for (const [width, height] of [[768, 900], [390, 844]]) {
-    setViewport(width, height);
+    setViewport(commands, width, height);
     assertInBrowser(
+      commands,
       `The ${width}px layout must stack all role cards without horizontal overflow.`,
       "getComputedStyle(document.querySelector('.roles-interaction')).display === 'none' && document.querySelectorAll('.roles-interaction + div article').length === 3 && document.documentElement.scrollWidth <= innerWidth",
     );
   }
+
+  await browser.runBatch(commands);
 } finally {
-  preview.kill('SIGTERM');
+  try {
+    await preview.close();
+  } finally {
+    await browser.close();
+  }
 }

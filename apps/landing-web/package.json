@@ -9,7 +9,7 @@
     "build:css": "node scripts/build-css.mjs && tailwindcss -i src/styles/global.css -o public/landing.css --minify",
     "typecheck": "astro check",
     "test": "node --test tests/*.test.mjs",
-    "test:browser": "node tests/roles-browser.mjs",
+    "test:browser": "node tests/roles-browser.mjs && node tests/analytics-browser.mjs",
     "lint": "eslint .",
     "preview": "astro preview --port 4321 --strictPort"
   },
