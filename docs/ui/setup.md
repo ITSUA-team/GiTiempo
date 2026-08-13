@@ -39,7 +39,7 @@ Current workspace setup:
   --color-status-active-bg: #e8f5e9;
   --color-status-active-text: #2e7d32;
   --color-status-warn-bg: #fff8e1;
-  --color-status-warn-text: #f57f17;
+  --color-status-warn-text: #a35200;
   --color-status-error-bg: #ffebee;
   --color-status-error-text: #c62828;
 
