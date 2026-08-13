@@ -4,6 +4,9 @@ const URL_NAMES = {
   PUBLIC_ADMIN_APP_URL: 'PUBLIC_ADMIN_APP_URL',
 };
 
+const MEASUREMENT_ID_NAME = 'PUBLIC_GA_MEASUREMENT_ID';
+const MEASUREMENT_ID_PATTERN = /^G-[A-Z0-9]{4,}$/;
+
 function parseUrl(name, value, { originOnly = false } = {}) {
   if (!value) {
     throw new Error(`${name} is required.`);
@@ -28,6 +31,12 @@ function parseUrl(name, value, { originOnly = false } = {}) {
 }
 
 export function getPublicConfig(environment) {
+  const measurementId = environment.PUBLIC_GA_MEASUREMENT_ID?.trim();
+
+  if (measurementId && !MEASUREMENT_ID_PATTERN.test(measurementId)) {
+    throw new Error(`${MEASUREMENT_ID_NAME} must be a valid GA4 Measurement ID.`);
+  }
+
   return {
     siteUrl: parseUrl(URL_NAMES.PUBLIC_SITE_URL, environment.PUBLIC_SITE_URL, {
       originOnly: true,
@@ -40,5 +49,6 @@ export function getPublicConfig(environment) {
       URL_NAMES.PUBLIC_ADMIN_APP_URL,
       environment.PUBLIC_ADMIN_APP_URL,
     ),
+    analyticsMeasurementId: measurementId || undefined,
   };
 }

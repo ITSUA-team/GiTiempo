@@ -1,0 +1,38 @@
+---
+interface Props {
+  measurementId: string;
+}
+
+const { measurementId } = Astro.props;
+---
+
+<section
+  class="fixed inset-x-6 bottom-6 z-50 mx-auto max-w-[432px] rounded-lg border border-divider bg-surface-primary p-5 text-text-dark shadow-card sm:inset-x-auto sm:right-8 sm:left-auto lg:right-[88px]"
+  data-analytics-consent-root
+  data-analytics-measurement-id={measurementId}
+  aria-label="Analytics preferences"
+  hidden
+>
+  <h2 class="text-base font-bold">Help us improve GITiempo</h2>
+  <p class="mt-2 text-sm leading-5 text-text-muted">
+    Allow anonymous analytics to understand which landing pages and entry points are useful. We do not send account, workspace, project, task, repository, or form data.
+  </p>
+  <p class="mt-3 text-xs leading-5 text-text-muted" data-analytics-consent-status aria-live="polite"></p>
+  <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+    <button class="action-consent-secondary" type="button" data-analytics-consent="deny">Decline</button>
+    <button class="action-consent-primary" type="button" data-analytics-consent="grant">Allow analytics</button>
+  </div>
+</section>
+
+<script>
+  import { initializeLandingAnalytics } from '../lib/landing-analytics.mjs';
+
+  const root = document.querySelector('[data-analytics-consent-root]');
+
+  if (root instanceof HTMLElement) {
+    initializeLandingAnalytics({
+      root,
+      measurementId: root.dataset.analyticsMeasurementId ?? '',
+    });
+  }
+</script>

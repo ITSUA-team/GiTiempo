@@ -1,10 +1,13 @@
 ---
+import AnalyticsConsent from '../components/AnalyticsConsent.astro';
+
 interface Props {
   title: string;
   description: string;
+  measurementId?: string;
 }
 
-const { title, description } = Astro.props;
+const { title, description, measurementId } = Astro.props;
 const siteUrl = new URL(import.meta.env.PUBLIC_SITE_URL);
 const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
 const socialImageUrl = new URL('/social-card.svg', siteUrl).href;
@@ -39,6 +42,7 @@ const socialImageUrl = new URL('/social-card.svg', siteUrl).href;
       Skip to main content
     </a>
     <slot />
+    {measurementId && <AnalyticsConsent measurementId={measurementId} />}
     <script>
       const activeTimers = document.querySelectorAll<HTMLElement>('[data-live-timer]');
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
