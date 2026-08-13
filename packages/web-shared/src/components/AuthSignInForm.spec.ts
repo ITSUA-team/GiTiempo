@@ -106,6 +106,33 @@ describe("AuthSignInForm", () => {
     );
   });
 
+  it("announces a sign-in failure through a live region", () => {
+    const wrapper = mountForm({ errorMessage: "Invalid credentials" });
+
+    expect(
+      wrapper.get('[data-testid="sign-in-error"]').attributes("role"),
+    ).toBe("alert");
+  });
+
+  it("announces the help link as part of the same failure message", () => {
+    const wrapper = mountForm({
+      errorHelpHref: "https://github.com/settings/emails",
+      errorHelpLabel: "Check your verified emails",
+      errorMessage: "That GitHub account has no verified workspace email.",
+    });
+    const alert = wrapper.get('[data-testid="sign-in-error"]');
+
+    expect(alert.attributes("role")).toBe("alert");
+    expect(alert.text()).toContain("Check your verified emails");
+  });
+
+  it("renders no live region while sign-in has not failed", () => {
+    const wrapper = mountForm();
+
+    expect(wrapper.find('[data-testid="sign-in-error"]').exists()).toBe(false);
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  });
+
   it("renders custom secondary actions below Google sign-in", () => {
     const wrapper = mountFormWithSlot();
 

@@ -9,6 +9,7 @@
 - For custom non-PrimeVue controls, use `outline-2 outline-brand outline-offset-2`.
 - Meet WCAG 2.1 AA contrast targets.
 - All form fields need associated `<label>` elements.
+- A form-level or request-level error that appears without moving focus must be a live region, so give its container `role="alert"` the way `InlineRequestMessage` and the sign-in form do. Field-level validation messages are already covered by PrimeVue `<Message>`; this rule is about the summary error a submit or redirect produces.
 - Icon-only buttons need `aria-label`.
 - Custom interactive elements must support keyboard navigation.
 - For the compact top-bar timer, the shell surface or mobile opener must expose an accessible name that clearly opens timer actions, such as `Open timer` or `Task and timer`.

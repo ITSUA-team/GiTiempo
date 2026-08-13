@@ -155,6 +155,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
           v-if="props.errorMessage"
           class="border-destructive/20 bg-destructive/5 text-destructive rounded-sm border px-3 py-2 text-sm"
           data-testid="sign-in-error"
+          role="alert"
         >
           {{ props.errorMessage }}
           <a
