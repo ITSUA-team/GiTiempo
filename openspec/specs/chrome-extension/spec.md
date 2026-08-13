@@ -4,12 +4,18 @@
 TBD - created by archiving change add-github-timer-chrome-extension. Update Purpose after archive.
 ## Requirements
 ### Requirement: Extension App Is Manifest V3
-The system SHALL provide a Chrome extension app that builds as a Manifest V3 browser extension and runs independently from the user and admin SPAs.
+The system SHALL provide a browser extension app that builds as a Manifest V3 extension for each supported browser and runs independently from the user and admin SPAs.
 
-#### Scenario: Extension package builds installable output
+#### Scenario: Extension package builds installable output per supported browser
 - **WHEN** the extension build command runs
-- **THEN** it produces a Manifest V3 extension bundle with popup, content script, and background or service-worker entries
-- **AND** the manifest includes host permissions and content-script matches required for supported GitHub issue-surface injection and GiTiempo API access
+- **THEN** it produces one Manifest V3 bundle per supported browser, each with popup, content script, and a background entry of the form that browser supports
+- **AND** each manifest includes host permissions and content-script matches required for supported GitHub issue-surface injection and GiTiempo API access
+- **AND** a manifest carries no key that its own browser does not understand
+
+#### Scenario: Firefox bundle declares a stable add-on identity
+- **WHEN** the Firefox bundle is built
+- **THEN** its manifest declares a gecko add-on id, a minimum supported browser version, and a data-collection declaration
+- **AND** the add-on id comes from configuration rather than being fixed in the build, so environments installed side by side do not share one identity
 
 #### Scenario: Missing required extension environment fails fast
 - **GIVEN** the extension build or startup environment is missing any required `VITE_EXTENSION_*` value
@@ -95,7 +101,8 @@ The extension SHALL authenticate users either through Firebase and the existing 
 #### Scenario: Google sign-in uses MV3-compatible extension auth flow
 - **GIVEN** the user chooses `Sign in with Google` from the popup
 - **WHEN** the extension starts the identity-provider flow
-- **THEN** it uses an extension-owned MV3-compatible web auth flow with the extension redirect URI
+- **THEN** it uses an extension-owned MV3-compatible web auth flow with the redirect URI the running browser reports
+- **AND** it reads the OAuth client id from extension configuration rather than from a manifest key, so the flow does not depend on a key only one browser family defines
 - **AND** it does not assume SPA popup or redirect behavior that is unavailable to the extension runtime
 
 #### Scenario: Email sign-in stays inside the popup boundary
@@ -103,6 +110,12 @@ The extension SHALL authenticate users either through Firebase and the existing 
 - **WHEN** the user submits email/password credentials
 - **THEN** the extension completes Firebase email sign-in inside the popup-owned auth boundary
 - **AND** it exchanges the resulting Firebase identity with the backend auth API
+
+#### Scenario: GitHub sign-in names the browser it runs in
+- **GIVEN** the user chooses GitHub sign-in from the popup
+- **WHEN** the extension requests the backend sign-in start endpoint
+- **THEN** it sends which browser the build targets alongside its challenge
+- **AND** it sends no redirect destination, so it cannot influence where the handoff code is delivered
 
 #### Scenario: GitHub sign-in exchanges a backend handoff code
 - **GIVEN** the user chooses GitHub sign-in from the popup

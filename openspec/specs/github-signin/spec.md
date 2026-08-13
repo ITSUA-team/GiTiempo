@@ -88,7 +88,7 @@ The user-web and admin-web login pages MUST offer a **Continue with GitHub** act
 - **THEN** the **Continue with GitHub** action is not shown
 
 ### Requirement: Extension GitHub Sign-In Returns Through A Configured Extension Destination
-The backend GitHub sign-in flow SHALL accept an extension login target, and for that target SHALL return the browser to a redirect destination read from backend configuration on every outcome. It MUST NOT take that destination from the request, and MUST fail closed when the destination is not configured.
+The backend GitHub sign-in flow SHALL accept an extension login target, and for that target SHALL return the browser to a redirect destination read from backend configuration on every outcome. Because a browser may derive its own extension redirect host, the backend SHALL keep one configured destination per supported browser and select between them by a discriminator carried on the request. That discriminator names a configured destination; it MUST NOT supply one. The backend MUST NOT take a destination from the request, and MUST fail closed when the destination for the named browser is not configured.
 
 #### Scenario: Extension target starts the flow
 - **GIVEN** GitHub sign-in and an extension redirect destination are configured for the backend
@@ -108,6 +108,18 @@ The backend GitHub sign-in flow SHALL accept an extension login target, and for 
 - **THEN** the backend redirects the browser to the configured extension destination carrying an error indicator
 - **AND** it does not redirect to a web app login page, so the extension's authorization window always reaches a destination it can observe
 
+#### Scenario: The outcome returns to the browser that began the flow
+- **GIVEN** destinations are configured for more than one browser
+- **WHEN** an extension-initiated flow names one of them at the start endpoint
+- **THEN** the signed state records that browser alongside the login target
+- **AND** every outcome of that flow returns to the destination configured for it, not to another browser's
+
+#### Scenario: An unrecognized or absent browser resolves to the default
+- **GIVEN** an extension-target request names no browser, or names one the backend does not recognize
+- **WHEN** the backend resolves the destination
+- **THEN** it uses the default browser's configured destination
+- **AND** a state signed before browsers were distinguished still resolves to that same destination
+
 #### Scenario: Redirect destination is never taken from the request
 - **GIVEN** a request to the start endpoint supplies its own candidate redirect destination
 - **WHEN** the backend builds the extension flow
@@ -121,10 +133,10 @@ The backend GitHub sign-in flow SHALL accept an extension login target, and for 
 - **AND** it does not deliver the outcome to the extension destination
 
 #### Scenario: Unconfigured extension destination fails closed
-- **GIVEN** the backend has no extension redirect destination configured
-- **WHEN** an extension-target flow is attempted
-- **THEN** the backend reports the flow as unavailable
-- **AND** no partial or defaulted destination is used
+- **GIVEN** the backend has no redirect destination configured for the browser an extension-target flow names
+- **WHEN** that flow is attempted
+- **THEN** the backend reports the flow as unavailable before the browser leaves for GitHub
+- **AND** no partial or defaulted destination is used, and another browser's destination is never substituted
 
 ### Requirement: Extension Session Establishment Is Bound To Its Initiator
 For the extension login target, the backend SHALL accept a handoff code only for a transaction it can attribute to the client that started it, by proof of possession at the session exchange rather than by the cookie the web targets use, since the extension's authorization window does not carry that cookie to the callback. It MUST refuse to start an extension transaction that could not be bound this way.
