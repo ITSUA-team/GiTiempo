@@ -28,6 +28,30 @@
 - The canonical URL comes from the configured public landing origin.
 - Links into the user and admin apps remain normal same-tab navigation unless a later approved requirement says otherwise.
 
+## Analytics Consent
+
+Landing analytics is optional. It is available only when the deployed build supplies a valid `PUBLIC_GA_MEASUREMENT_ID`; local development and tests leave this value blank by default. A missing value emits no analytics controls or Google script.
+
+When analytics is configured, display the first-visit consent card in the lower-right corner without covering the primary page CTA. Its approved copy is:
+
+- Heading: `Help us improve GITiempo`
+- Body: `Allow anonymous analytics to understand which landing pages and entry points are useful. We do not send account, workspace, project, task, repository, or form data.`
+- Primary action: `Allow analytics`
+- Secondary action: `Decline`
+
+The prompt is not a modal: page content stays available while it is visible. It has an accessible label, a logical keyboard order, and controls with a minimum 44px target. Selecting either action hides the prompt and stores the visitor choice. The footer has a persistent `Analytics settings` button; it reopens the same card with the current choice visible and lets the visitor change it. On a narrow viewport, the card uses the page shell width and sits above the safe bottom inset.
+
+The implementation is framework-free and uses basic Consent Mode v2: analytics storage and all advertising consent values default to denied. It loads `gtag.js` asynchronously only after a visitor grants analytics consent. It must not enable advertising consent, Google Signals, User-ID, remarketing, or cross-domain tracking. With a configured Measurement ID, the consent and analytics scripts are the only approved browser-script exception in addition to the illustrative preview timer.
+
+Only the following analytics events are approved:
+
+| Event | Fields |
+|---|---|
+| `page_view` | Rendered document title and a page location restricted to the origin, pathname, and approved campaign parameters (`utm_*`, `gclid`, `dclid`, `gbraid`, `wbraid`) |
+| `landing_cta_click` | Fixed `cta_location` (`header`, `hero`, `final_cta`) and fixed `destination_app` (`user_app`, `admin_app`) |
+
+Never send link URLs, CTA labels, arbitrary DOM text, hashes, unapproved query values, or any personally identifiable or application data. Analytics failure or blocking must not interrupt CTA navigation.
+
 ## Page Order And Anchors
 
 Use one `h1` and preserve this section order:
@@ -91,16 +115,19 @@ The three Pencil frames define the parity checkpoints. Use content-driven Tailwi
   - Three workflow steps in one row.
   - A selectable role list with its matching detail panel; Member, Project Manager, and Admin are available roles.
   - Side-by-side final CTA copy and actions.
+  - Analytics consent card is a compact fixed lower-right card; the footer settings control stays in the final footer row.
 - Tablet, `640px` through `1023px`:
   - Compact inline navigation.
   - Hero copy followed by the preview.
   - Workflow and role content stack without hiding information.
   - CTA actions may stack beneath the copy.
+  - Analytics consent card is fixed to the lower-right page inset and remains within the viewport.
 - Mobile, below `640px`:
   - Brand and primary CTA in the first header row.
   - Product, How it works, and FAQ anchors in a compact second row; no JavaScript menu.
   - All content, cards, workflow steps, and CTA actions use one column.
   - Preserve the approved information hierarchy and enabled states.
+  - Analytics consent card becomes a full-width fixed card inset by the page shell, above the safe bottom inset; actions may stack.
 
 Do not implement disabled Pencil nodes. Member, Project Manager, and Admin role details are part of the landing UI; the disabled Reports + Invoices scope card is not.
 
@@ -141,7 +168,7 @@ Do not implement disabled Pencil nodes. Member, Project Manager, and Admin role 
 - Product screenshots require useful alt text when they communicate workflow. Decorative graphics use empty alt text.
 - Do not rely on color alone for status or workflow meaning.
 - Respect `prefers-reduced-motion`; smooth scrolling and decorative motion must be disabled when reduced motion is requested.
-- The active timer values in landing app previews may advance once per second unless reduced motion is requested. They are illustrative only and do not represent a signed-in session or API data. This is the only approved browser script: it must remain framework-free, scope itself to preview timer elements, and must not add a client application runtime.
+- The active timer values in landing app previews may advance once per second unless reduced motion is requested. They are illustrative only and do not represent a signed-in session or API data. The timer and, when configured, the documented consent/analytics behavior are the only approved browser scripts. They must remain framework-free and must not add a client application runtime.
 - Verify keyboard order, 200% zoom, contrast, and no horizontal overflow.
 
 ## SEO And Performance
@@ -151,8 +178,8 @@ Do not implement disabled Pencil nodes. Member, Project Manager, and Admin role 
 - Derive canonical and social URLs from the configured public landing origin.
 - Include `robots.txt` and sitemap support for the deployed site.
 - Use `astro:assets` for local content images, include intrinsic dimensions, and avoid layout shifts.
-- Prefer local or self-hosted fonts and avoid render-blocking third-party scripts.
-- Ship zero client framework JavaScript and hydrated islands. The documented illustrative preview timer is the sole approved inline browser script; document any additional script or island and its hydration reason before implementation.
+- Prefer local or self-hosted fonts and avoid render-blocking third-party scripts. The conditional Google Analytics loader is permitted only after consent.
+- Ship zero client framework JavaScript and hydrated islands. The documented illustrative preview timer and optional framework-free consent/analytics behavior are the only approved browser scripts; document any additional script or island and its hydration reason before implementation.
 - Do not invent review counts, customer logos, guarantees, pricing, support commitments, or structured-data claims that are not approved elsewhere.
 
 ## Verification
