@@ -254,12 +254,18 @@ The extension SHALL inject a page-local timer control into supported GitHub issu
 - **AND** it keeps the GitHub issue context visible
 
 ### Requirement: Extension Uses Existing Timer API Contracts
-The extension SHALL consume existing timer endpoints and shared request/response shapes without requiring new backend behavior.
+The extension SHALL consume existing timer endpoints and shared request/response shapes without requiring new backend behavior. When stopping a timer, it SHALL first read the authoritative current timer and submit that entry's identity to the conditional stop contract.
 
 #### Scenario: Start request matches shared GitHub timer contract
 - **WHEN** the extension starts a timer from a GitHub issue
 - **THEN** the request body contains only `githubRepo`, `issueNumber`, and `issueTitle`
 - **AND** it matches the existing shared `startTimerFromGitHub` contract
+
+#### Scenario: Extension conditionally stops the authoritative timer
+- **GIVEN** the extension receives a timer-stop action
+- **WHEN** it reads the authoritative current timer from the API
+- **THEN** it sends that timer's identifier as `expectedTimerId` to `POST /time-entries/timer/stop`
+- **AND** a changed timer is reported as a recoverable `409 Conflict`
 
 #### Scenario: Current timer is reconciled from API
 - **WHEN** the popup or injected control loads authenticated state
