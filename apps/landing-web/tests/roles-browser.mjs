@@ -85,11 +85,11 @@ try {
     );
   }
 
-  browser.runBatch(commands);
+  await browser.runBatch(commands);
 } finally {
   try {
     await preview.close();
   } finally {
-    browser.close();
+    await browser.close();
   }
 }

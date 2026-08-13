@@ -1,36 +1,47 @@
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 
-function writeFailureOutput(result) {
-  if (result.stdout) process.stdout.write(result.stdout);
-  if (result.stderr) process.stderr.write(result.stderr);
+function runAgentBrowser(args, input) {
+  return new Promise((resolveRun, rejectRun) => {
+    const child = spawn('agent-browser', args, {
+      cwd: process.cwd(),
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    child.stdout.on('data', (output) => process.stdout.write(output));
+    child.stderr.on('data', (output) => process.stderr.write(output));
+    child.once('error', rejectRun);
+    child.once('close', (code) => {
+      if (code === 0) {
+        resolveRun();
+      } else {
+        rejectRun(new Error(`agent-browser exited with status ${code}.`));
+      }
+    });
+    child.stdin.end(input);
+  });
 }
 
 export function createBrowserTestRunner(name) {
   const sessionName = `${name}-${process.pid}`;
   let started = false;
 
-  function runBatch(commands) {
+  async function runBatch(commands) {
     started = true;
 
-    const result = spawnSync('agent-browser', ['--session-name', sessionName, 'batch', '--bail'], {
-      cwd: process.cwd(),
-      encoding: 'utf8',
-      input: JSON.stringify(commands),
-    });
-
-    if (result.status !== 0) {
-      writeFailureOutput(result);
-      throw new Error('agent-browser batch failed.');
-    }
+    await runAgentBrowser(
+      ['--session-name', sessionName, 'batch', '--bail'],
+      JSON.stringify(commands),
+    );
   }
 
-  function close() {
+  async function close() {
     if (!started) return;
 
-    spawnSync('agent-browser', ['--session-name', sessionName, 'close'], {
-      cwd: process.cwd(),
-      encoding: 'utf8',
-    });
+    try {
+      await runAgentBrowser(['--session-name', sessionName, 'close']);
+    } catch {
+      // Preserve the browser-test result when cleanup cannot reach its daemon.
+    }
   }
 
   return { runBatch, close };
