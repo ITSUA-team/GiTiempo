@@ -142,7 +142,7 @@ export const giTiempoAutoCompletePt = {
 export const giTiempoDialogCloseButtonPt = {
   root: {
     class:
-      "rounded-none border-0 bg-transparent text-text-muted shadow-none ring-0 hover:border-transparent hover:bg-transparent hover:text-text-dark focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 active:border-transparent active:bg-transparent",
+      "rounded-none border-0 bg-transparent text-text-muted shadow-none ring-0 hover:border-transparent hover:bg-transparent hover:text-text-dark focus:border-transparent focus:bg-transparent focus:ring-0 focus:shadow-none focus-visible:outline-brand focus-visible:outline-2 focus-visible:outline-offset-2 active:border-transparent active:bg-transparent",
   },
 } as const;
 

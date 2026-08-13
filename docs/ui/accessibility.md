@@ -16,6 +16,7 @@
 - Disabled popup timer actions must use proper disabled semantics, not only muted styling.
 - The compact top-bar timer surface and the mobile `Task & timer` opener must be keyboard reachable.
 - The centered task-picker dialog must restore focus to the invoking compact timer surface or mobile opener when it closes.
+- The shared dialog close button keeps a `focus-visible` outline. A dialog does not show that outline the moment it opens because `AppDialog` renders a visually hidden initial-focus target that takes focus instead; that target, not the removal of the outline, is what keeps the close button from looking focused on open. Removing the outline to hide a stray ring breaks keyboard navigation and is not the fix.
 - The create-task title field inside the task-picker dialog must have a visible label and error text tied to the field.
 
 ## Covered By PrimeVue
