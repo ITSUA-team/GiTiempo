@@ -28,64 +28,101 @@ describe("StandaloneSplitPage", () => {
     expect(panel.firstElementChild?.className).toContain("max-w-[600px]");
   });
 
-  it("paints the whole left half for the auth screens", () => {
-    const panel = leftPanel(
-      mountPage({
-        leftPanelClass: authGradientPanelClass,
-        leftPanelFullBleed: true,
-      }),
-    );
-
-    // The gradient sits on the half itself, not the inner column, so it reaches
-    // the page edge instead of leaving an unpainted strip beside the content.
-    expect(panel.className).toContain(authGradientPanelClass);
-    expect(panel.className).toContain("lg:justify-start");
-    expect(panel.firstElementChild?.className).not.toContain(
-      authGradientPanelClass,
-    );
-  });
-
-  it("centres the auth intro column instead of pinning it to the page edge", () => {
-    const panel = leftPanel(
-      mountPage({
-        leftPanelClass: authGradientPanelClass,
-        leftPanelFullBleed: true,
-      }),
-    );
-
-    expect(panel.firstElementChild?.className).toContain("mx-auto");
-    expect(panel.firstElementChild?.className).toContain("max-w-[640px]");
-  });
-
-  it("gives the brand panel the space the auth form does not need", () => {
+  it("paints the brand half of the background and leaves the other half bare", () => {
     const wrapper = mountPage({
       leftPanelClass: authGradientPanelClass,
       leftPanelFullBleed: true,
     });
-    const left = leftPanel(wrapper);
-    const right = wrapper.get('[data-testid="right"]').element.parentElement!
-      .parentElement!;
+    const halves = wrapper.get('[data-testid="auth-split-background"]').element
+      .children;
 
-    // Design: the form column keeps its own width and the brand panel takes the
-    // rest, rather than the halves splitting the viewport evenly.
-    expect(left.className).toContain("lg:flex-1");
-    expect(left.className).not.toContain("lg:min-w-[50vw]");
-    expect(right.className).toContain("lg:flex-none");
-    expect(right.className).not.toContain("lg:flex-1");
+    // The gradient sits on a background half, so it reaches the page edge no
+    // matter how narrow the content column above it is.
+    expect(halves).toHaveLength(2);
+    expect(halves[0]!.className).toContain(authGradientPanelClass);
+    expect(halves[0]!.className).toContain("w-1/2");
+    expect(halves[1]!.className).toContain("w-1/2");
+    expect(halves[1]!.className).not.toContain(authGradientPanelClass);
   });
 
-  it("keeps the auth form column within readable bounds", () => {
+  it("bounds the auth content and centres it on the page", () => {
     const wrapper = mountPage({
       leftPanelClass: authGradientPanelClass,
       leftPanelFullBleed: true,
     });
+    const content = wrapper.get('[data-testid="auth-split-content"]').element;
+
+    expect(content.className).toContain("mx-auto");
+    expect(content.className).toContain("max-w-[1400px]");
+    expect(content.className).toContain("lg:justify-between");
+  });
+
+  it("pushes the intro and the form to opposite ends of that bounded row", () => {
+    const wrapper = mountPage({
+      leftPanelClass: authGradientPanelClass,
+      leftPanelFullBleed: true,
+    });
+    const intro = wrapper.get('[data-testid="auth-split-intro"]').element;
+    const form = wrapper.get('[data-testid="auth-split-form"]').element;
+
+    for (const column of [intro, form]) {
+      expect(column.className).toContain("lg:w-1/2");
+      expect(column.className).toContain("lg:max-w-[640px]");
+      expect(column.className).toContain("lg:flex-none");
+    }
+  });
+
+  it("keeps the columns transparent so neither paints over a background half", () => {
+    const wrapper = mountPage({
+      leftPanelClass: authGradientPanelClass,
+      leftPanelFullBleed: true,
+    });
+    const intro = wrapper.get('[data-testid="auth-split-intro"]').element;
+    const form = wrapper.get('[data-testid="auth-split-form"]').element;
+
+    expect(intro.className).not.toContain("bg-");
+    expect(form.className).not.toContain("bg-");
+  });
+
+  it("keeps the intro column full height so its logo and footer stay pinned", () => {
+    const wrapper = mountPage({
+      leftPanelClass: authGradientPanelClass,
+      leftPanelFullBleed: true,
+    });
+    const content = wrapper.get('[data-testid="auth-split-content"]').element;
+    const introSlotParent = wrapper.get('[data-testid="left"]').element
+      .parentElement!;
+
+    expect(content.className).toContain("min-h-screen");
+    expect(content.className).toContain("lg:items-stretch");
+    expect(introSlotParent.className).toContain("flex-1");
+  });
+
+  it("carries the brand colour on the stacked intro below the split breakpoint", () => {
+    const wrapper = mountPage({
+      leftPanelClass: authGradientPanelClass,
+      leftPanelFullBleed: true,
+    });
+    const intro = wrapper.get('[data-testid="auth-split-intro"]').element;
+    const mobileBackdrop = intro.firstElementChild!;
+
+    // Stacked layouts have no half to paint, so the intro carries the gradient
+    // itself and drops it again once the halves appear.
+    expect(mobileBackdrop.className).toContain(authGradientPanelClass);
+    expect(mobileBackdrop.className).toContain("lg:hidden");
+  });
+
+  it("leaves the register and invite composition untouched", () => {
+    const wrapper = mountPage();
+    const panel = leftPanel(wrapper);
     const right = wrapper.get('[data-testid="right"]').element.parentElement!
       .parentElement!;
 
-    // Ratio rather than the design's raw 520px, so the form does not read as a
-    // narrow strip on large displays; bounded so it stays sane at both ends.
-    expect(right.className).toContain("lg:w-[41%]");
-    expect(right.className).toContain("lg:min-w-[520px]");
-    expect(right.className).toContain("lg:max-w-[640px]");
+    expect(wrapper.find('[data-testid="auth-split-background"]').exists()).toBe(
+      false,
+    );
+    expect(panel.className).toContain("lg:min-w-[50vw]");
+    expect(right.className).toContain("lg:min-w-[50vw]");
+    expect(right.firstElementChild?.className).toContain("max-w-[600px]");
   });
 });
