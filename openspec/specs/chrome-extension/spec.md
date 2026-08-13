@@ -4,12 +4,18 @@
 TBD - created by archiving change add-github-timer-chrome-extension. Update Purpose after archive.
 ## Requirements
 ### Requirement: Extension App Is Manifest V3
-The system SHALL provide a Chrome extension app that builds as a Manifest V3 browser extension and runs independently from the user and admin SPAs.
+The system SHALL provide a browser extension app that builds as a Manifest V3 extension for each supported browser and runs independently from the user and admin SPAs.
 
-#### Scenario: Extension package builds installable output
+#### Scenario: Extension package builds installable output per supported browser
 - **WHEN** the extension build command runs
-- **THEN** it produces a Manifest V3 extension bundle with popup, content script, and background or service-worker entries
-- **AND** the manifest includes host permissions and content-script matches required for supported GitHub issue-surface injection and GiTiempo API access
+- **THEN** it produces one Manifest V3 bundle per supported browser, each with popup, content script, and a background entry of the form that browser supports
+- **AND** each manifest includes host permissions and content-script matches required for supported GitHub issue-surface injection and GiTiempo API access
+- **AND** a manifest carries no key that its own browser does not understand
+
+#### Scenario: Firefox bundle declares a stable add-on identity
+- **WHEN** the Firefox bundle is built
+- **THEN** its manifest declares a gecko add-on id, a minimum supported browser version, and a data-collection declaration
+- **AND** the add-on id comes from configuration rather than being fixed in the build, so environments installed side by side do not share one identity
 
 #### Scenario: Missing required extension environment fails fast
 - **GIVEN** the extension build or startup environment is missing any required `VITE_EXTENSION_*` value
@@ -95,7 +101,8 @@ The extension SHALL authenticate users either through Firebase and the existing 
 #### Scenario: Google sign-in uses MV3-compatible extension auth flow
 - **GIVEN** the user chooses `Sign in with Google` from the popup
 - **WHEN** the extension starts the identity-provider flow
-- **THEN** it uses an extension-owned MV3-compatible web auth flow with the extension redirect URI
+- **THEN** it uses an extension-owned MV3-compatible web auth flow with the redirect URI the running browser reports
+- **AND** it reads the OAuth client id from extension configuration rather than from a manifest key, so the flow does not depend on a key only one browser family defines
 - **AND** it does not assume SPA popup or redirect behavior that is unavailable to the extension runtime
 
 #### Scenario: Email sign-in stays inside the popup boundary
@@ -103,6 +110,12 @@ The extension SHALL authenticate users either through Firebase and the existing 
 - **WHEN** the user submits email/password credentials
 - **THEN** the extension completes Firebase email sign-in inside the popup-owned auth boundary
 - **AND** it exchanges the resulting Firebase identity with the backend auth API
+
+#### Scenario: GitHub sign-in names the browser it runs in
+- **GIVEN** the user chooses GitHub sign-in from the popup
+- **WHEN** the extension requests the backend sign-in start endpoint
+- **THEN** it sends which browser the build targets alongside its challenge
+- **AND** it sends no redirect destination, so it cannot influence where the handoff code is delivered
 
 #### Scenario: GitHub sign-in exchanges a backend handoff code
 - **GIVEN** the user chooses GitHub sign-in from the popup
@@ -254,12 +267,18 @@ The extension SHALL inject a page-local timer control into supported GitHub issu
 - **AND** it keeps the GitHub issue context visible
 
 ### Requirement: Extension Uses Existing Timer API Contracts
-The extension SHALL consume existing timer endpoints and shared request/response shapes without requiring new backend behavior.
+The extension SHALL consume existing timer endpoints and shared request/response shapes without requiring new backend behavior. When stopping a timer, it SHALL first read the authoritative current timer and submit that entry's identity to the conditional stop contract.
 
 #### Scenario: Start request matches shared GitHub timer contract
 - **WHEN** the extension starts a timer from a GitHub issue
 - **THEN** the request body contains only `githubRepo`, `issueNumber`, and `issueTitle`
 - **AND** it matches the existing shared `startTimerFromGitHub` contract
+
+#### Scenario: Extension conditionally stops the authoritative timer
+- **GIVEN** the extension receives a timer-stop action
+- **WHEN** it reads the authoritative current timer from the API
+- **THEN** it sends that timer's identifier as `expectedTimerId` to `POST /time-entries/timer/stop`
+- **AND** a changed timer is reported as a recoverable `409 Conflict`
 
 #### Scenario: Current timer is reconciled from API
 - **WHEN** the popup or injected control loads authenticated state
@@ -355,7 +374,7 @@ The extension SHALL end a session on request by revoking it with the backend and
 - **AND** the menu warns, before the action is taken, that the timer will keep running, so the outcome is not a surprise
 
 ### Requirement: Popup Offers GitHub Sign-In When Enabled For The Build
-The extension popup SHALL offer a GitHub sign-in action in its unauthenticated state when GitHub sign-in is enabled for the build, SHALL omit that action otherwise, and SHALL follow the approved popup authorization design for how the available sign-in actions are presented.
+The extension popup SHALL offer a GitHub sign-in action in its unauthenticated state when GitHub sign-in is enabled for the build, SHALL omit that action otherwise, and SHALL follow the approved popup authorization design for how the available sign-in actions are presented. Its recoverable sign-in copy SHALL name the no-member and ambiguous-account causes it can distinguish.
 
 #### Scenario: GitHub action appears alongside the existing actions
 - **GIVEN** GitHub sign-in is enabled for the extension build
@@ -376,6 +395,19 @@ The extension popup SHALL offer a GitHub sign-in action in its unauthenticated s
 - **THEN** the popup shows recoverable sign-in error copy naming the failure it can distinguish
 - **AND** no session is stored
 - **AND** the user can retry sign-in from the same state
+
+#### Scenario: No-member indicator names the missing work address
+- **GIVEN** the user started GitHub sign-in from the popup
+- **WHEN** the flow returns the no-member error indicator
+- **THEN** the popup explains that no GiTiempo account matches any verified email on the GitHub account
+- **AND** it names `https://github.com/settings/emails` as where to add and verify a work address
+- **AND** no session is stored
+
+#### Scenario: Ambiguous-account indicator directs to email sign-in
+- **GIVEN** the user started GitHub sign-in from the popup
+- **WHEN** the flow returns the ambiguous-account error indicator
+- **THEN** the popup explains that the GitHub account matches more than one GiTiempo account
+- **AND** it directs the user to sign in with their email address instead
 
 #### Scenario: Abandoned authorization window is not an error state
 - **GIVEN** the user started GitHub sign-in from the popup

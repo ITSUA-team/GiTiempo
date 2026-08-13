@@ -310,7 +310,7 @@ The backend MUST allow an authenticated user to stop their current running timer
 - **WHEN** the user attempts to stop a timer
 - **THEN** the backend responds with 404 Not Found
 
-### Requirement: Chrome Extension Can Start Timer From GitHub Issue
+### Requirement: Clients Can Start Timer From GitHub Issue
 The backend MUST preserve canonical GitHub provider mappings when starting timers from GitHub issues so existing workspace records are reused instead of duplicated by repository owner or name casing drift.
 
 #### Scenario: Extension reuses existing GitHub mapping regardless of repository casing
@@ -318,6 +318,41 @@ The backend MUST preserve canonical GitHub provider mappings when starting timer
 - **WHEN** the extension starts a timer for that same GitHub issue
 - **THEN** the backend reuses the existing project and task records
 - **AND** does not create duplicate GitHub provider references for the casing variant
+
+### Requirement: Starting A Timer From A GitHub Issue Is Authorized Against The Repository
+
+The backend MUST verify that the submitted repository exists and is readable by the caller's connected GitHub account, and MUST assert the workspace GitHub organization policy for its owner, before creating or reusing any project for that repository. The repository identifier recorded MUST be the one GitHub reports rather than the one the caller supplied.
+
+#### Scenario: Repository outside the workspace organization policy is refused
+
+- **GIVEN** a workspace whose organization policy does not allow an owner
+- **WHEN** a member starts a timer for an issue in a repository under that owner
+- **THEN** the request is refused
+- **AND** no project is created for that repository
+
+#### Scenario: Nonexistent or unreadable repository is refused
+
+- **WHEN** a member starts a timer for an issue in a repository that does not exist or that their connected account cannot read
+- **THEN** the request is refused as not found
+- **AND** no project is created
+
+#### Scenario: Missing GitHub connection is refused before any write
+
+- **GIVEN** a member with no connected GitHub account
+- **WHEN** they start a timer from a GitHub issue
+- **THEN** the request is refused with the same unconnected-account response GitHub browsing returns
+- **AND** no project, task, or time entry is created
+
+#### Scenario: Recorded repository uses the casing GitHub reports
+
+- **WHEN** a member starts a timer supplying a repository whose casing differs from GitHub's own
+- **THEN** the project reference records the repository as GitHub reports it
+- **AND** a later request using either casing reuses the same project
+
+#### Scenario: Verification happens before the creating transaction
+
+- **WHEN** repository verification fails for any reason
+- **THEN** no project, task, provider reference, or time entry is written
 
 ### Requirement: Project Time Entries Can Be Listed Read Only
 The backend MUST allow authenticated users to list time entries for visible projects without allowing mutation of other users' entries, including task-title search within the visible project list.

@@ -51,6 +51,26 @@ Each local user record MUST be uniquely associated with one Firebase identity.
 - THEN the lookup uses the unique Firebase UID
 - AND the same Firebase UID cannot belong to more than one user record
 
+### Requirement: User Avatar Source Is Stored
+
+Each local user record MUST store which source owns its current avatar, so identity synchronisation and explicit profile updates cannot silently overwrite each other.
+
+#### Scenario: Avatar ownership is persisted alongside the avatar
+
+- **WHEN** the backend stores a user avatar
+- **THEN** the user record also records whether the avatar is owned by the identity provider or by the user
+
+#### Scenario: Records default to provider ownership
+
+- **GIVEN** a user record created before avatar ownership was tracked
+- **WHEN** the backend reads that record
+- **THEN** its avatar is treated as owned by the identity provider
+
+#### Scenario: Ownership is internal to the backend
+
+- **WHEN** the backend serialises a user for any API response
+- **THEN** the avatar source is not part of the public user contract
+
 ### Requirement: One Running Timer Per User
 
 The system MUST prevent a user from having multiple running timers at the same time, including under concurrent timer-start requests.
