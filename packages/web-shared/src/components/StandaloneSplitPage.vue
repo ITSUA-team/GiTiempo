@@ -1,10 +1,9 @@
 <script setup lang="ts">
 const panelRootClass = "w-full lg:flex lg:flex-1 lg:min-w-[50vw]";
 const panelInnerClass = "flex h-full w-full max-w-[600px] flex-col justify-center";
-// Auth screens give the brand panel every pixel the form does not need: the
-// left half grows, the form column stays at its designed width, and the intro
-// copy sits against the left edge instead of inside a centred column.
 const growingPanelRootClass = "w-full lg:flex lg:flex-1 lg:justify-start";
+const fullBleedIntroInnerClass =
+  "mx-auto flex h-full w-full max-w-[640px] flex-col justify-center";
 // The design fixes the form column at 520 on a 1280 canvas — about 41%. Keeping
 // that ratio instead of the raw pixel value stops the form reading as a narrow
 // strip on large displays, while the bounds keep it usable at both extremes.
@@ -34,7 +33,11 @@ const props = withDefaults(
           props.leftPanelFullBleed ? '' : 'lg:justify-end',
         ]"
       >
-        <div :class="props.leftPanelFullBleed ? uncappedInnerClass : panelInnerClass">
+        <div
+          :class="
+            props.leftPanelFullBleed ? fullBleedIntroInnerClass : panelInnerClass
+          "
+        >
           <slot name="left" />
         </div>
       </div>

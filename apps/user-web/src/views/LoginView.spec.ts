@@ -395,7 +395,18 @@ describe("LoginView", () => {
     expect(panel).not.toBeNull();
     expect(panel?.className).toContain("lg:flex-1");
     expect(panel?.className).not.toContain("lg:min-w-[50vw]");
-    expect(panel?.firstElementChild?.className).not.toContain("max-w-[600px]");
+    expect(panel?.firstElementChild?.className).not.toContain("linear-gradient");
+  });
+
+  it("centres the intro column inside the brand half", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    const panel = wrapper.get("h1").element.closest('[class*="linear-gradient"]');
+    const introColumn = panel?.firstElementChild;
+
+    expect(introColumn?.className).toContain("mx-auto");
+    expect(introColumn?.className).toContain("max-w-[640px]");
   });
 
   it("hides the extension callout when no install page is configured", async () => {

@@ -28,7 +28,7 @@ describe("StandaloneSplitPage", () => {
     expect(panel.firstElementChild?.className).toContain("max-w-[600px]");
   });
 
-  it("paints the whole left half and left-aligns it for the auth screens", () => {
+  it("paints the whole left half for the auth screens", () => {
     const panel = leftPanel(
       mountPage({
         leftPanelClass: authGradientPanelClass,
@@ -40,7 +40,21 @@ describe("StandaloneSplitPage", () => {
     // the page edge instead of leaving an unpainted strip beside the content.
     expect(panel.className).toContain(authGradientPanelClass);
     expect(panel.className).toContain("lg:justify-start");
-    expect(panel.firstElementChild?.className).not.toContain("max-w-[600px]");
+    expect(panel.firstElementChild?.className).not.toContain(
+      authGradientPanelClass,
+    );
+  });
+
+  it("centres the auth intro column instead of pinning it to the page edge", () => {
+    const panel = leftPanel(
+      mountPage({
+        leftPanelClass: authGradientPanelClass,
+        leftPanelFullBleed: true,
+      }),
+    );
+
+    expect(panel.firstElementChild?.className).toContain("mx-auto");
+    expect(panel.firstElementChild?.className).toContain("max-w-[640px]");
   });
 
   it("gives the brand panel the space the auth form does not need", () => {

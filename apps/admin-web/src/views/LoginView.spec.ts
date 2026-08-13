@@ -319,6 +319,8 @@ describe("LoginView", () => {
     expect(panel).not.toBeNull();
     expect(panel?.className).toContain("lg:flex-1");
     expect(panel?.className).not.toContain("lg:min-w-[50vw]");
-    expect(panel?.firstElementChild?.className).not.toContain("max-w-[600px]");
+    expect(panel?.firstElementChild?.className).not.toContain("linear-gradient");
+    expect(panel?.firstElementChild?.className).toContain("mx-auto");
+    expect(panel?.firstElementChild?.className).toContain("max-w-[640px]");
   });
 });
