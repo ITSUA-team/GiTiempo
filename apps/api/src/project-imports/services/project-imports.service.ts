@@ -231,8 +231,35 @@ export class ProjectImportsService {
             .returning({ projectId: projectExternalRefs.projectId });
 
           if (!repositoryRef) {
-            await tx.delete(projects).where(eq(projects.id, project!.id));
-            return { kind: 'repository-taken' as const };
+            const [reclaimed] = await tx
+              .update(projectExternalRefs)
+              .set({
+                projectId: project!.id,
+                externalKey: repository,
+                externalUrl: `https://github.com/${repository}`,
+                metadata: { githubRepo: repository },
+                syncedAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(projectExternalRefs.workspaceId, user.workspaceId),
+                  eq(projectExternalRefs.provider, 'github'),
+                  eq(projectExternalRefs.externalType, 'repository'),
+                  sql`lower(${projectExternalRefs.externalKey}) = ${normalizeGitHubRepoKey(repository)}`,
+                  sql`${projectExternalRefs.projectId} IN (
+                    SELECT ${projects.id} FROM ${projects}
+                    WHERE ${projects.id} = ${projectExternalRefs.projectId}
+                      AND ${projects.isActive} = false
+                  )`,
+                ),
+              )
+              .returning({ projectId: projectExternalRefs.projectId });
+
+            if (!reclaimed) {
+              await tx.delete(projects).where(eq(projects.id, project!.id));
+              return { kind: 'repository-taken' as const };
+            }
           }
         }
 
@@ -306,6 +333,7 @@ export class ProjectImportsService {
           eq(projectExternalRefs.workspaceId, workspaceId),
           eq(projectExternalRefs.provider, 'github'),
           eq(projectExternalRefs.externalType, 'repository'),
+          eq(projects.isActive, true),
           sql`lower(${projectExternalRefs.externalKey}) = ${normalized}`,
         ),
       )
@@ -321,14 +349,11 @@ export class ProjectImportsService {
     tracking: TrackingProject | null,
   ): ImportedGitHubProject {
     const owner = tracking?.name ?? 'another project';
-    const archived = tracking?.isActive === false;
 
     return {
       githubProjectId,
       linkedRepository: repository,
-      message: archived
-        ? `${repository ?? 'That repository'} is already tracked by ${owner}, which is archived. Reactivate or resolve that project instead of adding this one.`
-        : `${repository ?? 'That repository'} is already tracked by ${owner}. Timers started from its issues keep using that project.`,
+      message: `${repository ?? 'That repository'} is already tracked by ${owner}. Timers started from its issues keep using that project.`,
       projectId: null,
       status: 'repository-taken',
       trackingProject: tracking,

@@ -277,7 +277,7 @@ describe('describeOutcome', () => {
 		expect(describeOutcome(result, settings)).toContain('stays disabled');
 	});
 
-	it('says the tracking project is archived so the way out is clear', () => {
+	it('ignores an archived project holding the repository', () => {
 		const result = option(
 			summary(),
 			new Map(),
@@ -286,8 +286,10 @@ describe('describeOutcome', () => {
 			]),
 		);
 
-		expect(isBoardAddable(result)).toBe(false);
-		expect(describeOutcome(result, settings)).toContain('archived');
+		expect(result.linkedRepositoryOwner).toBeNull();
+		expect(result.linkedRepositoryTaken).toBe(false);
+		expect(isBoardAddable(result)).toBe(true);
+		expect(describeBlockedReason(result)).toBeNull();
 	});
 
 	it('keeps a board addable when nothing tracks its repository', () => {

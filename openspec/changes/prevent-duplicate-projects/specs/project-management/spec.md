@@ -4,7 +4,7 @@
 
 An admin or PM SHALL be able to add an organization's GitHub Project as a GiTiempo project through a dedicated import request, and MUST be able to supply the same visibility and default-billable settings a directly created project takes. A project that is already imported MUST be reported without being modified, and one refused project MUST NOT abort the rest of the request.
 
-A GitHub project whose repository is already tracked by another GiTiempo project MUST be refused without writing anything, and the refusal MUST name the project that tracks the repository. The relation MUST be detected the way GitHub treats identity, so letter casing cannot hide it.
+A GitHub project whose repository is already tracked by another **active** GiTiempo project MUST be refused without writing anything, and the refusal MUST name the project that tracks the repository. The relation MUST be detected the way GitHub treats identity, so letter casing cannot hide it. A disabled project MUST NOT block the import: because a project cannot be deleted, disabling one is how a workspace retires it, and the import MUST take over the repository from it rather than leave the repository pointing at a project no timer can use.
 
 The caller MUST supply only the GitHub project id and those local settings. The system MUST read the project's owner, title, number, and URL from GitHub using the caller's connected account, and MUST decide the organization policy from the owner GitHub reports rather than any value in the request.
 
@@ -65,12 +65,13 @@ The caller MUST supply only the GitHub project id and those local settings. The 
 - **WHEN** the board is imported
 - **THEN** the relation is still detected and the import is refused the same way
 
-#### Scenario: A repository tracked by an archived project still refuses the import
+#### Scenario: A disabled project does not block the import
 
 - **GIVEN** the only project tracking the board's repository is disabled
 - **WHEN** the board is imported
-- **THEN** the import is refused naming that project
-- **AND** the response states that the tracking project is archived
+- **THEN** the import succeeds
+- **AND** the repository is linked to the created project
+- **AND** the disabled project keeps its tasks, time entries, and assignments
 
 ### Requirement: Admin And PM Can Create Projects
 

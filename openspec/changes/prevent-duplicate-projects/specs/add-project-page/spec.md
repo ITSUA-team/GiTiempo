@@ -2,7 +2,7 @@
 
 ### Requirement: Add Project Imports An Organization GitHub Project
 
-The Add Project page SHALL let an admin add one of the workspace organizations' open GitHub Projects as a GiTiempo project, without touching projects already added. The page MUST state what pressing the action will create before it is pressed, and MUST NOT promise a setting the import does not apply. A GitHub project whose only repository is already tracked by another GiTiempo project MUST NOT be addable, and the page MUST say which project tracks it.
+The Add Project page SHALL let an admin add one of the workspace organizations' open GitHub Projects as a GiTiempo project, without touching projects already added. The page MUST state what pressing the action will create before it is pressed, and MUST NOT promise a setting the import does not apply. A GitHub project whose only repository is already tracked by another **active** GiTiempo project MUST NOT be addable, and the page MUST say which project tracks it. A disabled project MUST NOT block the add, since disabling is how a workspace retires a project it cannot delete.
 
 #### Scenario: The organization scopes the project search
 
@@ -26,9 +26,9 @@ The Add Project page SHALL let an admin add one of the workspace organizations' 
 - **AND** the add action is unavailable
 - **AND** selecting it modifies nothing
 
-#### Scenario: A repository tracked by another project blocks the add
+#### Scenario: A repository tracked by an active project blocks the add
 
-- **GIVEN** a GitHub project whose only repository is already tracked by a different GiTiempo project, in any letter casing
+- **GIVEN** a GitHub project whose only repository is already tracked by a different active GiTiempo project, in any letter casing
 - **WHEN** the admin selects it
 - **THEN** the form reports which project already tracks the repository
 - **AND** the add action is unavailable
@@ -40,6 +40,13 @@ The Add Project page SHALL let an admin add one of the workspace organizations' 
 - **WHEN** the admin submits the import
 - **THEN** the import is refused naming the tracking project
 - **AND** the page reports it in place without navigating away or creating anything
+
+#### Scenario: A repository held only by a disabled project stays addable
+
+- **GIVEN** the only project tracking the board's repository is disabled
+- **WHEN** the admin selects it
+- **THEN** the add action stays available
+- **AND** the form does not report the repository as taken
 
 #### Scenario: No repository is linked when the project spans several
 

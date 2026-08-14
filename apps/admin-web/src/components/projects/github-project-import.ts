@@ -90,10 +90,12 @@ export function toBoardOption(
 	const repositories = scanState === 'ok' ? summary!.repositories : [];
 	const linkedRepository = repositories.length === 1 ? repositories[0]! : null;
 	const imported = importedByBoardId.get(board.id);
-	const linkedRepositoryOwner =
+	const repositoryHolder =
 		linkedRepository === null
 			? null
 			: (importedRepositoryKeys.get(linkedRepository.toLowerCase()) ?? null);
+	const linkedRepositoryOwner =
+		repositoryHolder?.projectIsActive === true ? repositoryHolder : null;
 
 	return {
 		board,
@@ -222,12 +224,7 @@ export function describeOutcome(
 	}
 
 	if (option.linkedRepository && option.linkedRepositoryOwner) {
-		const owner = option.linkedRepositoryOwner;
-		const archived = owner.projectIsActive
-			? ''
-			: ', which is archived — reactivate or resolve it first';
-
-		return `${option.linkedRepository} is already tracked by ${owner.projectName}${archived}. Adding this project would split time for one repository across two, so Add project stays disabled.`;
+		return `${option.linkedRepository} is already tracked by ${option.linkedRepositoryOwner.projectName}. Adding this project would split time for one repository across two, so Add project stays disabled.`;
 	}
 
 	if (option.linkedRepository) {

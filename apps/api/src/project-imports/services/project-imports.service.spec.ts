@@ -16,6 +16,7 @@ interface RecordedInsert {
 interface DbStubOptions {
   tracking?: unknown[];
   repositoryRefWins?: boolean;
+  reclaims?: boolean;
 }
 
 function createDbStub(
@@ -23,7 +24,7 @@ function createDbStub(
   existing: unknown[] = [],
   options: DbStubOptions = {},
 ) {
-  const { repositoryRefWins = true, tracking = [] } = options;
+  const { reclaims = false, repositoryRefWins = true, tracking = [] } = options;
   const deletedProjectIds: string[] = [];
 
   const tx = {
@@ -52,6 +53,15 @@ function createDbStub(
           returning: vi.fn(async () => [{ id: 'project-1' }]),
         };
       }),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(async () =>
+            reclaims ? [{ projectId: 'project-1' }] : [],
+          ),
+        })),
+      })),
     })),
   };
 
@@ -211,12 +221,8 @@ describe('ProjectImportsService GitHub project import', () => {
     expect(db.transaction).not.toHaveBeenCalled();
   });
 
-  it('says the tracking project is archived so the way out is clear', async () => {
-    const service = createService(
-      createDbStub(inserts, [], {
-        tracking: [{ id: 'project-9', isActive: false, name: 'Old Kesher' }],
-      }),
-    );
+  it('ignores an archived project holding the repository', async () => {
+    const service = createService(createDbStub(inserts, [], { tracking: [] }));
 
     const response = await service.importGitHubProjects(user, {
       githubProjects: [
@@ -224,9 +230,27 @@ describe('ProjectImportsService GitHub project import', () => {
       ],
     });
 
-    expect(response.results[0]?.status).toBe('repository-taken');
-    expect(response.results[0]?.message).toContain('archived');
-    expect(inserts).toHaveLength(0);
+    expect(response.results[0]?.status).toBe('imported');
+  });
+
+  it('reclaims the repository mapping an archived project still holds', async () => {
+    const db = createDbStub(inserts, [], {
+      repositoryRefWins: false,
+      reclaims: true,
+    });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      linkedRepository: 'ITSUA-team/Kesher',
+      status: 'imported',
+    });
+    expect(db.deletedProjectIds).toEqual([]);
   });
 
   it('rolls the project back when the repository is taken mid-write', async () => {
