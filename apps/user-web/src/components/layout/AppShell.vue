@@ -5,6 +5,8 @@ import { RouterView, useRoute, useRouter } from "vue-router";
 import {
   createAppToast,
   getErrorMessage,
+  MAIN_CONTENT_ELEMENT_ID,
+  SkipToContentLink,
   WorkspaceHeader,
   WorkspaceNavigation,
 } from "@gitiempo/web-shared";
@@ -123,7 +125,9 @@ watch(
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark flex min-h-screen flex-col">
+  <div class="bg-app-bg text-text-dark relative flex min-h-screen flex-col">
+    <SkipToContentLink />
+
     <WorkspaceHeader
       :counterpart-href="adminWorkspaceHref"
       :counterpart-label="USER_COUNTERPART_LABEL"
@@ -153,7 +157,11 @@ watch(
         :items="USER_NAV_ITEMS"
       />
 
-      <main class="min-w-0 flex-1 p-6">
+      <main
+        :id="MAIN_CONTENT_ELEMENT_ID"
+        class="min-w-0 flex-1 p-6"
+        tabindex="-1"
+      >
         <RouterView />
       </main>
     </div>
