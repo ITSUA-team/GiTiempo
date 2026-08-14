@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type {
   ImportGitHubProjectsInput,
   ImportGitHubProjectsResponse,
@@ -9,11 +9,15 @@ import type {
   ImportGitHubRepositoriesResponse,
   ImportedGitHubRepository,
   ProjectGitHubRepositoryListResponse,
+  TrackingProject,
 } from '@gitiempo/shared';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
-import { parseGitHubRepoKey } from '../../github/github-repo-key';
+import {
+  normalizeGitHubRepoKey,
+  parseGitHubRepoKey,
+} from '../../github/github-repo-key';
 import { GithubService } from '../../github/services/github.service';
 import { MembersService } from '../../members/services/members.service';
 import { GithubTaskMaterializationService } from '../../tasks/services/github-task-materialization.service';
@@ -107,6 +111,7 @@ export class ProjectImportsService {
           'This GitHub project could not be verified for your workspace. It may belong to an organization that is not approved, or be one your GitHub account cannot see.',
         projectId: null,
         status: 'failed',
+        trackingProject: null,
       };
     }
 
@@ -119,14 +124,17 @@ export class ProjectImportsService {
       const existing = await this.db
         .select({ projectId: projectExternalRefs.projectId })
         .from(projectExternalRefs)
+        .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
         .where(
           and(
             eq(projectExternalRefs.workspaceId, user.workspaceId),
             eq(projectExternalRefs.provider, 'github'),
             eq(projectExternalRefs.externalType, 'project'),
             eq(projectExternalRefs.externalKey, board.githubProjectId),
+            eq(projects.isActive, true),
           ),
         )
+        .orderBy(projects.createdAt, projectExternalRefs.projectId)
         .limit(1);
 
       if (existing[0]) {
@@ -136,10 +144,26 @@ export class ProjectImportsService {
           message: null,
           projectId: existing[0].projectId,
           status: 'already-imported',
+          trackingProject: null,
         };
       }
 
-      const projectId = await this.db.transaction(async (tx) => {
+      if (repository !== null) {
+        const tracking = await this.findRepositoryOwner(
+          user.workspaceId,
+          repository,
+        );
+
+        if (tracking) {
+          return this.toRepositoryTakenResult(
+            board.githubProjectId,
+            repository,
+            tracking,
+          );
+        }
+      }
+
+      const outcome = await this.db.transaction(async (tx) => {
         const [project] = await tx
           .insert(projects)
           .values({
@@ -182,12 +206,44 @@ export class ProjectImportsService {
           .returning({ projectId: projectExternalRefs.projectId });
 
         if (!ref) {
-          await tx.delete(projects).where(eq(projects.id, project!.id));
-          return null;
+          const [reclaimedBoard] = await tx
+            .update(projectExternalRefs)
+            .set({
+              projectId: project!.id,
+              externalUrl: verified.url,
+              metadata: {
+                githubProjectNumber: verified.number,
+                githubProjectOwner: verified.ownerLogin,
+                githubProjectTitle: verified.title,
+              },
+              syncedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(projectExternalRefs.workspaceId, user.workspaceId),
+                eq(projectExternalRefs.provider, 'github'),
+                eq(projectExternalRefs.externalType, 'project'),
+                eq(projectExternalRefs.externalKey, board.githubProjectId),
+                inArray(
+                  projectExternalRefs.projectId,
+                  tx
+                    .select({ id: projects.id })
+                    .from(projects)
+                    .where(eq(projects.isActive, false)),
+                ),
+              ),
+            )
+            .returning({ projectId: projectExternalRefs.projectId });
+
+          if (!reclaimedBoard) {
+            await tx.delete(projects).where(eq(projects.id, project!.id));
+            return { kind: 'board-taken' as const };
+          }
         }
 
         if (repository !== null) {
-          await tx
+          const [repositoryRef] = await tx
             .insert(projectExternalRefs)
             .values({
               workspaceId: user.workspaceId,
@@ -206,28 +262,78 @@ export class ProjectImportsService {
                 projectExternalRefs.externalType,
                 projectExternalRefs.externalKey,
               ],
-            });
+            })
+            .returning({ projectId: projectExternalRefs.projectId });
+
+          if (!repositoryRef) {
+            const [reclaimed] = await tx
+              .update(projectExternalRefs)
+              .set({
+                projectId: project!.id,
+                externalKey: repository,
+                externalUrl: `https://github.com/${repository}`,
+                metadata: { githubRepo: repository },
+                syncedAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(projectExternalRefs.workspaceId, user.workspaceId),
+                  eq(projectExternalRefs.provider, 'github'),
+                  eq(projectExternalRefs.externalType, 'repository'),
+                  sql`lower(${projectExternalRefs.externalKey}) = ${normalizeGitHubRepoKey(repository)}`,
+                  inArray(
+                    projectExternalRefs.projectId,
+                    tx
+                      .select({ id: projects.id })
+                      .from(projects)
+                      .where(eq(projects.isActive, false)),
+                  ),
+                ),
+              )
+              .returning({ projectId: projectExternalRefs.projectId });
+
+            if (!reclaimed) {
+              await tx.delete(projects).where(eq(projects.id, project!.id));
+              return { kind: 'repository-taken' as const };
+            }
+          }
         }
 
-        return project!.id;
+        return { kind: 'imported' as const, projectId: project!.id };
       });
 
-      if (projectId === null) {
+      if (outcome.kind === 'board-taken') {
         return {
           githubProjectId: board.githubProjectId,
           linkedRepository: repository,
           message: null,
           projectId: null,
           status: 'already-imported',
+          trackingProject: null,
         };
+      }
+
+      if (outcome.kind === 'repository-taken') {
+        const tracking =
+          repository === null
+            ? null
+            : await this.findRepositoryOwner(user.workspaceId, repository);
+
+        return this.toRepositoryTakenResult(
+          board.githubProjectId,
+          repository,
+          tracking,
+        );
       }
 
       return {
         githubProjectId: board.githubProjectId,
         linkedRepository: repository,
         message: null,
-        projectId,
+        projectId: outcome.projectId,
         status: 'imported',
+        trackingProject: null,
       };
     } catch (error) {
       return {
@@ -236,8 +342,59 @@ export class ProjectImportsService {
         message: toImportFailureMessage(error),
         projectId: null,
         status: 'failed',
+        trackingProject: null,
       };
     }
+  }
+
+  private async findRepositoryOwner(
+    workspaceId: string,
+    githubRepo: string,
+  ): Promise<TrackingProject | null> {
+    const normalized = normalizeGitHubRepoKey(githubRepo);
+
+    if (!normalized) {
+      return null;
+    }
+
+    const [row] = await this.db
+      .select({
+        id: projects.id,
+        isActive: projects.isActive,
+        name: projects.name,
+      })
+      .from(projectExternalRefs)
+      .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
+      .where(
+        and(
+          eq(projectExternalRefs.workspaceId, workspaceId),
+          eq(projectExternalRefs.provider, 'github'),
+          eq(projectExternalRefs.externalType, 'repository'),
+          eq(projects.isActive, true),
+          sql`lower(${projectExternalRefs.externalKey}) = ${normalized}`,
+        ),
+      )
+      .orderBy(projects.createdAt, projectExternalRefs.projectId)
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  private toRepositoryTakenResult(
+    githubProjectId: string,
+    repository: string | null,
+    tracking: TrackingProject | null,
+  ): ImportedGitHubProject {
+    const owner = tracking?.name ?? 'another project';
+
+    return {
+      githubProjectId,
+      linkedRepository: repository,
+      message: `${repository ?? 'That repository'} is already tracked by ${owner}. Timers started from its issues keep using that project.`,
+      projectId: null,
+      status: 'repository-taken',
+      trackingProject: tracking,
+    };
   }
 
   private async resolveRepository(
@@ -269,6 +426,7 @@ export class ProjectImportsService {
         githubRepo: projectExternalRefs.externalKey,
         projectId: projectExternalRefs.projectId,
         projectIsActive: projects.isActive,
+        projectName: projects.name,
       })
       .from(projectExternalRefs)
       .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))

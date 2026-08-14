@@ -13,15 +13,45 @@ interface RecordedInsert {
   values: Record<string, unknown>;
 }
 
-function createDbStub(inserts: RecordedInsert[], existing: unknown[] = []) {
+interface DbStubOptions {
+  boardRefWins?: boolean;
+  joinedRows?: unknown[][];
+  repositoryRefWins?: boolean;
+  reclaims?: boolean;
+}
+
+function createDbStub(
+  inserts: RecordedInsert[],
+  existing: unknown[] = [],
+  options: DbStubOptions = {},
+) {
+  const {
+    boardRefWins = true,
+    joinedRows = [],
+    reclaims = false,
+    repositoryRefWins = true,
+  } = options;
+  const deletedProjectIds: string[] = [];
+
   const tx = {
-    delete: vi.fn(() => ({ where: vi.fn(async () => undefined) })),
+    delete: vi.fn(() => ({
+      where: vi.fn(async () => {
+        deletedProjectIds.push('project-1');
+      }),
+    })),
     insert: vi.fn(() => ({
       values: vi.fn((values: Record<string, unknown>) => {
         inserts.push({ values });
 
+        const isRepositoryRef = values.externalType === 'repository';
+        const isBoardRef = values.externalType === 'project';
+        const lost =
+          (isRepositoryRef && !repositoryRefWins) ||
+          (isBoardRef && !boardRefWins);
         const conflict = {
-          returning: vi.fn(async () => [{ projectId: 'project-1' }]),
+          returning: vi.fn(async () =>
+            lost ? [] : [{ projectId: 'project-1' }],
+          ),
           then: (resolve: (value: unknown) => unknown) =>
             Promise.resolve(undefined).then(resolve),
         };
@@ -32,11 +62,36 @@ function createDbStub(inserts: RecordedInsert[], existing: unknown[] = []) {
         };
       }),
     })),
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({ where: vi.fn(async () => []) })),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(async () =>
+            reclaims ? [{ projectId: 'project-1' }] : [],
+          ),
+        })),
+      })),
+    })),
+  };
+
+  const pending = [...joinedRows];
+  const joinedChain = () => {
+    const rows = pending.shift() ?? [];
+
+    return {
+      where: vi.fn(() => ({
+        orderBy: vi.fn(() => ({ limit: vi.fn(async () => rows) })),
+      })),
+    };
   };
 
   return {
+    deletedProjectIds,
     select: vi.fn(() => ({
       from: vi.fn(() => ({
+        innerJoin: vi.fn(joinedChain),
         where: vi.fn(() => ({ limit: vi.fn(async () => existing) })),
       })),
     })),
@@ -49,12 +104,16 @@ function createDbStub(inserts: RecordedInsert[], existing: unknown[] = []) {
 describe('ProjectImportsService GitHub project import', () => {
   let inserts: RecordedInsert[];
   let members: { requireRole: ReturnType<typeof vi.fn> };
-  let github: { resolveImportableProject: ReturnType<typeof vi.fn> };
+  let github: {
+    getRepository: ReturnType<typeof vi.fn>;
+    resolveImportableProject: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     inserts = [];
     members = { requireRole: vi.fn(async () => undefined) };
     github = {
+      getRepository: vi.fn(async () => ({ fullName: 'ITSUA-team/Kesher' })),
       resolveImportableProject: vi.fn(async () => ({
         number: 7,
         ownerLogin: 'approved-org',
@@ -154,6 +213,184 @@ describe('ProjectImportsService GitHub project import', () => {
       'imported',
       'failed',
     ]);
+  });
+
+  it('refuses a board whose repository another project already tracks', async () => {
+    const db = createDbStub(inserts, [], {
+      joinedRows: [[], [{ id: 'project-9', isActive: true, name: 'Kesher' }]],
+    });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      projectId: null,
+      status: 'repository-taken',
+      trackingProject: { id: 'project-9', isActive: true, name: 'Kesher' },
+    });
+    expect(response.results[0]?.message).toContain('Kesher');
+    expect(inserts).toHaveLength(0);
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it('ignores an archived project holding the repository', async () => {
+    const service = createService(
+      createDbStub(inserts, [], { joinedRows: [] }),
+    );
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]?.status).toBe('imported');
+  });
+
+  it('reclaims the repository mapping an archived project still holds', async () => {
+    const db = createDbStub(inserts, [], {
+      repositoryRefWins: false,
+      reclaims: true,
+    });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      linkedRepository: 'ITSUA-team/Kesher',
+      status: 'imported',
+    });
+    expect(db.deletedProjectIds).toEqual([]);
+  });
+
+  it('rolls the project back when the repository is taken mid-write', async () => {
+    const db = createDbStub(inserts, [], { repositoryRefWins: false });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      projectId: null,
+      status: 'repository-taken',
+    });
+    expect(db.deletedProjectIds).toEqual(['project-1']);
+  });
+
+  it('imports normally when no project tracks the repository', async () => {
+    const service = createService(
+      createDbStub(inserts, [], { joinedRows: [] }),
+    );
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      linkedRepository: 'ITSUA-team/Kesher',
+      status: 'imported',
+      trackingProject: null,
+    });
+    expect(
+      inserts.find((row) => row.values.externalType === 'repository')?.values
+        .externalKey,
+    ).toBe('ITSUA-team/Kesher');
+  });
+
+  it('lets a refused board leave the rest of the request alone', async () => {
+    github.resolveImportableProject
+      .mockResolvedValueOnce({
+        number: 1,
+        ownerLogin: 'approved-org',
+        title: 'Taken',
+        url: null,
+      })
+      .mockResolvedValueOnce({
+        number: 2,
+        ownerLogin: 'approved-org',
+        title: 'Free',
+        url: null,
+      });
+    const service = createService(
+      createDbStub(inserts, [], {
+        joinedRows: [
+          [],
+          [{ id: 'project-9', isActive: true, name: 'Kesher' }],
+          [],
+        ],
+      }),
+    );
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_one', githubRepos: ['itsua-team/kesher'] },
+        { githubProjectId: 'PVT_two', githubRepos: [] },
+      ],
+    });
+
+    expect(response.results.map((result) => result.status)).toEqual([
+      'repository-taken',
+      'imported',
+    ]);
+  });
+
+  it('re-imports a board whose only holder is archived', async () => {
+    const db = createDbStub(inserts, [], { joinedRows: [[], []] });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]?.status).toBe('imported');
+    expect(response.results[0]?.projectId).toBe('project-1');
+  });
+
+  it('reclaims the board mapping an archived project still holds', async () => {
+    const db = createDbStub(inserts, [], {
+      boardRefWins: false,
+      joinedRows: [[], []],
+      reclaims: true,
+    });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [{ githubProjectId: 'PVT_kwDO', githubRepos: [] }],
+    });
+
+    expect(response.results[0]?.status).toBe('imported');
+    expect(db.deletedProjectIds).toEqual([]);
+  });
+
+  it('reports a board an active project already holds', async () => {
+    const db = createDbStub(inserts, [], {
+      boardRefWins: false,
+      joinedRows: [[], []],
+      reclaims: false,
+    });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [{ githubProjectId: 'PVT_kwDO', githubRepos: [] }],
+    });
+
+    expect(response.results[0]?.status).toBe('already-imported');
+    expect(db.deletedProjectIds).toEqual(['project-1']);
   });
 
   it('requires an admin or pm before reaching GitHub at all', async () => {
