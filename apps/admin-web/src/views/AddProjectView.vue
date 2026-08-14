@@ -16,6 +16,7 @@ import {
   LabeledCheckbox,
   type CreateProjectFormInput,
 } from '@gitiempo/web-shared';
+import { isApiErrorStatus } from '@gitiempo/web-shared/http';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
@@ -33,6 +34,7 @@ import {
   describeOutcome,
   describeProjectName,
   describeStatus,
+  isBoardAddable,
   type BoardOption,
   type GitHubFieldsAvailability,
 } from '@/components/projects/github-project-import';
@@ -53,6 +55,7 @@ const githubSelection = ref<BoardOption | null>(null);
 const githubAvailability = ref<GitHubFieldsAvailability>('loading');
 const isScanningBoard = ref(false);
 const importError = ref<string | null>(null);
+const nameError = ref<string | null>(null);
 const projectForm = ref<{
   setFieldValue: (field: string, value: unknown) => void;
 } | null>(null);
@@ -103,7 +106,7 @@ const canSubmit = computed(() => {
 
   return (
     option !== null &&
-    option.importedProjectId === null &&
+    isBoardAddable(option) &&
     option.scanState !== 'missing' &&
     !isScanningBoard.value
   );
@@ -214,6 +217,13 @@ async function importSelectedProject(
     return null;
   }
 
+  if (result.status === 'repository-taken') {
+    importError.value =
+      result.message ??
+      'That repository is already tracked by another project.';
+    return null;
+  }
+
   if (result.status !== 'imported' || result.projectId === null) {
     importError.value =
       'This GitHub project has already been added. Reload the projects list to see it.';
@@ -246,6 +256,7 @@ async function handleSubmit({
 
   isSubmitting.value = true;
   importError.value = null;
+  nameError.value = null;
 
   try {
     const projectId = isGitHub.value
@@ -272,6 +283,14 @@ async function handleSubmit({
     successToast(`"${trimmedName}" has been created successfully.`);
     await router.push({ name: routeNames.projects });
   } catch (err) {
+    if (isNameConflict(err)) {
+      nameError.value =
+        err instanceof Error
+          ? err.message
+          : 'A project with that name already exists.';
+      return;
+    }
+
     errorToast(err instanceof Error ? err.message : 'An unexpected error occurred', {
       error: err,
       logContext: { action: 'create-project', feature: 'projects' },
@@ -279,6 +298,10 @@ async function handleSubmit({
   } finally {
     isSubmitting.value = false;
   }
+}
+
+function isNameConflict(error: unknown): boolean {
+  return isApiErrorStatus(error, [409]);
 }
 
 function handleBack(): void {
@@ -376,16 +399,24 @@ onMounted(loadMembers);
               <InputText
                 id="project-name"
                 name="name"
-                :invalid="$form.name?.invalid"
+                :invalid="$form.name?.invalid || nameError !== null"
                 :disabled="isSubmitting"
                 class="h-[38px] w-full rounded-[6px] px-3 text-[14px] font-medium"
                 placeholder="Customer Portal"
+                @input="nameError = null"
               />
               <small
                 v-if="$form.name?.invalid"
                 class="text-status-error-text text-xs"
               >
                 {{ $form.name.error?.message }}
+              </small>
+              <small
+                v-else-if="nameError"
+                class="text-status-error-text text-xs"
+                data-testid="project-name-conflict"
+              >
+                {{ nameError }}
               </small>
             </div>
 

@@ -18,10 +18,13 @@ import {
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { getAdminSettingsClient } from '@/services/admin-settings-client';
 import {
+  describeBlockedReason,
+  isBoardAddable,
   toBoardOption,
   type BoardOption,
   type GitHubFieldsAvailability,
   type ImportedBoard,
+  type RepositoryOwner,
 } from './github-project-import';
 
 const props = defineProps<{ disabled: boolean }>();
@@ -52,7 +55,7 @@ const selectedOrganization = ref<string | null>(null);
 const boards = ref<GitHubProject[]>([]);
 const summaries = ref<Record<string, BoardRepositorySummary>>({});
 const importedByBoardId = ref(new Map<string, ImportedBoard>());
-const importedRepositoryKeys = ref(new Map<string, string>());
+const importedRepositoryKeys = ref(new Map<string, RepositoryOwner>());
 const typedProjectQuery = ref<string | null>(null);
 const boardsTruncated = ref(false);
 const projectSuggestions = ref<BoardOption[]>([]);
@@ -201,7 +204,11 @@ async function load(): Promise<void> {
     importedRepositoryKeys.value = new Map(
       importedRepositories.items.map((item) => [
         item.githubRepo.toLowerCase(),
-        item.projectId,
+        {
+          projectId: item.projectId,
+          projectIsActive: item.projectIsActive,
+          projectName: item.projectName,
+        },
       ]),
     );
 
@@ -336,14 +343,13 @@ onMounted(load);
               class="flex w-full items-center justify-between gap-3"
               data-testid="github-import-option"
               :data-imported="option.importedProjectId !== null ? 'true' : 'false'"
+              :data-addable="isBoardAddable(option) ? 'true' : 'false'"
             >
               <span class="flex items-center gap-2">
                 <span
                   class="text-[14px] font-semibold"
                   :class="
-                    option.importedProjectId !== null
-                      ? 'text-text-muted'
-                      : 'text-text-dark'
+                    isBoardAddable(option) ? 'text-text-dark' : 'text-text-muted'
                   "
                 >
                   {{ option.board.title }}
@@ -353,10 +359,11 @@ onMounted(load);
                 </span>
               </span>
               <span
-                v-if="option.importedProjectId !== null"
-                class="border-divider text-text-muted rounded-sm border px-1.5 text-[11px]"
+                v-if="describeBlockedReason(option)"
+                class="border-divider text-text-muted shrink-0 rounded-sm border px-1.5 text-[11px]"
+                data-testid="github-import-option-blocked"
               >
-                Already added
+                {{ describeBlockedReason(option) }}
               </span>
               <span
                 v-else

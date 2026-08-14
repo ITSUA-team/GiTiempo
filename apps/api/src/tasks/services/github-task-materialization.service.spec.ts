@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { GithubTaskMaterializationService } from './github-task-materialization.service';
+import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
 
 function orgsMock(canonicalOwner: string | null) {
   return {
@@ -146,6 +147,45 @@ describe('GithubTaskMaterializationService', () => {
         'octo/repo',
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('resolves a repository to one project by a stable order', async () => {
+    const limit = vi.fn().mockResolvedValue([{ projectId: 'project-older' }]);
+    const orderBy = vi.fn().mockReturnValue({ limit });
+    const where = vi.fn().mockReturnValue({ orderBy });
+    const executor = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ where }),
+      }),
+    };
+    const service = new GithubTaskMaterializationService(
+      {} as never,
+      orgsMock(null),
+    );
+    Object.defineProperty(service, 'requireProjectRow', {
+      value: vi.fn().mockResolvedValue({ id: 'project-older' }),
+    });
+
+    const result = await service.findOrCreateProjectForRepo(
+      executor as never,
+      {
+        sub: 'user-1',
+        email: 'user@example.com',
+        firebaseUid: 'user-uid',
+        workspaceId: 'workspace-1',
+        role: 'admin',
+      },
+      'ITSUA-team/Kesher',
+    );
+
+    expect(result).toEqual({
+      created: false,
+      project: { id: 'project-older' },
+    });
+    expect(orderBy).toHaveBeenCalledWith(
+      projectExternalRefs.createdAt,
+      projectExternalRefs.projectId,
+    );
   });
 
   it('fails closed when a GitHub issue ref already belongs to a different project', async () => {

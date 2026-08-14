@@ -10,6 +10,7 @@ import type {
 } from "@gitiempo/shared";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
+import { MAIN_CONTENT_ELEMENT_ID } from "@gitiempo/web-shared";
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
 import {
   resetAuthRuntimeForTesting,
@@ -324,5 +325,58 @@ describe("AppShell", () => {
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
     );
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("lets keyboard users bypass the shell chrome before the header", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "user-access-token";
+    authStore.bootstrapComplete = true;
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/");
+    await router.isReady();
+
+    const wrapper = mount(AppShell, {
+      attachTo: document.body,
+      global: {
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          RouterView: {
+            name: "RouterView",
+            template: '<a href="/first-page-link">Page link</a>',
+          },
+          TopBarTimer: {
+            props: ["openRequestId"],
+            template: '<div data-testid="top-bar-timer" />',
+          },
+          WorkspaceHeader: {
+            template:
+              '<header><button type="button" data-testid="header-action">Profile</button></header>',
+          },
+        },
+      },
+    });
+
+    const focusable = wrapper.element.querySelectorAll(
+      'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    const skipLink = wrapper.get('[data-testid="skip-to-content"]');
+    const main = wrapper.get("main");
+
+    expect(focusable[0]).toBe(skipLink.element);
+    expect(main.attributes("id")).toBe(MAIN_CONTENT_ELEMENT_ID);
+    expect(main.attributes("tabindex")).toBe("-1");
+    expect(skipLink.attributes("href")).toBe(`#${MAIN_CONTENT_ELEMENT_ID}`);
+
+    await skipLink.trigger("click");
+
+    expect(document.activeElement).toBe(main.element);
+
+    wrapper.unmount();
   });
 });

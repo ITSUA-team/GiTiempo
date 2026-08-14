@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import type * as VueRouter from 'vue-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ApiError } from '@gitiempo/web-shared/http';
 import { useAuthStore } from '@/stores/auth';
 import { toBoardOption } from '@/components/projects/github-project-import';
 
@@ -385,6 +386,65 @@ describe('AddProjectView', () => {
     await flushPromises();
 
     expect(testMocks.importGitHubProjects).not.toHaveBeenCalled();
+  });
+
+  it('reports a name conflict on the field instead of a toast', async () => {
+    testMocks.createProject.mockRejectedValue(
+      new ApiError('A project named "Customer Portal" already exists in this workspace.', {
+        code: null,
+        status: 409,
+      }),
+    );
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="submit-project-form"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="project-name-conflict"]').text()).toContain(
+      'already exists in this workspace',
+    );
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
+  });
+
+  it('still toasts a failure that is not a name conflict', async () => {
+    testMocks.createProject.mockRejectedValue(
+      new ApiError('Server exploded', { code: null, status: 500 }),
+    );
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="submit-project-form"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="project-name-conflict"]').exists()).toBe(false);
+    expect(testMocks.errorToast).toHaveBeenCalled();
+  });
+
+  it('reports a repository already tracked by another project in place', async () => {
+    testMocks.importGitHubProjects.mockResolvedValue({
+      results: [
+        {
+          githubProjectId: 'PVT_Krvn',
+          linkedRepository: 'ITSUA-team/Kesher',
+          message: 'ITSUA-team/Kesher is already tracked by Kesher.',
+          projectId: null,
+          status: 'repository-taken',
+          trackingProject: { id: 'p9', isActive: true, name: 'Kesher' },
+        },
+      ],
+    });
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    await switchToGitHub(wrapper);
+    await wrapper.get('[data-testid="pick-github-project"]').trigger('click');
+    await wrapper.get('[data-testid="submit-project-form"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('already tracked by Kesher');
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('surfaces a failed import instead of navigating away', async () => {

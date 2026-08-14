@@ -9,6 +9,12 @@ export interface ImportedBoard {
 	projectId: string;
 }
 
+export interface RepositoryOwner {
+	projectId: string;
+	projectIsActive: boolean;
+	projectName: string;
+}
+
 export interface BoardOption {
 	board: GitHubProject;
 	id: string;
@@ -16,6 +22,7 @@ export interface BoardOption {
 	importedRepository: string | null;
 	label: string;
 	linkedRepository: string | null;
+	linkedRepositoryOwner: RepositoryOwner | null;
 	linkedRepositoryTaken: boolean;
 	reason: string;
 	repositories: string[];
@@ -72,7 +79,7 @@ export function toBoardOption(
 	board: GitHubProject,
 	summary: BoardRepositorySummary | undefined,
 	importedByBoardId: ReadonlyMap<string, ImportedBoard>,
-	importedRepositoryKeys: ReadonlyMap<string, string>,
+	importedRepositoryKeys: ReadonlyMap<string, RepositoryOwner>,
 ): BoardOption {
 	const scanState: ScanState =
 		summary === undefined
@@ -83,6 +90,12 @@ export function toBoardOption(
 	const repositories = scanState === 'ok' ? summary!.repositories : [];
 	const linkedRepository = repositories.length === 1 ? repositories[0]! : null;
 	const imported = importedByBoardId.get(board.id);
+	const repositoryHolder =
+		linkedRepository === null
+			? null
+			: (importedRepositoryKeys.get(linkedRepository.toLowerCase()) ?? null);
+	const linkedRepositoryOwner =
+		repositoryHolder?.projectIsActive === true ? repositoryHolder : null;
 
 	return {
 		board,
@@ -91,14 +104,29 @@ export function toBoardOption(
 		importedRepository: imported?.linkedRepository ?? null,
 		label: board.title,
 		linkedRepository,
-		linkedRepositoryTaken:
-			linkedRepository !== null &&
-			importedRepositoryKeys.has(linkedRepository.toLowerCase()),
+		linkedRepositoryOwner,
+		linkedRepositoryTaken: linkedRepositoryOwner !== null,
 		reason: describeReason(summary, repositories, scanState),
 		repositories,
 		scanState,
 		summary,
 	};
+}
+
+export function isBoardAddable(option: BoardOption): boolean {
+	return option.importedProjectId === null && !option.linkedRepositoryTaken;
+}
+
+export function describeBlockedReason(option: BoardOption): string | null {
+	if (option.importedProjectId !== null) {
+		return 'Already added';
+	}
+
+	if (option.linkedRepositoryOwner) {
+		return `Repository tracked by ${option.linkedRepositoryOwner.projectName}`;
+	}
+
+	return null;
 }
 
 export function describeProjectName(option: BoardOption): string {
@@ -119,8 +147,8 @@ export function describeLinkedRepository(option: BoardOption): string {
 	}
 
 	if (option.linkedRepository) {
-		return option.linkedRepositoryTaken
-			? `${option.linkedRepository} — already tracked by another project`
+		return option.linkedRepositoryOwner
+			? `${option.linkedRepository} — already tracked by ${option.linkedRepositoryOwner.projectName}`
 			: option.linkedRepository;
 	}
 
@@ -195,8 +223,8 @@ export function describeOutcome(
 		return `${opening}, without a repository, because its issues could not be read. Nothing will be linked.`;
 	}
 
-	if (option.linkedRepository && option.linkedRepositoryTaken) {
-		return `${opening}. ${option.linkedRepository} already belongs to another project, so it will not be linked here. Timers started from its issues keep using that project.`;
+	if (option.linkedRepository && option.linkedRepositoryOwner) {
+		return `${option.linkedRepository} is already tracked by ${option.linkedRepositoryOwner.projectName}. Adding this project would split time for one repository across two, so Add project stays disabled.`;
 	}
 
 	if (option.linkedRepository) {

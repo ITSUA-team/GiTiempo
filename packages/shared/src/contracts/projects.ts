@@ -170,12 +170,24 @@ export const importGitHubProjectsSchema = z
   })
   .strict();
 
+export const trackingProjectSchema = z.object({
+  id: z.uuid(),
+  isActive: z.boolean(),
+  name: z.string(),
+});
+
 export const importedGitHubProjectSchema = z.object({
   githubProjectId: z.string(),
   linkedRepository: z.string().nullable(),
   projectId: z.uuid().nullable(),
-  status: z.enum(["imported", "already-imported", "failed"]),
+  status: z.enum([
+    "imported",
+    "already-imported",
+    "repository-taken",
+    "failed",
+  ]),
   message: z.string().nullable(),
+  trackingProject: trackingProjectSchema.nullable().default(null),
 });
 
 export const importGitHubProjectsResponseSchema = z.object({
@@ -210,6 +222,7 @@ export const projectGitHubRepositoryListResponseSchema = z.object({
       githubRepo: z.string(),
       projectId: z.uuid(),
       projectIsActive: z.boolean(),
+      projectName: z.string().default(""),
     }),
   ),
 });
@@ -277,6 +290,7 @@ export type ProjectGitHubRepositoryListResponse = z.infer<
 export type ImportGitHubProjectsInput = z.infer<
   typeof importGitHubProjectsSchema
 >;
+export type TrackingProject = z.infer<typeof trackingProjectSchema>;
 export type ImportedGitHubProject = z.infer<typeof importedGitHubProjectSchema>;
 export type ImportGitHubProjectsResponse = z.infer<
   typeof importGitHubProjectsResponseSchema

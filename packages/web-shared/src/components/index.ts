@@ -35,6 +35,8 @@ export {
 } from "./management-table";
 export { default as PlaceholderPage } from "./PlaceholderPage.vue";
 export { default as SectionHeader } from "./SectionHeader.vue";
+export { default as SkipToContentLink } from "./SkipToContentLink.vue";
+export { MAIN_CONTENT_ELEMENT_ID } from "./skip-link";
 export { default as RouteErrorPanel } from "./RouteErrorPanel.vue";
 export { default as RequestStateCard } from "./RequestStateCard.vue";
 export { default as StatCard } from "./StatCard.vue";

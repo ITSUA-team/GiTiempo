@@ -38,6 +38,7 @@ on:
   push:
     branches:
       - staging
+      - main
     paths:
       - apps/api/**
       - packages/shared/**
@@ -64,14 +65,14 @@ jobs:
   deploy:
     name: Deploy API
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
     concurrency:
-      group: api-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+      group: api-${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
       cancel-in-progress: false
     env:
       CI: true
       TURBO_TELEMETRY_DISABLED: 1
-      DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+      DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
       RUN_MIGRATIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.run_migrations || 'true' }}
       RUN_SEED: ${{ github.event_name == 'workflow_dispatch' && inputs.run_seed || 'false' }}
       PREBUILT_IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.image_tag || '' }}
@@ -190,7 +191,7 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" "mkdir -p '$API_DEPLOY_PATH'"
-          scp -i ~/.ssh/gitiempo_api_deploy deploy/api/compose.yml deploy/api/.env.example deploy/api/nginx.staging.example.conf "$VPS_USER@$VPS_HOST:$API_DEPLOY_PATH/"
+          scp -i ~/.ssh/gitiempo_api_deploy deploy/api/compose.yml deploy/api/.env.example deploy/api/nginx.staging.example.conf deploy/api/nginx.production.example.conf "$VPS_USER@$VPS_HOST:$API_DEPLOY_PATH/"
 
       - name: Pull and restart API on VPS
         shell: bash

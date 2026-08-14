@@ -199,6 +199,8 @@ export class ProjectsService {
       ['admin', 'pm'],
     );
 
+    await this.requireNameAvailable(user.workspaceId, input.name, null);
+
     const createValues = {
       workspaceId: user.workspaceId,
       name: input.name,
@@ -276,6 +278,34 @@ export class ProjectsService {
     };
   }
 
+  private async requireNameAvailable(
+    workspaceId: string,
+    name: string,
+    excludeProjectId: string | null,
+  ): Promise<void> {
+    const conditions = [
+      eq(projects.workspaceId, workspaceId),
+      eq(projects.isActive, true),
+      sql`lower(${projects.name}) = lower(${name})`,
+    ];
+
+    if (excludeProjectId !== null) {
+      conditions.push(sql`${projects.id} <> ${excludeProjectId}`);
+    }
+
+    const [taken] = await this.db
+      .select({ name: projects.name })
+      .from(projects)
+      .where(and(...conditions))
+      .limit(1);
+
+    if (taken) {
+      throw new ConflictException(
+        `A project named "${taken.name}" already exists in this workspace.`,
+      );
+    }
+  }
+
   async updateProject(
     user: AuthUser,
     projectId: string,
@@ -286,6 +316,10 @@ export class ProjectsService {
       throw new ForbiddenException(
         'Only admins can change project active state',
       );
+    }
+
+    if (input.name !== undefined) {
+      await this.requireNameAvailable(user.workspaceId, input.name, projectId);
     }
 
     const [row] = await this.db
