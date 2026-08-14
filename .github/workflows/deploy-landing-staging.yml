@@ -39,6 +39,7 @@ jobs:
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PUBLIC_USER_APP_URL: ${{ vars.PUBLIC_USER_APP_URL }}
       PUBLIC_ADMIN_APP_URL: ${{ vars.PUBLIC_ADMIN_APP_URL }}
+      PUBLIC_GA_MEASUREMENT_ID: ${{ vars.PUBLIC_GA_MEASUREMENT_ID }}
 
     steps:
       - name: Check out repository

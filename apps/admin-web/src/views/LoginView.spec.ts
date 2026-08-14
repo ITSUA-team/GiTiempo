@@ -308,17 +308,35 @@ describe("LoginView", () => {
     );
   });
 
-  it("paints the whole left half with the auth gradient", async () => {
+  it("centres the bounded auth row between two equal background halves", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
 
-    // Guards the restyle: the gradient belongs to the half, not the inner
-    // column, or a white strip reappears beside the intro copy.
-    const panel = wrapper.get("h1").element.closest('[class*="linear-gradient"]');
+    const halves = wrapper.get('[data-testid="auth-split-background"]').element
+      .children;
+    const content = wrapper.get('[data-testid="auth-split-content"]').element;
 
-    expect(panel).not.toBeNull();
-    expect(panel?.className).toContain("lg:flex-1");
-    expect(panel?.className).not.toContain("lg:min-w-[50vw]");
-    expect(panel?.firstElementChild?.className).not.toContain("max-w-[600px]");
+    // The gradient is a background half, so it reaches the page edge while the
+    // content stays inside a centred, bounded row.
+    expect(halves).toHaveLength(2);
+    expect(halves[0]!.className).toContain("linear-gradient");
+    expect(halves[0]!.className).toContain("w-1/2");
+    expect(halves[1]!.className).toContain("w-1/2");
+    expect(content.className).toContain("mx-auto");
+    expect(content.className).toContain("max-w-[1400px]");
+    expect(content.className).toContain("lg:justify-between");
+  });
+
+  it("never paints an opaque panel over a background half", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    const form = wrapper.get('[data-testid="auth-split-form"]').element;
+    const painted = [...form.querySelectorAll("*")].filter((node) =>
+      /(^|\s)bg-app-bg(\s|$)/.test(node.className.toString()),
+    );
+
+    expect(form.className).not.toContain("bg-");
+    expect(painted).toHaveLength(0);
   });
 });

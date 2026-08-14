@@ -220,6 +220,7 @@ Required staging values:
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | environment variable | Firebase client config used at Vite build time |
 | `VITE_FIREBASE_PROJECT_ID` | environment variable | Firebase client config used at Vite build time |
 | `VITE_FIREBASE_STORAGE_BUCKET` | environment variable | Firebase client config used at Vite build time |
+| `PUBLIC_GA_MEASUREMENT_ID` | environment variable (optional) | Valid public GA4 `G-...` Measurement ID; leave blank to keep landing analytics disabled |
 
 The shared staging GitHub Environment example is `deploy/github-environment.staging.example.env`.
 

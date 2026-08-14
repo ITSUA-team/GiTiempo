@@ -147,7 +147,7 @@ function handleGithubSignIn(): void {
 
     <template #right>
       <section
-        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12"
+        class="flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12"
       >
         <AuthSignInForm
           title="Admin sign in"

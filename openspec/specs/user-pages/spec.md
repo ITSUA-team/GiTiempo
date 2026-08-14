@@ -369,8 +369,28 @@ The Time Entries page MUST allow authenticated users to review, filter, create, 
 - **GIVEN** the own-entry list request succeeds with entries across multiple dates
 - **WHEN** the page renders results
 - **THEN** entries are grouped by their started-at day
-- **AND** each day group shows a day heading and a primary icon-only `New time entry` action with explicit tooltip and accessible label copy `New time entry`
+- **AND** each day group shows a day heading, the total time tracked that day, and a primary icon-only `New time entry` action with explicit tooltip and accessible label copy `New time entry`
 - **AND** each entry row shows task, project, time range, duration, edit, and delete affordances according to entry state.
+
+#### Scenario: Day heading shows the tracked total for that day
+
+- **GIVEN** a day group renders with one or more own time entries
+- **WHEN** the page renders the day heading
+- **THEN** the heading shows the sum of the durations of that group's entries beside the day label
+- **AND** the total uses the same compact duration format as the entry rows
+- **AND** each entry contributes its full duration, matching the duration its own row displays
+
+#### Scenario: Day total advances while an entry in that day is running
+
+- **GIVEN** a day group contains a running entry
+- **WHEN** the running duration advances
+- **THEN** that day's total advances with it without requiring a page reload
+
+#### Scenario: Day total is presented as the approved chip
+
+- **WHEN** the page renders a day heading total
+- **THEN** it renders as a tinted chip carrying a clock glyph and the duration
+- **AND** the heading does not place a separator character between the day label and the total
 
 #### Scenario: Running entries stay visible but not editable
 
@@ -657,6 +677,38 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **AND** page or composable tests cover loading, request-error, disconnected, connected, redirecting/connecting, callback success toast, callback error toast, callback-success-followed-by-fetch-failure, connect failure, disconnect success, and disconnect failure behavior
 - **AND** frontend lint and typecheck pass for user-web
 
+### Requirement: Profile Account Card Renders Member Avatar
+
+The `user-web` Profile page account card SHALL render the member's stored avatar image when one is available and SHALL fall back to member initials otherwise. This applies to the member's own avatar and is distinct from the Profile GitHub connection card, which renders the connected GitHub account avatar under its own rules.
+
+#### Scenario: Account card shows the stored avatar image
+
+- **GIVEN** an authenticated member with a stored avatar opens the Profile page
+- **WHEN** the account card renders
+- **THEN** the card displays that avatar image in the existing circular avatar slot
+- **AND** the image is cropped to the circle without distorting a non-square source
+- **AND** member initials are not displayed alongside the image
+
+#### Scenario: Account card falls back to initials without an avatar
+
+- **GIVEN** an authenticated member with no stored avatar opens the Profile page
+- **WHEN** the account card renders
+- **THEN** the card displays the member initials as before
+
+#### Scenario: Account card falls back to initials when the avatar image fails to load
+
+- **GIVEN** the Profile account card rendering a stored avatar image
+- **WHEN** the image fails to load
+- **THEN** the card displays the member initials instead
+- **AND** no broken image is shown
+
+#### Scenario: Member avatar is independent of the GitHub connection avatar
+
+- **GIVEN** a member whose GitHub connection reports an account avatar
+- **WHEN** the Profile page renders
+- **THEN** the account card avatar reflects the member's stored avatar only
+- **AND** the GitHub connection card continues to render the connected GitHub account avatar under its existing rules
+
 ### Requirement: User Record Lists Adapt To Mobile Cards
 User-web record-list surfaces SHALL preserve desktop table rendering on tablet and desktop viewports while rendering mobile-readable stacked record cards below the documented mobile breakpoint.
 
@@ -921,3 +973,35 @@ The user top-bar timer task picker MUST preserve the project and task default in
 - **WHEN** the user starts the timer
 - **THEN** the timer start request does not send an entry-level billable override
 - **AND** the returned running entry reflects the backend-inherited `isBillable: false` value
+### Requirement: Top-Bar Timer Picker Offers Organization GitHub Projects
+
+The user-web top-bar timer task picker SHALL offer the organization's GitHub Project boards as targets beside visible projects, so a member can start tracking an issue that is already planned on a board. Board targets MUST be presented as their own kind and MUST NOT be mixed into the picker's project state. Everything the picker already does for real projects and their tasks MUST behave exactly as before.
+
+#### Scenario: Board targets appear beside projects
+
+- **GIVEN** the top-bar timer task picker is open for a member whose workspace approves an organization
+- **WHEN** the picker lists its selectable targets
+- **THEN** the member's visible projects appear as they do today
+- **AND** that organization's open GitHub Project boards appear as a separate labelled group
+
+#### Scenario: Selecting a project is unchanged
+
+- **GIVEN** board targets are present in the picker
+- **WHEN** the member selects a visible project
+- **THEN** the picker loads that project's tasks exactly as it does without board targets
+- **AND** unsynced GitHub issues are still appended for a GitHub-backed project
+
+#### Scenario: Selecting a board lists its issues instead of project tasks
+
+- **GIVEN** the picker is open
+- **WHEN** the member selects a board target and then one of its open issues
+- **THEN** the dialog allows starting a timer for that issue
+- **AND** starting it produces a running timer against a task in a project that tracks that issue's repository
+
+#### Scenario: Picker states for boards stay distinct
+
+- **WHEN** board loading, a board with no trackable issues, a missing GitHub connection, or a request failure occurs
+- **THEN** the picker renders a state specific to that condition
+- **AND** it does not collapse a failure into empty-data messaging
+
+The detailed behaviour of board targets — which boards are offered, issue listing, draft reporting, and the guards that keep a board out of project-only code paths — is specified by the `timer-github-project-tracking` capability.

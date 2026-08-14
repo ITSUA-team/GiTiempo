@@ -160,6 +160,10 @@
 The approved `.pen` auth screens (user login, admin login, and both register screens) share one visual language. The implementation follows the `.pen` as parity source; where the running app still differs, the `.pen` wins.
 
 - The brand panel uses a 135° linear gradient from `#6E3AA0` to `#2E1442`, with the logo and hero copy reversed out in white over it.
+- At and above the `lg` breakpoint the page background is two equal halves: the brand gradient on the left, the app background on the right. The gradient is painted on that half rather than on a content column, so it always reaches the page edge.
+- The intro block and the sign-in card sit inside one horizontally centred row bounded by a maximum width, pushed to opposite ends of it. The gutter from the page's left edge to the intro therefore matches the gutter from the sign-in card to the page's right edge, and neither block drifts to the outer edges as the display gets wider.
+- Each of the two columns is bounded to half of that centred row, so a column edge can never cross the row's midpoint — which is exactly where the two background halves meet. Neither column may paint its own opaque background either: a panel wider or more opaque than this leaves the brand half looking cut into pieces.
+- Below `lg` the layout stacks and the intro block carries the brand gradient itself, since there is no half to paint.
 - All four auth screens use the same logo lockup: a white rounded badge with the brand-purple `GT` mark.
 - The Google and GitHub actions use their brand marks — the four-color Google `G` and the dark GitHub Octocat — rather than generic icons.
 - Labeled dividers separate the credential fields, the OAuth actions, and the create-workspace zone so the three ways in read as distinct groups.
