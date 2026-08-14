@@ -390,6 +390,7 @@ export class GithubTaskMaterializationService {
           sql`lower(${projectExternalRefs.externalKey}) = ${normalizedRepo}`,
         ),
       )
+      .orderBy(projectExternalRefs.createdAt, projectExternalRefs.projectId)
       .limit(1);
 
     return row ?? null;
