@@ -10,5 +10,6 @@ export * from "./contracts/time-entries.js";
 export * from "./contracts/reports.js";
 export * from "./contracts/saved-reports.js";
 export * from "./contracts/github.js";
+export * from "./contracts/jira.js";
 export * from "./auth/access-token-claims.js";
 export * from "./auth/profile-initials.js";

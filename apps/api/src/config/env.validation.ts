@@ -84,6 +84,8 @@ export const envSchema = z
     GITHUB_APP_ID: optionalNonEmptyString,
     GITHUB_APP_CLIENT_ID: optionalNonEmptyString,
     GITHUB_APP_CLIENT_SECRET: optionalNonEmptyString,
+    JIRA_CLIENT_ID: optionalNonEmptyString,
+    JIRA_CLIENT_SECRET: optionalNonEmptyString,
 
     // --- GitHub sign-in OAuth App (identity only, separate from the App above) ---
     GITHUB_SIGNIN_CLIENT_ID: optionalNonEmptyString,

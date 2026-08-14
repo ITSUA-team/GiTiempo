@@ -23,6 +23,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { TimeEntriesModule } from './time-entries/time-entries.module';
 import { ReportsModule } from './reports/reports.module';
 import { GithubModule } from './github/github.module';
+import { JiraModule } from './jira/jira.module';
 import { AppThrottlerGuard } from './commons/guards/app-throttler.guard';
 
 @Module({
@@ -55,6 +56,7 @@ import { AppThrottlerGuard } from './commons/guards/app-throttler.guard';
     TimeEntriesModule,
     ReportsModule,
     GithubModule,
+    JiraModule,
     CommonsModule,
   ],
   controllers: [],

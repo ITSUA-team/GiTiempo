@@ -21,6 +21,7 @@ import { WorkspaceGitHubOrganizationsService } from './services/workspace-github
   ],
   exports: [
     GithubConnectionsService,
+    GithubEncryptionService,
     GithubService,
     WorkspaceGitHubOrganizationsService,
   ],

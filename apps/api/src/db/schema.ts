@@ -11,6 +11,8 @@ export * from '../workspaces/schemas/workspaces.schema';
 export * from '../workspaces/schemas/workspace-settings.schema';
 export * from '../members/schemas/workspace-members.schema';
 export * from '../invites/schemas/invites.schema';
+export * from '../jira/schemas/jira-connections.schema';
+export * from '../jira/schemas/jira-oauth-states.schema';
 export * from '../projects/schemas/projects.schema';
 export * from '../projects/schemas/project-assignments.schema';
 export * from '../projects/schemas/project-external-refs.schema';

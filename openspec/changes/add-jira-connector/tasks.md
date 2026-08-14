@@ -1,12 +1,12 @@
 ## 1. Atlassian app and configuration
 
 - [ ] 1.1 Register the Atlassian OAuth 2.0 (3LO) app with read scopes and the callback URL per environment
-- [ ] 1.2 Add `JIRA_CLIENT_ID`, `JIRA_CLIENT_SECRET`, and the callback URL to env validation so a missing value fails at boot by name
+- [x] 1.2 Add `JIRA_CLIENT_ID`, `JIRA_CLIENT_SECRET`, and the callback URL to env validation so a missing value fails at boot by name
 - [ ] 1.3 Record the new values in the deployment guide and the staging GitHub Environment
 
 ## 2. Shared contracts
 
-- [ ] 2.1 Define the Jira connection status contract, including the re-authorization state
+- [x] 2.1 Define the Jira connection status contract, including the re-authorization state
 - [ ] 2.2 Define the Jira project and issue browsing contracts with immutable ids beside keys, capped pagination, and the hidden-by-permissions representation
 - [ ] 2.3 Define the start-timer-from-Jira-issue contract carrying the issue id and Jira project id only, validated strictly
 - [ ] 2.4 Define the workspace Jira site policy contracts with frontend-safe errors
@@ -14,19 +14,19 @@
 
 ## 3. Database
 
-- [ ] 3.1 Add `jira_connections` mirroring `github_connections`, plus the needs-reauthorization marker
-- [ ] 3.2 Add `jira_oauth_states` mirroring `github_oauth_states`
+- [x] 3.1 Add `jira_connections` mirroring `github_connections`, plus the needs-reauthorization marker
+- [x] 3.2 Add `jira_oauth_states` mirroring `github_oauth_states`
 - [ ] 3.3 Add `workspace_jira_sites` holding one cloud id and hostname per workspace
 - [ ] 3.4 Generate the migration and note in the rollout that `ENCRYPTION_KEY` rotation now also covers `jira_connections`
 
 ## 4. Jira OAuth foundation
 
-- [ ] 4.1 Build the OAuth client: authorization URL with read scopes and offline access, code exchange, accessible-resources lookup
-- [ ] 4.2 Build the single-use member-bound state service mirroring the GitHub one
-- [ ] 4.3 Build the connections service with encrypted storage and single-flight refresh; a rejected refresh marks re-authorization instead of deleting
-- [ ] 4.4 Expose status, connect, callback, and disconnect endpoints with safe configured redirects
-- [ ] 4.5 Test the refresh race: concurrent callers produce exactly one Atlassian refresh call, and rotation replaces the stored token
-- [ ] 4.6 Test that a replayed or expired state stores nothing
+- [x] 4.1 Build the OAuth client: authorization URL with read scopes and offline access, code exchange, accessible-resources lookup
+- [x] 4.2 Build the single-use member-bound state service mirroring the GitHub one
+- [x] 4.3 Build the connections service with encrypted storage and single-flight refresh; a rejected refresh marks re-authorization instead of deleting
+- [x] 4.4 Expose status, connect, callback, and disconnect endpoints with safe configured redirects
+- [x] 4.5 Test the refresh race: concurrent callers produce exactly one Atlassian refresh call, and rotation replaces the stored token
+- [x] 4.6 Test that a replayed or expired state stores nothing
 
 ## 5. Site policy
 
