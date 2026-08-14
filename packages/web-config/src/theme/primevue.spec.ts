@@ -39,14 +39,23 @@ describe("giTiempoPrimeVueOptions", () => {
     expect(giTiempoDialogCloseButtonPt.root.class).toContain("rounded-none");
     expect(giTiempoDialogCloseButtonPt.root.class).toContain("border-0");
     expect(giTiempoDialogCloseButtonPt.root.class).toContain("bg-transparent");
-    expect(giTiempoDialogCloseButtonPt.root.class).toContain("focus:outline-none");
-    expect(giTiempoDialogCloseButtonPt.root.class).toContain("focus-visible:outline-none");
     expect(giTiempoDialogCloseButtonPt.root.class).not.toContain("rounded-full");
-    expect(giTiempoDialogCloseButtonPt.root.class).not.toContain("focus-visible:outline-2");
     expect(giTiempoConfirmDialogPt.pcCloseButton).toBe(giTiempoDialogCloseButtonPt);
     expect(giTiempoDialogPt.pcCloseButton).toMatchObject(giTiempoDialogCloseButtonPt);
     expect(giTiempoPrimeVueOptions.pt.confirmdialog).toBe(giTiempoConfirmDialogPt);
     expect(giTiempoPrimeVueOptions.pt.dialog).toBe(giTiempoDialogPt);
+  });
+
+  it("keeps a visible keyboard focus indicator on the dialog close button", () => {
+    const closeButtonClass = giTiempoDialogCloseButtonPt.root.class;
+
+    expect(closeButtonClass).toContain("focus-visible:outline-brand");
+    expect(closeButtonClass).toContain("focus-visible:outline-2");
+    expect(closeButtonClass).toContain("focus-visible:outline-offset-2");
+    expect(closeButtonClass).not.toContain("focus-visible:outline-none");
+    expect(closeButtonClass).not.toContain("focus-visible:ring-0");
+    expect(closeButtonClass).not.toContain("focus:outline-none");
+    expect(closeButtonClass).not.toContain("outline-none");
   });
 
   it("composes autocomplete instance overrides with the shared baseline", () => {

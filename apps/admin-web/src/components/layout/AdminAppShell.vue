@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed, watch } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
-import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
+import {
+  MAIN_CONTENT_ELEMENT_ID,
+  SkipToContentLink,
+  WorkspaceHeader,
+  WorkspaceNavigation,
+} from "@gitiempo/web-shared";
 import { hasAllowedRole } from "@gitiempo/web-shared/router";
 import {
   getCounterpartWorkspaceAppHref,
@@ -169,7 +174,11 @@ watch(
        on mobile. It clips only the horizontal axis, so vertical scroll and the
        sticky header are untouched; wide tables keep their own overflow-x-auto,
        and overlays/menus teleport to <body>, outside this subtree. -->
-  <div class="bg-app-bg text-text-dark flex min-h-screen flex-col overflow-x-clip">
+  <div
+    class="bg-app-bg text-text-dark relative flex min-h-screen flex-col overflow-x-clip"
+  >
+    <SkipToContentLink />
+
     <WorkspaceHeader
       :counterpart-href="userWorkspaceHref"
       :counterpart-label="ADMIN_COUNTERPART_LABEL"
@@ -196,7 +205,11 @@ watch(
         :items="navItems"
       />
 
-      <main class="min-w-0 flex-1 p-6 pb-20 sm:pb-6">
+      <main
+        :id="MAIN_CONTENT_ELEMENT_ID"
+        class="min-w-0 flex-1 p-6 pb-20 sm:pb-6"
+        tabindex="-1"
+      >
         <RouterView />
       </main>
     </div>

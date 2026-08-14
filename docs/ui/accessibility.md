@@ -9,13 +9,16 @@
 - For custom non-PrimeVue controls, use `outline-2 outline-brand outline-offset-2`.
 - Meet WCAG 2.1 AA contrast targets.
 - All form fields need associated `<label>` elements.
+- A form-level or request-level error that appears without moving focus must be a live region, so give its container `role="alert"` the way `InlineRequestMessage` and the sign-in form do. Field-level validation messages are already covered by PrimeVue `<Message>`; this rule is about the summary error a submit or redirect produces.
 - Icon-only buttons need `aria-label`.
+- Every authenticated shell must render `SkipToContentLink` as its first focusable element and give its `<main>` the shared `MAIN_CONTENT_ELEMENT_ID` plus `tabindex="-1"`. The `tabindex` is what makes `<main>` a focus target; without it the link only moves the scroll position. The link is `sr-only` until focused, and every style it needs when visible has to be a `focus:` variant, because `focus:not-sr-only` resets position and padding at a specificity plain utilities cannot beat.
 - Custom interactive elements must support keyboard navigation.
 - For the compact top-bar timer, the shell surface or mobile opener must expose an accessible name that clearly opens timer actions, such as `Open timer` or `Task and timer`.
 - Do not make the live `HH:MM:SS` timer assertive; avoid announcing every second to screen readers.
 - Disabled popup timer actions must use proper disabled semantics, not only muted styling.
 - The compact top-bar timer surface and the mobile `Task & timer` opener must be keyboard reachable.
 - The centered task-picker dialog must restore focus to the invoking compact timer surface or mobile opener when it closes.
+- The shared dialog close button keeps a `focus-visible` outline. A dialog does not show that outline the moment it opens because `AppDialog` renders a visually hidden initial-focus target that takes focus instead; that target, not the removal of the outline, is what keeps the close button from looking focused on open. Removing the outline to hide a stray ring breaks keyboard navigation and is not the fix.
 - The create-task title field inside the task-picker dialog must have a visible label and error text tied to the field.
 
 ## Covered By PrimeVue
