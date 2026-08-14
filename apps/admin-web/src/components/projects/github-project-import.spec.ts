@@ -8,9 +8,21 @@ import {
 	describeOutcome,
 	describeProjectName,
 	describeStatus,
+	isBoardAddable,
+	describeBlockedReason,
 	toBoardOption,
 	type ImportedBoard,
+	type RepositoryOwner,
 } from './github-project-import';
+
+function owner(overrides: Partial<RepositoryOwner> = {}): RepositoryOwner {
+	return {
+		projectId: 'p1',
+		projectIsActive: true,
+		projectName: 'GiTiempo',
+		...overrides,
+	};
+}
 
 const board = {
 	id: 'PVT_Krvn',
@@ -50,7 +62,7 @@ function unscannedOption() {
 function option(
 	boardSummary: BoardRepositorySummary = summary(),
 	imported: ReadonlyMap<string, ImportedBoard> = new Map(),
-	repositories: ReadonlyMap<string, string> = new Map(),
+	repositories: ReadonlyMap<string, RepositoryOwner> = new Map(),
 ) {
 	return toBoardOption(board, boardSummary, imported, repositories);
 }
@@ -99,7 +111,7 @@ describe('toBoardOption', () => {
 		const result = option(
 			summary(),
 			new Map(),
-			new Map([['itsua-team/gitiempo', 'p1']]),
+			new Map([['itsua-team/gitiempo', owner()]]),
 		);
 
 		expect(result.importedProjectId).toBeNull();
@@ -133,11 +145,11 @@ describe('describeLinkedRepository', () => {
 		const result = option(
 			summary(),
 			new Map(),
-			new Map([['itsua-team/gitiempo', 'p1']]),
+			new Map([['itsua-team/gitiempo', owner()]]),
 		);
 
 		expect(describeLinkedRepository(result)).toBe(
-			'ITSUA-team/GiTiempo — already tracked by another project',
+			'ITSUA-team/GiTiempo — already tracked by GiTiempo',
 		);
 	});
 
@@ -211,7 +223,7 @@ describe('describeStatus', () => {
 		const shared = option(
 			summary(),
 			new Map(),
-			new Map([['itsua-team/gitiempo', 'p1']]),
+			new Map([['itsua-team/gitiempo', owner()]]),
 		);
 		const alreadyImported = option(
 			summary(),
@@ -248,16 +260,51 @@ describe('describeOutcome', () => {
 		).toContain('as a public project, not billable by default');
 	});
 
-	it('explains why a shared repository will not be linked', () => {
+	it('blocks a board whose repository another project already tracks', () => {
 		const result = option(
 			summary(),
 			new Map(),
-			new Map([['itsua-team/gitiempo', 'p1']]),
+			new Map([['itsua-team/gitiempo', owner()]]),
 		);
 
-		expect(describeOutcome(result, settings)).toContain(
-			'already belongs to another project, so it will not be linked here',
+		expect(isBoardAddable(result)).toBe(false);
+		expect(describeBlockedReason(result)).toBe(
+			'Repository tracked by GiTiempo',
 		);
+		expect(describeOutcome(result, settings)).toContain(
+			'is already tracked by GiTiempo',
+		);
+		expect(describeOutcome(result, settings)).toContain('stays disabled');
+	});
+
+	it('says the tracking project is archived so the way out is clear', () => {
+		const result = option(
+			summary(),
+			new Map(),
+			new Map([
+				['itsua-team/gitiempo', owner({ projectIsActive: false })],
+			]),
+		);
+
+		expect(isBoardAddable(result)).toBe(false);
+		expect(describeOutcome(result, settings)).toContain('archived');
+	});
+
+	it('keeps a board addable when nothing tracks its repository', () => {
+		const result = option();
+
+		expect(isBoardAddable(result)).toBe(true);
+		expect(describeBlockedReason(result)).toBeNull();
+	});
+
+	it('blocks a board that is already imported', () => {
+		const result = option(
+			summary(),
+			new Map([['PVT_Krvn', { linkedRepository: null, projectId: 'p2' }]]),
+		);
+
+		expect(isBoardAddable(result)).toBe(false);
+		expect(describeBlockedReason(result)).toBe('Already added');
 	});
 
 	it('explains a board that holds only drafts', () => {

@@ -33,6 +33,7 @@ import {
   describeOutcome,
   describeProjectName,
   describeStatus,
+  isBoardAddable,
   type BoardOption,
   type GitHubFieldsAvailability,
 } from '@/components/projects/github-project-import';
@@ -103,7 +104,7 @@ const canSubmit = computed(() => {
 
   return (
     option !== null &&
-    option.importedProjectId === null &&
+    isBoardAddable(option) &&
     option.scanState !== 'missing' &&
     !isScanningBoard.value
   );
@@ -211,6 +212,13 @@ async function importSelectedProject(
 
   if (!result || result.status === 'failed') {
     importError.value = result?.message ?? 'Import failed.';
+    return null;
+  }
+
+  if (result.status === 'repository-taken') {
+    importError.value =
+      result.message ??
+      'That repository is already tracked by another project.';
     return null;
   }
 

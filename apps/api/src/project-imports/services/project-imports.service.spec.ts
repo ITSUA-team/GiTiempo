@@ -13,15 +13,36 @@ interface RecordedInsert {
   values: Record<string, unknown>;
 }
 
-function createDbStub(inserts: RecordedInsert[], existing: unknown[] = []) {
+interface DbStubOptions {
+  tracking?: unknown[];
+  repositoryRefWins?: boolean;
+}
+
+function createDbStub(
+  inserts: RecordedInsert[],
+  existing: unknown[] = [],
+  options: DbStubOptions = {},
+) {
+  const { repositoryRefWins = true, tracking = [] } = options;
+  const deletedProjectIds: string[] = [];
+
   const tx = {
-    delete: vi.fn(() => ({ where: vi.fn(async () => undefined) })),
+    delete: vi.fn(() => ({
+      where: vi.fn(async () => {
+        deletedProjectIds.push('project-1');
+      }),
+    })),
     insert: vi.fn(() => ({
       values: vi.fn((values: Record<string, unknown>) => {
         inserts.push({ values });
 
+        const isRepositoryRef = values.externalType === 'repository';
         const conflict = {
-          returning: vi.fn(async () => [{ projectId: 'project-1' }]),
+          returning: vi.fn(async () =>
+            isRepositoryRef && !repositoryRefWins
+              ? []
+              : [{ projectId: 'project-1' }],
+          ),
           then: (resolve: (value: unknown) => unknown) =>
             Promise.resolve(undefined).then(resolve),
         };
@@ -34,9 +55,17 @@ function createDbStub(inserts: RecordedInsert[], existing: unknown[] = []) {
     })),
   };
 
+  const trackingChain = {
+    where: vi.fn(() => ({
+      orderBy: vi.fn(() => ({ limit: vi.fn(async () => tracking) })),
+    })),
+  };
+
   return {
+    deletedProjectIds,
     select: vi.fn(() => ({
       from: vi.fn(() => ({
+        innerJoin: vi.fn(() => trackingChain),
         where: vi.fn(() => ({ limit: vi.fn(async () => existing) })),
       })),
     })),
@@ -49,12 +78,16 @@ function createDbStub(inserts: RecordedInsert[], existing: unknown[] = []) {
 describe('ProjectImportsService GitHub project import', () => {
   let inserts: RecordedInsert[];
   let members: { requireRole: ReturnType<typeof vi.fn> };
-  let github: { resolveImportableProject: ReturnType<typeof vi.fn> };
+  let github: {
+    getRepository: ReturnType<typeof vi.fn>;
+    resolveImportableProject: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     inserts = [];
     members = { requireRole: vi.fn(async () => undefined) };
     github = {
+      getRepository: vi.fn(async () => ({ fullName: 'ITSUA-team/Kesher' })),
       resolveImportableProject: vi.fn(async () => ({
         number: 7,
         ownerLogin: 'approved-org',
@@ -153,6 +186,116 @@ describe('ProjectImportsService GitHub project import', () => {
     expect(response.results.map((result) => result.status)).toEqual([
       'imported',
       'failed',
+    ]);
+  });
+
+  it('refuses a board whose repository another project already tracks', async () => {
+    const db = createDbStub(inserts, [], {
+      tracking: [{ id: 'project-9', isActive: true, name: 'Kesher' }],
+    });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      projectId: null,
+      status: 'repository-taken',
+      trackingProject: { id: 'project-9', isActive: true, name: 'Kesher' },
+    });
+    expect(response.results[0]?.message).toContain('Kesher');
+    expect(inserts).toHaveLength(0);
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it('says the tracking project is archived so the way out is clear', async () => {
+    const service = createService(
+      createDbStub(inserts, [], {
+        tracking: [{ id: 'project-9', isActive: false, name: 'Old Kesher' }],
+      }),
+    );
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]?.status).toBe('repository-taken');
+    expect(response.results[0]?.message).toContain('archived');
+    expect(inserts).toHaveLength(0);
+  });
+
+  it('rolls the project back when the repository is taken mid-write', async () => {
+    const db = createDbStub(inserts, [], { repositoryRefWins: false });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      projectId: null,
+      status: 'repository-taken',
+    });
+    expect(db.deletedProjectIds).toEqual(['project-1']);
+  });
+
+  it('imports normally when no project tracks the repository', async () => {
+    const service = createService(createDbStub(inserts, [], { tracking: [] }));
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      linkedRepository: 'ITSUA-team/Kesher',
+      status: 'imported',
+      trackingProject: null,
+    });
+    expect(
+      inserts.find((row) => row.values.externalType === 'repository')?.values
+        .externalKey,
+    ).toBe('ITSUA-team/Kesher');
+  });
+
+  it('lets a refused board leave the rest of the request alone', async () => {
+    github.resolveImportableProject
+      .mockResolvedValueOnce({
+        number: 1,
+        ownerLogin: 'approved-org',
+        title: 'Taken',
+        url: null,
+      })
+      .mockResolvedValueOnce({
+        number: 2,
+        ownerLogin: 'approved-org',
+        title: 'Free',
+        url: null,
+      });
+    const service = createService(
+      createDbStub(inserts, [], {
+        tracking: [{ id: 'project-9', isActive: true, name: 'Kesher' }],
+      }),
+    );
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_one', githubRepos: ['itsua-team/kesher'] },
+        { githubProjectId: 'PVT_two', githubRepos: [] },
+      ],
+    });
+
+    expect(response.results.map((result) => result.status)).toEqual([
+      'repository-taken',
+      'imported',
     ]);
   });
 
