@@ -17,6 +17,12 @@ So the same repository routinely exists under two casings, the `onConflictDoNoth
 
 **The reader picks arbitrarily.** `findGitHubProjectRef` matches with `lower(external_key) = <normalized>` and `.limit(1)` with no `ORDER BY`.
 
+### This was already solved next door
+
+`task_external_refs` had the identical split — the extension used to lowercase the owner, so one issue became two tasks. Migration `0015_dedup_github_issue_casing` collapsed the duplicates and rebuilt that table's unique index on `lower(external_key)`, for every provider rather than only GitHub, and `task-external-refs.schema.ts` carries the reasoning in a comment. `project_external_refs` is the mirror table and never got the same treatment.
+
+That precedent settles two questions this design would otherwise have to argue from first principles, and it is followed rather than re-litigated. What it does **not** settle is what to do with the duplicate rows, because a duplicate task and a duplicate project are not comparable objects.
+
 The data model already promises the guarantee this chain breaks: *Provider lookup remains unique within workspace*. And `time-tracking-api` already requires recording the identifier GitHub reports. The design therefore mostly makes existing requirements true, plus one deliberate rule reversal the author directed.
 
 ## Goals / Non-Goals
@@ -52,9 +58,13 @@ A repository tracked only by a *disabled* project still refuses — the mapping 
 
 `findOrCreateProjectForRepo` resolves the repository through GitHub and stores `fullName`, as the import path already does. Lowercasing before insert was rejected: it invents a spelling GitHub never used, which then leaks into project names, `external_url`, and metadata. When verification fails, the timer start fails; writing the caller's spelling as a fallback is the exact behavior that created the defect. The existing lookup still runs first, so no GitHub call is added when the project already exists.
 
-### Enforce uniqueness on `lower(external_key)`, scoped to GitHub
+### Enforce uniqueness on `lower(external_key)`, for every provider
 
-The unique index becomes a partial expression index over `(workspace_id, provider, external_type, lower(external_key))` where `provider = 'github'`; exact-match uniqueness stays for other providers, whose identifiers may be genuinely case-sensitive.
+`project_external_refs_workspace_provider_key_unique` is rebuilt over `(workspace_id, provider, external_type, lower(external_key))`, byte-for-byte the shape `task_external_refs` has carried since `0015`.
+
+An earlier draft scoped this to `provider = 'github'` so that a case-sensitive provider could keep exact matching. That was rejected: the team already faced the choice for task mappings and made it globally, and two mirror tables disagreeing about what provider identity means would cost more in confusion than the hypothetical it protects. If a genuinely case-sensitive provider is added later, both tables should change together, as one decision.
+
+The stored key keeps GitHub's real casing. Only the index expression is case-folded.
 
 ### Resolve deterministically by creation order
 
@@ -64,15 +74,32 @@ The unique index becomes a partial expression index over `(workspace_id, provide
 
 `UNIQUE (workspace_id, lower(name)) WHERE is_active`, with a service-level check returning a typed conflict so the API answers with the collision rather than a constraint violation. Global uniqueness and archived-inclusive uniqueness were rejected: the first reserves names across tenants, the second reserves them forever against soft-disable semantics.
 
-### Report merge failures rather than forcing them
+### Unlink the duplicate mapping; never delete the project
 
-The migration keeps the mapping on the project that has recorded time, falling back to the older project when neither or both have. It deletes no project and moves no time entry. Undecidable pairs are reported and the index creation fails loudly.
+`0015` could merge and delete a duplicate task cheaply: only `time_entries` (restrict) and its own refs (cascade) pointed at one, so moving the entries and dropping the task was complete and safe.
+
+A project is a different object. Four things point at it:
+
+| Referencing column | On delete |
+|---|---|
+| `tasks.project_id` | restrict |
+| `project_assignments.project_id` | cascade |
+| `project_external_refs.project_id` | cascade |
+| `task_external_refs.project_id` | cascade |
+
+A full merge would have to move `tasks`, then also rewrite `task_external_refs.project_id` for every moved task — because that column cascades, deleting the old project after moving only the tasks would silently destroy the GitHub issue link of each one. It would additionally have to reconcile `project_assignments` against its `(project_id, user_id)` unique index, and pick a winner between two projects' names, visibility, and billable defaults. None of that is a migration's decision to make.
+
+So the migration goes only as far as the index requires. Per case-insensitive repository key it keeps one mapping — the row carrying GitHub's real casing, then the older project, the same ordering `0015` used — and deletes the other **mapping row only**. The project it pointed at survives intact with its tasks, its time, and its assignments; it is simply no longer claimed by that repository. Every project left unlinked this way is reported, because a workspace holding two similar projects is a real problem, just a human one: whether to rename, archive, or genuinely merge them depends on facts a migration cannot see.
+
+Timers keep working throughout. Resolution follows the surviving mapping, so new time for that repository lands in one project from then on.
 
 ## Risks / Trade-offs
 
-**[Existing duplicate mappings block the new index] → Merge first, fail the deploy if any remain.** Skipping silently would leave the guarantee nominal while the code assumes it holds — the exact state being fixed.
+**[Existing duplicate mappings block the new index] → Unlink duplicates first by a deterministic rule, so nothing is left for the index to trip over.** Because unlinking never deletes a project, there is no case the rule cannot decide, and the migration does not need an escape hatch.
 
-**[Existing duplicate active names block the name index] → Report and stop.** Auto-renaming user-visible names in a migration is not acceptable.
+**[A project silently loses its GitHub link] → Report every one.** This is the real cost of unlinking rather than merging: a workspace can be left with a project that still holds time but no longer answers for its repository. It has to be visible, or it becomes the next mystery. The migration output is the record.
+
+**[Existing duplicate active names block the name index] → Report and stop.** Auto-renaming user-visible names in a migration is not acceptable, and unlike the mapping case there is no safe partial step: a name either collides or it does not.
 
 **[A flow that used to succeed now refuses] → Intended.** Both refusals — the tracked-repository import and the duplicate name — are the requested behavior, but operators should expect support questions from users who relied on the old outcome.
 
@@ -84,13 +111,17 @@ The migration keeps the mapping on the project that has recorded time, falling b
 
 ## Migration Plan
 
-1. Merge duplicate GitHub repository mappings; report anything undecidable and stop.
-2. Rewrite surviving GitHub mapping keys to the spelling GitHub reports where they differ only by case.
-3. Create the partial case-insensitive unique index for GitHub mappings.
-4. Report duplicate active project names per workspace; stop if any exist.
-5. Create the partial unique index on `(workspace_id, lower(name))`.
+Hand-written, in the shape of `0015_dedup_github_issue_casing`.
 
-Rollback drops the two indexes. Steps 1–2 are not reversible, which is acceptable because they converge on identifiers GitHub already reports.
+1. Per workspace, provider, external type, and `lower(external_key)`, rank project mappings by GitHub's real casing first, then the older project, then id. Delete every row but the first — mapping rows only, no project.
+2. Report the projects those deleted rows pointed at, so the workspace's orphaned duplicates are on the record.
+3. Drop and recreate `project_external_refs_workspace_provider_key_unique` over `(workspace_id, provider, external_type, lower(external_key))`.
+4. Report duplicate active project names per workspace; stop if any exist.
+5. Create the unique index on `(workspace_id, lower(name)) WHERE is_active`.
+
+Rollback drops the two indexes and restores the raw-key mapping index. Step 1 is not reversible — the deleted rows were duplicates of a surviving mapping, and the projects they pointed at are untouched, so nothing recoverable is lost.
+
+Step 4 is the one that can stop a deploy. Tasks 1.1–1.3 exist to find out in advance whether it will.
 
 ## Open Questions
 

@@ -2,7 +2,7 @@
 
 ### Requirement: External Provider References Are Stored Separately
 
-The backend data model MUST store provider-specific project and task identity in external reference records. Uniqueness MUST compare external keys the way the provider treats identity, so a provider whose identifiers are case-insensitive cannot occupy two mappings for one object.
+The backend data model MUST store provider-specific project and task identity in external reference records. Uniqueness MUST compare external keys without regard to letter case, and project mappings and task mappings MUST follow the same rule, so one external object cannot occupy two mappings under two spellings. The stored key MUST keep the casing the provider reports.
 
 #### Scenario: Project external reference stores provider identity
 
@@ -22,18 +22,25 @@ The backend data model MUST store provider-specific project and task identity in
 - **WHEN** both records would point to different core records
 - **THEN** the backend prevents duplicate provider mappings
 
-#### Scenario: GitHub keys differing only by case are one mapping
+#### Scenario: Keys differing only by case are one mapping
 
-- **GIVEN** a workspace already maps a GitHub repository to a project
+- **GIVEN** a workspace already maps a repository to a project
 - **WHEN** a second mapping is attempted for the same repository under different letter casing
 - **THEN** the backend refuses it as a duplicate provider mapping
 - **AND** the existing mapping is left untouched
 
-#### Scenario: Case-sensitive providers keep exact matching
+#### Scenario: Project mappings and task mappings agree on identity
 
-- **GIVEN** a provider whose identifiers are case-sensitive
-- **WHEN** two of its external keys differ only by letter case
-- **THEN** they remain two distinct mappings
+- **GIVEN** task mappings treat two keys differing only by letter case as one object
+- **WHEN** the same two keys are used for project mappings
+- **THEN** they are treated as one object there as well
+
+#### Scenario: The stored key keeps the provider's casing
+
+- **GIVEN** a provider reports an external key containing uppercase letters
+- **WHEN** the mapping is stored
+- **THEN** the stored key keeps that casing
+- **AND** only the uniqueness comparison ignores it
 
 ## ADDED Requirements
 

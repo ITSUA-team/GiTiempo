@@ -1,8 +1,8 @@
 ## 1. Establish the current damage
 
-- [ ] 1.1 Write a read-only query that lists, per workspace, GitHub repository mappings whose keys differ only by letter case, with the projects they point at and whether each has time entries
+- [ ] 1.1 Write a read-only query that lists, per workspace, project mappings whose keys differ only by letter case, with the projects they point at and whether each holds tasks or time entries
 - [ ] 1.2 Write a read-only query that lists duplicate active project names per workspace, compared case-insensitively
-- [ ] 1.3 Run both against a production dump and record the counts, since they decide whether the migration can run unattended
+- [ ] 1.3 Run both against a production dump and record the counts, since 1.2 decides whether the deploy can complete at all
 
 ## 2. Refuse the import when the repository is already tracked
 
@@ -27,17 +27,17 @@
 - [ ] 4.4 Give `findGitHubProjectRef` a deterministic order so a pre-migration duplicate cannot resolve differently between requests
 - [ ] 4.5 Add service tests proving a repository supplied in any casing reuses one project and records GitHub's casing
 
-## 5. Merge the mappings that already exist
+## 5. Resolve the mappings that already exist
 
-- [ ] 5.1 Write a data migration that merges GitHub repository mappings differing only by case, keeping the mapping on the project holding time entries, falling back to the older project
-- [ ] 5.2 Leave any pair the rule cannot decide in place and report it, deleting no project and moving no time entry
-- [ ] 5.3 Rewrite surviving GitHub mapping keys to the casing GitHub reports where they differ only by case
-- [ ] 5.4 Test the migration against a fixture holding both a decidable and an undecidable pair
+- [ ] 5.1 Read `0015_dedup_github_issue_casing.sql` and follow its structure, ranking rows by GitHub's real casing first, then the older project, then id
+- [ ] 5.2 Write a hand-written migration that keeps one project mapping per case-insensitive key and deletes the other mapping rows, deleting no project and moving no task, assignment, or time entry
+- [ ] 5.3 Report the projects left unlinked, so a workspace holding two similar projects is on the record rather than discovered later
+- [ ] 5.4 Test the migration against a fixture holding two projects mapped to one repository under two casings, asserting both projects survive and exactly one mapping remains
 
 ## 6. Enforce mapping uniqueness in the database
 
-- [ ] 6.1 Replace the GitHub portion of the external-ref unique index with a partial expression index on `lower(external_key)` scoped to `provider = 'github'`
-- [ ] 6.2 Keep exact-match uniqueness for every other provider
+- [ ] 6.1 Rebuild `project_external_refs_workspace_provider_key_unique` over `(workspace_id, provider, external_type, lower(external_key))`, matching the shape `task_external_refs` already uses
+- [ ] 6.2 Mirror the change in `project-external-refs.schema.ts`, carrying the same explanatory comment the task schema has
 - [ ] 6.3 Confirm the index creation fails loudly if step 5 left duplicates, rather than being skipped
 - [ ] 6.4 Add a test proving a second mapping for the same repository in different casing is refused
 
@@ -68,3 +68,4 @@
 - [ ] 9.6 Attempt to create a project whose name matches an active one in any casing and confirm the form explains it
 - [ ] 9.7 Disable a project, reuse its name, and confirm both records read correctly afterwards
 - [ ] 9.8 Rehearse the full migration against a restored production dump and record how long it holds locks
+- [ ] 9.9 After the rehearsal, confirm every project the migration unlinked still holds its tasks, time entries, and assignments, and appears in the report
