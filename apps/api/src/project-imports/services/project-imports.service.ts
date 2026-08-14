@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type {
   ImportGitHubProjectsInput,
   ImportGitHubProjectsResponse,
@@ -124,14 +124,17 @@ export class ProjectImportsService {
       const existing = await this.db
         .select({ projectId: projectExternalRefs.projectId })
         .from(projectExternalRefs)
+        .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
         .where(
           and(
             eq(projectExternalRefs.workspaceId, user.workspaceId),
             eq(projectExternalRefs.provider, 'github'),
             eq(projectExternalRefs.externalType, 'project'),
             eq(projectExternalRefs.externalKey, board.githubProjectId),
+            eq(projects.isActive, true),
           ),
         )
+        .orderBy(projects.createdAt, projectExternalRefs.projectId)
         .limit(1);
 
       if (existing[0]) {
@@ -203,8 +206,40 @@ export class ProjectImportsService {
           .returning({ projectId: projectExternalRefs.projectId });
 
         if (!ref) {
-          await tx.delete(projects).where(eq(projects.id, project!.id));
-          return { kind: 'board-taken' as const };
+          const [reclaimedBoard] = await tx
+            .update(projectExternalRefs)
+            .set({
+              projectId: project!.id,
+              externalUrl: verified.url,
+              metadata: {
+                githubProjectNumber: verified.number,
+                githubProjectOwner: verified.ownerLogin,
+                githubProjectTitle: verified.title,
+              },
+              syncedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(projectExternalRefs.workspaceId, user.workspaceId),
+                eq(projectExternalRefs.provider, 'github'),
+                eq(projectExternalRefs.externalType, 'project'),
+                eq(projectExternalRefs.externalKey, board.githubProjectId),
+                inArray(
+                  projectExternalRefs.projectId,
+                  tx
+                    .select({ id: projects.id })
+                    .from(projects)
+                    .where(eq(projects.isActive, false)),
+                ),
+              ),
+            )
+            .returning({ projectId: projectExternalRefs.projectId });
+
+          if (!reclaimedBoard) {
+            await tx.delete(projects).where(eq(projects.id, project!.id));
+            return { kind: 'board-taken' as const };
+          }
         }
 
         if (repository !== null) {
@@ -247,11 +282,13 @@ export class ProjectImportsService {
                   eq(projectExternalRefs.provider, 'github'),
                   eq(projectExternalRefs.externalType, 'repository'),
                   sql`lower(${projectExternalRefs.externalKey}) = ${normalizeGitHubRepoKey(repository)}`,
-                  sql`${projectExternalRefs.projectId} IN (
-                    SELECT ${projects.id} FROM ${projects}
-                    WHERE ${projects.id} = ${projectExternalRefs.projectId}
-                      AND ${projects.isActive} = false
-                  )`,
+                  inArray(
+                    projectExternalRefs.projectId,
+                    tx
+                      .select({ id: projects.id })
+                      .from(projects)
+                      .where(eq(projects.isActive, false)),
+                  ),
                 ),
               )
               .returning({ projectId: projectExternalRefs.projectId });
