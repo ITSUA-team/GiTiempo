@@ -397,6 +397,7 @@ export class GithubTaskMaterializationService {
     const [row] = await executor
       .select({ projectId: projectExternalRefs.projectId })
       .from(projectExternalRefs)
+      .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
       .where(
         and(
           eq(projectExternalRefs.workspaceId, workspaceId),
@@ -405,7 +406,11 @@ export class GithubTaskMaterializationService {
           sql`lower(${projectExternalRefs.externalKey}) = ${normalizedRepo}`,
         ),
       )
-      .orderBy(projectExternalRefs.createdAt, projectExternalRefs.projectId)
+      .orderBy(
+        sql`${projects.isActive} desc`,
+        projectExternalRefs.createdAt,
+        projectExternalRefs.projectId,
+      )
       .limit(1);
 
     return row ?? null;

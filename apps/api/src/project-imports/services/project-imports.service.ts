@@ -12,6 +12,7 @@ import type {
   TrackingProject,
 } from '@gitiempo/shared';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import {
@@ -263,60 +264,66 @@ export class ProjectImportsService {
         }
 
         if (repository !== null) {
-          const [repositoryRef] = await tx
-            .insert(projectExternalRefs)
-            .values({
+          const normalizedRepository = normalizeGitHubRepoKey(repository);
+          if (!normalizedRepository) {
+            throw DomainError.internal(
+              'github_repo_invalid',
+              'GitHub repository reference is invalid',
+            );
+          }
+
+          const [heldRef] = await tx
+            .select({
+              id: projectExternalRefs.id,
+              isActive: projects.isActive,
+            })
+            .from(projectExternalRefs)
+            .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
+            .where(
+              and(
+                eq(projectExternalRefs.workspaceId, user.workspaceId),
+                eq(projectExternalRefs.provider, 'github'),
+                eq(projectExternalRefs.externalType, 'repository'),
+                sql`lower(${projectExternalRefs.externalKey}) = ${normalizedRepository}`,
+              ),
+            )
+            .orderBy(
+              sql`${projects.isActive} desc`,
+              sql`(${projectExternalRefs.externalKey} = ${repository}) desc`,
+              projectExternalRefs.createdAt,
+              projectExternalRefs.id,
+            )
+            .limit(1);
+
+          if (heldRef?.isActive) {
+            await tx.delete(projects).where(eq(projects.id, project!.id));
+            return { kind: 'repository-taken' as const };
+          }
+
+          const repositoryValues = {
+            externalKey: repository,
+            externalUrl: `https://github.com/${repository}`,
+            metadata: { githubRepo: repository },
+            syncedAt: new Date(),
+          };
+
+          if (heldRef) {
+            await tx
+              .update(projectExternalRefs)
+              .set({
+                ...repositoryValues,
+                projectId: project!.id,
+                updatedAt: new Date(),
+              })
+              .where(eq(projectExternalRefs.id, heldRef.id));
+          } else {
+            await tx.insert(projectExternalRefs).values({
+              ...repositoryValues,
               workspaceId: user.workspaceId,
               projectId: project!.id,
               provider: 'github',
               externalType: 'repository',
-              externalKey: repository,
-              externalUrl: `https://github.com/${repository}`,
-              metadata: { githubRepo: repository },
-              syncedAt: new Date(),
-            })
-            .onConflictDoNothing({
-              target: [
-                projectExternalRefs.workspaceId,
-                projectExternalRefs.provider,
-                projectExternalRefs.externalType,
-                projectExternalRefs.externalKey,
-              ],
-            })
-            .returning({ projectId: projectExternalRefs.projectId });
-
-          if (!repositoryRef) {
-            const [reclaimed] = await tx
-              .update(projectExternalRefs)
-              .set({
-                projectId: project!.id,
-                externalKey: repository,
-                externalUrl: `https://github.com/${repository}`,
-                metadata: { githubRepo: repository },
-                syncedAt: new Date(),
-                updatedAt: new Date(),
-              })
-              .where(
-                and(
-                  eq(projectExternalRefs.workspaceId, user.workspaceId),
-                  eq(projectExternalRefs.provider, 'github'),
-                  eq(projectExternalRefs.externalType, 'repository'),
-                  sql`lower(${projectExternalRefs.externalKey}) = ${normalizeGitHubRepoKey(repository)}`,
-                  inArray(
-                    projectExternalRefs.projectId,
-                    tx
-                      .select({ id: projects.id })
-                      .from(projects)
-                      .where(eq(projects.isActive, false)),
-                  ),
-                ),
-              )
-              .returning({ projectId: projectExternalRefs.projectId });
-
-            if (!reclaimed) {
-              await tx.delete(projects).where(eq(projects.id, project!.id));
-              return { kind: 'repository-taken' as const };
-            }
+            });
           }
         }
 

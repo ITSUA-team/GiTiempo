@@ -203,10 +203,11 @@ describe('GithubTaskMaterializationService', () => {
     const limit = vi.fn().mockResolvedValue([{ projectId: 'project-older' }]);
     const orderBy = vi.fn().mockReturnValue({ limit });
     const where = vi.fn().mockReturnValue({ orderBy });
+    const innerJoin = vi.fn().mockReturnValue({ where });
     const executor = {
       execute: vi.fn(),
       select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({ where }),
+        from: vi.fn().mockReturnValue({ innerJoin }),
       }),
     };
     const service = new GithubTaskMaterializationService(
@@ -233,7 +234,9 @@ describe('GithubTaskMaterializationService', () => {
       created: false,
       project: { id: 'project-older' },
     });
+    expect(innerJoin).toHaveBeenCalledWith(projects, expect.anything());
     expect(orderBy).toHaveBeenCalledWith(
+      expect.anything(),
       projectExternalRefs.createdAt,
       projectExternalRefs.projectId,
     );
