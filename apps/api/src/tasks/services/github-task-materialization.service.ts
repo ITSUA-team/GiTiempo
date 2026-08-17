@@ -4,6 +4,7 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import { resolveAvailableProjectName } from '../../projects/project-name-policy';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
 import {
   projectRowSelection,
@@ -80,12 +81,18 @@ export class GithubTaskMaterializationService {
       return { project, created: false };
     }
 
+    const name = await resolveAvailableProjectName(
+      executor,
+      user.workspaceId,
+      githubRepo,
+    );
+
     const project = (
       await executor
         .insert(projects)
         .values({
           workspaceId: user.workspaceId,
-          name: githubRepo,
+          name,
           color: null,
         })
         .returning()

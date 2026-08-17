@@ -38,6 +38,11 @@ import { users } from '../../users/schemas/users.schema';
 import { projectAssignments } from '../schemas/project-assignments.schema';
 import { projectExternalRefs } from '../schemas/project-external-refs.schema';
 import { projectRowSelection, projects } from '../schemas/projects.schema';
+import {
+  describeProjectNameConflict,
+  findActiveProjectNameConflict,
+  type ProjectNameExecutor,
+} from '../project-name-policy';
 
 export type ProjectRow = typeof projects.$inferSelect;
 type ProjectResponseRow = ProjectRow & {
@@ -199,8 +204,6 @@ export class ProjectsService {
       ['admin', 'pm'],
     );
 
-    await this.requireNameAvailable(user.workspaceId, input.name, null);
-
     const createValues = {
       workspaceId: user.workspaceId,
       name: input.name,
@@ -210,34 +213,21 @@ export class ProjectsService {
       defaultBillableForTasks: input.defaultBillableForTasks ?? true,
     };
 
-    if (membership.role === 'admin') {
-      const row = (
-        await this.db.insert(projects).values(createValues).returning()
-      )[0]!;
-      const response = await this.findProjectResponseInWorkspace(
-        user.workspaceId,
-        row.id,
-      );
-      if (!response) {
-        throw DomainError.internal(
-          'project_create_response_missing',
-          'Failed to fetch created project',
-        );
-      }
-      return this.toProjectResponse(response);
-    }
-
     const row = await this.db.transaction(async (tx) => {
+      await this.requireNameAvailable(tx, user.workspaceId, input.name, null);
+
       const inserted = (
         await tx.insert(projects).values(createValues).returning()
       )[0]!;
 
-      await tx.insert(projectAssignments).values({
-        workspaceId: user.workspaceId,
-        projectId: inserted.id,
-        userId: user.sub,
-        assignedBy: user.sub,
-      });
+      if (membership.role !== 'admin') {
+        await tx.insert(projectAssignments).values({
+          workspaceId: user.workspaceId,
+          projectId: inserted.id,
+          userId: user.sub,
+          assignedBy: user.sub,
+        });
+      }
 
       return inserted;
     });
@@ -279,30 +269,20 @@ export class ProjectsService {
   }
 
   private async requireNameAvailable(
+    executor: ProjectNameExecutor,
     workspaceId: string,
     name: string,
     excludeProjectId: string | null,
   ): Promise<void> {
-    const conditions = [
-      eq(projects.workspaceId, workspaceId),
-      eq(projects.isActive, true),
-      sql`lower(${projects.name}) = lower(${name})`,
-    ];
-
-    if (excludeProjectId !== null) {
-      conditions.push(sql`${projects.id} <> ${excludeProjectId}`);
-    }
-
-    const [taken] = await this.db
-      .select({ name: projects.name })
-      .from(projects)
-      .where(and(...conditions))
-      .limit(1);
+    const taken = await findActiveProjectNameConflict(
+      executor,
+      workspaceId,
+      name,
+      excludeProjectId,
+    );
 
     if (taken) {
-      throw new ConflictException(
-        `A project named "${taken.name}" already exists in this workspace.`,
-      );
+      throw new ConflictException(describeProjectNameConflict(taken.name));
     }
   }
 
@@ -319,7 +299,12 @@ export class ProjectsService {
     }
 
     if (input.name !== undefined) {
-      await this.requireNameAvailable(user.workspaceId, input.name, projectId);
+      await this.requireNameAvailable(
+        this.db,
+        user.workspaceId,
+        input.name,
+        projectId,
+      );
     }
 
     const [row] = await this.db

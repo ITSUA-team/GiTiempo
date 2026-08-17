@@ -141,10 +141,14 @@ afterEach(() => {
 describe('ProjectsService', () => {
   it('refuses a name an active project already holds', async () => {
     const insert = vi.fn();
-    const db = {
+    const tx = {
       insert,
       select: vi.fn().mockReturnValue(selectRows([{ name: 'Kesher' }])),
-      transaction: vi.fn(),
+    };
+    const db = {
+      insert,
+      select: vi.fn(),
+      transaction: vi.fn((callback) => callback(tx)),
     };
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
@@ -225,13 +229,11 @@ describe('ProjectsService', () => {
         }
         throw new Error('Unexpected insert table');
       }),
+      select: vi.fn().mockReturnValue(selectRows([])),
     };
     const db = {
       transaction: vi.fn((callback) => callback(tx)),
-      select: vi
-        .fn()
-        .mockReturnValueOnce(selectRows([]))
-        .mockReturnValue(selectRows([projectResponseRow])),
+      select: vi.fn().mockReturnValue(selectRows([projectResponseRow])),
     };
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'pm' }),
@@ -259,19 +261,21 @@ describe('ProjectsService', () => {
     const createdRow = { ...projectRow, defaultBillableForTasks: false };
     const returning = vi.fn().mockResolvedValue([createdRow]);
     const values = vi.fn().mockReturnValue({ returning });
-    const db = {
+    const tx = {
       insert: vi.fn().mockReturnValue({ values }),
-      select: vi
-        .fn()
-        .mockReturnValueOnce(selectRows([]))
-        .mockReturnValue(
-          selectRows([
-            {
-              ...projectResponseRow,
-              defaultBillableForTasks: false,
-            },
-          ]),
-        ),
+      select: vi.fn().mockReturnValue(selectRows([])),
+    };
+    const db = {
+      insert: vi.fn(),
+      transaction: vi.fn((callback) => callback(tx)),
+      select: vi.fn().mockReturnValue(
+        selectRows([
+          {
+            ...projectResponseRow,
+            defaultBillableForTasks: false,
+          },
+        ]),
+      ),
     };
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),

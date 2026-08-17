@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { GithubTaskMaterializationService } from './github-task-materialization.service';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
+import { projects } from '../../projects/schemas/projects.schema';
 
 function orgsMock(canonicalOwner: string | null) {
   return {
@@ -147,6 +148,51 @@ describe('GithubTaskMaterializationService', () => {
         'octo/repo',
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('derives a free name when a manual project already holds the repository name', async () => {
+    const projectValues = vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([{ id: 'project-new' }]),
+    });
+    const refValues = vi.fn().mockReturnValue({
+      onConflictDoNothing: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ projectId: 'project-new' }]),
+      }),
+    });
+    const executor = {
+      delete: vi.fn(),
+      insert: vi.fn((table) =>
+        table === projects ? { values: projectValues } : { values: refValues },
+      ),
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ name: 'ITSUA-team/Kesher' }]),
+        }),
+      }),
+    };
+    const service = new GithubTaskMaterializationService(
+      {} as never,
+      orgsMock(null),
+    );
+    Object.defineProperty(service, 'findGitHubProjectRef', {
+      value: vi.fn().mockResolvedValue(null),
+    });
+
+    await service.findOrCreateProjectForRepo(
+      executor as never,
+      {
+        sub: 'user-1',
+        email: 'user@example.com',
+        firebaseUid: 'user-uid',
+        workspaceId: 'workspace-1',
+        role: 'admin',
+      },
+      'ITSUA-team/Kesher',
+    );
+
+    expect(projectValues).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'ITSUA-team/Kesher (2)' }),
+    );
   });
 
   it('resolves a repository to one project by a stable order', async () => {

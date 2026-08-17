@@ -21,6 +21,10 @@ import {
 import { GithubService } from '../../github/services/github.service';
 import { MembersService } from '../../members/services/members.service';
 import { GithubTaskMaterializationService } from '../../tasks/services/github-task-materialization.service';
+import {
+  describeProjectNameConflict,
+  findActiveProjectNameConflict,
+} from '../../projects/project-name-policy';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
 import { projects } from '../../projects/schemas/projects.schema';
 
@@ -163,12 +167,25 @@ export class ProjectImportsService {
         }
       }
 
+      const derivedName = `${verified.ownerLogin}/${verified.title}`;
+
       const outcome = await this.db.transaction(async (tx) => {
+        const nameConflict = await findActiveProjectNameConflict(
+          tx,
+          user.workspaceId,
+          derivedName,
+          null,
+        );
+
+        if (nameConflict) {
+          return { kind: 'name-taken' as const, conflict: nameConflict };
+        }
+
         const [project] = await tx
           .insert(projects)
           .values({
             workspaceId: user.workspaceId,
-            name: `${verified.ownerLogin}/${verified.title}`,
+            name: derivedName,
             color: null,
             ...(board.visibility === undefined
               ? {}
@@ -311,6 +328,21 @@ export class ProjectImportsService {
           projectId: null,
           status: 'already-imported',
           trackingProject: null,
+        };
+      }
+
+      if (outcome.kind === 'name-taken') {
+        return {
+          githubProjectId: board.githubProjectId,
+          linkedRepository: repository,
+          message: `${describeProjectNameConflict(outcome.conflict.name)} Rename that project or the GitHub board, then import again.`,
+          projectId: null,
+          status: 'name-taken',
+          trackingProject: {
+            id: outcome.conflict.id,
+            isActive: true,
+            name: outcome.conflict.name,
+          },
         };
       }
 

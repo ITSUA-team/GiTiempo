@@ -16,6 +16,7 @@ interface RecordedInsert {
 interface DbStubOptions {
   boardRefWins?: boolean;
   joinedRows?: unknown[][];
+  nameConflict?: unknown[];
   repositoryRefWins?: boolean;
   reclaims?: boolean;
 }
@@ -28,6 +29,7 @@ function createDbStub(
   const {
     boardRefWins = true,
     joinedRows = [],
+    nameConflict = [],
     reclaims = false,
     repositoryRefWins = true,
   } = options;
@@ -63,7 +65,9 @@ function createDbStub(
       }),
     })),
     select: vi.fn(() => ({
-      from: vi.fn(() => ({ where: vi.fn(async () => []) })),
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({ limit: vi.fn(async () => nameConflict) })),
+      })),
     })),
     update: vi.fn(() => ({
       set: vi.fn(() => ({
@@ -157,6 +161,29 @@ describe('ProjectImportsService GitHub project import', () => {
       githubProjectOwner: 'approved-org',
       githubProjectTitle: 'Real Board',
     });
+  });
+
+  it('refuses a board whose derived name an active project already holds', async () => {
+    const db = createDbStub(inserts, [], {
+      nameConflict: [{ id: 'project-9', name: 'approved-org/real board' }],
+    });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [{ githubProjectId: 'PVT_kwDO', githubRepos: [] }],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      projectId: null,
+      status: 'name-taken',
+      trackingProject: {
+        id: 'project-9',
+        isActive: true,
+        name: 'approved-org/real board',
+      },
+    });
+    expect(response.results[0]?.message).toContain('already exists');
+    expect(inserts).toHaveLength(0);
   });
 
   it('refuses a project whose real owner the workspace has not approved', async () => {
