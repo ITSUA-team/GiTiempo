@@ -83,6 +83,12 @@ function selectRows(rows: unknown[]) {
   return { from };
 }
 
+function selectAllRows(rows: unknown[]) {
+  const where = vi.fn().mockResolvedValue(rows);
+  const from = vi.fn().mockReturnValue({ where });
+  return { from };
+}
+
 function selectJoinedRows(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ limit });
@@ -166,9 +172,14 @@ describe('ProjectsService', () => {
 
   it('refuses renaming onto a name another active project holds', async () => {
     const update = vi.fn();
+    const tx = {
+      select: vi.fn().mockReturnValue(selectRows([{ name: 'Kesher' }])),
+      update,
+    };
     const db = {
       insert: vi.fn(),
-      select: vi.fn().mockReturnValue(selectRows([{ name: 'Kesher' }])),
+      select: vi.fn(),
+      transaction: vi.fn((callback) => callback(tx)),
       update,
     };
     const members = {
@@ -176,7 +187,7 @@ describe('ProjectsService', () => {
     };
     const service = new ProjectsService(db as never, members as never);
     Object.defineProperty(service, 'requireProjectForUpdate', {
-      value: vi.fn().mockResolvedValue({ role: 'admin' }),
+      value: vi.fn().mockResolvedValue({ project: projectRow, role: 'admin' }),
     });
 
     await expect(
@@ -185,24 +196,99 @@ describe('ProjectsService', () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it('frees a clashing stored name when a single-field update reactivates', async () => {
+    const archivedRow = { ...projectRow, name: 'Kesher', isActive: false };
+    const revivedRow = { ...archivedRow, isActive: true, name: 'Kesher (2)' };
+    const returning = vi.fn().mockResolvedValue([revivedRow]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const tx = {
+      select: vi.fn().mockReturnValue(selectAllRows([{ name: 'KESHER' }])),
+      update: vi.fn().mockReturnValue({ set }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const members = {
+      requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new ProjectsService(db as never, members as never);
+    Object.defineProperty(service, 'requireProjectForUpdate', {
+      value: vi.fn().mockResolvedValue({ project: archivedRow, role: 'admin' }),
+    });
+    Object.defineProperty(service, 'findProjectResponseInWorkspace', {
+      value: vi.fn().mockResolvedValue({
+        ...revivedRow,
+        source: 'manual',
+        totalSeconds: 0,
+        members: [],
+      }),
+    });
+
+    const result = await service.updateProject(adminUser, archivedRow.id, {
+      isActive: true,
+    });
+
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({ isActive: true, name: 'Kesher (2)' }),
+    );
+    expect(result.name).toBe('Kesher (2)');
+  });
+
+  it('keeps the stored name when reactivating does not clash', async () => {
+    const archivedRow = { ...projectRow, name: 'Kesher', isActive: false };
+    const revivedRow = { ...archivedRow, isActive: true };
+    const returning = vi.fn().mockResolvedValue([revivedRow]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const tx = {
+      select: vi.fn().mockReturnValue(selectAllRows([])),
+      update: vi.fn().mockReturnValue({ set }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const members = {
+      requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new ProjectsService(db as never, members as never);
+    Object.defineProperty(service, 'requireProjectForUpdate', {
+      value: vi.fn().mockResolvedValue({ project: archivedRow, role: 'admin' }),
+    });
+    Object.defineProperty(service, 'findProjectResponseInWorkspace', {
+      value: vi.fn().mockResolvedValue({
+        ...revivedRow,
+        source: 'manual',
+        totalSeconds: 0,
+        members: [],
+      }),
+    });
+
+    await service.updateProject(adminUser, archivedRow.id, { isActive: true });
+
+    expect(set).toHaveBeenCalledWith(
+      expect.not.objectContaining({ name: expect.anything() }),
+    );
+  });
+
   it('leaves an update that does not touch the name unchecked', async () => {
-    const select = vi.fn().mockReturnValue(selectRows([projectResponseRow]));
+    const nameLookup = vi.fn();
     const where = vi.fn().mockResolvedValue([projectRow]);
-    const db = {
-      insert: vi.fn(),
-      select,
+    const tx = {
+      select: nameLookup,
       update: vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({ returning: where }),
         }),
       }),
     };
+    const db = {
+      insert: vi.fn(),
+      select: vi.fn().mockReturnValue(selectRows([projectResponseRow])),
+      transaction: vi.fn((callback) => callback(tx)),
+    };
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
     const service = new ProjectsService(db as never, members as never);
     Object.defineProperty(service, 'requireProjectForUpdate', {
-      value: vi.fn().mockResolvedValue({ role: 'admin' }),
+      value: vi.fn().mockResolvedValue({ project: projectRow, role: 'admin' }),
     });
     Object.defineProperty(service, 'findProjectResponseInWorkspace', {
       value: vi.fn().mockResolvedValue(projectResponseRow),
@@ -210,7 +296,7 @@ describe('ProjectsService', () => {
 
     await service.updateProject(adminUser, 'project-1', { color: '#ffffff' });
 
-    expect(select).not.toHaveBeenCalled();
+    expect(nameLookup).not.toHaveBeenCalled();
   });
 
   it('auto-assigns a PM to a project created by that PM', async () => {
@@ -329,7 +415,9 @@ describe('ProjectsService', () => {
   });
 
   it('rejects PM project active state updates', async () => {
-    const db = { update: vi.fn() };
+    const update = vi.fn();
+    const tx = { update };
+    const db = { transaction: vi.fn((callback) => callback(tx)), update };
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'pm' }),
     };
@@ -339,7 +427,7 @@ describe('ProjectsService', () => {
     await expect(
       service.updateProject(pmUser, projectRow.id, { isActive: false }),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(db.update).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
   });
 
   it('allows admins to archive and unarchive with single-field updates', async () => {
@@ -351,7 +439,11 @@ describe('ProjectsService', () => {
       .mockResolvedValueOnce([unarchivedRow]);
     const where = vi.fn().mockReturnValue({ returning });
     const set = vi.fn().mockReturnValue({ where });
-    const db = { update: vi.fn().mockReturnValue({ set }) };
+    const tx = {
+      select: vi.fn().mockReturnValue(selectRows([])),
+      update: vi.fn().mockReturnValue({ set }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
@@ -402,7 +494,8 @@ describe('ProjectsService', () => {
     const returning = vi.fn().mockResolvedValue([updatedRow]);
     const where = vi.fn().mockReturnValue({ returning });
     const set = vi.fn().mockReturnValue({ where });
-    const db = { update: vi.fn().mockReturnValue({ set }) };
+    const tx = { update: vi.fn().mockReturnValue({ set }) };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
     };

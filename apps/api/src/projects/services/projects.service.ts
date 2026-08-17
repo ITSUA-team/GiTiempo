@@ -41,6 +41,7 @@ import { projectRowSelection, projects } from '../schemas/projects.schema';
 import {
   describeProjectNameConflict,
   findActiveProjectNameConflict,
+  resolveAvailableProjectName,
   type ProjectNameExecutor,
 } from '../project-name-policy';
 
@@ -291,48 +292,67 @@ export class ProjectsService {
     projectId: string,
     input: UpdateProjectInput,
   ): Promise<ProjectResponse> {
-    const { role } = await this.requireProjectForUpdate(user, projectId);
-    if (role === 'pm' && input.isActive !== undefined) {
-      throw new ForbiddenException(
-        'Only admins can change project active state',
-      );
-    }
-
-    if (input.name !== undefined) {
-      await this.requireNameAvailable(
-        this.db,
-        user.workspaceId,
-        input.name,
+    const row = await this.db.transaction(async (tx) => {
+      const { project, role } = await this.requireProjectForUpdate(
+        user,
         projectId,
+        tx,
       );
-    }
+      if (role === 'pm' && input.isActive !== undefined) {
+        throw new ForbiddenException(
+          'Only admins can change project active state',
+        );
+      }
 
-    const [row] = await this.db
-      .update(projects)
-      .set({
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.description !== undefined
-          ? { description: input.description }
-          : {}),
-        ...(input.color !== undefined ? { color: input.color } : {}),
-        ...(input.visibility !== undefined
-          ? { visibility: input.visibility }
-          : {}),
-        ...(input.defaultBillableForTasks !== undefined
-          ? { defaultBillableForTasks: input.defaultBillableForTasks }
-          : {}),
-        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(projects.id, projectId),
-          eq(projects.workspaceId, user.workspaceId),
-        ),
-      )
-      .returning();
+      const isReactivating = input.isActive === true && !project.isActive;
+      let nextName = input.name ?? null;
 
-    if (!row) throw new NotFoundException('Project not found');
+      if (nextName !== null) {
+        await this.requireNameAvailable(
+          tx,
+          user.workspaceId,
+          nextName,
+          projectId,
+        );
+      } else if (isReactivating) {
+        const available = await resolveAvailableProjectName(
+          tx,
+          user.workspaceId,
+          project.name,
+        );
+
+        nextName = available === project.name ? null : available;
+      }
+
+      const [updated] = await tx
+        .update(projects)
+        .set({
+          ...(nextName !== null ? { name: nextName } : {}),
+          ...(input.description !== undefined
+            ? { description: input.description }
+            : {}),
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          ...(input.visibility !== undefined
+            ? { visibility: input.visibility }
+            : {}),
+          ...(input.defaultBillableForTasks !== undefined
+            ? { defaultBillableForTasks: input.defaultBillableForTasks }
+            : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(projects.id, projectId),
+            eq(projects.workspaceId, user.workspaceId),
+          ),
+        )
+        .returning();
+
+      if (!updated) throw new NotFoundException('Project not found');
+      return updated;
+    });
+
     const response = await this.findProjectResponseInWorkspace(
       user.workspaceId,
       row.id,
