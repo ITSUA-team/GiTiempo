@@ -148,6 +148,7 @@ describe('ProjectsService', () => {
   it('refuses a name an active project already holds', async () => {
     const insert = vi.fn();
     const tx = {
+      execute: vi.fn(),
       insert,
       select: vi.fn().mockReturnValue(selectRows([{ name: 'Kesher' }])),
     };
@@ -173,6 +174,7 @@ describe('ProjectsService', () => {
   it('refuses renaming onto a name another active project holds', async () => {
     const update = vi.fn();
     const tx = {
+      execute: vi.fn(),
       select: vi.fn().mockReturnValue(selectRows([{ name: 'Kesher' }])),
       update,
     };
@@ -203,6 +205,7 @@ describe('ProjectsService', () => {
     const where = vi.fn().mockReturnValue({ returning });
     const set = vi.fn().mockReturnValue({ where });
     const tx = {
+      execute: vi.fn(),
       select: vi.fn().mockReturnValue(selectAllRows([{ name: 'KESHER' }])),
       update: vi.fn().mockReturnValue({ set }),
     };
@@ -240,6 +243,7 @@ describe('ProjectsService', () => {
     const where = vi.fn().mockReturnValue({ returning });
     const set = vi.fn().mockReturnValue({ where });
     const tx = {
+      execute: vi.fn(),
       select: vi.fn().mockReturnValue(selectAllRows([])),
       update: vi.fn().mockReturnValue({ set }),
     };
@@ -271,6 +275,7 @@ describe('ProjectsService', () => {
     const nameLookup = vi.fn();
     const where = vi.fn().mockResolvedValue([projectRow]);
     const tx = {
+      execute: vi.fn(),
       select: nameLookup,
       update: vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -302,6 +307,7 @@ describe('ProjectsService', () => {
   it('auto-assigns a PM to a project created by that PM', async () => {
     const assignmentValues = vi.fn().mockResolvedValue(undefined);
     const tx = {
+      execute: vi.fn(),
       insert: vi.fn((table) => {
         if (table === projects) {
           return {
@@ -348,6 +354,7 @@ describe('ProjectsService', () => {
     const returning = vi.fn().mockResolvedValue([createdRow]);
     const values = vi.fn().mockReturnValue({ returning });
     const tx = {
+      execute: vi.fn(),
       insert: vi.fn().mockReturnValue({ values }),
       select: vi.fn().mockReturnValue(selectRows([])),
     };
@@ -383,6 +390,7 @@ describe('ProjectsService', () => {
 
   it('rejects assignment targets with admin role', async () => {
     const tx = {
+      execute: vi.fn(),
       select: vi
         .fn()
         .mockReturnValueOnce(selectRows([projectRow]))
@@ -399,6 +407,7 @@ describe('ProjectsService', () => {
 
   it('rejects duplicate assignments before insert', async () => {
     const tx = {
+      execute: vi.fn(),
       select: vi
         .fn()
         .mockReturnValueOnce(selectRows([projectRow]))
@@ -440,6 +449,7 @@ describe('ProjectsService', () => {
     const where = vi.fn().mockReturnValue({ returning });
     const set = vi.fn().mockReturnValue({ where });
     const tx = {
+      execute: vi.fn(),
       select: vi.fn().mockReturnValue(selectRows([])),
       update: vi.fn().mockReturnValue({ set }),
     };
@@ -526,6 +536,7 @@ describe('ProjectsService', () => {
     const taskUpdate = updateRowCount(2);
     const timeEntryUpdate = updateRowCount(1);
     const tx = {
+      execute: vi.fn(),
       update: vi
         .fn()
         .mockReturnValueOnce(taskUpdate.query)
@@ -619,6 +630,7 @@ describe('ProjectsService', () => {
   it('uses the provided selector when checking project visibility', async () => {
     const db = { select: vi.fn() };
     const tx = {
+      execute: vi.fn(),
       select: vi
         .fn()
         .mockReturnValue(selectJoinedRows([{ project: projectRow }])),

@@ -36,6 +36,7 @@ function createDbStub(
   const deletedProjectIds: string[] = [];
 
   const tx = {
+    execute: vi.fn(),
     delete: vi.fn(() => ({
       where: vi.fn(async () => {
         deletedProjectIds.push('project-1');

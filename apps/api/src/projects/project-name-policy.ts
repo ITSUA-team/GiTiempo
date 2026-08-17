@@ -9,9 +9,20 @@ const MAX_DERIVED_NAME_ATTEMPTS = 200;
 
 export type ProjectNameExecutor = Pick<DrizzleDB, 'select'>;
 
+export type ProjectNamespaceLockExecutor = Pick<DrizzleDB, 'execute'>;
+
 export interface ProjectNameConflict {
   id: string;
   name: string;
+}
+
+export async function lockProjectNamespace(
+  executor: ProjectNamespaceLockExecutor,
+  workspaceId: string,
+): Promise<void> {
+  await executor.execute(
+    sql`select pg_advisory_xact_lock(hashtext(${`project-name:${workspaceId}`}))`,
+  );
 }
 
 export function describeProjectNameConflict(takenName: string): string {

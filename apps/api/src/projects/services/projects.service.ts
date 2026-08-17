@@ -41,6 +41,7 @@ import { projectRowSelection, projects } from '../schemas/projects.schema';
 import {
   describeProjectNameConflict,
   findActiveProjectNameConflict,
+  lockProjectNamespace,
   resolveAvailableProjectName,
   type ProjectNameExecutor,
 } from '../project-name-policy';
@@ -215,6 +216,7 @@ export class ProjectsService {
     };
 
     const row = await this.db.transaction(async (tx) => {
+      await lockProjectNamespace(tx, user.workspaceId);
       await this.requireNameAvailable(tx, user.workspaceId, input.name, null);
 
       const inserted = (
@@ -306,6 +308,10 @@ export class ProjectsService {
 
       const isReactivating = input.isActive === true && !project.isActive;
       let nextName = input.name ?? null;
+
+      if (nextName !== null || isReactivating) {
+        await lockProjectNamespace(tx, user.workspaceId);
+      }
 
       if (nextName !== null) {
         await this.requireNameAvailable(

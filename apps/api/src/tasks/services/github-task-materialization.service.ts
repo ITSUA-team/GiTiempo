@@ -4,7 +4,10 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
-import { resolveAvailableProjectName } from '../../projects/project-name-policy';
+import {
+  lockProjectNamespace,
+  resolveAvailableProjectName,
+} from '../../projects/project-name-policy';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
 import {
   projectRowSelection,
@@ -21,7 +24,10 @@ import { WorkspaceGitHubOrganizationsService } from '../../github/services/works
 import { taskExternalRefs } from '../schemas/task-external-refs.schema';
 import { taskRowSelection, tasks } from '../schemas/tasks.schema';
 
-type QueryExecutor = Pick<DrizzleDB, 'delete' | 'insert' | 'select'>;
+type QueryExecutor = Pick<
+  DrizzleDB,
+  'delete' | 'execute' | 'insert' | 'select'
+>;
 type TaskRow = typeof tasks.$inferSelect;
 
 @Injectable()
@@ -80,6 +86,8 @@ export class GithubTaskMaterializationService {
       );
       return { project, created: false };
     }
+
+    await lockProjectNamespace(executor, user.workspaceId);
 
     const name = await resolveAvailableProjectName(
       executor,

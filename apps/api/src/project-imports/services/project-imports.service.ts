@@ -24,6 +24,7 @@ import { GithubTaskMaterializationService } from '../../tasks/services/github-ta
 import {
   describeProjectNameConflict,
   findActiveProjectNameConflict,
+  lockProjectNamespace,
 } from '../../projects/project-name-policy';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
 import { projects } from '../../projects/schemas/projects.schema';
@@ -170,6 +171,8 @@ export class ProjectImportsService {
       const derivedName = `${verified.ownerLogin}/${verified.title}`;
 
       const outcome = await this.db.transaction(async (tx) => {
+        await lockProjectNamespace(tx, user.workspaceId);
+
         const nameConflict = await findActiveProjectNameConflict(
           tx,
           user.workspaceId,

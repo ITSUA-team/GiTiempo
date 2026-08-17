@@ -40,6 +40,7 @@ describe('GithubTaskMaterializationService', () => {
         };
       });
     const executor = {
+      execute: vi.fn(),
       delete: vi.fn(),
       insert: vi.fn().mockReturnValue({ values }),
       select: vi.fn(),
@@ -92,6 +93,7 @@ describe('GithubTaskMaterializationService', () => {
         };
       });
     const executor = {
+      execute: vi.fn(),
       delete: vi.fn(),
       insert: vi.fn().mockReturnValue({ values }),
       select: vi.fn(),
@@ -117,6 +119,7 @@ describe('GithubTaskMaterializationService', () => {
 
   it('fails closed when a GitHub repository ref points outside the current workspace', async () => {
     const executor = {
+      execute: vi.fn(),
       select: vi.fn(),
     };
     const service = new GithubTaskMaterializationService(
@@ -160,6 +163,7 @@ describe('GithubTaskMaterializationService', () => {
       }),
     });
     const executor = {
+      execute: vi.fn(),
       delete: vi.fn(),
       insert: vi.fn((table) =>
         table === projects ? { values: projectValues } : { values: refValues },
@@ -200,6 +204,7 @@ describe('GithubTaskMaterializationService', () => {
     const orderBy = vi.fn().mockReturnValue({ limit });
     const where = vi.fn().mockReturnValue({ orderBy });
     const executor = {
+      execute: vi.fn(),
       select: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({ where }),
       }),
@@ -255,6 +260,7 @@ describe('GithubTaskMaterializationService', () => {
       .mockReturnValueOnce({ returning: returningTask })
       .mockReturnValueOnce({ onConflictDoNothing });
     const executor = {
+      execute: vi.fn(),
       delete: vi
         .fn()
         .mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
