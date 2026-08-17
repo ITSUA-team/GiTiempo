@@ -64,8 +64,6 @@ function mountDialog(overrides: DialogProps = {}) {
       githubProjectAvailability: 'available' as const,
       githubProjectDraftCount: 0,
     githubProjectOptions: [],
-      githubProjectRepositories: {},
-      githubTrackedRepositoryKeys: new Set<string>(),
     githubProjectsErrorMessage: null,
     githubProjectsTruncated: false,
     isLoadingGitHubProjects: false,

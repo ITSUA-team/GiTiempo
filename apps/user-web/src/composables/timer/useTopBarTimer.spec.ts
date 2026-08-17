@@ -199,6 +199,15 @@ function createClientMock(): TimeEntriesClient & {
   listProjectGitHubIssues: ReturnType<
     typeof vi.fn<TimeEntriesClient['listProjectGitHubIssues']>
   >;
+  listGitHubOwners: ReturnType<
+    typeof vi.fn<TimeEntriesClient['listGitHubOwners']>
+  >;
+  listGitHubProjectIssues: ReturnType<
+    typeof vi.fn<TimeEntriesClient['listGitHubProjectIssues']>
+  >;
+  listGitHubProjects: ReturnType<
+    typeof vi.fn<TimeEntriesClient['listGitHubProjects']>
+  >;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient['listOwnEntries']>>;
   listProjectTimeEntries: ReturnType<
     typeof vi.fn<TimeEntriesClient['listProjectTimeEntries']>
@@ -927,7 +936,7 @@ describe('useTopBarTimer', () => {
     ]);
   });
 
-  it('does not cache local-only selected project tasks before project metadata loads', async () => {
+  it('defers the selected project task load until project metadata is available', async () => {
     const client = createClientMock();
     const projectsRequest = createDeferred<ProjectResponse[]>();
     const syncedTask = {
@@ -983,16 +992,16 @@ describe('useTopBarTimer', () => {
     const openDialogPromise = topBarTimer.openDialog();
     await flushPromises();
 
-    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.project);
+    expect(client.listProjectTasks).not.toHaveBeenCalled();
     expect(client.listProjectGitHubIssues).not.toHaveBeenCalled();
-    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
-      'some test issue',
-    ]);
 
     projectsRequest.resolve([githubProject]);
     await openDialogPromise;
     await flushPromises();
 
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(1);
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.project);
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledTimes(1);
     expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
       TEST_IDS.project,
       { limit: 30, state: 'open' },
@@ -1472,6 +1481,154 @@ describe('useTopBarTimer', () => {
         severity: 'success',
         summary: 'Timer started',
       }),
+    );
+  });
+
+  it('requests board issues only once a board is chosen, never while listing boards', async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
+    client.listGitHubOwners.mockResolvedValue({
+      items: [
+        {
+          login: 'ITSUA-team',
+          label: 'ITSUA-team',
+          type: 'organization',
+          avatarUrl: null,
+          url: null,
+        },
+      ],
+    });
+    client.listGitHubProjects.mockResolvedValue({
+      items: [
+        {
+          id: 'PVT_board',
+          number: 7,
+          title: 'GiTimpo',
+          owner: 'ITSUA-team',
+          state: 'open',
+          description: null,
+          url: 'https://github.com/orgs/ITSUA-team/projects/7',
+          updatedAt: '2026-04-21T10:00:00.000Z',
+        },
+        {
+          id: 'PVT_board_2',
+          number: 8,
+          title: 'Backlog',
+          owner: 'ITSUA-team',
+          state: 'open',
+          description: null,
+          url: 'https://github.com/orgs/ITSUA-team/projects/8',
+          updatedAt: '2026-04-21T10:00:00.000Z',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 50, nextPageToken: null },
+    });
+    client.listGitHubProjectIssues.mockResolvedValue({
+      items: [],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+      skipped: { pullRequests: 0, draftIssues: 0, redacted: 0, unknown: 0 },
+    });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(topBarTimer.githubProjectOptions.value).toHaveLength(2);
+    expect(client.listGitHubProjectIssues).not.toHaveBeenCalled();
+
+    topBarTimer.setSelectedGitHubProjectId('PVT_board');
+    await flushPromises();
+
+    expect(client.listGitHubProjectIssues).toHaveBeenCalledTimes(1);
+    expect(client.listGitHubProjectIssues).toHaveBeenCalledWith('PVT_board', {
+      limit: 30,
+      state: 'open',
+    });
+  });
+
+  it('keeps the GitHub board cache across a timer start', async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listOwnEntries.mockResolvedValueOnce(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
+    client.listGitHubOwners.mockResolvedValue({
+      items: [
+        {
+          login: 'ITSUA-team',
+          label: 'ITSUA-team',
+          type: 'organization',
+          avatarUrl: null,
+          url: null,
+        },
+      ],
+    });
+    client.listGitHubProjects.mockResolvedValue({
+      items: [
+        {
+          id: 'PVT_board',
+          number: 7,
+          title: 'GiTimpo',
+          owner: 'ITSUA-team',
+          state: 'open',
+          description: null,
+          url: 'https://github.com/orgs/ITSUA-team/projects/7',
+          updatedAt: '2026-04-21T10:00:00.000Z',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 50, nextPageToken: null },
+    });
+    client.listGitHubProjectIssues.mockResolvedValue({
+      items: [],
+      pagination: { hasNextPage: false, limit: 50, nextPageToken: null },
+      skipped: { pullRequests: 0, draftIssues: 0, redacted: 0, unknown: 0 },
+    });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await startTimerFromSeededDialog(topBarTimer);
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.task });
+
+    const ownerCallsBeforeReopen = client.listGitHubOwners.mock.calls.length;
+    const boardCallsBeforeReopen = client.listGitHubProjects.mock.calls.length;
+    const boardIssueCallsBeforeReopen =
+      client.listGitHubProjectIssues.mock.calls.length;
+
+    expect(boardCallsBeforeReopen).toBeGreaterThan(0);
+
+    topBarTimer.closeDialog();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(client.listGitHubOwners).toHaveBeenCalledTimes(ownerCallsBeforeReopen);
+    expect(client.listGitHubProjects).toHaveBeenCalledTimes(boardCallsBeforeReopen);
+    expect(client.listGitHubProjectIssues).toHaveBeenCalledTimes(
+      boardIssueCallsBeforeReopen,
     );
   });
 

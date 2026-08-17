@@ -33,8 +33,6 @@ const {
   githubProjectAvailability,
   githubProjectDraftCount,
   githubProjectOptions,
-  githubProjectRepositories,
-  githubTrackedRepositoryKeys,
   githubProjectsErrorMessage,
   githubProjectsTruncated,
   isLoadingGitHubProjects,
@@ -237,8 +235,6 @@ watch(
     :github-project-availability="githubProjectAvailability"
     :github-project-draft-count="githubProjectDraftCount"
     :github-project-options="githubProjectOptions"
-    :github-project-repositories="githubProjectRepositories"
-    :github-tracked-repository-keys="githubTrackedRepositoryKeys"
     :github-projects-error-message="githubProjectsErrorMessage"
     :github-projects-truncated="githubProjectsTruncated"
     :is-loading-git-hub-projects="isLoadingGitHubProjects"
