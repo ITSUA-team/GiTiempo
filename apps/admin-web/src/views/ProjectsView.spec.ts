@@ -475,6 +475,31 @@ describe('ProjectsView', () => {
     expect(testMocks.successToast).toHaveBeenCalledWith('Legacy Project is now active.');
   });
 
+  it('reports the server-assigned name when unarchiving had to rename the project', async () => {
+    const project = createProject({ isActive: false });
+
+    testMocks.listProjects
+      .mockResolvedValueOnce([project])
+      .mockResolvedValueOnce([]);
+    testMocks.updateProject.mockResolvedValueOnce({
+      ...createProject({ isActive: true }),
+      id: 'project-archived',
+      name: 'Legacy Project (2)',
+    });
+
+    const wrapper = mountProjectsView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="project-edit-unarchive"]').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.successToast).toHaveBeenCalledWith(
+      'Legacy Project is now active as "Legacy Project (2)", because another project already uses the original name.',
+    );
+  });
+
   it('opens project edit expansion, saves settings, refreshes, and collapses', async () => {
     const project = {
       ...createProject(),
