@@ -447,6 +447,35 @@ describe('AddProjectView', () => {
     expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
+  it('shows a name clash under the derived name rather than as a toast', async () => {
+    testMocks.importGitHubProjects.mockResolvedValue({
+      results: [
+        {
+          githubProjectId: 'PVT_Krvn',
+          linkedRepository: null,
+          message:
+            'A project named "Kesher" already exists in this workspace. Rename that project or the GitHub board, then import again.',
+          projectId: null,
+          status: 'name-taken',
+          trackingProject: { id: 'p9', isActive: true, name: 'Kesher' },
+        },
+      ],
+    });
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    await switchToGitHub(wrapper);
+    await wrapper.get('[data-testid="pick-github-project"]').trigger('click');
+    await wrapper.get('[data-testid="submit-project-form"]').trigger('click');
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="github-import-name-conflict"]').text(),
+    ).toContain('already exists in this workspace');
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
+  });
+
   it('surfaces a failed import instead of navigating away', async () => {
     testMocks.importGitHubProjects.mockResolvedValue({
       results: [

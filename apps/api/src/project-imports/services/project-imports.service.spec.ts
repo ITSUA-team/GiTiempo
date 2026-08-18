@@ -15,8 +15,9 @@ interface RecordedInsert {
 
 interface DbStubOptions {
   boardRefWins?: boolean;
+  heldRepositoryRef?: unknown[];
   joinedRows?: unknown[][];
-  repositoryRefWins?: boolean;
+  nameConflict?: unknown[];
   reclaims?: boolean;
 }
 
@@ -27,13 +28,15 @@ function createDbStub(
 ) {
   const {
     boardRefWins = true,
+    heldRepositoryRef = [],
     joinedRows = [],
+    nameConflict = [],
     reclaims = false,
-    repositoryRefWins = true,
   } = options;
   const deletedProjectIds: string[] = [];
 
   const tx = {
+    execute: vi.fn(),
     delete: vi.fn(() => ({
       where: vi.fn(async () => {
         deletedProjectIds.push('project-1');
@@ -43,11 +46,7 @@ function createDbStub(
       values: vi.fn((values: Record<string, unknown>) => {
         inserts.push({ values });
 
-        const isRepositoryRef = values.externalType === 'repository';
-        const isBoardRef = values.externalType === 'project';
-        const lost =
-          (isRepositoryRef && !repositoryRefWins) ||
-          (isBoardRef && !boardRefWins);
+        const lost = values.externalType === 'project' && !boardRefWins;
         const conflict = {
           returning: vi.fn(async () =>
             lost ? [] : [{ projectId: 'project-1' }],
@@ -63,7 +62,16 @@ function createDbStub(
       }),
     })),
     select: vi.fn(() => ({
-      from: vi.fn(() => ({ where: vi.fn(async () => []) })),
+      from: vi.fn(() => ({
+        innerJoin: vi.fn(() => ({
+          where: vi.fn(() => ({
+            orderBy: vi.fn(() => ({
+              limit: vi.fn(async () => heldRepositoryRef),
+            })),
+          })),
+        })),
+        where: vi.fn(() => ({ limit: vi.fn(async () => nameConflict) })),
+      })),
     })),
     update: vi.fn(() => ({
       set: vi.fn(() => ({
@@ -159,6 +167,29 @@ describe('ProjectImportsService GitHub project import', () => {
     });
   });
 
+  it('refuses a board whose derived name an active project already holds', async () => {
+    const db = createDbStub(inserts, [], {
+      nameConflict: [{ id: 'project-9', name: 'approved-org/real board' }],
+    });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [{ githubProjectId: 'PVT_kwDO', githubRepos: [] }],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      projectId: null,
+      status: 'name-taken',
+      trackingProject: {
+        id: 'project-9',
+        isActive: true,
+        name: 'approved-org/real board',
+      },
+    });
+    expect(response.results[0]?.message).toContain('already exists');
+    expect(inserts).toHaveLength(0);
+  });
+
   it('refuses a project whose real owner the workspace has not approved', async () => {
     github.resolveImportableProject.mockRejectedValueOnce(
       new NotFoundException('GitHub project owner could not be verified'),
@@ -239,7 +270,10 @@ describe('ProjectImportsService GitHub project import', () => {
 
   it('ignores an archived project holding the repository', async () => {
     const service = createService(
-      createDbStub(inserts, [], { joinedRows: [] }),
+      createDbStub(inserts, [], {
+        heldRepositoryRef: [{ id: 'ref-1', isActive: false }],
+        joinedRows: [],
+      }),
     );
 
     const response = await service.importGitHubProjects(user, {
@@ -251,10 +285,9 @@ describe('ProjectImportsService GitHub project import', () => {
     expect(response.results[0]?.status).toBe('imported');
   });
 
-  it('reclaims the repository mapping an archived project still holds', async () => {
+  it('transfers a differently cased mapping an archived project still holds', async () => {
     const db = createDbStub(inserts, [], {
-      repositoryRefWins: false,
-      reclaims: true,
+      heldRepositoryRef: [{ id: 'ref-1', isActive: false }],
     });
     const service = createService(db);
 
@@ -269,10 +302,15 @@ describe('ProjectImportsService GitHub project import', () => {
       status: 'imported',
     });
     expect(db.deletedProjectIds).toEqual([]);
+    expect(
+      inserts.filter((row) => row.values.externalType === 'repository'),
+    ).toEqual([]);
   });
 
   it('rolls the project back when the repository is taken mid-write', async () => {
-    const db = createDbStub(inserts, [], { repositoryRefWins: false });
+    const db = createDbStub(inserts, [], {
+      heldRepositoryRef: [{ id: 'ref-1', isActive: true }],
+    });
     const service = createService(db);
 
     const response = await service.importGitHubProjects(user, {

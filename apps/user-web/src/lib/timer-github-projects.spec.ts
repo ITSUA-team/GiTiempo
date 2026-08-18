@@ -5,11 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import {
-  isRepositoryTracked,
   loadGitHubProjectIssues,
-  loadGitHubProjectRepositories,
   loadOrganizationGitHubProjects,
-  toTrackedRepositoryKeySet,
 } from "./timer-github-projects";
 
 function project(
@@ -327,106 +324,3 @@ describe("loadGitHubProjectIssues", () => {
   });
 });
 
-describe("loadGitHubProjectRepositories", () => {
-  it("derives the distinct repositories each board holds", async () => {
-    const listGitHubProjectIssues = vi.fn().mockResolvedValue(
-      issuesResponse([
-        issueItem("ITSUA-team/GiTiempo", 1, "One"),
-        issueItem("ITSUA-team/GiTiempo", 2, "Two"),
-        issueItem("ITSUA-team/.github", 3, "Three"),
-      ]),
-    );
-    const client = clientMock({ listGitHubProjectIssues });
-
-    const result = await loadGitHubProjectRepositories({
-      client,
-      projects: [{ id: "PVT_GiTimpo" }],
-    });
-
-    expect(result["PVT_GiTimpo"]).toEqual({
-      hasMore: false,
-      repositories: ["ITSUA-team/GiTiempo", "ITSUA-team/.github"],
-    });
-  });
-
-  it("reports a board with no linked repository as empty rather than failing", async () => {
-    const client = clientMock({
-      listGitHubProjectIssues: vi
-        .fn()
-        .mockResolvedValue(issuesResponse([], { draftIssues: 3 })),
-    });
-
-    const result = await loadGitHubProjectRepositories({
-      client,
-      projects: [{ id: "PVT_TestProjectWithoutRepository" }],
-    });
-
-    expect(result["PVT_TestProjectWithoutRepository"]).toEqual({
-      hasMore: false,
-      repositories: [],
-    });
-  });
-
-  it("keeps one failing board from breaking the others", async () => {
-    const listGitHubProjectIssues = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("boom"))
-      .mockResolvedValueOnce(
-        issuesResponse([issueItem("ITSUA-team/GiTiempo", 1, "One")]),
-      );
-    const client = clientMock({ listGitHubProjectIssues });
-
-    const result = await loadGitHubProjectRepositories({
-      client,
-      projects: [{ id: "PVT_Broken" }, { id: "PVT_Fine" }],
-    });
-
-    expect(result["PVT_Broken"]?.repositories).toEqual([]);
-    expect(result["PVT_Fine"]?.repositories).toEqual(["ITSUA-team/GiTiempo"]);
-  });
-
-  it("flags boards whose first page did not exhaust the issues", async () => {
-    const client = clientMock({
-      listGitHubProjectIssues: vi
-        .fn()
-        .mockResolvedValue(
-          issuesResponse([issueItem("ITSUA-team/GiTiempo", 1, "One")], {
-            nextPageToken: "next",
-          }),
-        ),
-    });
-
-    const result = await loadGitHubProjectRepositories({
-      client,
-      projects: [{ id: "PVT_GiTimpo" }],
-    });
-
-    expect(result["PVT_GiTimpo"]?.hasMore).toBe(true);
-  });
-});
-
-describe("toTrackedRepositoryKeySet", () => {
-  it("collects owner/repo names from GitHub-backed projects, lowercased", () => {
-    const keys = toTrackedRepositoryKeySet([
-      { name: "ITSUA-team/GiTiempo", source: "github" },
-      { name: "ITSUA-team/.github", source: "github" },
-      { name: "Internal Platform", source: "github" },
-      { name: "octo-org/manual", source: "manual" },
-    ]);
-
-    expect([...keys].sort()).toEqual([
-      "itsua-team/.github",
-      "itsua-team/gitiempo",
-    ]);
-  });
-
-  it("matches a repository regardless of casing", () => {
-    const keys = toTrackedRepositoryKeySet([
-      { name: "ITSUA-team/GiTiempo", source: "github" },
-    ]);
-
-    expect(isRepositoryTracked("itsua-team/gitiempo", keys)).toBe(true);
-    expect(isRepositoryTracked("ITSUA-team/GiTiempo", keys)).toBe(true);
-    expect(isRepositoryTracked("ITSUA-team/other", keys)).toBe(false);
-  });
-});

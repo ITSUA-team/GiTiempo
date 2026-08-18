@@ -1,7 +1,19 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
+import { useQueryClient } from "@tanstack/vue-query";
+import type { ComputedRef } from "vue";
 
-import { appendUnsyncedProjectGitHubIssueOptions } from "@/lib/project-github-issues";
+import {
+  appendUnsyncedProjectGitHubIssueOptions,
+  createProjectGitHubIssuePageFetcher,
+  type ProjectGitHubIssuePageFetcher,
+} from "@/lib/project-github-issues";
+import {
+  timerGithubKeys,
+  userProjectsKeys,
+  type UserServerStateScope,
+} from "@/lib/query-keys";
+import { TIMER_OPTIONS_STALE_TIME } from "@/lib/timer-options-cache";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import {
@@ -13,6 +25,7 @@ import {
 interface UseTimeEntryTaskOptionsOptions {
   client: TimeEntriesClient;
   getProjectById(projectId: string): ProjectResponse | null;
+  scope: ComputedRef<UserServerStateScope>;
 }
 
 interface LoadTaskOptionsOptions {
@@ -40,8 +53,21 @@ interface CachedProjectTaskOptions {
 export function useTimeEntryTaskOptions({
   client,
   getProjectById,
+  scope,
 }: UseTimeEntryTaskOptionsOptions) {
+  const queryClient = useQueryClient();
   const taskCache = new Map<string, CachedProjectTaskOptions>();
+
+  const fetchProjectGitHubIssuePage: ProjectGitHubIssuePageFetcher = (page) =>
+    queryClient.fetchQuery({
+      queryKey: timerGithubKeys.repositoryIssuePage(
+        scope.value,
+        page.projectId,
+        page.pageToken ?? null,
+      ),
+      queryFn: () => createProjectGitHubIssuePageFetcher(client)(page),
+      staleTime: TIMER_OPTIONS_STALE_TIME,
+    });
 
   async function loadProjectTaskOptions(
     projectId: string,
@@ -60,7 +86,11 @@ export function useTimeEntryTaskOptions({
       };
     }
 
-    const localTasks = await client.listProjectTasks(projectId);
+    const localTasks = await queryClient.fetchQuery({
+      queryKey: userProjectsKeys.projectTasks(scope.value, projectId),
+      queryFn: () => client.listProjectTasks(projectId),
+      staleTime: TIMER_OPTIONS_STALE_TIME,
+    });
     const localTaskOptions = buildLocalTaskOptions(localTasks, options.trackableOnly);
     const result = await appendGitHubIssueOptions(
       projectId,
@@ -182,6 +212,7 @@ export function useTimeEntryTaskOptions({
 
     return appendUnsyncedProjectGitHubIssueOptions({
       client,
+      fetchPage: fetchProjectGitHubIssuePage,
       localTaskOptions,
       localTasks,
       mapGitHubIssue(issue) {

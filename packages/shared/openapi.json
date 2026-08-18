@@ -405,6 +405,19 @@
             }
           },
           {
+            "name": "browser",
+            "required": false,
+            "in": "query",
+            "description": "Which browser the `extension` target began in, selecting between destinations the operator configured. An absent or unrecognized value resolves to `chrome`. Ignored for web targets. It names a configured destination rather than supplying one, so the callback still only ever redirects to a URL the server owns.",
+            "schema": {
+              "enum": [
+                "chrome",
+                "firefox"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "name": "redirect",
             "required": false,
             "in": "query",
@@ -5417,11 +5430,36 @@
                   "enum": [
                     "imported",
                     "already-imported",
+                    "repository-taken",
+                    "name-taken",
                     "failed"
                   ]
                 },
                 "message": {
                   "type": "string",
+                  "nullable": true
+                },
+                "trackingProject": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "isActive",
+                    "name"
+                  ],
+                  "default": null,
                   "nullable": true
                 }
               },
@@ -5457,6 +5495,10 @@
                 },
                 "projectIsActive": {
                   "type": "boolean"
+                },
+                "projectName": {
+                  "default": "",
+                  "type": "string"
                 }
               },
               "required": [

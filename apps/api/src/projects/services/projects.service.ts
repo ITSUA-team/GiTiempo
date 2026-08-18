@@ -38,6 +38,13 @@ import { users } from '../../users/schemas/users.schema';
 import { projectAssignments } from '../schemas/project-assignments.schema';
 import { projectExternalRefs } from '../schemas/project-external-refs.schema';
 import { projectRowSelection, projects } from '../schemas/projects.schema';
+import {
+  describeProjectNameConflict,
+  findActiveProjectNameConflict,
+  lockProjectNamespace,
+  resolveAvailableProjectName,
+  type ProjectNameExecutor,
+} from '../project-name-policy';
 
 export type ProjectRow = typeof projects.$inferSelect;
 type ProjectResponseRow = ProjectRow & {
@@ -199,8 +206,6 @@ export class ProjectsService {
       ['admin', 'pm'],
     );
 
-    await this.requireNameAvailable(user.workspaceId, input.name, null);
-
     const createValues = {
       workspaceId: user.workspaceId,
       name: input.name,
@@ -210,34 +215,22 @@ export class ProjectsService {
       defaultBillableForTasks: input.defaultBillableForTasks ?? true,
     };
 
-    if (membership.role === 'admin') {
-      const row = (
-        await this.db.insert(projects).values(createValues).returning()
-      )[0]!;
-      const response = await this.findProjectResponseInWorkspace(
-        user.workspaceId,
-        row.id,
-      );
-      if (!response) {
-        throw DomainError.internal(
-          'project_create_response_missing',
-          'Failed to fetch created project',
-        );
-      }
-      return this.toProjectResponse(response);
-    }
-
     const row = await this.db.transaction(async (tx) => {
+      await lockProjectNamespace(tx, user.workspaceId);
+      await this.requireNameAvailable(tx, user.workspaceId, input.name, null);
+
       const inserted = (
         await tx.insert(projects).values(createValues).returning()
       )[0]!;
 
-      await tx.insert(projectAssignments).values({
-        workspaceId: user.workspaceId,
-        projectId: inserted.id,
-        userId: user.sub,
-        assignedBy: user.sub,
-      });
+      if (membership.role !== 'admin') {
+        await tx.insert(projectAssignments).values({
+          workspaceId: user.workspaceId,
+          projectId: inserted.id,
+          userId: user.sub,
+          assignedBy: user.sub,
+        });
+      }
 
       return inserted;
     });
@@ -279,30 +272,20 @@ export class ProjectsService {
   }
 
   private async requireNameAvailable(
+    executor: ProjectNameExecutor,
     workspaceId: string,
     name: string,
     excludeProjectId: string | null,
   ): Promise<void> {
-    const conditions = [
-      eq(projects.workspaceId, workspaceId),
-      eq(projects.isActive, true),
-      sql`lower(${projects.name}) = lower(${name})`,
-    ];
-
-    if (excludeProjectId !== null) {
-      conditions.push(sql`${projects.id} <> ${excludeProjectId}`);
-    }
-
-    const [taken] = await this.db
-      .select({ name: projects.name })
-      .from(projects)
-      .where(and(...conditions))
-      .limit(1);
+    const taken = await findActiveProjectNameConflict(
+      executor,
+      workspaceId,
+      name,
+      excludeProjectId,
+    );
 
     if (taken) {
-      throw new ConflictException(
-        `A project named "${taken.name}" already exists in this workspace.`,
-      );
+      throw new ConflictException(describeProjectNameConflict(taken.name));
     }
   }
 
@@ -311,43 +294,71 @@ export class ProjectsService {
     projectId: string,
     input: UpdateProjectInput,
   ): Promise<ProjectResponse> {
-    const { role } = await this.requireProjectForUpdate(user, projectId);
-    if (role === 'pm' && input.isActive !== undefined) {
-      throw new ForbiddenException(
-        'Only admins can change project active state',
+    const row = await this.db.transaction(async (tx) => {
+      const { project, role } = await this.requireProjectForUpdate(
+        user,
+        projectId,
+        tx,
       );
-    }
+      if (role === 'pm' && input.isActive !== undefined) {
+        throw new ForbiddenException(
+          'Only admins can change project active state',
+        );
+      }
 
-    if (input.name !== undefined) {
-      await this.requireNameAvailable(user.workspaceId, input.name, projectId);
-    }
+      const isReactivating = input.isActive === true && !project.isActive;
+      let nextName = input.name ?? null;
 
-    const [row] = await this.db
-      .update(projects)
-      .set({
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.description !== undefined
-          ? { description: input.description }
-          : {}),
-        ...(input.color !== undefined ? { color: input.color } : {}),
-        ...(input.visibility !== undefined
-          ? { visibility: input.visibility }
-          : {}),
-        ...(input.defaultBillableForTasks !== undefined
-          ? { defaultBillableForTasks: input.defaultBillableForTasks }
-          : {}),
-        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(projects.id, projectId),
-          eq(projects.workspaceId, user.workspaceId),
-        ),
-      )
-      .returning();
+      if (nextName !== null || isReactivating) {
+        await lockProjectNamespace(tx, user.workspaceId);
+      }
 
-    if (!row) throw new NotFoundException('Project not found');
+      if (nextName !== null) {
+        await this.requireNameAvailable(
+          tx,
+          user.workspaceId,
+          nextName,
+          projectId,
+        );
+      } else if (isReactivating) {
+        const available = await resolveAvailableProjectName(
+          tx,
+          user.workspaceId,
+          project.name,
+        );
+
+        nextName = available === project.name ? null : available;
+      }
+
+      const [updated] = await tx
+        .update(projects)
+        .set({
+          ...(nextName !== null ? { name: nextName } : {}),
+          ...(input.description !== undefined
+            ? { description: input.description }
+            : {}),
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          ...(input.visibility !== undefined
+            ? { visibility: input.visibility }
+            : {}),
+          ...(input.defaultBillableForTasks !== undefined
+            ? { defaultBillableForTasks: input.defaultBillableForTasks }
+            : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(projects.id, projectId),
+            eq(projects.workspaceId, user.workspaceId),
+          ),
+        )
+        .returning();
+
+      if (!updated) throw new NotFoundException('Project not found');
+      return updated;
+    });
+
     const response = await this.findProjectResponseInWorkspace(
       user.workspaceId,
       row.id,

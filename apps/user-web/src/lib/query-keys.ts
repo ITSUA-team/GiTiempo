@@ -77,21 +77,6 @@ export const timerKeys = {
     scope: UserServerStateScope,
     query?: Partial<TimeEntryListQuery>,
   ) => [...timerKeys.all(scope), "eligible-last-entry", normalizeTimeEntryListQuery(query)] as const,
-  githubOwners: (scope: UserServerStateScope) =>
-    [...timerKeys.all(scope), "github-owners"] as const,
-  githubProjects: (scope: UserServerStateScope) =>
-    [...timerKeys.all(scope), "github-projects"] as const,
-  githubProjectRepositories: (scope: UserServerStateScope) =>
-    [...timerKeys.all(scope), "github-project-repositories"] as const,
-  githubProjectIssues: (
-    scope: UserServerStateScope,
-    githubProjectId: string | null | undefined,
-  ) =>
-    [
-      ...timerKeys.all(scope),
-      "github-project-issues",
-      normalizeString(githubProjectId),
-    ] as const,
   projectTaskOptions: (
     scope: UserServerStateScope,
     projectId: string | null | undefined,
@@ -100,6 +85,35 @@ export const timerKeys = {
       ...timerKeys.all(scope),
       "project-task-options",
       normalizeString(projectId),
+    ] as const,
+};
+
+export const timerGithubKeys = {
+  all: (scope?: UserServerStateScope) =>
+    ["user-web", normalizeScope(scope), "top-bar-timer-github"] as const,
+  boardIssues: (
+    scope: UserServerStateScope,
+    githubProjectId: string | null | undefined,
+  ) =>
+    [
+      ...timerGithubKeys.all(scope),
+      "board-issues",
+      normalizeString(githubProjectId),
+    ] as const,
+  boards: (scope: UserServerStateScope) =>
+    [...timerGithubKeys.all(scope), "boards"] as const,
+  owners: (scope: UserServerStateScope) =>
+    [...timerGithubKeys.all(scope), "owners"] as const,
+  repositoryIssuePage: (
+    scope: UserServerStateScope,
+    projectId: string | null | undefined,
+    pageToken: string | null | undefined,
+  ) =>
+    [
+      ...timerGithubKeys.all(scope),
+      "repository-issue-page",
+      normalizeString(projectId),
+      normalizeString(pageToken),
     ] as const,
 };
 

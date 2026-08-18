@@ -62,6 +62,7 @@ const projectForm = ref<{
 
 watch(githubSelection, () => {
   importError.value = null;
+  nameError.value = null;
 });
 
 const sourceOptions = [
@@ -168,6 +169,7 @@ function outcomeFor(form: FormState): string {
 function handleSourceUpdate(value: 'manual' | 'github'): void {
   sourceMode.value = value;
   importError.value = null;
+  nameError.value = null;
   isScanningBoard.value = false;
   githubSelection.value = null;
   projectForm.value?.setFieldValue('name', '');
@@ -221,6 +223,12 @@ async function importSelectedProject(
     importError.value =
       result.message ??
       'That repository is already tracked by another project.';
+    return null;
+  }
+
+  if (result.status === 'name-taken') {
+    nameError.value =
+      result.message ?? 'A project with that name already exists.';
     return null;
   }
 
@@ -376,12 +384,23 @@ onMounted(loadMembers);
                 Project name
               </span>
               <div
-                class="border-divider text-text-dark bg-app-bg flex h-[38px] items-center rounded-[6px] border px-3 text-[14px] font-medium"
+                class="text-text-dark bg-app-bg flex h-[38px] items-center rounded-[6px] border px-3 text-[14px] font-medium"
+                :class="nameError ? 'border-destructive' : 'border-divider'"
                 data-testid="github-import-derived-name"
               >
                 {{ derivedName ?? '—' }}
               </div>
-              <small class="text-text-muted text-xs">
+              <small
+                v-if="nameError"
+                class="text-status-error-text text-xs"
+                data-testid="github-import-name-conflict"
+              >
+                {{ nameError }}
+              </small>
+              <small
+                v-else
+                class="text-text-muted text-xs"
+              >
                 Derived from the organization and the project.
               </small>
             </div>
