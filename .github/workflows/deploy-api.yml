@@ -142,7 +142,10 @@ jobs:
 
       - name: Build API image
         if: env.PREBUILT_IMAGE_TAG == ''
-        run: docker build -f apps/api/Dockerfile -t "${{ steps.image.outputs.image }}" .
+        run: |
+          docker build -f apps/api/Dockerfile \
+            -t "${{ steps.image.outputs.image }}" \
+            -t "${{ steps.image.outputs.image_repo }}:${DEPLOY_ENV}" .
 
       - name: Smoke API image
         env:
@@ -151,7 +154,9 @@ jobs:
 
       - name: Push API image
         if: env.PREBUILT_IMAGE_TAG == ''
-        run: docker push "${{ steps.image.outputs.image }}"
+        run: |
+          docker push "${{ steps.image.outputs.image }}"
+          docker push "${{ steps.image.outputs.image_repo }}:${DEPLOY_ENV}"
 
       - name: Validate deploy environment
         shell: bash
