@@ -7,7 +7,7 @@
 
 - App path: `apps/landing-web`.
 - Stack: Astro, TypeScript, and Tailwind CSS v4.
-- Route: `/`.
+- Routes: `/` and `/privacy`.
 - Output: static by default.
 - Local development URL: `http://localhost:4321`.
 - Port `4321` must be strict so the landing never silently moves onto the user app port `5173` or admin app port `5174`.
@@ -16,6 +16,8 @@
   - `GITiempo Landing Page` — desktop, 1440px.
   - `GITiempo Landing Page — Tablet` — tablet, 768px.
   - `GITiempo Landing Page — Mobile` — mobile, 390px.
+  - `GITiempo Privacy Policy` — desktop, 1440px.
+  - `GITiempo Privacy Policy — Mobile` — mobile, 390px.
 
 ## Origins And Links
 
@@ -27,6 +29,16 @@
 - Treat origins as environment configuration. Do not hard-code staging URLs in Astro components.
 - The canonical URL comes from the configured public landing origin.
 - Links into the user and admin apps remain normal same-tab navigation unless a later approved requirement says otherwise.
+
+## Privacy Policy Route
+
+`/privacy` is a static, crawlable legal page linked from the landing footer and included in the sitemap. It has one `h1`, a skip link supplied by the shared layout, a canonical URL, and no analytics prompt or illustrative timer script.
+
+- The page must identify the data controller and provide a monitored privacy contact email from `PUBLIC_PRIVACY_CONTROLLER_NAME` and `PUBLIC_PRIVACY_CONTACT_EMAIL`. These build-time values are mandatory; do not replace them with example addresses or product-name guesses.
+- Cover service account and time-tracking data, extension session tokens stored in `chrome.storage.local`, and the GitHub repository name plus issue number submitted when a user starts a timer. State the important boundary: an issue title and full page URL may be read locally to recognise the GitHub page but are not part of the timer-start API request.
+- State the service purposes, recipients/categories of providers, retention approach, security limitations, user rights, a policy-update mechanism, and the Chrome Web Store Google API Limited Use disclosure.
+- The compact header links back to `/`; it does not reuse the home-page in-page navigation or app-entry CTAs. Its footer uses the dark landing treatment and marks `Privacy Policy` as the current page.
+- The desktop and mobile Pencil frames are content and hierarchy checkpoints; the mobile page remains one column with readable body copy and visibly separated sections.
 
 ## Analytics Consent
 
@@ -66,6 +78,8 @@ Use one `h1` and preserve this section order:
 6. MVP Scope.
 7. FAQ: `id="faq"`.
 8. Final CTA and footer.
+
+The home footer includes a normal same-tab `Privacy Policy` link before the conditional `Analytics settings` control.
 
 Anchor targets must use scroll margin that clears the header. Navigation labels and targets are:
 

@@ -6,6 +6,9 @@ const URL_NAMES = {
 
 const MEASUREMENT_ID_NAME = 'PUBLIC_GA_MEASUREMENT_ID';
 const MEASUREMENT_ID_PATTERN = /^G-[A-Z0-9]{4,}$/;
+const PRIVACY_CONTROLLER_NAME = 'PUBLIC_PRIVACY_CONTROLLER_NAME';
+const PRIVACY_CONTACT_EMAIL = 'PUBLIC_PRIVACY_CONTACT_EMAIL';
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function parseUrl(name, value, { originOnly = false } = {}) {
   if (!value) {
@@ -30,6 +33,26 @@ function parseUrl(name, value, { originOnly = false } = {}) {
   return url.href;
 }
 
+function parseRequiredText(name, value) {
+  const text = value?.trim();
+
+  if (!text) {
+    throw new Error(`${name} is required.`);
+  }
+
+  return text;
+}
+
+function parseEmail(name, value) {
+  const email = parseRequiredText(name, value);
+
+  if (!EMAIL_PATTERN.test(email)) {
+    throw new Error(`${name} must be a valid email address.`);
+  }
+
+  return email;
+}
+
 export function getPublicConfig(environment) {
   const measurementId = environment.PUBLIC_GA_MEASUREMENT_ID?.trim();
 
@@ -50,5 +73,13 @@ export function getPublicConfig(environment) {
       environment.PUBLIC_ADMIN_APP_URL,
     ),
     analyticsMeasurementId: measurementId || undefined,
+    privacyControllerName: parseRequiredText(
+      PRIVACY_CONTROLLER_NAME,
+      environment.PUBLIC_PRIVACY_CONTROLLER_NAME,
+    ),
+    privacyContactEmail: parseEmail(
+      PRIVACY_CONTACT_EMAIL,
+      environment.PUBLIC_PRIVACY_CONTACT_EMAIL,
+    ),
   };
 }

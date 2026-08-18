@@ -15,7 +15,7 @@ const title = 'GITiempo — Time tracking that fits your workflow';
 const description = 'Track time from GitHub issues or your workspace, keep manual work in context, and make review simpler.';
 ---
 
-<BaseLayout {title} {description} measurementId={config.analyticsMeasurementId}>
+<BaseLayout {title} {description} measurementId={config.analyticsMeasurementId} enableIllustrativeTimer>
   <Navigation userAppUrl={config.userAppUrl} />
   <main id="main-content">
     <Hero userAppUrl={config.userAppUrl} adminAppUrl={config.adminAppUrl} />
