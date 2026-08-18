@@ -3,7 +3,7 @@ name: Deploy frontend production
 on:
   push:
     branches:
-      - main
+      - production
     paths:
       - apps/user-web/**
       - apps/admin-web/**

@@ -3,7 +3,7 @@ name: Deploy landing production
 on:
   push:
     branches:
-      - main
+      - production
     paths:
       - apps/landing-web/**
       - packages/web-config/**
