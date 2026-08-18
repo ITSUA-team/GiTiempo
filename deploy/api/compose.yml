@@ -53,10 +53,20 @@ services:
       start_period: 20s
     networks:
       - api-internal
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gitiempo-api.rule=Host(`${API_DOMAIN:?API_DOMAIN is required}`)"
+      - "traefik.http.routers.gitiempo-api.entrypoints=websecure"
+      - "traefik.http.routers.gitiempo-api.tls=true"
+      - "traefik.http.routers.gitiempo-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.gitiempo-api.loadbalancer.server.port=3000"
 
 networks:
   api-internal:
     driver: bridge
+  web:
+    external: true
 
 volumes:
   postgres_data:
