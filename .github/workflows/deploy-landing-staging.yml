@@ -76,6 +76,11 @@ jobs:
           run-api-e2e: 'false'
           run-browser: 'true'
 
+      # Browser analytics checks intentionally rebuild dist with a test GA ID.
+      # Recreate the deploy artifact with this environment's public values.
+      - name: Rebuild landing-web staging assets
+        run: pnpm --filter landing-web build
+
       - name: Deploy landing-web to Cloudflare Workers staging
         working-directory: apps/landing-web
         env:
