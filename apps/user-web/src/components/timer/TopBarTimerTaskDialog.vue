@@ -20,17 +20,10 @@ import {
 } from "@/lib/inline-new-task";
 import type { GitHubProjectAvailability } from "@/lib/timer-github-projects";
 
-interface GitHubProjectRepositoryBadge {
-  fullName: string;
-  isTracked: boolean;
-}
-
 interface GitHubProjectPickerOption {
-  hasMoreRepositories: boolean;
   id: string;
   isGitHubProjectOption: true;
   name: string;
-  repositoryBadges: GitHubProjectRepositoryBadge[];
 }
 
 type ProjectPickerOption = GitHubProjectPickerOption | ProjectResponse;
@@ -58,11 +51,6 @@ const props = defineProps<{
   githubProjectAvailability: GitHubProjectAvailability;
   githubProjectDraftCount: number;
   githubProjectOptions: { id: string; title: string }[];
-  githubProjectRepositories: Record<
-    string,
-    { hasMore: boolean; repositories: string[] }
-  >;
-  githubTrackedRepositoryKeys: Set<string>;
   githubProjectsErrorMessage: string | null;
   githubProjectsTruncated: boolean;
   isLoadingGitHubProjects: boolean;
@@ -140,22 +128,11 @@ const mobileProjectModel = shallowRef<ProjectAutoCompleteValue>(null);
 const mobileTaskModel = shallowRef<TaskAutoCompleteValue>(null);
 const projectSuggestions = shallowRef<ProjectOptionGroup[]>([]);
 const githubProjectPickerOptions = computed<GitHubProjectPickerOption[]>(() =>
-  props.githubProjectOptions.map((board) => {
-    const summary = props.githubProjectRepositories[board.id];
-
-    return {
-      hasMoreRepositories: summary?.hasMore ?? false,
-      id: board.id,
-      isGitHubProjectOption: true as const,
-      name: board.title,
-      repositoryBadges: (summary?.repositories ?? []).map((fullName) => ({
-        fullName,
-        isTracked: props.githubTrackedRepositoryKeys.has(
-          fullName.toLowerCase(),
-        ),
-      })),
-    };
-  }),
+  props.githubProjectOptions.map((board) => ({
+    id: board.id,
+    isGitHubProjectOption: true as const,
+    name: board.title,
+  })),
 );
 const allProjectPickerOptions = computed<ProjectPickerOption[]>(() => [
   ...props.projectOptions,
@@ -505,48 +482,7 @@ watch(
               :suggestions="projectSuggestions"
               @complete="handleProjectComplete"
               @update:model-value="handleMobileProjectUpdate"
-            >
-              <template #option="slotProps">
-                <div class="flex min-w-0 flex-col gap-1 py-0.5">
-                  <span class="truncate">{{ slotProps.option.name }}</span>
-                  <span
-                    v-if="isGitHubProjectPickerOption(slotProps.option)"
-                    class="flex flex-wrap items-center gap-1"
-                    data-testid="top-bar-timer-board-repositories"
-                  >
-                    <span
-                      v-for="badge in slotProps.option.repositoryBadges"
-                      :key="badge.fullName"
-                      class="inline-flex items-center gap-1 rounded-sm border px-1.5 py-px text-[11px] leading-4"
-                      :class="
-                        badge.isTracked
-                          ? 'border-primary/40 bg-primary/10 text-primary'
-                          : 'border-surface-300 text-text-muted'
-                      "
-                      :data-tracked="badge.isTracked ? 'true' : 'false'"
-                    >
-                      {{ badge.fullName }}
-                      <span
-                        v-if="badge.isTracked"
-                        aria-hidden="true"
-                      >&#10003;</span>
-                    </span>
-                    <span
-                      v-if="slotProps.option.repositoryBadges.length === 0"
-                      class="text-text-muted text-[11px] leading-4"
-                    >
-                      No linked repository
-                    </span>
-                    <span
-                      v-else-if="slotProps.option.hasMoreRepositories"
-                      class="text-text-muted text-[11px] leading-4"
-                    >
-                      and more
-                    </span>
-                  </span>
-                </div>
-              </template>
-            </AutoComplete>
+            />
           </div>
         </div>
 
