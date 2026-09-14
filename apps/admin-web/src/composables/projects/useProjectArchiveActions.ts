@@ -72,10 +72,14 @@ export function useProjectArchiveActions({
     }
 
     try {
-      await client.updateProject(project.id, {
+      const updated = await client.updateProject(project.id, {
         isActive: true,
       });
-      onSuccess(`${project.name} is now active.`);
+      onSuccess(
+        updated.name === project.name
+          ? `${project.name} is now active.`
+          : `${project.name} is now active as "${updated.name}", because another project already uses the original name.`,
+      );
       collapseProjectRow(project);
       await refreshProjects();
     } catch (error) {

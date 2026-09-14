@@ -61,9 +61,6 @@ export function useTopBarTaskPicker() {
   const githubProjectsErrorMessage = ref<string | null>(null);
   const githubProjectsTruncated = ref(false);
   const githubProjectDraftCount = ref(0);
-  const githubProjectRepositories = ref<
-    Record<string, { hasMore: boolean; repositories: string[] }>
-  >({});
   const projectsErrorMessage = ref<string | null>(null);
   const tasksErrorMessage = ref<string | null>(null);
   const createTaskErrorMessage = ref<string | null>(null);
@@ -181,12 +178,6 @@ export function useTopBarTaskPicker() {
     githubProjectDraftCount.value = count;
   }
 
-  function setGitHubProjectRepositories(
-    next: Record<string, { hasMore: boolean; repositories: string[] }>,
-  ): void {
-    githubProjectRepositories.value = next;
-  }
-
   function setSelectedTaskId(taskId: string | null): void {
     selectedTaskId.value = taskId;
   }
@@ -280,7 +271,6 @@ export function useTopBarTaskPicker() {
     activeTasks,
     githubProjectAvailability,
     githubProjectDraftCount,
-    githubProjectRepositories,
     githubProjects,
     githubProjectsErrorMessage,
     githubProjectsTruncated,
@@ -288,7 +278,6 @@ export function useTopBarTaskPicker() {
     selectedGitHubProjectId,
     setGitHubProjectAvailability,
     setGitHubProjectDraftCount,
-    setGitHubProjectRepositories,
     setGitHubProjects,
     setGitHubProjectsError,
     setGitHubProjectsTruncated,

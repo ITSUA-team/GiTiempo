@@ -29,14 +29,31 @@ export interface AppendedProjectTaskOptionsResult<TTaskOption> {
   taskOptions: TTaskOption[];
 }
 
+export type ProjectGitHubIssuePageFetcher = (input: {
+  pageToken: string | undefined;
+  projectId: string;
+}) => Promise<GitHubRepositoryIssueListResponse>;
+
 interface AppendUnsyncedProjectGitHubIssueOptionsInput<TTaskOption> {
   client: TimeEntriesClient;
+  fetchPage?: ProjectGitHubIssuePageFetcher;
   knownSyncedGitHubIssues?: SyncedGitHubIssue[];
   localTaskOptions: TTaskOption[];
   localTasks: TaskResponse[];
   hasKnownGitHubIssueSource?: boolean;
   project: Pick<ProjectResponse, "id" | "source"> | null;
   mapGitHubIssue(issue: UnsyncedProjectGitHubIssue): TTaskOption;
+}
+
+export function createProjectGitHubIssuePageFetcher(
+  client: TimeEntriesClient,
+): ProjectGitHubIssuePageFetcher {
+  return ({ pageToken, projectId }) =>
+    client.listProjectGitHubIssues(projectId, {
+      limit: PROJECT_GITHUB_ISSUE_PAGE_SIZE,
+      ...(pageToken ? { pageToken } : {}),
+      state: "open",
+    });
 }
 
 export function supportsProjectGitHubIssueSuggestions(
@@ -52,10 +69,14 @@ export function supportsProjectGitHubIssueSuggestions(
 
 export async function loadUnsyncedProjectGitHubIssues(input: {
   client: TimeEntriesClient;
+  fetchPage?: ProjectGitHubIssuePageFetcher;
   knownSyncedGitHubIssues?: SyncedGitHubIssue[];
   localTasks: TaskResponse[];
   projectId: string;
 }): Promise<UnsyncedProjectGitHubIssueResult> {
+  const fetchPage =
+    input.fetchPage ?? createProjectGitHubIssuePageFetcher(input.client);
+
   try {
     const issues: UnsyncedProjectGitHubIssue[] = [];
     const syncedLocalIssues = new Set(
@@ -70,14 +91,10 @@ export async function loadUnsyncedProjectGitHubIssues(input: {
     let pagesLoaded = 0;
 
     do {
-      const response = await input.client.listProjectGitHubIssues(
-        input.projectId,
-        {
-          limit: PROJECT_GITHUB_ISSUE_PAGE_SIZE,
-          ...(pageToken ? { pageToken } : {}),
-          state: "open",
-        },
-      );
+      const response = await fetchPage({
+        pageToken,
+        projectId: input.projectId,
+      });
 
       for (const issue of response.items) {
         const issueKey = toRepositoryIssueKey(issue);
@@ -136,6 +153,7 @@ export async function appendUnsyncedProjectGitHubIssueOptions<TTaskOption>(
 
   const { errorMessage, issues } = await loadUnsyncedProjectGitHubIssues({
     client: input.client,
+    ...(input.fetchPage ? { fetchPage: input.fetchPage } : {}),
     knownSyncedGitHubIssues: input.knownSyncedGitHubIssues,
     localTasks: input.localTasks,
     projectId: project.id,

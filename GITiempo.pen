@@ -39631,6 +39631,16 @@
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "privacyFooterDesktop",
+                  "name": "Privacy Policy Link",
+                  "fill": "$color-accent",
+                  "content": "Privacy Policy",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "600"
                 }
               ]
             }
@@ -42158,6 +42168,16 @@
                   "fontFamily": "$font-sans",
                   "fontSize": 12,
                   "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "privacyFooterTablet",
+                  "name": "Privacy Policy Link",
+                  "fill": "$color-accent",
+                  "content": "Privacy Policy",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
                 }
               ]
             }
@@ -44311,6 +44331,16 @@
                   "fontFamily": "$font-sans",
                   "fontSize": 12,
                   "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "privacyFooterMobile",
+                  "name": "Privacy Policy Link",
+                  "fill": "$color-accent",
+                  "content": "Privacy Policy",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
                 }
               ]
             }
@@ -48335,6 +48365,124 @@
                 }
               ]
             }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "privacyPolicyDesktop",
+      "x": 3000,
+      "y": 9600,
+      "name": "GITiempo Privacy Policy",
+      "clip": true,
+      "width": 1440,
+      "height": 1080,
+      "fill": "$color-surface",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "privacyPolicyDesktopHeader",
+          "width": "fill_container",
+          "height": 84,
+          "fill": "#1A1A1A",
+          "padding": [0, 88],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {"type": "text", "id": "privacyPolicyDesktopBrand", "fill": "#FFFFFF", "content": "GITiempo", "fontFamily": "$font-sans", "fontSize": 18, "fontWeight": "700"},
+            {"type": "text", "id": "privacyPolicyDesktopHome", "fill": "$color-accent", "content": "Back to home", "fontFamily": "$font-sans", "fontSize": 14, "fontWeight": "700"}
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "privacyPolicyDesktopContent",
+          "width": "fill_container",
+          "height": 900,
+          "layout": "vertical",
+          "gap": 20,
+          "padding": [64, 240],
+          "children": [
+            {"type": "text", "id": "privacyPolicyDesktopEyebrow", "fill": "$color-brand", "content": "●  LEGAL", "fontFamily": "$font-mono", "fontSize": 12, "fontWeight": "700", "letterSpacing": 1.2},
+            {"type": "text", "id": "privacyPolicyDesktopTitle", "fill": "$color-text-dark", "content": "Privacy Policy", "fontFamily": "$font-sans", "fontSize": 50, "fontWeight": "700", "letterSpacing": -2.2},
+            {"type": "text", "id": "privacyPolicyDesktopIntro", "fill": "$color-text-muted", "textGrowth": "fixed-width", "width": 760, "content": "How GITiempo handles personal data in the service and Chrome extension.", "fontFamily": "$font-sans", "fontSize": 18, "fontWeight": "normal", "lineHeight": 1.5},
+            {"type": "text", "id": "privacyPolicyDesktopUpdated", "fill": "$color-text-muted", "content": "Last updated: 18 August 2026", "fontFamily": "$font-sans", "fontSize": 14, "fontWeight": "normal"},
+            {"type": "frame", "id": "privacyPolicyDesktopRule", "width": "fill_container", "height": 1, "fill": "$color-divider"},
+            {"type": "text", "id": "privacyPolicyDesktopSections", "fill": "$color-text-dark", "textGrowth": "fixed-width", "width": "fill_container", "content": "1. Controller and contact\n\n2. Information we process\nAccount, service records, local extension session, and GitHub issue context.\n\n3. How we use information\n\n4. Sharing and Google services\n\n5. Retention and security\n\n6. Your choices and rights\n\n7. Changes to this policy", "fontFamily": "$font-sans", "fontSize": 16, "fontWeight": "normal", "lineHeight": 1.48}
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "privacyPolicyDesktopFooter",
+          "width": "fill_container",
+          "height": 96,
+          "fill": "#1A1A1A",
+          "padding": [0, 88],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {"type": "text", "id": "privacyPolicyDesktopFooterBrand", "fill": "#FFFFFF", "content": "GITiempo", "fontFamily": "$font-sans", "fontSize": 13, "fontWeight": "700"},
+            {"type": "text", "id": "privacyPolicyDesktopFooterCurrent", "fill": "$color-accent", "content": "Privacy Policy", "fontFamily": "$font-sans", "fontSize": 12, "fontWeight": "600"}
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "privacyPolicyMobile",
+      "x": 4600,
+      "y": 9600,
+      "name": "GITiempo Privacy Policy — Mobile",
+      "clip": true,
+      "width": 390,
+      "height": 1280,
+      "fill": "$color-surface",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "privacyPolicyMobileHeader",
+          "width": "fill_container",
+          "height": 72,
+          "fill": "#1A1A1A",
+          "padding": [0, 24],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {"type": "text", "id": "privacyPolicyMobileBrand", "fill": "#FFFFFF", "content": "GITiempo", "fontFamily": "$font-sans", "fontSize": 16, "fontWeight": "700"},
+            {"type": "text", "id": "privacyPolicyMobileHome", "fill": "$color-accent", "content": "Home", "fontFamily": "$font-sans", "fontSize": 14, "fontWeight": "700"}
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "privacyPolicyMobileContent",
+          "width": "fill_container",
+          "height": 1112,
+          "layout": "vertical",
+          "gap": 18,
+          "padding": [40, 24],
+          "children": [
+            {"type": "text", "id": "privacyPolicyMobileEyebrow", "fill": "$color-brand", "content": "●  LEGAL", "fontFamily": "$font-mono", "fontSize": 11, "fontWeight": "700", "letterSpacing": 1.1},
+            {"type": "text", "id": "privacyPolicyMobileTitle", "fill": "$color-text-dark", "content": "Privacy Policy", "fontFamily": "$font-sans", "fontSize": 38, "fontWeight": "700", "letterSpacing": -1.5},
+            {"type": "text", "id": "privacyPolicyMobileIntro", "fill": "$color-text-muted", "textGrowth": "fixed-width", "width": "fill_container", "content": "How GITiempo handles personal data in the service and Chrome extension.", "fontFamily": "$font-sans", "fontSize": 16, "fontWeight": "normal", "lineHeight": 1.5},
+            {"type": "text", "id": "privacyPolicyMobileUpdated", "fill": "$color-text-muted", "content": "Last updated: 18 August 2026", "fontFamily": "$font-sans", "fontSize": 13, "fontWeight": "normal"},
+            {"type": "frame", "id": "privacyPolicyMobileRule", "width": "fill_container", "height": 1, "fill": "$color-divider"},
+            {"type": "text", "id": "privacyPolicyMobileSections", "fill": "$color-text-dark", "textGrowth": "fixed-width", "width": "fill_container", "content": "1. Controller and contact\n\n2. Information we process\nAccount, service records, local extension session, and GitHub issue context.\n\n3. How we use information\n\n4. Sharing and Google services\n\n5. Retention and security\n\n6. Your choices and rights\n\n7. Changes to this policy", "fontFamily": "$font-sans", "fontSize": 15, "fontWeight": "normal", "lineHeight": 1.5}
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "privacyPolicyMobileFooter",
+          "width": "fill_container",
+          "height": 96,
+          "fill": "#1A1A1A",
+          "padding": [0, 24],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {"type": "text", "id": "privacyPolicyMobileFooterBrand", "fill": "#FFFFFF", "content": "GITiempo", "fontFamily": "$font-sans", "fontSize": 13, "fontWeight": "700"},
+            {"type": "text", "id": "privacyPolicyMobileFooterCurrent", "fill": "$color-accent", "content": "Privacy Policy", "fontFamily": "$font-sans", "fontSize": 12, "fontWeight": "600"}
           ]
         }
       ]

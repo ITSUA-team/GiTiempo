@@ -3,7 +3,7 @@ name: Deploy landing production
 on:
   push:
     branches:
-      - main
+      - production
     paths:
       - apps/landing-web/**
       - packages/web-config/**
@@ -41,6 +41,8 @@ jobs:
       PUBLIC_ADMIN_APP_URL: ${{ vars.PUBLIC_ADMIN_APP_URL }}
       # Optional GA4 Measurement ID; leave blank to keep landing analytics disabled.
       PUBLIC_GA_MEASUREMENT_ID: ${{ vars.PUBLIC_GA_MEASUREMENT_ID }}
+      PUBLIC_PRIVACY_CONTROLLER_NAME: ${{ vars.PUBLIC_PRIVACY_CONTROLLER_NAME }}
+      PUBLIC_PRIVACY_CONTACT_EMAIL: ${{ vars.PUBLIC_PRIVACY_CONTACT_EMAIL }}
 
     steps:
       - name: Check out repository
@@ -68,6 +70,8 @@ jobs:
           require_env PUBLIC_SITE_URL
           require_env PUBLIC_USER_APP_URL
           require_env PUBLIC_ADMIN_APP_URL
+          require_env PUBLIC_PRIVACY_CONTROLLER_NAME
+          require_env PUBLIC_PRIVACY_CONTACT_EMAIL
 
       - name: Run landing-web checks
         uses: ./.github/actions/workspace-check

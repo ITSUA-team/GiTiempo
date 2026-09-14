@@ -184,6 +184,7 @@ export const importedGitHubProjectSchema = z.object({
     "imported",
     "already-imported",
     "repository-taken",
+    "name-taken",
     "failed",
   ]),
   message: z.string().nullable(),

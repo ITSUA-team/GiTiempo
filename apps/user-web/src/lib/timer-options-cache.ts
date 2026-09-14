@@ -1,11 +1,8 @@
 import type { QueryClient } from "@tanstack/vue-query";
 
+import { loadOrganizationGitHubProjects } from "@/lib/timer-github-projects";
 import {
-  loadGitHubProjectRepositories,
-  loadOrganizationGitHubProjects,
-} from "@/lib/timer-github-projects";
-import {
-  timerKeys,
+  timerGithubKeys,
   userProjectsKeys,
   type UserServerStateScope,
 } from "@/lib/query-keys";
@@ -30,24 +27,11 @@ export async function prefetchTimerOptions({
     staleTime: TIMER_OPTIONS_STALE_TIME,
   });
 
-  const githubProjects = queryClient
-    .fetchQuery({
-      queryKey: timerKeys.githubProjects(scope),
-      queryFn: () => loadOrganizationGitHubProjects({ client }),
-      staleTime: TIMER_OPTIONS_STALE_TIME,
-    })
-    .then(async (result) => {
-      if (result.projects.length === 0) {
-        return;
-      }
-
-      await queryClient.prefetchQuery({
-        queryKey: timerKeys.githubProjectRepositories(scope),
-        queryFn: () =>
-          loadGitHubProjectRepositories({ client, projects: result.projects }),
-        staleTime: TIMER_OPTIONS_STALE_TIME,
-      });
-    });
+  const githubProjects = queryClient.prefetchQuery({
+    queryKey: timerGithubKeys.boards(scope),
+    queryFn: () => loadOrganizationGitHubProjects({ client }),
+    staleTime: TIMER_OPTIONS_STALE_TIME,
+  });
 
   await Promise.allSettled([projects, githubProjects]);
 }
