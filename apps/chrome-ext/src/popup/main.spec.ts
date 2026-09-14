@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getExtensionConfig } from "@/lib/config";
 import type { PageContext } from "@/lib/github-context";
 import type {
   RuntimeAuthResult,
@@ -383,7 +384,7 @@ describe("popup app", () => {
       ).toEqual(["Open profile", "Sign out"]);
       expect(
         menu.querySelector<HTMLAnchorElement>('[data-action="open-profile"]')?.href,
-      ).toBe("http://localhost:5173/profile");
+      ).toBe(getExtensionConfig().userSpaProfileUrl);
       // The header action the menu sits beside stays reachable.
       expect(document.querySelector('[aria-label="Open GiTiempo dashboard"]')).not.toBeNull();
     });

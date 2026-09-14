@@ -42,7 +42,12 @@ function setViewport(commands, width, height) {
 }
 
 run('pnpm', ['build'], {
-  env: { ...process.env, PUBLIC_GA_MEASUREMENT_ID: 'G-TEST1234' },
+  env: {
+    ...process.env,
+    PUBLIC_GA_MEASUREMENT_ID: 'G-TEST1234',
+    PUBLIC_PRIVACY_CONTROLLER_NAME: 'GiTiempo browser test',
+    PUBLIC_PRIVACY_CONTACT_EMAIL: 'privacy-browser-test@example.invalid',
+  },
 });
 
 const preview = await startStaticPreview();
