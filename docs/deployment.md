@@ -72,6 +72,8 @@ Landing-only changes do not enter the two-SPA deployment matrix. The landing wor
 
 Before publishing or updating the extension, deploy the landing with its real production privacy controller and contact values, then use `https://gitiempo.com/privacy` as the Chrome Web Store Dashboard privacy-policy URL. Verify that the page is public without sign-in, appears in `sitemap-index.xml`, and matches the Dashboard privacy disclosures and the extension’s actual permissions and data flow. Legal review must confirm the controller identity, retention period, processor/recipient wording, international-transfer wording where applicable, and the current effective date before the first production submission.
 
+The package-specific [Chrome Web Store privacy and release checklist](chrome-web-store-privacy.md) is the required record for the final package hash, permission/host and remote-code inspection, candidate data categories, publisher certifications, and Dashboard review. It deliberately distinguishes source-derived facts from publisher-confirmed and Dashboard-verified values.
+
 Each deployment workflow runs lint/typecheck/tests/build for its affected app before deployment. Shared frontend package changes deploy both SPAs after both app gates pass.
 
 Implementation and local verification do not invoke a live deployment; publishing occurs only through an authorized GitHub Actions staging workflow run.

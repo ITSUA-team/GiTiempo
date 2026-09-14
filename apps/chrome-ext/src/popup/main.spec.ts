@@ -55,6 +55,7 @@ function createRuntimeClient(overrides?: {
   signInWithGithub?: RuntimeClient["signInWithGithub"];
   signInWithGoogle?: RuntimeClient["signInWithGoogle"];
   signOut?: RuntimeClient["signOut"];
+  retryProviderCleanup?: RuntimeClient["retryProviderCleanup"];
   snapshot?: RuntimeSnapshot;
   startTimer?: RuntimeClient["startTimer"];
   stopTimer?: RuntimeClient["stopTimer"];
@@ -86,6 +87,12 @@ function createRuntimeClient(overrides?: {
       })),
     signOut:
       overrides?.signOut ??
+      vi.fn(async (): Promise<RuntimeAuthResult> => ({
+        ok: true,
+        snapshot: { authenticated: false, currentTimer: null, errorMessage: null, user: null },
+      })),
+    retryProviderCleanup:
+      overrides?.retryProviderCleanup ??
       vi.fn(async (): Promise<RuntimeAuthResult> => ({
         ok: true,
         snapshot: { authenticated: false, currentTimer: null, errorMessage: null, user: null },
@@ -500,6 +507,52 @@ describe("popup app", () => {
 
       expect(signOut).toHaveBeenCalledOnce();
       expect(document.querySelector('[data-testid="popup-account-menu"]')).toBeNull();
+      expect(document.body.textContent).toContain("Continue with Google");
+    });
+
+    it("retries pending provider cleanup from the unauthenticated popup without a new login", async () => {
+      const retryProviderCleanup = vi.fn(async () => ({
+        ok: true,
+        snapshot: {
+          authenticated: false,
+          currentTimer: null,
+          errorMessage: null,
+          providerCleanupPending: false,
+          user: null,
+        },
+      }));
+      const app = createPopupApp({
+        root: document.querySelector<HTMLElement>("#app")!,
+        runtimeClient: createRuntimeClient({
+          retryProviderCleanup,
+          snapshot: {
+            authenticated: false,
+            currentTimer: null,
+            errorMessage: null,
+            providerCleanupPending: true,
+            user: null,
+          },
+        }),
+        pageContextResolver: async () => ({ kind: "unsupported" }),
+      });
+
+      await app.load();
+
+      expect(document.body.textContent).toContain("Sign-out incomplete");
+      expect(document.body.textContent).toContain(
+        "Your GiTiempo session ended. Retry to clear remaining sign-in data.",
+      );
+      expect(document.body.textContent).not.toContain("Continue with Google");
+      expect(document.querySelector('[data-testid="popup-user-avatar"]')).toBeNull();
+      expect(document.querySelector('[aria-label="Open GiTiempo dashboard"]')).not.toBeNull();
+      document
+        .querySelector<HTMLButtonElement>('[data-action="retry-sign-out"]')!
+        .click();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(retryProviderCleanup).toHaveBeenCalledOnce();
+      expect(document.querySelector('[data-action="retry-sign-out"]')).toBeNull();
       expect(document.body.textContent).toContain("Continue with Google");
     });
 

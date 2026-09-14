@@ -39636,7 +39636,7 @@
                   "type": "text",
                   "id": "privacyFooterDesktop",
                   "name": "Privacy Policy Link",
-                  "fill": "$color-accent",
+                  "fill": "#000000",
                   "content": "Privacy Policy",
                   "fontFamily": "Inter",
                   "fontSize": 12,
@@ -39944,7 +39944,10 @@
           "strokeAlignment": "inner",
           "layout": "vertical",
           "gap": 12,
-          "padding": [16, 18],
+          "padding": [
+            16,
+            18
+          ],
           "children": [
             {
               "type": "text",
@@ -42173,7 +42176,7 @@
                   "type": "text",
                   "id": "privacyFooterTablet",
                   "name": "Privacy Policy Link",
-                  "fill": "$color-accent",
+                  "fill": "#000000",
                   "content": "Privacy Policy",
                   "fontFamily": "$font-sans",
                   "fontSize": 12,
@@ -42195,7 +42198,10 @@
           "strokeAlignment": "inner",
           "layout": "vertical",
           "gap": 12,
-          "padding": [16, 32],
+          "padding": [
+            16,
+            32
+          ],
           "children": [
             {
               "type": "text",
@@ -44336,7 +44342,7 @@
                   "type": "text",
                   "id": "privacyFooterMobile",
                   "name": "Privacy Policy Link",
-                  "fill": "$color-accent",
+                  "fill": "#000000",
                   "content": "Privacy Policy",
                   "fontFamily": "$font-sans",
                   "fontSize": 12,
@@ -44358,7 +44364,10 @@
           "strokeAlignment": "inner",
           "layout": "vertical",
           "gap": 12,
-          "padding": [16, 24],
+          "padding": [
+            16,
+            24
+          ],
           "children": [
             {
               "type": "text",
@@ -48387,12 +48396,31 @@
           "width": "fill_container",
           "height": 84,
           "fill": "#1A1A1A",
-          "padding": [0, 88],
+          "padding": [
+            0,
+            88
+          ],
           "justifyContent": "space_between",
           "alignItems": "center",
           "children": [
-            {"type": "text", "id": "privacyPolicyDesktopBrand", "fill": "#FFFFFF", "content": "GITiempo", "fontFamily": "$font-sans", "fontSize": 18, "fontWeight": "700"},
-            {"type": "text", "id": "privacyPolicyDesktopHome", "fill": "$color-accent", "content": "Back to home", "fontFamily": "$font-sans", "fontSize": 14, "fontWeight": "700"}
+            {
+              "type": "text",
+              "id": "privacyPolicyDesktopBrand",
+              "fill": "#FFFFFF",
+              "content": "GITiempo",
+              "fontFamily": "$font-sans",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyDesktopHome",
+              "fill": "#000000",
+              "content": "Back to home",
+              "fontFamily": "$font-sans",
+              "fontSize": 14,
+              "fontWeight": "700"
+            }
           ]
         },
         {
@@ -48402,14 +48430,71 @@
           "height": 900,
           "layout": "vertical",
           "gap": 20,
-          "padding": [64, 240],
+          "padding": [
+            64,
+            240
+          ],
           "children": [
-            {"type": "text", "id": "privacyPolicyDesktopEyebrow", "fill": "$color-brand", "content": "●  LEGAL", "fontFamily": "$font-mono", "fontSize": 12, "fontWeight": "700", "letterSpacing": 1.2},
-            {"type": "text", "id": "privacyPolicyDesktopTitle", "fill": "$color-text-dark", "content": "Privacy Policy", "fontFamily": "$font-sans", "fontSize": 50, "fontWeight": "700", "letterSpacing": -2.2},
-            {"type": "text", "id": "privacyPolicyDesktopIntro", "fill": "$color-text-muted", "textGrowth": "fixed-width", "width": 760, "content": "How GITiempo handles personal data in the service and Chrome extension.", "fontFamily": "$font-sans", "fontSize": 18, "fontWeight": "normal", "lineHeight": 1.5},
-            {"type": "text", "id": "privacyPolicyDesktopUpdated", "fill": "$color-text-muted", "content": "Last updated: 18 August 2026", "fontFamily": "$font-sans", "fontSize": 14, "fontWeight": "normal"},
-            {"type": "frame", "id": "privacyPolicyDesktopRule", "width": "fill_container", "height": 1, "fill": "$color-divider"},
-            {"type": "text", "id": "privacyPolicyDesktopSections", "fill": "$color-text-dark", "textGrowth": "fixed-width", "width": "fill_container", "content": "1. Controller and contact\n\n2. Information we process\nAccount, service records, local extension session, and GitHub issue context.\n\n3. How we use information\n\n4. Sharing and Google services\n\n5. Retention and security\n\n6. Your choices and rights\n\n7. Changes to this policy", "fontFamily": "$font-sans", "fontSize": 16, "fontWeight": "normal", "lineHeight": 1.48}
+            {
+              "type": "text",
+              "id": "privacyPolicyDesktopEyebrow",
+              "fill": "$color-brand",
+              "content": "●  LEGAL",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "700",
+              "letterSpacing": 1.2
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyDesktopTitle",
+              "fill": "$color-text-dark",
+              "content": "Privacy Policy",
+              "fontFamily": "$font-sans",
+              "fontSize": 50,
+              "fontWeight": "700",
+              "letterSpacing": -2.2
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyDesktopIntro",
+              "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": 760,
+              "content": "How GITiempo handles personal data in the service and Chrome extension.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-sans",
+              "fontSize": 18,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyDesktopUpdated",
+              "fill": "$color-text-muted",
+              "content": "Last updated: 18 August 2026",
+              "fontFamily": "$font-sans",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "privacyPolicyDesktopRule",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "$color-divider"
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyDesktopSections",
+              "fill": "$color-text-dark",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "1. Controller and contact\n\n2. Information we process\nAccount, service records, local extension session, and GitHub issue context.\n\n3. How we use information\n\n4. Sharing and Google services\n\n5. Retention and security\n\n6. Your choices and rights\n\n7. Changes to this policy",
+              "lineHeight": 1.48,
+              "fontFamily": "$font-sans",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            }
           ]
         },
         {
@@ -48418,12 +48503,31 @@
           "width": "fill_container",
           "height": 96,
           "fill": "#1A1A1A",
-          "padding": [0, 88],
+          "padding": [
+            0,
+            88
+          ],
           "justifyContent": "space_between",
           "alignItems": "center",
           "children": [
-            {"type": "text", "id": "privacyPolicyDesktopFooterBrand", "fill": "#FFFFFF", "content": "GITiempo", "fontFamily": "$font-sans", "fontSize": 13, "fontWeight": "700"},
-            {"type": "text", "id": "privacyPolicyDesktopFooterCurrent", "fill": "$color-accent", "content": "Privacy Policy", "fontFamily": "$font-sans", "fontSize": 12, "fontWeight": "600"}
+            {
+              "type": "text",
+              "id": "privacyPolicyDesktopFooterBrand",
+              "fill": "#FFFFFF",
+              "content": "GITiempo",
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyDesktopFooterCurrent",
+              "fill": "#000000",
+              "content": "Privacy Policy",
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "600"
+            }
           ]
         }
       ]
@@ -48446,12 +48550,31 @@
           "width": "fill_container",
           "height": 72,
           "fill": "#1A1A1A",
-          "padding": [0, 24],
+          "padding": [
+            0,
+            24
+          ],
           "justifyContent": "space_between",
           "alignItems": "center",
           "children": [
-            {"type": "text", "id": "privacyPolicyMobileBrand", "fill": "#FFFFFF", "content": "GITiempo", "fontFamily": "$font-sans", "fontSize": 16, "fontWeight": "700"},
-            {"type": "text", "id": "privacyPolicyMobileHome", "fill": "$color-accent", "content": "Home", "fontFamily": "$font-sans", "fontSize": 14, "fontWeight": "700"}
+            {
+              "type": "text",
+              "id": "privacyPolicyMobileBrand",
+              "fill": "#FFFFFF",
+              "content": "GITiempo",
+              "fontFamily": "$font-sans",
+              "fontSize": 16,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyMobileHome",
+              "fill": "#000000",
+              "content": "Home",
+              "fontFamily": "$font-sans",
+              "fontSize": 14,
+              "fontWeight": "700"
+            }
           ]
         },
         {
@@ -48461,14 +48584,71 @@
           "height": 1112,
           "layout": "vertical",
           "gap": 18,
-          "padding": [40, 24],
+          "padding": [
+            40,
+            24
+          ],
           "children": [
-            {"type": "text", "id": "privacyPolicyMobileEyebrow", "fill": "$color-brand", "content": "●  LEGAL", "fontFamily": "$font-mono", "fontSize": 11, "fontWeight": "700", "letterSpacing": 1.1},
-            {"type": "text", "id": "privacyPolicyMobileTitle", "fill": "$color-text-dark", "content": "Privacy Policy", "fontFamily": "$font-sans", "fontSize": 38, "fontWeight": "700", "letterSpacing": -1.5},
-            {"type": "text", "id": "privacyPolicyMobileIntro", "fill": "$color-text-muted", "textGrowth": "fixed-width", "width": "fill_container", "content": "How GITiempo handles personal data in the service and Chrome extension.", "fontFamily": "$font-sans", "fontSize": 16, "fontWeight": "normal", "lineHeight": 1.5},
-            {"type": "text", "id": "privacyPolicyMobileUpdated", "fill": "$color-text-muted", "content": "Last updated: 18 August 2026", "fontFamily": "$font-sans", "fontSize": 13, "fontWeight": "normal"},
-            {"type": "frame", "id": "privacyPolicyMobileRule", "width": "fill_container", "height": 1, "fill": "$color-divider"},
-            {"type": "text", "id": "privacyPolicyMobileSections", "fill": "$color-text-dark", "textGrowth": "fixed-width", "width": "fill_container", "content": "1. Controller and contact\n\n2. Information we process\nAccount, service records, local extension session, and GitHub issue context.\n\n3. How we use information\n\n4. Sharing and Google services\n\n5. Retention and security\n\n6. Your choices and rights\n\n7. Changes to this policy", "fontFamily": "$font-sans", "fontSize": 15, "fontWeight": "normal", "lineHeight": 1.5}
+            {
+              "type": "text",
+              "id": "privacyPolicyMobileEyebrow",
+              "fill": "$color-brand",
+              "content": "●  LEGAL",
+              "fontFamily": "Inter",
+              "fontSize": 11,
+              "fontWeight": "700",
+              "letterSpacing": 1.1
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyMobileTitle",
+              "fill": "$color-text-dark",
+              "content": "Privacy Policy",
+              "fontFamily": "$font-sans",
+              "fontSize": 38,
+              "fontWeight": "700",
+              "letterSpacing": -1.5
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyMobileIntro",
+              "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "How GITiempo handles personal data in the service and Chrome extension.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-sans",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyMobileUpdated",
+              "fill": "$color-text-muted",
+              "content": "Last updated: 18 August 2026",
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "privacyPolicyMobileRule",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "$color-divider"
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyMobileSections",
+              "fill": "$color-text-dark",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "1. Controller and contact\n\n2. Information we process\nAccount, service records, local extension session, and GitHub issue context.\n\n3. How we use information\n\n4. Sharing and Google services\n\n5. Retention and security\n\n6. Your choices and rights\n\n7. Changes to this policy",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-sans",
+              "fontSize": 15,
+              "fontWeight": "normal"
+            }
           ]
         },
         {
@@ -48477,12 +48657,31 @@
           "width": "fill_container",
           "height": 96,
           "fill": "#1A1A1A",
-          "padding": [0, 24],
+          "padding": [
+            0,
+            24
+          ],
           "justifyContent": "space_between",
           "alignItems": "center",
           "children": [
-            {"type": "text", "id": "privacyPolicyMobileFooterBrand", "fill": "#FFFFFF", "content": "GITiempo", "fontFamily": "$font-sans", "fontSize": 13, "fontWeight": "700"},
-            {"type": "text", "id": "privacyPolicyMobileFooterCurrent", "fill": "$color-accent", "content": "Privacy Policy", "fontFamily": "$font-sans", "fontSize": 12, "fontWeight": "600"}
+            {
+              "type": "text",
+              "id": "privacyPolicyMobileFooterBrand",
+              "fill": "#FFFFFF",
+              "content": "GITiempo",
+              "fontFamily": "$font-sans",
+              "fontSize": 13,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "privacyPolicyMobileFooterCurrent",
+              "fill": "#000000",
+              "content": "Privacy Policy",
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "600"
+            }
           ]
         }
       ]
@@ -61324,6 +61523,194 @@
       "width": 360,
       "height": 420,
       "content": "One form, Source as a field\n\nThe two source tiles were a mode switch pretending to be content. Making Source the first field removes the switch and lets both branches share Project manager, Visibility and Default billable — which is the whole point of the change.\n\nWHAT THIS COSTS\n\nProject manager: nothing. /projects/new is admin-only and createAssignment requires admin, so the form can import and then assign, exactly as the manual path already does.\n\nVisibility and Default billable: the import endpoint must accept them. Today importBoard inserts only {workspaceId, name, color}, so imported projects silently take the column defaults private and billable=true. Showing the fields without that change would be a lie.\n\nAdd them per project in importGitHubProjectsSchema (it is .strict() and takes up to 25), not top-level, so a future multi-select import can still differ per project.\n\nSEPARATE, NOT FIXED HERE\n\ncreateProject assigns the creator when the caller is a PM; importBoard does not. No PM reaches this page today, so nothing breaks, but the two paths disagree."
+    },
+    {
+      "type": "frame",
+      "id": "Jr6mK",
+      "x": 9503,
+      "y": 2080,
+      "name": "Ext Sign-out Cleanup Pending",
+      "width": 320,
+      "height": 480,
+      "fill": "$color-surface",
+      "cornerRadius": "$radius-lg",
+      "effect": {
+        "type": "shadow",
+        "shadowType": "outer",
+        "color": "#00000014",
+        "offset": {
+          "x": 0,
+          "y": 1
+        },
+        "blur": 3
+      },
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 20,
+      "children": [
+        {
+          "type": "frame",
+          "id": "h30ln",
+          "name": "extDbrand",
+          "width": "fill_container",
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "a7LqsG",
+              "name": "extDbLeft",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Z0O4C",
+                  "name": "extDbLogo",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 9,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "JSbpW",
+                      "name": "extDbLogoText",
+                      "fill": "$color-brand",
+                      "content": "GT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "oNqJm",
+                  "name": "extDbText",
+                  "fill": "$color-text-dark",
+                  "content": "GiTiempo",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fYFI8",
+              "name": "extDbRight",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "hzstQ",
+                  "type": "ref",
+                  "ref": "dpU0a",
+                  "name": "extDhome"
+                },
+                {
+                  "type": "frame",
+                  "id": "DQ3Pm",
+                  "x": 36,
+                  "y": 0,
+                  "name": "extDavatar",
+                  "enabled": false,
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 14,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "txOou",
+                      "name": "extBavatarText",
+                      "fill": "$color-brand",
+                      "content": "AT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "o1z4OO",
+          "name": "extDbody",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "DU3kB",
+              "name": "extDill",
+              "width": 72,
+              "height": 72,
+              "fill": "$color-status-error-bg",
+              "cornerRadius": 24,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "X3jzya",
+                  "name": "extDillText",
+                  "fill": "$color-status-error-text",
+                  "content": "!",
+                  "fontFamily": "Inter",
+                  "fontSize": 28,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "L6oII",
+              "name": "extDhead",
+              "fill": "$color-text-dark",
+              "content": "Sign-out incomplete",
+              "fontFamily": "Inter",
+              "fontSize": 22,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "AhsSz",
+              "name": "extDcopy",
+              "fill": "$color-text-muted",
+              "textGrowth": "fixed-width",
+              "width": 220,
+              "content": "Your GiTiempo session ended. Retry to clear remaining sign-in data.",
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "gsstc",
+              "name": "extDretry",
+              "fill": "$color-brand",
+              "content": "Retry sign-out",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            }
+          ]
+        }
+      ]
     }
   ],
   "variables": {

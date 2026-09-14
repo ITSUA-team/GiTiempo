@@ -167,6 +167,23 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
     `;
   }
 
+  if (!state.snapshot.authenticated && state.snapshot.providerCleanupPending) {
+    const message = state.errorMessage ??
+      "Your GiTiempo session ended. Retry to clear remaining sign-in data.";
+
+    return `
+      <div class="flex h-full flex-col gap-6">
+        ${renderBrandHeader({ authenticated: true })}
+        <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+          <div class="bg-status-error-bg text-status-error-text flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
+          <p class="m-0 text-lg font-semibold text-text-dark">Sign-out incomplete</p>
+          <p class="m-0 max-w-[220px] text-sm text-text-muted">${escapeHtml(message)}</p>
+          <button data-action="retry-sign-out" class="${popupTextActionClass}" ${state.isSubmitting ? "disabled" : ""}>Retry sign-out</button>
+        </div>
+      </div>
+    `;
+  }
+
   if (!state.snapshot.authenticated) {
     return `
       <div class="flex h-full flex-col gap-6">

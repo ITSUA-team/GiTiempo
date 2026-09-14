@@ -79,3 +79,7 @@ Register the first with Google and set the second as the Firefox backend variabl
 ## Data collection
 
 `browser_specific_settings.gecko.data_collection_permissions` declares `websiteActivity`, required for addons.mozilla.org submissions since 3 November 2025. The extension sends the repository and issue number of the page being viewed to the GiTiempo API, which is website activity leaving the device; declaring `none` would have been untrue.
+
+## Chrome Web Store release checklist
+
+Before packaging or submitting a Chrome Web Store release, use the [privacy and release checklist](../../docs/chrome-web-store-privacy.md). It records the package-specific data inventory, permission and host justifications, policy URL, artifact inspection, CWS declaration status, and publisher facts that cannot be inferred from source code.

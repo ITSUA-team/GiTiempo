@@ -81,6 +81,10 @@ test('requires real public privacy-policy contact details', () => {
     /PUBLIC_PRIVACY_CONTROLLER_NAME/,
   );
   assert.throws(
+    () => getPublicConfig({ ...environment, PUBLIC_PRIVACY_CONTROLLER_NAME: 'GiTiempo Ltd' }),
+    /PUBLIC_PRIVACY_CONTACT_EMAIL/,
+  );
+  assert.throws(
     () =>
       getPublicConfig({
         ...environment,
@@ -179,6 +183,16 @@ test('publishes a static privacy policy with extension-specific data handling', 
   assert.match(privacyPage, /chrome\.storage\.local/);
   assert.match(privacyPage, /repository name and issue number/);
   assert.match(privacyPage, /Limited Use requirements/);
+  assert.match(privacyPage, /extension-local IndexedDB/);
+  assert.match(privacyPage, /token-free status flag/);
+  assert.match(privacyPage, /Retry sign-out/);
+  assert.match(privacyPage, /does not delete server-held/);
+  assert.match(privacyPage, /does not stop a running timer/);
+  assert.match(privacyPage, /all extension user data/);
+  assert.match(privacyPage, /subsequently retrieves issue information/);
+  assert.match(privacyPage, /withdrawing consent does not delete information already received by Google/);
+  assert.match(privacyPage, /does not collect analytics/);
+  assert.doesNotMatch(privacyPage, /anonymous analytics/i);
   assert.doesNotMatch(privacyPage, /measurementId=/);
   assert.match(legalFooter, /aria-current="page"/);
 });

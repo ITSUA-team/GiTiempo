@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  clearPendingProviderCleanup,
   clearStoredSession,
+  EXTENSION_PROVIDER_CLEANUP_PENDING_STORAGE_KEY,
   EXTENSION_SESSION_STORAGE_KEY,
+  hasPendingProviderCleanup,
   getStoredSession,
+  setPendingProviderCleanup,
   setStoredSession,
   type StorageAreaLike,
 } from "./session";
@@ -73,5 +77,17 @@ describe("extension session storage", () => {
     await clearStoredSession(storage);
 
     expect(data).toEqual({});
+  });
+
+  it("stores only a boolean while provider cleanup is pending", async () => {
+    const { data, storage } = createStorage();
+
+    await setPendingProviderCleanup(storage);
+
+    expect(data).toEqual({ [EXTENSION_PROVIDER_CLEANUP_PENDING_STORAGE_KEY]: true });
+    await expect(hasPendingProviderCleanup(storage)).resolves.toBe(true);
+
+    await clearPendingProviderCleanup(storage);
+    await expect(hasPendingProviderCleanup(storage)).resolves.toBe(false);
   });
 });

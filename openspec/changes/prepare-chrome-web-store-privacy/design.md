@@ -39,6 +39,10 @@ Do not short-circuit one cleanup because the other fails. A Firebase persistence
 
 Persist a token-free `providerCleanupPending` marker in extension storage before starting cleanup, and clear it when Firebase cleanup succeeds. Retain it on provider failure so closing the popup or restarting the background worker cannot lose the incomplete-cleanup state. The unauthenticated popup's recoverable error presentation exposes a `Retry sign-out` action when that marker is present; the action retries cleanup without requiring the account menu or a new login. Reopening the popup restores that error/action from the marker. Clear the error after success. This adds a bounded recovery state to the existing error presentation, not a new account menu; include it in the design-frame review and disclose the token-free local cleanup status alongside storage behavior.
 
+Implementation review: initiate the marker write first, but a failed write must not prevent either cleanup operation from starting. If provider cleanup and marker storage both fail, report that persistence was unavailable and keep retry state in the current worker; recovery across a worker restart cannot be guaranteed when storage itself rejects writes. Attach rejection handling immediately to every concurrent cleanup promise, including while backend revocation is still pending.
+
+The recovery presentation reuses `Ext Error`: signed-out header with the home action, no account menu or login controls, centered error icon, `Sign-out incomplete`, explanatory copy, and `Retry sign-out`. Inspected through Pencil MCP and recorded as [`Ext Sign-out Cleanup Pending`](design-assets/Jr6mK.png). The PNG is a durable review artifact; canvas edits were made through MCP.
+
 Alternative considered: change only the policy to admit that Firebase credentials survive logout. That leaves a surprising user-visible security boundary, so this proposal corrects the behavior and documents the resulting storage lifecycle.
 
 ### 2. Remove `tabs` while preserving the required host access

@@ -4,7 +4,7 @@ import type { TimeEntryResponse, TokenPairResponse } from "@gitiempo/shared";
 
 import { getExtensionConfig } from "@/lib/config";
 import { createExtensionApiClient } from "@/lib/api";
-import { signInWithGoogle } from "@/lib/firebase";
+import { signInWithGoogle, signOutFromFirebase } from "@/lib/firebase";
 import { signInWithGithub } from "@/lib/github-signin";
 import type {
   BackgroundMessage,
@@ -13,7 +13,12 @@ import type {
   RuntimeSnapshot,
   SnapshotUser,
 } from "@/lib/runtime";
-import { getStoredSession } from "@/lib/session";
+import {
+  clearPendingProviderCleanup,
+  getStoredSession,
+  hasPendingProviderCleanup,
+  setPendingProviderCleanup,
+} from "@/lib/session";
 import { decodeAccessTokenEmail } from "@/lib/token";
 
 const config = getExtensionConfig();
@@ -41,13 +46,17 @@ function deriveSnapshotUser(
 }
 
 async function loadSnapshot(): Promise<RuntimeSnapshot> {
-  const session = await getStoredSession();
+  const [session, providerCleanupPending] = await Promise.all([
+    getStoredSession(),
+    getProviderCleanupPending(),
+  ]);
 
   if (!session) {
     return {
       authenticated: false,
       currentTimer: null,
       errorMessage: null,
+      providerCleanupPending,
       user: null,
     };
   }
@@ -59,6 +68,7 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
       authenticated: true,
       currentTimer: response.timeEntry,
       errorMessage: null,
+      providerCleanupPending,
       user: deriveSnapshotUser(session, response.timeEntry),
     };
   } catch (error) {
@@ -68,6 +78,7 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
       authenticated: nextSession !== null,
       currentTimer: null,
       errorMessage: error instanceof Error ? error.message : "Unable to load timer state.",
+      providerCleanupPending,
       user: nextSession ? deriveSnapshotUser(nextSession, null) : null,
     };
   }
@@ -137,6 +148,99 @@ async function handleAuthExchange(
   firebaseIdToken: string,
 ): Promise<RuntimeAuthResult> {
   return handleMutation(() => apiClient.loginWithFirebaseToken(firebaseIdToken));
+}
+
+const PROVIDER_CLEANUP_ERROR_MESSAGE =
+  "Sign-out was incomplete. Retry to remove the remaining provider session.";
+const CLEANUP_MARKER_ERROR_MESSAGE =
+  "Sign-out completed, but its recovery status could not be stored.";
+
+let providerCleanupPendingInMemory = false;
+
+async function getProviderCleanupPending(): Promise<boolean> {
+  try {
+    return providerCleanupPendingInMemory || (await hasPendingProviderCleanup());
+  } catch {
+    return providerCleanupPendingInMemory;
+  }
+}
+
+async function retryProviderCleanup(): Promise<void> {
+  try {
+    await signOutFromFirebase();
+  } catch (error) {
+    providerCleanupPendingInMemory = true;
+    throw new Error(PROVIDER_CLEANUP_ERROR_MESSAGE, { cause: error });
+  }
+
+  try {
+    await clearPendingProviderCleanup();
+    providerCleanupPendingInMemory = false;
+  } catch (error) {
+    providerCleanupPendingInMemory = true;
+    throw new Error(CLEANUP_MARKER_ERROR_MESSAGE, { cause: error });
+  }
+}
+
+/**
+ * Keeps the independently-owned GiTiempo and Firebase stores from making each
+ * other conditional. The credential-free marker is started before either
+ * cleanup begins, but its storage failure never blocks either cleanup. A failed
+ * provider sign-out remains recoverable after a worker restart when the marker
+ * can persist, and in the current worker otherwise.
+ */
+async function signOutEverywhere(): Promise<void> {
+  const markerPromise = setPendingProviderCleanup();
+  const sessionPromise = apiClient.exitSession();
+  const providerPromise = signOutFromFirebase();
+  let markerClearError: unknown = null;
+  let markerWasWritten = false;
+
+  // Start marker removal as soon as Firebase has completed. It therefore does
+  // not wait for a slow but still bounded backend revoke.
+  const providerCompletionPromise = providerPromise.then(
+    async () => {
+      try {
+        await markerPromise;
+        markerWasWritten = true;
+        await clearPendingProviderCleanup();
+        providerCleanupPendingInMemory = false;
+      } catch (error) {
+        markerClearError = error;
+        // A failed initial write has no stale marker to recover, while a failed
+        // removal leaves the already-written marker reachable for retry.
+        providerCleanupPendingInMemory = markerWasWritten;
+      }
+    },
+    (error) => {
+      providerCleanupPendingInMemory = true;
+      throw error;
+    },
+  );
+
+  const [sessionResult, providerResult, markerResult] = await Promise.allSettled([
+    sessionPromise,
+    providerCompletionPromise,
+    markerPromise,
+  ]);
+
+  if (providerResult.status === "rejected") {
+    if (markerResult.status === "rejected") {
+      throw new Error(`${PROVIDER_CLEANUP_ERROR_MESSAGE} Recovery status could not be stored.`, {
+        cause: providerResult.reason,
+      });
+    }
+
+    throw new Error(PROVIDER_CLEANUP_ERROR_MESSAGE, { cause: providerResult.reason });
+  }
+
+  if (sessionResult.status === "rejected") {
+    throw sessionResult.reason;
+  }
+
+  if (markerResult.status === "rejected" || markerClearError !== null) {
+    throw new Error(CLEANUP_MARKER_ERROR_MESSAGE, { cause: markerClearError });
+  }
 }
 
 /**
@@ -235,7 +339,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         // is what lets the best-effort revoke actually leave the machine.
         // Responding first would let the worker idle-terminate mid-request, and
         // the wait is bounded by the revoke's own five-second abort.
-        sendResponse(await handleMutation(() => apiClient.exitSession()));
+        sendResponse(await handleMutation(signOutEverywhere));
+        return;
+      }
+      case "auth/retry-provider-cleanup": {
+        sendResponse(await handleMutation(retryProviderCleanup));
         return;
       }
       case "runtime/get-snapshot": {

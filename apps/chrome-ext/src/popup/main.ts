@@ -200,6 +200,9 @@ export function createPopupApp({
     root.querySelector('[data-action="sign-out"]')?.addEventListener("click", () => {
       void handleSignOut();
     });
+    root.querySelector('[data-action="retry-sign-out"]')?.addEventListener("click", () => {
+      void handleRetryProviderCleanup();
+    });
     root.querySelector('[data-action="toggle-email"]')?.addEventListener("click", () => {
       state.showEmailForm = !state.showEmailForm;
       render();
@@ -316,6 +319,27 @@ export function createPopupApp({
         error instanceof Error ? error.message : "Unable to sign out.";
     } finally {
       state.isAccountMenuOpen = false;
+      state.isSubmitting = false;
+      render();
+    }
+  }
+
+  async function handleRetryProviderCleanup(): Promise<void> {
+    state.isSubmitting = true;
+    state.errorMessage = null;
+    render();
+
+    try {
+      const result = await runtimeClient.retryProviderCleanup();
+
+      state.snapshot = result.snapshot;
+      state.errorMessage = result.ok
+        ? null
+        : result.errorMessage ?? "Unable to complete sign-out.";
+    } catch (error) {
+      state.errorMessage =
+        error instanceof Error ? error.message : "Unable to complete sign-out.";
+    } finally {
       state.isSubmitting = false;
       render();
     }
