@@ -2,10 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, NotFoundException } from '@nestjs/common';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { eq, inArray, like } from 'drizzle-orm';
+import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { GithubService } from '../src/github/services/github.service';
+import { GithubTaskMaterializationService } from '../src/tasks/services/github-task-materialization.service';
+import type { AuthUser } from '../src/auth/types/auth-user';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import {
@@ -53,6 +55,7 @@ describe('Project imports (e2e)', () => {
   let db: DrizzleDB;
   let adminToken: string;
   let workspaceId: string;
+  let adminUser: AuthUser;
 
   function board(
     overrides: {
@@ -122,6 +125,14 @@ describe('Project imports (e2e)', () => {
       .where(eq(users.firebaseUid, 'seed-user-1'))
       .limit(1);
     if (!admin) throw new Error('Expected the seeded admin');
+
+    adminUser = {
+      sub: admin.id,
+      workspaceId,
+      email: 'admin@example.com',
+      firebaseUid: 'admin-uid',
+      role: 'admin',
+    } as AuthUser;
 
     await db
       .delete(workspaceGitHubOrganizations)
@@ -221,5 +232,103 @@ describe('Project imports (e2e)', () => {
     expect(second.body.results[0].status).toBe('already-imported');
     expect(second.body.results[0].projectId).toBe(projectId);
     expect((await readProject(projectId))?.visibility).toBe('public');
+  });
+
+  async function seedProject(name: string, isActive: boolean) {
+    const [row] = await db
+      .insert(projects)
+      .values({ workspaceId, name, isActive })
+      .returning({ id: projects.id });
+
+    return row!.id;
+  }
+
+  async function seedRepositoryRef(
+    projectId: string,
+    externalKey: string,
+    createdAt: Date,
+  ) {
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId,
+      provider: 'github',
+      externalType: 'repository',
+      externalKey,
+      externalUrl: `https://github.com/${externalKey}`,
+      metadata: { githubRepo: externalKey },
+      createdAt,
+    });
+  }
+
+  async function readRepositoryRefs(normalizedKey: string) {
+    return db
+      .select({
+        externalKey: projectExternalRefs.externalKey,
+        isActive: projects.isActive,
+        projectId: projectExternalRefs.projectId,
+      })
+      .from(projectExternalRefs)
+      .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
+      .where(
+        and(
+          eq(projectExternalRefs.workspaceId, workspaceId),
+          eq(projectExternalRefs.externalType, 'repository'),
+          sql`lower(${projectExternalRefs.externalKey}) = ${normalizedKey}`,
+        ),
+      );
+  }
+
+  it('transfers a differently cased mapping off an archived project', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const repository = `${ORGANIZATION}/Kesher-${suffix}`;
+    const archivedKey = repository.toLowerCase();
+
+    const archivedId = await seedProject(
+      `${ORGANIZATION}/archived-${suffix}`,
+      false,
+    );
+    await seedRepositoryRef(archivedId, archivedKey, new Date('2020-01-01'));
+
+    const response = await importBoards([board({ githubRepos: [repository] })]);
+
+    expect(response.body.results[0].status).toBe('imported');
+
+    const refs = await readRepositoryRefs(archivedKey);
+    expect(refs).toHaveLength(1);
+    expect(refs[0]).toMatchObject({
+      externalKey: repository,
+      isActive: true,
+      projectId: response.body.results[0].projectId,
+    });
+  });
+
+  it('resolves the timer repository to the active holder, not the older archived one', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const repository = `${ORGANIZATION}/Timer-${suffix}`;
+
+    const archivedId = await seedProject(
+      `${ORGANIZATION}/timer-archived-${suffix}`,
+      false,
+    );
+    const activeId = await seedProject(
+      `${ORGANIZATION}/timer-active-${suffix}`,
+      true,
+    );
+    await seedRepositoryRef(
+      archivedId,
+      repository.toLowerCase(),
+      new Date('2020-01-01'),
+    );
+    await seedRepositoryRef(activeId, repository, new Date('2024-01-01'));
+
+    const materialization = app.get(GithubTaskMaterializationService, {
+      strict: false,
+    });
+    const resolved = await db.transaction((tx) =>
+      materialization.findOrCreateProjectForRepo(tx, adminUser, repository),
+    );
+
+    expect(resolved.created).toBe(false);
+    expect(resolved.project.id).toBe(activeId);
   });
 });

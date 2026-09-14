@@ -1,7 +1,6 @@
 import type {
   GitHubProject,
   GitHubProjectIssueItem,
-  ProjectResponse,
   SyncedGitHubIssue,
 } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
@@ -200,67 +199,3 @@ function toIssueOption(item: GitHubProjectIssueItem): GitHubProjectIssueOption {
   };
 }
 
-const MAX_REPOSITORY_PROBE_BOARDS = 12;
-const REPOSITORY_PROBE_PAGE_SIZE = 50;
-
-export interface GitHubProjectRepositorySummary {
-  repositories: string[];
-  hasMore: boolean;
-}
-
-export async function loadGitHubProjectRepositories(input: {
-  client: TimeEntriesClient;
-  projects: Pick<GitHubProject, "id">[];
-}): Promise<Record<string, GitHubProjectRepositorySummary>> {
-  const boards = input.projects.slice(0, MAX_REPOSITORY_PROBE_BOARDS);
-  const entries = await Promise.all(
-    boards.map(async (board) => {
-      try {
-        const response = await input.client.listGitHubProjectIssues(board.id, {
-          limit: REPOSITORY_PROBE_PAGE_SIZE,
-          state: "open",
-        });
-        const repositories: string[] = [];
-
-        for (const item of response.items) {
-          const fullName = item.issue.repository.fullName;
-
-          if (!repositories.includes(fullName)) {
-            repositories.push(fullName);
-          }
-        }
-
-        return [
-          board.id,
-          {
-            hasMore: response.pagination.nextPageToken !== null,
-            repositories,
-          },
-        ] as const;
-      } catch {
-        return [board.id, { hasMore: false, repositories: [] }] as const;
-      }
-    }),
-  );
-
-  return Object.fromEntries(entries);
-}
-
-export function toTrackedRepositoryKeySet(
-  projects: Pick<ProjectResponse, "name" | "source">[],
-): Set<string> {
-  return new Set(
-    projects
-      .filter((project) => project.source === "github")
-      .map((project) => project.name)
-      .filter((name) => /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(name))
-      .map((name) => name.toLowerCase()),
-  );
-}
-
-export function isRepositoryTracked(
-  fullName: string,
-  trackedKeys: Set<string>,
-): boolean {
-  return trackedKeys.has(fullName.toLowerCase());
-}

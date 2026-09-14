@@ -4,6 +4,10 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import {
+  lockProjectNamespace,
+  resolveAvailableProjectName,
+} from '../../projects/project-name-policy';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
 import {
   projectRowSelection,
@@ -20,7 +24,10 @@ import { WorkspaceGitHubOrganizationsService } from '../../github/services/works
 import { taskExternalRefs } from '../schemas/task-external-refs.schema';
 import { taskRowSelection, tasks } from '../schemas/tasks.schema';
 
-type QueryExecutor = Pick<DrizzleDB, 'delete' | 'insert' | 'select'>;
+type QueryExecutor = Pick<
+  DrizzleDB,
+  'delete' | 'execute' | 'insert' | 'select'
+>;
 type TaskRow = typeof tasks.$inferSelect;
 
 @Injectable()
@@ -80,12 +87,20 @@ export class GithubTaskMaterializationService {
       return { project, created: false };
     }
 
+    await lockProjectNamespace(executor, user.workspaceId);
+
+    const name = await resolveAvailableProjectName(
+      executor,
+      user.workspaceId,
+      githubRepo,
+    );
+
     const project = (
       await executor
         .insert(projects)
         .values({
           workspaceId: user.workspaceId,
-          name: githubRepo,
+          name,
           color: null,
         })
         .returning()
@@ -382,6 +397,7 @@ export class GithubTaskMaterializationService {
     const [row] = await executor
       .select({ projectId: projectExternalRefs.projectId })
       .from(projectExternalRefs)
+      .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
       .where(
         and(
           eq(projectExternalRefs.workspaceId, workspaceId),
@@ -390,7 +406,11 @@ export class GithubTaskMaterializationService {
           sql`lower(${projectExternalRefs.externalKey}) = ${normalizedRepo}`,
         ),
       )
-      .orderBy(projectExternalRefs.createdAt, projectExternalRefs.projectId)
+      .orderBy(
+        sql`${projects.isActive} desc`,
+        projectExternalRefs.createdAt,
+        projectExternalRefs.projectId,
+      )
       .limit(1);
 
     return row ?? null;

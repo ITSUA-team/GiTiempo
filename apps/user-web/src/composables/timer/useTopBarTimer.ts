@@ -11,7 +11,6 @@ import { prefetchTimerOptions } from '@/lib/timer-options-cache';
 import { useAuthStore } from '@/stores/auth';
 
 import { useTopBarTaskCreation } from './useTopBarTaskCreation';
-import { toTrackedRepositoryKeySet } from "@/lib/timer-github-projects";
 import { useTopBarTaskOptions } from './useTopBarTaskOptions';
 import { useTopBarTaskPicker } from './useTopBarTaskPicker';
 import { useTopBarTimerActions } from './useTopBarTimerActions';
@@ -131,10 +130,6 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     githubProjectAvailability: picker.githubProjectAvailability,
     githubProjectDraftCount: picker.githubProjectDraftCount,
     githubProjectOptions: picker.githubProjects,
-    githubProjectRepositories: picker.githubProjectRepositories,
-    githubTrackedRepositoryKeys: computed(() =>
-      toTrackedRepositoryKeySet(picker.projects.value),
-    ),
     githubProjectsErrorMessage: picker.githubProjectsErrorMessage,
     githubProjectsTruncated: picker.githubProjectsTruncated,
     isLoadingGitHubProjects: taskOptions.isLoadingGitHubProjects,

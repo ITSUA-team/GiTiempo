@@ -102,6 +102,7 @@ const taskOptions = useTimeEntryTaskOptions({
   getProjectById(projectId) {
     return data.visibleProjects.value.find((project) => project.id === projectId) ?? null;
   },
+  scope,
 });
 const mutations = useTimeEntryMutations({
   client,
