@@ -210,6 +210,7 @@ GitHub Actions stores deploy credentials and environment-specific values.
 | Cloudflare API token/account/zone data | GitHub Environment | Used by Wrangler deploys |
 | `VITE_*` frontend values | GitHub Environment | Injected at frontend build time |
 | `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, `PUBLIC_ADMIN_APP_URL` | GitHub Environment | Injected at landing build time; canonical origin and direct user/admin app entry URLs |
+| `PUBLIC_PRIVACY_CONTROLLER_NAME`, `PUBLIC_PRIVACY_CONTACT_EMAIL` | GitHub Environment | Required public legal controller name and monitored privacy contact, rendered on `/privacy` |
 | `PUBLIC_GA_MEASUREMENT_ID` | GitHub Environment variable (optional) | Valid public GA4 `G-...` Measurement ID; enables consent-gated landing analytics at build time |
 | `PUBLIC_API_URL` | GitHub Environment variable | Public API base URL used for readiness checks |
 | `API_DEPLOY_PATH` | GitHub Environment variable | Remote VPS deploy directory |

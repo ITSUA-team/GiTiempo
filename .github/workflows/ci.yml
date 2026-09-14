@@ -15,6 +15,8 @@ env:
   PUBLIC_SITE_URL: https://landing-ci.invalid
   PUBLIC_USER_APP_URL: https://user-ci.invalid/login
   PUBLIC_ADMIN_APP_URL: https://admin-ci.invalid
+  PUBLIC_PRIVACY_CONTROLLER_NAME: GiTiempo CI
+  PUBLIC_PRIVACY_CONTACT_EMAIL: privacy-ci@example.invalid
 
 jobs:
   detect:
