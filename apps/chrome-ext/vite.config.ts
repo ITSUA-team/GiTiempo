@@ -45,7 +45,7 @@ function buildManifest(mode: string): Record<string, unknown> {
     manifest_version: 3,
     name: "GiTiempo",
     ...(extensionKey ? { "{{chrome}}.key": extensionKey } : {}),
-    version: "0.0.0",
+    version: "0.1.0",
     description:
       "Track GiTiempo timers directly from supported GitHub issue surfaces.",
     permissions: ["identity", "storage", "tabs"],
