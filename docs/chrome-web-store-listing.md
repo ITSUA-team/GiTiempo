@@ -46,9 +46,10 @@ The ready-to-upload screenshots follow a clear carousel story: start from an iss
 | Screenshot 2 | 1280 × 800 px | Keep focus while a GiTiempo timer is running; stop when work is done. | [`02-stay-in-the-flow.png`](./chrome-web-store-assets/02-stay-in-the-flow.png) |
 | Screenshot 3 | 1280 × 800 px | Retain task context when opening GiTiempo from GitHub Projects. | [`03-keep-project-context.png`](./chrome-web-store-assets/03-keep-project-context.png) |
 | Screenshot 4 | 1280 × 800 px | Start and stop the timer without leaving a supported GitHub page. | [`04-timer-controls-in-github.png`](./chrome-web-store-assets/04-timer-controls-in-github.png) |
-| Marquee image | 1400 × 560 px | Optional; not prepared. Do not include awards, ratings, or unsupported performance claims. | — |
+| Small promo tile | 440 × 280 px | Required Store promotional image: GiTiempo extension popup over a work screen. | [`promo-small-440x280.png`](./chrome-web-store-assets/promo-small-440x280.png) |
+| Marquee promo tile | 1400 × 560 px | Optional featured-placement image: GiTiempo extension popup visibly anchored to its browser-extension trigger. | [`promo-marquee-1400x560.png`](./chrome-web-store-assets/promo-marquee-1400x560.png) |
 
-Chrome requires at least one screenshot and permits up to five. Use square-corner images; 1280 × 800 px is the preferred screenshot size. Upload only the four files listed above after release-build verification.
+Chrome requires a small promo tile and at least one screenshot; it permits up to five screenshots. Use square-corner images; 1280 × 800 px is the preferred screenshot size. Upload the two promo tiles and four screenshots listed above after release-build verification.
 
 ## Publisher details
 
