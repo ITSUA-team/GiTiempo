@@ -113,8 +113,7 @@ test('page preserves the approved section order and direct-entry CTA labels', ()
   assert.match(hero, /Open admin workspace/);
   assert.match(finalCta, /Open admin workspace/);
   assert.doesNotMatch(`${hero}${finalCta}${navigation}`, /<a[^>]*>(?:(?!<\/a>)[\s\S])*preview/i);
-  assert.match(navigation, /size-7 place-items-center rounded-\[6px\] bg-brand/);
-  assert.match(navigation, /aria-hidden="true">G<\/span>/);
+  assert.match(navigation, /<img src="\/brand-mark\.png" alt="" class="size-7 shrink-0 object-contain" \/>/);
   assert.match(navigation, /<span>GITiempo<\/span>/);
 });
 
@@ -255,6 +254,6 @@ test('provides crawl guidance and a static sitemap', () => {
   assert.match(sitemap, /PUBLIC_SITE_URL/);
   assert.match(sitemap, /<urlset/);
   assert.match(sitemap, /privacyUrl/);
-  assert.match(favicon, />G<\/text>/);
-  assert.doesNotMatch(favicon, /M18 16h28/);
+  assert.match(favicon, /brand-mark\.png/);
+  assert.doesNotMatch(favicon, /<text/);
 });

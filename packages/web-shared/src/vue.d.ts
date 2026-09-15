@@ -5,3 +5,8 @@ declare module "*.vue" {
 
   export default component;
 }
+
+declare module "*.png" {
+  const source: string;
+  export default source;
+}
