@@ -4,6 +4,7 @@ import { FirebaseError, initializeApp } from "firebase/app";
 import {
   GoogleAuthProvider,
   getAuth,
+  signOut,
   signInWithEmailAndPassword,
   signInWithCredential,
 } from "firebase/auth/web-extension";
@@ -142,4 +143,17 @@ export async function signInWithEmailPassword(
   );
 
   return credential.user.getIdToken();
+}
+
+/**
+ * Clears Firebase's own IndexedDB-backed extension persistence. GitHub-only
+ * sessions and builds without Firebase configuration have nothing to clear and
+ * are intentionally treated as already signed out.
+ */
+export async function signOutFromFirebase(): Promise<void> {
+  if (!firebaseApp) {
+    return;
+  }
+
+  await signOut(getFirebaseAuth());
 }
