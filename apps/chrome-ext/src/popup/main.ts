@@ -27,8 +27,13 @@ const config = getExtensionConfig();
 export async function resolveActivePageContext(): Promise<PageContext> {
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-  if (!activeTab?.url) {
+  if (!activeTab) {
     return { kind: "error", message: "No active browser tab was found." };
+  }
+
+  // Tabs outside the granted hosts exist, but their URL is not exposed.
+  if (!activeTab.url) {
+    return { kind: "unsupported" };
   }
 
   const parsed = parseGitHubIssueUrl(activeTab.url);

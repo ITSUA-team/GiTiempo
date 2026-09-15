@@ -756,6 +756,53 @@ describe("popup app", () => {
     );
   });
 
+  it("keeps timer stop available when the active tab URL is hidden by host permissions", async () => {
+    vi.stubGlobal("chrome", {
+      tabs: { query: vi.fn(async () => [{ id: 21 }]) },
+    });
+    const runtimeClient = createRuntimeClient({
+      snapshot: {
+        authenticated: true,
+        currentTimer: currentTimer(),
+        errorMessage: null,
+        user: null,
+      },
+    });
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient,
+    });
+
+    try {
+      await app.load();
+
+      expect(document.body.textContent).not.toContain("Connection lost");
+      const stopButton = document.querySelector<HTMLButtonElement>('[data-action="stop-timer"]');
+      expect(stopButton).not.toBeNull();
+      stopButton!.click();
+
+      await vi.waitFor(() => {
+        expect(runtimeClient.stopTimer).toHaveBeenCalledWith(currentTimer()!.id);
+        expect(document.body.textContent).toContain(
+          "Open a supported GitHub issue to start a timer.",
+        );
+      });
+    } finally {
+      app.destroy();
+    }
+  });
+
+  it("reports an error when there is no active tab", async () => {
+    vi.stubGlobal("chrome", {
+      tabs: { query: vi.fn(async () => []) },
+    });
+
+    await expect(resolveActivePageContext()).resolves.toEqual({
+      kind: "error",
+      message: "No active browser tab was found.",
+    });
+  });
+
   it("resolves GitHub Projects issue pane tabs through the shared parser fallback", async () => {
     vi.stubGlobal("chrome", {
       tabs: {
