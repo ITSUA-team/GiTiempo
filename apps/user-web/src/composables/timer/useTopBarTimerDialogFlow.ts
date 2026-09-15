@@ -1,5 +1,5 @@
 import { createAppToast, type ToastLike } from '@gitiempo/web-shared';
-import { watch, type ComputedRef } from 'vue';
+import { type ComputedRef } from 'vue';
 
 import type { useTopBarTaskCreation } from './useTopBarTaskCreation';
 import type { useTopBarTaskOptions } from './useTopBarTaskOptions';
@@ -36,6 +36,19 @@ export function useTopBarTimerDialogFlow({
   function clearDialogActionErrors(): void {
     selectionUpdate.clearSelectionUpdateError();
     timerActions.clearTimerActionError();
+  }
+
+  async function loadTasksIntoPicker(projectId: string): Promise<void> {
+    try {
+      await taskOptions.loadTasksForProject(projectId);
+    } catch (error) {
+      appToast.showErrorToast({
+        detail: 'Refresh and try again.',
+        error,
+        logContext: { action: 'load-project-tasks', feature: 'top-bar-timer' },
+        summary: 'Could not load tasks',
+      });
+    }
   }
 
   async function openDialog(): Promise<void> {
@@ -116,6 +129,14 @@ export function useTopBarTimerDialogFlow({
     if (shouldClearSelectedTask) {
       picker.setSelectedTaskId(null);
     }
+
+    if (projectId === null) {
+      picker.setTasks([]);
+      picker.setTasksError(null);
+      return;
+    }
+
+    void loadTasksIntoPicker(projectId);
   }
 
   function setSelectedTaskId(taskId: string | null): void {
@@ -221,38 +242,6 @@ export function useTopBarTimerDialogFlow({
 
     await handleDialogPrimaryAction();
   }
-
-  watch(picker.selectedProjectId, async (nextProjectId, previousProjectId) => {
-    if (!picker.isDialogOpen.value) {
-      return;
-    }
-
-    if (picker.selectedGitHubProjectId.value !== null) {
-      return;
-    }
-
-    if (!nextProjectId) {
-      picker.setTasks([]);
-      picker.setTasksError(null);
-      picker.setSelectedTaskId(null);
-      return;
-    }
-
-    if (nextProjectId !== previousProjectId && previousProjectId !== null) {
-      picker.setSelectedTaskId(null);
-    }
-
-    try {
-      await taskOptions.loadTasksForProject(nextProjectId);
-    } catch (error) {
-      appToast.showErrorToast({
-        detail: 'Refresh and try again.',
-        error,
-        logContext: { action: 'load-project-tasks', feature: 'top-bar-timer' },
-        summary: 'Could not load tasks',
-      });
-    }
-  });
 
   return {
     closeDialog,

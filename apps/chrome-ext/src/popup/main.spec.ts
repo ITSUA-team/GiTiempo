@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getExtensionConfig } from "@/lib/config";
 import type { PageContext } from "@/lib/github-context";
 import type {
   RuntimeAuthResult,
@@ -54,6 +55,7 @@ function createRuntimeClient(overrides?: {
   signInWithGithub?: RuntimeClient["signInWithGithub"];
   signInWithGoogle?: RuntimeClient["signInWithGoogle"];
   signOut?: RuntimeClient["signOut"];
+  retryProviderCleanup?: RuntimeClient["retryProviderCleanup"];
   snapshot?: RuntimeSnapshot;
   startTimer?: RuntimeClient["startTimer"];
   stopTimer?: RuntimeClient["stopTimer"];
@@ -85,6 +87,12 @@ function createRuntimeClient(overrides?: {
       })),
     signOut:
       overrides?.signOut ??
+      vi.fn(async (): Promise<RuntimeAuthResult> => ({
+        ok: true,
+        snapshot: { authenticated: false, currentTimer: null, errorMessage: null, user: null },
+      })),
+    retryProviderCleanup:
+      overrides?.retryProviderCleanup ??
       vi.fn(async (): Promise<RuntimeAuthResult> => ({
         ok: true,
         snapshot: { authenticated: false, currentTimer: null, errorMessage: null, user: null },
@@ -383,7 +391,7 @@ describe("popup app", () => {
       ).toEqual(["Open profile", "Sign out"]);
       expect(
         menu.querySelector<HTMLAnchorElement>('[data-action="open-profile"]')?.href,
-      ).toBe("http://localhost:5173/profile");
+      ).toBe(getExtensionConfig().userSpaProfileUrl);
       // The header action the menu sits beside stays reachable.
       expect(document.querySelector('[aria-label="Open GiTiempo dashboard"]')).not.toBeNull();
     });
@@ -499,6 +507,52 @@ describe("popup app", () => {
 
       expect(signOut).toHaveBeenCalledOnce();
       expect(document.querySelector('[data-testid="popup-account-menu"]')).toBeNull();
+      expect(document.body.textContent).toContain("Continue with Google");
+    });
+
+    it("retries pending provider cleanup from the unauthenticated popup without a new login", async () => {
+      const retryProviderCleanup = vi.fn(async () => ({
+        ok: true,
+        snapshot: {
+          authenticated: false,
+          currentTimer: null,
+          errorMessage: null,
+          providerCleanupPending: false,
+          user: null,
+        },
+      }));
+      const app = createPopupApp({
+        root: document.querySelector<HTMLElement>("#app")!,
+        runtimeClient: createRuntimeClient({
+          retryProviderCleanup,
+          snapshot: {
+            authenticated: false,
+            currentTimer: null,
+            errorMessage: null,
+            providerCleanupPending: true,
+            user: null,
+          },
+        }),
+        pageContextResolver: async () => ({ kind: "unsupported" }),
+      });
+
+      await app.load();
+
+      expect(document.body.textContent).toContain("Sign-out incomplete");
+      expect(document.body.textContent).toContain(
+        "Your GiTiempo session ended. Retry to clear remaining sign-in data.",
+      );
+      expect(document.body.textContent).not.toContain("Continue with Google");
+      expect(document.querySelector('[data-testid="popup-user-avatar"]')).toBeNull();
+      expect(document.querySelector('[aria-label="Open GiTiempo dashboard"]')).not.toBeNull();
+      document
+        .querySelector<HTMLButtonElement>('[data-action="retry-sign-out"]')!
+        .click();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(retryProviderCleanup).toHaveBeenCalledOnce();
+      expect(document.querySelector('[data-action="retry-sign-out"]')).toBeNull();
       expect(document.body.textContent).toContain("Continue with Google");
     });
 
@@ -700,6 +754,53 @@ describe("popup app", () => {
     expect(document.body.textContent).toContain(
       "Supported on direct GitHub issue pages and GitHub Projects issue panes.",
     );
+  });
+
+  it("keeps timer stop available when the active tab URL is hidden by host permissions", async () => {
+    vi.stubGlobal("chrome", {
+      tabs: { query: vi.fn(async () => [{ id: 21 }]) },
+    });
+    const runtimeClient = createRuntimeClient({
+      snapshot: {
+        authenticated: true,
+        currentTimer: currentTimer(),
+        errorMessage: null,
+        user: null,
+      },
+    });
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient,
+    });
+
+    try {
+      await app.load();
+
+      expect(document.body.textContent).not.toContain("Connection lost");
+      const stopButton = document.querySelector<HTMLButtonElement>('[data-action="stop-timer"]');
+      expect(stopButton).not.toBeNull();
+      stopButton!.click();
+
+      await vi.waitFor(() => {
+        expect(runtimeClient.stopTimer).toHaveBeenCalledWith(currentTimer()!.id);
+        expect(document.body.textContent).toContain(
+          "Open a supported GitHub issue to start a timer.",
+        );
+      });
+    } finally {
+      app.destroy();
+    }
+  });
+
+  it("reports an error when there is no active tab", async () => {
+    vi.stubGlobal("chrome", {
+      tabs: { query: vi.fn(async () => []) },
+    });
+
+    await expect(resolveActivePageContext()).resolves.toEqual({
+      kind: "error",
+      message: "No active browser tab was found.",
+    });
   });
 
   it("resolves GitHub Projects issue pane tabs through the shared parser fallback", async () => {

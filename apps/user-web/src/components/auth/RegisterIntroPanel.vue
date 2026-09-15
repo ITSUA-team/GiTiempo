@@ -34,8 +34,12 @@ const desktopSteps = [
   >
     <div class="flex flex-col gap-8">
       <div class="flex items-center gap-3">
-        <div class="bg-surface-primary/14 flex size-10 items-center justify-center rounded-xl text-sm font-semibold">
-          GT
+        <div class="bg-surface-primary/14 flex size-10 items-center justify-center rounded-xl">
+          <img
+            alt=""
+            class="size-8 object-contain"
+            src="/brand-mark.png"
+          >
         </div>
         <div class="flex flex-col gap-0.5">
           <p class="text-[18px] font-semibold">
@@ -90,8 +94,12 @@ const desktopSteps = [
     data-testid="register-mobile-hero"
   >
     <div class="flex items-center gap-2.5">
-      <div class="text-brand bg-surface-primary flex size-[34px] items-center justify-center rounded-[9px] text-sm font-semibold">
-        GT
+      <div class="bg-surface-primary flex size-[34px] items-center justify-center rounded-[9px]">
+        <img
+          alt=""
+          class="size-7 object-contain"
+          src="/brand-mark.png"
+        >
       </div>
       <p class="text-[15px] font-semibold">
         GiTiempo

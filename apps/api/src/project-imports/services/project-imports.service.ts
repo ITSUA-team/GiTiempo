@@ -12,6 +12,7 @@ import type {
   TrackingProject,
 } from '@gitiempo/shared';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import {
@@ -21,6 +22,11 @@ import {
 import { GithubService } from '../../github/services/github.service';
 import { MembersService } from '../../members/services/members.service';
 import { GithubTaskMaterializationService } from '../../tasks/services/github-task-materialization.service';
+import {
+  describeProjectNameConflict,
+  findActiveProjectNameConflict,
+  lockProjectNamespace,
+} from '../../projects/project-name-policy';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
 import { projects } from '../../projects/schemas/projects.schema';
 
@@ -163,12 +169,27 @@ export class ProjectImportsService {
         }
       }
 
+      const derivedName = `${verified.ownerLogin}/${verified.title}`;
+
       const outcome = await this.db.transaction(async (tx) => {
+        await lockProjectNamespace(tx, user.workspaceId);
+
+        const nameConflict = await findActiveProjectNameConflict(
+          tx,
+          user.workspaceId,
+          derivedName,
+          null,
+        );
+
+        if (nameConflict) {
+          return { kind: 'name-taken' as const, conflict: nameConflict };
+        }
+
         const [project] = await tx
           .insert(projects)
           .values({
             workspaceId: user.workspaceId,
-            name: `${verified.ownerLogin}/${verified.title}`,
+            name: derivedName,
             color: null,
             ...(board.visibility === undefined
               ? {}
@@ -243,60 +264,66 @@ export class ProjectImportsService {
         }
 
         if (repository !== null) {
-          const [repositoryRef] = await tx
-            .insert(projectExternalRefs)
-            .values({
+          const normalizedRepository = normalizeGitHubRepoKey(repository);
+          if (!normalizedRepository) {
+            throw DomainError.internal(
+              'github_repo_invalid',
+              'GitHub repository reference is invalid',
+            );
+          }
+
+          const [heldRef] = await tx
+            .select({
+              id: projectExternalRefs.id,
+              isActive: projects.isActive,
+            })
+            .from(projectExternalRefs)
+            .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
+            .where(
+              and(
+                eq(projectExternalRefs.workspaceId, user.workspaceId),
+                eq(projectExternalRefs.provider, 'github'),
+                eq(projectExternalRefs.externalType, 'repository'),
+                sql`lower(${projectExternalRefs.externalKey}) = ${normalizedRepository}`,
+              ),
+            )
+            .orderBy(
+              sql`${projects.isActive} desc`,
+              sql`(${projectExternalRefs.externalKey} = ${repository}) desc`,
+              projectExternalRefs.createdAt,
+              projectExternalRefs.id,
+            )
+            .limit(1);
+
+          if (heldRef?.isActive) {
+            await tx.delete(projects).where(eq(projects.id, project!.id));
+            return { kind: 'repository-taken' as const };
+          }
+
+          const repositoryValues = {
+            externalKey: repository,
+            externalUrl: `https://github.com/${repository}`,
+            metadata: { githubRepo: repository },
+            syncedAt: new Date(),
+          };
+
+          if (heldRef) {
+            await tx
+              .update(projectExternalRefs)
+              .set({
+                ...repositoryValues,
+                projectId: project!.id,
+                updatedAt: new Date(),
+              })
+              .where(eq(projectExternalRefs.id, heldRef.id));
+          } else {
+            await tx.insert(projectExternalRefs).values({
+              ...repositoryValues,
               workspaceId: user.workspaceId,
               projectId: project!.id,
               provider: 'github',
               externalType: 'repository',
-              externalKey: repository,
-              externalUrl: `https://github.com/${repository}`,
-              metadata: { githubRepo: repository },
-              syncedAt: new Date(),
-            })
-            .onConflictDoNothing({
-              target: [
-                projectExternalRefs.workspaceId,
-                projectExternalRefs.provider,
-                projectExternalRefs.externalType,
-                projectExternalRefs.externalKey,
-              ],
-            })
-            .returning({ projectId: projectExternalRefs.projectId });
-
-          if (!repositoryRef) {
-            const [reclaimed] = await tx
-              .update(projectExternalRefs)
-              .set({
-                projectId: project!.id,
-                externalKey: repository,
-                externalUrl: `https://github.com/${repository}`,
-                metadata: { githubRepo: repository },
-                syncedAt: new Date(),
-                updatedAt: new Date(),
-              })
-              .where(
-                and(
-                  eq(projectExternalRefs.workspaceId, user.workspaceId),
-                  eq(projectExternalRefs.provider, 'github'),
-                  eq(projectExternalRefs.externalType, 'repository'),
-                  sql`lower(${projectExternalRefs.externalKey}) = ${normalizeGitHubRepoKey(repository)}`,
-                  inArray(
-                    projectExternalRefs.projectId,
-                    tx
-                      .select({ id: projects.id })
-                      .from(projects)
-                      .where(eq(projects.isActive, false)),
-                  ),
-                ),
-              )
-              .returning({ projectId: projectExternalRefs.projectId });
-
-            if (!reclaimed) {
-              await tx.delete(projects).where(eq(projects.id, project!.id));
-              return { kind: 'repository-taken' as const };
-            }
+            });
           }
         }
 
@@ -311,6 +338,21 @@ export class ProjectImportsService {
           projectId: null,
           status: 'already-imported',
           trackingProject: null,
+        };
+      }
+
+      if (outcome.kind === 'name-taken') {
+        return {
+          githubProjectId: board.githubProjectId,
+          linkedRepository: repository,
+          message: `${describeProjectNameConflict(outcome.conflict.name)} Rename that project or the GitHub board, then import again.`,
+          projectId: null,
+          status: 'name-taken',
+          trackingProject: {
+            id: outcome.conflict.id,
+            isActive: true,
+            name: outcome.conflict.name,
+          },
         };
       }
 

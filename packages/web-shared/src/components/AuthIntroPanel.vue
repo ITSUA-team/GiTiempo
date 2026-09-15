@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import brandMarkUrl from "../assets/brand-mark.png";
+
 interface FeatureCard {
   description: string;
   title: string;
@@ -23,10 +25,14 @@ const props = defineProps<{
   >
     <div class="flex items-center gap-3">
       <div
-        class="bg-surface-primary text-brand flex size-10 items-center justify-center rounded-lg text-[15px] font-bold"
+        class="bg-surface-primary flex size-10 items-center justify-center rounded-lg"
         data-testid="auth-intro-logo"
       >
-        GT
+        <img
+          alt=""
+          class="size-8 object-contain"
+          :src="brandMarkUrl"
+        >
       </div>
       <div class="flex flex-col gap-0.5">
         <p class="text-text-inverse text-lg font-semibold">

@@ -27,7 +27,7 @@ Frontend builds use build-time environment values. The existing SPAs use `VITE_*
 
 | App | Required deployment values |
 |---|---|
-| `landing-web` | Public site URL/canonical origin, user-app entry URL, admin-app entry URL, and optional GA4 Measurement ID |
+| `landing-web` | Public site URL/canonical origin, user-app entry URL, admin-app entry URL, required privacy controller name and contact email, and optional GA4 Measurement ID |
 | `user-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_ADMIN_APP_URL`, and optionally `VITE_EXTENSION_INSTALL_URL` (browser-extension install page; the login extension link is hidden when unset) |
 | `admin-web` | `VITE_API_BASE_URL`, Firebase client variables, `VITE_USER_APP_URL` |
 
@@ -42,7 +42,7 @@ The landing implementation must receive all three values from environment-aware 
 
 Do not read production frontend config from repository `.env` files. GitHub Actions must inject environment-specific values from GitHub Environments or repository secrets/variables. The staging Environment example at `deploy/github-environment.staging.example.env` documents the frontend and API values.
 
-For Cloudflare staging deployment, `CLOUDFLARE_ACCOUNT_ID` and the landing `PUBLIC_*` values are GitHub Environment variables. `CLOUDFLARE_API_TOKEN` is a GitHub Environment secret. The example file separates those categories so operators do not duplicate the account ID as a secret. `PUBLIC_GA_MEASUREMENT_ID` is optional: set a valid `G-...` value to compile the consent-gated GA4 integration, or leave it blank to compile no analytics prompt or Google tag.
+For Cloudflare staging deployment, `CLOUDFLARE_ACCOUNT_ID` and the landing `PUBLIC_*` values are GitHub Environment variables. `CLOUDFLARE_API_TOKEN` is a GitHub Environment secret. The example file separates those categories so operators do not duplicate the account ID as a secret. `PUBLIC_GA_MEASUREMENT_ID` is optional: set a valid `G-...` value to compile the consent-gated GA4 integration, or leave it blank to compile no analytics prompt or Google tag. `PUBLIC_PRIVACY_CONTROLLER_NAME` and `PUBLIC_PRIVACY_CONTACT_EMAIL` are required public values: use the legal controller name and a monitored mailbox, because they render on `https://gitiempo.com/privacy`.
 
 ### Frontend Manual Triggers
 
@@ -66,7 +66,13 @@ Recommended path filters:
 | `deploy-frontend-staging` | `apps/user-web/**`, `apps/admin-web/**`, `packages/shared/**`, `packages/web-config/**`, `packages/web-shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, shared CI/deploy workflow files |
 | `deploy-landing-staging` | `apps/landing-web/**`, `packages/web-config/**`, workspace manifests, Turbo configuration, workspace check action, landing target detector, and landing workflow files |
 
-Landing-only changes do not enter the two-SPA deployment matrix. The landing workflow validates `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, and `PUBLIC_ADMIN_APP_URL`, then runs the landing lint, typecheck, test, and build gates before invoking Wrangler. It does not require Firebase or API values. It passes optional `PUBLIC_GA_MEASUREMENT_ID` through without making it a deployment prerequisite.
+Landing-only changes do not enter the two-SPA deployment matrix. The landing workflow validates `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, `PUBLIC_ADMIN_APP_URL`, `PUBLIC_PRIVACY_CONTROLLER_NAME`, and `PUBLIC_PRIVACY_CONTACT_EMAIL`, then runs the landing lint, typecheck, test, and build gates before invoking Wrangler. It does not require Firebase or API values. It passes optional `PUBLIC_GA_MEASUREMENT_ID` through without making it a deployment prerequisite.
+
+### Chrome Web Store privacy-policy release gate
+
+Before publishing or updating the extension, deploy the landing with its real production privacy controller and contact values, then use `https://gitiempo.com/privacy` as the Chrome Web Store Dashboard privacy-policy URL. Verify that the page is public without sign-in, appears in `sitemap-index.xml`, and matches the Dashboard privacy disclosures and the extension’s actual permissions and data flow. Legal review must confirm the controller identity, retention period, processor/recipient wording, international-transfer wording where applicable, and the current effective date before the first production submission.
+
+The package-specific [Chrome Web Store privacy and release checklist](chrome-web-store-privacy.md) is the required record for the final package hash, permission/host and remote-code inspection, candidate data categories, publisher certifications, and Dashboard review. It deliberately distinguishes source-derived facts from publisher-confirmed and Dashboard-verified values.
 
 Each deployment workflow runs lint/typecheck/tests/build for its affected app before deployment. Shared frontend package changes deploy both SPAs after both app gates pass.
 
@@ -206,6 +212,7 @@ GitHub Actions stores deploy credentials and environment-specific values.
 | Cloudflare API token/account/zone data | GitHub Environment | Used by Wrangler deploys |
 | `VITE_*` frontend values | GitHub Environment | Injected at frontend build time |
 | `PUBLIC_SITE_URL`, `PUBLIC_USER_APP_URL`, `PUBLIC_ADMIN_APP_URL` | GitHub Environment | Injected at landing build time; canonical origin and direct user/admin app entry URLs |
+| `PUBLIC_PRIVACY_CONTROLLER_NAME`, `PUBLIC_PRIVACY_CONTACT_EMAIL` | GitHub Environment | Required public legal controller name and monitored privacy contact, rendered on `/privacy` |
 | `PUBLIC_GA_MEASUREMENT_ID` | GitHub Environment variable (optional) | Valid public GA4 `G-...` Measurement ID; enables consent-gated landing analytics at build time |
 | `PUBLIC_API_URL` | GitHub Environment variable | Public API base URL used for readiness checks |
 | `API_DEPLOY_PATH` | GitHub Environment variable | Remote VPS deploy directory |

@@ -135,7 +135,7 @@ function renderBrandHeader(
   return `
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="bg-accent-tint text-brand flex size-8 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold" data-testid="popup-logo">GT</div>
+        <div class="bg-accent-tint flex size-8 shrink-0 items-center justify-center rounded-lg" data-testid="popup-logo"><img src="icons/icon-32.png" alt="" class="size-7 object-contain" /></div>
         <div>
           <p class="m-0 text-sm font-semibold text-text-dark">GiTiempo</p>
           <p class="m-0 text-xs text-text-muted">GitHub timer</p>
@@ -163,6 +163,23 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
       <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
         <p class="m-0 text-lg font-semibold text-text-dark">Loading extension state</p>
         <p class="m-0 text-sm text-text-muted">Checking your session and timer context.</p>
+      </div>
+    `;
+  }
+
+  if (!state.snapshot.authenticated && state.snapshot.providerCleanupPending) {
+    const message = state.errorMessage ??
+      "Your GiTiempo session ended. Retry to clear remaining sign-in data.";
+
+    return `
+      <div class="flex h-full flex-col gap-6">
+        ${renderBrandHeader({ authenticated: true })}
+        <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+          <div class="bg-status-error-bg text-status-error-text flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
+          <p class="m-0 text-lg font-semibold text-text-dark">Sign-out incomplete</p>
+          <p class="m-0 max-w-[220px] text-sm text-text-muted">${escapeHtml(message)}</p>
+          <button data-action="retry-sign-out" class="${popupTextActionClass}" ${state.isSubmitting ? "disabled" : ""}>Retry sign-out</button>
+        </div>
       </div>
     `;
   }

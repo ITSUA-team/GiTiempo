@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const signInWithCredential = vi.fn();
 const signInWithEmailAndPassword = vi.fn();
+const signOut = vi.fn();
 const getAuth = vi.fn(() => "firebase-auth-instance");
 const initializeApp = vi.fn(() => "firebase-app-instance");
+let firebaseConfigured = true;
 const googleCredential = vi.fn((_idToken: string | null, accessToken?: string | null) => ({
   accessToken: accessToken ?? null,
   providerId: "google.com",
@@ -24,6 +26,7 @@ vi.mock("firebase/auth/web-extension", () => ({
     credential: googleCredential,
   },
   getAuth,
+  signOut,
   signInWithCredential,
   signInWithEmailAndPassword,
 }));
@@ -39,7 +42,7 @@ vi.mock("./config", () => ({
     googleOAuthClientId: "google-client-id.apps.googleusercontent.com",
     userSpaUrl: "http://localhost:5173/login",
   }),
-  hasFirebaseConfig: () => true,
+  hasFirebaseConfig: () => firebaseConfigured,
 }));
 
 function setChromeRuntime({
@@ -61,7 +64,7 @@ function setChromeRuntime({
         () =>
           manifest ?? {
             oauth2: { client_id: "google-client-id.apps.googleusercontent.com" },
-            permissions: ["identity", "storage", "tabs"],
+            permissions: ["identity", "storage"],
           },
       ),
       lastError: undefined,
@@ -73,6 +76,7 @@ describe("extension firebase auth", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    firebaseConfigured = true;
   });
 
   it("uses launchWebAuthFlow and exchanges the Google access token through Firebase", async () => {
@@ -108,7 +112,7 @@ describe("extension firebase auth", () => {
   it("fails explicitly when the extension has no identity permission", async () => {
     setChromeRuntime({
       launchWebAuthFlow: vi.fn(),
-      manifest: { permissions: ["storage", "tabs"] },
+      manifest: { permissions: ["storage"] },
     });
 
     const { signInWithGoogle } = await import("./firebase");
@@ -128,7 +132,7 @@ describe("extension firebase auth", () => {
           );
         },
       ),
-      manifest: { permissions: ["identity", "storage", "tabs"] },
+      manifest: { permissions: ["identity", "storage"] },
     });
     signInWithCredential.mockResolvedValue({
       user: { getIdToken: vi.fn().mockResolvedValue("firebase-id-token") },
@@ -154,5 +158,22 @@ describe("extension firebase auth", () => {
       "alexey@example.com",
       "password123",
     );
+  });
+
+  it("clears Firebase extension persistence", async () => {
+    const { signOutFromFirebase } = await import("./firebase");
+
+    await signOutFromFirebase();
+
+    expect(signOut).toHaveBeenCalledWith("firebase-auth-instance");
+  });
+
+  it("treats a GitHub-only build without Firebase configuration as already signed out", async () => {
+    firebaseConfigured = false;
+
+    const { signOutFromFirebase } = await import("./firebase");
+
+    await expect(signOutFromFirebase()).resolves.toBeUndefined();
+    expect(signOut).not.toHaveBeenCalled();
   });
 });

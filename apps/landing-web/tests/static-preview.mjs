@@ -33,9 +33,12 @@ export async function startStaticPreview() {
         return;
       }
 
-      const body = await readFile(filePath);
+      const body = await readFile(filePath).catch((error) => {
+        if (error.code !== 'EISDIR') throw error;
+        return readFile(resolve(filePath, 'index.html'));
+      });
       response.writeHead(200, {
-        'content-type': contentTypes[extname(filePath)] ?? 'application/octet-stream',
+        'content-type': contentTypes[extname(filePath)] ?? 'text/html; charset=utf-8',
       });
       response.end(body);
     } catch {

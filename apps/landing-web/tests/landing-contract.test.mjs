@@ -21,12 +21,16 @@ test('accepts complete public app entry URLs', () => {
       PUBLIC_SITE_URL: 'https://gitiempo-landing.itsua.dev',
       PUBLIC_USER_APP_URL: 'https://gitiempo.itsua.dev/login',
       PUBLIC_ADMIN_APP_URL: 'https://gitiempo-admin.itsua.dev',
+      PUBLIC_PRIVACY_CONTROLLER_NAME: 'GiTiempo Ltd',
+      PUBLIC_PRIVACY_CONTACT_EMAIL: 'privacy@gitiempo.example',
     }),
     {
       siteUrl: 'https://gitiempo-landing.itsua.dev/',
       userAppUrl: 'https://gitiempo.itsua.dev/login',
       adminAppUrl: 'https://gitiempo-admin.itsua.dev/',
       analyticsMeasurementId: undefined,
+      privacyControllerName: 'GiTiempo Ltd',
+      privacyContactEmail: 'privacy@gitiempo.example',
     },
   );
 });
@@ -36,6 +40,8 @@ test('accepts an optional valid GA4 Measurement ID and rejects invalid values', 
     PUBLIC_SITE_URL: 'https://gitiempo-landing.itsua.dev',
     PUBLIC_USER_APP_URL: 'https://gitiempo.itsua.dev/login',
     PUBLIC_ADMIN_APP_URL: 'https://gitiempo-admin.itsua.dev',
+    PUBLIC_PRIVACY_CONTROLLER_NAME: 'GiTiempo Ltd',
+    PUBLIC_PRIVACY_CONTACT_EMAIL: 'privacy@gitiempo.example',
   };
 
   assert.equal(
@@ -56,8 +62,36 @@ test('rejects invalid public URLs with the failing variable name', () => {
         PUBLIC_SITE_URL: 'not-a-url',
         PUBLIC_USER_APP_URL: 'https://gitiempo.itsua.dev/login',
         PUBLIC_ADMIN_APP_URL: 'https://gitiempo-admin.itsua.dev',
+        PUBLIC_PRIVACY_CONTROLLER_NAME: 'GiTiempo Ltd',
+        PUBLIC_PRIVACY_CONTACT_EMAIL: 'privacy@gitiempo.example',
       }),
     /PUBLIC_SITE_URL/,
+  );
+});
+
+test('requires real public privacy-policy contact details', () => {
+  const environment = {
+    PUBLIC_SITE_URL: 'https://gitiempo-landing.itsua.dev',
+    PUBLIC_USER_APP_URL: 'https://gitiempo.itsua.dev/login',
+    PUBLIC_ADMIN_APP_URL: 'https://gitiempo-admin.itsua.dev',
+  };
+
+  assert.throws(
+    () => getPublicConfig(environment),
+    /PUBLIC_PRIVACY_CONTROLLER_NAME/,
+  );
+  assert.throws(
+    () => getPublicConfig({ ...environment, PUBLIC_PRIVACY_CONTROLLER_NAME: 'GiTiempo Ltd' }),
+    /PUBLIC_PRIVACY_CONTACT_EMAIL/,
+  );
+  assert.throws(
+    () =>
+      getPublicConfig({
+        ...environment,
+        PUBLIC_PRIVACY_CONTROLLER_NAME: 'GiTiempo Ltd',
+        PUBLIC_PRIVACY_CONTACT_EMAIL: 'not-an-email',
+      }),
+    /PUBLIC_PRIVACY_CONTACT_EMAIL/,
   );
 });
 
@@ -79,8 +113,7 @@ test('page preserves the approved section order and direct-entry CTA labels', ()
   assert.match(hero, /Open admin workspace/);
   assert.match(finalCta, /Open admin workspace/);
   assert.doesNotMatch(`${hero}${finalCta}${navigation}`, /<a[^>]*>(?:(?!<\/a>)[\s\S])*preview/i);
-  assert.match(navigation, /size-7 place-items-center rounded-\[6px\] bg-brand/);
-  assert.match(navigation, /aria-hidden="true">G<\/span>/);
+  assert.match(navigation, /<img src="\/brand-mark\.png" alt="" class="size-7 shrink-0 object-contain" \/>/);
   assert.match(navigation, /<span>GITiempo<\/span>/);
 });
 
@@ -136,6 +169,31 @@ test('marks every user/admin entry CTA and exposes consent settings only when co
   assert.equal((ctas.match(/data-analytics-destination="admin_app"/g) ?? []).length, 2);
   assert.match(finalCta, /analyticsEnabled && <button/);
   assert.match(finalCta, /data-analytics-settings/);
+  assert.match(finalCta, /href="\/privacy"/);
+});
+
+test('publishes a static privacy policy with extension-specific data handling', () => {
+  const privacyPage = source('../src/pages/privacy.astro');
+  const legalFooter = markup('../src/components/LegalFooter.astro');
+
+  assert.match(privacyPage, /<h1[^>]*>Privacy Policy<\/h1>/);
+  assert.match(privacyPage, /privacyControllerName/);
+  assert.match(privacyPage, /privacyContactEmail/);
+  assert.match(privacyPage, /chrome\.storage\.local/);
+  assert.match(privacyPage, /repository name and issue number/);
+  assert.match(privacyPage, /Limited Use requirements/);
+  assert.match(privacyPage, /extension-local IndexedDB/);
+  assert.match(privacyPage, /token-free status flag/);
+  assert.match(privacyPage, /Retry sign-out/);
+  assert.match(privacyPage, /does not delete server-held/);
+  assert.match(privacyPage, /does not stop a running timer/);
+  assert.match(privacyPage, /all extension user data/);
+  assert.match(privacyPage, /subsequently retrieves issue information/);
+  assert.match(privacyPage, /withdrawing consent does not delete information already received by Google/);
+  assert.match(privacyPage, /does not collect analytics/);
+  assert.doesNotMatch(privacyPage, /anonymous analytics/i);
+  assert.doesNotMatch(privacyPage, /measurementId=/);
+  assert.match(legalFooter, /aria-current="page"/);
 });
 
 test('switches desktop role details with native radio controls', () => {
@@ -195,6 +253,7 @@ test('provides crawl guidance and a static sitemap', () => {
   assert.match(robots, /sitemap-index\.xml/);
   assert.match(sitemap, /PUBLIC_SITE_URL/);
   assert.match(sitemap, /<urlset/);
-  assert.match(favicon, />G<\/text>/);
-  assert.doesNotMatch(favicon, /M18 16h28/);
+  assert.match(sitemap, /privacyUrl/);
+  assert.match(favicon, /brand-mark\.png/);
+  assert.doesNotMatch(favicon, /<text/);
 });

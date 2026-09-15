@@ -30,12 +30,11 @@ describe("AuthIntroPanel", () => {
     const wrapper = mountPanel();
     const logo = wrapper.get('[data-testid="auth-intro-logo"]');
 
-    expect(logo.text()).toBe("GT");
+    expect(logo.get("img").attributes("src")).toContain("brand-mark.png");
     expect(logo.classes()).toContain("size-10");
     // The restyled auth screens put a white badge with the brand mark on the
     // gradient panel, replacing the earlier accent-tint tile.
     expect(logo.classes()).toContain("bg-surface-primary");
-    expect(logo.classes()).toContain("text-brand");
     expect(logo.classes()).toContain("rounded-lg");
   });
 

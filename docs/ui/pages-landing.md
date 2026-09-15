@@ -7,7 +7,7 @@
 
 - App path: `apps/landing-web`.
 - Stack: Astro, TypeScript, and Tailwind CSS v4.
-- Route: `/`.
+- Routes: `/` and `/privacy`.
 - Output: static by default.
 - Local development URL: `http://localhost:4321`.
 - Port `4321` must be strict so the landing never silently moves onto the user app port `5173` or admin app port `5174`.
@@ -16,6 +16,8 @@
   - `GITiempo Landing Page` — desktop, 1440px.
   - `GITiempo Landing Page — Tablet` — tablet, 768px.
   - `GITiempo Landing Page — Mobile` — mobile, 390px.
+  - `GITiempo Privacy Policy` — desktop, 1440px.
+  - `GITiempo Privacy Policy — Mobile` — mobile, 390px.
 
 ## Origins And Links
 
@@ -27,6 +29,18 @@
 - Treat origins as environment configuration. Do not hard-code staging URLs in Astro components.
 - The canonical URL comes from the configured public landing origin.
 - Links into the user and admin apps remain normal same-tab navigation unless a later approved requirement says otherwise.
+
+## Privacy Policy Route
+
+`/privacy` is a static, crawlable legal page linked from the landing footer and included in the sitemap. It has one `h1`, a skip link supplied by the shared layout, a canonical URL, and no analytics prompt or illustrative timer script.
+
+- The page must identify the data controller and provide a monitored privacy contact email from `PUBLIC_PRIVACY_CONTROLLER_NAME` and `PUBLIC_PRIVACY_CONTACT_EMAIL`. These build-time values are mandatory; do not replace them with example addresses or product-name guesses.
+- Cover account/profile and time records; Google/email-password authentication through Firebase and GitHub sign-in; GiTiempo tokens in `chrome.storage.local`, Firebase authentication in extension-local IndexedDB, and the token-free pending-provider-cleanup flag. Successful sign-out clears both authentication stores; incomplete cleanup exposes `Retry sign-out` after reopening.
+- Distinguish locally read GitHub URL/title from the repository name and issue number in a timer-start request, followed by server retrieval of issue information from GitHub. Describe authorized workspace access. Logout/uninstall does not delete server records, stop a running timer, or end other app/provider website sessions.
+- State service purposes, recipients, retention, security limitations, rights/contact-based deletion requests, and policy revisions. Limited Use covers all extension user data, including GitHub-derived data. Confirm organizational transfer/human-access restrictions and actual processors, regions, retention and backups before publication; unresolved facts belong in `docs/chrome-web-store-privacy.md`, never invented policy values.
+- Disclose optional, consent-gated homepage GA4: page views with sanitized title/location/campaign fields, fixed CTA metadata, analytics cookies and local consent storage, homepage settings, best-effort cookie cleanup, and no retroactive deletion after withdrawal. Do not guarantee anonymity or imply extension analytics. Consume `add-landing-ga4-analytics` without changing its runtime or marking its external Tag Assistant/DebugView verification complete.
+- The compact header links back to `/`; it does not reuse the home-page in-page navigation or app-entry CTAs. Its footer uses the dark landing treatment and marks `Privacy Policy` as the current page.
+- The desktop and mobile Pencil frames are content and hierarchy checkpoints; the mobile page remains one column with readable body copy and visibly separated sections.
 
 ## Analytics Consent
 
@@ -66,6 +80,8 @@ Use one `h1` and preserve this section order:
 6. MVP Scope.
 7. FAQ: `id="faq"`.
 8. Final CTA and footer.
+
+The home footer includes a normal same-tab `Privacy Policy` link before the conditional `Analytics settings` control.
 
 Anchor targets must use scroll margin that clears the header. Navigation labels and targets are:
 

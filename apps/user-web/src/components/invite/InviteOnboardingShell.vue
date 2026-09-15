@@ -24,9 +24,13 @@ defineProps<{
       >
         <div class="flex items-center gap-3">
           <div
-            class="bg-accent-tint text-brand flex size-10 items-center justify-center rounded-xl text-sm font-semibold"
+            class="bg-accent-tint flex size-10 items-center justify-center rounded-xl"
           >
-            GT
+            <img
+              alt=""
+              class="size-8 object-contain"
+              src="/brand-mark.png"
+            >
           </div>
           <div class="flex flex-col gap-0.5">
             <p class="text-text-dark text-lg font-semibold">

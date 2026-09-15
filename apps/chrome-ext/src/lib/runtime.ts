@@ -14,6 +14,8 @@ export interface RuntimeSnapshot {
   authenticated: boolean;
   currentTimer: TimeEntryResponse | null;
   errorMessage: string | null;
+  /** Firebase cleanup failed after local GiTiempo cleanup; retry is available. */
+  providerCleanupPending?: boolean;
   user: SnapshotUser | null;
 }
 
@@ -37,6 +39,7 @@ export interface RuntimeClient {
   getSnapshot(): Promise<RuntimeSnapshot>;
   onSnapshotUpdated(listener: (snapshot: RuntimeSnapshot) => void): () => void;
   openExtension(): Promise<void>;
+  retryProviderCleanup(): Promise<RuntimeAuthResult>;
   signOut(): Promise<RuntimeAuthResult>;
   startTimer(pageContext: SupportedGitHubIssueContext): Promise<RuntimeMutationResult>;
   stopTimer(expectedTimerId: string): Promise<RuntimeMutationResult>;
@@ -49,6 +52,7 @@ export type BackgroundMessage =
   | { type: "auth/sign-in-github" }
   | { type: "auth/sign-in-google" }
   | { type: "auth/sign-out" }
+  | { type: "auth/retry-provider-cleanup" }
   | { type: "runtime/get-snapshot" }
   | { type: "timer/start"; pageContext: SupportedGitHubIssueContext }
   | { type: "timer/stop"; expectedTimerId: string }
@@ -126,6 +130,11 @@ export function createRuntimeClient(): RuntimeClient {
     },
     signOut() {
       return sendRuntimeMessage<RuntimeAuthResult>({ type: "auth/sign-out" });
+    },
+    retryProviderCleanup() {
+      return sendRuntimeMessage<RuntimeAuthResult>({
+        type: "auth/retry-provider-cleanup",
+      });
     },
     startTimer(pageContext) {
       return sendRuntimeMessage<RuntimeMutationResult>({

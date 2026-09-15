@@ -1,4 +1,5 @@
 import PdfPrinter from 'pdfmake';
+import { join } from 'node:path';
 import type { ReportDocument, ReportDocumentRow } from '@gitiempo/shared';
 import {
   COLOR,
@@ -20,6 +21,13 @@ import {
 
 /** pdfmake document nodes are untyped by the library. */
 type PdfContent = Record<string, unknown>;
+
+const REPORT_BRAND_MARK_PATH = join(
+  __dirname,
+  '..',
+  'assets',
+  'brand-mark.png',
+);
 
 function mutedLine(text: string, fontSize: number, top: number): PdfContent {
   return { color: COLOR.textMuted, fontSize, margin: [0, top, 0, 0], text };
@@ -47,13 +55,9 @@ function buildMasthead(document: ReportDocument): PdfContent {
               body: [
                 [
                   {
-                    alignment: 'center',
-                    bold: true,
-                    color: COLOR.brand,
-                    fillColor: COLOR.accentTint,
-                    fontSize: FONT.number,
-                    margin: [0, 5, 0, 5],
-                    text: 'GT',
+                    fit: [24, 24],
+                    image: REPORT_BRAND_MARK_PATH,
+                    margin: [0, 0, 0, 0],
                   },
                 ],
               ],
