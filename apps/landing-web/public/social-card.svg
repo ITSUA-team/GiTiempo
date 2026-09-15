@@ -7,8 +7,9 @@
   <rect x="776" y="222" width="132" height="244" rx="10" fill="#292929"/>
   <rect x="928" y="222" width="124" height="154" rx="10" fill="#fff"/>
   <rect x="928" y="396" width="124" height="70" rx="10" fill="#e8e1f5"/>
-  <circle cx="108" cy="132" r="8" fill="#a88dff"/>
-  <text x="132" y="138" fill="#cbbfff" font-family="monospace" font-size="20" font-weight="700">TIME TRACKING FOR GITHUB ISSUES &amp; PROJECTS</text>
+  <image href="brand-mark.png" x="88" y="96" width="44" height="44"/>
+  <text x="148" y="126" fill="#fff" font-family="Arial, sans-serif" font-size="24" font-weight="700">GiTiempo</text>
+  <text x="100" y="168" fill="#cbbfff" font-family="monospace" font-size="20" font-weight="700">TIME TRACKING FOR GITHUB ISSUES &amp; PROJECTS</text>
   <text x="100" y="260" fill="#fff" font-family="Arial, sans-serif" font-size="66" font-weight="700">Track time where</text>
   <text x="100" y="335" fill="#fff" font-family="Arial, sans-serif" font-size="66" font-weight="700">the work happens.</text>
   <rect x="100" y="420" width="220" height="60" rx="10" fill="#5d2b85"/>
