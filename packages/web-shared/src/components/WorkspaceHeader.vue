@@ -22,6 +22,7 @@ import Button from "primevue/button";
 import Menu from "primevue/menu";
 import type { MenuItem as PrimeMenuItem } from "primevue/menuitem";
 import { avatarImagePtClass, useAvatarImage } from "../avatar";
+import brandMarkUrl from "../assets/brand-mark.png";
 import {
   getWorkspaceRoleLabel,
   getWorkspaceSwitchStatus,
@@ -90,7 +91,6 @@ const props = withDefaults(
     userInitials: string;
     workspaceMemberships?: CurrentUserWorkspaceMembershipResponse[];
     workspaceName: string;
-    workspaceShortName?: string;
   }>(),
   {
     centerContentAlign: "center",
@@ -104,7 +104,6 @@ const props = withDefaults(
     switchingWorkspaceId: null,
     userAvatarUrl: null,
     workspaceMemberships: () => [],
-    workspaceShortName: "GT",
   },
 );
 
@@ -363,12 +362,12 @@ onBeforeUnmount(() => {
     class="bg-surface-primary after:bg-divider sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 px-4 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:content-[''] sm:h-16 sm:grid-rows-1 sm:px-6"
   >
     <div class="row-start-1 flex min-w-0 items-center gap-3">
-      <div
+      <img
         data-testid="workspace-header-logo"
-        class="bg-accent-tint text-brand flex size-8 items-center justify-center rounded-lg text-xs leading-[14px] font-semibold"
+        :src="brandMarkUrl"
+        alt=""
+        class="size-8 shrink-0 object-contain"
       >
-        {{ props.workspaceShortName }}
-      </div>
       <div
         v-if="hasPageName"
         class="flex min-w-0 items-center gap-2"

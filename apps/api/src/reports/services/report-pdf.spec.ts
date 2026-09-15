@@ -47,6 +47,7 @@ describe('renderReportDocument', () => {
 
     const flat = JSON.stringify(definition.content);
     expect(flat).toContain('GiTiempo');
+    expect(flat).toContain('brand-mark.png');
     expect(flat).toContain('TIME REPORT');
     expect(flat).toContain('GI Tiempo');
     expect(flat).toContain('Grouping: Project › Member');
