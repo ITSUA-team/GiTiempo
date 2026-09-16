@@ -23,10 +23,10 @@
 - [ ] 4.1 Obtain and record operator confirmation of controller identity/contact, actual provider/recipient list, retention/deletion/backups, applicable transfers, and organizational Limited Use practices before finalizing public factual statements.
 - [x] 4.2 Update the existing policy with authentication providers/storage, local GitHub context versus timer-start payload and server retrieval, authorized workspace sharing, all-data Limited Use, and the difference between logout/uninstall and server deletion.
 - [x] 4.3 Add optional landing GA4 disclosures matching the active analytics contract: measured events and sanitized fields, cookies/consent storage, withdrawal controls and limitations, and separation from extension behavior; avoid an anonymity guarantee.
-- [ ] 4.4 Confirm that the currently displayed staging controller `ITSUA` identifies the actual responsible person/organization and that the separate contact `admin@itsua.com` is monitored; use confirmed production inputs and a truthful revision date, preserve fail-fast handling of missing/malformed inputs, and update `docs/ui/pages-landing.md` with the approved content contract. The earlier issue of an email being displayed as the controller is already resolved on staging.
+- [x] 4.4 Confirm that the currently displayed staging controller `ITSUA` identifies the actual responsible person/organization and that the separate contact `admin@itsua.com` is monitored; use confirmed production inputs and a truthful revision date, preserve fail-fast handling of missing/malformed inputs, and update `docs/ui/pages-landing.md` with the approved content contract. The earlier issue of an email being displayed as the controller is already resolved on staging.
 - [x] 4.5 Verify existing `/privacy` generation, footer link, canonical metadata, and sitemap inclusion in the actual build artifact; repair only demonstrated omissions and confirm no analytics/timer scripts are emitted on the policy page.
 - [x] 4.6 Add or update focused landing route/content/configuration regressions, including analytics-enabled and disabled builds, mandatory policy inputs, disclosure coverage, and sitemap/footer behavior.
-- [ ] 4.7 Run landing lint, typecheck, tests, and build; verify the updated policy at 390, 768, 1024, and 1440 pixels for keyboard access, heading order, readability, and no horizontal overflow.
+- [x] 4.7 Run landing lint, typecheck, tests, and build; verify the updated policy at 390, 768, 1024, and 1440 pixels for keyboard access, heading order, readability, and no horizontal overflow.
 
 ## 5. Docs and declaration preparation
 
@@ -37,7 +37,7 @@
 
 ## 6. Release verification under applicable authorization
 
-- [ ] 6.1 Verify the revised policy on the existing staging deployment, including its homepage footer link and sitemap, then promote the approved artifact to production with confirmed production inputs using the existing release process when authorized. Treat the earlier production 404 as pending release, not a proven routing defect; keep this task open until production deployment has occurred.
-- [ ] 6.2 Verify anonymously on the public domain: HTTP 200 with the expected policy text and confirmed controller/contact/date, working homepage footer link, sitemap inclusion, and no sign-in requirement. Record URL, deployment revision, and timestamp.
+- [x] 6.1 Verify the revised policy on the existing staging deployment, including its homepage footer link and sitemap, then promote the approved artifact to production with confirmed production inputs using the existing release process when authorized. Treat the earlier production 404 as pending release, not a proven routing defect; keep this task open until production deployment has occurred.
+- [x] 6.2 Verify anonymously on the public domain: HTTP 200 with the expected policy text and confirmed controller/contact/date, working homepage footer link, sitemap inclusion, and no sign-in requirement. Record URL, deployment revision, and timestamp.
 - [ ] 6.3 Compare the publisher's actual Chrome Web Store Privacy practices fields and policy URL against the candidate package and approved policy; update them under applicable authorization and record their verified state. Do not infer values from an unseen Dashboard.
 - [ ] 6.4 Record final privacy submission readiness only after all public policy, publisher-fact, package, and Dashboard checks pass. Store submission itself remains a separately authorized release action; unresolved gates remain pending.

@@ -234,6 +234,50 @@ describe('Project imports (e2e)', () => {
     expect((await readProject(projectId))?.visibility).toBe('public');
   });
 
+  it('refuses an import whose repository is already tracked by an active project', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const repository = `${ORGANIZATION}/Taken-${suffix}`;
+    const boardTitle = `Board ${suffix}`;
+    const trackingProjectName = `${ORGANIZATION}/tracking-${suffix}`;
+    const trackingProjectId = await seedProject(trackingProjectName, true);
+    await seedRepositoryRef(
+      trackingProjectId,
+      repository.toLowerCase(),
+      new Date('2024-01-01'),
+    );
+
+    const response = await importBoards([
+      board({ githubRepos: [repository], title: boardTitle }),
+    ]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.results[0]).toMatchObject({
+      linkedRepository: repository,
+      projectId: null,
+      status: 'repository-taken',
+      trackingProject: {
+        id: trackingProjectId,
+        isActive: true,
+        name: trackingProjectName,
+      },
+    });
+
+    const created = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.name, `${ORGANIZATION}/${boardTitle}`));
+    expect(created).toHaveLength(0);
+
+    const refs = await readRepositoryRefs(repository.toLowerCase());
+    expect(refs).toEqual([
+      expect.objectContaining({
+        externalKey: repository.toLowerCase(),
+        isActive: true,
+        projectId: trackingProjectId,
+      }),
+    ]);
+  });
+
   async function seedProject(name: string, isActive: boolean) {
     const [row] = await db
       .insert(projects)

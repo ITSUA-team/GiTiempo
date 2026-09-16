@@ -10,7 +10,8 @@ This checklist is the package-specific record for the GiTiempo Chrome extension.
 | Local Chrome candidate | Technically verified, 2026-09-14 | `apps/chrome-ext/dist/gitiempo-chrome-0.1.0.zip`, SHA-256 `9c654ecd6428b01bef5f745389d161e23b959cfeeb80a88659bcf2aedc307eed`; 10 files, sorted entries and fixed ZIP timestamps. The ignored ZIP is rebuilt locally; hash it again after any rebuild. |
 | Candidate API environment | Staging; production package pending | Built host is `https://api.gitiempo.itsua.dev/*`. Confirm the intended release backend/configuration and rebuild/review before Store upload. This ZIP is a local test candidate. |
 | Public privacy-policy URL | Pending production release | Use `https://gitiempo.com/privacy` only after the approved landing release is public. The staging baseline is `https://gitiempo-landing.itsua.dev/privacy/`; it is not the Store URL. |
-| Controller and privacy contact | Publisher-confirmed | The publisher confirmed `ITSUA` as controller and `admin@itsua.com` as its monitored contact. Confirm the production build uses these same values. |
+| Controller and privacy contact | Publisher-confirmed, reconfirmed 2026-09-16 | The publisher confirmed `ITSUA` as controller and reconfirmed that `admin@itsua.com` is its monitored privacy contact. Confirm the production build uses these same values. |
+| Public ITSUA identity evidence | Website-verified, 2026-09-16 | [itsua.com](https://itsua.com/) identifies ITSUA as an engineering studio and publishes `hello@itsua.com`, Sakala tn 7-2, Tallinn, 10141, Estonia, and VAT `EE102549430`. Its contact page also lists Tallinn and Kharkiv studios. This corroborates ITSUA's public identity, but does not by itself prove that ITSUA controls GiTiempo processing or that `admin@itsua.com` is monitored. |
 | CWS Dashboard values | Not yet verified | Compare every final Dashboard choice and policy URL with this checklist and the approved policy; record the review date and publisher account below. |
 
 ## Technical data-flow inventory
@@ -70,13 +71,13 @@ The bundled Zod dependency contains two `Function("")` capability probes and a s
 | Human access to extension user data is limited to permitted exceptions. | Open publisher fact | Confirm actual operational/support access and the applicable exception before making a Limited Use certification. |
 | Processor/recipient list and processing locations/transfers are complete. | Open publisher fact | Obtain the actual hosting and processing providers and countries; do not infer them from source code. |
 | Retention, deletion-request process, and backup treatment are accurate. | Open publisher fact | Obtain actual periods/criteria for accounts, workspace records, logs, and backups. |
-| The production controller/contact/date are correct. | Pending production verification | The staging page showed `ITSUA`, `admin@itsua.com`, and 18 August 2026; production has not been checked after release. |
+| The production controller/contact/date are correct. | Verified, 2026-09-16 | Anonymous production output showed `ITSUA`, `admin@itsua.com`, and 14 September 2026. It corresponds to the latest successful `Deploy landing production` workflow run, revision `2f51c54397e11a5cde50e61bbcfac280a63c0d0a`. |
 
 ## Publication gates
 
 1. Build and inspect the final Chrome artifact, fill in its SHA-256, manifest, permissions, and remote-code results.
 2. Complete the open publisher facts above, then update the public policy with only confirmed operational details.
-3. Deploy the approved policy to production and anonymously verify the policy URL, footer link, sitemap entry, controller, contact, and effective date.
+3. Completed 16 September 2026: anonymously verify the production policy URL, footer link, sitemap entry, controller, contact, effective date, deployment revision, and timestamp.
 4. Open the real CWS Dashboard, select data categories using the current Dashboard definitions, compare all entries with this document and the policy, and record the reviewer/date.
 5. Submit only after every gate is complete. Do not place credentials, keys, test-account details, or session tokens in this document.
 
@@ -88,16 +89,18 @@ The existing `add-landing-ga4-analytics` change owns analytics behavior. This ch
 
 Design inspection: approved privacy desktop/mobile and extension unauthenticated/error frames inspected on 2026-09-14. `Ext Sign-out Cleanup Pending` (`Jr6mK`) reuses the existing error presentation without an authenticated account menu and offers `Retry sign-out` before another login.
 
-## Verification evidence (2026-09-14)
+## Verification evidence (2026-09-14–16)
 
 - Extension lint, typecheck, and both browser builds passed; 144 tests passed. Regressions cover independent provider/session cleanup, pending backend revoke, provider/storage failures, retry after module reset, and the existing refresh-race/timer behavior. Popup and content tests verify the signed-out transition. API/SPAs/provider website logout code is unchanged; real-account checks remain pending.
 - Tab API inventory: popup active-tab lookup reads supported GitHub context and sends page-context messages; background queries supported GitHub URL patterns and broadcasts snapshots; popup opens configured app/profile tabs. Existing issue, pull-request, organization-project, navigation, and broadcast tests pass with the shared manifest's `tabs` permission removed. Mocked tests do not prove browser permission enforcement.
 - Landing lint, typecheck, and 17 tests passed. `pnpm --filter landing-web exec node tests/privacy-browser.mjs` passed two actual builds (GA4 absent and configured) at 390/768/1024/1440px in Chrome for Testing. It checks HTTP 200 for `/privacy` and `/privacy/`, emitted identity/contact/canonical, sitemap and footer links, one H1/eight H2 headings, no policy scripts/islands/consent/timer runtime, no horizontal overflow, readable body size, and programmatic focus visibility. Full-page screenshots were visually inspected at all four widths.
 - Browser test fixtures use `Privacy route test` / `privacy@example.invalid` and an invalid test domain intentionally; these are test-only environment overrides, not production controller inputs. The source still requires controller/contact and rejects absent or malformed values.
-- After fixture tests, rebuilt the local landing with publisher-confirmed `ITSUA` and `admin@itsua.com` and verified those values, 14 September 2026, and absence of scripts in the generated policy. Production environment inputs and the deployed artifact have not been verified; task 4.4 is partially complete for that reason.
-- Physical keyboard traversal and actual footer-click navigation are not certified: this host's agent-browser input actions reported success without activating the link. Direct URL requests/navigation, valid hrefs, and programmatic focus checks passed. Task 4.7 remains open for that final interaction check.
+- After fixture tests, rebuilt the local landing with publisher-confirmed `ITSUA` and `admin@itsua.com` and verified those values, 14 September 2026, and absence of scripts in the generated policy.
+- Staging verification, 16 September 2026 at 12:16:24 UTC: `https://gitiempo-landing.itsua.dev/privacy/` rendered `ITSUA`, `admin@itsua.com`, and the 14 September 2026 revision date. A real click on the staging homepage footer's `Privacy Policy` link returned to that public route. `https://gitiempo-landing.itsua.dev/sitemap-index.xml` returned HTTP 200 and listed `https://gitiempo-landing.itsua.dev/privacy`.
+- Anonymous production verification, 16 September 2026 at 12:00:41 UTC: `https://gitiempo.com/privacy/` returned HTTP 200 after the canonical `/privacy` to `/privacy/` redirect and rendered the ITSUA controller name, the `admin@itsua.com` mailto link, and the 14 September 2026 revision date. The homepage footer linked to `/privacy`, and the sitemap index listed the privacy URL; no sign-in was required. The latest successful [production deployment run](https://github.com/ITSUA-team/GiTiempo/actions/runs/35078709182) completed at 09:20:15 UTC and deployed revision `2f51c54397e11a5cde50e61bbcfac280a63c0d0a`, providing the release revision for task 6.2.
+- Landing keyboard and footer interaction verification, 16 September 2026: the browser regression uses native Tab then Enter at all required widths and confirms the skip link reaches and activates `#main-content`. In the production page opened in Codex Browser, a real click on the homepage footer's `Privacy Policy` link navigated to `https://gitiempo.com/privacy/`; a native Tab focused `Skip to main content`, and Return activated its `#main-content` target. Task 4.7 is complete.
 - Strict validation of `prepare-chrome-web-store-privacy` and `git diff --check` passed. The active analytics delta and its outstanding external verification were not changed.
-- Not performed: packaged Google/email/GitHub real-account flows, real Chrome/Firefox permission checks across supported surfaces, revised staging or production deployment, or actual CWS Dashboard edits. No deployment or Store submission was triggered.
+- Not performed: packaged Google/email/GitHub real-account flows, real Chrome/Firefox permission checks across supported surfaces, or actual CWS Dashboard edits. This verification did not trigger a deployment or Store submission.
 
 ## References
 
