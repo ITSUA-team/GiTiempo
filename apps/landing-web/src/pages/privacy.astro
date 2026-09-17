@@ -6,7 +6,7 @@ import { getPublicConfig } from '../lib/public-config.mjs';
 const config = getPublicConfig(import.meta.env);
 const title = 'Privacy Policy — GITiempo';
 const description = 'How GITiempo handles personal data in the service and Chrome extension.';
-const lastUpdated = '14 September 2026';
+const lastUpdated = '16 September 2026';
 ---
 
 <BaseLayout {title} {description}>
@@ -61,20 +61,44 @@ const lastUpdated = '14 September 2026';
         <section aria-labelledby="privacy-sharing">
           <h2 id="privacy-sharing" class="card-heading text-text-dark">4. Sharing and authentication services</h2>
           <p class="mt-3">
-            We share information with providers that help operate GITiempo, with authorized workspace members for time tracking, or where required by law. Google and Firebase provide Google and email/password authentication. If you choose GitHub sign-in, GitHub provides identity information through the GiTiempo authentication service. GitHub also supplies repository and issue information for linked tasks. Hosting and infrastructure providers process service data to operate the website and API.
+            We share information with the following providers that help operate GITiempo, with authorized workspace members for time tracking, or where required by law.
           </p>
+          <ul class="mt-3 list-disc space-y-2 pl-5">
+            <li><strong>Hetzner Online</strong> (Germany, European Union) — primary hosting for the GITiempo API and database.</li>
+            <li><strong>Cloudflare</strong> (global edge network) — content delivery and DNS for the GITiempo web applications.</li>
+            <li><strong>Firebase / Google</strong> — authentication services (Google, email/password, and GitHub sign-in). Firebase processes authentication identifiers and, for email/password sign-in, the email address you provide.</li>
+            <li><strong>GitHub</strong> — if you choose GitHub sign-in, GitHub provides identity information through the GiTiempo authentication service. GitHub also supplies repository and issue information for linked tasks.</li>
+            <li><strong>Backblaze</strong> (European Union) — encrypted backup storage for the GITiempo database.</li>
+            <li><strong>Google</strong> (Gmail) — transactional email delivery for account invitations and service notifications.</li>
+          </ul>
           <p class="mt-3">
             Our handling of all extension user data, including GitHub-derived data and information received from Google APIs, follows the Chrome Web Store User Data Policy and its Limited Use requirements. We use this data only to provide or improve the extension’s disclosed time-tracking purpose. We do not sell it or use or transfer it for advertising, creditworthiness assessment, or lending.
           </p>
           <p class="mt-3">
             Transfers are limited to supporting that purpose, meeting legal requirements, preventing abuse, or a business transfer with your prior explicit consent. Human access is limited to your explicit consent for specific data, security needs, legal obligations, or aggregated and anonymized data for internal operations.
           </p>
+          <p class="mt-3">
+            Primary hosting and database storage are located in Germany (European Union). Encrypted backups are stored in the European Union. Firebase and GitHub may process data in their respective global infrastructures; any transfer outside the European Union is subject to appropriate safeguards, including Standard Contractual Clauses where applicable.
+          </p>
         </section>
 
         <section aria-labelledby="privacy-retention">
           <h2 id="privacy-retention" class="card-heading text-text-dark">5. Retention and security</h2>
           <p class="mt-3">
-            We retain personal data only for as long as needed to provide the service, comply with legal obligations, resolve disputes, and enforce agreements. Access is limited to people and providers who need it to operate the service. No method of transmission or storage is completely secure, so please protect your account credentials and keep your browser up to date.
+            We retain personal data for the following periods:
+          </p>
+          <ul class="mt-3 list-disc space-y-2 pl-5">
+            <li><strong>Account, workspace, project, task, and time-entry data</strong>: retained while your account is active. We do not automatically delete workspace or time-entry records; they remain accessible to authorized workspace members according to their roles.</li>
+            <li><strong>Encrypted database backups</strong>: daily backups are retained for up to 90 days; weekly backups are retained for up to one year. Older backups are automatically removed. All backups are encrypted before transmission to the backup provider.</li>
+            <li><strong>Application logs</strong>: retained for up to 30 days.</li>
+            <li><strong>Authentication tokens</strong>: access tokens expire after 15 minutes; refresh tokens expire after 7 days. Expired or revoked tokens are not reused.</li>
+            <li><strong>Workspace invitations</strong>: expire after 7 days if not accepted.</li>
+          </ul>
+          <p class="mt-3">
+            Access to production data is limited to authorized personnel who need it to operate and support the service. Data in transit is protected with TLS. Database backups are encrypted at rest. No method of transmission or storage is completely secure, so please protect your account credentials and keep your browser up to date.
+          </p>
+          <p class="mt-3">
+            If a personal data breach occurs, we will notify affected users and the relevant supervisory authority in accordance with applicable data protection law, including within 72 hours where required by the GDPR.
           </p>
         </section>
 
@@ -84,7 +108,16 @@ const lastUpdated = '14 September 2026';
             Successful extension sign-out clears its GiTiempo session and extension-local Firebase authentication state. If provider cleanup fails, use <strong>Retry sign-out</strong> in the popup, including after reopening it. Backend session revocation is attempted but may fail when the service is unavailable. Signing out does not sign you out of the GiTiempo web apps or Google/GitHub websites.
           </p>
           <p class="mt-3">
-            Signing out or uninstalling the extension does not delete server-held account, workspace, or time-entry records and does not stop a running timer. To request access, correction, deletion, or a portable copy of your personal data, contact the privacy email above and describe your request. Depending on where you live, you may also have rights to restrict or object to processing and to complain to your local data-protection authority.
+            Signing out or uninstalling the extension does not delete server-held account, workspace, or time-entry records and does not stop a running timer. To request access, correction, deletion, or a portable copy of your personal data, contact the privacy email above and describe your request. We will respond within 30 days.
+          </p>
+          <p class="mt-3">
+            <strong>Account deletion requests.</strong> When you request deletion of your account, we will remove your workspace membership, associated project assignments, and linked authentication records from the live database. Your time-entry records may be retained where their deletion would affect workspace reporting that other members rely on; in that case we will inform you. Account profile data (name, email, and avatar) will be removed or anonymized. Firebase authentication records will be deleted from the authentication provider upon request.
+          </p>
+          <p class="mt-3">
+            Data that has been included in encrypted database backups may remain in those backups until the backups expire and are automatically removed — up to 90 days for daily backups and up to one year for weekly backups. We cannot selectively remove individual records from encrypted backups, but backups are inaccessible without the encryption key and are not used for any purpose other than disaster recovery.
+          </p>
+          <p class="mt-3">
+            Depending on where you live, you may also have rights to restrict or object to processing, to data portability, and to complain to your local data-protection authority.
           </p>
         </section>
 

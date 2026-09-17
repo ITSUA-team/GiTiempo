@@ -66,27 +66,36 @@ The bundled Zod dependency contains two `Function("")` capability probes and a s
 | --- | --- | --- |
 | Data is used only to provide GiTiempo functionality. | Publisher-confirmed | Confirm this still holds for the release package and policy. |
 | Data is not sold, used for third-party advertising, creditworthiness, or lending. | Publisher-confirmed | Record the responsible publisher reviewer before CWS submission. |
-| Transfers are limited to the core function and comply with the applicable CWS policy. | Open publisher fact | The user did not confirm permitted transfer recipients or exceptions. |
-| Human access to extension user data is limited to permitted exceptions. | Open publisher fact | Confirm actual operational/support access and the applicable exception before making a Limited Use certification. |
-| Processor/recipient list and processing locations/transfers are complete. | Open publisher fact | Obtain the actual hosting and processing providers and countries; do not infer them from source code. |
-| Retention, deletion-request process, and backup treatment are accurate. | Open publisher fact | Obtain actual periods/criteria for accounts, workspace records, logs, and backups. |
-| The production controller/contact/date are correct. | Pending production verification | The staging page showed `ITSUA`, `admin@itsua.com`, and 18 August 2026; production has not been checked after release. |
+| Transfers are limited to the core function and comply with the applicable CWS policy. | Confirmed, 2026-09-16 | Primary hosting and database in Germany (EU); encrypted backups in EU. Firebase/Google and GitHub may process data in their global infrastructures; transfers outside the EU are subject to appropriate safeguards including Standard Contractual Clauses. Public policy §4 updated with transfer safeguards. |
+| Human access to extension user data is limited to permitted exceptions. | Confirmed, 2026-09-16 | Production data access is restricted to authorized personnel with key-based authentication; the database is not exposed to the public internet; monitoring tools are behind authenticated reverse proxies. No third-party or anonymous access to user data. Public policy §5 states access is limited to authorized personnel. Internal access-control, MFA, and audit-log details are recorded in the internal privacy review. |
+| Processor/recipient list and processing locations/transfers are complete. | Confirmed, 2026-09-16 | Providers verified from production infrastructure: Hetzner Online (Germany, EU) — hosting and database; Cloudflare (global edge) — CDN and DNS; Firebase/Google — authentication; GitHub — OAuth sign-in and issue data; Backblaze (EU) — encrypted backup storage; Google (Gmail) — transactional email. Public policy §4 lists all providers with regions. No additional processors identified. |
+| Retention, deletion-request process, and backup treatment are accurate. | Confirmed, 2026-09-16 | Account/workspace/time-entry data: retained while account is active, no automatic deletion. Encrypted backups: 90 days (daily), 1 year (weekly), auto-pruned. Application logs: 30 days. Access tokens: 15 minutes; refresh tokens: 7 days. Invites: 7 days. Deletion process: manual request via privacy email, 30-day response; workspace membership and profile data removed or anonymized; time entries may be retained for workspace reporting integrity; backup data persists until backup expiration. Public policy §5 and §6 updated with confirmed retention periods and deletion process. |
+| The production controller/contact/date are correct. | Pending production verification | The local policy revision uses `ITSUA` as controller, `admin@itsua.com` as contact, and 16 September 2026 as the effective date. Production deployment and anonymous verification of the live policy URL have not yet been performed. |
 
 ## Publication gates
 
 1. Build and inspect the final Chrome artifact, fill in its SHA-256, manifest, permissions, and remote-code results.
-2. Complete the open publisher facts above, then update the public policy with only confirmed operational details.
+2. ~~Complete the open publisher facts above, then update the public policy with only confirmed operational details.~~ **Completed 2026-09-16.** Processor list, retention/deletion/backups, transfers, and human access confirmed from production infrastructure. Public policy updated with confirmed facts only.
 3. Deploy the approved policy to production and anonymously verify the policy URL, footer link, sitemap entry, controller, contact, and effective date.
 4. Open the real CWS Dashboard, select data categories using the current Dashboard definitions, compare all entries with this document and the policy, and record the reviewer/date.
 5. Submit only after every gate is complete. Do not place credentials, keys, test-account details, or session tokens in this document.
 
 ## Local policy revision and dependencies
 
-The local policy revision dated 14 September 2026 adds verified authentication/storage, GitHub, deletion-boundary, and optional GA4 disclosures. It is a release draft while the processor list, retention/backups/transfers, and organizational human-access practices remain unconfirmed. The Limited Use wording is the proposed publication commitment; source inspection alone does not verify organizational compliance.
+The local policy revision dated 16 September 2026 adds confirmed processor list with processing regions, transfer safeguards, specific retention periods for account/workspace/time-entry data, backups, logs, and authentication tokens, a defined account-deletion request process with 30-day response timeline and backup treatment, and a personal-data-breach notification commitment. All retention periods, provider identities, and processing locations were verified from the production infrastructure on 2026-09-16. The Limited Use wording is the proposed publication commitment, now grounded in confirmed operational facts rather than source inspection alone.
+
+The earlier 14 September 2026 revision added verified authentication/storage, GitHub, deletion-boundary, and optional GA4 disclosures. The 16 September revision supersedes it for processor list, retention/backups/transfers, and deletion process.
 
 The existing `add-landing-ga4-analytics` change owns analytics behavior. This change only documents its optional consent, sanitized events, and withdrawal contract. Its outstanding external Tag Assistant/GA4 DebugView verification remains open and has not been marked complete here.
 
 Design inspection: approved privacy desktop/mobile and extension unauthenticated/error frames inspected on 2026-09-14. `Ext Sign-out Cleanup Pending` (`Jr6mK`) reuses the existing error presentation without an authenticated account menu and offers `Retry sign-out` before another login.
+
+## Verification evidence (2026-09-16)
+
+- Public privacy policy (`apps/landing-web/src/pages/privacy.astro`) updated with confirmed operational facts: processor list with regions (§4), specific retention periods and security practices (§5), and account-deletion request process with backup treatment (§6). Effective date updated to 16 September 2026.
+- Landing lint, typecheck, and 17 tests passed. Build verified with production-env values: `/privacy/index.html` generated successfully; no secrets, host addresses, IP addresses, or internal configuration values found in the output.
+- Publisher facts confirmed from production infrastructure inspection: processor identities and regions, retention periods, backup encryption and retention, authentication token lifetimes, deletion process, access controls, and transfer safeguards. Internal research document (`Privacy_Policy.md`) contains the full evidence with internal details; this checklist and the public policy contain only confirmed, publishable facts.
+- Still pending: production deployment and anonymous verification of the live policy URL, packaged browser tests with real accounts, and actual CWS Dashboard review.
 
 ## Verification evidence (2026-09-14)
 
