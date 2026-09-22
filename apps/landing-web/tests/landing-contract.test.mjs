@@ -187,6 +187,10 @@ test('publishes a static privacy policy with extension-specific data handling', 
   assert.match(privacyPage, /Retry sign-out/);
   assert.match(privacyPage, /does not delete server-held/);
   assert.match(privacyPage, /does not stop a running timer/);
+  assert.match(privacyPage, /Hetzner Online GmbH/);
+  assert.match(privacyPage, /Backblaze B2/);
+  assert.match(privacyPage, /90 daily snapshots and 52 weekly snapshots/);
+  assert.match(privacyPage, /does not currently provide self-service or API account deletion/);
   assert.match(privacyPage, /all extension user data/);
   assert.match(privacyPage, /subsequently retrieves issue information/);
   assert.match(privacyPage, /withdrawing consent does not delete information already received by Google/);

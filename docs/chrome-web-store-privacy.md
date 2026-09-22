@@ -9,7 +9,7 @@ This checklist is the package-specific record for the GiTiempo Chrome extension.
 | Package version | Technical fact | `0.1.0` in `apps/chrome-ext/package.json` and the generated-manifest source. |
 | Local Chrome candidate | Technically verified, 2026-09-14 | `apps/chrome-ext/dist/gitiempo-chrome-0.1.0.zip`, SHA-256 `9c654ecd6428b01bef5f745389d161e23b959cfeeb80a88659bcf2aedc307eed`; 10 files, sorted entries and fixed ZIP timestamps. The ignored ZIP is rebuilt locally; hash it again after any rebuild. |
 | Candidate API environment | Staging; production package pending | Built host is `https://api.gitiempo.itsua.dev/*`. Confirm the intended release backend/configuration and rebuild/review before Store upload. This ZIP is a local test candidate. |
-| Public privacy-policy URL | Pending production release | Use `https://gitiempo.com/privacy` only after the approved landing release is public. The staging baseline is `https://gitiempo-landing.itsua.dev/privacy/`; it is not the Store URL. |
+| Public privacy-policy URL | Public revision pending deployment | `https://gitiempo.com/privacy` is live with the 14 September 2026 policy. The locally revised 16 September 2026 policy adds confirmed processor, retention, deletion-boundary, and backup facts; deploy and anonymously re-verify it before using it for Store submission. |
 | Controller and privacy contact | Publisher-confirmed, reconfirmed 2026-09-16 | The publisher confirmed `ITSUA` as controller and reconfirmed that `admin@itsua.com` is its monitored privacy contact. Confirm the production build uses these same values. |
 | Public ITSUA identity evidence | Website-verified, 2026-09-16 | [itsua.com](https://itsua.com/) identifies ITSUA as an engineering studio and publishes `hello@itsua.com`, Sakala tn 7-2, Tallinn, 10141, Estonia, and VAT `EE102549430`. Its contact page also lists Tallinn and Kharkiv studios. This corroborates ITSUA's public identity, but does not by itself prove that ITSUA controls GiTiempo processing or that `admin@itsua.com` is monitored. |
 | CWS Dashboard values | Not yet verified | Compare every final Dashboard choice and policy URL with this checklist and the approved policy; record the review date and publisher account below. |
@@ -67,23 +67,29 @@ The bundled Zod dependency contains two `Function("")` capability probes and a s
 | --- | --- | --- |
 | Data is used only to provide GiTiempo functionality. | Publisher-confirmed | Confirm this still holds for the release package and policy. |
 | Data is not sold, used for third-party advertising, creditworthiness, or lending. | Publisher-confirmed | Record the responsible publisher reviewer before CWS submission. |
-| Transfers are limited to the core function and comply with the applicable CWS policy. | Open publisher fact | The user did not confirm permitted transfer recipients or exceptions. |
-| Human access to extension user data is limited to permitted exceptions. | Open publisher fact | Confirm actual operational/support access and the applicable exception before making a Limited Use certification. |
-| Processor/recipient list and processing locations/transfers are complete. | Open publisher fact | Obtain the actual hosting and processing providers and countries; do not infer them from source code. |
-| Retention, deletion-request process, and backup treatment are accurate. | Open publisher fact | Obtain actual periods/criteria for accounts, workspace records, logs, and backups. |
+| Transfers are limited to the core function and comply with the applicable CWS policy. | Partially confirmed | The operator research identifies the current providers below, but does not confirm the applicable contractual transfer safeguards or every transfer exception. |
+| Human access to extension user data is limited to permitted exceptions. | Open publisher fact | Restricted infrastructure access is reported, but Cloudflare/Firebase membership, MFA enforcement, access auditing, and an incident-response process remain unverified or incomplete. Do not make a final Limited Use certification on this evidence alone. |
+| Processor/recipient list and processing locations/transfers are complete. | Partially confirmed | Operator research received 2026-09-16 identifies Hetzner (Germany), Cloudflare (web delivery/security), Backblaze B2 (EU-Central backups), Firebase/Google (authentication and transactional email), and GitHub (sign-in and issue integration). Confirm the applicable transfer safeguards and Cloudflare/Firebase account access before treating the list as final. |
+| Retention, deletion-request process, and backup treatment are accurate. | Partially confirmed | The live database has no automatic cleanup or fixed retention period; account deletion is not available through the UI or API. Encrypted backups retain up to 90 daily and 52 weekly snapshots. Application/access logs have no fixed retention period; monitoring logs retain up to 30 days. A documented manual deletion-request process and retention criteria remain open. |
 | The production controller/contact/date are correct. | Verified, 2026-09-16 | Anonymous production output showed `ITSUA`, `admin@itsua.com`, and 14 September 2026. It corresponds to the latest successful `Deploy landing production` workflow run, revision `2f51c54397e11a5cde50e61bbcfac280a63c0d0a`. |
 
 ## Publication gates
 
 1. Build and inspect the final Chrome artifact, fill in its SHA-256, manifest, permissions, and remote-code results.
-2. Complete the open publisher facts above, then update the public policy with only confirmed operational details.
+2. Completed in the local revision on 16 September 2026: update the public policy with confirmed processors, locations, backup periods, and deletion boundaries. Keep the organizational-access and transfer-safeguard gaps visibly open.
 3. Completed 16 September 2026: anonymously verify the production policy URL, footer link, sitemap entry, controller, contact, effective date, deployment revision, and timestamp.
 4. Open the real CWS Dashboard, select data categories using the current Dashboard definitions, compare all entries with this document and the policy, and record the reviewer/date.
 5. Submit only after every gate is complete. Do not place credentials, keys, test-account details, or session tokens in this document.
 
 ## Local policy revision and dependencies
 
-The local policy revision dated 14 September 2026 adds verified authentication/storage, GitHub, deletion-boundary, and optional GA4 disclosures. It is a release draft while the processor list, retention/backups/transfers, and organizational human-access practices remain unconfirmed. The Limited Use wording is the proposed publication commitment; source inspection alone does not verify organizational compliance.
+The local policy revision dated 16 September 2026 adds operator-researched processor/location, retention, deletion-boundary, and backup disclosures to the prior verified authentication/storage, GitHub, and optional GA4 disclosures. It remains a release draft while transfer safeguards, Cloudflare/Firebase access controls, and organizational human-access practices remain unconfirmed. The Limited Use wording is a proposed publication commitment; operational research alone does not verify organizational compliance.
+
+## Operator research received 2026-09-16
+
+The operator supplied environment research used only for the public facts stated above. It confirms that production application and database processing occur at Hetzner in Germany; web delivery/security uses Cloudflare; encrypted database backups are stored in Backblaze B2's EU-Central region; Firebase/Google provide authentication and transactional email; and GitHub supports sign-in and linked issue retrieval. The research also confirms no automatic deletion of primary account/workspace/time-entry records, no self-service or API account-deletion flow, backup retention of up to 90 daily and 52 weekly snapshots, non-fixed application/access-log retention, and 30-day monitoring-log retention.
+
+Sensitive operational details, access identities, host addresses, credentials, and configuration paths from that research are deliberately not recorded here. Before closing task 4.1, the publisher still needs to confirm transfer safeguards, Cloudflare/Firebase human access and MFA, access-audit coverage, a deletion-request process, and organizational Limited Use practices.
 
 The existing `add-landing-ga4-analytics` change owns analytics behavior. This change only documents its optional consent, sanitized events, and withdrawal contract. Its outstanding external Tag Assistant/GA4 DebugView verification remains open and has not been marked complete here.
 
