@@ -97,10 +97,16 @@ The Chrome release package MUST request only `identity`, `storage`, and the host
 #### Scenario: Supported tab behavior works with scoped access
 
 - **GIVEN** the extension is installed with its minimum permissions
-- **WHEN** the user opens supported GitHub issue, pull-request, and organization-project issue surfaces and operates the timer
+- **WHEN** the user opens supported GitHub issues and organization-project issue panes, with or without a `/views/{view}` path segment, and operates the timer
 - **THEN** popup context resolution, injected controls, and updates across matching tabs continue to work
 - **AND** opening the web app and profile continues to work
-- **AND** Chrome and Firefox verification records identify any necessary browser-specific permission difference
+- **AND** Chrome verification records identify any necessary permission difference; Firefox runtime verification is explicitly deferred for this release-preparation pass, not reported as passed
+
+#### Scenario: Pull requests remain outside extension scope
+
+- **WHEN** the user opens a GitHub pull request
+- **THEN** the extension does not inject timer controls or treat that page as a supported timer context
+- **AND** content-script matches, background tab broadcasts, and release declarations exclude pull-request pages
 
 ### Requirement: Chrome Web Store Privacy Declarations Match the Release
 
@@ -138,3 +144,11 @@ The release documentation MUST maintain a reviewable inventory mapping extension
 - **WHEN** the Dashboard declarations are checked before submission
 - **THEN** the record identifies package version and hash, policy URL, review date, category/permission decisions, and certification status
 - **AND** the public policy and recorded Dashboard declarations agree with that candidate's behavior
+
+#### Scenario: Publisher owns the Dashboard review
+
+- **GIVEN** the publisher explicitly takes ownership of actual Store field verification
+- **WHEN** the agent completes its engineering handoff
+- **THEN** Dashboard review is recorded as an external publisher-owned follow-up, not an agent completion blocker
+- **AND** the agent does not request Dashboard access or inspect, change or certify those fields
+- **AND** engineering completion is distinguished from final Store submission readiness, which still requires the publisher's review
