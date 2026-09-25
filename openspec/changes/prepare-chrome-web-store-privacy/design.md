@@ -29,6 +29,14 @@ Follow `apps/chrome-ext/AGENTS.md`, `apps/landing-web/AGENTS.md`, `docs/ui/INDEX
 
 ## Decisions
 
+### Verification scope amendment — 25 September 2026
+
+The publisher explicitly removed Pull Request support from this change. Supported timer surfaces are GitHub issues and organization-project issue panes, including project URLs both with and without `/views/{view}`. Remove the obsolete PR content-script/broadcast matches and declaration wording; do not add PR functionality.
+
+The current real-account verification pass uses Chrome and an email/password test account only. Firefox runtime testing is deferred; its build remains checked. Google/GitHub login remain product features, but are outside this manual pass. Retain the observed Google `redirect_uri_mismatch` and incomplete GitHub verification as known limitations, not passes. This adjustment narrows the manual acceptance matrix; it does not certify excluded flows or Store readiness.
+
+The publisher subsequently took ownership of actual Chrome Web Store field and policy-URL verification. Task 6.3 is an external publisher follow-up, not an agent task or engineering-handoff blocker. The agent will not request Dashboard login, inspect or change Store fields, or submit the package. Task 6.4 reports the engineering handoff separately from final submission readiness; unseen Dashboard values remain unverified until the publisher completes that review.
+
 ### 1. Own Firebase cleanup in extension authentication orchestration
 
 Add a small extension-owned Firebase sign-out helper in `src/lib/firebase.ts`. Invoke it from the background account-menu logout path together with the existing GiTiempo session termination. Keep the API client's storage invalidation and bounded backend revocation semantics; capture the old token pair for revocation and invalidate refresh state before clearing it. Backend latency must not delay initiation of either local cleanup operation. Start the API client's existing `exitSession()` operation and Firebase cleanup independently in the handler, then settle both results; do not call Firebase sign-out only after awaiting `exitSession()`, because that promise also waits for backend revocation. Keep the handler alive while the bounded revoke settles so the MV3 worker can finish the request.
@@ -108,7 +116,7 @@ Verify each certification against the publisher's real practices, including perm
 2. Resolve policy facts with the operator, update existing content/docs, and verify landing builds with analytics absent and configured. Confirm the privacy route emits no analytics or timer scripts.
 3. Test the packaged extension's login/logout and timer behavior, including persistent Firebase state, backend failure, and an active timer. Record declaration evidence against that package.
 4. Use the existing staging deployment to verify the corrected policy, then under applicable release authorization promote the approved landing artifact to production and verify the production URL, footer, sitemap, identity/contact values, and content. Keep this gate open until production deployment and checks have occurred.
-5. Confirm Dashboard declarations against that artifact and policy before submitting. Do not submit while any release gate remains unresolved.
+5. Publisher-owned follow-up: independently confirm Dashboard declarations against that artifact and policy before submitting. This does not block the agent's engineering handoff, but final Store submission readiness still depends on the publisher's review.
 6. Roll back app artifacts through the existing deployment/package process if needed; keep the policy consistent with the restored behavior. Restoring a version without a public policy makes the submission gate fail again. No database migration is required.
 
 ## Open Questions

@@ -451,11 +451,11 @@ describe("injected issue control", () => {
     app.destroy();
   });
 
-  it("mounts after the Projects issue pane sticky header becomes available", async () => {
+  it("mounts in a base Projects issue pane after its sticky header becomes available", async () => {
     window.history.replaceState(
       {},
       "",
-      "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+      "https://github.com/orgs/octo/projects/7?pane=issue&issue=octo|repo|184",
     );
     document.body.innerHTML = `
       <main>
@@ -647,8 +647,8 @@ describe("injected issue control", () => {
     app.destroy();
   });
 
-  it("mounts after GitHub navigates from a pull request to an issue in the same tab", async () => {
-    window.history.replaceState({}, "", "https://github.com/octo/repo/pull/200");
+  it("unmounts on issue-to-PR navigation and remounts when returning to an issue", async () => {
+    window.history.replaceState({}, "", "https://github.com/octo/repo/issues/200");
     document.body.innerHTML = `
       <main>
         <div id="partial-discussion-header">
@@ -656,13 +656,21 @@ describe("injected issue control", () => {
         </div>
       </main>
     `;
-    document.title = "Unsupported pull request";
+    document.title = "Fix billing regression";
 
     const app = bootstrapInjectedIssueControl(
       document,
       window,
       createRuntimeClient(),
     );
+
+    await Promise.resolve();
+
+    expect(document.getElementById("gitiempo-extension-root")).not.toBeNull();
+
+    document.title = "Unsupported pull request";
+    window.history.pushState({}, "", "https://github.com/octo/repo/pull/200");
+    document.body.querySelector("main")!.append(document.createElement("div"));
 
     await Promise.resolve();
 

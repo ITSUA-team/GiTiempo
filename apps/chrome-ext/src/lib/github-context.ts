@@ -27,7 +27,7 @@ export type PageContext =
 const ISSUE_URL_PATTERN =
   /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)(?:$|[?#/])/;
 const PROJECT_ISSUE_PANE_PATH_PATTERN =
-  /^\/orgs\/[^/]+\/projects\/[^/]+\/views\/[^/]+(?:$|\/)/;
+  /^\/orgs\/[^/]+\/projects\/[^/]+(?:\/views\/[^/]+)?\/?$/;
 const ISSUE_TITLE_SELECTORS = [
   '[data-testid="issue-title"]',
   '.js-issue-title',

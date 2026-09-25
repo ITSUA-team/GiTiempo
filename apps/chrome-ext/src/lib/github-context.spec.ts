@@ -17,7 +17,7 @@ describe("github issue context", () => {
     });
   });
 
-  it("parses supported GitHub Projects issue pane URLs", () => {
+  it("parses supported GitHub Projects issue pane URLs with and without a view", () => {
     expect(
       parseGitHubIssueUrl(
         "https://github.com/orgs/octo/projects/7/views/1?pane=issue&itemId=192662239&issue=octo|repo|184",
@@ -27,11 +27,26 @@ describe("github issue context", () => {
       issueNumber: 184,
       surface: "project-issue-pane",
     });
+
+    expect(
+      parseGitHubIssueUrl(
+        "https://github.com/orgs/octo/projects/7?pane=issue&itemId=192662239&issue=octo|repo|184",
+      ),
+    ).toEqual({
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+      surface: "project-issue-pane",
+    });
   });
 
-  it("rejects unsupported GitHub URLs", () => {
+  it("rejects unsupported pull request and project-list URLs", () => {
     expect(
       parseGitHubIssueUrl("https://github.com/octo/repo/pull/184"),
+    ).toBeNull();
+    expect(
+      parseGitHubIssueUrl(
+        "https://github.com/orgs/octo/projects?pane=issue&issue=octo|repo|184",
+      ),
     ).toBeNull();
   });
 
@@ -53,6 +68,11 @@ describe("github issue context", () => {
     expect(
       parseGitHubIssueUrl(
         "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|not-a-number",
+      ),
+    ).toBeNull();
+    expect(
+      parseGitHubIssueUrl(
+        "https://github.com/orgs/octo/projects/7/views?pane=issue&issue=octo|repo|184",
       ),
     ).toBeNull();
   });
@@ -85,20 +105,20 @@ describe("github issue context", () => {
     });
   });
 
-  it("resolves supported GitHub Projects issue pane context with the active pane URL", () => {
+  it("resolves supported GitHub Projects issue pane context with the base project URL", () => {
     document.body.innerHTML = '<h1 class="js-issue-title">Improve reports filters</h1>';
 
     expect(
       resolveGitHubIssueContext(
         document,
-        "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+        "https://github.com/orgs/octo/projects/7?pane=issue&issue=octo|repo|184",
       ),
     ).toEqual({
       githubRepo: "octo/repo",
       issueNumber: 184,
       issueTitle: "Improve reports filters",
       issueUrl:
-        "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+        "https://github.com/orgs/octo/projects/7?pane=issue&issue=octo|repo|184",
       kind: "supported",
       surface: "project-issue-pane",
     });
