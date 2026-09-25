@@ -17,26 +17,28 @@ describe("github issue context", () => {
     });
   });
 
-  it("parses supported GitHub Projects issue pane URLs with and without a view", () => {
+  it("parses supported GitHub Projects issue pane URLs without treating the URL project number as a node ID", () => {
+    const withView = parseGitHubIssueUrl(
+      "https://github.com/orgs/octo/projects/7/views/1?pane=issue&itemId=192662239&issue=octo|repo|184",
+    );
     expect(
-      parseGitHubIssueUrl(
-        "https://github.com/orgs/octo/projects/7/views/1?pane=issue&itemId=192662239&issue=octo|repo|184",
-      ),
+      withView,
     ).toEqual({
       githubRepo: "octo/repo",
       issueNumber: 184,
       surface: "project-issue-pane",
     });
+    expect(withView).not.toHaveProperty("githubProjectId");
 
-    expect(
-      parseGitHubIssueUrl(
-        "https://github.com/orgs/octo/projects/7?pane=issue&itemId=192662239&issue=octo|repo|184",
-      ),
-    ).toEqual({
+    const withoutView = parseGitHubIssueUrl(
+      "https://github.com/orgs/octo/projects/7?pane=issue&itemId=192662239&issue=octo|repo|184",
+    );
+    expect(withoutView).toEqual({
       githubRepo: "octo/repo",
       issueNumber: 184,
       surface: "project-issue-pane",
     });
+    expect(withoutView).not.toHaveProperty("githubProjectId");
   });
 
   it("rejects unsupported pull request and project-list URLs", () => {

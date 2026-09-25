@@ -16,12 +16,15 @@ import { createTestQueryClient, createTestQueryPlugin } from '@/test/query-clien
 
 const testMocks = vi.hoisted(() => ({
   addWorkspaceGitHubOrganization: vi.fn(),
+  completeWorkspaceGitHubInstallation: vi.fn(),
   errorToast: vi.fn(),
   getGitHubConnectionStatus: vi.fn(),
   getWorkspace: vi.fn(),
   listAvailableGitHubOrganizations: vi.fn(),
   listWorkspaceGitHubOrganizations: vi.fn(),
+  listWorkspaceGitHubInstallations: vi.fn(),
   removeWorkspaceGitHubOrganization: vi.fn(),
+  setupWorkspaceGitHubInstallation: vi.fn(),
   getWorkspaceSettings: vi.fn(),
   successToast: vi.fn(),
   updateWorkspace: vi.fn(),
@@ -31,14 +34,20 @@ const testMocks = vi.hoisted(() => ({
 vi.mock('@/services/admin-settings-client', () => ({
   getAdminSettingsClient: () => ({
     addWorkspaceGitHubOrganization: testMocks.addWorkspaceGitHubOrganization,
+    completeWorkspaceGitHubInstallation:
+      testMocks.completeWorkspaceGitHubInstallation,
     getGitHubConnectionStatus: testMocks.getGitHubConnectionStatus,
     getWorkspace: testMocks.getWorkspace,
     listAvailableGitHubOrganizations:
       testMocks.listAvailableGitHubOrganizations,
     listWorkspaceGitHubOrganizations:
       testMocks.listWorkspaceGitHubOrganizations,
+    listWorkspaceGitHubInstallations:
+      testMocks.listWorkspaceGitHubInstallations,
     removeWorkspaceGitHubOrganization:
       testMocks.removeWorkspaceGitHubOrganization,
+    setupWorkspaceGitHubInstallation:
+      testMocks.setupWorkspaceGitHubInstallation,
     getWorkspaceSettings: testMocks.getWorkspaceSettings,
     updateWorkspace: testMocks.updateWorkspace,
     updateWorkspaceSettings: testMocks.updateWorkspaceSettings,
@@ -293,12 +302,15 @@ function mountSettingsView({
 describe('SettingsView', () => {
   beforeEach(() => {
     testMocks.addWorkspaceGitHubOrganization.mockReset();
+    testMocks.completeWorkspaceGitHubInstallation.mockReset();
     testMocks.errorToast.mockReset();
     testMocks.getGitHubConnectionStatus.mockReset();
     testMocks.getWorkspace.mockReset();
     testMocks.listAvailableGitHubOrganizations.mockReset();
     testMocks.listWorkspaceGitHubOrganizations.mockReset();
+    testMocks.listWorkspaceGitHubInstallations.mockReset();
     testMocks.removeWorkspaceGitHubOrganization.mockReset();
+    testMocks.setupWorkspaceGitHubInstallation.mockReset();
     testMocks.getWorkspaceSettings.mockReset();
     testMocks.successToast.mockReset();
     testMocks.updateWorkspace.mockReset();
@@ -313,6 +325,21 @@ describe('SettingsView', () => {
       availableGitHubOrganizationsResponse,
     );
     testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({ items: [] });
+    testMocks.listWorkspaceGitHubInstallations.mockResolvedValue({ items: [] });
+    testMocks.completeWorkspaceGitHubInstallation.mockResolvedValue({
+      id: '55555555-5555-4555-8555-555555555555',
+      installationId: '123456',
+      organizationId: '654321',
+      organizationLogin: 'Octo-Org',
+      recoveryReason: null,
+      status: 'verified',
+      verifiedAt: '2026-05-01T10:00:00.000Z',
+    });
+    testMocks.setupWorkspaceGitHubInstallation.mockResolvedValue({
+      expiresAt: '2026-05-01T10:10:00.000Z',
+      installationUrl: 'https://github.com/apps/gi-tiempo/installations/new',
+      state: 'a'.repeat(32),
+    });
     testMocks.removeWorkspaceGitHubOrganization.mockResolvedValue(undefined);
     testMocks.getWorkspaceSettings.mockResolvedValue(settingsResponse);
     testMocks.updateWorkspace.mockResolvedValue(workspaceResponse);
@@ -572,6 +599,11 @@ describe('SettingsView', () => {
         .get('[data-testid="settings-github-account-disconnected"] a')
         .attributes('href'),
     ).toBe('https://user.example.test/profile');
+    expect(
+      wrapper.get(
+        '[data-testid="settings-github-organization-install-33333333-3333-4333-8333-333333333333"]',
+      ).text(),
+    ).toContain('Install App');
 
     await wrapper
       .findAll('button')
@@ -1138,5 +1170,35 @@ describe('SettingsView', () => {
         .text(),
     ).toContain('unblock or approve the installed GiTiempo app');
     expect(wrapper.text()).not.toContain('Blocked');
+  });
+
+  it('submits only complete installation callback data and removes it from the URL', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/settings?state=' + 'a'.repeat(32) + '&installation_id=123456&keep=value',
+    );
+
+    mountSettingsView();
+    await flushPromises();
+
+    expect(testMocks.completeWorkspaceGitHubInstallation).toHaveBeenCalledWith({
+      installationId: '123456',
+      state: 'a'.repeat(32),
+    });
+    expect(window.location.search).toBe('?keep=value');
+  });
+
+  it('does not complete an installation callback when GitHub returns only one value', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/settings?state=' + 'a'.repeat(32),
+    );
+
+    mountSettingsView();
+    await flushPromises();
+
+    expect(testMocks.completeWorkspaceGitHubInstallation).not.toHaveBeenCalled();
   });
 });

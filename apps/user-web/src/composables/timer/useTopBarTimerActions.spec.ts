@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { computed, defineComponent, h, ref } from "vue";
+import { ApiError } from "@gitiempo/web-shared/http";
 
 import { timerKeys } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
@@ -146,5 +147,23 @@ describe("useTopBarTimerActions starting from a GitHub board", () => {
     expect(
       invalidatedKeys.some((key) => key.includes(timerScopePrefix)),
     ).toBe(true);
+  });
+
+  it("keeps the exact assignment remedy from the shared tracking error contract", async () => {
+    const startTimerFromGitHub = vi.fn(async () => {
+      throw new ApiError(
+        "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.",
+        { code: "project_assignment_required", status: 403 },
+      );
+    });
+    const mounted = mountActions({ startTimerFromGitHub } as never);
+    wrappers.push(mounted.wrapper);
+
+    await mounted.actions.handlePrimaryAction();
+
+    expect(mounted.actions.timerActionErrorMessage.value).toBe(
+      "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.",
+    );
+    expect(mounted.summary.currentTimer.value).toBeNull();
   });
 });

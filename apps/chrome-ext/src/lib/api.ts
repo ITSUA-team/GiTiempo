@@ -23,6 +23,7 @@ import {
   setStoredSession,
   type StorageAreaLike,
 } from "./session";
+import { ExtensionApiError } from "./github-tracking-error";
 
 
 export interface ExtensionApiClient {
@@ -79,6 +80,15 @@ function getResponseErrorMessage(status: number, body: unknown): string {
   }
 
   return getDefaultResponseErrorMessage(status);
+}
+
+function getResponseErrorCode(body: unknown): string | null {
+  if (!body || typeof body !== "object") {
+    return null;
+  }
+
+  const code = (body as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
 }
 
 async function parseJsonResponse(response: Response): Promise<unknown> {
@@ -306,7 +316,10 @@ export function createExtensionApiClient({
     }
 
     if (!response.ok) {
-      throw new Error(getResponseErrorMessage(response.status, body));
+      throw new ExtensionApiError(
+        getResponseErrorMessage(response.status, body),
+        getResponseErrorCode(body),
+      );
     }
 
     return options.responseSchema.parse(body);

@@ -79,6 +79,8 @@ export const adminSettingsKeys = {
     [...adminSettingsKeys.all(scope), 'github-connection'] as const,
   workspaceGitHubOrganizations: (scope: AdminServerStateScope) =>
     [...adminSettingsKeys.all(scope), 'workspace-github-organizations'] as const,
+  workspaceGitHubInstallations: (scope: AdminServerStateScope) =>
+    [...adminSettingsKeys.all(scope), 'workspace-github-installations'] as const,
   workspace: (scope: AdminServerStateScope) =>
     [...adminSettingsKeys.all(scope), 'workspace'] as const,
   workspaceSettings: (scope: AdminServerStateScope) =>

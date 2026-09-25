@@ -314,6 +314,32 @@ describe("injected issue control", () => {
     expect(startTimer).toHaveBeenCalledWith(supportedContext());
   });
 
+  it("keeps the issue context and renders the exact assignment remedy after a denied start", async () => {
+    const assignmentMessage =
+      "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.";
+    const mounted = mountInjectedIssueControl(
+      document,
+      supportedContext(),
+      createRuntimeClient({
+        startTimer: vi.fn(async () => ({
+          errorCode: "project_assignment_required" as const,
+          errorMessage: assignmentMessage,
+          ok: false,
+          snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        })),
+      }),
+    )!;
+
+    await mounted.load();
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+    root.querySelector<HTMLButtonElement>('[data-action="start-timer"]')!.click();
+    await Promise.resolve();
+
+    expect(root.textContent).toContain("Improve reports filters");
+    expect(root.textContent).toContain(assignmentMessage);
+    expect(root.textContent).not.toContain("Connect GitHub");
+  });
+
   it("renders the running state with elapsed time and a stop action", async () => {
     const mounted = mountInjectedIssueControl(
       document,

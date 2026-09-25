@@ -83,7 +83,13 @@ function renderInjectedBody(
     `;
   }
 
-  if (state.actionErrorMessage || state.snapshot.errorMessage) {
+  const currentTimer = state.snapshot.currentTimer;
+  const isCurrentIssueTimer = currentTimer
+    ? currentTimer.githubIssue?.githubRepo === pageContext.githubRepo
+      && currentTimer.githubIssue.issueNumber === pageContext.issueNumber
+    : false;
+
+  if ((state.actionErrorMessage || state.snapshot.errorMessage) && !isCurrentIssueTimer) {
     return `
       <div>
         <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
@@ -109,12 +115,6 @@ function renderInjectedBody(
     `;
   }
 
-  const currentTimer = state.snapshot.currentTimer;
-  const isCurrentIssueTimer = currentTimer
-    ? currentTimer.githubIssue?.githubRepo === pageContext.githubRepo
-      && currentTimer.githubIssue.issueNumber === pageContext.issueNumber
-    : false;
-
   if (currentTimer && isCurrentIssueTimer) {
     return `
       <div class="flex items-start justify-between gap-3">
@@ -125,7 +125,12 @@ function renderInjectedBody(
         <span class="bg-status-active-bg text-status-active-text rounded-sm px-2 py-1 text-xs font-semibold">Running</span>
       </div>
       <div class="flex items-center justify-between gap-3">
-        <p class="m-0 text-lg font-semibold text-brand">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
+        <div class="flex flex-col gap-1">
+          <p class="m-0 text-lg font-semibold text-brand">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
+          ${(state.actionErrorMessage || state.snapshot.errorMessage)
+            ? `<p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to start timer.")}</p>`
+            : ""}
+        </div>
         <button type="button" data-action="stop-timer" class="bg-destructive text-text-inverse ${injectedActionButtonClass}">Stop Timer</button>
       </div>
     `;

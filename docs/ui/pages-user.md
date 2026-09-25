@@ -35,7 +35,8 @@
 - Boards are a different axis from projects and are never hidden because one of their repositories already has a project: a board is a view over issues that may span several repositories.
 - Each board row lists the repositories its issues belong to, and marks the ones a GiTiempo project already tracks. The board list response carries no repository field, so the repositories are derived from the first page of each board's issues; a board whose page did not exhaust its issues says so rather than implying the list is complete. A board with no trackable issues shows `No linked repository`.
 - Selecting a board lists that board's open issues in `Task`, each carrying the repository it belongs to. Draft board items have no repository and cannot be tracked; their count is reported instead of being silently dropped.
-- Starting a timer on a board issue creates the GiTiempo project for that issue's own repository, materializes the task and starts the timer in one server request. The member does not need an admin to prepare anything first.
+- Starting a timer on a board issue sends the issue identifiers and optional board hint to the server. The server verifies the workspace GitHub App installation, canonical repository and issue, and the member's access to an existing mapped GiTiempo project; it may materialize the task only inside that project. It never creates a project or a member assignment.
+- A rejected GitHub-backed start preserves personal GitHub browsing and import. For an assignment failure, show exactly: `You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.` Installation, organization, or repository permission failures direct the member to a workspace administrator; mapping failures direct them to a workspace administrator or project manager; provider failures offer retry.
 - While a board is selected there is no project to create a task in, so the inline `New task` field is unavailable, and a running timer cannot be reassigned to a board issue without starting from it first.
 - Board loading, a board with only draft items, a missing GitHub connection, a workspace with no approved organization, and a request failure are five distinct states and must not be collapsed into one another.
 - The `Task` select lists visible tasks first and appends `New task` as the last option.
@@ -130,6 +131,7 @@
 - A disabled placeholder row does not satisfy the editable display-name requirement.
 - GitHub connection card fields must reflect the current API contract only: `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt`. `connectedAt` and `updatedAt` render as browser-local user-facing timestamps rather than raw ISO strings.
 - GitHub connection card required states: loading, request-error, disconnected, connected, and redirecting/connecting.
+- This card represents only the member's personal browsing and import connection. Its status does not indicate whether a workspace GitHub App installation is ready for timer starts, and tracking errors do not add a reconnect call to action here.
 - Connected state actions: `Reconnect` and `Disconnect`.
 - Disconnected state primary action: `Connect GitHub`.
 - Disconnect uses the shared PrimeVue `<ConfirmDialog>` confirmation pattern before removing the connection.
