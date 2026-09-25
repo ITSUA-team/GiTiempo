@@ -803,13 +803,13 @@ describe("popup app", () => {
     });
   });
 
-  it("resolves GitHub Projects issue pane tabs through the shared parser fallback", async () => {
+  it("resolves base GitHub Projects issue pane tabs through the shared parser fallback", async () => {
     vi.stubGlobal("chrome", {
       tabs: {
         query: vi.fn(async () => [{
           id: 21,
           title: "Improve reports filters · GitHub",
-          url: "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+          url: "https://github.com/orgs/octo/projects/7?pane=issue&issue=octo|repo|184",
         }]),
         sendMessage: vi.fn(async () => {
           throw new Error("receiver missing");
@@ -822,7 +822,7 @@ describe("popup app", () => {
       issueNumber: 184,
       issueTitle: "Improve reports filters",
       issueUrl:
-        "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+        "https://github.com/orgs/octo/projects/7?pane=issue&issue=octo|repo|184",
       kind: "supported",
       surface: "project-issue-pane",
     });

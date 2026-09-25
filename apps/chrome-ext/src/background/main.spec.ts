@@ -105,7 +105,7 @@ describe("background snapshot broadcast", () => {
   it("broadcasts snapshot updates to runtime listeners and GitHub content-script tabs", async () => {
     chromeStub.tabs.query.mockResolvedValue([
       { id: 11, url: "https://github.com/octo/repo/issues/184" },
-      { id: 12, url: "https://github.com/octo/repo/pull/200" },
+      { id: 12, url: "https://github.com/orgs/octo/projects/7?pane=issue" },
       { url: "https://github.com/octo/repo/issues/201" },
     ]);
 
@@ -126,7 +126,6 @@ describe("background snapshot broadcast", () => {
     expect(chromeStub.tabs.query).toHaveBeenCalledWith({
       url: [
         "https://github.com/*/*/issues/*",
-        "https://github.com/*/*/pull/*",
         "https://github.com/orgs/*/projects/*",
       ],
     });

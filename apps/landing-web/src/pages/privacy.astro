@@ -6,7 +6,7 @@ import { getPublicConfig } from '../lib/public-config.mjs';
 const config = getPublicConfig(import.meta.env);
 const title = 'Privacy Policy — GITiempo';
 const description = 'How GITiempo handles personal data in the service and Chrome extension.';
-const lastUpdated = '16 September 2026';
+const lastUpdated = '22 September 2026';
 ---
 
 <BaseLayout {title} {description}>
@@ -45,6 +45,7 @@ const lastUpdated = '16 September 2026';
             <li>GiTiempo access and refresh tokens in the extension’s <code>chrome.storage.local</code>. Google and email/password sign-in also use Firebase Authentication, which stores authentication state in extension-local IndexedDB. Your email and password are submitted to Firebase for email/password sign-in; GiTiempo receives a Firebase identity token to establish its own session.</li>
             <li>A local, token-free status flag when Firebase sign-out needs to be retried. This flag survives reopening the extension and is removed after provider cleanup succeeds.</li>
             <li>When you start a timer from a supported GitHub issue page, the repository name and issue number sent to GITiempo to create or start the linked time entry.</li>
+            <li>Service access and diagnostic logs used to investigate errors and protect the service. Error messages may include information related to the account or operation involved.</li>
           </ul>
           <p class="mt-3">
             The extension may read the issue title and page address locally to recognise a supported GitHub surface and show its control. It does not send the issue title or full page address in the timer-start request. GiTiempo subsequently retrieves issue information, including its title, from GitHub to create the linked task. This integration does not monitor your general browsing history or passively record your activity.
@@ -66,11 +67,14 @@ const lastUpdated = '16 September 2026';
           <ul class="mt-3 list-disc space-y-2 pl-5">
             <li><strong>Hetzner Online</strong> (Germany, European Union) — primary hosting for the GITiempo API and database.</li>
             <li><strong>Cloudflare</strong> (global edge network) — content delivery and DNS for the GITiempo web applications.</li>
-            <li><strong>Firebase / Google</strong> — authentication services (Google, email/password, and GitHub sign-in). Firebase processes authentication identifiers and, for email/password sign-in, the email address you provide.</li>
+            <li><strong>Firebase / Google</strong> — Google and email/password authentication. Firebase processes authentication identifiers and the credentials you submit for email/password sign-in.</li>
             <li><strong>GitHub</strong> — if you choose GitHub sign-in, GitHub provides identity information through the GiTiempo authentication service. GitHub also supplies repository and issue information for linked tasks.</li>
             <li><strong>Backblaze</strong> (European Union) — encrypted backup storage for the GITiempo database.</li>
             <li><strong>Google</strong> (Gmail) — transactional email delivery for account invitations and service notifications.</li>
           </ul>
+          <p class="mt-3">
+            We also use Slack for operational error notifications. These notifications do not contain users’ personal data.
+          </p>
           <p class="mt-3">
             Our handling of all extension user data, including GitHub-derived data and information received from Google APIs, follows the Chrome Web Store User Data Policy and its Limited Use requirements. We use this data only to provide or improve the extension’s disclosed time-tracking purpose. We do not sell it or use or transfer it for advertising, creditworthiness assessment, or lending.
           </p>
@@ -78,27 +82,26 @@ const lastUpdated = '16 September 2026';
             Transfers are limited to supporting that purpose, meeting legal requirements, preventing abuse, or a business transfer with your prior explicit consent. Human access is limited to your explicit consent for specific data, security needs, legal obligations, or aggregated and anonymized data for internal operations.
           </p>
           <p class="mt-3">
-            Primary hosting and database storage are located in Germany (European Union). Encrypted backups are stored in the European Union. Firebase and GitHub may process data in their respective global infrastructures; any transfer outside the European Union is subject to appropriate safeguards, including Standard Contractual Clauses where applicable.
+            Primary hosting and database storage are located in Germany (European Union). Encrypted backups are stored in Backblaze B2’s EU-Central region. The other providers listed above may process information outside your country, including outside the European Union. These hosting locations do not mean that all processing takes place within the European Union. Contact the privacy email above for information about international processing and the safeguards applicable to your data.
           </p>
         </section>
 
         <section aria-labelledby="privacy-retention">
           <h2 id="privacy-retention" class="card-heading text-text-dark">5. Retention and security</h2>
           <p class="mt-3">
-            We retain personal data for the following periods:
+            Storage and deletion depend on the type of information:
           </p>
           <ul class="mt-3 list-disc space-y-2 pl-5">
-            <li><strong>Account, workspace, project, task, and time-entry data</strong>: retained while your account is active. We do not automatically delete workspace or time-entry records; they remain accessible to authorized workspace members according to their roles.</li>
-            <li><strong>Encrypted database backups</strong>: daily backups are retained for up to 90 days; weekly backups are retained for up to one year. Older backups are automatically removed. All backups are encrypted before transmission to the backup provider.</li>
-            <li><strong>Application logs</strong>: retained for up to 30 days.</li>
-            <li><strong>Authentication tokens</strong>: access tokens expire after 15 minutes; refresh tokens expire after 7 days. Expired or revoked tokens are not reused.</li>
-            <li><strong>Workspace invitations</strong>: expire after 7 days if not accepted.</li>
+            <li><strong>Account, workspace, project, task, and time-entry data</strong>: these records currently remain in the service until manually deleted. Becoming inactive or leaving a workspace does not automatically delete your account or its related records.</li>
+            <li><strong>Encrypted database backups</strong>: the backup schedule keeps 90 daily and 52 weekly snapshots, normally covering approximately three months and one year respectively. Older snapshots are removed when scheduled backup pruning runs. Backup data is encrypted before it is sent to the storage provider.</li>
+            <li><strong>Service logs</strong>: our monitoring log store is configured for 30-day retention. This does not apply to every copy: application and access logs on the service host currently have no fixed automatic deletion period. Operational notifications sent to Slack do not contain users’ personal data.</li>
+            <li><strong>Authentication and invitation records</strong>: access tokens are valid for 15 minutes; refresh tokens and unaccepted workspace invitations expire after 7 days. Expiration prevents further use but does not itself delete the associated stored records. There is currently no scheduled cleanup of expired refresh-token, OAuth-state, or invitation records.</li>
           </ul>
           <p class="mt-3">
-            Access to production data is limited to authorized personnel who need it to operate and support the service. Data in transit is protected with TLS. Database backups are encrypted at rest. No method of transmission or storage is completely secure, so please protect your account credentials and keep your browser up to date.
+            We use authentication controls and encrypted database backups to protect information. Human access to extension user data is subject to the Limited Use restrictions described above. No method of transmission or storage is completely secure, so please protect your account credentials and keep your browser up to date.
           </p>
           <p class="mt-3">
-            If a personal data breach occurs, we will notify affected users and the relevant supervisory authority in accordance with applicable data protection law, including within 72 hours where required by the GDPR.
+            You can report a suspected security or privacy incident through the privacy contact above. Applicable data-protection law determines our obligations to notify affected individuals and supervisory authorities.
           </p>
         </section>
 
@@ -108,13 +111,13 @@ const lastUpdated = '16 September 2026';
             Successful extension sign-out clears its GiTiempo session and extension-local Firebase authentication state. If provider cleanup fails, use <strong>Retry sign-out</strong> in the popup, including after reopening it. Backend session revocation is attempted but may fail when the service is unavailable. Signing out does not sign you out of the GiTiempo web apps or Google/GitHub websites.
           </p>
           <p class="mt-3">
-            Signing out or uninstalling the extension does not delete server-held account, workspace, or time-entry records and does not stop a running timer. To request access, correction, deletion, or a portable copy of your personal data, contact the privacy email above and describe your request. We will respond within 30 days.
+            Signing out or uninstalling the extension does not delete server-held account, workspace, or time-entry records and does not stop a running timer. To request access, correction, deletion, or a portable copy of your personal data, contact the privacy email above and describe your request. Applicable data-protection law determines the response deadlines and any permitted limitations on these rights.
           </p>
           <p class="mt-3">
-            <strong>Account deletion requests.</strong> When you request deletion of your account, we will remove your workspace membership, associated project assignments, and linked authentication records from the live database. Your time-entry records may be retained where their deletion would affect workspace reporting that other members rely on; in that case we will inform you. Account profile data (name, email, and avatar) will be removed or anonymized. Firebase authentication records will be deleted from the authentication provider upon request.
+            <strong>Account deletion requests.</strong> Account deletion is not currently available as a self-service action. {config.privacyControllerName} receives requests through the privacy email above, and a technical administrator handles deletion manually. This process covers your profile, related personal records, and your Firebase authentication account where one exists, subject to applicable legal limitations. Removing your workspace membership alone does not perform this deletion. Records shared with a workspace are considered separately when handling your request.
           </p>
           <p class="mt-3">
-            Data that has been included in encrypted database backups may remain in those backups until the backups expire and are automatically removed — up to 90 days for daily backups and up to one year for weekly backups. We cannot selectively remove individual records from encrypted backups, but backups are inaccessible without the encryption key and are not used for any purpose other than disaster recovery.
+            Removing information from the live service does not immediately remove copies already included in encrypted backups. Those copies may remain until the relevant snapshots are removed under the backup schedule described above.
           </p>
           <p class="mt-3">
             Depending on where you live, you may also have rights to restrict or object to processing, to data portability, and to complain to your local data-protection authority.

@@ -84,7 +84,6 @@ function buildManifest(mode: string): Record<string, unknown> {
       {
         matches: [
           "https://github.com/*/*/issues/*",
-          "https://github.com/*/*/pull/*",
           "https://github.com/orgs/*/projects/*",
         ],
         js: ["src/content/main.ts"],
