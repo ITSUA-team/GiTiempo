@@ -50,7 +50,7 @@ try {
       for (const width of [390, 768, 1024, 1440]) {
         commands.push(
           ['set', 'viewport', String(width), '1000'],
-          ['reload'],
+          ['navigate', `${preview.origin}/privacy`],
           ['wait', '--load', 'networkidle'],
           ['eval', `(() => {
             if (innerWidth !== ${width}) throw new Error('Viewport was not set to ${width}px');
@@ -58,6 +58,14 @@ try {
             for (const p of document.querySelectorAll('article p:not(.eyebrow), article li')) {
               if (parseFloat(getComputedStyle(p).fontSize) < 14) throw new Error('Unreadable body size');
             }
+          })()`],
+          ['press', 'Tab'],
+          ['eval', `(() => {
+            if (document.activeElement.getAttribute('href') !== '#main-content') throw new Error('Tab must reach the visible skip link first');
+          })()`],
+          ['press', 'Enter'],
+          ['eval', `(() => {
+            if (location.hash !== '#main-content') throw new Error('Enter must activate the skip link');
           })()`],
           ['eval', "document.querySelector('a[href=\"#main-content\"]').focus()"],
           ['eval', `(() => {

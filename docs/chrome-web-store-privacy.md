@@ -4,6 +4,8 @@ This checklist is the package-specific record for the GiTiempo Chrome extension.
 
 ## Release identity and status
 
+Historical public-identity evidence retained from the incoming branch: on 16 September 2026, [itsua.com](https://itsua.com/) identified ITSUA as an engineering studio and published `hello@itsua.com`, Sakala tn 7-2, Tallinn, 10141, Estonia, and VAT `EE102549430`. This corroborates public identity, not control of GiTiempo processing or monitoring of `admin@itsua.com`; those rely on the publisher confirmations below.
+
 | Item | Status | Evidence or required action |
 | --- | --- | --- |
 | Package version | Technical fact | `0.1.0` in `apps/chrome-ext/package.json` and the generated-manifest source. |
@@ -106,7 +108,7 @@ These checks focus the CWS review preparation; they do not replace the broader o
 
 The broader issue additionally tracks access/MFA review, audit coverage, documented retention criteria, and an incident-response procedure. Do not label those tasks completed solely because they are not separate CWS Dashboard fields. Keep supporting access and contractual evidence private; record only a sanitized conclusion, responsible role and review date here.
 
-The existing `add-landing-ga4-analytics` change owns analytics behavior. This change only documents its optional consent, sanitized events, and withdrawal contract. Its outstanding external Tag Assistant/GA4 DebugView verification remains open and has not been marked complete here.
+The archived [`add-landing-ga4-analytics` change](../openspec/changes/archive/2026-09-16-add-landing-ga4-analytics/tasks.md) owns analytics behavior, now reflected in the main specs. This change only documents its optional consent, sanitized events, and withdrawal contract. The archive retains outstanding external Tag Assistant/GA4 DebugView verification; merging the archive does not mark that check complete here.
 
 Design inspection: approved privacy desktop/mobile and extension unauthenticated/error frames inspected on 2026-09-14. `Ext Sign-out Cleanup Pending` (`Jr6mK`) reuses the existing error presentation without an authenticated account menu and offers `Retry sign-out` before another login.
 
@@ -160,14 +162,18 @@ Historical record: the local checks below were previously recorded. The claims o
 
 ## Verification evidence (2026-09-14)
 
+The 16 September staging/production checks recorded below verified the older 14 September policy. They are retained as historical evidence, not completion of publication tasks for the revised 22 September policy.
+
 - Extension lint, typecheck, and both browser builds passed; 144 tests passed. Regressions cover independent provider/session cleanup, pending backend revoke, provider/storage failures, retry after module reset, and the existing refresh-race/timer behavior. Popup and content tests verify the signed-out transition. API/SPAs/provider website logout code is unchanged; real-account checks remain pending.
 - Tab API inventory: popup active-tab lookup reads supported GitHub context and sends page-context messages; background queries supported GitHub URL patterns and broadcasts snapshots; popup opens configured app/profile tabs. Existing issue, pull-request, organization-project, navigation, and broadcast tests pass with the shared manifest's `tabs` permission removed. Mocked tests do not prove browser permission enforcement.
 - Landing lint, typecheck, and 17 tests passed. `pnpm --filter landing-web exec node tests/privacy-browser.mjs` passed two actual builds (GA4 absent and configured) at 390/768/1024/1440px in Chrome for Testing. It checks HTTP 200 for `/privacy` and `/privacy/`, emitted identity/contact/canonical, sitemap and footer links, one H1/eight H2 headings, no policy scripts/islands/consent/timer runtime, no horizontal overflow, readable body size, and programmatic focus visibility. Full-page screenshots were visually inspected at all four widths.
 - Browser test fixtures use `Privacy route test` / `privacy@example.invalid` and an invalid test domain intentionally; these are test-only environment overrides, not production controller inputs. The source still requires controller/contact and rejects absent or malformed values.
-- After fixture tests, rebuilt the local landing with publisher-confirmed `ITSUA` and `admin@itsua.com` and verified those values, 14 September 2026, and absence of scripts in the generated policy. Production environment inputs and the deployed artifact have not been verified; task 4.4 is partially complete for that reason.
-- Physical keyboard traversal and actual footer-click navigation are not certified: this host's agent-browser input actions reported success without activating the link. Direct URL requests/navigation, valid hrefs, and programmatic focus checks passed. Task 4.7 remains open for that final interaction check.
+- After fixture tests, rebuilt the local landing with publisher-confirmed `ITSUA` and `admin@itsua.com` and verified those values, 14 September 2026, and absence of scripts in the generated policy.
+- Staging verification, 16 September 2026 at 12:16:24 UTC: `https://gitiempo-landing.itsua.dev/privacy/` rendered `ITSUA`, `admin@itsua.com`, and the 14 September 2026 revision date. A real click on the staging homepage footer's `Privacy Policy` link returned to that public route. `https://gitiempo-landing.itsua.dev/sitemap-index.xml` returned HTTP 200 and listed `https://gitiempo-landing.itsua.dev/privacy`.
+- Anonymous production verification, 16 September 2026 at 12:00:41 UTC: `https://gitiempo.com/privacy/` returned HTTP 200 after the canonical `/privacy` to `/privacy/` redirect and rendered the ITSUA controller name, the `admin@itsua.com` mailto link, and the 14 September 2026 revision date. The homepage footer linked to `/privacy`, and the sitemap index listed the privacy URL; no sign-in was required. The latest successful [production deployment run](https://github.com/ITSUA-team/GiTiempo/actions/runs/35078709182) completed at 09:20:15 UTC and deployed revision `2f51c54397e11a5cde50e61bbcfac280a63c0d0a`, providing the release revision for task 6.2.
+- Landing keyboard and footer interaction verification, 16 September 2026: the browser regression uses native Tab then Enter at all required widths and confirms the skip link reaches and activates `#main-content`. In the production page opened in Codex Browser, a real click on the homepage footer's `Privacy Policy` link navigated to `https://gitiempo.com/privacy/`; a native Tab focused `Skip to main content`, and Return activated its `#main-content` target. Task 4.7 is complete.
 - Strict validation of `prepare-chrome-web-store-privacy` and `git diff --check` passed. The active analytics delta and its outstanding external verification were not changed.
-- Not performed: packaged Google/email/GitHub real-account flows, real Chrome/Firefox permission checks across supported surfaces, revised staging or production deployment, or actual CWS Dashboard edits. No deployment or Store submission was triggered.
+- Not performed: packaged Google/email/GitHub real-account flows, real Chrome/Firefox permission checks across supported surfaces, or actual CWS Dashboard edits. This verification did not trigger a deployment or Store submission.
 
 ## References
 
