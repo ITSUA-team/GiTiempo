@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import type {
   AddWorkspaceGitHubOrganizationInput,
+  GitHubInstallationCompleteRequest,
+  GitHubInstallationSetupRequest,
+  GitHubInstallationSetupResponse,
   GitHubConnectionStatusResponse,
   GitHubOwnerListResponse,
   ManagementProjectSummaryResponse,
@@ -11,6 +14,8 @@ import type {
   UpdateWorkspaceSettingsInput,
   WorkspaceGitHubOrganizationListResponse,
   WorkspaceGitHubOrganizationResponse,
+  WorkspaceGitHubInstallation,
+  WorkspaceGitHubInstallationList,
   WorkspaceInviteListResponse,
   WorkspaceMemberListResponse,
   WorkspaceResponse,
@@ -84,6 +89,16 @@ interface WorkspaceGitHubOrganizationsClient {
   removeWorkspaceGitHubOrganization(organizationId: string): Promise<void>;
 }
 
+interface WorkspaceGitHubInstallationsClient {
+  completeWorkspaceGitHubInstallation(
+    input: GitHubInstallationCompleteRequest,
+  ): Promise<WorkspaceGitHubInstallation>;
+  listWorkspaceGitHubInstallations(): Promise<WorkspaceGitHubInstallationList>;
+  setupWorkspaceGitHubInstallation(
+    input: GitHubInstallationSetupRequest,
+  ): Promise<GitHubInstallationSetupResponse>;
+}
+
 interface AdminScopedQueryOptions {
   enabled: MaybeRefOrGetter<boolean>;
   scope: MaybeRefOrGetter<AdminServerStateScope>;
@@ -152,6 +167,17 @@ interface UseWorkspaceSettingsQueryOptions extends AdminScopedQueryOptions {
 interface UseRemoveWorkspaceGitHubOrganizationMutationOptions
   extends AdminScopedMutationOptions {
   client: WorkspaceGitHubOrganizationsClient;
+}
+
+interface UseWorkspaceGitHubInstallationsQueryOptions
+  extends AdminScopedQueryOptions {
+  client: Pick<WorkspaceGitHubInstallationsClient, 'listWorkspaceGitHubInstallations'>;
+}
+
+interface UseWorkspaceGitHubInstallationsMutationOptions<
+  Method extends keyof WorkspaceGitHubInstallationsClient,
+> extends AdminScopedMutationOptions {
+  client: Pick<WorkspaceGitHubInstallationsClient, Method>;
 }
 
 async function invalidateQueryKeys(
@@ -273,6 +299,42 @@ export const useRemoveWorkspaceGitHubOrganizationMutation = (
   return useMutation({
     mutationFn: (organizationId: string) =>
       options.client.removeWorkspaceGitHubOrganization(organizationId),
+    onSuccess: async () => {
+      await invalidateQueryKeys(
+        queryClient,
+        adminMutationInvalidationKeys.afterSettingsSave(toValue(options.scope)),
+      );
+    },
+  });
+};
+
+export const useWorkspaceGitHubInstallationsQuery = (
+  options: UseWorkspaceGitHubInstallationsQueryOptions,
+) =>
+  useQuery({
+    queryKey: computed(() =>
+      adminSettingsKeys.workspaceGitHubInstallations(toValue(options.scope)),
+    ),
+    enabled: computed(() => isQueryEnabled(options)),
+    queryFn: () => options.client.listWorkspaceGitHubInstallations(),
+  });
+
+export const useSetupWorkspaceGitHubInstallationMutation = (
+  options: UseWorkspaceGitHubInstallationsMutationOptions<'setupWorkspaceGitHubInstallation'>,
+) =>
+  useMutation({
+    mutationFn: (input: GitHubInstallationSetupRequest) =>
+      options.client.setupWorkspaceGitHubInstallation(input),
+  });
+
+export const useCompleteWorkspaceGitHubInstallationMutation = (
+  options: UseWorkspaceGitHubInstallationsMutationOptions<'completeWorkspaceGitHubInstallation'>,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: GitHubInstallationCompleteRequest) =>
+      options.client.completeWorkspaceGitHubInstallation(input),
     onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,

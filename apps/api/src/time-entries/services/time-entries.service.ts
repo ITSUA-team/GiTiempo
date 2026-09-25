@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  UnauthorizedException,
   Inject,
   Injectable,
   NotFoundException,
@@ -16,6 +17,11 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
+import {
+  githubTrackingErrorMessages,
+  githubTrackingErrorStatuses,
+} from '@gitiempo/shared';
+import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import type {
   CreateManualTimeEntryInput,
   CurrentTimeEntryResponse,
@@ -40,14 +46,17 @@ import { parseGitHubRepoKey } from '../../github/github-repo-key';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
-import { projects as projectsTable } from '../../projects/schemas/projects.schema';
+import {
+  projectRowSelection,
+  projects as projectsTable,
+} from '../../projects/schemas/projects.schema';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { taskExternalRefs } from '../../tasks/schemas/task-external-refs.schema';
 import {
   taskRowSelection,
   tasks as tasksTable,
 } from '../../tasks/schemas/tasks.schema';
-import { GithubService } from '../../github/services/github.service';
+import { GithubInstallationsService } from '../../github/services/github-installations.service';
 import { GithubTaskMaterializationService } from '../../tasks/services/github-task-materialization.service';
 import { TasksService } from '../../tasks/services/tasks.service';
 import { users } from '../../users/schemas/users.schema';
@@ -95,7 +104,7 @@ export class TimeEntriesService {
     private readonly tasks: TasksService,
     private readonly usersActivity: UsersActivityService,
     private readonly githubTasks: GithubTaskMaterializationService,
-    private readonly github: GithubService,
+    private readonly installations: GithubInstallationsService,
   ) {}
 
   async listOwnEntries(
@@ -332,55 +341,100 @@ export class TimeEntriesService {
       throw new UnprocessableEntityException('GitHub repository is invalid');
     }
 
-    const membership = await this.members.requireActiveMembership(
-      user.sub,
-      user.workspaceId,
-    );
-
-    const repository = await this.github.getRepository(
-      user,
-      repoParts.owner,
-      repoParts.repo,
-    );
-    const githubRepo = repository.fullName;
-    const issue = await this.github.getRepositoryIssue(
+    await this.members.requireActiveMembership(user.sub, user.workspaceId);
+    const verified = await this.installations.prepareIssue(
       user,
       repoParts.owner,
       repoParts.repo,
       input.issueNumber,
     );
+    const githubRepo = verified.repository.fullName;
+    const issue = verified.issue;
     const issueKey = `${githubRepo}#${issue.number}`;
+    const existing = await this.githubTasks.findExistingIssueProject(
+      this.db,
+      user.workspaceId,
+      githubRepo,
+      issueKey,
+    );
+    const verifiedBoardIds: string[] = [];
+    if (!existing) {
+      const mappedBoardIds = await this.githubTasks.listMappedBoardIds(
+        user.workspaceId,
+        verified.organizationLogin,
+      );
+      const candidates = input.githubProjectId
+        ? mappedBoardIds.filter((id) => id === input.githubProjectId)
+        : mappedBoardIds;
+      for (const boardId of candidates) {
+        if (await this.installations.verifyBoard(verified, boardId)) {
+          verifiedBoardIds.push(boardId);
+        }
+      }
+    }
 
     try {
       const entryId = await this.db.transaction(async (tx) => {
-        const { project, created } =
-          await this.githubTasks.resolveProjectForIssue(tx, user, {
-            githubProjectId: input.githubProjectId,
+        // Locks serialize membership removal/role changes and assignment deletion
+        // against materialization, including changes committed during provider IO.
+        const [membership] = await tx
+          .select({ role: workspaceMembers.role })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, user.workspaceId),
+              eq(workspaceMembers.userId, user.sub),
+            ),
+          )
+          .for('update');
+        if (!membership) throw new UnauthorizedException('Unauthorized');
+        await this.installations.assertCurrent(tx, user, verified);
+        const resolved = await this.githubTasks.resolveExistingProjectForIssue(
+          tx,
+          user,
+          {
             githubRepo,
             issueKey,
-          });
-        if (!project.isActive) {
+            verifiedBoardIds,
+          },
+        );
+        const [project] = await tx
+          .select(projectRowSelection)
+          .from(projectsTable)
+          .where(
+            and(
+              eq(projectsTable.id, resolved.id),
+              eq(projectsTable.workspaceId, user.workspaceId),
+            ),
+          )
+          .for('update');
+        if (!project) throw new NotFoundException('Project not found');
+        if (!project.isActive)
           throw new UnprocessableEntityException('Project is inactive');
-        }
-
-        if (membership.role !== 'admin') {
-          if (!created) {
-            await this.projects.requireVisibleProject(user, project.id);
-          } else {
-            await tx
-              .insert(projectAssignments)
-              .values({
-                workspaceId: user.workspaceId,
-                projectId: project.id,
-                userId: user.sub,
-                assignedBy: user.sub,
-              })
-              .onConflictDoNothing({
-                target: [
-                  projectAssignments.projectId,
-                  projectAssignments.userId,
-                ],
-              });
+        if (
+          membership.role !== 'admin' &&
+          !(membership.role === 'pm' && project.visibility === 'public')
+        ) {
+          const [assignment] = await tx
+            .select({ id: projectAssignments.id })
+            .from(projectAssignments)
+            .where(
+              and(
+                eq(projectAssignments.workspaceId, user.workspaceId),
+                eq(projectAssignments.projectId, project.id),
+                eq(projectAssignments.userId, user.sub),
+              ),
+            )
+            .for('update');
+          if (!assignment) {
+            if (membership.role === 'member') {
+              throw new DomainError(
+                'project_assignment_required',
+                githubTrackingErrorMessages.project_assignment_required,
+                githubTrackingErrorStatuses.project_assignment_required,
+              );
+            }
+            throw new NotFoundException('Project not found');
           }
         }
 

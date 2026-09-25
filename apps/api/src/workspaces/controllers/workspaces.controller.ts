@@ -27,6 +27,7 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { WorkspaceAdminGuard } from '../../members/guards/workspace-admin.guard';
 import { WorkspaceGitHubOrganizationsService } from '../../github/services/workspace-github-organizations.service';
+import { GithubInstallationsService } from '../../github/services/github-installations.service';
 import { AddWorkspaceGitHubOrganizationDto } from '../dto/add-workspace-github-organization.dto';
 import { UpdateWorkspaceSettingsDto } from '../dto/update-workspace-settings.dto';
 import { UpdateWorkspaceDto } from '../dto/update-workspace.dto';
@@ -35,6 +36,14 @@ import { WorkspaceGitHubOrganizationRecoveryErrorResponseDto } from '../dto/work
 import { WorkspaceGitHubOrganizationResponseDto } from '../dto/workspace-github-organization-response.dto';
 import { WorkspaceSettingsResponseDto } from '../dto/workspace-settings-response.dto';
 import { WorkspaceResponseDto } from '../dto/workspace-response.dto';
+import {
+  GithubInstallationAssociationParamsDto,
+  GithubInstallationCompleteDto,
+  GithubInstallationSetupDto,
+  GithubInstallationSetupResponseDto,
+  WorkspaceGithubInstallationDto,
+  WorkspaceGithubInstallationListDto,
+} from '../dto/github-installations.dto';
 import { WorkspacesService } from '../services/workspaces.service';
 
 @ApiTags('workspace')
@@ -44,6 +53,7 @@ export class WorkspacesController {
   constructor(
     private readonly workspaces: WorkspacesService,
     private readonly workspaceGitHubOrganizations: WorkspaceGitHubOrganizationsService,
+    private readonly githubInstallations: GithubInstallationsService,
   ) {}
 
   @Get()
@@ -154,5 +164,71 @@ export class WorkspacesController {
       user.workspaceId,
       organizationId,
     );
+  }
+
+  @Get('github/installations')
+  @UseGuards(WorkspaceAdminGuard)
+  @ApiOperation({ summary: 'List verified workspace GitHub App installations' })
+  @ApiOkResponse({ type: WorkspaceGithubInstallationListDto })
+  @ZodSerializerDto(WorkspaceGithubInstallationListDto)
+  listGitHubInstallations(
+    @CurrentUser() user: AuthUser,
+  ): Promise<WorkspaceGithubInstallationListDto> {
+    return this.githubInstallations.list(user.workspaceId);
+  }
+
+  @Post('github/installations/setup')
+  @UseGuards(WorkspaceAdminGuard)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a single-use GitHub App installation setup state',
+  })
+  @ApiCreatedResponse({ type: GithubInstallationSetupResponseDto })
+  @ZodSerializerDto(GithubInstallationSetupResponseDto)
+  setupGitHubInstallation(
+    @CurrentUser() user: AuthUser,
+    @Body() body: GithubInstallationSetupDto,
+  ): Promise<GithubInstallationSetupResponseDto> {
+    return this.githubInstallations.setup(user, body);
+  }
+
+  @Post('github/installations/complete')
+  @UseGuards(WorkspaceAdminGuard)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Verify and save a GitHub App installation for the workspace',
+  })
+  @ApiCreatedResponse({ type: WorkspaceGithubInstallationDto })
+  @ZodSerializerDto(WorkspaceGithubInstallationDto)
+  completeGitHubInstallation(
+    @CurrentUser() user: AuthUser,
+    @Body() body: GithubInstallationCompleteDto,
+  ): Promise<WorkspaceGithubInstallationDto> {
+    return this.githubInstallations.complete(user, body);
+  }
+
+  @Post('github/installations/:associationId/reverify')
+  @UseGuards(WorkspaceAdminGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reverify a saved GitHub App installation' })
+  @ApiOkResponse({ type: WorkspaceGithubInstallationDto })
+  @ZodSerializerDto(WorkspaceGithubInstallationDto)
+  reverifyGitHubInstallation(
+    @CurrentUser() user: AuthUser,
+    @Param() params: GithubInstallationAssociationParamsDto,
+  ): Promise<WorkspaceGithubInstallationDto> {
+    return this.githubInstallations.reverify(user, params.associationId);
+  }
+
+  @Delete('github/installations/:associationId')
+  @UseGuards(WorkspaceAdminGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Locally disconnect a GitHub App installation' })
+  @ApiNoContentResponse()
+  disconnectGitHubInstallation(
+    @CurrentUser() user: AuthUser,
+    @Param() params: GithubInstallationAssociationParamsDto,
+  ): Promise<void> {
+    return this.githubInstallations.disconnect(user, params.associationId);
   }
 }

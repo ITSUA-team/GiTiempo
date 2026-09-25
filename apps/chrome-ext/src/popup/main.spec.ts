@@ -981,4 +981,29 @@ describe("popup app", () => {
     expect(document.body.textContent).toContain("Runtime unavailable");
     expect(document.body.textContent).toContain("Retry connection");
   });
+
+  it("shows the exact assignment remedy and does not suggest a personal GitHub reconnect", async () => {
+    const assignmentMessage =
+      "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.";
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient: createRuntimeClient({
+        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        startTimer: vi.fn(async () => ({
+          errorCode: "project_assignment_required" as const,
+          errorMessage: assignmentMessage,
+          ok: false,
+          snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        })),
+      }),
+      pageContextResolver: async () => supportedContext(),
+    });
+
+    await app.load();
+    document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')!.click();
+    await Promise.resolve();
+
+    expect(document.body.textContent).toContain(assignmentMessage);
+    expect(document.body.textContent).not.toContain("Connect GitHub");
+  });
 });

@@ -1,18 +1,28 @@
 import {
 	addWorkspaceGitHubOrganizationSchema,
+	githubInstallationCompleteRequestSchema,
+	githubInstallationSetupRequestSchema,
+	githubInstallationSetupResponseSchema,
 	githubConnectionStatusResponseSchema,
 	githubOwnerListResponseSchema,
 	updateWorkspaceSettingsSchema,
 	workspaceGitHubOrganizationListResponseSchema,
 	workspaceGitHubOrganizationResponseSchema,
+	workspaceGitHubInstallationListSchema,
+	workspaceGitHubInstallationSchema,
 	workspaceSettingsResponseSchema,
 	type AddWorkspaceGitHubOrganizationInput,
+	type GitHubInstallationCompleteRequest,
+	type GitHubInstallationSetupRequest,
+	type GitHubInstallationSetupResponse,
 	type GitHubConnectionStatusResponse,
 	type GitHubOwnerListResponse,
 	type UpdateWorkspaceInput,
 	type UpdateWorkspaceSettingsInput,
 	type WorkspaceGitHubOrganizationListResponse,
 	type WorkspaceGitHubOrganizationResponse,
+	type WorkspaceGitHubInstallation,
+	type WorkspaceGitHubInstallationList,
 	type WorkspaceResponse,
 	type WorkspaceSettingsResponse,
 } from '@gitiempo/shared';
@@ -30,11 +40,18 @@ export interface AdminSettingsClient {
 	addWorkspaceGitHubOrganization(
 		input: AddWorkspaceGitHubOrganizationInput,
 	): Promise<WorkspaceGitHubOrganizationResponse>;
+	completeWorkspaceGitHubInstallation(
+		input: GitHubInstallationCompleteRequest,
+	): Promise<WorkspaceGitHubInstallation>;
 	getGitHubConnectionStatus(): Promise<GitHubConnectionStatusResponse>;
 	getWorkspace(): Promise<WorkspaceResponse>;
 	listAvailableGitHubOrganizations(): Promise<GitHubOwnerListResponse>;
-	listWorkspaceGitHubOrganizations(): Promise<WorkspaceGitHubOrganizationListResponse>;
-	removeWorkspaceGitHubOrganization(organizationId: string): Promise<void>;
+  listWorkspaceGitHubOrganizations(): Promise<WorkspaceGitHubOrganizationListResponse>;
+  listWorkspaceGitHubInstallations(): Promise<WorkspaceGitHubInstallationList>;
+  removeWorkspaceGitHubOrganization(organizationId: string): Promise<void>;
+	setupWorkspaceGitHubInstallation(
+		input: GitHubInstallationSetupRequest,
+	): Promise<GitHubInstallationSetupResponse>;
 	getWorkspaceSettings(): Promise<WorkspaceSettingsResponse>;
 	updateWorkspace(
 		input: UpdateWorkspaceInput,
@@ -56,6 +73,15 @@ export function createAdminSettingsClient({
 				method: 'POST',
 				path: '/workspace/github/organizations',
 				responseSchema: workspaceGitHubOrganizationResponseSchema,
+			});
+		},
+
+		completeWorkspaceGitHubInstallation(input) {
+			return apiClient.requestJson({
+				body: githubInstallationCompleteRequestSchema.parse(input),
+				method: 'POST',
+				path: '/workspace/github/installations/complete',
+				responseSchema: workspaceGitHubInstallationSchema,
 			});
 		},
 
@@ -84,10 +110,26 @@ export function createAdminSettingsClient({
 			});
 		},
 
+		listWorkspaceGitHubInstallations() {
+			return apiClient.requestJson({
+				path: '/workspace/github/installations',
+				responseSchema: workspaceGitHubInstallationListSchema,
+			});
+		},
+
 		async removeWorkspaceGitHubOrganization(organizationId) {
 			await apiClient.requestNoContent({
 				method: 'DELETE',
 				path: `/workspace/github/organizations/${organizationId}`,
+			});
+		},
+
+		setupWorkspaceGitHubInstallation(input) {
+			return apiClient.requestJson({
+				body: githubInstallationSetupRequestSchema.parse(input),
+				method: 'POST',
+				path: '/workspace/github/installations/setup',
+				responseSchema: githubInstallationSetupResponseSchema,
 			});
 		},
 

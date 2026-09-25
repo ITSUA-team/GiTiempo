@@ -52,6 +52,16 @@ const availableGitHubOrganizationsResponse = {
   ],
 } as const;
 
+const workspaceGitHubInstallation = {
+  id: '55555555-5555-4555-8555-555555555555',
+  installationId: '123456',
+  organizationId: '654321',
+  organizationLogin: 'Octo-Org',
+  recoveryReason: null,
+  status: 'verified',
+  verifiedAt: '2026-05-01T10:00:00.000Z',
+} as const;
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     headers: { 'Content-Type': 'application/json' },
@@ -228,6 +238,56 @@ describe('createAdminSettingsClient', () => {
           Authorization: 'Bearer access-token',
         }),
         method: 'DELETE',
+      }),
+    );
+  });
+
+  it('lists workspace GitHub App installations without personal credentials', async () => {
+    fetchFn.mockResolvedValue(jsonResponse({ items: [workspaceGitHubInstallation] }));
+
+    const result = await client.listWorkspaceGitHubInstallations();
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/workspace/github/installations',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(result.items).toEqual([workspaceGitHubInstallation]);
+    expect(result.items[0]).not.toHaveProperty('accessToken');
+  });
+
+  it('starts GitHub App installation setup with only the organization login', async () => {
+    fetchFn.mockResolvedValue(
+      jsonResponse({
+        expiresAt: '2026-05-01T10:10:00.000Z',
+        installationUrl: 'https://github.com/apps/gi-tiempo/installations/new',
+        state: 'a'.repeat(32),
+      }),
+    );
+
+    await client.setupWorkspaceGitHubInstallation({ organizationLogin: 'Octo-Org' });
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/workspace/github/installations/setup',
+      expect.objectContaining({
+        body: JSON.stringify({ organizationLogin: 'Octo-Org' }),
+        method: 'POST',
+      }),
+    );
+  });
+
+  it('submits callback data to the server for verification', async () => {
+    fetchFn.mockResolvedValue(jsonResponse(workspaceGitHubInstallation, 201));
+
+    await client.completeWorkspaceGitHubInstallation({
+      installationId: '123456',
+      state: 'a'.repeat(32),
+    });
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/workspace/github/installations/complete',
+      expect.objectContaining({
+        body: JSON.stringify({ state: 'a'.repeat(32), installationId: '123456' }),
+        method: 'POST',
       }),
     );
   });

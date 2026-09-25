@@ -1,6 +1,6 @@
 # ADR 003: GitHub App with User-to-Server Authentication
 
-**Status:** Approved  
+**Status:** Superseded by [ADR 009](009-workspace-github-app-installation-tracking.md) for GitHub-backed timer starts; retained for personal browsing and import.
 **Date:** 2025-01-15
 
 ## Context
@@ -18,7 +18,7 @@ Use a **GitHub App** with **user-to-server authentication** flow:
 - The backend receives a short-lived user access token (`ghu_`, 8h) and a refresh token (`ghr_`, 6mo).
 - Tokens are AES-encrypted at rest in the `GitHubConnection` table.
 - Access tokens are refreshed automatically when expired.
-- The app accesses only what the connected user's GitHub account can see; GiTiempo does not introduce a shared organization token or workspace-level GitHub credential.
+- The app accesses only what the connected user's GitHub account can see for personal browsing and import. ADR 009 adds a separate workspace GitHub App installation credential for GitHub-backed timer starts.
 - Workspace admins may apply an additional GiTiempo workspace policy that allow-lists which GitHub organizations are surfaced inside the product, but that policy is a filter and does not grant access by itself.
 
 ## Consequences

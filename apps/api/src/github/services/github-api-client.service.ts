@@ -24,6 +24,12 @@ import type {
 const GITHUB_API = 'https://api.github.com';
 const GITHUB_GRAPHQL = 'https://api.github.com/graphql';
 
+/** Internal signal used only by server-side GitHub App installation requests. */
+export class GithubInstallationAuthenticationError extends Error {}
+
+/** Internal signal used only by server-side GitHub App installation requests. */
+export class GithubInstallationPermissionError extends Error {}
+
 type RestPageToken = { kind: 'rest-page'; page: number };
 type RestCursorToken = { kind: 'rest-cursor'; after: string };
 type GraphqlCursorToken = { kind: 'graphql-cursor'; cursor: string };
@@ -403,12 +409,15 @@ export class GithubApiClientService {
     accessToken: string;
     owner: string;
     repo: string;
+    installationAuth?: boolean;
   }): Promise<GitHubRepository> {
     const result = await this.rest<GitHubRepoRest>(
       input.accessToken,
       `/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}`,
       {},
       null,
+      input.installationAuth ? 'GitHub repository not found' : undefined,
+      input.installationAuth === true,
     );
 
     return this.toRepository(result.body);
@@ -419,6 +428,7 @@ export class GithubApiClientService {
     owner: string;
     repo: string;
     issueNumber: number;
+    installationAuth?: boolean;
   }): Promise<GitHubIssue> {
     const issue = await this.rest<GitHubIssueRest>(
       input.accessToken,
@@ -426,6 +436,7 @@ export class GithubApiClientService {
       {},
       null,
       'GitHub issue not found',
+      input.installationAuth === true,
     ).then((result) => result.body);
 
     if (issue.pull_request !== undefined) {
@@ -442,6 +453,7 @@ export class GithubApiClientService {
     q?: string;
     limit: number;
     pageToken?: string;
+    installationAuth?: boolean;
   }): Promise<GitHubProjectIssueListResponse> {
     const after = this.decodePage(input.pageToken, 'graphql-cursor');
     const query = `
@@ -485,6 +497,7 @@ export class GithubApiClientService {
         after,
         query: input.q ?? null,
       },
+      input.installationAuth === true,
     );
     const items = body.data?.node?.items;
     if (!items?.nodes || !items.pageInfo) {
@@ -521,6 +534,7 @@ export class GithubApiClientService {
   async getProject(input: {
     accessToken: string;
     projectId: string;
+    installationAuth?: boolean;
   }): Promise<GithubProjectSummary> {
     const query = `
       query($id: ID!) {
@@ -542,6 +556,7 @@ export class GithubApiClientService {
       input.accessToken,
       query,
       { id: input.projectId },
+      input.installationAuth === true,
     );
     const node = body.data?.node;
     const owner = node?.owner;
@@ -604,15 +619,29 @@ export class GithubApiClientService {
     query: Record<string, string>,
     paginationKind: 'rest-page' | 'rest-cursor' | null,
     notFoundMessage?: string,
+    installationAuth = false,
   ): Promise<RestResult<T>> {
     const url = new URL(path, GITHUB_API);
     for (const [key, value] of Object.entries(query)) {
       url.searchParams.set(key, value);
     }
-    const response = await fetch(url, {
-      headers: this.headers(accessToken),
-    });
-    const body = (await this.readJson(response)) as T;
+    const response = await this.request(
+      url,
+      { headers: this.headers(accessToken) },
+      installationAuth,
+    );
+    if (response.status === 401 && installationAuth) {
+      throw new GithubInstallationAuthenticationError();
+    }
+    if (response.status === 403 && installationAuth) {
+      if (
+        response.headers.get('x-ratelimit-remaining') === '0' ||
+        response.headers.has('retry-after')
+      ) {
+        throw new ServiceUnavailableException('GitHub API rate limit exceeded');
+      }
+      throw new GithubInstallationPermissionError();
+    }
     if (response.status === 404 && notFoundMessage) {
       throw new NotFoundException(notFoundMessage);
     }
@@ -624,6 +653,7 @@ export class GithubApiClientService {
       });
       throw new ServiceUnavailableException('GitHub API request failed');
     }
+    const body = (await this.readJson(response)) as T;
     return {
       body,
       pagination: this.toRestPagination(
@@ -638,28 +668,81 @@ export class GithubApiClientService {
     accessToken: string,
     query: string,
     variables: Record<string, unknown>,
+    installationAuth = false,
   ): Promise<T> {
-    const response = await fetch(GITHUB_GRAPHQL, {
-      method: 'POST',
-      headers: {
-        ...this.headers(accessToken),
-        'Content-Type': 'application/json',
+    const response = await this.request(
+      GITHUB_GRAPHQL,
+      {
+        method: 'POST',
+        headers: {
+          ...this.headers(accessToken),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query, variables }),
       },
-      body: JSON.stringify({ query, variables }),
-    });
-    const body = (await this.readJson(response)) as T & { errors?: unknown[] };
-    if (
-      !response.ok ||
-      (Array.isArray(body.errors) && body.errors.length > 0)
-    ) {
+      installationAuth,
+    );
+    if (response.status === 401 && installationAuth) {
+      throw new GithubInstallationAuthenticationError();
+    }
+    if (response.status === 403 && installationAuth) {
+      if (
+        response.headers.get('x-ratelimit-remaining') === '0' ||
+        response.headers.has('retry-after')
+      ) {
+        throw new ServiceUnavailableException('GitHub API rate limit exceeded');
+      }
+      throw new GithubInstallationPermissionError();
+    }
+    if (!response.ok) {
       this.logger.warn({
         event: 'github.graphql.request_failed',
         status: response.status,
-        hasErrors: Array.isArray(body.errors) && body.errors.length > 0,
+        hasErrors: false,
+      });
+      throw new ServiceUnavailableException('GitHub API request failed');
+    }
+    const body = (await this.readJson(response)) as T & {
+      errors?: Array<{ type?: string }>;
+    };
+    if (Array.isArray(body.errors) && body.errors.length > 0) {
+      const errorTypes = body.errors.map((error) => error.type);
+      if (
+        installationAuth &&
+        errorTypes.some(
+          (type) => type === 'FORBIDDEN' || type === 'INSUFFICIENT_SCOPES',
+        )
+      ) {
+        throw new GithubInstallationPermissionError();
+      }
+      if (installationAuth && errorTypes.includes('NOT_FOUND')) {
+        throw new NotFoundException('GitHub resource not found');
+      }
+      this.logger.warn({
+        event: 'github.graphql.request_failed',
+        status: response.status,
+        hasErrors: true,
       });
       throw new ServiceUnavailableException('GitHub API request failed');
     }
     return body;
+  }
+
+  private async request(
+    url: string | URL,
+    init: RequestInit,
+    installationAuth: boolean,
+  ): Promise<Response> {
+    if (!installationAuth) return fetch(url, init);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    try {
+      return await fetch(url, { ...init, signal: controller.signal });
+    } catch {
+      throw new ServiceUnavailableException('GitHub API request failed');
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   private async readJson(response: Response): Promise<unknown> {

@@ -1,0 +1,19 @@
+meta {
+  name: List workspace installations
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/workspace/github/installations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+docs {
+  Requires an active workspace administrator. Setup/complete/reverify also require a connected GitHub organization owner. Status and local disconnect do not require personal GitHub credentials. Use only a state returned by setup; installation IDs and organization authority are verified server-side. Never place installation access tokens or App private keys in this collection.
+}

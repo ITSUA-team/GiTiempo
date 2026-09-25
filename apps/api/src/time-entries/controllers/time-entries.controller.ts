@@ -20,6 +20,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -36,6 +37,7 @@ import { TimeEntryListResponseDto } from '../dto/time-entry-list-response.dto';
 import { TimeEntryResponseDto } from '../dto/time-entry-response.dto';
 import { UpdateTimeEntryDto } from '../dto/update-time-entry.dto';
 import { TimeEntriesService } from '../services/time-entries.service';
+import { GitHubTrackingErrorResponseDto } from '../dto/github-tracking-error-response.dto';
 
 @ApiTags('time-entries')
 @ApiBearerAuth()
@@ -100,19 +102,28 @@ export class TimeEntriesController {
   @ApiOperation({
     summary: 'Start timer from GitHub issue data',
     description: [
-      'Verifies the repository through the caller GitHub connection and asserts',
-      'the workspace GitHub organization policy before any project, task, or',
-      'time entry is written. The repository is recorded under the name GitHub',
-      'reports, not the name supplied in the request.',
+      'Verifies repository and issue through the workspace GitHub App installation.',
+      'Requires an existing mapped project and ordinary-member assignment, including public projects.',
+      'Rechecks membership, installation, organization policy and project access before task/time writes.',
+      'Uses GitHub canonical metadata; never creates projects or assignments and needs no personal GitHub connection.',
     ].join(' '),
   })
   @ApiCreatedResponse({ type: TimeEntryResponseDto })
-  @ApiConflictResponse({ description: 'Timer already running' })
+  @ApiConflictResponse({
+    description:
+      'Timer already running, installation required, or project mapping missing/ambiguous',
+  })
   @ApiForbiddenResponse({
-    description: 'Repository owner is not allowed for the workspace',
+    description:
+      'Assignment, installation access/permissions, or organization policy denies tracking',
+    type: GitHubTrackingErrorResponseDto,
   })
   @ApiNotFoundResponse({
-    description: 'GitHub connection, repository, or issue not found',
+    description: 'GitHub resource or local target not available',
+  })
+  @ApiServiceUnavailableResponse({
+    type: GitHubTrackingErrorResponseDto,
+    description: 'GitHub provider unavailable; retry later',
   })
   @ApiUnprocessableEntityResponse({ description: 'Project or task inactive' })
   @ZodSerializerDto(TimeEntryResponseDto)
