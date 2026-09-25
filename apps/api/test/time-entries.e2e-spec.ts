@@ -1191,25 +1191,39 @@ describe('Time entries (e2e)', () => {
     expect(started.body.isBillable).toBe(false);
   });
 
-  it('reuses existing GitHub refs when repository casing differs', async () => {
+  it('routes lowercase and uppercase issue starts to one GitHub project', async () => {
     const suffix = randomUUID().slice(0, 8);
-    const storedGitHubRepo = `gitiempo-test/Mixed-Case-${suffix}`;
-    const requestedGitHubRepo = storedGitHubRepo.toLowerCase();
+    const canonicalGitHubRepo = `gitiempo-test/Mixed-Case-${suffix}`;
+    const lowercaseGitHubRepo = canonicalGitHubRepo.toLowerCase();
     const issueNumber = 778;
 
-    await createGitHubRefs(storedGitHubRepo, issueNumber, platformTaskId);
-
-    const started = await request(app.getHttpServer())
+    const lowercaseStarted = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github')
       .set('Authorization', bearer(memberToken))
       .send({
-        githubRepo: requestedGitHubRepo,
+        githubRepo: lowercaseGitHubRepo,
         issueNumber,
       });
 
-    expect(started.status).toBe(201);
-    expect(started.body.projectId).toBe(platformProjectId);
-    expect(started.body.taskId).toBe(platformTaskId);
+    expect(lowercaseStarted.status).toBe(201);
+
+    await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(memberToken));
+
+    const uppercaseStarted = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(memberToken))
+      .send({
+        githubRepo: canonicalGitHubRepo,
+        issueNumber,
+      });
+
+    expect(uppercaseStarted.status).toBe(201);
+    expect(uppercaseStarted.body.projectId).toBe(
+      lowercaseStarted.body.projectId,
+    );
+    expect(uppercaseStarted.body.taskId).toBe(lowercaseStarted.body.taskId);
 
     const projectRefs = await db
       .select({ externalKey: projectExternalRefs.externalKey })
@@ -1220,8 +1234,8 @@ describe('Time entries (e2e)', () => {
           eq(projectExternalRefs.provider, 'github'),
           eq(projectExternalRefs.externalType, 'repository'),
           or(
-            eq(projectExternalRefs.externalKey, storedGitHubRepo),
-            eq(projectExternalRefs.externalKey, requestedGitHubRepo),
+            eq(projectExternalRefs.externalKey, canonicalGitHubRepo),
+            eq(projectExternalRefs.externalKey, lowercaseGitHubRepo),
           ),
         ),
       );
@@ -1238,11 +1252,11 @@ describe('Time entries (e2e)', () => {
           or(
             eq(
               taskExternalRefs.externalKey,
-              `${storedGitHubRepo}#${issueNumber}`,
+              `${canonicalGitHubRepo}#${issueNumber}`,
             ),
             eq(
               taskExternalRefs.externalKey,
-              `${requestedGitHubRepo}#${issueNumber}`,
+              `${lowercaseGitHubRepo}#${issueNumber}`,
             ),
           ),
         ),
