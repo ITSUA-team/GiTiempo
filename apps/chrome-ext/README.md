@@ -1,6 +1,6 @@
 # GiTiempo Browser Extension
 
-Manifest V3 extension for starting and stopping GiTiempo timers from GitHub issue pages. One source tree, two builds: `dist/chrome` and `dist/firefox`.
+Manifest V3 extension for starting and stopping GiTiempo timers from direct GitHub issue pages and GitHub Projects issue panes. Pull requests are not supported. One source tree, two builds: `dist/chrome` and `dist/firefox`.
 
 ## Commands
 

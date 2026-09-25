@@ -38,8 +38,8 @@
 
 - [x] 6.1 Run lint, typecheck and tests for `@gitiempo/api`, `@gitiempo/shared`, `user-web`, and `admin-web`
 - [x] 6.2 Confirm the extension needs no release, since normalization is server-side
-- [ ] 6.3 Start a timer from an issue supplying lowercase, then uppercase, and confirm one project receives both
-- [ ] 6.4 Select a board whose repository is tracked by an existing project and confirm the dropdown blocks it naming that project, in either casing
-- [ ] 6.5 Submit that import anyway through the API and confirm it is refused with nothing written
-- [ ] 6.6 Attempt to create a project whose name matches an active one in any casing and confirm the form explains it
-- [ ] 6.7 Disable a project, reuse its name, and confirm both records read correctly afterwards
+- [x] 6.3 Start a timer from an issue supplying lowercase, then uppercase, and confirm one project receives both
+- [x] 6.4 Select a board whose repository is tracked by an existing project and confirm the dropdown blocks it naming that project, in either casing
+- [x] 6.5 Submit that import anyway through the API and confirm it is refused with nothing written
+- [x] 6.6 Attempt to create a project whose name matches an active one in any casing and confirm the form explains it
+- [x] 6.7 Disable a project, reuse its name, and confirm both records read correctly afterwards
