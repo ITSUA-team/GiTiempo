@@ -255,6 +255,10 @@ describe('GithubInstallationsService setup authority', () => {
         token: string,
         installationId: string,
       ) => Promise<boolean>;
+      fetchOrganizationMembership: (
+        organizationLogin: string,
+        token: string,
+      ) => Promise<unknown>;
       fetchGitHub: (path: string, token: string) => Promise<unknown>;
       verifySetupAuthority: (...args: unknown[]) => Promise<unknown>;
     };
@@ -275,9 +279,10 @@ describe('GithubInstallationsService setup authority', () => {
       permissions: { issues: 'read', members: 'read' },
       ...overrides.installation,
     };
-    vi.spyOn(privateSubject, 'fetchGitHub')
-      .mockResolvedValueOnce(membership)
-      .mockResolvedValueOnce(installation);
+    vi.spyOn(privateSubject, 'fetchOrganizationMembership').mockResolvedValue(
+      membership,
+    );
+    vi.spyOn(privateSubject, 'fetchGitHub').mockResolvedValue(installation);
     return privateSubject;
   }
 
