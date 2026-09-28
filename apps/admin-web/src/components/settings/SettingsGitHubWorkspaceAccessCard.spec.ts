@@ -112,6 +112,9 @@ function createProps(overrides: Record<string, unknown> = {}) {
     availableOrganizationsRequestError: null,
     canAddOrganization: true,
     isInitialLoading: false,
+    installingOrganizationLogin: null,
+    installations: [],
+    installationsLoaded: false,
     items: [],
     organizationLoginError: null,
     recoveryChecklist: null,
@@ -194,6 +197,77 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       ?.trigger('click');
 
     expect(wrapper.emitted('remove')).toEqual([['org-1']]);
+  });
+
+  it('starts App installation for the selected organization when it is not verified', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        installationsLoaded: true,
+        items: [
+          {
+            id: 'org-1',
+            workspaceId: 'workspace-1',
+            organizationLogin: 'Octo-Org',
+            createdByUserId: 'user-1',
+            createdAt: '2026-06-18T00:00:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    await wrapper
+      .get('[data-testid="settings-github-organization-install-org-1"]')
+      .trigger('click');
+
+    expect(wrapper.emitted('install')).toEqual([['Octo-Org']]);
+  });
+
+  it('hides the App installation action when the organization is verified', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        installations: [
+          {
+            id: 'installation-1',
+            installationId: '123456',
+            organizationId: '654321',
+            organizationLogin: 'octo-org',
+            recoveryReason: null,
+            status: 'verified',
+            verifiedAt: '2026-06-18T00:00:00.000Z',
+          },
+        ],
+        installationsLoaded: true,
+        items: [
+          {
+            id: 'org-1',
+            workspaceId: 'workspace-1',
+            organizationLogin: 'Octo-Org',
+            createdByUserId: 'user-1',
+            createdAt: '2026-06-18T00:00:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    expect(
+      wrapper.find('[data-testid="settings-github-organization-install-org-1"]').exists(),
+    ).toBe(false);
   });
 
   it('hides the add organization setup action when GitHub is disconnected', () => {

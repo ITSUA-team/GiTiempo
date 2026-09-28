@@ -1,11 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { and, eq, inArray, like, or } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { GithubService } from '../src/github/services/github.service';
+import { GithubInstallationsService } from '../src/github/services/github-installations.service';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import {
@@ -22,19 +30,32 @@ import {
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
-const githubService = {
-  getRepository: (_user: unknown, owner: string, repo: string) =>
-    Promise.resolve({ fullName: `${owner}/${repo}` }),
-  getRepositoryIssue: (
-    _user: unknown,
-    owner: string,
-    repo: string,
-    issueNumber: number,
-  ) =>
-    Promise.resolve({
-      number: issueNumber,
-      title: `GitHub issue ${issueNumber} in ${owner}/${repo}`,
+const githubInstallations = {
+  assertCurrent: vi.fn().mockResolvedValue(undefined),
+  prepareIssue: vi.fn(
+    async (
+      _user: unknown,
+      owner: string,
+      repo: string,
+      issueNumber: number,
+    ) => ({
+      associationId: 'e2e-installation',
+      authorizationVersion: 1,
+      issue: {
+        id: `issue-${owner}-${repo}-${issueNumber}`,
+        number: issueNumber,
+        title: `GitHub issue ${issueNumber} in ${owner}/${repo}`,
+      },
+      organizationLogin: owner,
+      repository: {
+        fullName: `${owner}/${repo}`,
+        id: `repo-${owner}-${repo}`,
+        name: repo,
+        owner,
+      },
     }),
+  ),
+  verifyBoard: vi.fn().mockResolvedValue(true),
 };
 
 describe('Time entries (e2e)', () => {
@@ -53,8 +74,8 @@ describe('Time entries (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(GithubService)
-      .useValue(githubService)
+      .overrideProvider(GithubInstallationsService)
+      .useValue(githubInstallations)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -114,6 +135,29 @@ describe('Time entries (e2e)', () => {
       .delete(timeEntries)
       .where(eq(timeEntries.workspaceId, workspaceId));
     await cleanupGitHubFixtures();
+    githubInstallations.assertCurrent.mockReset();
+    githubInstallations.assertCurrent.mockResolvedValue(undefined);
+    githubInstallations.prepareIssue.mockReset();
+    githubInstallations.prepareIssue.mockImplementation(
+      async (_user, owner, repo, issueNumber) => ({
+        associationId: 'e2e-installation',
+        authorizationVersion: 1,
+        issue: {
+          id: `issue-${owner}-${repo}-${issueNumber}`,
+          number: issueNumber,
+          title: `GitHub issue ${issueNumber} in ${owner}/${repo}`,
+        },
+        organizationLogin: owner,
+        repository: {
+          fullName: `${owner}/${repo}`,
+          id: `repo-${owner}-${repo}`,
+          name: repo,
+          owner,
+        },
+      }),
+    );
+    githubInstallations.verifyBoard.mockReset();
+    githubInstallations.verifyBoard.mockResolvedValue(true);
   });
 
   async function cleanupGitHubFixtures(): Promise<void> {
@@ -774,15 +818,16 @@ describe('Time entries (e2e)', () => {
     const issueNumber = 88;
 
     try {
+      await createGitHubRepositoryRef(githubRepo, platformProjectId);
       const started = await request(app.getHttpServer())
         .post('/time-entries/timer/start-from-github')
-        .set('Authorization', bearer(otherMemberToken))
+        .set('Authorization', bearer(adminToken))
         .send({ githubRepo, issueNumber });
       expect(started.status).toBe(201);
 
       await request(app.getHttpServer())
         .post('/time-entries/timer/stop')
-        .set('Authorization', bearer(otherMemberToken));
+        .set('Authorization', bearer(adminToken));
 
       const [taskRef] = await db
         .select({ externalKey: taskExternalRefs.externalKey })
@@ -859,7 +904,7 @@ describe('Time entries (e2e)', () => {
     await db.delete(projects).where(eq(projects.id, projectId));
   }
 
-  it('creates a project for the issue repository even when a board lists it', async () => {
+  it('uses the verified mapped board without creating a repository project', async () => {
     const suffix = randomUUID().slice(0, 8);
     const { boardId, projectId } = await seedBoardProject(suffix);
     const githubRepo = `gitiempo-test/repo-${suffix}`;
@@ -879,31 +924,18 @@ describe('Time entries (e2e)', () => {
         .post('/time-entries/timer/stop')
         .set('Authorization', bearer(adminToken));
 
-      expect(await readTaskProjectId(started.body.task.id)).not.toBe(projectId);
-
+      expect(await readTaskProjectId(started.body.task.id)).toBe(projectId);
       const created = await db
         .select({ id: projects.id })
         .from(projects)
         .where(eq(projects.name, githubRepo));
-      expect(created).toHaveLength(1);
-      expect(await readTaskProjectId(started.body.task.id)).toBe(
-        created[0]!.id,
-      );
+      expect(created).toHaveLength(0);
     } finally {
-      const repositoryProjects = await db
-        .select({ id: projects.id })
-        .from(projects)
-        .where(eq(projects.name, githubRepo));
-
-      for (const repositoryProject of repositoryProjects) {
-        await dropBoardProject(repositoryProject.id);
-      }
-
       await dropBoardProject(projectId);
     }
   });
 
-  it('sends issues from two repositories on one board to their own projects', async () => {
+  it('uses one verified mapped board for issues from multiple repositories', async () => {
     const suffix = randomUUID().slice(0, 8);
     const { boardId, projectId } = await seedBoardProject(suffix);
     const firstRepo = `gitiempo-test/first-${suffix}`;
@@ -930,20 +962,205 @@ describe('Time entries (e2e)', () => {
         taskProjectIds.push(await readTaskProjectId(started.body.task.id));
       }
 
-      expect(taskProjectIds[0]).not.toBe(taskProjectIds[1]);
-      expect(taskProjectIds).not.toContain(projectId);
+      expect(taskProjectIds).toEqual([projectId, projectId]);
     } finally {
-      const repositoryProjects = await db
-        .select({ id: projects.id })
-        .from(projects)
-        .where(inArray(projects.name, [firstRepo, secondRepo]));
-
-      for (const repositoryProject of repositoryProjects) {
-        await dropBoardProject(repositoryProject.id);
-      }
-
       await dropBoardProject(projectId);
     }
+  });
+
+  it('rejects an absent mapping without materializing tracking records', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/no-map-${suffix}`;
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(adminToken))
+      .send({ githubRepo, issueNumber: 31 });
+
+    expect(started.status).toBe(409);
+    expect(started.body.code).toBe('github_project_mapping_required');
+    const created = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.title, `GitHub issue 31 in ${githubRepo}`));
+    expect(created).toHaveLength(0);
+  });
+
+  it('rejects an ambiguous verified board mapping without writes', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const first = await seedBoardProject(`first-${suffix}`);
+    const second = await seedBoardProject(`second-${suffix}`);
+    const githubRepo = `gitiempo-test/ambiguous-${suffix}`;
+
+    try {
+      const started = await request(app.getHttpServer())
+        .post('/time-entries/timer/start-from-github')
+        .set('Authorization', bearer(adminToken))
+        .send({ githubRepo, issueNumber: 32 });
+
+      expect(started.status).toBe(409);
+      expect(started.body.code).toBe('github_project_mapping_ambiguous');
+      const created = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.title, `GitHub issue 32 in ${githubRepo}`));
+      expect(created).toHaveLength(0);
+    } finally {
+      await dropBoardProject(first.projectId);
+      await dropBoardProject(second.projectId);
+    }
+  });
+
+  it('rejects forged board hints that installation verification does not confirm', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const { boardId, projectId } = await seedBoardProject(suffix);
+    const githubRepo = `gitiempo-test/forged-board-${suffix}`;
+    githubInstallations.verifyBoard.mockResolvedValueOnce(false);
+
+    try {
+      const started = await request(app.getHttpServer())
+        .post('/time-entries/timer/start-from-github')
+        .set('Authorization', bearer(adminToken))
+        .send({ githubProjectId: boardId, githubRepo, issueNumber: 33 });
+
+      expect(started.status).toBe(409);
+      expect(started.body.code).toBe('github_project_mapping_required');
+      expect(githubInstallations.verifyBoard).toHaveBeenCalledWith(
+        expect.anything(),
+        boardId,
+      );
+    } finally {
+      await dropBoardProject(projectId);
+    }
+  });
+
+  it('does not write tracking records when installation freshness fails at the transaction boundary', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/disconnected-${suffix}`;
+    await createGitHubRepositoryRef(githubRepo, platformProjectId);
+    githubInstallations.assertCurrent.mockRejectedValueOnce(
+      new Error('installation disconnected'),
+    );
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(adminToken))
+      .send({ githubRepo, issueNumber: 34 });
+
+    expect(started.status).toBe(500);
+    const created = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.title, `GitHub issue 34 in ${githubRepo}`));
+    expect(created).toHaveLength(0);
+  });
+
+  it('rechecks a revoked assignment after provider lookup without partial writes', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/revoked-${suffix}`;
+    const [project] = await db
+      .insert(projects)
+      .values({ workspaceId, name: `gitiempo-test/Revoked ${suffix}` })
+      .returning({ id: projects.id });
+    if (!project) throw new Error('Expected revocation fixture project');
+    await createGitHubRepositoryRef(githubRepo, project.id);
+    await db.insert(projectAssignments).values({
+      workspaceId,
+      projectId: project.id,
+      userId: memberUserId,
+      assignedBy: memberUserId,
+    });
+    githubInstallations.prepareIssue.mockImplementationOnce(
+      async (_user, owner, repo, issueNumber) => {
+        await db
+          .delete(projectAssignments)
+          .where(
+            and(
+              eq(projectAssignments.projectId, project.id),
+              eq(projectAssignments.userId, memberUserId),
+            ),
+          );
+        return {
+          associationId: 'e2e-installation',
+          authorizationVersion: 1,
+          issue: {
+            id: `issue-${owner}-${repo}-${issueNumber}`,
+            number: issueNumber,
+            title: `GitHub issue ${issueNumber} in ${owner}/${repo}`,
+          },
+          organizationLogin: owner,
+          repository: {
+            fullName: `${owner}/${repo}`,
+            id: `repo-${owner}-${repo}`,
+            name: repo,
+            owner,
+          },
+        };
+      },
+    );
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(memberToken))
+      .send({ githubRepo, issueNumber: 35 });
+
+    expect(started.status).toBe(403);
+    expect(started.body.code).toBe('project_assignment_required');
+    const created = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.title, `GitHub issue 35 in ${githubRepo}`));
+    expect(created).toHaveLength(0);
+  });
+
+  it('serializes simultaneous GitHub starts without duplicate issue materialization', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/simultaneous-${suffix}`;
+    const issueNumber = 36;
+    await createGitHubRepositoryRef(githubRepo, platformProjectId);
+
+    const [first, second] = await Promise.all([
+      request(app.getHttpServer())
+        .post('/time-entries/timer/start-from-github')
+        .set('Authorization', bearer(adminToken))
+        .send({ githubRepo, issueNumber }),
+      request(app.getHttpServer())
+        .post('/time-entries/timer/start-from-github')
+        .set('Authorization', bearer(adminToken))
+        .send({ githubRepo, issueNumber }),
+    ]);
+
+    expect([first.status, second.status].sort()).toEqual([201, 409]);
+    const refs = await db
+      .select({ taskId: taskExternalRefs.taskId })
+      .from(taskExternalRefs)
+      .where(eq(taskExternalRefs.externalKey, `${githubRepo}#${issueNumber}`));
+    expect(refs).toHaveLength(1);
+    await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(adminToken));
+  });
+
+  it('stops an owned timer without calling GitHub after provider access fails', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/stop-outage-${suffix}`;
+    await createGitHubRepositoryRef(githubRepo, platformProjectId);
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(adminToken))
+      .send({ githubRepo, issueNumber: 37 });
+    expect(started.status).toBe(201);
+
+    githubInstallations.prepareIssue.mockClear();
+    githubInstallations.prepareIssue.mockRejectedValueOnce(
+      new Error('provider unavailable'),
+    );
+    const stopped = await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(adminToken));
+
+    expect(stopped.status).toBe(200);
+    expect(githubInstallations.prepareIssue).not.toHaveBeenCalled();
   });
 
   it('prefers the repository project over the board that lists the issue', async () => {
@@ -1070,15 +1287,16 @@ describe('Time entries (e2e)', () => {
     const githubRepo = `gitiempo-test/Repo-CamelCase-${suffix}`;
     const issueNumber = 77;
 
+    await createGitHubRepositoryRef(githubRepo, platformProjectId);
     const started = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github')
-      .set('Authorization', bearer(otherMemberToken))
+      .set('Authorization', bearer(adminToken))
       .send({ githubRepo, issueNumber });
     expect(started.status).toBe(201);
 
     await request(app.getHttpServer())
       .post('/time-entries/timer/stop')
-      .set('Authorization', bearer(otherMemberToken));
+      .set('Authorization', bearer(adminToken));
 
     const [taskRef] = await db
       .select({ externalKey: taskExternalRefs.externalKey })
@@ -1089,21 +1307,22 @@ describe('Time entries (e2e)', () => {
     expect(taskRef?.externalKey).toBe(`${githubRepo}#${issueNumber}`);
   });
 
-  it('starts timer from GitHub issue data and creates provider refs', async () => {
+  it('materializes an issue task in an existing repository project', async () => {
     const suffix = randomUUID().slice(0, 8);
     const githubRepo = `gitiempo-test/repo-${suffix}`;
     const issueNumber = 123;
 
+    await createGitHubRepositoryRef(githubRepo, platformProjectId);
     const started = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github')
-      .set('Authorization', bearer(otherMemberToken))
+      .set('Authorization', bearer(adminToken))
       .send({
         githubRepo,
         issueNumber,
       });
     expect(started.status).toBe(201);
     expect(started.body.source).toBe('extension');
-    expect(started.body.project.name).toBe(githubRepo);
+    expect(started.body.projectId).toBe(platformProjectId);
     expect(started.body.task.title).toBe(
       `GitHub issue ${issueNumber} in ${githubRepo}`,
     );
@@ -1111,34 +1330,12 @@ describe('Time entries (e2e)', () => {
 
     const current = await request(app.getHttpServer())
       .get('/time-entries/current')
-      .set('Authorization', bearer(otherMemberToken));
+      .set('Authorization', bearer(adminToken));
     expect(current.status).toBe(200);
     expect(current.body.timeEntry.githubIssue).toEqual({
       githubRepo,
       issueNumber,
     });
-
-    const [projectRef] = await db
-      .select()
-      .from(projectExternalRefs)
-      .where(
-        and(
-          eq(projectExternalRefs.workspaceId, workspaceId),
-          eq(projectExternalRefs.provider, 'github'),
-          eq(projectExternalRefs.externalType, 'repository'),
-          eq(projectExternalRefs.externalKey, githubRepo),
-        ),
-      )
-      .limit(1);
-    expect(projectRef?.projectId).toBe(started.body.projectId);
-
-    const project = await request(app.getHttpServer())
-      .get(`/projects/${started.body.projectId}`)
-      .set('Authorization', bearer(otherMemberToken));
-    expect(project.status).toBe(200);
-    expect(project.body.source).toBe('github');
-    expect(project.body.visibility).toBe('private');
-    expect(project.body.totalSeconds).toBe(0);
 
     const [taskRef] = await db
       .select()
@@ -1153,18 +1350,6 @@ describe('Time entries (e2e)', () => {
       )
       .limit(1);
     expect(taskRef?.taskId).toBe(started.body.taskId);
-
-    const [assignment] = await db
-      .select()
-      .from(projectAssignments)
-      .where(
-        and(
-          eq(projectAssignments.projectId, started.body.projectId),
-          eq(projectAssignments.userId, otherMemberUserId),
-        ),
-      )
-      .limit(1);
-    expect(assignment?.userId).toBe(otherMemberUserId);
   });
 
   it('starts GitHub timers with existing task billable defaults', async () => {
@@ -1197,9 +1382,11 @@ describe('Time entries (e2e)', () => {
     const lowercaseGitHubRepo = canonicalGitHubRepo.toLowerCase();
     const issueNumber = 778;
 
+    await createGitHubRepositoryRef(canonicalGitHubRepo, platformProjectId);
+
     const lowercaseStarted = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github')
-      .set('Authorization', bearer(memberToken))
+      .set('Authorization', bearer(adminToken))
       .send({
         githubRepo: lowercaseGitHubRepo,
         issueNumber,
@@ -1209,11 +1396,11 @@ describe('Time entries (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/time-entries/timer/stop')
-      .set('Authorization', bearer(memberToken));
+      .set('Authorization', bearer(adminToken));
 
     const uppercaseStarted = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github')
-      .set('Authorization', bearer(memberToken))
+      .set('Authorization', bearer(adminToken))
       .send({
         githubRepo: canonicalGitHubRepo,
         issueNumber,
@@ -1225,21 +1412,7 @@ describe('Time entries (e2e)', () => {
     );
     expect(uppercaseStarted.body.taskId).toBe(lowercaseStarted.body.taskId);
 
-    const projectRefs = await db
-      .select({ externalKey: projectExternalRefs.externalKey })
-      .from(projectExternalRefs)
-      .where(
-        and(
-          eq(projectExternalRefs.workspaceId, workspaceId),
-          eq(projectExternalRefs.provider, 'github'),
-          eq(projectExternalRefs.externalType, 'repository'),
-          or(
-            eq(projectExternalRefs.externalKey, canonicalGitHubRepo),
-            eq(projectExternalRefs.externalKey, lowercaseGitHubRepo),
-          ),
-        ),
-      );
-    expect(projectRefs).toHaveLength(1);
+    expect(uppercaseStarted.body.projectId).toBe(platformProjectId);
 
     const taskRefs = await db
       .select({ externalKey: taskExternalRefs.externalKey })
@@ -1264,7 +1437,7 @@ describe('Time entries (e2e)', () => {
     expect(taskRefs).toHaveLength(1);
   });
 
-  it('creates GitHub issue tasks from the project billable default', async () => {
+  it('creates GitHub issue tasks from the mapped project billable default', async () => {
     const suffix = randomUUID().slice(0, 8);
     const githubRepo = `gitiempo-test/lazy-billable-${suffix}`;
     const issueNumber = 778;
@@ -1293,7 +1466,7 @@ describe('Time entries (e2e)', () => {
 
     const started = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github')
-      .set('Authorization', bearer(otherMemberToken))
+      .set('Authorization', bearer(adminToken))
       .send({
         githubRepo,
         issueNumber,
@@ -1311,7 +1484,7 @@ describe('Time entries (e2e)', () => {
     expect(createdTask?.value).toBe(false);
   });
 
-  it('does not grant project visibility through existing GitHub refs', async () => {
+  it('rejects an unassigned member for a private mapped GitHub issue', async () => {
     const suffix = randomUUID().slice(0, 8);
     const githubRepo = `gitiempo-test/existing-${suffix}`;
     const issueNumber = 321;
@@ -1325,7 +1498,11 @@ describe('Time entries (e2e)', () => {
         githubRepo,
         issueNumber,
       });
-    expect(started.status).toBe(404);
+    expect(started.status).toBe(403);
+    expect(started.body.code).toBe('project_assignment_required');
+    expect(started.body.message).toBe(
+      'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
+    );
 
     const [assignment] = await db
       .select()
@@ -1338,6 +1515,32 @@ describe('Time entries (e2e)', () => {
       )
       .limit(1);
     expect(assignment).toBeUndefined();
+  });
+
+  it('rejects an unassigned member for a public mapped GitHub issue', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/public-${suffix}`;
+    const [project] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `gitiempo-test/Public ${suffix}`,
+        visibility: 'public',
+      })
+      .returning({ id: projects.id });
+    if (!project) throw new Error('Expected public fixture project');
+    await createGitHubRepositoryRef(githubRepo, project.id);
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(otherMemberToken))
+      .send({ githubRepo, issueNumber: 322 });
+
+    expect(started.status).toBe(403);
+    expect(started.body.code).toBe('project_assignment_required');
+    expect(started.body.message).toBe(
+      'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
+    );
   });
 
   it('allows assigned users to reuse existing GitHub refs', async () => {
@@ -1439,7 +1642,7 @@ describe('Time entries (e2e)', () => {
     expect(started.status).toBe(404);
   });
 
-  it('rejects GitHub issue refs outside the matched project', async () => {
+  it('uses the canonical issue task before a conflicting repository mapping', async () => {
     const suffix = randomUUID().slice(0, 8);
     const githubRepo = `gitiempo-test/wrong-project-${suffix}`;
     const issueNumber = 753;
@@ -1489,7 +1692,9 @@ describe('Time entries (e2e)', () => {
         githubRepo,
         issueNumber,
       });
-    expect(started.status).toBe(404);
+    expect(started.status).toBe(201);
+    expect(started.body.taskId).toBe(otherTask.id);
+    expect(started.body.projectId).toBe(otherProject.id);
   });
 
   async function createManualEntry(
@@ -1582,6 +1787,22 @@ describe('Time entries (e2e)', () => {
       externalKey: issueKey,
       externalUrl: `https://github.com/${githubRepo}/issues/${issueNumber}`,
       metadata: { githubRepo, issueNumber },
+      syncedAt: new Date(),
+    });
+  }
+
+  async function createGitHubRepositoryRef(
+    githubRepo: string,
+    projectId: string,
+  ): Promise<void> {
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId,
+      provider: 'github',
+      externalType: 'repository',
+      externalKey: githubRepo,
+      externalUrl: `https://github.com/${githubRepo}`,
+      metadata: { githubRepo },
       syncedAt: new Date(),
     });
   }

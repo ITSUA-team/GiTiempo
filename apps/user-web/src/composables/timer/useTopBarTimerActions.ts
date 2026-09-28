@@ -1,6 +1,11 @@
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
-import { isApiErrorStatus } from "@gitiempo/web-shared/http";
-import type { StartTimerInput } from "@gitiempo/shared";
+import { ApiError, isApiErrorStatus } from "@gitiempo/web-shared/http";
+import {
+  githubTrackingErrorCodeSchema,
+  githubTrackingErrorMessages,
+  type GitHubTrackingErrorCode,
+  type StartTimerInput,
+} from "@gitiempo/shared";
 import { isGitHubProjectIssueSelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 import {
   useStartTimerFromGitHubMutation,
@@ -169,6 +174,15 @@ export function useTopBarTimerActions({
     error: unknown,
     message: string,
   ): { detail: string; summary: string } {
+    const trackingErrorCode = getGitHubTrackingErrorCode(error);
+
+    if (trackingErrorCode) {
+      return {
+        detail: githubTrackingErrorMessages[trackingErrorCode],
+        summary: getGitHubTrackingErrorSummary(trackingErrorCode),
+      };
+    }
+
     if (isApiErrorStatus(error, [403])) {
       return {
         detail:
@@ -203,6 +217,33 @@ export function useTopBarTimerActions({
     isStoppingTimer,
     timerActionErrorMessage,
   };
+}
+
+function getGitHubTrackingErrorCode(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return null;
+  }
+
+  const parsed = githubTrackingErrorCodeSchema.safeParse(error.code);
+  return parsed.success ? parsed.data : null;
+}
+
+function getGitHubTrackingErrorSummary(
+  code: GitHubTrackingErrorCode,
+): string {
+  const summaries = {
+    project_assignment_required: "Project assignment required",
+    github_installation_required: "GitHub App setup required",
+    github_installation_unavailable: "GitHub App unavailable",
+    github_installation_permissions_required: "GitHub App permissions required",
+    github_organization_not_allowed: "Organization not allowed",
+    github_resource_unavailable: "GitHub issue unavailable",
+    github_project_mapping_required: "Project setup required",
+    github_project_mapping_ambiguous: "Project mapping needs attention",
+    github_provider_unavailable: "GitHub is temporarily unavailable",
+  } as const;
+
+  return summaries[code];
 }
 
 function getStartTimerErrorToastCopy(message: string): {

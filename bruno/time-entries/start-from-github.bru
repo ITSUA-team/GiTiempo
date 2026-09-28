@@ -1,0 +1,30 @@
+meta {
+  name: Start assigned GitHub issue timer
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/time-entries/timer/start-from-github
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "githubRepo": "{{githubOrganizationLogin}}/{{githubRepositoryName}}",
+    "issueNumber": 1
+  }
+}
+
+docs {
+  Requires a verified workspace installation and an existing project mapping. Ordinary members must be explicitly assigned, including on public projects. Personal GitHub connection is not required.
+
+  Optional githubProjectId is a verifiable board hint. Client titles, workspace IDs, credentials and assignment fields are rejected.
+
+  Safe denial codes: project_assignment_required (403), github_installation_required (409), github_installation_unavailable (403), github_installation_permissions_required (403), github_organization_not_allowed (403), github_resource_unavailable (404), github_project_mapping_required / github_project_mapping_ambiguous (409), github_provider_unavailable (503). A denial creates no project, assignment, task or time entry. Existing owned timers can still be stopped.
+}

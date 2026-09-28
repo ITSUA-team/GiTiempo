@@ -1,5 +1,10 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import {
+  githubTrackingErrorMessages,
+  githubTrackingErrorStatuses,
+  type GitHubTrackingErrorCode,
+} from '@gitiempo/shared';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
@@ -16,6 +21,7 @@ import {
 import type { ProjectRow } from '../../projects/services/projects.service';
 import {
   normalizeGitHubIssueExternalKey,
+  normalizeGitHubLogin,
   normalizeGitHubRepoKey,
   parseGitHubRepoKey,
   rewriteGitHubIssueOwner,
@@ -255,6 +261,118 @@ export class GithubTaskMaterializationService {
     return task;
   }
 
+  /** Read-only lookup; timer requests never create projects or assignments. */
+  async findExistingIssueProject(
+    executor: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    githubRepo: string,
+    issueKey: string,
+    lockMapping = false,
+  ): Promise<ProjectRow | null> {
+    const issueRef = await this.findGitHubTaskRefInWorkspace(
+      executor,
+      workspaceId,
+      issueKey,
+      lockMapping,
+    );
+    if (issueRef) {
+      return this.requireProjectRow(executor, workspaceId, issueRef.projectId);
+    }
+    const repositoryRef = await this.findGitHubProjectRef(
+      executor,
+      workspaceId,
+      githubRepo,
+      lockMapping,
+    );
+    return repositoryRef
+      ? this.requireProjectRow(executor, workspaceId, repositoryRef.projectId)
+      : null;
+  }
+
+  async listMappedBoardIds(
+    workspaceId: string,
+    organizationLogin: string,
+  ): Promise<string[]> {
+    const refs = await this.db
+      .select({
+        id: projectExternalRefs.externalKey,
+        metadata: projectExternalRefs.metadata,
+      })
+      .from(projectExternalRefs)
+      .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
+      .where(
+        and(
+          eq(projectExternalRefs.workspaceId, workspaceId),
+          eq(projectExternalRefs.provider, 'github'),
+          eq(projectExternalRefs.externalType, 'project'),
+          eq(projects.isActive, true),
+        ),
+      );
+    const normalizedOrganization = normalizeGitHubLogin(organizationLogin);
+    return refs.flatMap((ref) =>
+      normalizeGitHubLogin(
+        typeof ref.metadata.githubProjectOwner === 'string'
+          ? ref.metadata.githubProjectOwner
+          : '',
+      ) === normalizedOrganization
+        ? [ref.id]
+        : [],
+    );
+  }
+
+  async resolveExistingProjectForIssue(
+    executor: Pick<DrizzleDB, 'select'>,
+    user: AuthUser,
+    input: {
+      githubRepo: string;
+      issueKey: string;
+      verifiedBoardIds: readonly string[];
+    },
+  ): Promise<ProjectRow> {
+    const existing = await this.findExistingIssueProject(
+      executor,
+      user.workspaceId,
+      input.githubRepo,
+      input.issueKey,
+      true,
+    );
+    if (existing) return existing;
+    if (input.verifiedBoardIds.length === 0) {
+      throw this.trackingError('github_project_mapping_required');
+    }
+    const refs = await executor
+      .select({ projectId: projectExternalRefs.projectId })
+      .from(projectExternalRefs)
+      .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
+      .where(
+        and(
+          eq(projectExternalRefs.workspaceId, user.workspaceId),
+          eq(projectExternalRefs.provider, 'github'),
+          eq(projectExternalRefs.externalType, 'project'),
+          eq(projects.isActive, true),
+          inArray(projectExternalRefs.externalKey, [...input.verifiedBoardIds]),
+        ),
+      )
+      .for('update');
+    const ids = [...new Set(refs.map((ref) => ref.projectId))];
+    if (ids.length !== 1) {
+      throw this.trackingError(
+        ids.length
+          ? 'github_project_mapping_ambiguous'
+          : 'github_project_mapping_required',
+      );
+    }
+    return this.requireProjectRow(executor, user.workspaceId, ids[0]!);
+  }
+
+  private trackingError(code: GitHubTrackingErrorCode): DomainError {
+    return new DomainError(
+      code,
+      githubTrackingErrorMessages[code],
+      githubTrackingErrorStatuses[code],
+    );
+  }
+
   async resolveProjectForIssue(
     executor: QueryExecutor,
     user: AuthUser,
@@ -385,6 +503,7 @@ export class GithubTaskMaterializationService {
     executor: Pick<DrizzleDB, 'select'>,
     workspaceId: string,
     githubRepo: string,
+    lockMapping = false,
   ): Promise<{ projectId: string } | null> {
     const normalizedRepo = normalizeGitHubRepoKey(githubRepo);
     if (!normalizedRepo) {
@@ -394,7 +513,7 @@ export class GithubTaskMaterializationService {
       );
     }
 
-    const [row] = await executor
+    const query = executor
       .select({ projectId: projectExternalRefs.projectId })
       .from(projectExternalRefs)
       .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
@@ -413,6 +532,7 @@ export class GithubTaskMaterializationService {
       )
       .limit(1);
 
+    const [row] = await (lockMapping ? query.for('update') : query);
     return row ?? null;
   }
 
@@ -469,6 +589,7 @@ export class GithubTaskMaterializationService {
     executor: Pick<DrizzleDB, 'select'>,
     workspaceId: string,
     issueKey: string,
+    lockMapping = false,
   ): Promise<{ projectId: string; taskId: string } | null> {
     const normalizedIssueKey = normalizeGitHubIssueExternalKey(issueKey);
     if (!normalizedIssueKey) {
@@ -478,7 +599,7 @@ export class GithubTaskMaterializationService {
       );
     }
 
-    const [row] = await executor
+    const query = executor
       .select({
         projectId: taskExternalRefs.projectId,
         taskId: taskExternalRefs.taskId,
@@ -494,6 +615,7 @@ export class GithubTaskMaterializationService {
       )
       .limit(1);
 
+    const [row] = await (lockMapping ? query.for('update') : query);
     return row ?? null;
   }
 

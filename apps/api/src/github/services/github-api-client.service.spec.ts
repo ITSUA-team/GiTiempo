@@ -3,7 +3,10 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GithubApiClientService } from './github-api-client.service';
+import {
+  GithubApiClientService,
+  GithubInstallationPermissionError,
+} from './github-api-client.service';
 
 const accessToken = 'ghu_secret_token';
 
@@ -427,4 +430,44 @@ describe('GithubApiClientService', () => {
       }),
     ).rejects.toThrow(ServiceUnavailableException);
   });
+});
+
+describe('GithubApiClientService installation authentication', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([
+    [
+      'getProject',
+      (service: GithubApiClientService) =>
+        service.getProject({
+          accessToken,
+          projectId: 'PVT_id',
+          installationAuth: true,
+        }),
+    ],
+    [
+      'listProjectIssues',
+      (service: GithubApiClientService) =>
+        service.listProjectIssues({
+          accessToken,
+          projectId: 'PVT_id',
+          state: 'all',
+          limit: 100,
+          installationAuth: true,
+        }),
+    ],
+  ])(
+    'maps HTTP 200 GraphQL FORBIDDEN from %s to an installation permission signal',
+    async (_method, request) => {
+      vi.stubGlobal(
+        'fetch',
+        vi
+          .fn()
+          .mockResolvedValue(jsonResponse({ errors: [{ type: 'FORBIDDEN' }] })),
+      );
+      await expect(
+        request(new GithubApiClientService()),
+      ).rejects.toBeInstanceOf(GithubInstallationPermissionError);
+    },
+  );
 });

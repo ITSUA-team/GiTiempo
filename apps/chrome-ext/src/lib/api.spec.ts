@@ -52,6 +52,42 @@ function createTestConfig() {
 }
 
 describe("createExtensionApiClient", () => {
+  it("preserves safe GitHub tracking failure codes without treating them as session expiry", async () => {
+    const { storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn: vi.fn(async () =>
+        jsonResponse(
+          {
+            code: "project_assignment_required",
+            error: "Forbidden",
+            message:
+              "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.",
+          },
+          { status: 403 },
+        ),
+      ),
+      storage,
+    });
+
+    await expect(
+      client.startTimerFromGitHub({
+        githubRepo: "octo/private-repo",
+        issueNumber: 184,
+        issueTitle: "Private issue",
+        issueUrl: "https://github.com/octo/private-repo/issues/184",
+        kind: "supported",
+        surface: "issue-page",
+      }),
+    ).rejects.toMatchObject({ code: "project_assignment_required" });
+    await expect(storage.get()).resolves.toHaveProperty(EXTENSION_SESSION_STORAGE_KEY);
+  });
   it("posts Firebase token exchange requests and stores the returned session", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
