@@ -82,8 +82,18 @@ export const envSchema = z
 
     // --- GitHub App (repo/issue integration) ---
     GITHUB_APP_ID: optionalNonEmptyString,
+    GITHUB_APP_SLUG: optionalNonEmptyString,
     GITHUB_APP_CLIENT_ID: optionalNonEmptyString,
     GITHUB_APP_CLIENT_SECRET: optionalNonEmptyString,
+    // GitHub App installation credentials. These are backend-only and are
+    // deliberately distinct from OAuth client credentials above.
+    GITHUB_APP_PRIVATE_KEY: z
+      .preprocess(
+        (val) => (val === '' ? undefined : val),
+        z.string().min(1).optional(),
+      )
+      .transform((val) => val?.replace(/\\n/g, '\n')),
+    GITHUB_APP_WEBHOOK_SECRET: optionalNonEmptyString,
 
     // --- GitHub sign-in OAuth App (identity only, separate from the App above) ---
     GITHUB_SIGNIN_CLIENT_ID: optionalNonEmptyString,
@@ -169,8 +179,11 @@ export const envSchema = z
     if (env.NODE_ENV === 'production') {
       const requiredGithub: Array<keyof typeof env> = [
         'GITHUB_APP_ID',
+        'GITHUB_APP_SLUG',
         'GITHUB_APP_CLIENT_ID',
         'GITHUB_APP_CLIENT_SECRET',
+        'GITHUB_APP_PRIVATE_KEY',
+        'GITHUB_APP_WEBHOOK_SECRET',
         'ENCRYPTION_KEY',
         'APP_URL',
         'USER_SPA_URL',

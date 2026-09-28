@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import type {
   GitHubOwner,
+  WorkspaceGitHubInstallation,
   WorkspaceGitHubOrganizationResponse,
 } from '@gitiempo/shared';
 import { composeGiTiempoSelfAppendedAutoCompleteDropdownPt } from '@gitiempo/web-config/theme';
@@ -35,6 +36,9 @@ const props = defineProps<{
   availableOrganizationsRequestError: string | null;
   canAddOrganization: boolean;
   isInitialLoading: boolean;
+  installingOrganizationLogin: string | null;
+  installations: readonly WorkspaceGitHubInstallation[];
+  installationsLoaded: boolean;
   items: readonly WorkspaceGitHubOrganizationResponse[];
   organizationLoginError: string | null;
   recoveryChecklist: GitHubWorkspaceAccessChecklist | null;
@@ -44,6 +48,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   add: [];
+  install: [organizationLogin: string];
   remove: [organizationId: string];
   retry: [];
   retryAdd: [];
@@ -94,6 +99,20 @@ const shouldShowAddGate = computed(
     !props.isInitialLoading &&
     !props.requestError,
 );
+
+function hasVerifiedInstallation(organizationLogin: string): boolean {
+  const normalizedLogin = organizationLogin.trim().toLowerCase();
+
+  return props.installations.some(
+    (installation) =>
+      installation.organizationLogin.trim().toLowerCase() === normalizedLogin &&
+      installation.status === 'verified',
+  );
+}
+
+function shouldShowInstallApp(organizationLogin: string): boolean {
+  return props.installationsLoaded && !hasVerifiedInstallation(organizationLogin);
+}
 
 watch(
   () => props.availableOrganizations,
@@ -189,15 +208,28 @@ watch(
               Allowed for this workspace
             </span>
           </div>
-          <Button
-            label="Remove"
-            severity="danger"
-            outlined
-            size="small"
-            :disabled="adding"
-            :loading="removingOrganizationId === organization.id"
-            @click="emit('remove', organization.id)"
-          />
+          <div class="flex flex-wrap justify-end gap-2">
+            <Button
+              v-if="shouldShowInstallApp(organization.organizationLogin)"
+              label="Install App"
+              :loading="installingOrganizationLogin === organization.organizationLogin"
+              outlined
+              severity="secondary"
+              size="small"
+              :disabled="Boolean(installingOrganizationLogin)"
+              :data-testid="`settings-github-organization-install-${organization.id}`"
+              @click="emit('install', organization.organizationLogin)"
+            />
+            <Button
+              label="Remove"
+              severity="danger"
+              outlined
+              size="small"
+              :disabled="adding"
+              :loading="removingOrganizationId === organization.id"
+              @click="emit('remove', organization.id)"
+            />
+          </div>
         </div>
       </div>
     </section>

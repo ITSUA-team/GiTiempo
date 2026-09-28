@@ -12,6 +12,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    maxWorkers: 2,
     environmentOptions: {
       jsdom: {
         url: "https://user.example.test/login",

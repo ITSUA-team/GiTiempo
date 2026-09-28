@@ -1,6 +1,10 @@
 /* global chrome */
 
-import type { TimeEntryResponse, TokenPairResponse } from "@gitiempo/shared";
+import {
+  githubTrackingErrorMessages,
+  type TimeEntryResponse,
+  type TokenPairResponse,
+} from "@gitiempo/shared";
 
 import { getExtensionConfig } from "@/lib/config";
 import { createExtensionApiClient } from "@/lib/api";
@@ -20,6 +24,7 @@ import {
   setPendingProviderCleanup,
 } from "@/lib/session";
 import { decodeAccessTokenEmail } from "@/lib/token";
+import { getGitHubTrackingErrorCode } from "@/lib/github-tracking-error";
 
 const config = getExtensionConfig();
 const apiClient = createExtensionApiClient({ config });
@@ -131,13 +136,19 @@ async function handleMutation(
     };
   } catch (error) {
     const snapshot = await loadSnapshot();
+    const errorCode = getGitHubTrackingErrorCode(error);
 
     await broadcastSnapshot(snapshot);
 
     return {
       ok: false,
+      ...(errorCode ? { errorCode } : {}),
       errorMessage:
-        error instanceof Error ? error.message : "Unable to update timer state.",
+        errorCode
+          ? githubTrackingErrorMessages[errorCode]
+          : error instanceof Error
+            ? error.message
+            : "Unable to update timer state.",
       snapshot,
     };
   }

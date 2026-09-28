@@ -12,3 +12,4 @@ export * from "./contracts/saved-reports.js";
 export * from "./contracts/github.js";
 export * from "./auth/access-token-claims.js";
 export * from "./auth/profile-initials.js";
+export * from './contracts/github-installations.js';
