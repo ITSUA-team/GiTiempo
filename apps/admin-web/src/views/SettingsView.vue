@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, shallowRef, watch } from 'vue';
 
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import SettingsForm from '@/components/settings/SettingsForm.vue';
 import SettingsGitHubAccountCard from '@/components/settings/SettingsGitHubAccountCard.vue';
 import SettingsGitHubWorkspaceAccessCard from '@/components/settings/SettingsGitHubWorkspaceAccessCard.vue';
 import SettingsPageSkeleton from '@/components/settings/SettingsPageSkeleton.vue';
-import { buildGitHubProfileHref } from '@/components/settings/github-workspace-access';
+import {
+  buildGitHubProfileHref,
+} from '@/components/settings/github-workspace-access';
 import { appEnv } from '@/config/env';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useAdminSettingsData } from '@/composables/settings/useAdminSettingsData';
 import { useAdminSettingsForm } from '@/composables/settings/useAdminSettingsForm';
 import { useAdminSettingsGitHubConnection } from '@/composables/settings/useAdminSettingsGitHubConnection';
 import { useAdminWorkspaceGitHubOrganizations } from '@/composables/settings/useAdminWorkspaceGitHubOrganizations';
+import { useAdminWorkspaceGitHubInstallations } from '@/composables/settings/useAdminWorkspaceGitHubInstallations';
 import { useAdminSettingsPersistence } from '@/composables/settings/useAdminSettingsPersistence';
 import { toAdminSettingsFormValues } from '@/composables/settings/admin-settings-form';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
@@ -79,6 +82,21 @@ const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
   scope,
   userAppUrl: appEnv.userAppUrl,
 });
+const workspaceGitHubInstallations = useAdminWorkspaceGitHubInstallations({
+  organizations: workspaceGitHubOrganizations.items,
+  canConfigure: canAddGitHubOrganization,
+  enabled: isAuthenticated,
+  onError(message, error, action) {
+    errorToast(message, {
+      error,
+      logContext: { action, feature: 'settings-github-installations' },
+    });
+  },
+  onSuccess(message) {
+    successToast(message);
+  },
+  scope,
+});
 const {
   currencyOptions,
   fieldErrors,
@@ -114,6 +132,7 @@ const gitHubAddGateMessage = computed(() => {
 
   return null;
 });
+const handledInstallationCallback = shallowRef(false);
 
 function syncWorkspaceName(values = persisted.value): void {
   if (!values) return;
@@ -162,6 +181,33 @@ watch(
     const values = toAdminSettingsFormValues(nextData.workspace, nextData.settings);
     settingsForm.applyPersistedValues(values);
     syncWorkspaceName(values);
+  },
+  { immediate: true },
+);
+
+watch(
+  isAuthenticated,
+  async (authenticated) => {
+    const callbackUrl = new URL(window.location.href);
+    const state = callbackUrl.searchParams.get('state');
+    const installationId = callbackUrl.searchParams.get('installation_id');
+    if (
+      handledInstallationCallback.value ||
+      !authenticated ||
+      !state ||
+      !installationId
+    ) {
+      return;
+    }
+
+    handledInstallationCallback.value = true;
+    try {
+      await workspaceGitHubInstallations.completeSetup(state, installationId);
+    } finally {
+      callbackUrl.searchParams.delete('state');
+      callbackUrl.searchParams.delete('installation_id');
+      window.history.replaceState({}, '', `${callbackUrl.pathname}${callbackUrl.search}${callbackUrl.hash}`);
+    }
   },
   { immediate: true },
 );
@@ -218,12 +264,16 @@ watch(
             :available-organizations-request-error="workspaceGitHubOrganizations.availableOrganizationsRequestError.value"
             :can-add-organization="canAddGitHubOrganization"
             :is-initial-loading="workspaceGitHubOrganizations.isInitialLoading.value"
+            :installing-organization-login="workspaceGitHubInstallations.installingOrganizationLogin.value"
+            :installations="workspaceGitHubInstallations.items.value"
+            :installations-loaded="workspaceGitHubInstallations.isLoaded.value"
             :items="workspaceGitHubOrganizations.items.value"
             :organization-login-error="workspaceGitHubOrganizations.organizationLoginError.value"
             :recovery-checklist="workspaceGitHubOrganizations.recoveryChecklist.value"
             :removing-organization-id="workspaceGitHubOrganizations.removingOrganizationId.value"
             :request-error="workspaceGitHubOrganizations.requestError.value"
             @add="workspaceGitHubOrganizations.addOrganization"
+            @install="workspaceGitHubInstallations.beginInstallation"
             @remove="workspaceGitHubOrganizations.removeOrganization"
             @retry="workspaceGitHubOrganizations.retryLoad"
             @retry-add="workspaceGitHubOrganizations.addOrganization"

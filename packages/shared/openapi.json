@@ -820,6 +820,178 @@
         ]
       }
     },
+    "/workspace/github/installations": {
+      "get": {
+        "operationId": "WorkspacesController_listGitHubInstallations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGithubInstallationListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List verified workspace GitHub App installations",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/installations/setup": {
+      "post": {
+        "operationId": "WorkspacesController_setupGitHubInstallation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubInstallationSetupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubInstallationSetupResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a single-use GitHub App installation setup state",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/installations/complete": {
+      "post": {
+        "operationId": "WorkspacesController_completeGitHubInstallation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubInstallationCompleteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGithubInstallationDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify and save a GitHub App installation for the workspace",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/installations/{associationId}/reverify": {
+      "post": {
+        "operationId": "WorkspacesController_reverifyGitHubInstallation",
+        "parameters": [
+          {
+            "name": "associationId",
+            "required": true,
+            "in": "path",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGithubInstallationDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reverify a saved GitHub App installation",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/installations/{associationId}": {
+      "delete": {
+        "operationId": "WorkspacesController_disconnectGitHubInstallation",
+        "parameters": [
+          {
+            "name": "associationId",
+            "required": true,
+            "in": "path",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Locally disconnect a GitHub App installation",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
     "/github/connection": {
       "get": {
         "operationId": "GithubController_connectionStatus",
@@ -1336,6 +1508,20 @@
         "summary": "GitHub OAuth callback",
         "tags": [
           "github"
+        ]
+      }
+    },
+    "/github/installations/webhook": {
+      "post": {
+        "operationId": "GithubInstallationsWebhookController_webhook",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GithubInstallationsWebhook"
         ]
       }
     },
@@ -2688,7 +2874,7 @@
     },
     "/time-entries/timer/start-from-github": {
       "post": {
-        "description": "Verifies the repository through the caller GitHub connection and asserts the workspace GitHub organization policy before any project, task, or time entry is written. The repository is recorded under the name GitHub reports, not the name supplied in the request.",
+        "description": "Verifies repository and issue through the workspace GitHub App installation. Requires an existing mapped project and ordinary-member assignment, including public projects. Rechecks membership, installation, organization policy and project access before task/time writes. Uses GitHub canonical metadata; never creates projects or assignments and needs no personal GitHub connection.",
         "operationId": "TimeEntriesController_startTimerFromGitHub",
         "parameters": [],
         "requestBody": {
@@ -2713,16 +2899,33 @@
             }
           },
           "403": {
-            "description": "Repository owner is not allowed for the workspace"
+            "description": "Assignment, installation access/permissions, or organization policy denies tracking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubTrackingErrorResponseDto"
+                }
+              }
+            }
           },
           "404": {
-            "description": "GitHub connection, repository, or issue not found"
+            "description": "GitHub resource or local target not available"
           },
           "409": {
-            "description": "Timer already running"
+            "description": "Timer already running, installation required, or project mapping missing/ambiguous"
           },
           "422": {
             "description": "Project or task inactive"
+          },
+          "503": {
+            "description": "GitHub provider unavailable; retry later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubTrackingErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4039,6 +4242,195 @@
           "error",
           "message",
           "recovery"
+        ],
+        "additionalProperties": false
+      },
+      "WorkspaceGithubInstallationListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "organizationId": {
+                  "type": "string",
+                  "maxLength": 30,
+                  "pattern": "^[1-9]\\d*$"
+                },
+                "organizationLogin": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 39,
+                  "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
+                },
+                "installationId": {
+                  "type": "string",
+                  "maxLength": 30,
+                  "pattern": "^[1-9]\\d*$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "verified",
+                    "suspended",
+                    "unavailable",
+                    "disconnected"
+                  ]
+                },
+                "verifiedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "recoveryReason": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "organizationLogin",
+                "installationId",
+                "status",
+                "verifiedAt",
+                "recoveryReason"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "GithubInstallationSetupDto": {
+        "type": "object",
+        "properties": {
+          "organizationLogin": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 39,
+            "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
+          }
+        },
+        "required": [
+          "organizationLogin"
+        ],
+        "additionalProperties": false
+      },
+      "GithubInstallationSetupResponseDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 256
+          },
+          "installationUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "existingInstallationId": {
+            "type": "string",
+            "maxLength": 30,
+            "pattern": "^[1-9]\\d*$"
+          }
+        },
+        "required": [
+          "state",
+          "installationUrl",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "GithubInstallationCompleteDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 256
+          },
+          "installationId": {
+            "type": "string",
+            "maxLength": 30,
+            "pattern": "^[1-9]\\d*$"
+          }
+        },
+        "required": [
+          "state",
+          "installationId"
+        ],
+        "additionalProperties": false
+      },
+      "WorkspaceGithubInstallationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "organizationId": {
+            "type": "string",
+            "maxLength": 30,
+            "pattern": "^[1-9]\\d*$"
+          },
+          "organizationLogin": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 39,
+            "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
+          },
+          "installationId": {
+            "type": "string",
+            "maxLength": 30,
+            "pattern": "^[1-9]\\d*$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "suspended",
+              "unavailable",
+              "disconnected"
+            ]
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "recoveryReason": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "organizationLogin",
+          "installationId",
+          "status",
+          "verifiedAt",
+          "recoveryReason"
         ],
         "additionalProperties": false
       },
@@ -6453,6 +6845,36 @@
           "issueNumber"
         ],
         "additionalProperties": false
+      },
+      "GitHubTrackingErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "project_assignment_required",
+              "github_installation_required",
+              "github_installation_unavailable",
+              "github_installation_permissions_required",
+              "github_organization_not_allowed",
+              "github_resource_unavailable",
+              "github_project_mapping_required",
+              "github_project_mapping_ambiguous",
+              "github_provider_unavailable"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message"
+        ]
       },
       "StopTimerDto": {
         "type": "object",

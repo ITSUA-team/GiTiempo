@@ -214,7 +214,12 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
     `;
   }
 
-  if (state.errorMessage || state.snapshot.errorMessage || state.pageContext?.kind === "error") {
+  // A denied start can race with a timer that became active in another surface.
+  // The error must not hide the authoritative stop control for that owned timer.
+  if (
+    (state.errorMessage || state.snapshot.errorMessage || state.pageContext?.kind === "error") &&
+    !state.snapshot.currentTimer
+  ) {
     const message =
       state.errorMessage ??
       state.snapshot.errorMessage ??
@@ -247,6 +252,9 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
           <p data-elapsed class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
           <p class="m-0 text-sm font-medium text-text-dark">${escapeHtml(state.snapshot.currentTimer.task.title)}</p>
           <p class="m-0 text-xs text-text-muted">${escapeHtml(runningContext)}</p>
+          ${(state.errorMessage || state.snapshot.errorMessage)
+            ? `<p class="m-0 text-sm text-destructive">${escapeHtml(state.errorMessage ?? state.snapshot.errorMessage ?? "Unable to start timer.")}</p>`
+            : ""}
         </div>
         <div class="mt-auto flex flex-col gap-3">
           <button data-action="stop-timer" class="bg-destructive text-text-inverse w-full rounded-sm px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Stop Timer</button>

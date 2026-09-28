@@ -1,0 +1,26 @@
+meta {
+  name: Complete verified installation setup
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/workspace/github/installations/complete
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "state": "{{githubInstallationState}}",
+    "installationId": "{{githubInstallationId}}"
+  }
+}
+
+docs {
+  Requires an active workspace administrator. Setup/complete/reverify also require a connected GitHub organization owner. Status and local disconnect do not require personal GitHub credentials. Use only a state returned by setup; installation IDs and organization authority are verified server-side. Never place installation access tokens or App private keys in this collection.
+}

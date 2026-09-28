@@ -45,7 +45,8 @@
   - `Continue with GitHub` — full width, on GitHub's own `#24292f`, carrying the GitHub mark. Shown only when `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED` is the string `true` for the build; otherwise omitted entirely, leaving the other two untouched.
   - `Sign in with email` — a brand text action below a labelled `or` divider, revealing the email form in place.
 - The two provider actions wear their own brand marks rather than two identically brand-coloured buttons, so they read as two distinct choices. They are the same marks the web logins use.
-- Starting a timer from a GitHub issue is verified server-side before anything is written: the repository must exist, be readable by the caller's connected GitHub account, and belong to an organization the workspace approves. This applies to the extension and to user-web alike, and the repository is recorded under the name GitHub reports rather than the one sent.
+- Starting a timer from a GitHub issue is verified server-side before anything is written through a verified workspace GitHub App installation. The repository must be in an allowed organization, remain accessible to that installation, and map to an existing GiTiempo project the member can access. A personal GitHub connection is not a prerequisite or fallback, and GitHub canonical repository names replace the submitted values.
+- GitHub Projects pane URLs expose a human project number, not the canonical ProjectV2 node ID accepted by the timer API. The extension sends no board hint from that number. The server resolves existing verified mappings and fails safely with the mapping-required or mapping-ambiguous remedy when it cannot select one authoritative project.
 - GitHub sign-in is **not** Firebase-backed: it leaves for the backend flow and returns a one-time handoff code that the service worker exchanges for the ordinary session. Its failures come back as recoverable copy naming the cause, and an authorization window the user closes reads as a cancelled attempt rather than a configuration error.
 
 ### Authenticated, No Active Timer
@@ -74,6 +75,9 @@
 - Inline muted message.
 - Keep the branded header visible so the home icon stays reachable.
 - Retry action link.
+- Map stable tracking error codes to the relevant remedy. For `project_assignment_required`, show exactly: `You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.` Installation, organization, and repository permission failures direct the member to a workspace administrator; mapping failures direct the member to a workspace administrator or project manager; provider failures offer retry.
+- Do not show a personal GitHub reconnect action for an installation-backed tracking error.
+- An error after a failed start does not claim a timer is running. If the authoritative current timer belongs to this member and matches the visible issue, keep `Stop Timer` available.
 
 ## Injected GitHub Issue UI
 
@@ -104,3 +108,4 @@
 - Keep the issue context visible so the user knows what page the action applies to.
 - Show concise inline error copy.
 - Show a `Retry` action without replacing the entire issue-page control shell.
+- Use the same stable-code remedy and exact assignment copy as the popup. Preserve an authoritative matching `Stop Timer` action after a failed start.

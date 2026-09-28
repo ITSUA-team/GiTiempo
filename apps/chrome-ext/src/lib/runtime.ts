@@ -1,6 +1,10 @@
 /* global chrome */
 
-import type { CurrentTimeEntryResponse, TimeEntryResponse } from "@gitiempo/shared";
+import type {
+  CurrentTimeEntryResponse,
+  GitHubTrackingErrorCode,
+  TimeEntryResponse,
+} from "@gitiempo/shared";
 
 import type { SupportedGitHubIssueContext } from "./github-context";
 
@@ -20,6 +24,7 @@ export interface RuntimeSnapshot {
 }
 
 export interface RuntimeActionResult {
+  errorCode?: GitHubTrackingErrorCode;
   errorMessage?: string;
   ok: boolean;
   snapshot: RuntimeSnapshot;
