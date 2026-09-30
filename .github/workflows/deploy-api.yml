@@ -39,7 +39,6 @@ on:
     branches:
       - staging
       - production
-      - devops/check-github-workflows
     paths:
       - apps/api/**
       - packages/shared/**

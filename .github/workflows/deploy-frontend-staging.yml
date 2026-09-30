@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - staging
-      - devops/check-github-workflows
     paths:
       - apps/user-web/**
       - apps/admin-web/**
