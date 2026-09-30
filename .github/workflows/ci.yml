@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - devops/check-github-workflows
 
 permissions:
   contents: read
@@ -21,7 +24,7 @@ env:
 jobs:
   detect:
     name: Detect CI targets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       has_targets: ${{ steps.detect.outputs.has_targets }}
       matrix: ${{ steps.detect.outputs.matrix }}
@@ -29,16 +32,30 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect affected packages
         id: detect
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
-          gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename' |
-            node .github/scripts/detect-ci-targets.mjs ci
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            zero_sha="0000000000000000000000000000000000000000"
+            {
+              if [ "$BEFORE_SHA" = "$zero_sha" ]; then
+                git ls-tree -r --name-only "$GITHUB_SHA"
+              else
+                git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA"
+              fi
+            } | node .github/scripts/detect-ci-targets.mjs ci
+          else
+            gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename' |
+              node .github/scripts/detect-ci-targets.mjs ci
+          fi
 
       - name: Verify CI target detector
         run: node --test .github/scripts/detect-ci-targets.test.mjs
@@ -47,7 +64,7 @@ jobs:
     name: Check ${{ matrix.package_name }}
     needs: detect
     if: needs.detect.outputs.has_targets == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
@@ -70,7 +87,7 @@ jobs:
       - detect
       - checks
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Verify required CI result

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - staging
+      - devops/check-github-workflows
     paths:
       - apps/user-web/**
       - apps/admin-web/**
@@ -40,7 +41,7 @@ permissions:
 jobs:
   detect:
     name: Detect frontend deploy targets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       has_targets: ${{ steps.detect.outputs.has_targets }}
       matrix: ${{ steps.detect.outputs.matrix }}

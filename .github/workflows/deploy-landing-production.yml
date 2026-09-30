@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - production
+      - devops/check-github-workflows
     paths:
       - apps/landing-web/**
       - packages/web-config/**
@@ -27,10 +28,10 @@ permissions:
 jobs:
   deploy:
     name: Deploy landing-web production
-    runs-on: ubuntu-latest
-    environment: production
+    runs-on: ubuntu-26.04
+    environment: ${{ github.ref_name == 'devops/check-github-workflows' && 'devops-build-test' || 'production' }}
     concurrency:
-      group: landing-production-landing-web
+      group: landing-${{ github.ref_name == 'devops/check-github-workflows' && 'devops' || 'production' }}
       cancel-in-progress: false
     env:
       CI: true
@@ -51,6 +52,7 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Validate landing production environment
+        if: github.ref_name != 'devops/check-github-workflows'
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -87,6 +89,7 @@ jobs:
         run: pnpm --filter landing-web build
 
       - name: Deploy landing-web to Cloudflare Workers production
+        if: github.ref_name != 'devops/check-github-workflows'
         working-directory: apps/landing-web
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
