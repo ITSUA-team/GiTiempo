@@ -37,12 +37,12 @@ jobs:
       CI: true
       TURBO_TELEMETRY_DISABLED: 1
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
-      PUBLIC_USER_APP_URL: ${{ vars.PUBLIC_USER_APP_URL }}
-      PUBLIC_ADMIN_APP_URL: ${{ vars.PUBLIC_ADMIN_APP_URL }}
+      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL || 'https://landing-ci.invalid' }}
+      PUBLIC_USER_APP_URL: ${{ vars.PUBLIC_USER_APP_URL || 'https://user-ci.invalid/login' }}
+      PUBLIC_ADMIN_APP_URL: ${{ vars.PUBLIC_ADMIN_APP_URL || 'https://admin-ci.invalid' }}
       PUBLIC_GA_MEASUREMENT_ID: ${{ vars.PUBLIC_GA_MEASUREMENT_ID }}
-      PUBLIC_PRIVACY_CONTROLLER_NAME: ${{ vars.PUBLIC_PRIVACY_CONTROLLER_NAME }}
-      PUBLIC_PRIVACY_CONTACT_EMAIL: ${{ vars.PUBLIC_PRIVACY_CONTACT_EMAIL }}
+      PUBLIC_PRIVACY_CONTROLLER_NAME: ${{ vars.PUBLIC_PRIVACY_CONTROLLER_NAME || 'GiTiempo CI' }}
+      PUBLIC_PRIVACY_CONTACT_EMAIL: ${{ vars.PUBLIC_PRIVACY_CONTACT_EMAIL || 'privacy-ci@example.invalid' }}
 
     steps:
       - name: Check out repository

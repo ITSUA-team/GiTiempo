@@ -35,9 +35,9 @@ jobs:
       CI: true
       TURBO_TELEMETRY_DISABLED: 1
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-      VITE_ADMIN_APP_URL: ${{ vars.VITE_ADMIN_APP_URL }}
-      VITE_USER_APP_URL: ${{ vars.VITE_USER_APP_URL }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://api-ci.invalid' }}
+      VITE_ADMIN_APP_URL: ${{ vars.VITE_ADMIN_APP_URL || 'https://admin-ci.invalid' }}
+      VITE_USER_APP_URL: ${{ vars.VITE_USER_APP_URL || 'https://user-ci.invalid' }}
       # Optional: unset simply hides the login extension link.
       VITE_EXTENSION_INSTALL_URL: ${{ vars.VITE_EXTENSION_INSTALL_URL }}
 
@@ -94,13 +94,13 @@ jobs:
       - name: Run ${{ inputs.app_name }} checks
         uses: ./.github/actions/workspace-check
         env:
-          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_GITHUB_SIGNIN_ENABLED: ${{ vars.VITE_GITHUB_SIGNIN_ENABLED }}
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY || 'ci-dummy-api-key' }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID || 'ci-dummy-app-id' }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN || 'ci-dummy.firebaseapp.com' }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID || '000000000000' }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID || 'ci-dummy-project' }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET || 'ci-dummy.appspot.com' }}
+          VITE_GITHUB_SIGNIN_ENABLED: ${{ vars.VITE_GITHUB_SIGNIN_ENABLED || 'false' }}
         with:
           package-name: ${{ inputs.package_name }}
           run-build: 'true'
