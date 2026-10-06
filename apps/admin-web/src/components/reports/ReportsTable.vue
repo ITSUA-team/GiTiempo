@@ -37,6 +37,7 @@ import {
   adminTableMinWidthClass,
 } from '@/lib/admin-table-classes';
 import ReportGroupingBuilder from '@/components/reports/ReportGroupingBuilder.vue';
+import { useReportDatePickerWidth } from '@/composables/reports/use-report-date-picker-width';
 import { useReportTableTree } from '@/composables/reports/useReportTableTree';
 import {
   formatReportPercent,
@@ -69,6 +70,12 @@ const filters = defineModel<ReportTableFilters>('filters', { required: true });
 const dateRange = defineModel<ReportDateRange>('dateRange', { required: true });
 const grouping = defineModel<ReportGrouping>('grouping', { required: true });
 const isMobileViewport = useIsMobileViewport();
+const reportDatePickerWidth = useReportDatePickerWidth(dateRange);
+const datePickerStyle = computed(() => {
+  if (isMobileViewport.value) return undefined;
+  const width = reportDatePickerWidth.value;
+  return width ? { width } : undefined;
+});
 const projectFilterSuggestions = ref<ReportFilterOption[]>([]);
 const memberFilterSuggestions = ref<ReportFilterOption[]>([]);
 
@@ -279,6 +286,7 @@ function handleMemberFilterUpdate(
               aria-label="Report date range"
               class="w-full sm:w-[220px]"
               date-format="M d, yy"
+              :style="datePickerStyle"
               icon-display="input"
               :manual-input="false"
               placeholder="All dates"
