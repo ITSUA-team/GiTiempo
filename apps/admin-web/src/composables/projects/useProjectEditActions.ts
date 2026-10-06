@@ -60,6 +60,12 @@ export function useProjectEditActions({
       !input.memberIds.includes(nextManagerUserId)
         ? nextManagerUserId
         : null;
+    const managerToRemove =
+      managerChanged &&
+      currentManagerUserId !== null &&
+      !memberIdsToRemove.includes(currentManagerUserId)
+        ? currentManagerUserId
+        : null;
 
     let savedProject: ProjectResponse | null = null;
 
@@ -80,6 +86,9 @@ export function useProjectEditActions({
 
       if (managerToAdd) {
         await client.assignMember(project.id, managerToAdd);
+      }
+      if (managerToRemove) {
+        await client.removeAssignment(project.id, managerToRemove);
       }
 
       onSuccess(`${project.name} has been updated.`);
