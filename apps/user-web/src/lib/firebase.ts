@@ -1,5 +1,5 @@
 import { FirebaseError, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { connectAuthEmulator, getAuth } from "firebase/auth";
 import type { FirebaseApp, FirebaseOptions } from "firebase/app";
 
 import { appEnv } from "@/config/env";
@@ -34,6 +34,7 @@ function getFirebaseConfig(): FirebaseOptions | null {
 }
 
 let firebaseApp: FirebaseApp | null | undefined;
+let emulatorConnected = false;
 
 function getFirebaseApp(): FirebaseApp | null {
   if (firebaseApp !== undefined) {
@@ -61,5 +62,15 @@ export function getFirebaseAuth() {
     );
   }
 
-  return getAuth(app);
+  const auth = getAuth(app);
+
+  const emulatorHost = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST;
+  if (emulatorHost && !emulatorConnected) {
+    connectAuthEmulator(auth, `http://${emulatorHost}`, {
+      disableWarnings: true,
+    });
+    emulatorConnected = true;
+  }
+
+  return auth;
 }

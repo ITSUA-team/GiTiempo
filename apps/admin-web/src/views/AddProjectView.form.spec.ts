@@ -83,6 +83,12 @@ function sourceSelect(wrapper: ReturnType<typeof mountWithRealForm>) {
     .find((select) => select.props('inputId') === 'project-source')!;
 }
 
+function managerSelect(wrapper: ReturnType<typeof mountWithRealForm>) {
+  return wrapper
+    .findAllComponents(Select)
+    .find((select) => select.props('name') === 'managerUserId')!;
+}
+
 async function setSource(
   wrapper: ReturnType<typeof mountWithRealForm>,
   value: 'manual' | 'github',
@@ -170,5 +176,15 @@ describe('AddProjectView with the real PrimeVue form', () => {
 
     expect(testMocks.importGitHubProjects).not.toHaveBeenCalled();
     expect(testMocks.createProject).not.toHaveBeenCalled();
+  });
+
+  it('lets the project manager selection be cleared back to Unassigned', async () => {
+    const wrapper = mountWithRealForm();
+    await flushPromises();
+
+    const manager = managerSelect(wrapper);
+
+    expect(manager.props('showClear')).toBe(true);
+    expect(manager.props('placeholder')).toBe('Unassigned');
   });
 });

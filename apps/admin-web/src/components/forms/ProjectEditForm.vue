@@ -40,6 +40,10 @@ const memberOptions = props.allMembers
   .map((m) => ({ label: m.displayName ?? m.email, value: m.userId }));
 const memberSuggestions = ref(memberOptions.map((option) => option.value));
 
+const managerOptions = props.allMembers
+  .filter((m) => m.role === WorkspaceRoles.PM)
+  .map((m) => ({ label: m.displayName ?? m.email, value: m.userId }));
+
 const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
   { label: 'Private', value: 'private' as const },
@@ -63,6 +67,9 @@ function handleMemberComplete(event: AutoCompleteCompleteEvent): void {
 
 const initialValues: ProjectEditFormInput = {
   defaultBillableForTasks: props.project.defaultBillableForTasks,
+  managerUserId:
+    props.project.members.find((m) => m.role === WorkspaceRoles.PM)?.userId ??
+    null,
   visibility: props.project.visibility,
   memberIds: props.project.members.map((m) => m.userId),
 };
@@ -122,6 +129,26 @@ function handleSave({
         </div>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2.5">
+          <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+            <label
+              for="edit-project-manager"
+              class="text-text-dark font-sans text-[12px] leading-none font-medium"
+            >Project manager</label>
+            <Select
+              input-id="edit-project-manager"
+              name="managerUserId"
+              :options="managerOptions"
+              option-label="label"
+              option-value="value"
+              placeholder="Unassigned"
+              show-clear
+              :invalid="$form.managerUserId?.invalid"
+              :disabled="saving"
+              :pt="giTiempoSelectPt"
+              fluid
+            />
+          </div>
+
           <div class="flex min-w-0 flex-col gap-1.5 sm:w-[180px] sm:shrink-0">
             <label
               for="edit-visibility"
