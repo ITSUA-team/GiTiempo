@@ -555,11 +555,7 @@ export class TimeEntriesService {
   ): Promise<TimeEntryResponse> {
     try {
       const entryId = await this.db.transaction(async (tx) => {
-        const { task } = await this.tasks.requireTrackableTaskForUpdate(
-          user,
-          taskId,
-          tx,
-        );
+        const task = await this.requireTaskForTimerStart(tx, user, taskId);
         const [row] = await tx
           .insert(timeEntries)
           .values({
@@ -586,6 +582,110 @@ export class TimeEntriesService {
       this.handleRunningTimerConflict(error);
       throw error;
     }
+  }
+
+  private async requireTaskForTimerStart(
+    db: QueryExecutor,
+    user: AuthUser,
+    taskId: string,
+  ): Promise<TaskRow> {
+    const [membership] = await db
+      .select({ role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, user.workspaceId),
+          eq(workspaceMembers.userId, user.sub),
+        ),
+      )
+      .for('update');
+    if (!membership) throw new UnauthorizedException('Unauthorized');
+
+    const [target] = await db
+      .select({ projectId: tasksTable.projectId })
+      .from(tasksTable)
+      .where(
+        and(
+          eq(tasksTable.id, taskId),
+          eq(tasksTable.workspaceId, user.workspaceId),
+        ),
+      )
+      .limit(1);
+    if (!target) throw new NotFoundException('Task not found');
+
+    const [project] = await db
+      .select(projectRowSelection)
+      .from(projectsTable)
+      .where(
+        and(
+          eq(projectsTable.id, target.projectId),
+          eq(projectsTable.workspaceId, user.workspaceId),
+        ),
+      )
+      .for('update');
+    if (!project) throw new NotFoundException('Project not found');
+    if (!project.isActive) {
+      if (membership.role === 'admin') {
+        throw new UnprocessableEntityException('Project is inactive');
+      }
+      throw new NotFoundException('Project not found');
+    }
+
+    const [githubIssue] = await db
+      .select({ id: taskExternalRefs.id })
+      .from(taskExternalRefs)
+      .where(
+        and(
+          eq(taskExternalRefs.workspaceId, user.workspaceId),
+          eq(taskExternalRefs.projectId, project.id),
+          eq(taskExternalRefs.taskId, taskId),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+        ),
+      )
+      .limit(1);
+
+    const requiresAssignment =
+      membership.role !== 'admin' &&
+      (project.visibility === 'private' ||
+        (membership.role === 'member' && Boolean(githubIssue)));
+    if (requiresAssignment) {
+      const [assignment] = await db
+        .select({ id: projectAssignments.id })
+        .from(projectAssignments)
+        .where(
+          and(
+            eq(projectAssignments.workspaceId, user.workspaceId),
+            eq(projectAssignments.projectId, project.id),
+            eq(projectAssignments.userId, user.sub),
+          ),
+        )
+        .for('update');
+      if (!assignment) {
+        if (project.visibility === 'private') {
+          throw new NotFoundException('Project not found');
+        }
+        throw new DomainError(
+          'project_assignment_required',
+          githubTrackingErrorMessages.project_assignment_required,
+          githubTrackingErrorStatuses.project_assignment_required,
+        );
+      }
+    }
+
+    const task = await this.requireTaskRowForUpdate(
+      db,
+      user.workspaceId,
+      project.id,
+      taskId,
+    );
+    if (!task.isActive) {
+      throw new UnprocessableEntityException('Task is inactive');
+    }
+    if (task.status === 'closed') {
+      throw new UnprocessableEntityException('Task is closed');
+    }
+    return task;
   }
 
   private buildListConditions(
