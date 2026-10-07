@@ -465,39 +465,37 @@ The caller MUST supply only the GitHub project id and those local settings. The 
 
 ### Requirement: A Timer Started From A GitHub Issue Reuses An Existing Project
 
-Starting a timer from a GitHub issue MUST reuse a project the workspace already has for that work before creating one. The project tracking the issue's repository takes precedence, so time already recorded against a repository is never split away from it; a project added for the board the issue was started from is used only when the repository has none. An issue that is already tracked MUST keep the project that holds it rather than being refused.
+Starting a timer from a GitHub issue MUST resolve an existing project in the current workspace and MUST NOT create a project or assignment. An existing issue-task mapping SHALL retain its owning project across direct issue pages and Projects panes. For an issue without a task mapping, the repository's project SHALL take precedence over a verified eligible board's project. Each resolution MUST enforce installation resource access and GiTiempo tracking authorization before materialization or protected response data.
 
 #### Scenario: The repository's project is used when one exists
-
-- **GIVEN** a GiTiempo project tracking the issue's repository
-- **WHEN** a timer is started from that issue
-- **THEN** that project is used
-- **AND** no project is created
+- **GIVEN** an issue with no task mapping and a GiTiempo project tracking its repository
+- **WHEN** an authorized caller starts the timer with valid installation resource access
+- **THEN** that project is used and no project or assignment is created
 
 #### Scenario: The board's project is used when the repository has none
-
-- **GIVEN** no project tracks the issue's repository
-- **AND** the board the issue was started from was imported as a project
-- **WHEN** a timer is started from that issue
-- **THEN** the board's project is used
+- **GIVEN** no task or repository mapping and a uniquely resolved imported board containing the issue
+- **WHEN** the backend verifies the board relationship and caller's tracking access
+- **THEN** the board's existing project is used
 - **AND** no project is created for the repository
 
-#### Scenario: Nothing existing means a project is still created for the repository
-
-- **GIVEN** neither the repository nor the board has a project
+#### Scenario: Nothing existing requires deliberate project setup
+- **GIVEN** neither the issue, repository, nor a verified eligible board maps to a workspace project
 - **WHEN** a timer is started from the issue
-- **THEN** a project is created for the repository, named after it, as before
+- **THEN** the request returns a mapping-required error and creates no records
+- **AND** an administrator or project manager must establish the project through the existing deliberate setup/import flow
 
-#### Scenario: An already tracked issue is not refused when a repository project appears
+#### Scenario: An already tracked issue keeps its project when a repository project appears
+- **GIVEN** an issue tracked in the project imported for its board and a repository project created afterwards
+- **WHEN** an authorized caller starts the same issue from its direct page or a Projects pane
+- **THEN** the timer uses the existing task and its owning project on both surfaces
 
-- **GIVEN** an issue tracked in the project imported for its board
-- **AND** a project for that repository created afterwards
-- **WHEN** a timer is started from the same issue through the same board
-- **THEN** the timer runs against the project that already holds the issue
+#### Scenario: A different repository project does not override issue ownership
+- **GIVEN** a canonical issue-task mapping names a different project than the repository mapping
+- **WHEN** a caller starts that issue without a board hint
+- **THEN** the existing task's project is authoritative and its access checks apply
+- **AND** an access denial cannot fall back to the repository project or create a duplicate task
 
-#### Scenario: Two projects disagreeing about one issue is still refused
-
-- **GIVEN** an issue whose task belongs to a project other than the one its repository reference names
-- **AND** no board naming that task's project in the request
-- **WHEN** a timer is started from that issue
-- **THEN** the request is refused rather than guessing which project owns it
+#### Scenario: Ambiguous or corrupt mappings fail safely
+- **GIVEN** no authoritative task/repository mapping and multiple eligible board mappings, or inconsistent duplicate issue ownership
+- **WHEN** the backend resolves a timer target
+- **THEN** it refuses the request without guessing, exposing protected project data, or writing records

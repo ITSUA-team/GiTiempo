@@ -204,6 +204,38 @@ describe("useProjectTaskDirectTimerActions", () => {
     );
   });
 
+  it("shows the assignment remedy without reporting a successful project-task start", async () => {
+    const startTimerMutation = queryMocks.startTimerMutation as {
+      mutateAsync: ReturnType<typeof vi.fn>;
+    };
+    startTimerMutation.mutateAsync.mockRejectedValueOnce(
+      new ApiError(
+        "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.",
+        { code: "project_assignment_required", status: 403 },
+      ),
+    );
+    const mounted = mountHarness();
+    wrappers.push(mounted.wrapper);
+
+    await mounted.actions.startTimerForTask(task);
+
+    expect(mounted.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail:
+          "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.",
+        severity: "error",
+        summary: "Could not start timer",
+      }),
+    );
+    expect(mounted.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Timer started" }),
+    );
+    expect(
+      (queryMocks.currentTimerQuery as { refetch: ReturnType<typeof vi.fn> }).refetch,
+    ).toHaveBeenCalledWith({ throwOnError: true });
+    expect(mounted.actions.activeTimerTaskId.value).toBeNull();
+  });
+
   it("reports a failed authoritative refresh after a failed start", async () => {
     const startTimerMutation = queryMocks.startTimerMutation as {
       mutateAsync: ReturnType<typeof vi.fn>;

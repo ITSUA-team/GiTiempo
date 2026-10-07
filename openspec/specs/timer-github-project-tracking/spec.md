@@ -77,6 +77,7 @@ The picker MUST NOT hide a board because a GiTiempo project already tracks one o
 #### Scenario: Starting from a board reuses an existing project for that repository
 
 - **GIVEN** a GiTiempo project already tracks the repository of a board issue
+- **AND** the installation can verify all required resources and the member has GiTiempo tracking authorization
 - **WHEN** the member starts a timer on that issue from the board
 - **THEN** the existing project is reused
 - **AND** no duplicate project is created
@@ -85,14 +86,17 @@ The picker MUST NOT hide a board because a GiTiempo project already tracks one o
 
 - **GIVEN** a board that an admin added as a GiTiempo project
 - **AND** no GiTiempo project tracks the repository of one of its issues
+- **AND** the installation can verify all required resources and the member has GiTiempo tracking authorization
 - **WHEN** the member starts a timer on that issue from the board
 - **THEN** the timer runs against the project that was added for the board
 - **AND** no second project is created for the repository
 
-#### Scenario: The repository decides when both exist
+#### Scenario: The repository decides for an issue without a task mapping when both exist
 
 - **GIVEN** a board that was added as a project
+- **AND** the issue has no existing local task mapping
 - **AND** a separate GiTiempo project tracking the repository of one of its issues
+- **AND** the installation can verify all required resources and the member has GiTiempo tracking authorization
 - **WHEN** the member starts a timer on that issue from the board
 - **THEN** the timer runs against the project tracking the repository
 - **AND** time already recorded against that repository is not split away from it
@@ -101,6 +105,7 @@ The picker MUST NOT hide a board because a GiTiempo project already tracks one o
 
 - **GIVEN** an issue already tracked in the project added for its board
 - **AND** a project for that issue's repository appears afterwards
+- **AND** the installation can verify all required resources and the member has GiTiempo tracking authorization
 - **WHEN** the member starts a timer on the same issue from the same board again
 - **THEN** the timer runs against the project that already holds it
 - **AND** the request is not refused
@@ -145,28 +150,31 @@ Selecting a board SHALL list that board's open issues in the task field. Each li
 - **AND** it does not report the failure as a board with no issues
 
 ### Requirement: Starting A Timer On A Board Issue Creates The Project Through The Server
+Starting a timer against a board issue SHALL use the existing GitHub start-timer endpoint with the issue's own repository and an optional board hint. Despite this legacy requirement name, the operation MUST resolve an existing authorized GiTiempo project and MUST NOT create projects or assignments. GitHub browsing in the picker SHALL retain its existing personal-account credentials; the start request SHALL use workspace installation authorization consistently with the extension.
 
-Starting a timer against a board issue SHALL use the existing GitHub start-timer request with the issue's own repository, rather than creating a project from the client. The member MUST end up with a running timer against a task in a GiTiempo project that tracks that repository.
+#### Scenario: First timer on an unmapped board issue requires setup
+- **GIVEN** neither the issue, its repository, nor a verified eligible board maps to a GiTiempo project
+- **WHEN** a member starts the timer
+- **THEN** the server returns a mapping-required error and creates no project, assignment, task, or entry
+- **AND** the picker explains that an administrator or project manager must import/map the project first
 
-#### Scenario: First timer on a board issue creates the project and task
+#### Scenario: Imported project becomes a valid timer target
+- **GIVEN** an authorized administrator or PM has deliberately imported a project and established required assignments
+- **WHEN** an authorized member starts an issue timer with valid installation access
+- **THEN** the existing project is reused and appears among the member's GiTiempo targets under existing visibility rules
+- **AND** the GitHub board remains a distinct selectable board
 
-- **GIVEN** a board issue whose repository no GiTiempo project tracks
-- **WHEN** the member starts a timer on it
-- **THEN** the server creates the project, materialises the task, and starts the timer in one request
-- **AND** the member can see the resulting project afterwards
+#### Scenario: Issues from different repositories follow their existing mappings
+- **GIVEN** a board contains issues from different repositories
+- **WHEN** a member starts timers on them
+- **THEN** each issue follows its existing task mapping or the repository-before-board resolution rule
+- **AND** each start independently enforces installation permissions and GiTiempo project access
 
-#### Scenario: The created project appears among projects afterwards
-
-- **GIVEN** a member has started a timer from a board issue
-- **WHEN** they reopen the picker
-- **THEN** the new GiTiempo project appears among their projects
-- **AND** the board remains offered, because it may hold issues from other repositories
-
-#### Scenario: Issues from different repositories on one board each reach their own project
-
-- **GIVEN** a board holding issues from two repositories
-- **WHEN** the member starts a timer on an issue from each
-- **THEN** each timer runs against a project tracking that issue's own repository
+#### Scenario: User-web renders installation or assignment failure
+- **GIVEN** a user can browse a board using their personal GitHub account but installation access or GiTiempo tracking authorization is missing
+- **WHEN** the start endpoint rejects their request
+- **THEN** the picker shows the corresponding installation or project-access remedy
+- **AND** it does not present personal reconnection as the remedy
 
 ### Requirement: A Board Selection Never Reaches A Path That Requires A Project
 

@@ -2851,6 +2851,16 @@
               }
             }
           },
+          "403": {
+            "description": "An ordinary member is not assigned to the saved GitHub task project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubTrackingErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Task not found"
           },
@@ -6820,32 +6830,6 @@
         ],
         "additionalProperties": false
       },
-      "StartTimerFromGitHubDto": {
-        "type": "object",
-        "properties": {
-          "githubProjectId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "githubRepo": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 200,
-            "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$"
-          },
-          "issueNumber": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-          }
-        },
-        "required": [
-          "githubRepo",
-          "issueNumber"
-        ],
-        "additionalProperties": false
-      },
       "GitHubTrackingErrorResponseDto": {
         "type": "object",
         "properties": {
@@ -6875,6 +6859,32 @@
           "error",
           "message"
         ]
+      },
+      "StartTimerFromGitHubDto": {
+        "type": "object",
+        "properties": {
+          "githubProjectId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "githubRepo": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$"
+          },
+          "issueNumber": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "githubRepo",
+          "issueNumber"
+        ],
+        "additionalProperties": false
       },
       "StopTimerDto": {
         "type": "object",
