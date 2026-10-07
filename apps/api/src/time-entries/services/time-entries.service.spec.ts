@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   NotFoundException,
+  UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
@@ -72,6 +73,63 @@ function selectRowsForUpdate(rows: unknown[]) {
   const where = vi.fn().mockReturnValue({ limit });
   const from = vi.fn().mockReturnValue({ where });
   return { from, forUpdate };
+}
+
+function selectRowsInOrder(rows: unknown[][]) {
+  return vi.fn(() => {
+    const result = rows.shift() ?? [];
+    const chain: Record<string, unknown> = {};
+    for (const key of ['from', 'where', 'limit']) {
+      chain[key] = vi.fn(() => chain);
+    }
+    chain.for = vi.fn().mockResolvedValue(result);
+    chain.then = (
+      onfulfilled: (value: unknown) => unknown,
+      onrejected: (reason: unknown) => unknown,
+    ) => Promise.resolve(result).then(onfulfilled, onrejected);
+    return chain;
+  });
+}
+
+function timerStartRows(
+  options: {
+    role?: string;
+    visibility?: string;
+    githubLinked?: boolean;
+    assigned?: boolean;
+    taskActive?: boolean;
+    taskStatus?: string;
+  } = {},
+) {
+  const project = {
+    id: 'project-1',
+    workspaceId: user.workspaceId,
+    isActive: true,
+    visibility: options.visibility ?? 'public',
+  };
+  const task = {
+    id: 'task-1',
+    workspaceId: user.workspaceId,
+    projectId: project.id,
+    isActive: options.taskActive ?? true,
+    status: options.taskStatus ?? 'open',
+    defaultBillableForTimeEntries: false,
+  };
+  const needsAssignment =
+    (options.role ?? 'member') !== 'admin' &&
+    (project.visibility === 'private' ||
+      ((options.role ?? 'member') === 'member' && options.githubLinked));
+
+  return [
+    [{ role: options.role ?? 'member' }],
+    [{ projectId: project.id }],
+    [project],
+    options.githubLinked ? [{ id: 'github-issue-ref-1' }] : [],
+    ...(needsAssignment
+      ? [options.assigned === false ? [] : [{ id: 'assignment-1' }]]
+      : []),
+    [task],
+  ];
 }
 
 describe('TimeEntriesService', () => {
@@ -431,19 +489,16 @@ describe('TimeEntriesService', () => {
       constraint: 'time_entries_running_unique',
     });
     const values = vi.fn().mockReturnValue({ returning });
-    const tx = { insert: vi.fn().mockReturnValue({ values }) };
-    const db = { transaction: vi.fn((callback) => callback(tx)) };
-    const tasks = {
-      requireTrackableTaskForUpdate: vi.fn().mockResolvedValue({
-        task: { id: 'task-1', defaultBillableForTimeEntries: true },
-        project: { id: 'project-1', isActive: true },
-      }),
+    const tx = {
+      select: selectRowsInOrder(timerStartRows()),
+      insert: vi.fn().mockReturnValue({ values }),
     };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
     const service = new TimeEntriesService(
       db as never,
       {} as never,
       {} as never,
-      tasks as never,
+      {} as never,
       mockUsersActivity as never,
       mockGithubTasks,
       mockGithub(),
@@ -518,23 +573,16 @@ describe('TimeEntriesService', () => {
   it('starts web timers with an optional description', async () => {
     const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
     const values = vi.fn().mockReturnValue({ returning });
-    const tx = { insert: vi.fn().mockReturnValue({ values }) };
-    const db = { transaction: vi.fn((callback) => callback(tx)) };
-    const tasks = {
-      requireTrackableTaskForUpdate: vi.fn().mockResolvedValue({
-        project: { id: 'project-1', isActive: true },
-        task: {
-          id: 'task-1',
-          defaultBillableForTimeEntries: false,
-          isActive: true,
-        },
-      }),
+    const tx = {
+      select: selectRowsInOrder(timerStartRows()),
+      insert: vi.fn().mockReturnValue({ values }),
     };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
     const service = new TimeEntriesService(
       db as never,
       {} as never,
       {} as never,
-      tasks as never,
+      {} as never,
       mockUsersActivity as never,
       mockGithubTasks,
       mockGithub(),
@@ -554,11 +602,6 @@ describe('TimeEntriesService', () => {
       taskId: 'task-1',
     });
 
-    expect(tasks.requireTrackableTaskForUpdate).toHaveBeenCalledWith(
-      user,
-      'task-1',
-      tx,
-    );
     expect(values).toHaveBeenCalledWith(
       expect.objectContaining({
         description: 'Investigate release blocker',
@@ -567,6 +610,186 @@ describe('TimeEntriesService', () => {
         workspaceId: user.workspaceId,
       }),
     );
+  });
+
+  it.each(['member', 'admin'] as const)(
+    'denies an unassigned current member even with a %s token role',
+    async (tokenRole) => {
+      const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
+      const values = vi.fn().mockReturnValue({ returning });
+      const tx = {
+        select: selectRowsInOrder(
+          timerStartRows({ assigned: false, githubLinked: true }),
+        ),
+        insert: vi.fn().mockReturnValue({ values }),
+      };
+      const db = { transaction: vi.fn((callback) => callback(tx)) };
+      const service = new TimeEntriesService(
+        db as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        mockUsersActivity as never,
+        mockGithubTasks,
+        mockGithub(),
+      );
+      Object.defineProperty(service, 'requireEntryResponse', {
+        value: vi.fn().mockResolvedValue(completedEntry),
+      });
+
+      await expect(
+        service.startTimer({ ...user, role: tokenRole }, { taskId: 'task-1' }),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: 'project_assignment_required',
+        }),
+        message:
+          'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
+      });
+      expect(tx.insert).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not disclose an unassigned private saved GitHub task', async () => {
+    const tx = {
+      select: selectRowsInOrder(
+        timerStartRows({
+          assigned: false,
+          githubLinked: true,
+          visibility: 'private',
+        }),
+      ),
+      insert: vi.fn(),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      mockGithubTasks,
+      mockGithub(),
+    );
+
+    await expect(
+      service.startTimer(user, { taskId: 'task-1' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(tx.insert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['member', 'public', true],
+    ['member', 'private', true],
+    ['admin', 'private', false],
+    ['pm', 'public', false],
+    ['pm', 'private', true],
+  ])(
+    'allows current %s access to saved GitHub tasks in %s projects with assignment=%s',
+    async (role, visibility, assigned) => {
+      const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
+      const values = vi.fn().mockReturnValue({ returning });
+      const tx = {
+        select: selectRowsInOrder(
+          timerStartRows({
+            assigned: Boolean(assigned),
+            githubLinked: true,
+            role,
+            visibility,
+          }),
+        ),
+        insert: vi.fn().mockReturnValue({ values }),
+      };
+      const db = { transaction: vi.fn((callback) => callback(tx)) };
+      const service = new TimeEntriesService(
+        db as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        mockUsersActivity as never,
+        mockGithubTasks,
+        mockGithub(),
+      );
+      Object.defineProperty(service, 'requireEntryResponse', {
+        value: vi.fn().mockResolvedValue(completedEntry),
+      });
+
+      await expect(
+        service.startTimer(user, { taskId: 'task-1' }),
+      ).resolves.toEqual(completedEntry);
+      expect(tx.insert).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('keeps public manual tasks trackable when their project has GitHub mapping', async () => {
+    const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const tx = {
+      select: selectRowsInOrder(timerStartRows()),
+      insert: vi.fn().mockReturnValue({ values }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      mockGithubTasks,
+      mockGithub(),
+    );
+    Object.defineProperty(service, 'requireEntryResponse', {
+      value: vi.fn().mockResolvedValue(completedEntry),
+    });
+
+    await expect(
+      service.startTimer(user, { taskId: 'task-1' }),
+    ).resolves.toEqual(completedEntry);
+    expect(tx.insert).toHaveBeenCalledOnce();
+  });
+
+  it('uses the current locked membership role and denies removed members', async () => {
+    const tx = {
+      select: selectRowsInOrder([[]]),
+      insert: vi.fn(),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      mockGithubTasks,
+      mockGithub(),
+    );
+
+    await expect(
+      service.startTimer(user, { taskId: 'task-1' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(tx.insert).not.toHaveBeenCalled();
+  });
+
+  it('does not start a task from another workspace', async () => {
+    const tx = {
+      select: selectRowsInOrder([[{ role: 'member' }], []]),
+      insert: vi.fn(),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      mockGithubTasks,
+      mockGithub(),
+    );
+
+    await expect(
+      service.startTimer(user, { taskId: 'other-workspace-task' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(tx.insert).not.toHaveBeenCalled();
   });
 
   it('stops the current user timer from another workspace', async () => {

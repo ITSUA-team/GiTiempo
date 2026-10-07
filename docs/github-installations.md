@@ -1,6 +1,6 @@
 # Workspace GitHub App Installations
 
-GitHub-backed timer starts use a verified GitHub App installation associated with the workspace. This is separate from a member's personal GitHub connection: personal connection supports browsing and import, while an installation authorizes server-side issue verification for timer starts.
+Timer starts from GitHub issue identifiers use a verified GitHub App installation associated with the workspace. This is separate from a member's personal GitHub connection: personal connection supports browsing and import, while an installation authorizes server-side issue verification for those starts. Starting an already saved local task uses its stored GitHub linkage and current GiTiempo project authorization.
 
 ## Administrator setup
 
@@ -36,11 +36,13 @@ Monitor failed webhook delivery and reverify requests. Do not manually mark an i
 
 ## Start-time enforcement and recovery
 
-Each start request rechecks the installation, allowed organization, repository access, canonical GitHub identifiers, existing project mapping, and the member's project access. The server may materialize the issue as a task only inside that existing mapped project. It never auto-creates a project or assignment.
+Each `start-from-github` request rechecks the installation, allowed organization, repository access, canonical GitHub identifiers, existing project mapping, and the member's project access. The server may materialize the issue as a task only inside that existing mapped project. It never auto-creates a project or assignment.
+
+For `POST /time-entries/timer/start`, a saved task's own GitHub issue reference requires an ordinary member to have an explicit assignment to its GiTiempo project, even when the project is public or mapped only to a GitHub board. Personal connection state and GitHub issue assignee status do not affect this check: an assigned member may start after disconnect, and a connected unassigned member is denied. Public-project denial returns `403 project_assignment_required`; an invisible private target returns `404`. Administrators retain implicit access and PMs retain visibility-based access. Manual tasks retain their existing rules, including in GitHub-backed public projects. Completed manual entries, historical edits, running-task reassignment, and stopping an owned timer are unchanged.
 
 - Assignment failures use the exact message: `You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.`
 - Installation, organization, or repository permission failures are resolved by a workspace administrator in GitHub and Admin Settings.
 - Mapping failures are resolved by a workspace administrator or project manager by preparing the existing GiTiempo project mapping.
 - Provider failures are retried after GitHub is available.
 
-Do not roll back to user-to-server, personal tokens, or an administrator token as a production or UAT fallback. Rollback disables GitHub-backed starts by disconnecting or disabling the workspace installation; manual tracking, personal browsing, imports, and authoritative stopping of an already-running owned timer remain available.
+Do not roll back to user-to-server, personal tokens, or an administrator token as a production or UAT fallback. Rollback disables starts from GitHub identifiers by disconnecting or disabling the workspace installation; saved-task starts still use local project authorization. Manual tracking, personal browsing, imports, and authoritative stopping of an already-running owned timer remain available.

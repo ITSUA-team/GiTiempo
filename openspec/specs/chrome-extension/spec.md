@@ -189,7 +189,7 @@ The extension SHALL detect supported GitHub issue surfaces and derive the local 
 #### Scenario: Issue title is detected from page content
 - **GIVEN** the active tab is a supported GitHub issue surface
 - **WHEN** the extension prepares a timer start request
-- **THEN** it includes the detected issue title as `issueTitle`
+- **THEN** it uses the detected title only for local display and sends repository and issue identifiers for server verification
 - **AND** it uses a safe fallback or retryable error when the title cannot be determined
 
 #### Scenario: Unsupported page disables issue actions
@@ -234,7 +234,7 @@ The extension SHALL inject a page-local timer control into supported GitHub issu
 - **GIVEN** the user is authenticated
 - **AND** the GitHub issue surface has no running timer for the current user
 - **WHEN** the user clicks `Start Timer` in the injected control
-- **THEN** the extension calls `POST /time-entries/timer/start-from-github` with `githubRepo`, `issueNumber`, and `issueTitle`
+- **THEN** the extension calls `POST /time-entries/timer/start-from-github` with `githubRepo` and `issueNumber`, plus an optional supported `githubProjectId` hint
 - **AND** the control transitions to a running state after success
 
 #### Scenario: Injected running control stops timer for the matching GitHub issue
@@ -267,11 +267,11 @@ The extension SHALL inject a page-local timer control into supported GitHub issu
 - **AND** it keeps the GitHub issue context visible
 
 ### Requirement: Extension Uses Existing Timer API Contracts
-The extension SHALL consume existing timer endpoints and shared request/response shapes without requiring new backend behavior. When stopping a timer, it SHALL first read the authoritative current timer and submit that entry's identity to the conditional stop contract.
+The extension SHALL consume existing timer endpoints and shared request/response shapes using the shared installation authorization and existing-project mapping policy. When stopping a timer, it SHALL first read the authoritative current timer and submit that entry's identity to the conditional stop contract.
 
 #### Scenario: Start request matches shared GitHub timer contract
 - **WHEN** the extension starts a timer from a GitHub issue
-- **THEN** the request body contains only `githubRepo`, `issueNumber`, and `issueTitle`
+- **THEN** the request body contains only `githubRepo`, `issueNumber`, and an optional `githubProjectId` hint
 - **AND** it matches the existing shared `startTimerFromGitHub` contract
 
 #### Scenario: Extension conditionally stops the authoritative timer
@@ -414,3 +414,49 @@ The extension popup SHALL offer a GitHub sign-in action in its unauthenticated s
 - **WHEN** the authorization window closes without reaching the extension redirect destination
 - **THEN** the popup returns to its unauthenticated state reporting a cancelled attempt
 - **AND** it does not present the attempt as a backend or configuration failure
+
+### Requirement: Extension Tracking Does Not Require Personal GitHub Connection
+The popup and injected control SHALL allow signed-in GiTiempo members to request installation-authorized tracking without gating actions on personal GitHub connection state. Browser sign-in to GitHub, GitHub sign-in to GiTiempo, and connecting a personal GitHub integration SHALL remain distinct. Both supported issue surfaces MUST resolve through the same backend authorization and canonical mapping rules.
+
+#### Scenario: Signed-in assigned member starts without GitHub integration
+- **GIVEN** a valid GiTiempo session, installation access, and project assignment, with no usable personal GitHub connection
+- **WHEN** the member starts from the popup or injected control on a direct issue page or supported Projects issue pane
+- **THEN** the control sends the start request without a personal connection prerequisite
+- **AND** success displays the authoritative running timer
+
+#### Scenario: GiTiempo session is still required
+- **GIVEN** a GitHub browser session but no GiTiempo session
+- **WHEN** either extension surface renders
+- **THEN** it asks the user to sign in to GiTiempo before attempting tracking
+
+### Requirement: Extension Shows Actionable Tracking Access Failures
+Both popup and injected timer control SHALL interpret stable tracking error codes and show distinct assignment, installation, organization-policy, resource, mapping, and temporary-provider remedies. Errors MUST preserve local page context without exposing protected metadata. Failed starts MUST NOT be shown as running timers or clear an existing owned running timer.
+
+#### Scenario: Project assignment is missing
+- **GIVEN** the API returns `project_assignment_required`
+- **WHEN** either extension surface displays the failure
+- **THEN** it shows "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time."
+- **AND** it offers no personal GitHub connection action as a remedy
+
+#### Scenario: Installation requires administrator attention
+- **GIVEN** the API reports missing/unverified, suspended, removed, or disconnected installation access, disallowed organization, or insufficient permissions
+- **WHEN** either surface displays the failure
+- **THEN** it directs the member to the workspace administrator with the safe returned reason
+- **AND** it does not ask the member to connect GitHub
+
+#### Scenario: Project mapping requires setup
+- **GIVEN** the API reports a missing or ambiguous local project mapping
+- **WHEN** either surface displays the failure
+- **THEN** it directs the member to the workspace administrator or project manager to configure the mapping
+- **AND** it does not create a project or assignment from the client
+
+#### Scenario: Provider failure is retryable without session loss
+- **GIVEN** a retryable GitHub provider failure or rate limit
+- **WHEN** either surface displays the failure
+- **THEN** it offers retry guidance while retaining the GiTiempo session
+- **AND** it does not treat provider token renewal failure as a GiTiempo authentication failure
+
+#### Scenario: Stop remains available after installation failure
+- **GIVEN** an authoritative owned running timer and unavailable GitHub installation access
+- **WHEN** the popup or matching-issue injected control renders
+- **THEN** it retains the existing stop action and calls the ordinary GiTiempo stop endpoint

@@ -18,6 +18,7 @@ import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import {
   projectAssignments,
+  githubConnections,
   projectExternalRefs,
   projects,
   taskExternalRefs,
@@ -63,6 +64,7 @@ describe('Time entries (e2e)', () => {
   let db: DrizzleDB;
   let adminToken: string;
   let memberToken: string;
+  let pmToken: string;
   let otherMemberToken: string;
   let workspaceId: string;
   let platformProjectId: string;
@@ -123,6 +125,8 @@ describe('Time entries (e2e)', () => {
     otherMemberUserId = otherMember.id;
 
     adminToken = (await login(app)).accessToken;
+    pmToken = (await login(app, 'test:seed-user-1:alice@gitiempo.dev:Alice'))
+      .accessToken;
     memberToken = (await login(app, 'test:seed-user-2:bob@gitiempo.dev:Bob'))
       .accessToken;
     otherMemberToken = (
@@ -131,6 +135,9 @@ describe('Time entries (e2e)', () => {
   });
 
   afterEach(async () => {
+    await db
+      .delete(githubConnections)
+      .where(eq(githubConnections.userId, memberUserId));
     await db
       .delete(timeEntries)
       .where(eq(timeEntries.workspaceId, workspaceId));
@@ -203,6 +210,222 @@ describe('Time entries (e2e)', () => {
   afterAll(async () => {
     await app.close();
   });
+
+  it('denies saved public GitHub tasks after disconnect without changing history or creating a timer', async () => {
+    const { taskId } = await createSavedGitHubTask('public', false);
+    const historyId = await createStoredEntry(
+      memberUserId,
+      taskId,
+      '2026-05-01T10:00:00.000Z',
+      '2026-05-01T10:30:00.000Z',
+    );
+    await db.insert(githubConnections).values({
+      userId: memberUserId,
+      githubUserId: 'saved-timer-test',
+      login: 'saved-timer-test',
+      accessTokenEncrypted: 'fixture-access',
+      refreshTokenEncrypted: 'fixture-refresh',
+    });
+    const disconnected = await request(app.getHttpServer())
+      .delete('/github/connection')
+      .set('Authorization', bearer(memberToken));
+    expect(disconnected.status).toBe(204);
+    const denied = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId });
+    expect(denied.status).toBe(403);
+    expect(denied.body.code).toBe('project_assignment_required');
+    expect(denied.body.message).toBe(
+      'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
+    );
+    expect(
+      await db
+        .select({ id: timeEntries.id })
+        .from(timeEntries)
+        .where(eq(timeEntries.taskId, taskId)),
+    ).toEqual([{ id: historyId }]);
+    const current = await request(app.getHttpServer())
+      .get('/time-entries/current')
+      .set('Authorization', bearer(memberToken));
+    expect(current.body.timeEntry).toBeNull();
+    const [connection] = await db
+      .select()
+      .from(githubConnections)
+      .where(eq(githubConnections.userId, memberUserId));
+    expect(connection.connected).toBe(false);
+    expect(connection.accessTokenEncrypted).toBeNull();
+    expect(connection.refreshTokenEncrypted).toBeNull();
+    expect(
+      await db
+        .select({ id: taskExternalRefs.id })
+        .from(taskExternalRefs)
+        .where(eq(taskExternalRefs.taskId, taskId)),
+    ).toHaveLength(1);
+  });
+
+  it.each(
+    (['public', 'private'] as const).flatMap((visibility) =>
+      (['connected', 'disconnected', 'absent', 'expired'] as const).map(
+        (connectionState) => ({ visibility, connectionState }),
+      ),
+    ),
+  )(
+    'starts assigned saved $visibility GitHub work with a $connectionState connection and preserves stopping after access loss',
+    async ({ visibility, connectionState }) => {
+      if (connectionState !== 'absent') {
+        await db.insert(githubConnections).values({
+          userId: memberUserId,
+          githubUserId: 'saved-timer-test',
+          login: 'saved-timer-test',
+          connected: connectionState !== 'disconnected',
+          accessTokenEncrypted:
+            connectionState === 'disconnected' ? null : 'fixture-access',
+          refreshTokenEncrypted:
+            connectionState === 'disconnected' ? null : 'fixture-refresh',
+          tokenExpiresAt:
+            connectionState === 'expired'
+              ? new Date('2000-01-01')
+              : new Date('2099-01-01'),
+        });
+      }
+      const { projectId, taskId } = await createSavedGitHubTask(
+        visibility,
+        true,
+      );
+      const started = await request(app.getHttpServer())
+        .post('/time-entries/timer/start')
+        .set('Authorization', bearer(memberToken))
+        .send({ taskId, description: 'Saved issue work' });
+      expect(started.status).toBe(201);
+      expect(started.body).toMatchObject({
+        taskId,
+        projectId,
+        source: 'web',
+        description: 'Saved issue work',
+        isBillable: false,
+      });
+      const conflicting = await request(app.getHttpServer())
+        .post('/time-entries/timer/start')
+        .set('Authorization', bearer(memberToken))
+        .send({ taskId });
+      expect(conflicting.status).toBe(409);
+      const disconnected = await request(app.getHttpServer())
+        .delete('/github/connection')
+        .set('Authorization', bearer(memberToken));
+      expect(disconnected.status).toBe(204);
+      await db
+        .delete(projectAssignments)
+        .where(
+          and(
+            eq(projectAssignments.projectId, projectId),
+            eq(projectAssignments.userId, memberUserId),
+          ),
+        );
+      const stopped = await request(app.getHttpServer())
+        .post('/time-entries/timer/stop')
+        .set('Authorization', bearer(memberToken))
+        .send({ expectedTimerId: started.body.id });
+      expect(stopped.status).toBe(200);
+      expect(stopped.body).toMatchObject({
+        id: started.body.id,
+        taskId,
+        description: 'Saved issue work',
+        isBillable: false,
+      });
+      expect(stopped.body.endedAt).toBeTruthy();
+      expect(stopped.body.durationSeconds).toBeGreaterThanOrEqual(0);
+      const stale = await request(app.getHttpServer())
+        .post('/time-entries/timer/start')
+        .set('Authorization', bearer(memberToken))
+        .send({ taskId });
+      expect(stale.status).toBe(visibility === 'private' ? 404 : 403);
+      expect(
+        await db
+          .select({ id: timeEntries.id })
+          .from(timeEntries)
+          .where(eq(timeEntries.taskId, taskId)),
+      ).toEqual([{ id: started.body.id }]);
+    },
+  );
+
+  it.each(['admin', 'pm'] as const)(
+    'preserves %s public-project access without assignment',
+    async (role) => {
+      const { taskId } = await createSavedGitHubTask('public', false);
+      const started = await request(app.getHttpServer())
+        .post('/time-entries/timer/start')
+        .set('Authorization', bearer(role === 'admin' ? adminToken : pmToken))
+        .send({ taskId });
+      expect(started.status).toBe(201);
+    },
+  );
+
+  it('denies a connected unassigned member but allows a manual task in the same public GitHub project', async () => {
+    const { projectId, taskId } = await createSavedGitHubTask('public', false);
+    await db.insert(githubConnections).values({
+      userId: memberUserId,
+      githubUserId: 'saved-timer-test',
+      login: 'saved-timer-test',
+      accessTokenEncrypted: 'fixture-access',
+      refreshTokenEncrypted: 'fixture-refresh',
+    });
+    const denied = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId });
+    expect(denied.status).toBe(403);
+    expect(denied.body.code).toBe('project_assignment_required');
+    const manualTaskId = await createTask(
+      projectId,
+      'Manual task in GitHub project',
+    );
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: manualTaskId });
+    expect(started.status).toBe(201);
+    expect(started.body.taskId).toBe(manualTaskId);
+  });
+
+  async function createSavedGitHubTask(
+    visibility: 'public' | 'private',
+    assigned: boolean,
+  ) {
+    const name = `gitiempo-test/saved-${randomUUID()}`;
+    const [project] = await db
+      .insert(projects)
+      .values({ workspaceId, name, visibility })
+      .returning();
+    if (!project) throw new Error('Expected saved GitHub fixture project');
+    const taskId = await createTask(project.id, 'Saved GitHub issue', false);
+    // A board mapping alone is enough: linkage belongs to the task, not a repository parent.
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId: project.id,
+      provider: 'github',
+      externalType: 'project',
+      externalKey: name,
+      externalUrl: `https://github.com/orgs/gitiempo-test/projects/1`,
+    });
+    await db.insert(taskExternalRefs).values({
+      workspaceId,
+      projectId: project.id,
+      taskId,
+      provider: 'github',
+      externalType: 'issue',
+      externalKey: `${name}#1`,
+      externalUrl: `https://github.com/${name}/issues/1`,
+    });
+    if (assigned)
+      await db.insert(projectAssignments).values({
+        workspaceId,
+        projectId: project.id,
+        userId: memberUserId,
+        assignedBy: memberUserId,
+      });
+    return { projectId: project.id, taskId };
+  }
 
   it('creates manual entries and lists own entries with filters', async () => {
     const first = await createManualEntry(memberToken, {
