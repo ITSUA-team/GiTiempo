@@ -29,10 +29,10 @@ function getInstallHref(githubAppInstallUrl?: string | null): string {
 describe('buildGitHubWorkspaceAccessChecklist', () => {
   it('opens the GitHub App installation request page by default', () => {
     expect(getInstallHref()).toBe(
-      'https://github.com/apps/gi-tiempo/installations/new',
+      'https://github.com/apps/gitiempo/installations/new',
     );
     expect(getInstallHref('   ')).toBe(
-      'https://github.com/apps/gi-tiempo/installations/new',
+      'https://github.com/apps/gitiempo/installations/new',
     );
   });
 

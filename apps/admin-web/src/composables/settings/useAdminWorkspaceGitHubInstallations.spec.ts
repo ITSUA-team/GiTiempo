@@ -40,7 +40,7 @@ function createClient(overrides: Partial<InstallationsClient> = {}): Installatio
     listWorkspaceGitHubInstallations: vi.fn().mockResolvedValue({ items: [installation] }),
     setupWorkspaceGitHubInstallation: vi.fn().mockResolvedValue({
       expiresAt: '2026-05-01T10:10:00.000Z',
-      installationUrl: 'https://github.com/apps/gi-tiempo/installations/new',
+      installationUrl: 'https://github.com/apps/gitiempo/installations/new',
       state: 'a'.repeat(32),
     }),
     ...overrides,
@@ -102,7 +102,7 @@ describe('useAdminWorkspaceGitHubInstallations', () => {
       setupWorkspaceGitHubInstallation: vi.fn().mockResolvedValue({
         existingInstallationId: '987654',
         expiresAt: '2026-05-01T10:10:00.000Z',
-        installationUrl: 'https://github.com/apps/gi-tiempo/installations/new',
+        installationUrl: 'https://github.com/apps/gitiempo/installations/new',
         state: 'a'.repeat(32),
       }),
     });
@@ -135,7 +135,7 @@ describe('useAdminWorkspaceGitHubInstallations', () => {
   });
 
   it('opens the stateful installation URL after binding setup to the selected organization', async () => {
-    const installationUrl = `https://github.com/apps/gi-tiempo/installations/new?state=${'a'.repeat(32)}`;
+    const installationUrl = `https://github.com/apps/gitiempo/installations/new?state=${'a'.repeat(32)}`;
     const client = createClient({
       setupWorkspaceGitHubInstallation: vi.fn().mockResolvedValue({
         expiresAt: '2026-05-01T10:10:00.000Z',

@@ -78,7 +78,7 @@ function createRecoveryChecklist() {
       {
         action: {
           ariaLabel: 'Open GitHub App install page for My-test-org-for-clock',
-          href: 'https://github.com/apps/gi-tiempo/installations/new',
+          href: 'https://github.com/apps/gitiempo/installations/new',
           kind: 'link' as const,
           label: 'Open install',
           target: '_blank' as const,
@@ -514,7 +514,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       wrapper
         .get('[data-testid="settings-github-recovery-link-install"]')
         .attributes('href'),
-    ).toBe('https://github.com/apps/gi-tiempo/installations/new');
+    ).toBe('https://github.com/apps/gitiempo/installations/new');
 
     const retryButton = wrapper
       .findAll('button')

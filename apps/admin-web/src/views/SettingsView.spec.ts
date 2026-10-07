@@ -338,7 +338,7 @@ describe('SettingsView', () => {
     });
     testMocks.setupWorkspaceGitHubInstallation.mockResolvedValue({
       expiresAt: '2026-05-01T10:10:00.000Z',
-      installationUrl: 'https://github.com/apps/gi-tiempo/installations/new',
+      installationUrl: 'https://github.com/apps/gitiempo/installations/new',
       state: 'a'.repeat(32),
     });
     testMocks.removeWorkspaceGitHubOrganization.mockResolvedValue(undefined);
@@ -347,7 +347,7 @@ describe('SettingsView', () => {
     testMocks.updateWorkspaceSettings.mockResolvedValue(settingsResponse);
     vi.stubEnv(
       'VITE_GITHUB_APP_INSTALL_URL',
-      'https://github.com/apps/gi-tiempo/installations/new',
+      'https://github.com/apps/gitiempo/installations/new',
     );
     vi.stubEnv('VITE_USER_APP_URL', 'https://user.example.test/login');
 
@@ -989,7 +989,7 @@ describe('SettingsView', () => {
       wrapper
         .get('[data-testid="settings-github-recovery-link-install"]')
         .attributes('href'),
-    ).toBe('https://github.com/apps/gi-tiempo/installations/new');
+    ).toBe('https://github.com/apps/gitiempo/installations/new');
     expect(
       wrapper
         .get('[data-testid="settings-github-recovery-link-reconnect"]')
