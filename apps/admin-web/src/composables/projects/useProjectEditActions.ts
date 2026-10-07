@@ -1,5 +1,5 @@
 import { ref, type ComputedRef, type Ref } from 'vue';
-import type { ProjectResponse } from '@gitiempo/shared';
+import { WorkspaceRoles, type ProjectResponse } from '@gitiempo/shared';
 import type { ProjectEditFormInput } from '@gitiempo/web-shared';
 
 import {
@@ -48,6 +48,25 @@ export function useProjectEditActions({
       nextMemberIds: input.memberIds,
       project,
     });
+
+    const currentManagerUserId =
+      project.members.find((m) => m.role === WorkspaceRoles.PM)?.userId ?? null;
+    const nextManagerUserId = input.managerUserId ?? null;
+    const managerChanged =
+      (nextManagerUserId ?? null) !== (currentManagerUserId ?? null);
+    const managerToAdd =
+      managerChanged &&
+      nextManagerUserId !== null &&
+      !input.memberIds.includes(nextManagerUserId)
+        ? nextManagerUserId
+        : null;
+    const managerToRemove =
+      managerChanged &&
+      currentManagerUserId !== null &&
+      !memberIdsToRemove.includes(currentManagerUserId)
+        ? currentManagerUserId
+        : null;
+
     let savedProject: ProjectResponse | null = null;
 
     savingProjectEditId.value = project.id;
@@ -63,6 +82,13 @@ export function useProjectEditActions({
       }
       for (const userId of memberIdsToRemove) {
         await client.removeAssignment(project.id, userId);
+      }
+
+      if (managerToAdd) {
+        await client.assignMember(project.id, managerToAdd);
+      }
+      if (managerToRemove) {
+        await client.removeAssignment(project.id, managerToRemove);
       }
 
       onSuccess(`${project.name} has been updated.`);

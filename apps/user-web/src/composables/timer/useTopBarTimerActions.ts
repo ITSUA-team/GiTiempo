@@ -153,7 +153,7 @@ export function useTopBarTimerActions({
       const message = getErrorMessage(error);
       const toastCopy = isGitHubProjectIssueSelectedTaskContext(draftContext)
         ? getGitHubProjectStartErrorToastCopy(error, message)
-        : getStartTimerErrorToastCopy(message);
+        : getStartTimerErrorToastCopy(error, message);
 
       timerActionErrorMessage.value = message;
       appToast.showErrorToast({
@@ -246,10 +246,17 @@ function getGitHubTrackingErrorSummary(
   return summaries[code];
 }
 
-function getStartTimerErrorToastCopy(message: string): {
+function getStartTimerErrorToastCopy(error: unknown, message: string): {
   detail: string;
   summary: string;
 } {
+  if (getGitHubTrackingErrorCode(error) === "project_assignment_required") {
+    return {
+      detail: githubTrackingErrorMessages.project_assignment_required,
+      summary: "Project assignment required",
+    };
+  }
+
   if (message.toLowerCase().includes("task is closed")) {
     return {
       detail: "Choose an open task to start tracking time.",

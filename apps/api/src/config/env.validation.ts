@@ -132,6 +132,9 @@ export const envSchema = z
     FIREBASE_PROJECT_ID: firebaseProjectIdSchema.optional(),
     FIREBASE_CLIENT_EMAIL: firebaseClientEmailSchema.optional(),
     FIREBASE_PRIVATE_KEY: firebasePrivateKeySchema.optional(),
+    // Optional. When set, firebase-admin routes token verification to the
+    // Firebase Auth Emulator instead of production Firebase.
+    FIREBASE_AUTH_EMULATOR_HOST: optionalNonEmptyString,
   })
   .superRefine((env, ctx) => {
     if (

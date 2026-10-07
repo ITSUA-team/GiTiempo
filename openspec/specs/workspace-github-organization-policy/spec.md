@@ -32,7 +32,7 @@ The system SHALL maintain a workspace-owned allow-list of GitHub organization lo
 - **AND** the removed organization remains unavailable for new GitHub browsing, task-picker, or selection flows
 
 ### Requirement: GitHub Organization Policy Is A Filter Only
-The system MUST treat the workspace GitHub organization allow-list as a GiTiempo visibility policy layered on top of each user's connected GitHub account permissions.
+The system MUST treat the workspace GitHub organization allow-list as a GiTiempo visibility policy layered on top of the provider credential used by each operation: the user's connected account for existing browsing/import flows, and the workspace's verified installation for GitHub timer starts. An allow-list entry MUST NOT establish installation access or project tracking authorization.
 
 #### Scenario: Allowed organization does not grant provider access
 - **GIVEN** a GitHub organization login is allowed for the workspace
@@ -46,6 +46,17 @@ The system MUST treat the workspace GitHub organization allow-list as a GiTiempo
 - **AND** that organization is not allowed by the workspace policy
 - **WHEN** the member requests GitHub data for that organization
 - **THEN** the system rejects the organization-scoped request or omits that organization from selectable results
+
+#### Scenario: Installation tracking is independent of the member's personal account
+- **GIVEN** an allowed organization with a verified workspace installation and an assigned active member with no personal GitHub connection
+- **WHEN** the member starts tracking an accessible issue in the mapped active project
+- **THEN** organization policy is applied to installation access and does not require that member's GitHub OAuth
+
+#### Scenario: Removing organization policy blocks installation starts
+- **GIVEN** an installation is still active in GitHub but its organization is removed from workspace policy
+- **WHEN** a new GitHub start is requested
+- **THEN** it is rejected without tracking writes
+- **AND** historical records and owned timer stop remain available under existing GiTiempo rules
 
 ### Requirement: Organization Logins Are Normalized For Policy Matching
 The system SHALL compare GitHub organization logins case-insensitively while preserving a display login in responses.
@@ -112,7 +123,7 @@ The system MUST require the requesting admin to have a usable connected GitHub a
 - **WHEN** the admin requests to add a GitHub organization to the current workspace policy
 - **THEN** the system SHALL validate the organization through that admin's connected GitHub account before saving the policy row
 - **AND** the saved policy row remains owned by the workspace rather than by the admin's GitHub token
-- **AND** other workspace members still only see organization data their own connected GitHub accounts can access
+- **AND** browsing and import still use each member's own provider access; installation-based timer access separately requires a verified installation link and GiTiempo tracking authorization
 
 #### Scenario: Reading policy does not require connected GitHub account
 

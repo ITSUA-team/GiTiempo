@@ -87,6 +87,11 @@ export class TimeEntriesController {
   @ApiOperation({ summary: 'Start timer for an existing task' })
   @ApiCreatedResponse({ type: TimeEntryResponseDto })
   @ApiConflictResponse({ description: 'Timer already running' })
+  @ApiForbiddenResponse({
+    description:
+      'An ordinary member is not assigned to the saved GitHub task project',
+    type: GitHubTrackingErrorResponseDto,
+  })
   @ApiNotFoundResponse({ description: 'Task not found' })
   @ApiUnprocessableEntityResponse({ description: 'Task or project inactive' })
   @ZodSerializerDto(TimeEntryResponseDto)

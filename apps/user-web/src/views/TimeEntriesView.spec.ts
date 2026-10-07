@@ -8,6 +8,7 @@ import type {
   TimeEntryListResponse,
   TimeEntryResponse,
 } from "@gitiempo/shared";
+import { ApiError } from "@gitiempo/web-shared/http";
 
 import { INPUT_DEBOUNCE_MS } from "@gitiempo/web-shared";
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
@@ -866,6 +867,38 @@ describe("TimeEntriesView", () => {
       }),
     );
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+  });
+
+  it("shows the assignment remedy for a prior GitHub-task entry without a false timer start", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+    client.startTimer.mockRejectedValueOnce(
+      new ApiError(
+        "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.",
+        { code: "project_assignment_required", status: 403 },
+      ),
+    );
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`).trigger("click");
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.taskReports });
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail:
+          "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.",
+        severity: "error",
+        summary: "Could not start timer",
+      }),
+    );
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Timer started" }),
+    );
+    expect(wrapper.get(`[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`).attributes("disabled")).toBeUndefined();
   });
 
   it("opens edit with the same browser-local times shown in the table", async () => {

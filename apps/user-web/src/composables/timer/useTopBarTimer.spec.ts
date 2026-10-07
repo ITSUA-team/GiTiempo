@@ -1779,6 +1779,60 @@ describe('useTopBarTimer', () => {
     );
   });
 
+  it('keeps a saved GitHub-task assignment denial visible without a false running timer', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+    const savedGitHubTask = {
+      ...createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+      githubIssue: {
+        githubRepo: 'octo/repo',
+        issueNumber: 184,
+      },
+    };
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listOwnEntries.mockResolvedValue(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValue([
+      savedGitHubTask,
+    ]);
+    client.startTimer.mockRejectedValueOnce(
+      new ApiError(
+        'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
+        { code: 'project_assignment_required', status: 403 },
+      ),
+    );
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await startTimerFromSeededDialog(topBarTimer);
+    await flushPromises();
+
+    expect(topBarTimer.currentTimer.value).toBeNull();
+    expect(topBarTimer.timerActionErrorMessage.value).toBe(
+      'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
+    );
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail:
+          'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
+        severity: 'error',
+        summary: 'Project assignment required',
+      }),
+    );
+    expect(toast.add).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: 'Timer started' }),
+    );
+  });
+
   it('stops the timer with success toast feedback', async () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };

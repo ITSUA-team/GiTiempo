@@ -453,7 +453,8 @@ onMounted(loadMembers);
                   :options="memberOptions()"
                   option-label="label"
                   option-value="value"
-                  placeholder="Select"
+                  placeholder="Unassigned"
+                  show-clear
                   :loading="membersLoading"
                   :disabled="isSubmitting || membersLoading"
                   :pt="giTiempoSelectPt"

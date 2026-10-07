@@ -8,6 +8,7 @@ import {
 } from '@gitiempo/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
+import { ApiError } from '@gitiempo/web-shared/http';
 
 import { useAuthStore } from '@/stores/auth';
 import { adminSettingsKeys } from '@/lib/query-keys';
@@ -1200,5 +1201,28 @@ describe('SettingsView', () => {
     await flushPromises();
 
     expect(testMocks.completeWorkspaceGitHubInstallation).not.toHaveBeenCalled();
+  });
+
+  it('shows a user-friendly toast when the installations endpoint returns 404', async () => {
+    testMocks.listWorkspaceGitHubInstallations.mockRejectedValue(
+      new ApiError('Cannot GET /workspace/github/installations', {
+        code: null,
+        status: 404,
+      }),
+    );
+
+    mountSettingsView();
+    await flushPromises();
+
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'GitHub integration is not available on this server. Please contact support to update the server.',
+      expect.objectContaining({
+        error: expect.any(ApiError),
+        logContext: expect.objectContaining({
+          action: 'load-workspace-github-installations',
+          feature: 'settings-github-installations',
+        }),
+      }),
+    );
   });
 });
