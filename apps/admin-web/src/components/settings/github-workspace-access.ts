@@ -40,7 +40,7 @@ interface BuildGitHubWorkspaceAccessChecklistOptions {
 }
 
 const defaultGitHubAppInstallUrl =
-  'https://github.com/apps/gi-tiempo/installations/new';
+  'https://github.com/apps/gitiempo/installations/new';
 
 function resolveGitHubAppInstallUrl(
   githubAppInstallUrl: string | null | undefined,

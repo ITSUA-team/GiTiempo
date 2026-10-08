@@ -44,3 +44,15 @@
 - Keep `stores/auth.ts`, `router/index.ts`, route maps, route-level views, and product-specific shell or login composition app-local unless there are two stable call sites and a smaller shared abstraction is clearly justified.
 - If a task changes `packages/web-config` or `packages/web-shared`, verify both web apps.
 - If a task changes shared auth/session/router leaves, run both frontend test suites in addition to lint and typecheck.
+
+### Code Search — codebase-memory-mcp
+- Use codebase-memory-mcp for project-wide code search (symbols, calls,
+  dependencies, impact, data-flow). The project is indexed under the name
+  home-admin-Projects-YOUR_PROJECT_NAME.
+- Prefer graph tools (search_graph, trace_path, query_graph,
+  detect_changes) over grep/find_path for symbol, dependency, and
+  blast-radius lookups. Use grep/find_path only for text searches and
+  inspecting files flagged as parse_partial/skipped in coverage.
+- After every code change, re-index the project (index_repository) to keep
+  the graph in sync with the actual code. Before making trusted claims about
+  file coverage, cross-check with check_index_coverage / index_status.

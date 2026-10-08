@@ -124,7 +124,7 @@ const stubs = {
   },
   Form: {
     template:
-      '<form><slot :defaultBillableForTasks="{ invalid: false }" :memberIds="{ invalid: false }" :visibility="{ invalid: false }" /></form>',
+      '<form><slot :defaultBillableForTasks="{ invalid: false }" :managerUserId="{ invalid: false }" :memberIds="{ invalid: false }" :visibility="{ invalid: false }" /></form>',
   },
   Checkbox: {
     props: ['inputId', 'name'],
@@ -133,6 +133,7 @@ const stubs = {
   Select: {
     name: 'Select',
     props: {
+      disabled: Boolean,
       fluid: Boolean,
       inputId: String,
       invalid: Boolean,
@@ -140,10 +141,12 @@ const stubs = {
       optionLabel: String,
       optionValue: String,
       options: Array,
+      placeholder: String,
       pt: Object,
+      showClear: Boolean,
     },
     template:
-      '<select :id="inputId" :name="name"><option v-for="option in options" :key="option.value">{{ option.label }}</option></select>',
+      '<select :id="inputId" :name="name" :data-show-clear="showClear" :data-placeholder="placeholder"><option v-if="placeholder" :value="null">{{ placeholder }}</option><option v-for="option in options" :key="option.value">{{ option.label }}</option></select>',
   },
 };
 
@@ -173,6 +176,7 @@ describe('ProjectEditForm', () => {
     expect(wrapper.get('[data-footer-actions="primary"]').text()).toContain('Cancel');
     expect(wrapper.get('[data-footer-actions="primary"]').text()).toContain('Save');
     expect(wrapper.get('label[for="edit-members"]').text()).toBe('Select members');
+    expect(wrapper.get('label[for="edit-project-manager"]').text()).toBe('Project manager');
     expect(wrapper.get('label[for="edit-visibility"]').text()).toBe('Visibility');
     expect(wrapper.text()).toContain('New task billable default');
     const billableInput = wrapper.find('input[name="defaultBillableForTasks"]');
@@ -182,7 +186,9 @@ describe('ProjectEditForm', () => {
     expect(billableControl.classes()).toContain('h-[42px]');
     expect(wrapper.text()).toContain('Billable by default');
     const memberInput = wrapper.getComponent({ name: 'AutoComplete' });
-    const visibilityInput = wrapper.getComponent({ name: 'Select' });
+    const allSelects = wrapper.findAllComponents({ name: 'Select' });
+    const managerInput = allSelects.find((c) => c.props('inputId') === 'edit-project-manager')!;
+    const visibilityInput = allSelects.find((c) => c.props('inputId') === 'edit-visibility')!;
 
     expect(memberInput.props('multiple')).toBe(true);
     expect(memberInput.props('dropdown')).toBe(true);
@@ -225,6 +231,13 @@ describe('ProjectEditForm', () => {
     expect(visibilityInput.props('options')).toEqual([
       { label: 'Public', value: 'public' },
       { label: 'Private', value: 'private' },
+    ]);
+    expect(managerInput.props('showClear')).toBe(true);
+    expect(managerInput.props('placeholder')).toBe('Unassigned');
+    expect(managerInput.props('optionLabel')).toBe('label');
+    expect(managerInput.props('optionValue')).toBe('value');
+    expect(managerInput.props('options')).toEqual([
+      { label: 'Pat PM', value: 'user-2' },
     ]);
     expect(wrapper.text()).toContain('Pat PM');
     expect(wrapper.text()).toContain('member@example.com');

@@ -1,0 +1,11 @@
+{
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "ui": {
+      "port": 4000
+    },
+    "singleProjectMode": true
+  }
+}

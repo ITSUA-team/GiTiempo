@@ -180,6 +180,15 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
           'Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY.',
       );
     }
+    // firebase-admin reads FIREBASE_AUTH_EMULATOR_HOST from process.env at
+    // initialization time. @nestjs/config may not propagate unknown keys to
+    // process.env, so set it explicitly from the validated config.
+    const emulatorHost = this.config.get('FIREBASE_AUTH_EMULATOR_HOST', {
+      infer: true,
+    });
+    if (emulatorHost) {
+      process.env.FIREBASE_AUTH_EMULATOR_HOST = emulatorHost;
+    }
     this.app = initializeApp(
       {
         credential: cert({ projectId, clientEmail, privateKey }),
