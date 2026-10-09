@@ -15,7 +15,6 @@ import type { TimeEntrySource } from '@gitiempo/shared';
 import { tasks } from '../../tasks/schemas/tasks.schema';
 import { users } from '../../users/schemas/users.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
-import { invoices } from '../../invoices/schemas/invoices.schema';
 
 export const timeEntries = pgTable(
   'time_entries',
@@ -39,9 +38,6 @@ export const timeEntries = pgTable(
       .$type<TimeEntrySource>()
       .default('web')
       .notNull(),
-    invoiceId: uuid('invoice_id').references(() => invoices.id, {
-      onDelete: 'set null',
-    }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -53,9 +49,6 @@ export const timeEntries = pgTable(
     index('time_entries_task_id_idx').on(table.taskId),
     index('time_entries_user_id_idx').on(table.userId),
     index('time_entries_workspace_id_idx').on(table.workspaceId),
-    index('time_entries_invoice_id_idx')
-      .on(table.invoiceId)
-      .where(sql`${table.invoiceId} IS NOT NULL`),
     index('time_entries_started_at_idx').on(table.startedAt),
     index('time_entries_date_range_idx').on(
       table.workspaceId,
