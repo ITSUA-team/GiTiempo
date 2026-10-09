@@ -24,7 +24,7 @@ export const ADMIN_PAGE_NAMES_BY_ROUTE_NAME: Record<string, string> = {
 
 export const ADMIN_SETTINGS_ICON = markRaw(Cog6ToothIcon);
 export const ADMIN_SETTINGS_LABEL = ADMIN_PAGE_NAMES_BY_ROUTE_NAME[routeNames.settings];
-const SHOW_INVOICES_NAV = true;
+const SHOW_INVOICES_NAV = false;
 
 export const ADMIN_BASE_NAV_ITEMS = [
   {
