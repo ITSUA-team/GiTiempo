@@ -46,7 +46,7 @@ const managementRoles = [
 export const adminRouteAllowedRoles = {
   [routeNames.addProject]: adminOnlyRoles,
   [routeNames.dashboard]: managementRoles,
-  [routeNames.invoices]: managementRoles,
+  [routeNames.invoices]: adminOnlyRoles,
   [routeNames.members]: adminOnlyRoles,
   [routeNames.projects]: adminOnlyRoles,
   [routeNames.reports]: managementRoles,

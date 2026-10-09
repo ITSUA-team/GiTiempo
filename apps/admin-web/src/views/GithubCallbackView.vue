@@ -42,8 +42,6 @@ onMounted(() =>
     class="bg-app-bg flex min-h-screen w-full items-center justify-center px-6"
     data-testid="github-callback"
   >
-    <p class="text-text-muted text-sm">
-      Completing GitHub sign-in…
-    </p>
+    <p class="text-text-muted text-sm">Completing GitHub sign-in…</p>
   </div>
 </template>
