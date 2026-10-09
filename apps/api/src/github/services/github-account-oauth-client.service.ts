@@ -4,7 +4,7 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation';
 import type { GithubUserProfile } from './github-oauth-client.service';
 

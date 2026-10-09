@@ -1,4 +1,5 @@
-import type { ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
+import { Test } from '@nestjs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Env } from '../../config/env.validation';
 import {
@@ -19,6 +20,37 @@ function service(): GithubAccountOauthClientService {
 
 describe('GithubAccountOauthClientService', () => {
   beforeEach(() => vi.unstubAllGlobals());
+
+  it('resolves its configuration through Nest dependency injection', async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        GithubAccountOauthClientService,
+        {
+          provide: ConfigService,
+          useValue: new ConfigService({
+            APP_URL: 'https://api.example.test',
+            GITHUB_SIGNIN_CLIENT_ID: 'injected-oauth-client',
+          }),
+        },
+      ],
+    }).compile();
+
+    try {
+      const client = module.get(GithubAccountOauthClientService);
+      const url = new URL(
+        client.buildAuthorizationUrl({
+          state: 'account_link.state',
+          codeChallenge: 'pkce',
+        }),
+      );
+      expect(url.searchParams.get('client_id')).toBe('injected-oauth-client');
+      expect(url.searchParams.get('redirect_uri')).toBe(
+        'https://api.example.test/auth/github/callback',
+      );
+    } finally {
+      await module.close();
+    }
+  });
 
   it('uses the sign-in OAuth App and all agreed scopes', () => {
     const url = new URL(
