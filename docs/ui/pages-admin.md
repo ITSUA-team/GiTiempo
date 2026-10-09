@@ -46,15 +46,10 @@
 
 ## Invoices Page
 
-- Searchable invoice table with status tags and a table-header `Create invoice` action.
-- Invoice columns: Invoice (title), Project, Amount, and Status.
-- Admin management table search filters the visible table rows using DataTable `globalFilterFields` or local computed filtering over the loaded rows.
-- Column filters: project filter (`FilterAutoComplete` or `Select`), and status filter (`Select`).
-- Invoice edit/details dialog supports contract-approved fields and displays status-specific invoice actions inside the dialog.
-- Status-specific actions inside the dialog: `Send invoice` (draft→sent), `Mark as paid` (sent→paid). `Delete invoice` is admin-only.
-- Invoice creation uses API-provided eligible time entries and submits only fields supported by the contract.
-- The UI handles backend validation and conflicts, including entries that became ineligible because another invoice includes them.
-- Admins and PMs can access the page; PMs do not see admin-only deletion.
+- Invoice page UI is deferred until an invoice API/contract exists.
+- Do not expose invoices in authenticated shell navigation, dashboard metrics/activity, or page/table content while the invoice UI is deferred.
+- The protected `/invoices` route may remain as a hidden route-inventory placeholder, but it must not render a temporary invoice table, search control, create action, modal dialog, or fabricated invoice data.
+- When invoice contracts ship, restore the approved invoices page requirements from the design: searchable invoice table, status tags, table-header `Create invoice` action, invoice edit/details dialog, and status-specific invoice actions inside the dialog.
 
 ## Members Page
 
