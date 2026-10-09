@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import type {
   GitHubBrowsingPagination,
@@ -48,10 +49,11 @@ type GitHubOrgRest = {
 
 type GitHubOrgMembershipRest = {
   state?: string;
-  organization?: GitHubOrgRest | null;
+  organization?: (GitHubOrgRest & { id?: number | string }) | null;
 };
 
 type GitHubOrganizationMembershipLookup = {
+  id: string;
   login: string;
   avatarUrl: string | null;
   url: string;
@@ -276,12 +278,18 @@ export class GithubApiClientService {
         path,
       });
       throw new BadRequestException({
-        code: 'github_app_access_blocked',
+        code: 'github_oauth_access_blocked',
         error: 'BadRequest',
-        message: 'GitHub organization blocks this GitHub App',
+        message: 'GitHub organization blocks this OAuth application',
       });
     }
 
+    if (response.status === 401) {
+      throw new UnauthorizedException({
+        code: 'github_authorization_required',
+        message: 'GitHub authorization is required',
+      });
+    }
     if (!response.ok) {
       this.logger.warn({
         event: 'github.api.request_failed',
@@ -292,11 +300,12 @@ export class GithubApiClientService {
     }
 
     const organization = body.organization;
-    if (!body.state || !organization?.login) {
+    if (!body.state || !organization?.login || !organization.id) {
       throw new ServiceUnavailableException('GitHub API returned invalid data');
     }
 
     return {
+      id: String(organization.id),
       login: organization.login,
       avatarUrl: organization.avatar_url ?? null,
       url: organization.html_url ?? `https://github.com/${organization.login}`,
@@ -645,6 +654,12 @@ export class GithubApiClientService {
     if (response.status === 404 && notFoundMessage) {
       throw new NotFoundException(notFoundMessage);
     }
+    if (response.status === 401) {
+      throw new UnauthorizedException({
+        code: 'github_authorization_required',
+        message: 'GitHub authorization is required',
+      });
+    }
     if (!response.ok) {
       this.logger.warn({
         event: 'github.api.request_failed',
@@ -693,6 +708,12 @@ export class GithubApiClientService {
         throw new ServiceUnavailableException('GitHub API rate limit exceeded');
       }
       throw new GithubInstallationPermissionError();
+    }
+    if (response.status === 401) {
+      throw new UnauthorizedException({
+        code: 'github_authorization_required',
+        message: 'GitHub authorization is required',
+      });
     }
     if (!response.ok) {
       this.logger.warn({

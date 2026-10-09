@@ -39,6 +39,7 @@ const props = defineProps<{
   installingOrganizationLogin: string | null;
   installations: readonly WorkspaceGitHubInstallation[];
   installationsLoaded: boolean;
+  checkingOrganizationLogins: readonly string[];
   items: readonly WorkspaceGitHubOrganizationResponse[];
   organizationLoginError: string | null;
   recoveryChecklist: GitHubWorkspaceAccessChecklist | null;
@@ -111,7 +112,17 @@ function hasVerifiedInstallation(organizationLogin: string): boolean {
 }
 
 function shouldShowInstallApp(organizationLogin: string): boolean {
-  return props.installationsLoaded && !hasVerifiedInstallation(organizationLogin);
+  return (
+    props.installationsLoaded &&
+    !isCheckingInstallation(organizationLogin) &&
+    !hasVerifiedInstallation(organizationLogin)
+  );
+}
+
+function isCheckingInstallation(organizationLogin: string): boolean {
+  return props.checkingOrganizationLogins.includes(
+    organizationLogin.trim().toLowerCase(),
+  );
 }
 
 watch(
@@ -210,6 +221,16 @@ watch(
           </div>
           <div class="flex flex-wrap justify-end gap-2">
             <Button
+              v-if="isCheckingInstallation(organization.organizationLogin)"
+              label="Checking App"
+              loading
+              outlined
+              severity="secondary"
+              size="small"
+              disabled
+              :data-testid="`settings-github-organization-checking-${organization.id}`"
+            />
+            <Button
               v-if="shouldShowInstallApp(organization.organizationLogin)"
               label="Install App"
               :loading="installingOrganizationLogin === organization.organizationLogin"
@@ -240,12 +261,11 @@ watch(
     >
       <div class="flex flex-col gap-1">
         <h3 class="text-text-dark text-base font-semibold">
-          GitHub App access
+          GitHub organization access
         </h3>
         <p class="text-text-muted text-[13px] leading-5">
-          Complete these steps when GiTiempo cannot validate the organization
-          yet because GitHub access, app approval, or the current connection
-          still needs attention.
+          Complete these steps when GitHub organization access needs attention
+          before GiTiempo can validate this workspace organization.
         </p>
       </div>
 

@@ -111,12 +111,42 @@ const connectedGitHubStatus = {
     login: 'octocat',
     updatedAt: '2026-05-01T10:00:00.000Z',
   },
+  capabilities: {
+    organizationDiscovery: 'ready',
+    personalData: 'ready',
+  },
+  disconnect: 'allowed',
+  oauth: {
+    missingScopes: [],
+    status: 'authorized',
+  },
   status: 'connected',
 } as const;
 
 const disconnectedGitHubStatus = {
   account: null,
+  capabilities: {
+    organizationDiscovery: 'authorization_required',
+    personalData: 'authorization_required',
+  },
+  disconnect: 'allowed',
+  oauth: {
+    missingScopes: [],
+    status: 'not_authorized',
+  },
   status: 'disconnected',
+} as const;
+
+const revokedOrganizationDiscoveryGitHubStatus = {
+  ...connectedGitHubStatus,
+  capabilities: {
+    organizationDiscovery: 'authorization_required',
+    personalData: 'ready',
+  },
+  oauth: {
+    missingScopes: [],
+    status: 'not_authorized',
+  },
 } as const;
 
 const availableGitHubOrganizationsResponse = {
@@ -479,6 +509,7 @@ describe('SettingsView', () => {
     expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
       true,
     );
+    expect(testMocks.listAvailableGitHubOrganizations).toHaveBeenCalledTimes(1);
   });
 
   it('hides add setup while refreshing cached GitHub connection status', async () => {
@@ -617,6 +648,45 @@ describe('SettingsView', () => {
     );
   });
 
+  it('gates organization discovery on the OAuth organization permission', async () => {
+    testMocks.getGitHubConnectionStatus.mockResolvedValueOnce({
+      ...connectedGitHubStatus,
+      capabilities: {
+        ...connectedGitHubStatus.capabilities,
+        organizationDiscovery: 'permission_required',
+      },
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      'Grant GitHub organization permission from your profile before adding workspace organizations.',
+    );
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
+      false,
+    );
+    expect(testMocks.listAvailableGitHubOrganizations).not.toHaveBeenCalled();
+  });
+
+  it('keeps organization discovery available when only personal GitHub App data needs authorization', async () => {
+    testMocks.getGitHubConnectionStatus.mockResolvedValueOnce({
+      ...connectedGitHubStatus,
+      capabilities: {
+        ...connectedGitHubStatus.capabilities,
+        personalData: 'authorization_required',
+      },
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
+      true,
+    );
+    expect(testMocks.listAvailableGitHubOrganizations).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps settings form data intact when GitHub connection status fails and retries the status request', async () => {
     testMocks.getGitHubConnectionStatus
       .mockRejectedValueOnce(new Error('GitHub status unavailable'))
@@ -657,6 +727,7 @@ describe('SettingsView', () => {
       true,
     );
     expect(testMocks.getGitHubConnectionStatus).toHaveBeenCalledTimes(2);
+    expect(testMocks.listAvailableGitHubOrganizations).toHaveBeenCalledTimes(1);
   });
 
   it('submits changed workspace fields through the settings form save action', async () => {
@@ -838,6 +909,8 @@ describe('SettingsView', () => {
     expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
       true,
     );
+    expect(testMocks.getGitHubConnectionStatus).toHaveBeenCalledTimes(2);
+    expect(testMocks.listAvailableGitHubOrganizations).toHaveBeenCalledTimes(1);
 
     await typeAndAddOrganization(wrapper, 'Hidden-Org');
 
@@ -847,6 +920,31 @@ describe('SettingsView', () => {
     expect(testMocks.successToast).toHaveBeenCalledWith(
       'GitHub organization added.',
     );
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
+      true,
+    );
+  });
+
+  it('recovers the GitHub authorization gate when organization discovery revokes OAuth', async () => {
+    testMocks.getGitHubConnectionStatus
+      .mockResolvedValueOnce(connectedGitHubStatus)
+      .mockResolvedValueOnce(revokedOrganizationDiscoveryGitHubStatus);
+    testMocks.listAvailableGitHubOrganizations.mockRejectedValueOnce(
+      new Error('GitHub OAuth authorization not found'),
+    );
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(testMocks.getGitHubConnectionStatus).toHaveBeenCalledTimes(2);
+    expect(testMocks.listAvailableGitHubOrganizations).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).toContain(
+      'Reconnect GitHub from your profile before adding workspace organizations.',
+    );
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
+      false,
+    );
+    expect(wrapper.text()).not.toContain('Add organization');
   });
 
   it('keeps the selected organization when add fails', async () => {
@@ -964,7 +1062,7 @@ describe('SettingsView', () => {
     expect(testMocks.listWorkspaceGitHubOrganizations).toHaveBeenCalledTimes(2);
   });
 
-  it('shows a disconnected GitHub recovery checklist after add failure', async () => {
+  it('shows OAuth authorization recovery after add failure', async () => {
     testMocks.addWorkspaceGitHubOrganization.mockRejectedValueOnce(
       createRecoveryError(
         'Connect GitHub before adding an allowed organization',
@@ -978,21 +1076,16 @@ describe('SettingsView', () => {
     await flushPromises();
     await addOrganization(wrapper);
 
-    expect(wrapper.text()).toContain('GitHub App access');
+    expect(wrapper.text()).toContain('GitHub organization access');
     expect(
       wrapper
-        .get('[data-testid="settings-github-recovery-step-reconnect"]')
+        .get('[data-testid="settings-github-recovery-step-authorize"]')
         .text(),
-    ).toContain('Connect GitHub before retrying this organization');
+    ).toContain('Authorize your GitHub account');
     expect(wrapper.text()).not.toContain('Not connected');
     expect(
       wrapper
-        .get('[data-testid="settings-github-recovery-link-install"]')
-        .attributes('href'),
-    ).toBe('https://github.com/apps/gitiempo/installations/new');
-    expect(
-      wrapper
-        .get('[data-testid="settings-github-recovery-link-reconnect"]')
+        .get('[data-testid="settings-github-recovery-link-authorize"]')
         .attributes('href'),
     ).toBe('https://user.example.test/profile');
   });
@@ -1011,30 +1104,30 @@ describe('SettingsView', () => {
 
     expect(
       wrapper
-        .get('[data-testid="settings-github-recovery-step-install"]')
+        .get('[data-testid="settings-github-recovery-step-permission"]')
         .text(),
-    ).toContain('Choose the organization, install GiTiempo');
+    ).toContain('grant organization permission');
     expect(
       wrapper
         .get('[data-testid="settings-github-recovery-step-approve"]')
         .text(),
-    ).toContain('Open organization settings, approve pending access');
-    expect(wrapper.text()).not.toContain('Needs install');
+    ).toContain('Approve organization OAuth access');
+    expect(wrapper.text()).not.toContain('Needs authorization');
     expect(wrapper.text()).not.toContain('Needs review');
     expect(
       wrapper
         .get('[data-testid="settings-github-recovery-link-approve"]')
         .attributes('href'),
     ).toBe(
-      'https://github.com/organizations/My-test-org-for-clock/settings/installations',
+      'https://github.com/organizations/My-test-org-for-clock/settings/oauth_application_policy',
     );
   });
 
-  it('shows a blocked GitHub App recovery checklist with retry', async () => {
+  it('shows a blocked GitHub OAuth policy recovery checklist with retry', async () => {
     testMocks.addWorkspaceGitHubOrganization.mockRejectedValueOnce(
       createRecoveryError(
-        'GitHub organization blocks this GitHub App',
-        createRecoveryPayload('workspace_github_organization_app_access_blocked'),
+        'GitHub organization blocks OAuth access',
+        createRecoveryPayload('workspace_github_organization_oauth_access_blocked'),
       ),
     );
 
@@ -1044,19 +1137,19 @@ describe('SettingsView', () => {
 
     expect(
       wrapper
-        .get('[data-testid="settings-github-recovery-step-install"]')
+        .get('[data-testid="settings-github-recovery-step-authorize"]')
         .text(),
-    ).toContain('GiTiempo is already installed for this organization');
+    ).toContain('GitHub identity is authorized');
     expect(
       wrapper
         .get('[data-testid="settings-github-recovery-step-approve"]')
         .text(),
-    ).toContain('unblock or approve the installed GiTiempo app');
+    ).toContain('Approve organization OAuth access');
     expect(
       wrapper
-        .get('[data-testid="settings-github-recovery-step-reconnect"]')
+        .get('[data-testid="settings-github-recovery-step-permission"]')
         .text(),
-    ).toContain('Reconnect after GitHub-side approval');
+    ).toContain('grant organization permission');
     expect(wrapper.text()).not.toContain('Installed');
     expect(wrapper.text()).not.toContain('Blocked');
     expect(wrapper.text()).not.toContain('Reconnect needed');
@@ -1077,9 +1170,9 @@ describe('SettingsView', () => {
 
     expect(
       wrapper
-        .get('[data-testid="settings-github-recovery-step-install"]')
+        .get('[data-testid="settings-github-recovery-step-authorize"]')
         .text(),
-    ).toContain('Open the GitHub App installation request page');
+    ).toContain('GitHub identity is authorized');
     expect(
       wrapper.get('[data-testid="settings-github-recovery-step-retry"]').text(),
     ).toContain('retry the same organization login');
@@ -1090,8 +1183,8 @@ describe('SettingsView', () => {
   it('retries the same organization and returns to the saved-row state after recovery succeeds', async () => {
     testMocks.addWorkspaceGitHubOrganization.mockRejectedValueOnce(
       createRecoveryError(
-        'GitHub organization blocks this GitHub App',
-        createRecoveryPayload('workspace_github_organization_app_access_blocked'),
+        'GitHub organization blocks OAuth access',
+        createRecoveryPayload('workspace_github_organization_oauth_access_blocked'),
       ),
     );
     testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({
@@ -1122,7 +1215,7 @@ describe('SettingsView', () => {
         organizationLogin: 'My-test-org-for-clock',
       },
     );
-    expect(wrapper.text()).not.toContain('GitHub App access');
+    expect(wrapper.text()).not.toContain('GitHub organization access');
     expect(wrapper.text()).toContain('My-test-org-for-clock');
     expect(testMocks.successToast).toHaveBeenCalledWith(
       'GitHub organization added.',
@@ -1133,17 +1226,17 @@ describe('SettingsView', () => {
     testMocks.addWorkspaceGitHubOrganization
       .mockRejectedValueOnce(
         createRecoveryError(
-          'GitHub organization blocks this GitHub App',
+          'GitHub organization blocks OAuth access',
           createRecoveryPayload(
-            'workspace_github_organization_app_access_blocked',
+            'workspace_github_organization_oauth_access_blocked',
           ),
         ),
       )
       .mockRejectedValueOnce(
         createRecoveryError(
-          'GitHub organization blocks this GitHub App',
+          'GitHub organization blocks OAuth access',
           createRecoveryPayload(
-            'workspace_github_organization_app_access_blocked',
+            'workspace_github_organization_oauth_access_blocked',
           ),
         ),
       );
@@ -1164,12 +1257,12 @@ describe('SettingsView', () => {
         organizationLogin: 'My-test-org-for-clock',
       },
     );
-    expect(wrapper.text()).toContain('GitHub App access');
+    expect(wrapper.text()).toContain('GitHub organization access');
     expect(
       wrapper
         .get('[data-testid="settings-github-recovery-step-approve"]')
         .text(),
-    ).toContain('unblock or approve the installed GiTiempo app');
+    ).toContain('Approve organization OAuth access');
     expect(wrapper.text()).not.toContain('Blocked');
   });
 

@@ -9,6 +9,13 @@ import { ConfigService } from '@nestjs/config';
 import jwt from 'jsonwebtoken';
 import type { Env } from '../../config/env.validation';
 import { AuthService, type TokenPair } from './auth.service';
+import { GithubAccountService } from '../../github/services/github-account.service';
+import {
+  GithubAccountOauthClientService,
+  type GithubAccountTokenSet,
+} from '../../github/services/github-account-oauth-client.service';
+import { GithubEncryptionService } from '../../github/services/github-encryption.service';
+import type { GithubUserProfile } from '../../github/services/github-oauth-client.service';
 
 export type GithubLoginApp = 'user' | 'admin' | 'extension';
 
@@ -72,7 +79,7 @@ const HANDOFF_TTL_MS = 60_000;
  * tells a client which of them applied.
  */
 type HandoffClaim =
-  | { memberId: string }
+  | { memberId: string; staged: string; generation: number; startedAt: Date }
   | { reason: 'unknown' | 'expired' | 'verifier' };
 
 interface VerifiedGithubEmails {
@@ -87,6 +94,7 @@ function isChallenge(value: string | undefined): value is string {
 
 interface GithubStateClaims {
   purpose: 'gh-login-state';
+  startedAt: number;
   app: GithubLoginApp;
   nonceHash: string;
   /**
@@ -109,34 +117,36 @@ interface GithubEmailEntry {
   verified?: boolean;
 }
 
-/**
- * Backend "Sign in with GitHub": a login-scoped GitHub OAuth flow that uses a
- * dedicated identity-only OAuth App (`GITHUB_SIGNIN_CLIENT_ID`/`_SECRET`),
- * separate from the GitHub App integration — it never touches `GITHUB_APP_*` or
- * `github_connections`. The `state` is a JWT signed with `JWT_ACCESS_SECRET`
- * that omits the issuer/audience the access-token verifier requires and carries
- * a distinct `purpose`, so it can never pass as a session token; the handoff is
- * an opaque single-use code whose email is held server-side, never in the URL.
- * Only a primary + verified GitHub email is accepted, and the session is minted
- * for an already-existing member (no provisioning).
- */
+/** OAuth sign-in stages an encrypted grant until the initiator redeems the
+ * single-use handoff. Identity ownership, OAuth credentials and the application
+ * refresh session commit together; personal App credentials remain separate. */
 @Injectable()
 export class AuthGithubService {
   private readonly logger = new Logger(AuthGithubService.name);
 
-  // Opaque handoff codes: the verified email is held here, keyed by an
+  // Opaque handoff codes: the encrypted staged authorization is keyed by an
   // unguessable random code, so it never travels in the redirect URL (where it
   // could leak via history, proxy logs, or telemetry — RFC 9700 §§4.2-4.3).
   // Codes are single-use and short-lived. In-memory is sufficient for a single
   // API instance; a shared store would be needed once the API is scaled out.
   private readonly pendingHandoffs = new Map<
     string,
-    { memberId: string; expiresAt: number; challenge?: string }
+    {
+      memberId: string;
+      expiresAt: number;
+      challenge?: string;
+      staged: string;
+      generation: number;
+      startedAt: Date;
+    }
   >();
 
   constructor(
     private readonly config: ConfigService<Env, true>,
     private readonly auth: AuthService,
+    private readonly accounts: GithubAccountService,
+    private readonly oauthClient: GithubAccountOauthClientService,
+    private readonly encryption: GithubEncryptionService,
   ) {}
 
   /**
@@ -185,8 +195,7 @@ export class AuthGithubService {
     );
     url.searchParams.set('redirect_uri', this.callbackUrl());
     url.searchParams.set('state', state);
-    // Identity-only: read the user's email so an existing member can be matched.
-    url.searchParams.set('scope', 'user:email');
+    url.searchParams.set('scope', 'user:email read:org read:project');
     return { url: url.toString(), stateNonce };
   }
 
@@ -248,35 +257,56 @@ export class AuthGithubService {
     }
 
     try {
-      const accessToken = await this.exchangeCode(input.code);
-      const { emails, primaryEmail } =
-        await this.fetchVerifiedEmails(accessToken);
-      if (emails.length === 0) {
-        return this.appRedirect(app, '/login', { githubError: 'email' });
+      const tokens = await this.oauthClient.exchangeCode(input.code);
+      const profile = await this.oauthClient.getCurrentUser(tokens.accessToken);
+      const linked = await this.accounts.findByGithubId(profile.githubUserId);
+      let memberId: string | null;
+      if (linked) {
+        memberId = linked.userId;
+        await this.auth.assertActiveMember(memberId);
+      } else {
+        const { emails, primaryEmail } = await this.fetchVerifiedEmails(
+          tokens.accessToken,
+        );
+        if (emails.length === 0) {
+          return this.appRedirect(app, '/login', { githubError: 'email' });
+        }
+        const memberIds =
+          await this.auth.resolveActiveMemberIdsByEmails(emails);
+        if (memberIds.length === 0) {
+          return this.appRedirect(app, '/login', { githubError: 'nomember' });
+        }
+        memberId =
+          memberIds.length === 1
+            ? memberIds[0]!
+            : await this.resolvePreferredMemberId(memberIds, primaryEmail);
+        if (!memberId) {
+          return this.appRedirect(app, '/login', { githubError: 'ambiguous' });
+        }
       }
-
-      const memberIds = await this.auth.resolveActiveMemberIdsByEmails(emails);
-      if (memberIds.length === 0) {
-        this.logger.warn({
-          event: 'auth.github_login.no_member',
-          verifiedEmailCount: emails.length,
+      const existing = await this.accounts.findByUserId(memberId);
+      if (existing && existing.githubUserId !== profile.githubUserId) {
+        return this.appRedirect(app, '/login', {
+          githubError: 'github_identity_mismatch',
         });
-        return this.appRedirect(app, '/login', { githubError: 'nomember' });
       }
-
-      const memberId =
-        memberIds.length === 1
-          ? memberIds[0]
-          : await this.resolvePreferredMemberId(memberIds, primaryEmail);
-      if (!memberId) {
-        this.logger.warn({
-          event: 'auth.github_login.ambiguous',
-          matchedMemberCount: memberIds.length,
-        });
-        return this.appRedirect(app, '/login', { githubError: 'ambiguous' });
-      }
-
-      const handoff = this.createHandoff(memberId, claims.challenge);
+      const startedAt = new Date(claims.startedAt);
+      const version = await this.accounts.getVersion(memberId);
+      await this.accounts.assertLoginCurrent(
+        memberId,
+        startedAt,
+        version.generation,
+      );
+      const staged = this.encryption.encrypt(
+        JSON.stringify({ profile, tokens }),
+      );
+      const handoff = this.createHandoff(
+        memberId,
+        staged,
+        version.generation,
+        startedAt,
+        claims.challenge,
+      );
       // Round-trip the protected-route redirect (signed into the state at /start)
       // to the SPA callback so it can return the user where they were headed; the
       // SPA re-validates it before navigating (email/Google `?redirect=` parity).
@@ -286,7 +316,7 @@ export class AuthGithubService {
     } catch (error) {
       this.logger.warn({
         event: 'auth.github_login.callback_failed',
-        reason: error instanceof Error ? error.message : String(error),
+        reason: error instanceof Error ? error.name : 'unknown',
       });
       return this.appRedirect(app, '/login', { githubError: 'failed' });
     }
@@ -305,42 +335,28 @@ export class AuthGithubService {
       });
       throw new UnauthorizedException('Unauthorized');
     }
-    return this.auth.createSessionForMember(claim.memberId);
+    const staged = JSON.parse(this.encryption.decrypt(claim.staged)) as {
+      profile: GithubUserProfile;
+      tokens: GithubAccountTokenSet;
+    };
+    // Date values serialize as strings in the encrypted staged envelope.
+    if (staged.tokens.tokenExpiresAt)
+      staged.tokens.tokenExpiresAt = new Date(staged.tokens.tokenExpiresAt);
+    if (staged.tokens.refreshTokenExpiresAt)
+      staged.tokens.refreshTokenExpiresAt = new Date(
+        staged.tokens.refreshTokenExpiresAt,
+      );
+    return this.accounts.saveOAuthAndRun(
+      claim.memberId,
+      staged.profile,
+      staged.tokens,
+      claim.generation,
+      claim.startedAt,
+      (tx) => this.auth.createSessionForMember(claim.memberId, tx),
+    );
   }
 
   // --- OAuth mechanics -------------------------------------------------------
-
-  private async exchangeCode(code: string): Promise<string> {
-    const response = await fetch(
-      'https://github.com/login/oauth/access_token',
-      {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          client_id: this.requireConfig('GITHUB_SIGNIN_CLIENT_ID'),
-          client_secret: this.requireConfig('GITHUB_SIGNIN_CLIENT_SECRET'),
-          code,
-          redirect_uri: this.callbackUrl(),
-        }),
-      },
-    );
-    const body = (await response.json()) as {
-      access_token?: string;
-      error?: string;
-    };
-    if (!response.ok || body.error || !body.access_token) {
-      this.logger.warn({
-        event: 'auth.github_login.token_failed',
-        status: response.status,
-        error: body.error,
-      });
-      throw new ServiceUnavailableException('GitHub OAuth request failed');
-    }
-    return body.access_token;
-  }
 
   private async resolvePreferredMemberId(
     matchedMemberIds: string[],
@@ -403,6 +419,7 @@ export class AuthGithubService {
   ): string {
     const claims: GithubStateClaims = {
       purpose: 'gh-login-state',
+      startedAt: Date.now(),
       app,
       nonceHash,
     };
@@ -438,7 +455,10 @@ export class AuthGithubService {
     const decoded = jwt.verify(token, this.secret()) as GithubStateClaims;
     if (
       decoded.purpose !== 'gh-login-state' ||
-      typeof decoded.nonceHash !== 'string'
+      typeof decoded.nonceHash !== 'string' ||
+      !Number.isSafeInteger(decoded.startedAt) ||
+      decoded.startedAt > Date.now() ||
+      !GITHUB_LOGIN_APPS.includes(decoded.app)
     ) {
       throw new UnauthorizedException('invalid_state');
     }
@@ -498,23 +518,38 @@ export class AuthGithubService {
   }
 
   /**
-   * Issues an opaque single-use handoff code and stores the email against it.
+   * Issues an opaque single-use handoff code for the encrypted authorization.
    * The code carries no payload, so decoding it (from the URL, history, or
-   * logs) reveals nothing — the email lives only server-side.
+   * logs) reveals nothing — staged credentials stay server-side.
    */
-  private createHandoff(memberId: string, challenge?: string): string {
+  private createHandoff(
+    memberId: string,
+    staged: string,
+    generation: number,
+    startedAt: Date,
+    challenge?: string,
+  ): string {
+    this.purgeExpiredHandoffs();
     const code = randomBytes(32).toString('hex');
     this.pendingHandoffs.set(code, {
       memberId,
+      staged,
+      generation,
+      startedAt,
       expiresAt: Date.now() + HANDOFF_TTL_MS,
       ...(challenge ? { challenge } : {}),
     });
+    const expiry = setTimeout(
+      () => this.pendingHandoffs.delete(code),
+      HANDOFF_TTL_MS,
+    );
+    expiry.unref();
     return code;
   }
 
   /**
-   * Consumes a handoff code, returning its email once, or null when the code is
-   * unknown or expired. Deleting on read makes it single-use, so a replayed
+   * Consumes a handoff code, returning its staged authorization once when valid.
+   * Deleting on read makes it single-use, so a replayed
    * callback URL cannot mint a second session.
    */
   private claimHandoff(code: string, verifier?: string): HandoffClaim {
@@ -531,7 +566,12 @@ export class AuthGithubService {
     if (entry.challenge && !this.verifierMatches(verifier, entry.challenge)) {
       return { reason: 'verifier' };
     }
-    return { memberId: entry.memberId };
+    return {
+      memberId: entry.memberId,
+      staged: entry.staged,
+      generation: entry.generation,
+      startedAt: entry.startedAt,
+    };
   }
 
   /**

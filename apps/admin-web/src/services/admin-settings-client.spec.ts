@@ -37,6 +37,15 @@ const githubConnectionStatusResponse = {
     login: 'octocat',
     updatedAt: '2026-05-01T10:00:00.000Z',
   },
+  capabilities: {
+    organizationDiscovery: 'ready',
+    personalData: 'ready',
+  },
+  disconnect: 'allowed',
+  oauth: {
+    missingScopes: [],
+    status: 'authorized',
+  },
   status: 'connected',
 } as const;
 
@@ -289,6 +298,17 @@ describe('createAdminSettingsClient', () => {
         body: JSON.stringify({ state: 'a'.repeat(32), installationId: '123456' }),
         method: 'POST',
       }),
+    );
+  });
+
+  it('rechecks a saved GitHub App installation', async () => {
+    fetchFn.mockResolvedValue(jsonResponse(workspaceGitHubInstallation));
+
+    await client.reverifyWorkspaceGitHubInstallation('association-1');
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/workspace/github/installations/association-1/reverify',
+      expect.objectContaining({ method: 'POST' }),
     );
   });
 

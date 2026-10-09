@@ -229,7 +229,7 @@ describe('Time entries (e2e)', () => {
     const disconnected = await request(app.getHttpServer())
       .delete('/github/connection')
       .set('Authorization', bearer(memberToken));
-    expect(disconnected.status).toBe(204);
+    expect(disconnected.status).toBe(200);
     const denied = await request(app.getHttpServer())
       .post('/time-entries/timer/start')
       .set('Authorization', bearer(memberToken))
@@ -253,9 +253,8 @@ describe('Time entries (e2e)', () => {
       .select()
       .from(githubConnections)
       .where(eq(githubConnections.userId, memberUserId));
-    expect(connection.connected).toBe(false);
-    expect(connection.accessTokenEncrypted).toBeNull();
-    expect(connection.refreshTokenEncrypted).toBeNull();
+    expect(connection).toBeUndefined();
+    expect(disconnected.body.disconnected).toBe(true);
     expect(
       await db
         .select({ id: taskExternalRefs.id })
@@ -313,7 +312,7 @@ describe('Time entries (e2e)', () => {
       const disconnected = await request(app.getHttpServer())
         .delete('/github/connection')
         .set('Authorization', bearer(memberToken));
-      expect(disconnected.status).toBe(204);
+      expect(disconnected.status).toBe(200);
       await db
         .delete(projectAssignments)
         .where(

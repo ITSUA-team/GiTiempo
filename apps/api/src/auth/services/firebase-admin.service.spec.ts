@@ -1,15 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { UnauthorizedException } from '@nestjs/common';
+import {
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation';
 
 const verifyIdToken = vi.fn();
+const getUser = vi.fn();
 const getUserByEmail = vi.fn();
 const createUser = vi.fn();
 const deleteUser = vi.fn();
 const generatePasswordResetLink = vi.fn();
 const getAuth = vi.fn(() => ({
   verifyIdToken,
+  getUser,
   getUserByEmail,
   createUser,
   deleteUser,
@@ -43,7 +48,99 @@ function makeConfig(values: Partial<Env>) {
 describe('RealFirebaseAdminService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getUser.mockReset();
     getApps.mockReturnValue([]);
+  });
+
+  it.each([
+    {
+      providerId: 'password',
+      uid: 'member@example.test',
+      email: 'member@example.test',
+    },
+    {
+      providerId: 'google.com',
+      uid: 'google-provider-123',
+      email: 'member@example.test',
+    },
+  ])(
+    'checks an enabled same-UID alternative provider $providerId authoritatively',
+    async (provider) => {
+      getUser.mockResolvedValue({
+        uid: 'member',
+        disabled: false,
+        providerData: [provider],
+      });
+      const service = new RealFirebaseAdminService(
+        makeConfig({
+          FIREBASE_PROJECT_ID: 'p',
+          FIREBASE_CLIENT_EMAIL: 'x@y.z',
+          FIREBASE_PRIVATE_KEY: 'KEY',
+        }),
+      );
+      await expect(service.hasUsableAlternativeLogin('member')).resolves.toBe(
+        true,
+      );
+      expect(getUser).toHaveBeenCalledWith('member');
+    },
+  );
+
+  it.each([
+    {
+      uid: 'member',
+      disabled: true,
+      providerData: [{ providerId: 'password', email: 'member@example.test' }],
+    },
+    {
+      uid: 'different-user',
+      disabled: false,
+      providerData: [{ providerId: 'password', email: 'member@example.test' }],
+    },
+    {
+      uid: 'member',
+      disabled: false,
+      providerData: [{ providerId: 'github.com', uid: '123' }],
+    },
+    { uid: 'member', disabled: false, providerData: [] },
+    {
+      uid: 'member',
+      disabled: false,
+      providerData: [{ providerId: 'password' }],
+    },
+    {
+      uid: 'member',
+      disabled: false,
+      providerData: [{ providerId: 'google.com', uid: '' }],
+    },
+  ])(
+    'rejects disabled, foreign or unusable alternative-provider records %#',
+    async (record) => {
+      getUser.mockResolvedValue(record);
+      const service = new RealFirebaseAdminService(
+        makeConfig({
+          FIREBASE_PROJECT_ID: 'p',
+          FIREBASE_CLIENT_EMAIL: 'x@y.z',
+          FIREBASE_PRIVATE_KEY: 'KEY',
+        }),
+      );
+      await expect(service.hasUsableAlternativeLogin('member')).resolves.toBe(
+        false,
+      );
+    },
+  );
+
+  it('fails closed when authoritative alternative-provider lookup fails', async () => {
+    getUser.mockRejectedValue(new Error('provider unavailable'));
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+    await expect(service.hasUsableAlternativeLogin('member')).rejects.toThrow(
+      ServiceUnavailableException,
+    );
   });
 
   it('verifies a token with checkRevoked=true and returns the narrowed shape', async () => {

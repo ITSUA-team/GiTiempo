@@ -16,6 +16,7 @@ import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import { GithubApiClientService } from '../src/github/services/github-api-client.service';
+import { GithubAccountService } from '../src/github/services/github-account.service';
 import { GithubConnectionsService } from '../src/github/services/github-connections.service';
 import {
   workspaceGitHubOrganizations,
@@ -91,6 +92,21 @@ describe('Workspace settings (e2e)', () => {
       defaultHourlyRate: 100,
       timeZone: 'UTC',
     });
+    const accountService = app.get(GithubAccountService);
+    const version = await accountService.getVersion(adminUserId);
+    await accountService.saveOAuth(
+      adminUserId,
+      { githubUserId: '123', login: 'octocat', avatarUrl: null },
+      {
+        accessToken: 'oauth_org_access',
+        refreshToken: null,
+        tokenExpiresAt: null,
+        refreshTokenExpiresAt: null,
+        scopes: ['user:email', 'read:org', 'read:project'],
+      },
+      version.generation,
+      new Date(),
+    );
     await githubConnections.upsertConnected(
       adminUserId,
       {
@@ -104,6 +120,7 @@ describe('Workspace settings (e2e)', () => {
         tokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
         refreshTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
+      { generation: version.generation, startedAt: new Date() },
     );
 
     const tokens = await login(
@@ -211,7 +228,7 @@ describe('Workspace settings (e2e)', () => {
       expect(res.body.workspaceId).toBe(workspaceId);
       expect(typeof res.body.id).toBe('string');
       expect(githubApiClient.listOwners).toHaveBeenCalledWith(
-        'ghu_access_token',
+        'oauth_org_access',
         {
           login: 'octocat',
           avatarUrl: null,

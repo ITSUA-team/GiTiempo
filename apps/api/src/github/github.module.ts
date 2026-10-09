@@ -6,6 +6,8 @@ import { GithubConnectionsService } from './services/github-connections.service'
 import { GithubEncryptionService } from './services/github-encryption.service';
 import { GithubOauthClientService } from './services/github-oauth-client.service';
 import { GithubOauthStateService } from './services/github-oauth-state.service';
+import { GithubAccountOauthClientService } from './services/github-account-oauth-client.service';
+import { GithubAccountService } from './services/github-account.service';
 import { GithubService } from './services/github.service';
 import { WorkspaceGitHubOrganizationsService } from './services/workspace-github-organizations.service';
 import { GithubInstallationTokenProviderService } from './services/github-installation-token-provider.service';
@@ -19,6 +21,8 @@ import { GithubInstallationsService } from './services/github-installations.serv
     GithubEncryptionService,
     GithubOauthClientService,
     GithubOauthStateService,
+    GithubAccountOauthClientService,
+    GithubAccountService,
     GithubService,
     WorkspaceGitHubOrganizationsService,
     GithubInstallationTokenProviderService,
@@ -26,6 +30,9 @@ import { GithubInstallationsService } from './services/github-installations.serv
   ],
   exports: [
     GithubConnectionsService,
+    GithubAccountService,
+    GithubAccountOauthClientService,
+    GithubEncryptionService,
     GithubService,
     WorkspaceGitHubOrganizationsService,
     GithubInstallationsService,

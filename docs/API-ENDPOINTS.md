@@ -48,12 +48,22 @@ Expected frontend-visible registration error codes: `duplicate_email`, `weak_pas
 
 ## 3. GitHub Connection
 
-| Method | Path                 | Auth | Role | Description                                                                                                                                                                                             |
-| ------ | -------------------- | ---- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/github/connection` | JWT  | Any  | Get current GitHub connection status. When connected, the public account payload includes `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt`.                                     |
-| GET    | `/github/auth-url`   | JWT  | Any  | Get GitHub OAuth authorization URL (includes an opaque state id backed by server-side state and PKCE)                                                                                                    |
-| GET    | `/github/callback`   | None | —    | GitHub OAuth callback (browser redirect from GitHub). Validates the opaque server-side state id, consumes it once, exchanges `code` with PKCE, stores GitHubConnection, and redirects user to `USER_SPA_URL/profile`. Success redirects append `?github=connected`. Failure redirects append `?github=error&code=<safe-error-code>` where the safe error code is backend-controlled (`invalid_state`, `github_exchange_failed`, `github_config`, etc.). The SPA surfaces redirect outcomes with toast notifications only. |
-| DELETE | `/github/connection` | JWT  | Any  | Disconnect GitHub account                                                                                                                                                                               |
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| GET | `/auth/github/start` | None | Start user/admin/extension OAuth sign-in; request `user:email read:org read:project`. |
+| GET | `/auth/github/callback` | Browser binding | Dispatch signed sign-in state or opaque `account_link.*` state without fallback. |
+| POST | `/auth/github/session` | Single-use handoff | Commit the identity/OAuth grant and issue the unchanged token pair after initiator proof. |
+| GET | `/github/connection` | JWT | Identity metadata, OAuth status/scopes, separate capabilities and server-derived disconnect eligibility. |
+| GET | `/github/account/auth-url` | JWT | Start OAuth account linking with PKCE, user/session binding and generation; fixed Profile return. |
+| GET | `/github/auth-url` | JWT | Authorize personal GitHub App data access for the already linked GitHub identity. |
+| GET | `/github/callback` | Opaque App state | Complete personal App authorization; reject a different GitHub ID. |
+| DELETE | `/github/connection` | JWT | Full personal unlink; HTTP 200 with `{disconnected:true,providerRevocation:"confirmed"|"unconfirmed"|"not_required"}`. |
+
+`GET /github/connection` keeps `status: connected | disconnected` and safe `account` metadata. `oauth.status` is `not_authorized | authorized | reauthorization_required`; `missingScopes` contains known requested scopes only. `capabilities.organizationDiscovery` and `capabilities.personalData` independently report `ready | authorization_required | permission_required`. `disconnect` is `allowed | alternative_signin_required | verification_unavailable`. Workspace installations use their existing workspace endpoints.
+
+Account-link clients include credentials on the auth-URL request: the API sets an encrypted, HttpOnly, SameSite=Lax session-binding cookie scoped to `/auth/github` for ten minutes. The callback validates the initiating session and active membership; logout invalidates pending authorization generations. Sign-in keeps browser nonce and extension challenge/verifier behavior, configured destinations, existing member resolution and no provisioning. Linked immutable ID resolves first; verified-email resolution applies only to unlinked IDs.
+
+The Profile callback uses `github=connected` or `github=error&code=<safe-code>`. Ownership conflict and identity mismatch do not expose another person's details. Disconnect checks an enabled Firebase account with supported password or Google sign-in on the server, including a fresh check on DELETE. Failure to verify prevents mutation. Successful unlink preserves current GiTiempo sessions, workspace/history data and installations. `unconfirmed` warns that local unlink succeeded but provider revocation could not be confirmed.
 
 ---
 
@@ -61,14 +71,14 @@ Expected frontend-visible registration error codes: `duplicate_email`, `weak_pas
 
 | Method | Path                                                         | Auth | Role | Description                               |
 | ------ | ------------------------------------------------------------ | ---- | ---- | ----------------------------------------- |
-| GET    | `/github/organizations`                                      | JWT  | Any  | List current user's connected GitHub organizations for admin workspace allow-list setup; this is not filtered by the workspace allow-list |
+| GET    | `/github/organizations`                                      | JWT  | Any  | List current user's OAuth-visible active GitHub organizations before App installation for admin workspace allow-list setup; this is not filtered by the workspace allow-list |
 | GET    | `/github/owners?type=all\|personal\|organization`           | JWT  | Any  | List GitHub owners available for browsing; organization owners are filtered by the workspace allow-list |
 | GET    | `/github/projects?ownerType=personal\|organization&owner=<login>` | JWT  | Any  | List GitHub Projects (V2) for an owner scope |
 | GET    | `/github/repos?ownerType=personal\|organization&owner=<login>` | JWT  | Any  | List repositories for an owner scope      |
 | GET    | `/github/projects/:projectId/issues`                         | JWT  | Any  | List issues in a GitHub Project           |
 | GET    | `/github/repos/:owner/:repo/issues`                          | JWT  | Any  | List issues in a GitHub repository        |
 
-**Prerequisite:** User must have a connected GitHub account.
+**Prerequisites:** Organization setup uses OAuth `read:org`; private owners/repositories/issues/Projects browsing and imports use the retained personal GitHub App grant. No token-family fallback is permitted. Installation-backed timer verification uses workspace installation tokens independently.
 
 ---
 

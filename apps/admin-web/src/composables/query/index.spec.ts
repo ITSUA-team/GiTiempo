@@ -17,6 +17,15 @@ describe('admin-web query composables', () => {
   it('loads GitHub connection status with the scoped settings key', async () => {
     const client = {
       getGitHubConnectionStatus: vi.fn().mockResolvedValue({
+        capabilities: {
+          organizationDiscovery: 'ready',
+          personalData: 'ready',
+        },
+        disconnect: 'allowed',
+        oauth: {
+          missingScopes: [],
+          status: 'authorized',
+        },
         status: 'connected',
         account: {
           githubUserId: 'github-user-1',
@@ -59,6 +68,15 @@ describe('admin-web query composables', () => {
     expect(
       queryClient.getQueryData(adminSettingsKeys.githubConnection(scope)),
     ).toEqual({
+      capabilities: {
+        organizationDiscovery: 'ready',
+        personalData: 'ready',
+      },
+      disconnect: 'allowed',
+      oauth: {
+        missingScopes: [],
+        status: 'authorized',
+      },
       status: 'connected',
       account: {
         githubUserId: 'github-user-1',

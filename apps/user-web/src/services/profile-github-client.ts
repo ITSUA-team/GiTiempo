@@ -1,8 +1,10 @@
 import {
   githubAuthUrlResponseSchema,
   githubConnectionStatusResponseSchema,
+  githubDisconnectResponseSchema,
   type GitHubAuthUrlResponse,
   type GitHubConnectionStatusResponse,
+  type GitHubDisconnectResponse,
 } from "@gitiempo/shared";
 import type { AuthenticatedApiClient } from "@gitiempo/web-shared/http";
 
@@ -11,7 +13,8 @@ interface ProfileGitHubClientOptions {
 }
 
 export interface ProfileGitHubClient {
-  disconnect(): Promise<void>;
+  disconnect(): Promise<GitHubDisconnectResponse>;
+  getAccountAuthUrl(): Promise<GitHubAuthUrlResponse>;
   getAuthUrl(): Promise<GitHubAuthUrlResponse>;
   getConnectionStatus(): Promise<GitHubConnectionStatusResponse>;
 }
@@ -20,10 +23,18 @@ export function createProfileGitHubClient({
   apiClient,
 }: ProfileGitHubClientOptions): ProfileGitHubClient {
   return {
-    async disconnect() {
-      await apiClient.requestNoContent({
+    disconnect() {
+      return apiClient.requestJson({
         method: "DELETE",
         path: "/github/connection",
+        responseSchema: githubDisconnectResponseSchema,
+      });
+    },
+    getAccountAuthUrl() {
+      return apiClient.requestJson({
+        credentials: "include",
+        path: "/github/account/auth-url",
+        responseSchema: githubAuthUrlResponseSchema,
       });
     },
     getAuthUrl() {

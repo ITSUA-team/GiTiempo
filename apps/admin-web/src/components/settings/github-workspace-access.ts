@@ -24,7 +24,7 @@ export type GitHubWorkspaceAccessStepAction =
 export interface GitHubWorkspaceAccessStep {
   action: GitHubWorkspaceAccessStepAction | null;
   description: string;
-  id: 'approve' | 'install' | 'reconnect' | 'retry';
+  id: 'approve' | 'authorize' | 'permission' | 'retry';
   title: string;
 }
 
@@ -34,26 +34,14 @@ export interface GitHubWorkspaceAccessChecklist {
 }
 
 interface BuildGitHubWorkspaceAccessChecklistOptions {
-  githubAppInstallUrl?: string | null;
   recovery: WorkspaceGitHubOrganizationRecoveryPayload;
   userAppUrl?: string | null;
 }
 
-const defaultGitHubAppInstallUrl =
-  'https://github.com/apps/gitiempo/installations/new';
-
-function resolveGitHubAppInstallUrl(
-  githubAppInstallUrl: string | null | undefined,
-): string {
-  const configuredUrl = githubAppInstallUrl?.trim();
-
-  return configuredUrl || defaultGitHubAppInstallUrl;
-}
-
-function buildOrganizationInstallationsUrl(organizationLogin: string): string {
+function buildOrganizationOAuthPolicyUrl(organizationLogin: string): string {
   return `https://github.com/organizations/${encodeURIComponent(
     organizationLogin,
-  )}/settings/installations`;
+  )}/settings/oauth_application_policy`;
 }
 
 export function buildGitHubProfileHref(
@@ -94,79 +82,70 @@ function getStepPresentation(
   step: WorkspaceGitHubOrganizationRecoveryStep,
 ): Omit<GitHubWorkspaceAccessStep, 'action' | 'id'> {
   switch (step.id) {
-    case 'install':
+    case 'authorize':
       switch (step.status) {
         case 'action_required':
           return {
             description:
-              'Choose the organization, install GiTiempo, and select the required repositories.',
-            title: 'Install GitHub App for organization',
+              'Open your profile and authorize GitHub before adding this organization.',
+            title: 'Authorize your GitHub account',
           };
         case 'complete':
           return {
             description:
-              'GiTiempo is already installed for this organization. Continue to the organization access review step.',
-            title: 'Install GitHub App for organization',
+              'Your GitHub identity is authorized. Continue with any required organization permission review.',
+            title: 'Authorize your GitHub account',
           };
         default:
           return {
             description:
-              'Open the GitHub App installation request page if this organization still needs GiTiempo access.',
-            title: 'Install GitHub App for organization',
+              'Open your profile to refresh GitHub authorization before retrying.',
+            title: 'Authorize your GitHub account',
           };
       }
+    case 'permission':
+      return {
+        description:
+          'Reconnect GitHub from your profile and grant organization permission before retrying.',
+        title: 'Grant GitHub organization permission',
+      };
+    case 'reconnect':
+      return {
+        description:
+          'Open your profile and reconnect GitHub before retrying this organization.',
+        title: 'Reconnect GitHub',
+      };
+    case 'install':
+      return {
+        description:
+          'Install the GitHub App for this organization, then retry the workspace check.',
+        title: 'Install GitHub App',
+      };
     case 'approve':
       switch (step.status) {
         case 'action_required':
           return {
             description:
-              'Open organization settings, approve pending access, or finish the installation request.',
-            title: 'Approve or unblock organization access',
+              'Open the organization OAuth policy, then approve pending access.',
+            title: 'Approve organization OAuth access',
           };
         case 'blocked':
           return {
             description:
-              'Open organization settings and unblock or approve the installed GiTiempo app before retrying.',
-            title: 'Approve or unblock organization access',
+              'Open organization settings and approve or unblock OAuth access before retrying.',
+            title: 'Approve organization OAuth access',
           };
         case 'complete':
           return {
             description:
-              'Organization access is already approved. Continue to reconnect or retry inside GiTiempo.',
-            title: 'Approve or unblock organization access',
+              'Organization OAuth access is already approved. Retry inside GiTiempo.',
+            title: 'Approve organization OAuth access',
           };
         default:
           return {
             description:
-              'Open organization settings to review the current GiTiempo app access state.',
-            title: 'Approve or unblock organization access',
-          };
-      }
-    case 'reconnect':
-      switch (step.status) {
-        case 'action_required':
-          return {
-            description:
-              'Reconnect after GitHub-side approval so GiTiempo gets a fresh authorization.',
-            title: 'Reconnect your GitHub account',
-          };
-        case 'complete':
-          return {
-            description:
-              'Your GitHub account is already connected in GiTiempo. Retry after any GitHub-side changes finish.',
-            title: 'Reconnect your GitHub account',
-          };
-        case 'disconnected':
-          return {
-            description:
-              'Connect GitHub before retrying this organization in the workspace allow-list.',
-            title: 'Reconnect your GitHub account',
-          };
-        default:
-          return {
-            description:
-              'Use the existing profile connection flow to refresh GiTiempo GitHub authorization.',
-            title: 'Reconnect your GitHub account',
+              'Open organization settings to review the current OAuth application policy.',
+            title: 'Approve organization OAuth access',
           };
       }
     case 'retry':
@@ -194,14 +173,12 @@ function getStepPresentation(
 }
 
 export function buildGitHubWorkspaceAccessChecklist({
-  githubAppInstallUrl,
   recovery,
   userAppUrl,
 }: BuildGitHubWorkspaceAccessChecklistOptions): GitHubWorkspaceAccessChecklist {
   const organizationLogin = recovery.organizationLogin;
-  const installUrl = resolveGitHubAppInstallUrl(githubAppInstallUrl);
-  const organizationInstallationsUrl =
-    buildOrganizationInstallationsUrl(organizationLogin);
+  const organizationOAuthPolicyUrl =
+    buildOrganizationOAuthPolicyUrl(organizationLogin);
   const reconnectHref = buildGitHubProfileHref(userAppUrl);
 
   return {
@@ -222,15 +199,15 @@ export function buildGitHubWorkspaceAccessChecklist({
         };
       }
 
-      if (step.id === 'install') {
+      if (step.id === 'authorize' || step.id === 'permission') {
         const presentation = getStepPresentation(step);
 
         return {
           action: createLinkAction({
-            href: installUrl,
-            kindLabel: 'Open GitHub App install page',
-            label: 'Open install',
-            openInNewTab: true,
+            href: reconnectHref,
+            kindLabel: 'Open GitHub profile authorization',
+            label: 'Open profile',
+            openInNewTab: false,
             organizationLogin,
           }),
           description: presentation.description,
@@ -244,8 +221,8 @@ export function buildGitHubWorkspaceAccessChecklist({
 
         return {
           action: createLinkAction({
-            href: organizationInstallationsUrl,
-            kindLabel: 'Review GitHub App access',
+            href: organizationOAuthPolicyUrl,
+            kindLabel: 'Review GitHub organization OAuth access',
             label: 'Review GitHub',
             openInNewTab: true,
             organizationLogin,
@@ -256,20 +233,13 @@ export function buildGitHubWorkspaceAccessChecklist({
         };
       }
 
-      const presentation = getStepPresentation(step);
-
       return {
-        action: createLinkAction({
-          href: reconnectHref,
-          kindLabel: 'Reconnect GitHub account',
-          label: 'Reconnect',
-          openInNewTab: false,
-          organizationLogin,
-        }),
-        description: presentation.description,
-        id: step.id,
-        title: presentation.title,
+        action: null,
+        description: 'Retry the workspace allow-list check once GitHub access is ready.',
+        id: 'retry',
+        title: 'Retry workspace allow-list check',
       };
+
     }),
   };
 }

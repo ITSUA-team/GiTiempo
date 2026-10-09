@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GithubController } from './github.controller';
+import { ConfigService } from '@nestjs/config';
+import { GithubAccountService } from '../services/github-account.service';
+import { GithubEncryptionService } from '../services/github-encryption.service';
 import { GithubService } from '../services/github.service';
 
 describe('GithubController', () => {
@@ -18,6 +21,8 @@ describe('GithubController', () => {
     completeCallback: vi.fn(),
     disconnect: vi.fn(),
   };
+  const accounts = { createAuthorization: vi.fn() };
+  const encryption = { encrypt: vi.fn(() => 'encrypted-session') };
   const user = {
     sub: 'user-1',
     email: 'user@example.com',
@@ -30,7 +35,12 @@ describe('GithubController', () => {
     vi.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [GithubController],
-      providers: [{ provide: GithubService, useValue: githubService }],
+      providers: [
+        { provide: GithubService, useValue: githubService },
+        { provide: GithubAccountService, useValue: accounts },
+        { provide: GithubEncryptionService, useValue: encryption },
+        { provide: ConfigService, useValue: { get: () => 'test' } },
+      ],
     }).compile();
     controller = module.get(GithubController);
   });
@@ -49,6 +59,34 @@ describe('GithubController', () => {
 
     await expect(controller.authUrl(user)).resolves.toBe(response);
     expect(githubService.authUrl).toHaveBeenCalledWith(user);
+  });
+
+  it('binds OAuth linking to the encrypted authenticated session cookie', async () => {
+    accounts.createAuthorization.mockResolvedValue({
+      authorizationUrl: 'https://github.com/authorize',
+    });
+    const response = { cookie: vi.fn() };
+    await expect(
+      controller.accountAuthUrl(
+        user,
+        { headers: { authorization: 'Bearer session-token' } } as never,
+        response as never,
+      ),
+    ).resolves.toEqual({ authorizationUrl: 'https://github.com/authorize' });
+    expect(accounts.createAuthorization).toHaveBeenCalledWith(
+      user.sub,
+      'session-token',
+    );
+    expect(response.cookie).toHaveBeenCalledWith(
+      'github_account_session',
+      'encrypted-session',
+      expect.objectContaining({
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/auth/github',
+        maxAge: 600000,
+      }),
+    );
   });
 
   it('GET /github/owners delegates to service', async () => {
@@ -158,9 +196,15 @@ describe('GithubController', () => {
   });
 
   it('DELETE /github/connection delegates to service', async () => {
-    githubService.disconnect.mockResolvedValue(undefined);
+    githubService.disconnect.mockResolvedValue({
+      disconnected: true,
+      providerRevocation: 'unconfirmed',
+    });
 
-    await expect(controller.disconnect(user)).resolves.toBeUndefined();
+    await expect(controller.disconnect(user)).resolves.toEqual({
+      disconnected: true,
+      providerRevocation: 'unconfirmed',
+    });
     expect(githubService.disconnect).toHaveBeenCalledWith(user);
   });
 });

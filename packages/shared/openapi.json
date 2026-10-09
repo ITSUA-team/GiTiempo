@@ -489,7 +489,7 @@
             "name": "state",
             "required": false,
             "in": "query",
-            "description": "Signed state minted by `/auth/github/start`. Its `app` claim decides which client to return to.",
+            "description": "Signed sign-in state or opaque `account_link.*` state. Each namespace is verified independently without fallback.",
             "schema": {
               "type": "string"
             }
@@ -506,16 +506,16 @@
         ],
         "responses": {
           "302": {
-            "description": "Redirect back to whichever client the signed state names. Never returns a body, and never fails the request — an outcome the caller cannot observe is worse than an error it can.\n\n**Web targets** return to that app: on success to its `/auth/github/callback` SPA route with a single-use handoff `code`, otherwise to its `/login`.\n\n**The `extension` target** returns to the configured extension destination on every outcome, with the same `code` or indicator on that URL's own query. It has no route to load: the browser navigation is intercepted as soon as it matches, and an outcome sent to a web page would leave the extension's authorization window waiting forever.\n\nFailures carry `githubError` set to `denied`, `state`, `email`, or `failed`.",
+            "description": "Redirect the browser to the outcome destination for the verified flow. Never returns a body.\n\n**Web targets** return to that app: on success to its `/auth/github/callback` SPA route with a single-use handoff `code`, otherwise to its `/login`.\n\n**The `extension` target** returns to the configured extension destination on every outcome, with the same `code` or indicator on that URL's own query. It has no route to load: the browser navigation is intercepted as soon as it matches, and an outcome sent to a web page would leave the extension's authorization window waiting forever.\n\nSign-in failures carry a safe `githubError`, including denial, invalid state, email/member resolution, identity mismatch or provider failure.\n\n**Authenticated account linking** uses the separate opaque `account_link.*` namespace and returns only to user-web `/profile`, with `github=connected` or `github=error` and a safe `code`. It does not issue a sign-in handoff or switch the current GiTiempo account.",
             "headers": {
               "Location": {
-                "description": "Absolute URL to return the browser to: an app route for the web targets, the configured extension destination for `extension`.",
+                "description": "Absolute URL to return the browser to: an app route for sign-in, the configured extension destination for extension sign-in, or the fixed user Profile route for authenticated linking.",
                 "schema": {
                   "type": "string"
                 }
               },
               "Set-Cookie": {
-                "description": "Cleared `gh_oauth_state` cookie — the state binding is single-use. Web targets only; the `extension` target was never given one.",
+                "description": "Cleared flow-specific binding cookie: `gh_oauth_state` for web sign-in or `github_account_session` for authenticated linking. Extension sign-in uses its existing proof-of-possession binding.",
                 "schema": {
                   "type": "string"
                 }
@@ -523,7 +523,7 @@
             }
           }
         },
-        "summary": "GitHub sign-in OAuth callback",
+        "summary": "GitHub OAuth sign-in or authenticated account-link callback",
         "tags": [
           "auth"
         ]
@@ -564,434 +564,6 @@
         ]
       }
     },
-    "/workspace": {
-      "get": {
-        "operationId": "WorkspacesController_getWorkspace",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get the current workspace",
-        "tags": [
-          "workspace"
-        ]
-      },
-      "patch": {
-        "operationId": "WorkspacesController_updateWorkspace",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateWorkspaceDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Admin role required"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Update workspace identity fields",
-        "tags": [
-          "workspace"
-        ]
-      }
-    },
-    "/workspace/settings": {
-      "get": {
-        "operationId": "WorkspacesController_getSettings",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceSettingsResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Admin role required"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get workspace settings",
-        "tags": [
-          "workspace"
-        ]
-      },
-      "patch": {
-        "operationId": "WorkspacesController_updateSettings",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateWorkspaceSettingsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceSettingsResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Admin role required"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Update workspace settings",
-        "tags": [
-          "workspace"
-        ]
-      }
-    },
-    "/workspace/github/organizations": {
-      "get": {
-        "operationId": "WorkspacesController_listGitHubOrganizations",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationListResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Admin role required"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List workspace allowed GitHub organizations",
-        "tags": [
-          "workspace"
-        ]
-      },
-      "post": {
-        "operationId": "WorkspacesController_addGitHubOrganization",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddWorkspaceGitHubOrganizationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The organization cannot be added until the GitHub connection or GitHub App access issue is resolved",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationRecoveryErrorResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Admin role required"
-          },
-          "409": {
-            "description": "Existing GitHub-backed workspace mappings for this organization must be reconciled before it can be allowed"
-          },
-          "503": {
-            "description": "GitHub organization validation is temporarily unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationRecoveryErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Add an allowed GitHub organization to the workspace",
-        "tags": [
-          "workspace"
-        ]
-      }
-    },
-    "/workspace/github/organizations/{organizationId}": {
-      "delete": {
-        "operationId": "WorkspacesController_removeGitHubOrganization",
-        "parameters": [
-          {
-            "name": "organizationId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          },
-          "403": {
-            "description": "Admin role required"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Remove an allowed GitHub organization from the workspace",
-        "tags": [
-          "workspace"
-        ]
-      }
-    },
-    "/workspace/github/installations": {
-      "get": {
-        "operationId": "WorkspacesController_listGitHubInstallations",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceGithubInstallationListDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List verified workspace GitHub App installations",
-        "tags": [
-          "workspace"
-        ]
-      }
-    },
-    "/workspace/github/installations/setup": {
-      "post": {
-        "operationId": "WorkspacesController_setupGitHubInstallation",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GithubInstallationSetupDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GithubInstallationSetupResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a single-use GitHub App installation setup state",
-        "tags": [
-          "workspace"
-        ]
-      }
-    },
-    "/workspace/github/installations/complete": {
-      "post": {
-        "operationId": "WorkspacesController_completeGitHubInstallation",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GithubInstallationCompleteDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceGithubInstallationDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Verify and save a GitHub App installation for the workspace",
-        "tags": [
-          "workspace"
-        ]
-      }
-    },
-    "/workspace/github/installations/{associationId}/reverify": {
-      "post": {
-        "operationId": "WorkspacesController_reverifyGitHubInstallation",
-        "parameters": [
-          {
-            "name": "associationId",
-            "required": true,
-            "in": "path",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceGithubInstallationDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Reverify a saved GitHub App installation",
-        "tags": [
-          "workspace"
-        ]
-      }
-    },
-    "/workspace/github/installations/{associationId}": {
-      "delete": {
-        "operationId": "WorkspacesController_disconnectGitHubInstallation",
-        "parameters": [
-          {
-            "name": "associationId",
-            "required": true,
-            "in": "path",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Locally disconnect a GitHub App installation",
-        "tags": [
-          "workspace"
-        ]
-      }
-    },
     "/github/connection": {
       "get": {
         "operationId": "GithubController_connectionStatus",
@@ -1022,8 +594,15 @@
         "operationId": "GithubController_disconnect",
         "parameters": [],
         "responses": {
-          "204": {
-            "description": ""
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubDisconnectResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1032,6 +611,33 @@
           }
         ],
         "summary": "Disconnect GitHub account",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/account/auth-url": {
+      "get": {
+        "operationId": "GithubController_accountAuthUrl",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubAuthUrlResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Authorize the linked GitHub account through OAuth",
         "tags": [
           "github"
         ]
@@ -1058,7 +664,7 @@
             "bearer": []
           }
         ],
-        "summary": "Create GitHub OAuth authorization URL",
+        "summary": "Authorize personal GitHub App data access",
         "tags": [
           "github"
         ]
@@ -1522,6 +1128,434 @@
         },
         "tags": [
           "GithubInstallationsWebhook"
+        ]
+      }
+    },
+    "/workspace": {
+      "get": {
+        "operationId": "WorkspacesController_getWorkspace",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the current workspace",
+        "tags": [
+          "workspace"
+        ]
+      },
+      "patch": {
+        "operationId": "WorkspacesController_updateWorkspace",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkspaceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update workspace identity fields",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/settings": {
+      "get": {
+        "operationId": "WorkspacesController_getSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceSettingsResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get workspace settings",
+        "tags": [
+          "workspace"
+        ]
+      },
+      "patch": {
+        "operationId": "WorkspacesController_updateSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkspaceSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceSettingsResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update workspace settings",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/organizations": {
+      "get": {
+        "operationId": "WorkspacesController_listGitHubOrganizations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationListResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List workspace allowed GitHub organizations",
+        "tags": [
+          "workspace"
+        ]
+      },
+      "post": {
+        "operationId": "WorkspacesController_addGitHubOrganization",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddWorkspaceGitHubOrganizationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The organization cannot be added until the GitHub connection or GitHub App access issue is resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationRecoveryErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin role required"
+          },
+          "409": {
+            "description": "Existing GitHub-backed workspace mappings for this organization must be reconciled before it can be allowed"
+          },
+          "503": {
+            "description": "GitHub organization validation is temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationRecoveryErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add an allowed GitHub organization to the workspace",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/organizations/{organizationId}": {
+      "delete": {
+        "operationId": "WorkspacesController_removeGitHubOrganization",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "Admin role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove an allowed GitHub organization from the workspace",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/installations": {
+      "get": {
+        "operationId": "WorkspacesController_listGitHubInstallations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGithubInstallationListDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List verified workspace GitHub App installations",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/installations/setup": {
+      "post": {
+        "operationId": "WorkspacesController_setupGitHubInstallation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubInstallationSetupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubInstallationSetupResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a single-use GitHub App installation setup state",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/installations/complete": {
+      "post": {
+        "operationId": "WorkspacesController_completeGitHubInstallation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubInstallationCompleteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGithubInstallationDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify and save a GitHub App installation for the workspace",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/installations/{associationId}/reverify": {
+      "post": {
+        "operationId": "WorkspacesController_reverifyGitHubInstallation",
+        "parameters": [
+          {
+            "name": "associationId",
+            "required": true,
+            "in": "path",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGithubInstallationDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reverify a saved GitHub App installation",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/installations/{associationId}": {
+      "delete": {
+        "operationId": "WorkspacesController_disconnectGitHubInstallation",
+        "parameters": [
+          {
+            "name": "associationId",
+            "required": true,
+            "in": "path",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Locally disconnect a GitHub App installation",
+        "tags": [
+          "workspace"
         ]
       }
     },
@@ -3234,6 +3268,261 @@
         ]
       }
     },
+    "/invoices": {
+      "get": {
+        "operationId": "InvoicesController_listInvoices",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "sent",
+                "paid"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceListResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List invoices (PM: assigned projects only)",
+        "tags": [
+          "invoices"
+        ]
+      },
+      "post": {
+        "operationId": "InvoicesController_createInvoice",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvoiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          },
+          "404": {
+            "description": "Project not found"
+          },
+          "409": {
+            "description": "Invalid status transition"
+          },
+          "422": {
+            "description": "No eligible billable time entries found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create invoice from time report data",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/invoices/{id}": {
+      "get": {
+        "operationId": "InvoicesController_getInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          },
+          "404": {
+            "description": "Invoice not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get invoice details",
+        "tags": [
+          "invoices"
+        ]
+      },
+      "patch": {
+        "operationId": "InvoicesController_updateInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInvoiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          },
+          "404": {
+            "description": "Invoice not found"
+          },
+          "409": {
+            "description": "Invalid status transition or rate change on non-draft invoice"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update invoice (status, notes, rates)",
+        "tags": [
+          "invoices"
+        ]
+      },
+      "delete": {
+        "operationId": "InvoicesController_deleteInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "Admin role required"
+          },
+          "404": {
+            "description": "Invoice not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete invoice (unlinks time entries)",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
     "/reports/time": {
       "post": {
         "operationId": "ReportsController_getTimeReport",
@@ -3878,572 +4167,6 @@
         ],
         "additionalProperties": false
       },
-      "WorkspaceResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "name": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "UpdateWorkspaceDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          }
-        },
-        "additionalProperties": false
-      },
-      "WorkspaceSettingsResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "workspaceId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "currency": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 3
-          },
-          "defaultHourlyRate": {
-            "type": "number",
-            "minimum": 0,
-            "nullable": true
-          },
-          "timeZone": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          }
-        },
-        "required": [
-          "id",
-          "workspaceId",
-          "currency",
-          "defaultHourlyRate",
-          "timeZone",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "UpdateWorkspaceSettingsDto": {
-        "type": "object",
-        "properties": {
-          "currency": {
-            "type": "string",
-            "pattern": "^[A-Z]{3}$"
-          },
-          "defaultHourlyRate": {
-            "type": "number",
-            "minimum": 0,
-            "nullable": true
-          },
-          "timeZone": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          }
-        },
-        "additionalProperties": false
-      },
-      "WorkspaceGitHubOrganizationListResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "workspaceId": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "organizationLogin": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 255
-                },
-                "createdByUserId": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "createdAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                }
-              },
-              "required": [
-                "id",
-                "workspaceId",
-                "organizationLogin",
-                "createdByUserId",
-                "createdAt"
-              ]
-            }
-          }
-        },
-        "required": [
-          "items"
-        ]
-      },
-      "AddWorkspaceGitHubOrganizationDto": {
-        "type": "object",
-        "properties": {
-          "organizationLogin": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          }
-        },
-        "required": [
-          "organizationLogin"
-        ],
-        "additionalProperties": false
-      },
-      "WorkspaceGitHubOrganizationResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "workspaceId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "organizationLogin": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "createdByUserId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          }
-        },
-        "required": [
-          "id",
-          "workspaceId",
-          "organizationLogin",
-          "createdByUserId",
-          "createdAt"
-        ]
-      },
-      "WorkspaceGitHubOrganizationRecoveryErrorResponseDto": {
-        "type": "object",
-        "properties": {
-          "statusCode": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-          },
-          "code": {
-            "type": "string",
-            "enum": [
-              "workspace_github_organization_connection_required",
-              "workspace_github_organization_not_visible",
-              "workspace_github_organization_app_access_blocked",
-              "workspace_github_organization_provider_retryable"
-            ]
-          },
-          "error": {
-            "type": "string",
-            "minLength": 1
-          },
-          "message": {
-            "type": "string",
-            "minLength": 1
-          },
-          "recovery": {
-            "type": "object",
-            "properties": {
-              "organizationLogin": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 255
-              },
-              "reason": {
-                "type": "string",
-                "enum": [
-                  "workspace_github_organization_connection_required",
-                  "workspace_github_organization_not_visible",
-                  "workspace_github_organization_app_access_blocked",
-                  "workspace_github_organization_provider_retryable"
-                ]
-              },
-              "steps": {
-                "type": "array",
-                "prefixItems": [
-                  {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "const": "install"
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": [
-                          "action_required",
-                          "blocked",
-                          "complete",
-                          "disconnected",
-                          "ready",
-                          "unknown"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "status"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "const": "approve"
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": [
-                          "action_required",
-                          "blocked",
-                          "complete",
-                          "disconnected",
-                          "ready",
-                          "unknown"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "status"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "const": "reconnect"
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": [
-                          "action_required",
-                          "blocked",
-                          "complete",
-                          "disconnected",
-                          "ready",
-                          "unknown"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "status"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "const": "retry"
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": [
-                          "action_required",
-                          "blocked",
-                          "complete",
-                          "disconnected",
-                          "ready",
-                          "unknown"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "status"
-                    ],
-                    "additionalProperties": false
-                  }
-                ]
-              }
-            },
-            "required": [
-              "organizationLogin",
-              "reason",
-              "steps"
-            ],
-            "additionalProperties": false
-          },
-          "requestId": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "statusCode",
-          "code",
-          "error",
-          "message",
-          "recovery"
-        ],
-        "additionalProperties": false
-      },
-      "WorkspaceGithubInstallationListDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "organizationId": {
-                  "type": "string",
-                  "maxLength": 30,
-                  "pattern": "^[1-9]\\d*$"
-                },
-                "organizationLogin": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 39,
-                  "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
-                },
-                "installationId": {
-                  "type": "string",
-                  "maxLength": 30,
-                  "pattern": "^[1-9]\\d*$"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "verified",
-                    "suspended",
-                    "unavailable",
-                    "disconnected"
-                  ]
-                },
-                "verifiedAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                  "nullable": true
-                },
-                "recoveryReason": {
-                  "type": "string",
-                  "maxLength": 500,
-                  "nullable": true
-                }
-              },
-              "required": [
-                "id",
-                "organizationId",
-                "organizationLogin",
-                "installationId",
-                "status",
-                "verifiedAt",
-                "recoveryReason"
-              ],
-              "additionalProperties": false
-            }
-          }
-        },
-        "required": [
-          "items"
-        ],
-        "additionalProperties": false
-      },
-      "GithubInstallationSetupDto": {
-        "type": "object",
-        "properties": {
-          "organizationLogin": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 39,
-            "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
-          }
-        },
-        "required": [
-          "organizationLogin"
-        ],
-        "additionalProperties": false
-      },
-      "GithubInstallationSetupResponseDto": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "type": "string",
-            "minLength": 32,
-            "maxLength": 256
-          },
-          "installationUrl": {
-            "type": "string",
-            "format": "uri"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          },
-          "existingInstallationId": {
-            "type": "string",
-            "maxLength": 30,
-            "pattern": "^[1-9]\\d*$"
-          }
-        },
-        "required": [
-          "state",
-          "installationUrl",
-          "expiresAt"
-        ],
-        "additionalProperties": false
-      },
-      "GithubInstallationCompleteDto": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "type": "string",
-            "minLength": 32,
-            "maxLength": 256
-          },
-          "installationId": {
-            "type": "string",
-            "maxLength": 30,
-            "pattern": "^[1-9]\\d*$"
-          }
-        },
-        "required": [
-          "state",
-          "installationId"
-        ],
-        "additionalProperties": false
-      },
-      "WorkspaceGithubInstallationDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "organizationId": {
-            "type": "string",
-            "maxLength": 30,
-            "pattern": "^[1-9]\\d*$"
-          },
-          "organizationLogin": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 39,
-            "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
-          },
-          "installationId": {
-            "type": "string",
-            "maxLength": 30,
-            "pattern": "^[1-9]\\d*$"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "verified",
-              "suspended",
-              "unavailable",
-              "disconnected"
-            ]
-          },
-          "verifiedAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-            "nullable": true
-          },
-          "recoveryReason": {
-            "type": "string",
-            "maxLength": 500,
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "organizationId",
-          "organizationLogin",
-          "installationId",
-          "status",
-          "verifiedAt",
-          "recoveryReason"
-        ],
-        "additionalProperties": false
-      },
       "GithubConnectionStatusResponseDto": {
         "oneOf": [
           {
@@ -4457,12 +4180,79 @@
               },
               "account": {
                 "type": "null"
+              },
+              "oauth": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "not_authorized",
+                      "authorized",
+                      "reauthorization_required"
+                    ]
+                  },
+                  "missingScopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "user:email",
+                        "read:org",
+                        "read:project"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "status",
+                  "missingScopes"
+                ],
+                "additionalProperties": false
+              },
+              "capabilities": {
+                "type": "object",
+                "properties": {
+                  "organizationDiscovery": {
+                    "type": "string",
+                    "enum": [
+                      "ready",
+                      "authorization_required",
+                      "permission_required"
+                    ]
+                  },
+                  "personalData": {
+                    "type": "string",
+                    "enum": [
+                      "ready",
+                      "authorization_required",
+                      "permission_required"
+                    ]
+                  }
+                },
+                "required": [
+                  "organizationDiscovery",
+                  "personalData"
+                ],
+                "additionalProperties": false
+              },
+              "disconnect": {
+                "type": "string",
+                "enum": [
+                  "allowed",
+                  "alternative_signin_required",
+                  "verification_unavailable"
+                ]
               }
             },
             "required": [
               "status",
-              "account"
-            ]
+              "account",
+              "oauth",
+              "capabilities",
+              "disconnect"
+            ],
+            "additionalProperties": false
           },
           {
             "type": "object",
@@ -4505,13 +4295,81 @@
                   "avatarUrl",
                   "connectedAt",
                   "updatedAt"
+                ],
+                "additionalProperties": false
+              },
+              "oauth": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "not_authorized",
+                      "authorized",
+                      "reauthorization_required"
+                    ]
+                  },
+                  "missingScopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "user:email",
+                        "read:org",
+                        "read:project"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "status",
+                  "missingScopes"
+                ],
+                "additionalProperties": false
+              },
+              "capabilities": {
+                "type": "object",
+                "properties": {
+                  "organizationDiscovery": {
+                    "type": "string",
+                    "enum": [
+                      "ready",
+                      "authorization_required",
+                      "permission_required"
+                    ]
+                  },
+                  "personalData": {
+                    "type": "string",
+                    "enum": [
+                      "ready",
+                      "authorization_required",
+                      "permission_required"
+                    ]
+                  }
+                },
+                "required": [
+                  "organizationDiscovery",
+                  "personalData"
+                ],
+                "additionalProperties": false
+              },
+              "disconnect": {
+                "type": "string",
+                "enum": [
+                  "allowed",
+                  "alternative_signin_required",
+                  "verification_unavailable"
                 ]
               }
             },
             "required": [
               "status",
-              "account"
-            ]
+              "account",
+              "oauth",
+              "capabilities",
+              "disconnect"
+            ],
+            "additionalProperties": false
           }
         ]
       },
@@ -4525,7 +4383,8 @@
         },
         "required": [
           "authorizationUrl"
-        ]
+        ],
+        "additionalProperties": false
       },
       "GithubOwnerListResponseDto": {
         "type": "object",
@@ -5024,6 +4883,600 @@
           "pagination",
           "skipped"
         ]
+      },
+      "GithubDisconnectResponseDto": {
+        "type": "object",
+        "properties": {
+          "disconnected": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "providerRevocation": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "unconfirmed",
+              "not_required"
+            ]
+          }
+        },
+        "required": [
+          "disconnected",
+          "providerRevocation"
+        ],
+        "additionalProperties": false
+      },
+      "WorkspaceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateWorkspaceDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkspaceSettingsResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "defaultHourlyRate": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "currency",
+          "defaultHourlyRate",
+          "timeZone",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateWorkspaceSettingsDto": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "defaultHourlyRate": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkspaceGitHubOrganizationListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "workspaceId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "organizationLogin": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "createdByUserId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "workspaceId",
+                "organizationLogin",
+                "createdByUserId",
+                "createdAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "AddWorkspaceGitHubOrganizationDto": {
+        "type": "object",
+        "properties": {
+          "organizationLogin": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "organizationLogin"
+        ],
+        "additionalProperties": false
+      },
+      "WorkspaceGitHubOrganizationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "organizationLogin": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "createdByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "organizationLogin",
+          "createdByUserId",
+          "createdAt"
+        ]
+      },
+      "WorkspaceGitHubOrganizationRecoveryErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "workspace_github_organization_connection_required",
+              "workspace_github_organization_not_visible",
+              "workspace_github_organization_app_access_blocked",
+              "workspace_github_organization_oauth_access_blocked",
+              "workspace_github_organization_permission_required",
+              "workspace_github_organization_provider_retryable"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recovery": {
+            "type": "object",
+            "properties": {
+              "organizationLogin": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "workspace_github_organization_connection_required",
+                  "workspace_github_organization_not_visible",
+                  "workspace_github_organization_app_access_blocked",
+                  "workspace_github_organization_oauth_access_blocked",
+                  "workspace_github_organization_permission_required",
+                  "workspace_github_organization_provider_retryable"
+                ]
+              },
+              "steps": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "const": "authorize"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "action_required",
+                          "blocked",
+                          "complete",
+                          "disconnected",
+                          "ready",
+                          "unknown"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "const": "permission"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "action_required",
+                          "blocked",
+                          "complete",
+                          "disconnected",
+                          "ready",
+                          "unknown"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "const": "approve"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "action_required",
+                          "blocked",
+                          "complete",
+                          "disconnected",
+                          "ready",
+                          "unknown"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "const": "retry"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "action_required",
+                          "blocked",
+                          "complete",
+                          "disconnected",
+                          "ready",
+                          "unknown"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "organizationLogin",
+              "reason",
+              "steps"
+            ],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "error",
+          "message",
+          "recovery"
+        ],
+        "additionalProperties": false
+      },
+      "WorkspaceGithubInstallationListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "organizationId": {
+                  "type": "string",
+                  "maxLength": 30,
+                  "pattern": "^[1-9]\\d*$"
+                },
+                "organizationLogin": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 39,
+                  "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
+                },
+                "installationId": {
+                  "type": "string",
+                  "maxLength": 30,
+                  "pattern": "^[1-9]\\d*$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "verified",
+                    "suspended",
+                    "unavailable",
+                    "disconnected"
+                  ]
+                },
+                "verifiedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "recoveryReason": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "organizationLogin",
+                "installationId",
+                "status",
+                "verifiedAt",
+                "recoveryReason"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "GithubInstallationSetupDto": {
+        "type": "object",
+        "properties": {
+          "organizationLogin": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 39,
+            "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
+          }
+        },
+        "required": [
+          "organizationLogin"
+        ],
+        "additionalProperties": false
+      },
+      "GithubInstallationSetupResponseDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 256
+          },
+          "installationUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "existingInstallationId": {
+            "type": "string",
+            "maxLength": 30,
+            "pattern": "^[1-9]\\d*$"
+          }
+        },
+        "required": [
+          "state",
+          "installationUrl",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "GithubInstallationCompleteDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 256
+          },
+          "installationId": {
+            "type": "string",
+            "maxLength": 30,
+            "pattern": "^[1-9]\\d*$"
+          }
+        },
+        "required": [
+          "state",
+          "installationId"
+        ],
+        "additionalProperties": false
+      },
+      "WorkspaceGithubInstallationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "organizationId": {
+            "type": "string",
+            "maxLength": 30,
+            "pattern": "^[1-9]\\d*$"
+          },
+          "organizationLogin": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 39,
+            "pattern": "^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
+          },
+          "installationId": {
+            "type": "string",
+            "maxLength": 30,
+            "pattern": "^[1-9]\\d*$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "suspended",
+              "unavailable",
+              "disconnected"
+            ]
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "recoveryReason": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "organizationLogin",
+          "installationId",
+          "status",
+          "verifiedAt",
+          "recoveryReason"
+        ],
+        "additionalProperties": false
       },
       "WorkspaceInviteResponseDto": {
         "type": "object",
@@ -6923,6 +7376,436 @@
           },
           "isBillable": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "InvoiceListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "workspaceId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "projectId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "nullable": true
+                },
+                "title": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "sent",
+                    "paid"
+                  ]
+                },
+                "dateFrom": {
+                  "type": "string",
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                },
+                "dateTo": {
+                  "type": "string",
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                },
+                "hourlyRate": {
+                  "type": "number"
+                },
+                "currency": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "discountPercent": {
+                  "type": "number"
+                },
+                "totalHours": {
+                  "type": "number"
+                },
+                "totalAmount": {
+                  "type": "number"
+                },
+                "notes": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdBy": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "project": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "nullable": true
+                },
+                "createdByUser": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "displayName",
+                    "avatarUrl"
+                  ]
+                },
+                "timeEntryCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "id",
+                "workspaceId",
+                "projectId",
+                "title",
+                "status",
+                "dateFrom",
+                "dateTo",
+                "hourlyRate",
+                "currency",
+                "discountPercent",
+                "totalHours",
+                "totalAmount",
+                "notes",
+                "createdBy",
+                "createdAt",
+                "updatedAt",
+                "project",
+                "createdByUser",
+                "timeEntryCount"
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "CreateInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "dateFrom": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "dateTo": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "hourlyRate": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000
+          },
+          "discountPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 5000,
+            "nullable": true
+          }
+        },
+        "required": [
+          "title",
+          "dateFrom",
+          "dateTo"
+        ],
+        "additionalProperties": false
+      },
+      "InvoiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "sent",
+              "paid"
+            ]
+          },
+          "dateFrom": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "dateTo": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "hourlyRate": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "discountPercent": {
+            "type": "number"
+          },
+          "totalHours": {
+            "type": "number"
+          },
+          "totalAmount": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "project": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "nullable": true
+          },
+          "createdByUser": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              },
+              "displayName": {
+                "type": "string",
+                "nullable": true
+              },
+              "avatarUrl": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "displayName",
+              "avatarUrl"
+            ]
+          },
+          "timeEntryCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "projectId",
+          "title",
+          "status",
+          "dateFrom",
+          "dateTo",
+          "hourlyRate",
+          "currency",
+          "discountPercent",
+          "totalHours",
+          "totalAmount",
+          "notes",
+          "createdBy",
+          "createdAt",
+          "updatedAt",
+          "project",
+          "createdByUser",
+          "timeEntryCount"
+        ]
+      },
+      "UpdateInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "sent",
+              "paid"
+            ]
+          },
+          "hourlyRate": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000
+          },
+          "discountPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 5000,
+            "nullable": true
           }
         },
         "additionalProperties": false

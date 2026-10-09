@@ -269,6 +269,21 @@ describe("LoginView", () => {
     );
   });
 
+  it("explains when the GitHub identity is already linked to another account", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView(
+      "/login?githubError=github_identity_mismatch",
+    );
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="sign-in-error"]').text()).toContain(
+      "A different GitHub account is already connected",
+    );
+    expect(wrapper.find('[data-testid="sign-in-error-help"]').exists()).toBe(
+      false,
+    );
+  });
+
   it("keeps login actions disabled while Firebase sign-in is still in progress", async () => {
     let releaseProviderStep!: () => void;
     const providerStep = new Promise<void>((resolve) => {
