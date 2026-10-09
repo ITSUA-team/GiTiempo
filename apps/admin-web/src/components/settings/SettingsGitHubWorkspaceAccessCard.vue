@@ -39,6 +39,7 @@ const props = defineProps<{
   installingOrganizationLogin: string | null;
   installations: readonly WorkspaceGitHubInstallation[];
   installationsLoaded: boolean;
+  checkingOrganizationLogins: readonly string[];
   items: readonly WorkspaceGitHubOrganizationResponse[];
   organizationLoginError: string | null;
   recoveryChecklist: GitHubWorkspaceAccessChecklist | null;
@@ -111,7 +112,17 @@ function hasVerifiedInstallation(organizationLogin: string): boolean {
 }
 
 function shouldShowInstallApp(organizationLogin: string): boolean {
-  return props.installationsLoaded && !hasVerifiedInstallation(organizationLogin);
+  return (
+    props.installationsLoaded &&
+    !isCheckingInstallation(organizationLogin) &&
+    !hasVerifiedInstallation(organizationLogin)
+  );
+}
+
+function isCheckingInstallation(organizationLogin: string): boolean {
+  return props.checkingOrganizationLogins.includes(
+    organizationLogin.trim().toLowerCase(),
+  );
 }
 
 watch(
@@ -209,6 +220,16 @@ watch(
             </span>
           </div>
           <div class="flex flex-wrap justify-end gap-2">
+            <Button
+              v-if="isCheckingInstallation(organization.organizationLogin)"
+              label="Checking App"
+              loading
+              outlined
+              severity="secondary"
+              size="small"
+              disabled
+              :data-testid="`settings-github-organization-checking-${organization.id}`"
+            />
             <Button
               v-if="shouldShowInstallApp(organization.organizationLogin)"
               label="Install App"

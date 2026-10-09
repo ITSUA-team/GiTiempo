@@ -64,14 +64,6 @@ const canAddGitHubOrganization = computed(
     !githubConnection.loading.value &&
     !githubConnection.requestError.value,
 );
-const canConfigureGitHubInstallation = computed(
-  () =>
-    isAuthenticated.value &&
-    githubConnection.isConnected.value &&
-    githubConnection.connection.value?.capabilities?.personalData === 'ready' &&
-    !githubConnection.loading.value &&
-    !githubConnection.requestError.value,
-);
 const canLoadAvailableGitHubOrganizations = computed(
   () =>
     isAuthenticated.value &&
@@ -98,7 +90,7 @@ const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
 });
 const workspaceGitHubInstallations = useAdminWorkspaceGitHubInstallations({
   organizations: workspaceGitHubOrganizations.items,
-  canConfigure: canConfigureGitHubInstallation,
+  canConfigure: canAddGitHubOrganization,
   enabled: isAuthenticated,
   onError(message, error, action) {
     errorToast(message, {
@@ -295,6 +287,7 @@ watch(
             :installing-organization-login="workspaceGitHubInstallations.installingOrganizationLogin.value"
             :installations="workspaceGitHubInstallations.items.value"
             :installations-loaded="workspaceGitHubInstallations.isLoaded.value"
+            :checking-organization-logins="workspaceGitHubInstallations.checkingOrganizationLogins.value"
             :items="workspaceGitHubOrganizations.items.value"
             :organization-login-error="workspaceGitHubOrganizations.organizationLoginError.value"
             :recovery-checklist="workspaceGitHubOrganizations.recoveryChecklist.value"

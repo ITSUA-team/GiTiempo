@@ -25,7 +25,7 @@ None; this change updates the existing GitHub integration domains.
 - `github-oauth-foundation`: Separate account linking from personal App authorization; define capabilities, token lifecycle, identity consistency, and complete disconnect.
 - `github-data-browsing-api`: Use OAuth for setup organization discovery while explicitly retaining personal App credentials for browsing/import.
 - `workspace-github-organization-policy`: Gate setup on OAuth membership capability and permit validated additions before App installation.
-- `workspace-github-installations`: Make the retained personal App prerequisite explicit under the new identity status and keep OAuth policy addition independent of subsequent installation setup.
+- `workspace-github-installations`: Use OAuth organization membership for setup identity and GitHub App authentication for exact installation verification; leave new-install authorization to GitHub and retain personal App credentials only for private browsing/import.
 - `data-model`: Persist globally unique identity ownership, separate credentials, scoped transaction state, and complete unlink semantics.
 - `contracts`: Define capability-aware connection, recovery, and disconnect contracts without exposing secrets.
 - `user-pages`: Offer OAuth linking, distinct App authorization, missing-permission recovery, and guarded full Disconnect on Profile.

@@ -115,6 +115,7 @@ function createProps(overrides: Record<string, unknown> = {}) {
     installingOrganizationLogin: null,
     installations: [],
     installationsLoaded: false,
+    checkingOrganizationLogins: [],
     items: [],
     organizationLoginError: null,
     recoveryChecklist: null,
@@ -230,7 +231,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(wrapper.emitted('install')).toEqual([['Octo-Org']]);
   });
 
-  it('hides the App installation action when the organization is verified', () => {
+  it('does not show Install or Recheck actions for a verified organization', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
@@ -268,6 +269,36 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(
       wrapper.find('[data-testid="settings-github-organization-install-org-1"]').exists(),
     ).toBe(false);
+    expect(wrapper.find('[data-testid="settings-github-organization-reverify-org-1"]').exists()).toBe(false);
+  });
+
+  it('shows a checking state instead of Install App while it reconciles an organization', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        checkingOrganizationLogins: ['octo-org'],
+        installationsLoaded: true,
+        items: [
+          {
+            id: 'org-1',
+            workspaceId: 'workspace-1',
+            organizationLogin: 'Octo-Org',
+            createdByUserId: 'user-1',
+            createdAt: '2026-06-18T00:00:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    expect(wrapper.get('[data-testid="settings-github-organization-checking-org-1"]').text()).toContain('Checking App');
+    expect(wrapper.find('[data-testid="settings-github-organization-install-org-1"]').exists()).toBe(false);
   });
 
   it('hides the add organization setup action when GitHub is disconnected', () => {

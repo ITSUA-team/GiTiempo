@@ -43,6 +43,7 @@ export interface AdminSettingsClient {
 	completeWorkspaceGitHubInstallation(
 		input: GitHubInstallationCompleteRequest,
 	): Promise<WorkspaceGitHubInstallation>;
+	reverifyWorkspaceGitHubInstallation(associationId: string): Promise<WorkspaceGitHubInstallation>;
 	getGitHubConnectionStatus(): Promise<GitHubConnectionStatusResponse>;
 	getWorkspace(): Promise<WorkspaceResponse>;
 	listAvailableGitHubOrganizations(): Promise<GitHubOwnerListResponse>;
@@ -81,6 +82,14 @@ export function createAdminSettingsClient({
 				body: githubInstallationCompleteRequestSchema.parse(input),
 				method: 'POST',
 				path: '/workspace/github/installations/complete',
+				responseSchema: workspaceGitHubInstallationSchema,
+			});
+		},
+
+		reverifyWorkspaceGitHubInstallation(associationId) {
+			return apiClient.requestJson({
+				method: 'POST',
+				path: `/workspace/github/installations/${associationId}/reverify`,
 				responseSchema: workspaceGitHubInstallationSchema,
 			});
 		},

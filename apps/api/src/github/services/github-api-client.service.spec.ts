@@ -171,6 +171,7 @@ describe('GithubApiClientService', () => {
       jsonResponse({
         state: 'active',
         organization: {
+          id: 2468,
           login: 'My-test-org-for-clock',
           avatar_url: 'https://avatars.githubusercontent.com/u/2',
           html_url: 'https://github.com/My-test-org-for-clock',
@@ -188,6 +189,7 @@ describe('GithubApiClientService', () => {
       '/user/memberships/orgs/My-test-org-for-clock',
     );
     expect(result).toEqual({
+      id: '2468',
       login: 'My-test-org-for-clock',
       avatarUrl: 'https://avatars.githubusercontent.com/u/2',
       url: 'https://github.com/My-test-org-for-clock',
@@ -219,9 +221,9 @@ describe('GithubApiClientService', () => {
         'blocked-org',
       ),
     ).rejects.toMatchObject({
-      message: 'GitHub organization blocks this GitHub App',
+      message: 'GitHub organization blocks this OAuth application',
       response: expect.objectContaining({
-        code: 'github_app_access_blocked',
+        code: 'github_oauth_access_blocked',
       }),
     });
   });

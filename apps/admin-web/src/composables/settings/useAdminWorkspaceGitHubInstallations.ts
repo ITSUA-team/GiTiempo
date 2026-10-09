@@ -3,11 +3,13 @@ import {
   githubInstallationSetupRequestSchema,
   type GitHubInstallationSetupResponse,
   type WorkspaceGitHubOrganizationResponse,
+  type WorkspaceGitHubInstallation,
 } from '@gitiempo/shared';
 import { computed, onScopeDispose, ref, watch, type ComputedRef, type Ref } from 'vue';
 
 import {
   useCompleteWorkspaceGitHubInstallationMutation,
+  useReverifyWorkspaceGitHubInstallationMutation,
   useSetupWorkspaceGitHubInstallationMutation,
   useWorkspaceGitHubInstallationsQuery,
 } from '@/composables/query';
@@ -21,6 +23,7 @@ type WorkspaceGitHubInstallationsClient = Pick<
   AdminSettingsClient,
   | 'completeWorkspaceGitHubInstallation'
   | 'listWorkspaceGitHubInstallations'
+  | 'reverifyWorkspaceGitHubInstallation'
   | 'setupWorkspaceGitHubInstallation'
 >;
 
@@ -52,13 +55,15 @@ export function useAdminWorkspaceGitHubInstallations({
   const query = useWorkspaceGitHubInstallationsQuery({ client, enabled, scope });
   const setupMutation = useSetupWorkspaceGitHubInstallationMutation({ client, scope });
   const completeMutation = useCompleteWorkspaceGitHubInstallationMutation({ client, scope });
+  const reverifyMutation = useReverifyWorkspaceGitHubInstallationMutation({ client, scope });
   const items = computed(() => query.data.value?.items ?? []);
   const isLoaded = computed(
     () => query.data.value !== undefined && query.error.value === null,
   );
   const installingOrganizationLogin = ref<string | null>(null);
+  const checkingOrganizationLogins = ref<string[]>([]);
   const scopeKey = computed(() => JSON.stringify(scope.value));
-  const attemptedOrganizations = new Set<string>();
+  const attemptedReconciliations = new Set<string>();
   let disposed = false;
   onScopeDispose(() => { disposed = true; });
 
@@ -71,8 +76,8 @@ export function useAdminWorkspaceGitHubInstallations({
   ): { organizationLogin: string } | null {
     if (!canConfigure.value || !enabled.value || disposed) {
       onError?.(
-        'Authorize GitHub App data from your profile and confirm organization-owner access before linking a GitHub App installation.',
-        new Error('GitHub connection required for installation setup'),
+        'Authorize GitHub organization access from your profile before setting up the GitHub App.',
+        new Error('GitHub organization access is required for installation setup'),
         'setup-workspace-github-installation',
       );
       return null;
@@ -166,6 +171,32 @@ export function useAdminWorkspaceGitHubInstallations({
     }
   }
 
+  async function reverifyInstallation(
+    associationId: string,
+  ): Promise<WorkspaceGitHubInstallation | null> {
+    if (!enabled.value) return null;
+    const currentScope = scopeKey.value;
+    try {
+      const result = await reverifyMutation.mutateAsync(associationId);
+      if (isCurrentScope(currentScope)) {
+        await query.refetch({ throwOnError: false });
+      }
+      return isCurrentScope(currentScope) ? result : null;
+    } catch (error) {
+      if (isCurrentScope(currentScope)) {
+        onError?.(getErrorMessage(error), error, 'reverify-workspace-github-installation');
+      }
+      return null;
+    }
+  }
+
+  function setOrganizationCheckPending(organizationLogin: string, pending: boolean): void {
+    const normalizedLogin = organizationLogin.trim().toLowerCase();
+    checkingOrganizationLogins.value = pending
+      ? [...new Set([...checkingOrganizationLogins.value, normalizedLogin])]
+      : checkingOrganizationLogins.value.filter((login) => login !== normalizedLogin);
+  }
+
   watch(
     [
       canConfigure,
@@ -178,25 +209,46 @@ export function useAdminWorkspaceGitHubInstallations({
       () => completeMutation.isPending.value,
     ],
     async () => {
-      if (!canConfigure.value || !enabled.value) {
-        attemptedOrganizations.clear();
+      if (!enabled.value) {
+        attemptedReconciliations.clear();
         return;
       }
       // Do not infer absence from a failed or unfinished status request.
       if (!query.data.value || query.error.value || query.isFetching.value || completeMutation.isPending.value) return;
       const currentScope = scopeKey.value;
       for (const organization of organizations?.value ?? []) {
-        if (!isCurrentScope(currentScope) || !canConfigure.value) return;
+        if (!isCurrentScope(currentScope)) return;
         const login = organization.organizationLogin.toLowerCase();
-        const hasAssociation = () => items.value.some((item) => item.organizationLogin.toLowerCase() === login);
-        const isStillAllowed = () =>
-          !!organizations?.value.some((item) => item.id === organization.id) && !hasAssociation();
+        const association = items.value.find(
+          (item) => item.organizationLogin.toLowerCase() === login,
+        );
         const attemptKey = `${currentScope}:${organization.id}`;
-        // Preserve every saved state, especially deliberate local disconnects.
-        // Each missing link gets one attempt per Settings visit, not a retry loop.
-        if (hasAssociation() || attemptedOrganizations.has(attemptKey)) continue;
-        attemptedOrganizations.add(attemptKey);
-        await beginSetup(organization.organizationLogin, isStillAllowed);
+        if (attemptedReconciliations.has(attemptKey)) continue;
+        // A verified row is checked against GitHub on page entry. Non-verified
+        // rows are discovered through setup, except explicit local disconnects.
+        if (association?.status === 'disconnected') {
+          attemptedReconciliations.add(attemptKey);
+          continue;
+        }
+        if (association && association.status !== 'verified' && !canConfigure.value) continue;
+        attemptedReconciliations.add(attemptKey);
+        setOrganizationCheckPending(organization.organizationLogin, true);
+        try {
+          if (association?.status === 'verified') {
+            const result = await reverifyInstallation(association.id);
+            if (result && result.status !== 'verified' && canConfigure.value) {
+              const isStillAllowed = () =>
+                !!organizations?.value.some((item) => item.id === organization.id);
+              await beginSetup(organization.organizationLogin, isStillAllowed);
+            }
+          } else {
+            const isStillAllowed = () =>
+              !!organizations?.value.some((item) => item.id === organization.id);
+            await beginSetup(organization.organizationLogin, isStillAllowed);
+          }
+        } finally {
+          setOrganizationCheckPending(organization.organizationLogin, false);
+        }
       }
     },
     { immediate: true },
@@ -214,6 +266,7 @@ export function useAdminWorkspaceGitHubInstallations({
     beginSetup,
     completeSetup,
     installingOrganizationLogin,
+    checkingOrganizationLogins,
     isLoaded,
     items,
   };

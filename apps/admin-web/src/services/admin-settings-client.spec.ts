@@ -301,6 +301,17 @@ describe('createAdminSettingsClient', () => {
     );
   });
 
+  it('rechecks a saved GitHub App installation', async () => {
+    fetchFn.mockResolvedValue(jsonResponse(workspaceGitHubInstallation));
+
+    await client.reverifyWorkspaceGitHubInstallation('association-1');
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/workspace/github/installations/association-1/reverify',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
   it('updates workspace settings with the expected payload shape', async () => {
     fetchFn.mockResolvedValue(
       jsonResponse({

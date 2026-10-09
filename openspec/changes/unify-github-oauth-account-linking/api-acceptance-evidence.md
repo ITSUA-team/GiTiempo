@@ -144,3 +144,23 @@ NODE_ENV=test LOG_LEVEL=silent DATABASE_URL=postgresql://gitiempo_test@127.0.0.1
 ```
 
 Observed result: 2 files / 8 tests passed in 2.17 seconds. Both files passed focused ESLint; API typecheck passed. LOG_LEVEL=silent kept callback parameters out of test output. The current local database on port 5432 was not used by these probes. The final disposable cluster was stopped and deleted; no test cluster remains on port 55439.
+
+## 11.9 OAuth-member setup and post-install personal-data gate — 2026-10-09
+
+Build: local branch `unify-github-oauth-account-linking`, HEAD `8d4b9aa9` plus uncommitted setup/reconciliation changes. Retained probe: `apps/api/test/github-installation-setup-http-acceptance.e2e-spec.ts`. The fresh migrated database `gitiempo_119_20261009` uses the disposable PostgreSQL on port 55439. Nest routing, login, encrypted OAuth persistence, workspace authorization, installation association writes and PostgreSQL are real. GitHub responses and App JWT/installation-token minting are simulated; no live GitHub role or account was altered.
+
+Steps and observed results:
+
+1. Create a dedicated GiTiempo workspace admin, save an OAuth grant containing `read:org`, and return active GitHub membership with `role: member`. No personal App connection row is present. HTTP setup discovers installation `420` for organization ID `321`; completion verifies App `42`, saves the exact verified association and requests a restricted Issues/Metadata/Members read token. Re-verification succeeds and status listing returns one verified association without secrets. OAuth is used only for membership; App authentication is used for installation checks; `/user/installations` is never called. This covers ordinary GitHub membership under the permitted simulation boundary.
+2. After successful setup, private repository, repository-issue and Projects browsing endpoints each return 404. Repository and Project import endpoints return per-item `failed` with null project IDs. The workspace has zero imported projects and the user still has zero personal App credentials; there are no private provider requests or additional installation-token calls. Successful workspace installation cannot substitute for personal App authorization.
+3. Remove the allowed organization and request setup: 403 before provider requests. Demote the GiTiempo user to Member and request setup: 403, with no association created. The separate tracking suite confirms demotion during App verification is rejected before saving, preserving the preceding verified row.
+
+The combined run initially exposed obsolete tracking expectations for organization-owner role and `/user/installations` visibility, plus a race fixture attached to that removed provider call. Updated those cases to reject suspended/personal installations, and trigger GiTiempo-role loss during the current `/app/installations` verification. Wrong App, wrong organization and missing permission preservation checks remain in place.
+
+Final command from `apps/api`:
+
+```sh
+DATABASE_URL=postgresql://127.0.0.1:55439/gitiempo_119_20261009 LOG_LEVEL=silent NODE_ENV=test node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run --config ./vitest.e2e.config.ts test/github-installation-setup-http-acceptance.e2e-spec.ts test/github-installation-tracking.e2e-spec.ts
+```
+
+Observed result: 2 files / 16 tests passed in 2.56 seconds. The focused installation service suite passed 24 tests; API typecheck and ESLint for both changed E2E files passed. Real explicit GitHub install and live exact-installation/restricted-token verification are recorded separately in manual acceptance evidence. These new probes do not claim a second live GitHub identity. The fresh test database was removed and the temporary PostgreSQL restored to stopped state; the current local application database on port 5432 was not used.

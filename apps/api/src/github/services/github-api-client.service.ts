@@ -49,10 +49,11 @@ type GitHubOrgRest = {
 
 type GitHubOrgMembershipRest = {
   state?: string;
-  organization?: GitHubOrgRest | null;
+  organization?: (GitHubOrgRest & { id?: number | string }) | null;
 };
 
 type GitHubOrganizationMembershipLookup = {
+  id: string;
   login: string;
   avatarUrl: string | null;
   url: string;
@@ -277,9 +278,9 @@ export class GithubApiClientService {
         path,
       });
       throw new BadRequestException({
-        code: 'github_app_access_blocked',
+        code: 'github_oauth_access_blocked',
         error: 'BadRequest',
-        message: 'GitHub organization blocks this GitHub App',
+        message: 'GitHub organization blocks this OAuth application',
       });
     }
 
@@ -299,11 +300,12 @@ export class GithubApiClientService {
     }
 
     const organization = body.organization;
-    if (!body.state || !organization?.login) {
+    if (!body.state || !organization?.login || !organization.id) {
       throw new ServiceUnavailableException('GitHub API returned invalid data');
     }
 
     return {
+      id: String(organization.id),
       login: organization.login,
       avatarUrl: organization.avatar_url ?? null,
       url: organization.html_url ?? `https://github.com/${organization.login}`,

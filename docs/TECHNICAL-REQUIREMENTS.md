@@ -116,7 +116,7 @@ Full Disconnect verifies an enabled Firebase account with password or Google sig
 
 - Workspace admins can maintain a workspace-level allow-list of GitHub organization logins from the admin app.
 - This allow-list is a GiTiempo visibility policy layered on top of user-to-server GitHub auth. A workspace member only sees GitHub repositories, projects, and issues that match both the workspace policy and that member's own GitHub access.
-- Organization logins are validated through the requesting admin's active OAuth membership before they are saved; installing the GitHub App is not a prerequisite. Automatic installation confirmation is skipped without usable personal App authorization and cannot undo a successful policy addition.
+- Organization logins are validated through the requesting admin's active OAuth membership before they are saved; installing the GitHub App is not a prerequisite. Workspace installation setup uses OAuth `read:org` for organization identity and GitHub App authentication for exact installation checks; personal App authorization and owner/admin role are not setup prerequisites. GitHub controls authorization for new App installations.
 - The policy does not create a shared workspace GitHub token, does not expose GitHub token material to the frontend, and does not change the user-to-server authentication model.
 - A validated organization login does not guarantee access to every private resource in that organization; GitHub-side GitHub App approval or installation may still be required for some organization resources.
 

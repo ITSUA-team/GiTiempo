@@ -7,11 +7,11 @@ The existing OAuth App is reused for sign-in, linking from Profile and organizat
 | Sign-in and authenticated account linking | OAuth App | Immutable identity, active existing member, initiator proof, global ownership |
 | Organization discovery and adding workspace policy | OAuth `read:org` | Active membership; workspace admin for policy writes |
 | Private repositories/issues/Projects browsing and imports | Personal GitHub App | Matching linked identity and existing workspace visibility policy |
-| Installation discovery and setup | Personal GitHub App plus server App identity | Existing exact-installation and organization-owner checks |
+| Installation discovery and setup | OAuth `read:org` membership plus server GitHub App identity | Exact installation/App/organization/permission checks; GitHub authorizes new installations |
 | Installation-backed issue timer starts | Workspace App installation | Existing project, issue, organization, visibility and assignment checks |
 | Owned timer stop | Existing GiTiempo session | Existing ownership rules |
 
-Identity ownership is global across workspaces. Reauthorization for the same GitHub ID updates only its selected credential family. A GitHub ID owned by another GiTiempo user is rejected; changing an existing link to another ID requires full Disconnect first. OAuth-only identity does not grant private data or installation access. A migrated App-only identity can keep browsing but must authorize OAuth for organization discovery.
+Identity ownership is global across workspaces. Reauthorization for the same GitHub ID updates only its selected credential family. A GitHub ID owned by another GiTiempo user is rejected; changing an existing link to another ID requires full Disconnect first. OAuth-only identity does not grant private repository/project browsing or import. Workspace installation setup uses OAuth organization membership and GitHub App server credentials independently of the user's personal App grant. A migrated App-only identity can keep browsing but must authorize OAuth for organization discovery and installation setup.
 
 ## Full personal Disconnect
 
