@@ -77,15 +77,15 @@ function createRecoveryChecklist() {
     steps: [
       {
         action: {
-          ariaLabel: 'Open GitHub App install page for My-test-org-for-clock',
-          href: 'https://github.com/apps/gitiempo/installations/new',
+          ariaLabel: 'Open GitHub profile authorization for My-test-org-for-clock',
+          href: 'https://user.example.test/profile',
           kind: 'link' as const,
-          label: 'Open install',
-          target: '_blank' as const,
+          label: 'Open profile',
+          target: '_self' as const,
         },
-        description: 'Choose the organization and install GiTiempo.',
-        id: 'install' as const,
-        title: 'Install GitHub App for organization',
+        description: 'Authorize GitHub before adding this organization.',
+        id: 'authorize' as const,
+        title: 'Authorize your GitHub account',
       },
       {
         action: {
@@ -115,6 +115,7 @@ function createProps(overrides: Record<string, unknown> = {}) {
     installingOrganizationLogin: null,
     installations: [],
     installationsLoaded: false,
+    checkingOrganizationLogins: [],
     items: [],
     organizationLoginError: null,
     recoveryChecklist: null,
@@ -230,7 +231,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(wrapper.emitted('install')).toEqual([['Octo-Org']]);
   });
 
-  it('hides the App installation action when the organization is verified', () => {
+  it('does not show Install or Recheck actions for a verified organization', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
@@ -268,6 +269,36 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(
       wrapper.find('[data-testid="settings-github-organization-install-org-1"]').exists(),
     ).toBe(false);
+    expect(wrapper.find('[data-testid="settings-github-organization-reverify-org-1"]').exists()).toBe(false);
+  });
+
+  it('shows a checking state instead of Install App while it reconciles an organization', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        checkingOrganizationLogins: ['octo-org'],
+        installationsLoaded: true,
+        items: [
+          {
+            id: 'org-1',
+            workspaceId: 'workspace-1',
+            organizationLogin: 'Octo-Org',
+            createdByUserId: 'user-1',
+            createdAt: '2026-06-18T00:00:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    expect(wrapper.get('[data-testid="settings-github-organization-checking-org-1"]').text()).toContain('Checking App');
+    expect(wrapper.find('[data-testid="settings-github-organization-install-org-1"]').exists()).toBe(false);
   });
 
   it('hides the add organization setup action when GitHub is disconnected', () => {
@@ -505,16 +536,16 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       }),
     });
 
-    expect(wrapper.text()).toContain('GitHub App access');
-    expect(wrapper.text()).toContain('Install GitHub App for organization');
+    expect(wrapper.text()).toContain('GitHub organization access');
+    expect(wrapper.text()).toContain('Authorize your GitHub account');
     expect(wrapper.text()).toContain('Retry workspace allow-list check');
     expect(wrapper.text()).not.toContain('Installed');
     expect(wrapper.text()).not.toContain('Still blocked');
     expect(
       wrapper
-        .get('[data-testid="settings-github-recovery-link-install"]')
+        .get('[data-testid="settings-github-recovery-link-authorize"]')
         .attributes('href'),
-    ).toBe('https://github.com/apps/gitiempo/installations/new');
+    ).toBe('https://user.example.test/profile');
 
     const retryButton = wrapper
       .findAll('button')
@@ -549,7 +580,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       .find((button) => button.text() === 'Retry check');
 
     expect(
-      wrapper.find('[data-testid="settings-github-recovery-link-install"]').exists(),
+      wrapper.find('[data-testid="settings-github-recovery-link-authorize"]').exists(),
     ).toBe(true);
     expect(retryButton?.attributes('disabled')).toBeDefined();
 

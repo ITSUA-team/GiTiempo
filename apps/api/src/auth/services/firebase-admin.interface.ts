@@ -43,6 +43,8 @@ export interface FirebaseAdminService {
     email: string,
     continueUrl: string,
   ): Promise<string>;
+  /** Whether Firebase has a server-verified non-GitHub credential for this user. */
+  hasUsableAlternativeLogin(firebaseUid: string): Promise<boolean>;
 }
 
 export const FIREBASE_ADMIN = Symbol('FIREBASE_ADMIN');

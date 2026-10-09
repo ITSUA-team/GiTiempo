@@ -18,24 +18,49 @@ function createConnectedStatus(avatarUrl: string | null = "https://avatars.examp
       login: "alexeytsukanov",
       updatedAt: "2026-05-04T08:45:00.000Z",
     },
+    capabilities: {
+      organizationDiscovery: "ready",
+      personalData: "ready",
+    },
+    disconnect: "allowed",
+    oauth: {
+      missingScopes: [],
+      status: "authorized",
+    },
     status: "connected",
   };
 }
 
 function createClientMock(): ProfileGitHubClient & {
   disconnect: ReturnType<typeof vi.fn<ProfileGitHubClient["disconnect"]>>;
+  getAccountAuthUrl: ReturnType<typeof vi.fn<ProfileGitHubClient["getAccountAuthUrl"]>>;
   getAuthUrl: ReturnType<typeof vi.fn<ProfileGitHubClient["getAuthUrl"]>>;
   getConnectionStatus: ReturnType<
     typeof vi.fn<ProfileGitHubClient["getConnectionStatus"]>
   >;
 } {
   return {
-    disconnect: vi.fn<ProfileGitHubClient["disconnect"]>(async () => undefined),
+    disconnect: vi.fn<ProfileGitHubClient["disconnect"]>(async () => ({
+      disconnected: true,
+      providerRevocation: "confirmed",
+    })),
+    getAccountAuthUrl: vi.fn<ProfileGitHubClient["getAccountAuthUrl"]>(async () => ({
+      authorizationUrl: "https://github.com/login/oauth/authorize",
+    })),
     getAuthUrl: vi.fn<ProfileGitHubClient["getAuthUrl"]>(async () => ({
       authorizationUrl: "https://github.com/login/oauth/authorize",
     })),
     getConnectionStatus: vi.fn<ProfileGitHubClient["getConnectionStatus"]>(
-      async () => ({ account: null, status: "disconnected" }),
+      async () => ({
+        account: null,
+        capabilities: {
+          organizationDiscovery: "authorization_required",
+          personalData: "authorization_required",
+        },
+        disconnect: "allowed",
+        oauth: { missingScopes: [], status: "not_authorized" },
+        status: "disconnected",
+      }),
     ),
   };
 }
@@ -196,6 +221,29 @@ describe("useProfileGithubConnection", () => {
     );
   });
 
+  it.each([
+    ["github_account_conflict", "This GitHub account is already connected to another GiTiempo account."],
+    ["github_identity_mismatch", "A different GitHub account is already connected. Disconnect it before connecting another account."],
+  ])("explains %s, retains disconnected state, and cleans the callback URL", async (code, detail) => {
+    const { client, profileGithub, router, toast } = mountProfileGithub({
+      query: { code, github: "error", keep: "1" },
+    });
+
+    await flushPromises();
+
+    expect(toast.add).toHaveBeenCalledWith({
+      detail,
+      severity: "error",
+      summary: "GitHub connection failed",
+    });
+    expect(router.replace).toHaveBeenCalledWith({ query: { keep: "1" } });
+    expect(profileGithub.state.value).toBe("disconnected");
+    expect(profileGithub.connection.value?.account).toBeNull();
+    expect(client.getAccountAuthUrl).not.toHaveBeenCalled();
+    expect(client.getAuthUrl).not.toHaveBeenCalled();
+    expect(client.disconnect).not.toHaveBeenCalled();
+  });
+
   it("falls back to a generic error toast for unknown callback codes", async () => {
     const { router, toast } = mountProfileGithub({
       query: { code: "unexpected_code", github: "error", redirect: "/timer" },
@@ -223,7 +271,7 @@ describe("useProfileGithubConnection", () => {
     expect(profileGithub.state.value).toBe("connecting");
     await connectPromise;
 
-    expect(client.getAuthUrl).toHaveBeenCalledWith();
+    expect(client.getAccountAuthUrl).toHaveBeenCalledWith();
     expect(locationAssign).toHaveBeenCalledWith(
       "https://github.com/login/oauth/authorize",
     );
@@ -231,7 +279,7 @@ describe("useProfileGithubConnection", () => {
 
   it("returns to a retryable state when connect fails before redirect", async () => {
     const client = createClientMock();
-    client.getAuthUrl.mockRejectedValueOnce(new Error("GitHub auth flow failed"));
+    client.getAccountAuthUrl.mockRejectedValueOnce(new Error("GitHub auth flow failed"));
 
     const { profileGithub, toast } = mountProfileGithub({ client });
 
@@ -250,6 +298,39 @@ describe("useProfileGithubConnection", () => {
       context: { action: "start-connection", feature: "profile-github" },
       error: expect.any(Error),
     });
+  });
+
+  it("starts the personal GitHub App authorization independently from OAuth linking", async () => {
+    const { client, locationAssign, profileGithub } = mountProfileGithub();
+
+    await flushPromises();
+    await profileGithub.authorizePersonalData();
+
+    expect(client.getAuthUrl).toHaveBeenCalledWith();
+    expect(client.getAccountAuthUrl).not.toHaveBeenCalled();
+    expect(locationAssign).toHaveBeenCalledWith(
+      "https://github.com/login/oauth/authorize",
+    );
+  });
+
+  it("does not open disconnect confirmation when an alternative sign-in is required", async () => {
+    const client = createClientMock();
+    client.getConnectionStatus.mockResolvedValueOnce({
+      ...createConnectedStatus(),
+      disconnect: "alternative_signin_required",
+    });
+    const { confirm, profileGithub, toast } = mountProfileGithub({ client });
+
+    await flushPromises();
+    profileGithub.requestDisconnect();
+
+    expect(confirm.require).not.toHaveBeenCalled();
+    expect(client.disconnect).not.toHaveBeenCalled();
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        summary: "Another sign-in method is required",
+      }),
+    );
   });
 
   it("disconnects GitHub after confirmation and refetches the authoritative state", async () => {
@@ -304,12 +385,41 @@ describe("useProfileGithubConnection", () => {
     });
   });
 
+  it("reports an unconfirmed provider revocation after local disconnect", async () => {
+    const client = createClientMock();
+    client.getConnectionStatus.mockResolvedValueOnce(createConnectedStatus());
+    client.disconnect.mockResolvedValueOnce({
+      disconnected: true,
+      providerRevocation: "unconfirmed",
+    });
+    const { confirm, profileGithub, toast } = mountProfileGithub({ client });
+
+    await flushPromises();
+    profileGithub.requestDisconnect();
+    await confirm.require.mock.calls[0]?.[0].accept();
+
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        summary: "GitHub revocation needs review",
+      }),
+    );
+  });
+
   it("drops cached timer options when the connection status changes", async () => {
     const client = createClientMock();
 
     client.getConnectionStatus
       .mockResolvedValueOnce(createConnectedStatus())
-      .mockResolvedValueOnce({ account: null, status: "disconnected" });
+      .mockResolvedValueOnce({
+        account: null,
+        capabilities: {
+          organizationDiscovery: "authorization_required",
+          personalData: "authorization_required",
+        },
+        disconnect: "allowed",
+        oauth: { missingScopes: [], status: "not_authorized" },
+        status: "disconnected",
+      });
 
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
     const { profileGithub } = mountProfileGithub({ client });

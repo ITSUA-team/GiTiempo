@@ -139,6 +139,9 @@ describe('AuthService', () => {
     resolveActiveMembership: ReturnType<typeof vi.fn>;
     resolveActiveMembershipForUser: ReturnType<typeof vi.fn>;
   };
+  let githubAccounts: {
+    invalidatePendingAuthorizations: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     tokens = new TokenService(fakeConfig as never);
@@ -197,6 +200,9 @@ describe('AuthService', () => {
       resolveActiveMembership: vi.fn().mockResolvedValue(seedMembership),
       resolveActiveMembershipForUser: vi.fn().mockResolvedValue(seedMembership),
     };
+    githubAccounts = {
+      invalidatePendingAuthorizations: vi.fn().mockResolvedValue(undefined),
+    };
 
     service = new AuthService(
       fakeConfig as never,
@@ -206,6 +212,7 @@ describe('AuthService', () => {
       repo as never,
       users as never,
       members as never,
+      githubAccounts as never,
     );
   });
 
@@ -232,6 +239,7 @@ describe('AuthService', () => {
         expect.objectContaining({
           workspaceId: seedMembership.workspaceId,
         }),
+        undefined,
       );
       expect(repo.create).toHaveBeenCalledOnce();
       expect(repo.create).toHaveBeenCalledWith(
@@ -240,6 +248,7 @@ describe('AuthService', () => {
           workspaceMemberId: seedMembership.id,
           workspaceId: seedMembership.workspaceId,
         }),
+        undefined,
       );
       expect(pair.accessToken).toMatch(/^eyJ/);
       expect(pair.refreshToken.length).toBeGreaterThan(20);
@@ -881,6 +890,9 @@ describe('AuthService', () => {
       });
       await service.logout('raw', seedUserRow.id);
       expect(repo.deleteById).toHaveBeenCalledWith('row-1');
+      expect(
+        githubAccounts.invalidatePendingAuthorizations,
+      ).toHaveBeenCalledWith(seedUserRow.id);
     });
 
     it('is a no-op when the row does not belong to the subject', async () => {
@@ -898,6 +910,9 @@ describe('AuthService', () => {
       });
       await service.logout('raw', seedUserRow.id);
       expect(repo.deleteById).not.toHaveBeenCalled();
+      expect(
+        githubAccounts.invalidatePendingAuthorizations,
+      ).toHaveBeenCalledWith(seedUserRow.id);
     });
 
     it('is silent when the token is unknown', async () => {
@@ -906,6 +921,9 @@ describe('AuthService', () => {
         service.logout('raw', seedUserRow.id),
       ).resolves.toBeUndefined();
       expect(repo.deleteById).not.toHaveBeenCalled();
+      expect(
+        githubAccounts.invalidatePendingAuthorizations,
+      ).toHaveBeenCalledWith(seedUserRow.id);
     });
   });
 

@@ -183,3 +183,9 @@ The 16 September staging/production checks recorded below verified the older 14 
 - [Chrome Web Store Limited Use](https://developer.chrome.com/docs/webstore/program-policies/limited-use)
 - [Extension package guide](../apps/chrome-ext/README.md)
 - [Deployment and production-policy gate](deployment.md#chrome-web-store-privacy-policy-release-gate)
+
+## OAuth account-linking coordination — 2026-10-08
+
+The account-linking change adds backend encrypted OAuth token storage for identity and organization discovery alongside retained personal App credentials. The existing OAuth App requests `user:email read:org read:project`; it does not request `repo`. Tokens remain server-only; the extension keeps the existing token-pair and destination contracts. Full Disconnect deletes active identity ownership and both personal credential families, attempts bounded provider revocation, and preserves GiTiempo sessions, workspace installation access and time history. It is not account deletion or immediate backup erasure.
+
+Before publishing this build, the privacy change owner must reconcile GitHub OAuth purpose, token retention/deletion and consent disclosures with the current policy and release inventory. This source update does not claim publication, provider revocation guarantees, changed backup retention or a completed Store review. Saved GitHub timer assignment examples remain owned by `require-project-assignment-for-saved-github-timers`; installation and assignment authorization must not be described as repaired by personal OAuth consent.

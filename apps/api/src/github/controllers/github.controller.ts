@@ -6,19 +6,28 @@ import {
   HttpStatus,
   Param,
   Query,
+  Req,
   Res,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiFoundResponse,
-  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { ZodSerializerDto } from 'nestjs-zod';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
+import { ConfigService } from '@nestjs/config';
+import type { Env } from '../../config/env.validation';
+import { GithubAccountService } from '../services/github-account.service';
+import { GithubEncryptionService } from '../services/github-encryption.service';
+import {
+  GITHUB_ACCOUNT_SESSION_COOKIE,
+  githubAccountSessionCookieOptions,
+} from '../services/github-account-session';
+import { GithubDisconnectResponseDto } from '../dto/github-disconnect-response.dto';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { SkipAuth } from '../../auth/decorators/skip-auth.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
@@ -40,7 +49,12 @@ import { GithubService } from '../services/github.service';
 @ApiTags('github')
 @Controller('github')
 export class GithubController {
-  constructor(private readonly github: GithubService) {}
+  constructor(
+    private readonly github: GithubService,
+    private readonly accounts: GithubAccountService,
+    private readonly encryption: GithubEncryptionService,
+    private readonly config: ConfigService<Env, true>,
+  ) {}
 
   @Get('connection')
   @HttpCode(HttpStatus.OK)
@@ -54,10 +68,39 @@ export class GithubController {
     return this.github.connectionStatus(user);
   }
 
+  @Get('account/auth-url')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Authorize the linked GitHub account through OAuth',
+  })
+  @ApiOkResponse({ type: GithubAuthUrlResponseDto })
+  @ZodSerializerDto(GithubAuthUrlResponseDto)
+  async accountAuthUrl(
+    @CurrentUser() user: AuthUser,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<GithubAuthUrlResponseDto> {
+    const sessionToken =
+      request.headers.authorization?.replace(/^Bearer\s+/i, '') ?? '';
+    const result = await this.accounts.createAuthorization(
+      user.sub,
+      sessionToken,
+    );
+    response.cookie(
+      GITHUB_ACCOUNT_SESSION_COOKIE,
+      this.encryption.encrypt(sessionToken),
+      githubAccountSessionCookieOptions(
+        this.config.get('NODE_ENV', { infer: true }) === 'production',
+      ),
+    );
+    return result;
+  }
+
   @Get('auth-url')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create GitHub OAuth authorization URL' })
+  @ApiOperation({ summary: 'Authorize personal GitHub App data access' })
   @ApiOkResponse({ type: GithubAuthUrlResponseDto })
   @ZodSerializerDto(GithubAuthUrlResponseDto)
   authUrl(@CurrentUser() user: AuthUser): Promise<GithubAuthUrlResponseDto> {
@@ -187,11 +230,14 @@ export class GithubController {
   }
 
   @Delete('connection')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Disconnect GitHub account' })
-  @ApiNoContentResponse()
-  disconnect(@CurrentUser() user: AuthUser): Promise<void> {
+  @ApiOkResponse({ type: GithubDisconnectResponseDto })
+  @ZodSerializerDto(GithubDisconnectResponseDto)
+  disconnect(
+    @CurrentUser() user: AuthUser,
+  ): Promise<GithubDisconnectResponseDto> {
     return this.github.disconnect(user);
   }
 }

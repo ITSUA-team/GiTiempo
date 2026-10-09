@@ -1,5 +1,5 @@
 {
-  "id": "36078a37-f85f-4de7-812e-9295d5dd265d",
+  "id": "1980d219-8b4e-44dc-b5e5-3de88e3804b4",
   "prevId": "063d07bd-4ccb-4256-a30f-a6ee353683e0",
   "version": "7",
   "dialect": "postgresql",
@@ -1688,12 +1688,6 @@
           "notNull": true,
           "default": "'web'"
         },
-        "invoice_id": {
-          "name": "invoice_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1751,22 +1745,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "time_entries_invoice_id_idx": {
-          "name": "time_entries_invoice_id_idx",
-          "columns": [
-            {
-              "expression": "invoice_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"time_entries\".\"invoice_id\" IS NOT NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1875,19 +1853,6 @@
           ],
           "onDelete": "restrict",
           "onUpdate": "no action"
-        },
-        "time_entries_invoice_id_invoices_id_fk": {
-          "name": "time_entries_invoice_id_invoices_id_fk",
-          "tableFrom": "time_entries",
-          "tableTo": "invoices",
-          "columnsFrom": [
-            "invoice_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1901,233 +1866,6 @@
         "time_entries_source_check": {
           "name": "time_entries_source_check",
           "value": "\"time_entries\".\"source\" IN ('web', 'extension', 'manual')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.invoices": {
-      "name": "invoices",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "project_id": {
-          "name": "project_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "title": {
-          "name": "title",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "varchar(20)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'draft'"
-        },
-        "date_from": {
-          "name": "date_from",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "date_to": {
-          "name": "date_to",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "hourly_rate": {
-          "name": "hourly_rate",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "currency": {
-          "name": "currency",
-          "type": "varchar(3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "discount_percent": {
-          "name": "discount_percent",
-          "type": "numeric(5, 2)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "total_hours": {
-          "name": "total_hours",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "total_amount": {
-          "name": "total_amount",
-          "type": "numeric(12, 2)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "invoices_workspace_id_idx": {
-          "name": "invoices_workspace_id_idx",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "invoices_workspace_project_idx": {
-          "name": "invoices_workspace_project_idx",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "invoices_workspace_status_idx": {
-          "name": "invoices_workspace_status_idx",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "invoices_workspace_id_workspaces_id_fk": {
-          "name": "invoices_workspace_id_workspaces_id_fk",
-          "tableFrom": "invoices",
-          "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "invoices_project_id_projects_id_fk": {
-          "name": "invoices_project_id_projects_id_fk",
-          "tableFrom": "invoices",
-          "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "invoices_created_by_users_id_fk": {
-          "name": "invoices_created_by_users_id_fk",
-          "tableFrom": "invoices",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "invoices_status_check": {
-          "name": "invoices_status_check",
-          "value": "\"invoices\".\"status\" IN ('draft', 'sent', 'paid')"
-        },
-        "invoices_discount_check": {
-          "name": "invoices_discount_check",
-          "value": "\"invoices\".\"discount_percent\" >= 0 AND \"invoices\".\"discount_percent\" <= 100"
-        },
-        "invoices_date_range_check": {
-          "name": "invoices_date_range_check",
-          "value": "\"invoices\".\"date_to\" >= \"invoices\".\"date_from\""
         }
       },
       "isRLSEnabled": false
@@ -2266,6 +2004,316 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.github_account_links": {
+      "name": "github_account_links",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "github_user_id": {
+          "name": "github_user_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "login": {
+          "name": "login",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "avatar_url": {
+          "name": "avatar_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "connected_at": {
+          "name": "connected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "github_account_links_user_id_unique": {
+          "name": "github_account_links_user_id_unique",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "github_account_links_github_user_id_unique": {
+          "name": "github_account_links_github_user_id_unique",
+          "columns": [
+            {
+              "expression": "github_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "github_account_links_login_idx": {
+          "name": "github_account_links_login_idx",
+          "columns": [
+            {
+              "expression": "login",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "github_account_links_user_id_users_id_fk": {
+          "name": "github_account_links_user_id_users_id_fk",
+          "tableFrom": "github_account_links",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.github_oauth_grants": {
+      "name": "github_oauth_grants",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "account_link_id": {
+          "name": "account_link_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token_encrypted": {
+          "name": "access_token_encrypted",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "refresh_token_encrypted": {
+          "name": "refresh_token_encrypted",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scopes": {
+          "name": "scopes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "token_expires_at": {
+          "name": "token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "authorized_at": {
+          "name": "authorized_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "github_oauth_grants_account_link_id_unique": {
+          "name": "github_oauth_grants_account_link_id_unique",
+          "columns": [
+            {
+              "expression": "account_link_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "github_oauth_grants_expires_at_idx": {
+          "name": "github_oauth_grants_expires_at_idx",
+          "columns": [
+            {
+              "expression": "token_expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "github_oauth_grants_account_link_id_github_account_links_id_fk": {
+          "name": "github_oauth_grants_account_link_id_github_account_links_id_fk",
+          "tableFrom": "github_oauth_grants",
+          "tableTo": "github_account_links",
+          "columnsFrom": [
+            "account_link_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.github_authorization_generations": {
+      "name": "github_authorization_generations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generation": {
+          "name": "generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "disconnected_at": {
+          "name": "disconnected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "github_authorization_generations_user_id_unique": {
+          "name": "github_authorization_generations_user_id_unique",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "github_authorization_generations_user_id_users_id_fk": {
+          "name": "github_authorization_generations_user_id_users_id_fk",
+          "tableFrom": "github_authorization_generations",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.github_oauth_states": {
       "name": "github_oauth_states",
       "schema": "",
@@ -2294,6 +2342,33 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'github_app'"
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'personal_data'"
+        },
+        "session_token_hash": {
+          "name": "session_token_hash",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "generation": {
+          "name": "generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "expires_at": {
           "name": "expires_at",
@@ -2349,6 +2424,33 @@
         "github_oauth_states_expires_at_idx": {
           "name": "github_oauth_states_expires_at_idx",
           "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "github_oauth_states_account_link_idx": {
+          "name": "github_oauth_states_account_link_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "purpose",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "expires_at",
               "isExpression": false,

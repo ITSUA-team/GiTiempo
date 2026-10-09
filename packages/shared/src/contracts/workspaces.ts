@@ -76,6 +76,8 @@ export const workspaceGitHubOrganizationRecoveryReasonValues = [
   'workspace_github_organization_connection_required',
   'workspace_github_organization_not_visible',
   'workspace_github_organization_app_access_blocked',
+  'workspace_github_organization_oauth_access_blocked',
+  'workspace_github_organization_permission_required',
   'workspace_github_organization_provider_retryable',
 ] as const;
 
@@ -85,6 +87,8 @@ export const workspaceGitHubOrganizationRecoveryReasonSchema = z.enum(
 
 export const workspaceGitHubOrganizationRecoveryStepIdValues = [
   'install',
+  'authorize',
+  'permission',
   'approve',
   'reconnect',
   'retry',
@@ -116,13 +120,13 @@ export const workspaceGitHubOrganizationRecoveryStepSchema = z
 
 export const workspaceGitHubOrganizationRecoveryStepsSchema = z.tuple([
   workspaceGitHubOrganizationRecoveryStepSchema.extend({
-    id: z.literal('install'),
+    id: z.literal('authorize'),
+  }),
+  workspaceGitHubOrganizationRecoveryStepSchema.extend({
+    id: z.literal('permission'),
   }),
   workspaceGitHubOrganizationRecoveryStepSchema.extend({
     id: z.literal('approve'),
-  }),
-  workspaceGitHubOrganizationRecoveryStepSchema.extend({
-    id: z.literal('reconnect'),
   }),
   workspaceGitHubOrganizationRecoveryStepSchema.extend({
     id: z.literal('retry'),
@@ -225,27 +229,39 @@ export type UpdateWorkspaceSettingsInput = z.infer<
 
 const workspaceGitHubOrganizationRecoveryStepsByReason = {
   workspace_github_organization_connection_required: [
-    { id: 'install', status: 'unknown' },
+    { id: 'authorize', status: 'disconnected' },
+    { id: 'permission', status: 'blocked' },
+    { id: 'approve', status: 'unknown' },
+    { id: 'retry', status: 'blocked' },
+  ],
+  workspace_github_organization_permission_required: [
+    { id: 'authorize', status: 'complete' },
+    { id: 'permission', status: 'action_required' },
+    { id: 'approve', status: 'unknown' },
+    { id: 'retry', status: 'blocked' },
+  ],
+  workspace_github_organization_oauth_access_blocked: [
+    { id: 'authorize', status: 'complete' },
+    { id: 'permission', status: 'complete' },
     { id: 'approve', status: 'action_required' },
-    { id: 'reconnect', status: 'disconnected' },
     { id: 'retry', status: 'blocked' },
   ],
   workspace_github_organization_app_access_blocked: [
-    { id: 'install', status: 'complete' },
-    { id: 'approve', status: 'blocked' },
-    { id: 'reconnect', status: 'action_required' },
+    { id: 'authorize', status: 'complete' },
+    { id: 'permission', status: 'complete' },
+    { id: 'approve', status: 'action_required' },
     { id: 'retry', status: 'blocked' },
   ],
   workspace_github_organization_provider_retryable: [
-    { id: 'install', status: 'unknown' },
-    { id: 'approve', status: 'action_required' },
-    { id: 'reconnect', status: 'complete' },
+    { id: 'authorize', status: 'complete' },
+    { id: 'permission', status: 'complete' },
+    { id: 'approve', status: 'unknown' },
     { id: 'retry', status: 'ready' },
   ],
   workspace_github_organization_not_visible: [
-    { id: 'install', status: 'action_required' },
+    { id: 'authorize', status: 'complete' },
+    { id: 'permission', status: 'complete' },
     { id: 'approve', status: 'action_required' },
-    { id: 'reconnect', status: 'complete' },
     { id: 'retry', status: 'blocked' },
   ],
 } satisfies Record<

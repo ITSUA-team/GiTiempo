@@ -91,55 +91,19 @@ User → Firebase Auth (Google SSO or email/password) on frontend
 
 **CORS:** The backend configures CORS with allowed origins from the `ALLOWED_ORIGINS` environment variable (comma-separated list of web app URLs and exact Chrome extension origins such as `chrome-extension://<extension-id>`).
 
-### 2.3 GitHub Integration — GitHub App (User-to-Server)
+### 2.3 GitHub identity, OAuth discovery and App data access
 
-GitHub is an **optional integration** that users connect in their profile. It uses a **GitHub App** with user-to-server authentication, following [GitHub's official recommendation](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app).
+One globally unique immutable GitHub identity can be linked to one GiTiempo user across all workspaces. The existing OAuth App (`GITHUB_SIGNIN_CLIENT_ID` / `GITHUB_SIGNIN_CLIENT_SECRET`) serves sign-in, authenticated account linking and organization discovery. Login and linking request `user:email read:org read:project` upfront, without `repo`. The registered callback remains `/auth/github/callback`; no second OAuth App or expiry-setting change is required.
 
-See [ADR 003](./adr/003-github-app-user-to-server.md) for rationale.
+Sign-in resolves an existing link first, requiring an active eligible member; only unlinked identities use verified emails and the existing primary-address tie-break. Encrypted staged grants expire after one minute and are committed with the refresh session after single-use handoff proof. Browser nonce and Chrome/Firefox extension destinations/verifier rules remain unchanged.
 
-**OAuth connection flow:**
+Profile Connect/Reconnect calls `GET /github/account/auth-url`. Purpose-bound opaque state includes PKCE, user/session binding and persistent authorization generation. The callback returns to the fixed Profile destination and never switches the GiTiempo user or mints a new session. A globally owned GitHub ID or replacing a different linked ID returns a safe conflict.
 
-```
-User → clicks "Connect GitHub" in profile settings
-                               ↓
-                           Frontend calls GET /github/auth-url (with JWT)
-                               ↓
-                           Backend creates an unguessable opaque state id backed by
-                           github_oauth_states with user binding, PKCE verifier,
-                           expiry, and unconsumed status
-                           Backend returns GitHub OAuth authorization URL with state id
-                           and PKCE challenge
-                               ↓
-                          Browser navigates to GitHub → user authorizes the app
-                               ↓
-                           GitHub redirects to GET /github/callback?code=...&state=...
-                          (browser redirect — no Authorization header)
-                               ↓
-                            Backend validates the opaque state id against github_oauth_states,
-                           checks expiry, consumes it once, and identifies the bound user
-                          Backend exchanges `code` for GitHub user access token + refresh token
-                          Backend stores encrypted tokens in GitHubConnection
-                                ↓
-                            Backend redirects user to USER_SPA_URL/profile
-```
+Personal private repository/issue/Projects browsing and imports remain on the GitHub App user-to-server grant through `/github/auth-url` and `/github/callback`. Its immutable identity must match the link. App access and refresh tokens retain their own encrypted store and client; OAuth expiry/refresh metadata is optional provider data. Workspace installation access remains governed by ADR 009.
 
-The user SPA handles the redirect result on `/profile` and surfaces success or failure with toast notifications only.
+Connection status reports identity, OAuth scopes, organization discovery and personal data capabilities separately. Partial OAuth consent allows valid login. Missing `read:org` requires additional permission for organization setup; missing `read:project` never disables working App Projects. Provider restrictions and request failures are action-specific errors, not successful empty lists.
 
-The callback redirect contract uses `github` as the outcome query key:
-
-- `github=connected` for successful connection completion.
-- `github=error&code=<safe-error-code>` for handled failures, where `code` is a backend-defined safe enum such as `invalid_state`, `github_exchange_failed`, or `github_config`.
-
-Frontend callback handling must treat only those documented `github` values as supported outcomes.
-
-**Note:** The callback endpoint is unauthenticated (browser redirect from GitHub). User identification relies on the validated server-side OAuth state row, not on the GiTiempo JWT or a self-contained signed state JWT.
-
-**Token lifecycle (per GitHub docs):**
-
-| Token type        | Prefix | Lifetime                    |
-| ----------------- | ------ | --------------------------- |
-| User access token | `ghu_` | 8 hours (28800 seconds)     |
-| Refresh token     | `ghr_` | 6 months (15897600 seconds) |
+Full Disconnect verifies an enabled Firebase account with password or Google sign-in, removes identity and both personal token families, and invalidates older callbacks/handoffs/refresh commits. It preserves current GiTiempo sessions, workspace policy/installations and history. Local unlink succeeds despite bounded provider revocation failure and reports an explicit warning. See [OAuth setup and rollout](github-oauth-account-linking.md) and [ADR 003](adr/003-github-app-user-to-server.md).
 
 **On-demand sync (lazy):**
 
@@ -152,7 +116,7 @@ Frontend callback handling must treat only those documented `github` values as s
 
 - Workspace admins can maintain a workspace-level allow-list of GitHub organization logins from the admin app.
 - This allow-list is a GiTiempo visibility policy layered on top of user-to-server GitHub auth. A workspace member only sees GitHub repositories, projects, and issues that match both the workspace policy and that member's own GitHub access.
-- Organization logins are validated through the requesting admin's connected GitHub account before they are saved to the workspace policy.
+- Organization logins are validated through the requesting admin's active OAuth membership before they are saved; installing the GitHub App is not a prerequisite. Workspace installation setup uses OAuth `read:org` for organization identity and GitHub App authentication for exact installation checks; personal App authorization and owner/admin role are not setup prerequisites. GitHub controls authorization for new App installations.
 - The policy does not create a shared workspace GitHub token, does not expose GitHub token material to the frontend, and does not change the user-to-server authentication model.
 - A validated organization login does not guarantee access to every private resource in that organization; GitHub-side GitHub App approval or installation may still be required for some organization resources.
 

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RuntimeSnapshot } from "@/lib/runtime";
 
 const backgroundApiMocks = vi.hoisted(() => ({
+  exchangeGithubSession: vi.fn(),
   exitSession: vi.fn(),
   getCurrentTimer: vi.fn(),
   loginWithFirebaseToken: vi.fn(),
@@ -18,7 +19,12 @@ const sessionMocks = vi.hoisted(() => ({
 }));
 
 const firebaseMocks = vi.hoisted(() => ({
+  signInWithGoogle: vi.fn(),
   signOutFromFirebase: vi.fn(),
+}));
+
+const githubMocks = vi.hoisted(() => ({
+  signInWithGithub: vi.fn(),
 }));
 
 vi.mock("@/lib/config", () => ({
@@ -35,12 +41,12 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("@/lib/firebase", () => ({
-  signInWithGoogle: vi.fn(async () => "firebase-google-token"),
+  signInWithGoogle: firebaseMocks.signInWithGoogle,
   signOutFromFirebase: firebaseMocks.signOutFromFirebase,
 }));
 
 vi.mock("@/lib/github-signin", () => ({
-  signInWithGithub: vi.fn(async () => ({ code: "code", verifier: "verifier" })),
+  signInWithGithub: githubMocks.signInWithGithub,
 }));
 
 vi.mock("@/lib/session", () => ({
@@ -51,6 +57,7 @@ vi.mock("@/lib/session", () => ({
 }));
 
 type ChromeStub = {
+  action: { openPopup: ReturnType<typeof vi.fn> };
   runtime: {
     onMessage: { addListener: ReturnType<typeof vi.fn> };
     sendMessage: ReturnType<typeof vi.fn>;
@@ -63,6 +70,7 @@ type ChromeStub = {
 
 function createChromeStub(): ChromeStub {
   return {
+    action: { openPopup: vi.fn(async () => undefined) },
     runtime: {
       onMessage: { addListener: vi.fn() },
       sendMessage: vi.fn(async () => undefined),
@@ -95,6 +103,9 @@ describe("background snapshot broadcast", () => {
     sessionMocks.getStoredSession.mockResolvedValue(null);
     sessionMocks.hasPendingProviderCleanup.mockResolvedValue(false);
     firebaseMocks.signOutFromFirebase.mockResolvedValue(undefined);
+    firebaseMocks.signInWithGoogle.mockResolvedValue("firebase-google-token");
+    githubMocks.signInWithGithub.mockResolvedValue({ code: "code", verifier: "verifier" });
+    backgroundApiMocks.exchangeGithubSession.mockResolvedValue(undefined);
     backgroundApiMocks.exitSession.mockResolvedValue(undefined);
   });
 
@@ -224,6 +235,66 @@ describe("background snapshot broadcast", () => {
         user: null,
       },
     });
+  });
+
+  it.each(["github", "google"] as const)(
+    "returns a recoverable response when %s authorization is cancelled before exchange",
+    async (provider) => {
+      const errorMessage = "User cancelled or denied access.";
+      const signIn = provider === "github"
+        ? githubMocks.signInWithGithub
+        : firebaseMocks.signInWithGoogle;
+      signIn.mockRejectedValueOnce(new Error(errorMessage));
+
+      await import("./main");
+      const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]?.[0];
+      const sendResponse = vi.fn();
+
+      expect(onMessage({ type: `auth/sign-in-${provider}` }, {}, sendResponse)).toBe(true);
+
+      await vi.waitFor(() => {
+        expect(sendResponse).toHaveBeenCalledWith({
+          ok: false,
+          errorMessage,
+          snapshot: {
+            authenticated: false,
+            currentTimer: null,
+            errorMessage: null,
+            providerCleanupPending: false,
+            user: null,
+          },
+        });
+      });
+      expect(backgroundApiMocks.exchangeGithubSession).not.toHaveBeenCalled();
+      expect(backgroundApiMocks.loginWithFirebaseToken).not.toHaveBeenCalled();
+      expect(chromeStub.action.openPopup).not.toHaveBeenCalled();
+      expect(chromeStub.runtime.sendMessage).toHaveBeenCalledWith({
+        type: "runtime/snapshot-updated",
+        snapshot: expect.objectContaining({ authenticated: false }),
+      });
+    },
+  );
+
+  it("completes GitHub exchange and restores the popup after provider success", async () => {
+    sessionMocks.getStoredSession.mockResolvedValue({
+      accessToken: makeAccessToken({ sub: "user-1", email: "alexey@example.com" }),
+      refreshToken: "refresh-token",
+    });
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+
+    await import("./main");
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]?.[0];
+    const sendResponse = vi.fn();
+    onMessage({ type: "auth/sign-in-github" }, {}, sendResponse);
+
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({
+        ok: true,
+        snapshot: expect.objectContaining({ authenticated: true }),
+      }));
+    });
+    expect(backgroundApiMocks.exchangeGithubSession).toHaveBeenCalledWith("code", "verifier");
+    expect(chromeStub.action.openPopup).toHaveBeenCalledOnce();
   });
 
   it("stops only the timer identity supplied by the caller", async () => {

@@ -3,13 +3,15 @@ import {
   githubInstallationSetupRequestSchema,
   type GitHubInstallationSetupResponse,
   type WorkspaceGitHubOrganizationResponse,
+  type WorkspaceGitHubInstallation,
 } from '@gitiempo/shared';
-import { computed, onScopeDispose, ref, watch, type ComputedRef, type Ref } from 'vue';
+import { computed, onScopeDispose, ref, shallowRef, watch, type ComputedRef, type Ref } from 'vue';
 
 import { ApiError } from '@gitiempo/web-shared/http';
 
 import {
   useCompleteWorkspaceGitHubInstallationMutation,
+  useReverifyWorkspaceGitHubInstallationMutation,
   useSetupWorkspaceGitHubInstallationMutation,
   useWorkspaceGitHubInstallationsQuery,
 } from '@/composables/query';
@@ -23,6 +25,7 @@ type WorkspaceGitHubInstallationsClient = Pick<
   AdminSettingsClient,
   | 'completeWorkspaceGitHubInstallation'
   | 'listWorkspaceGitHubInstallations'
+  | 'reverifyWorkspaceGitHubInstallation'
   | 'setupWorkspaceGitHubInstallation'
 >;
 
@@ -64,13 +67,18 @@ export function useAdminWorkspaceGitHubInstallations({
   const query = useWorkspaceGitHubInstallationsQuery({ client, enabled, scope });
   const setupMutation = useSetupWorkspaceGitHubInstallationMutation({ client, scope });
   const completeMutation = useCompleteWorkspaceGitHubInstallationMutation({ client, scope });
+  const reverifyMutation = useReverifyWorkspaceGitHubInstallationMutation({ client, scope });
   const items = computed(() => query.data.value?.items ?? []);
   const isLoaded = computed(
     () => query.data.value !== undefined && query.error.value === null,
   );
   const installingOrganizationLogin = ref<string | null>(null);
   const scopeKey = computed(() => JSON.stringify(scope.value));
-  const attemptedOrganizations = new Set<string>();
+  const pendingChecks = shallowRef<{ login: string; scope: string }[]>([]);
+  const checkingOrganizationLogins = computed(() => [...new Set(
+    pendingChecks.value.filter((check) => check.scope === scopeKey.value).map((check) => check.login),
+  )]);
+  const attemptedReconciliations = new Set<string>();
   let disposed = false;
   onScopeDispose(() => { disposed = true; });
 
@@ -83,8 +91,8 @@ export function useAdminWorkspaceGitHubInstallations({
   ): { organizationLogin: string } | null {
     if (!canConfigure.value || !enabled.value || disposed) {
       onError?.(
-        'Connect your GitHub account and confirm organization-owner access before linking a GitHub App installation.',
-        new Error('GitHub connection required for installation setup'),
+        'Authorize GitHub organization access from your profile before setting up the GitHub App.',
+        new Error('GitHub organization access is required for installation setup'),
         'setup-workspace-github-installation',
       );
       return null;
@@ -124,6 +132,7 @@ export function useAdminWorkspaceGitHubInstallations({
     organizationLogin: string,
     isStillAllowed: () => boolean = () => true,
   ): Promise<void> {
+    if (!isStillAllowed()) return;
     const response = await requestSetup(organizationLogin);
     if (!response || !isStillAllowed()) return;
 
@@ -178,6 +187,33 @@ export function useAdminWorkspaceGitHubInstallations({
     }
   }
 
+  async function reverifyInstallation(
+    associationId: string,
+  ): Promise<WorkspaceGitHubInstallation | null> {
+    if (!enabled.value) return null;
+    const currentScope = scopeKey.value;
+    try {
+      const result = await reverifyMutation.mutateAsync(associationId);
+      if (isCurrentScope(currentScope)) {
+        await query.refetch({ throwOnError: false });
+      }
+      return isCurrentScope(currentScope) ? result : null;
+    } catch (error) {
+      if (isCurrentScope(currentScope)) {
+        onError?.(getErrorMessage(error), error, 'reverify-workspace-github-installation');
+      }
+      return null;
+    }
+  }
+
+  function beginOrganizationCheck(organizationLogin: string, currentScope: string): () => void {
+    const check = { login: organizationLogin.trim().toLowerCase(), scope: currentScope };
+    pendingChecks.value = [...pendingChecks.value, check];
+    return () => {
+      pendingChecks.value = pendingChecks.value.filter((pending) => pending !== check);
+    };
+  }
+
   watch(
     [
       canConfigure,
@@ -190,25 +226,52 @@ export function useAdminWorkspaceGitHubInstallations({
       () => completeMutation.isPending.value,
     ],
     async () => {
-      if (!canConfigure.value || !enabled.value) {
-        attemptedOrganizations.clear();
+      if (!enabled.value) {
+        attemptedReconciliations.clear();
         return;
       }
       // Do not infer absence from a failed or unfinished status request.
       if (!query.data.value || query.error.value || query.isFetching.value || completeMutation.isPending.value) return;
       const currentScope = scopeKey.value;
       for (const organization of organizations?.value ?? []) {
-        if (!isCurrentScope(currentScope) || !canConfigure.value) return;
+        if (!isCurrentScope(currentScope)) return;
         const login = organization.organizationLogin.toLowerCase();
-        const hasAssociation = () => items.value.some((item) => item.organizationLogin.toLowerCase() === login);
-        const isStillAllowed = () =>
-          !!organizations?.value.some((item) => item.id === organization.id) && !hasAssociation();
+        const association = items.value.find(
+          (item) => item.organizationLogin.toLowerCase() === login,
+        );
         const attemptKey = `${currentScope}:${organization.id}`;
-        // Preserve every saved state, especially deliberate local disconnects.
-        // Each missing link gets one attempt per Settings visit, not a retry loop.
-        if (hasAssociation() || attemptedOrganizations.has(attemptKey)) continue;
-        attemptedOrganizations.add(attemptKey);
-        await beginSetup(organization.organizationLogin, isStillAllowed);
+        if (attemptedReconciliations.has(attemptKey)) continue;
+        // A verified row is checked against GitHub on page entry. Non-verified
+        // rows are discovered through setup, except explicit local disconnects.
+        if (association?.status === 'disconnected') {
+          attemptedReconciliations.add(attemptKey);
+          continue;
+        }
+        // Setup discovery requires OAuth organization access. Do not consume this
+        // organization's one automatic discovery attempt until that access is ready.
+        if (association?.status !== 'verified' && !canConfigure.value) continue;
+        attemptedReconciliations.add(attemptKey);
+        const finishCheck = beginOrganizationCheck(organization.organizationLogin, currentScope);
+        try {
+          if (association?.status === 'verified') {
+            const result = await reverifyInstallation(association.id);
+            if (result && result.status !== 'verified' && canConfigure.value) {
+              const isStillAllowed = () =>
+                !!organizations?.value.some((item) => item.id === organization.id);
+              await beginSetup(organization.organizationLogin, isStillAllowed);
+            } else if (result && result.status !== 'verified') {
+              // Keep the verified-row recheck one-time, but let the later
+              // unavailable-association discovery run once OAuth access arrives.
+              attemptedReconciliations.delete(attemptKey);
+            }
+          } else {
+            const isStillAllowed = () =>
+              !!organizations?.value.some((item) => item.id === organization.id);
+            await beginSetup(organization.organizationLogin, isStillAllowed);
+          }
+        } finally {
+          finishCheck();
+        }
       }
     },
     { immediate: true },
@@ -226,6 +289,7 @@ export function useAdminWorkspaceGitHubInstallations({
     beginSetup,
     completeSetup,
     installingOrganizationLogin,
+    checkingOrganizationLogins,
     isLoaded,
     items,
   };

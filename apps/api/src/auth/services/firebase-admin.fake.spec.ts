@@ -137,4 +137,14 @@ describe('FakeFirebaseAdminService', () => {
       'http://localhost:5173/invites/password-setup?mode=resetPassword&oobCode=fake-reset-invitee%40example.com&continueUrl=http%3A%2F%2Flocalhost%3A5173%2Finvites%2Faccept%3Ftoken%3Dinvite-token',
     );
   });
+
+  it('models password and Google credentials as usable alternative sign-in methods', async () => {
+    await expect(fake.hasUsableAlternativeLogin('unknown-user')).resolves.toBe(
+      true,
+    );
+    fake.setAlternativeProviders('user-1', ['google.com']);
+    await expect(fake.hasUsableAlternativeLogin('user-1')).resolves.toBe(true);
+    fake.setAlternativeProviders('user-1', []);
+    await expect(fake.hasUsableAlternativeLogin('user-1')).resolves.toBe(false);
+  });
 });

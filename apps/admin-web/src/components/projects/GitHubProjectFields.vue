@@ -167,7 +167,10 @@ async function load(): Promise<void> {
     const connection =
       await getAdminSettingsClient().getGitHubConnectionStatus();
 
-    if (connection.status !== 'connected') {
+    if (
+      connection.status !== 'connected' ||
+      connection.capabilities.personalData !== 'ready'
+    ) {
       availability.value = 'no-connection';
       return;
     }
@@ -258,7 +261,7 @@ onMounted(load);
       severity="info"
       :closable="false"
     >
-      Connect a GitHub account in Settings to import projects.
+      Authorize GitHub data from your profile to import projects.
     </Message>
 
     <Message

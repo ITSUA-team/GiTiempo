@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGithubService, type GithubLoginApp } from './auth-github.service';
+import { GithubAccountOauthClientService } from '../../github/services/github-account-oauth-client.service';
+import { GithubEncryptionService } from '../../github/services/github-encryption.service';
 
 const env: Record<string, string> = {
   GITHUB_SIGNIN_CLIENT_ID: 'signin-client',
@@ -11,6 +13,7 @@ const env: Record<string, string> = {
   ADMIN_SPA_URL: 'http://localhost:5174',
   GITHUB_SIGNIN_EXTENSION_REDIRECT_URL: 'https://abcdef.chromiumapp.org/',
   JWT_ACCESS_SECRET: 'test-secret-value',
+  NODE_ENV: 'test',
 };
 const config = { get: (key: string) => env[key] } as never;
 
@@ -19,9 +22,14 @@ function createServiceWithout(...omitted: string[]) {
   const partial = { ...env };
   for (const key of omitted) delete partial[key];
   const auth = createAuthStub();
+  const accounts = createAccountsStub();
+  const localConfig = { get: (key: string) => partial[key] } as never;
   return new AuthGithubService(
-    { get: (key: string) => partial[key] } as never,
+    localConfig,
     auth as never,
+    accounts as never,
+    new GithubAccountOauthClientService(localConfig),
+    new GithubEncryptionService(localConfig),
   );
 }
 
@@ -31,12 +39,37 @@ function createAuthStub() {
   return {
     resolveActiveMemberIdsByEmails: vi.fn(async () => ['member-1']),
     createSessionForMember: vi.fn(async () => pair),
+    assertActiveMember: vi.fn(async () => undefined),
+  };
+}
+
+function createAccountsStub() {
+  return {
+    findByGithubId: vi.fn().mockResolvedValue(null),
+    findByUserId: vi.fn().mockResolvedValue(null),
+    getVersion: vi.fn(async () => ({ generation: 0, disconnectedAt: null })),
+    assertLoginCurrent: vi.fn(async () => undefined),
+    saveOAuthAndRun: vi.fn(
+      async (_memberId, _profile, _tokens, _generation, _startedAt, run) =>
+        run({}),
+    ),
   };
 }
 
 function createService() {
   const auth = createAuthStub();
-  return { svc: new AuthGithubService(config, auth as never), auth };
+  const accounts = createAccountsStub();
+  return {
+    svc: new AuthGithubService(
+      config,
+      auth as never,
+      accounts as never,
+      new GithubAccountOauthClientService(config),
+      new GithubEncryptionService(config),
+    ),
+    auth,
+    accounts,
+  };
 }
 
 function mockGithub(emails: unknown) {
@@ -45,7 +78,17 @@ function mockGithub(emails: unknown) {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ access_token: 'gh-token' }),
+        json: async () => ({
+          access_token: 'gh-token',
+          scope: 'user:email read:org read:project',
+        }),
+      } as Response;
+    }
+    if (String(url).endsWith('/user')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 123, login: 'octocat', avatar_url: null }),
       } as Response;
     }
     if (String(url).includes('user/emails')) {
@@ -94,7 +137,9 @@ describe('AuthGithubService', () => {
     expect(url.searchParams.get('redirect_uri')).toBe(
       'https://api.example.test/auth/github/callback',
     );
-    expect(url.searchParams.get('scope')).toBe('user:email');
+    expect(url.searchParams.get('scope')).toBe(
+      'user:email read:org read:project',
+    );
     expect(url.searchParams.get('state')).toBeTruthy();
     expect(url.searchParams.get('code_challenge')).toBeNull();
     // The browser-bound nonce is returned for the caller's cookie and never
@@ -112,11 +157,15 @@ describe('AuthGithubService', () => {
       secure: false,
     });
 
+    const prodConfig = {
+      get: (key: string) => (key === 'NODE_ENV' ? 'production' : env[key]),
+    } as never;
     const prod = new AuthGithubService(
-      {
-        get: (key: string) => (key === 'NODE_ENV' ? 'production' : env[key]),
-      } as never,
+      prodConfig,
       createAuthStub() as never,
+      createAccountsStub() as never,
+      new GithubAccountOauthClientService(prodConfig),
+      new GithubEncryptionService(prodConfig),
     );
     expect(prod.stateCookieOptions().secure).toBe(true);
   });
@@ -136,6 +185,139 @@ describe('AuthGithubService', () => {
     expect(redirect.origin + redirect.pathname).toBe(
       'http://localhost:5173/auth/github/callback',
     );
+    expect(redirect.searchParams.get('code')).toBeTruthy();
+  });
+
+  it('prefers an existing GitHub identity and does not consult email ownership', async () => {
+    const { svc, auth, accounts } = createService();
+    accounts.findByGithubId.mockResolvedValueOnce({
+      userId: 'linked-member',
+      githubUserId: '123',
+    });
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'other@example.com', primary: true, verified: true },
+      ]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(redirect.searchParams.get('code')).toBeTruthy();
+    expect(auth.assertActiveMember).toHaveBeenCalledWith('linked-member');
+    expect(auth.resolveActiveMemberIdsByEmails).not.toHaveBeenCalled();
+  });
+
+  it('does not fall back to email when the linked GitHub owner is inactive', async () => {
+    const { svc, auth, accounts } = createService();
+    accounts.findByGithubId.mockResolvedValueOnce({
+      userId: 'former-member',
+      githubUserId: '123',
+    });
+    auth.assertActiveMember.mockRejectedValueOnce(new Error('inactive'));
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'active@example.com', primary: true, verified: true },
+      ]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(redirect.searchParams.get('githubError')).toBe('failed');
+    expect(auth.resolveActiveMemberIdsByEmails).not.toHaveBeenCalled();
+  });
+
+  it("rejects a sign-in identity that conflicts with the user's existing GitHub link", async () => {
+    const { svc, accounts } = createService();
+    accounts.findByUserId.mockResolvedValueOnce({
+      userId: 'member-1',
+      githubUserId: 'other-github-user',
+    });
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(redirect.searchParams.get('githubError')).toBe(
+      'github_identity_mismatch',
+    );
+  });
+
+  it('stages an encrypted OAuth grant and persists it only when the handoff is redeemed', async () => {
+    const { svc, accounts } = createService();
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
+    );
+
+    const callback = await svc.completeCallback({
+      code: 'abc',
+      state,
+      stateNonce,
+    });
+    const handoff = new URL(callback).searchParams.get('code')!;
+
+    expect(accounts.saveOAuthAndRun).not.toHaveBeenCalled();
+    expect(callback).not.toContain('gh-token');
+    await svc.exchangeSession(handoff);
+    expect(accounts.saveOAuthAndRun).toHaveBeenCalledOnce();
+  });
+
+  it('rejects a sign-in when its authorization generation is no longer current', async () => {
+    const { svc, accounts } = createService();
+    accounts.assertLoginCurrent.mockRejectedValueOnce(new Error('stale'));
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([{ email: 'me@example.com', primary: true, verified: true }]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(redirect.searchParams.get('githubError')).toBe('failed');
+    expect(accounts.assertLoginCurrent).toHaveBeenCalledOnce();
+  });
+
+  it('does not block sign-in when GitHub returns a partial OAuth scope grant', async () => {
+    const { svc } = createService();
+    const { state, stateNonce } = startTransaction(svc);
+    const fetch = mockGithub([
+      { email: 'me@example.com', primary: true, verified: true },
+    ]);
+    fetch.mockImplementation(async (url: string) => {
+      const response = await mockGithub([
+        { email: 'me@example.com', primary: true, verified: true },
+      ])(url);
+      if (String(url).includes('access_token')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ access_token: 'gh-token', scope: 'user:email' }),
+        } as Response;
+      }
+      return response;
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
     expect(redirect.searchParams.get('code')).toBeTruthy();
   });
 
@@ -278,7 +460,10 @@ describe('AuthGithubService', () => {
 
     await svc.exchangeSession(redirect.searchParams.get('code')!);
 
-    expect(auth.createSessionForMember).toHaveBeenCalledWith('member-2');
+    expect(auth.createSessionForMember).toHaveBeenCalledWith(
+      'member-2',
+      expect.anything(),
+    );
   });
 
   it('does not consult the primary address while a single member matches', async () => {
@@ -423,7 +608,10 @@ describe('AuthGithubService', () => {
     expect(auth.resolveActiveMemberIdsByEmails).toHaveBeenCalledWith([
       'admin@example.com',
     ]);
-    expect(auth.createSessionForMember).toHaveBeenCalledWith('member-1');
+    expect(auth.createSessionForMember).toHaveBeenCalledWith(
+      'member-1',
+      expect.anything(),
+    );
     expect(result).toEqual(pair);
   });
 
