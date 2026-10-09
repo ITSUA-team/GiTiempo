@@ -15,20 +15,44 @@ export interface CreatedGithubOauthState {
   codeChallenge: string;
 }
 
+export type GithubOauthProvider = 'github_app' | 'oauth_app';
+export type GithubOauthPurpose = 'personal_data' | 'account_link';
+
+export interface CreateGithubOauthStateInput {
+  userId: string;
+  provider?: GithubOauthProvider;
+  purpose?: GithubOauthPurpose;
+  sessionTokenHash?: string;
+  generation?: number;
+}
+
 @Injectable()
 export class GithubOauthStateService {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
 
-  async create(userId: string): Promise<CreatedGithubOauthState> {
-    const state = randomBytes(32).toString('base64url');
+  async create(
+    input: string | CreateGithubOauthStateInput,
+  ): Promise<CreatedGithubOauthState> {
+    const request = typeof input === 'string' ? { userId: input } : input;
+    const rawState = randomBytes(32).toString('base64url');
+    // Account-link states use their own opaque namespace so the public callback
+    // can route them without ever falling through to sign-in or App handling.
+    const state =
+      request.purpose === 'account_link'
+        ? `account_link.${rawState}`
+        : rawState;
     const codeVerifier = randomBytes(32).toString('base64url');
     const codeChallenge = createHash('sha256')
       .update(codeVerifier)
       .digest('base64url');
     await this.db.insert(githubOauthStates).values({
-      userId,
+      userId: request.userId,
       state,
       codeVerifier,
+      provider: request.provider ?? 'github_app',
+      purpose: request.purpose ?? 'personal_data',
+      sessionTokenHash: request.sessionTokenHash ?? null,
+      generation: request.generation ?? 0,
       expiresAt: new Date(Date.now() + STATE_TTL_MS),
     });
     return { state, codeChallenge };

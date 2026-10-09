@@ -71,7 +71,7 @@ export function useAdminWorkspaceGitHubInstallations({
   ): { organizationLogin: string } | null {
     if (!canConfigure.value || !enabled.value || disposed) {
       onError?.(
-        'Connect your GitHub account and confirm organization-owner access before linking a GitHub App installation.',
+        'Authorize GitHub App data from your profile and confirm organization-owner access before linking a GitHub App installation.',
         new Error('GitHub connection required for installation setup'),
         'setup-workspace-github-installation',
       );

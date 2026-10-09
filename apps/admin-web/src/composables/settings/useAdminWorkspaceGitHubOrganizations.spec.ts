@@ -59,10 +59,12 @@ function createSubject({
   availableOrganizationsEnabled: isAvailableOrganizationsEnabled = true,
   client = createClient(),
   enabled: isEnabled = true,
+  refetchGitHubConnectionStatus,
 }: {
   availableOrganizationsEnabled?: boolean;
   client?: WorkspaceGitHubOrganizationsClient;
   enabled?: boolean;
+  refetchGitHubConnectionStatus?: () => Promise<void>;
 } = {}) {
   let result!: ReturnType<typeof useAdminWorkspaceGitHubOrganizations>;
   const availableOrganizationsEnabled = ref(isAvailableOrganizationsEnabled);
@@ -80,6 +82,7 @@ function createSubject({
           availableOrganizationsEnabled,
           client,
           enabled,
+          refetchGitHubConnectionStatus,
           scope,
         });
 
@@ -159,6 +162,20 @@ describe('useAdminWorkspaceGitHubOrganizations', () => {
       organizationLogin: 'Manual-Org',
     });
     expect(result.organizationLoginError.value).toBeNull();
+  });
+
+  it('refreshes GitHub connection status once after organization discovery fails', async () => {
+    const client = createClient({
+      listAvailableGitHubOrganizations: vi
+        .fn()
+        .mockRejectedValue(new Error('GitHub OAuth authorization not found')),
+    });
+    const refetchGitHubConnectionStatus = vi.fn().mockResolvedValue(undefined);
+
+    createSubject({ client, refetchGitHubConnectionStatus });
+    await flushPromises();
+
+    expect(refetchGitHubConnectionStatus).toHaveBeenCalledTimes(1);
   });
 
   it('submits selected organizations even when current suggestions are incomplete', async () => {

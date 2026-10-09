@@ -81,6 +81,38 @@ describe('GithubApiClientService', () => {
     expect(JSON.stringify(result)).not.toContain(accessToken);
   });
 
+  it.each(['organizations', 'memberships'])(
+    'rejects discovery when a later %s page fails, without returning partial results',
+    async (kind) => {
+      const path =
+        kind === 'organizations' ? '/user/orgs' : '/user/memberships/orgs';
+      const first =
+        kind === 'organizations'
+          ? [{ login: 'first-org' }]
+          : [{ state: 'active', organization: { login: 'first-org' } }];
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse(first, {
+          link: `<https://api.github.com${path}?page=2>; rel="next"`,
+        }),
+      );
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({ message: 'unavailable' }, { status: 503 }),
+      );
+      const operation =
+        kind === 'organizations'
+          ? service.listOwners(
+              'oauth-token',
+              { login: 'user', avatarUrl: null },
+              'organization',
+            )
+          : service.listActiveOrganizationMemberships('oauth-token');
+      await expect(operation).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it('lists paginated active organization memberships for authenticated users', async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse(

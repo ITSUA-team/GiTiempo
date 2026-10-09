@@ -85,14 +85,18 @@ describe('useAdminWorkspaceGitHubInstallations', () => {
     expect(result.items.value).toEqual([installation]);
   });
 
-  it('blocks setup until the admin can prove GitHub owner authority', async () => {
+  it('blocks OAuth-only setup with GitHub App authorization guidance', async () => {
     const { client, errors, result } = createSubject({ canConfigure: false });
     await flushPromises();
 
     await result.beginSetup('Octo-Org');
 
     expect(client.setupWorkspaceGitHubInstallation).not.toHaveBeenCalled();
-    expect(errors).toHaveBeenCalledTimes(1);
+    expect(errors).toHaveBeenCalledWith(
+      'Authorize GitHub App data from your profile and confirm organization-owner access before linking a GitHub App installation.',
+      expect.any(Error),
+      'setup-workspace-github-installation',
+    );
   });
 
   it('automatically confirms a discovered App for a missing allowed organization', async () => {

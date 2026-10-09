@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { GithubModule } from '../github/github.module';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env.validation';
@@ -29,7 +30,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
  */
 @Global()
 @Module({
-  imports: [UsersModule, MembersModule],
+  imports: [UsersModule, MembersModule, GithubModule],
   providers: [
     AuthService,
     AuthGithubService,

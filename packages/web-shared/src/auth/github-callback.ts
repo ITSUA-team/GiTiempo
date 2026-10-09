@@ -4,6 +4,10 @@ export const githubCallbackErrorMessages: Record<string, string> = {
     "Your GitHub account matches more than one GiTiempo account, so we cannot tell which one you meant. Sign in with your email address instead.",
   denied: "GitHub sign-in was cancelled.",
   email: "Your GitHub account has no verified email to sign in with.",
+  github_account_conflict:
+    "This GitHub account is already connected to another GiTiempo account. Sign in with a different method or disconnect it from that account first.",
+  github_identity_mismatch:
+    "A different GitHub account is already connected to this GiTiempo account. Disconnect it before replacing it.",
   nomember:
     "No GiTiempo account matches any verified email on your GitHub account. Add your work address to GitHub and verify it, then try again.",
   state: "GitHub sign-in could not be verified. Please try again.",

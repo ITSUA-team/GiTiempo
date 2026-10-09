@@ -34,11 +34,29 @@ const connectedStatus: GitHubConnectionStatusResponse = {
     login: 'octocat',
     updatedAt: '2026-05-01T10:00:00.000Z',
   },
+  capabilities: {
+    organizationDiscovery: 'ready',
+    personalData: 'ready',
+  },
+  disconnect: 'allowed',
+  oauth: {
+    missingScopes: [],
+    status: 'authorized',
+  },
   status: 'connected',
 };
 
 const disconnectedStatus: GitHubConnectionStatusResponse = {
   account: null,
+  capabilities: {
+    organizationDiscovery: 'authorization_required',
+    personalData: 'authorization_required',
+  },
+  disconnect: 'allowed',
+  oauth: {
+    missingScopes: [],
+    status: 'not_authorized',
+  },
   status: 'disconnected',
 };
 
@@ -78,11 +96,45 @@ describe('SettingsGitHubAccountCard', () => {
 
     expect(wrapper.get('[data-testid="settings-github-account-connected"]')).toBeTruthy();
     expect(wrapper.text()).toContain('octocat');
-    expect(wrapper.text()).toContain('Connected GitHub account');
+    expect(wrapper.text()).toContain('Connected GitHub identity');
     expect(wrapper.text()).not.toContain('token');
     expect(wrapper.get('a').attributes('href')).toBe(
       'https://user.example.test/profile',
     );
+  });
+
+  it('shows distinct OAuth and personal-data recovery guidance', () => {
+    const wrapper = mountCard({
+      connection: {
+        ...connectedStatus,
+        capabilities: {
+          organizationDiscovery: 'permission_required',
+          personalData: 'authorization_required',
+        },
+      },
+    });
+
+    expect(
+      wrapper.get('[data-testid="settings-github-account-organization-recovery"]').text(),
+    ).toContain('organization permission');
+    expect(
+      wrapper.get('[data-testid="settings-github-account-personal-data-recovery"]').text(),
+    ).toContain('Authorize GitHub App data');
+  });
+
+  it('shows account-permission recovery without blocking ready organization or App access', () => {
+    const wrapper = mountCard({
+      connection: {
+        ...connectedStatus,
+        oauth: { missingScopes: ['read:project'], status: 'authorized' },
+      },
+    });
+
+    expect(
+      wrapper.get('[data-testid="settings-github-account-oauth-permission-recovery"]').text(),
+    ).toContain('GitHub account permissions need attention');
+    expect(wrapper.find('[data-testid="settings-github-account-organization-recovery"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="settings-github-account-personal-data-recovery"]').exists()).toBe(false);
   });
 
   it('renders disconnected prerequisite guidance', () => {

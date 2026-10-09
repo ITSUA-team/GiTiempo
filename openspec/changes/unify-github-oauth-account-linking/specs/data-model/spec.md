@@ -40,11 +40,22 @@ The data model SHALL persist at most one active GitHub identity link per applica
 - **THEN** the existing App credentials SHALL be preserved and associated with that identity
 - **AND** no OAuth grant SHALL be fabricated
 
-#### Scenario: Migration does not choose a duplicate owner
+#### Scenario: Migration unlinks every duplicate legacy owner
 - **GIVEN** multiple legacy active users claim one GitHub ID
 - **WHEN** migration preflight runs
-- **THEN** the conflict SHALL be reported and deployment of new identity resolution/linking SHALL remain blocked until all active ownership conflicts are explicitly resolved
-- **AND** users MUST NOT be automatically merged or a winner selected
+- **THEN** it SHALL report the duplicate GitHub ID and every affected application user without credentials
+- **AND** the preflight SHALL treat the duplicate group as planned cleanup rather than select an owner or merge users
+- **WHEN** the migration runs
+- **THEN** it SHALL remove every matching legacy personal App connection row for that GitHub ID, including historical rows
+- **AND** it SHALL invalidate affected pending legacy OAuth states and persist durable authorization generation/cutoff records for every affected user
+- **AND** it MUST NOT fabricate an OAuth grant, revoke provider grants, merge users, choose a winner, or delete GiTiempo sessions, memberships, workspace records, projects, tasks or history
+- **AND** each affected user SHALL explicitly relink GitHub and reauthorize personal App data after migration
+
+#### Scenario: Duplicate cleanup is not reversible through rollback
+- **GIVEN** migration removed duplicate legacy personal bindings
+- **WHEN** the application is rolled back
+- **THEN** rollback MUST NOT restore the removed credentials or bindings
+- **AND** no restored row MAY reserve the GitHub ID or support sign-in resolution
 
 #### Scenario: Disconnected history cannot grant login
 - **GIVEN** a legacy row is disconnected

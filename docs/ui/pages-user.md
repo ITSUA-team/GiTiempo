@@ -130,11 +130,12 @@
 - `Save changes` persists the latest valid display name and `Cancel` restores the latest persisted value.
 - A disabled placeholder row does not satisfy the editable display-name requirement.
 - GitHub connection card fields must reflect the current API contract only: `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt`. `connectedAt` and `updatedAt` render as browser-local user-facing timestamps rather than raw ISO strings.
-- GitHub connection card required states: loading, request-error, disconnected, connected, and redirecting/connecting.
-- This card represents only the member's personal browsing and import connection. Its status does not indicate whether a workspace GitHub App installation is ready for timer starts, and tracking errors do not add a reconnect call to action here.
-- Connected state actions: `Reconnect` and `Disconnect`.
-- Disconnected state primary action: `Connect GitHub`.
-- Disconnect uses the shared PrimeVue `<ConfirmDialog>` confirmation pattern before removing the connection.
+- GitHub connection card required states: loading, request-error, disconnected, connected, and redirecting/connecting. A connected identity also shows separate organization-discovery and personal GitHub App data authorization readiness without exposing token material.
+- `Connect GitHub` and `Reconnect` use the OAuth account-link flow. It grants identity, organization setup, and GitHub Project scopes. `Authorize GitHub data` is a separate GitHub App action for private repository, issue, and Project browsing/import.
+- A missing OAuth organization permission offers OAuth recovery without disabling an already-working GitHub App data grant. A missing GitHub App data grant does not disable OAuth organization setup.
+- This card does not indicate whether a workspace GitHub App installation is ready for timer starts, and tracking errors do not add a reconnect call to action here.
+- Disconnect uses the shared PrimeVue `<ConfirmDialog>` confirmation pattern before removing the identity and both personal GitHub credential families. Its copy explains that workspace installations, saved projects/tasks, and time history remain. The card disables Disconnect and explains the required recovery when the server reports no verified alternative sign-in method.
+- After successful local unlink, a provider-revocation warning is shown through the existing toast pattern when GitHub cannot confirm revocation.
 - GitHub OAuth callback outcomes after redirect back to `/profile` are surfaced with toast notifications only; do not render inline success or error banners for callback results.
 - When `avatarUrl` is `null`, do not render the avatar row in the GitHub connection card.
 - Disconnect confirmation and callback notifications should use standard PrimeVue `<ConfirmDialog>` and `<Toast>` components; do not invent custom dialog or toast patterns for this page.

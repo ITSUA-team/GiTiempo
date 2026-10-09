@@ -27,9 +27,14 @@ function getRequiredEnvValue(value: string | undefined, key: string): string {
 
 function buildManifest(mode: string): Record<string, unknown> {
   const env = loadEnv(mode, process.cwd(), "");
-  const apiOrigin = new URL(
+  const apiUrl = new URL(
     normalizeBaseUrl(env.VITE_EXTENSION_API_BASE_URL),
-  ).origin;
+  );
+  // Firefox host match patterns cannot include a port, even when its permission
+  // API reports the pattern as granted. Keep the configured scheme and host.
+  const apiHostPermission = resolveTarget() === "firefox"
+    ? `${apiUrl.protocol}//${apiUrl.hostname}/*`
+    : `${apiUrl.origin}/*`;
   const extensionKey = env.VITE_EXTENSION_KEY?.trim();
   const geckoExtensionId = getRequiredEnvValue(
     env.VITE_EXTENSION_GECKO_ID,
@@ -49,7 +54,7 @@ function buildManifest(mode: string): Record<string, unknown> {
     description:
       "Track GiTiempo timers directly from supported GitHub issue surfaces.",
     permissions: ["identity", "storage"],
-    host_permissions: [`${apiOrigin}/*`, "https://github.com/*"],
+    host_permissions: [apiHostPermission, "https://github.com/*"],
     "{{firefox}}.browser_specific_settings": {
       gecko: {
         id: geckoExtensionId,

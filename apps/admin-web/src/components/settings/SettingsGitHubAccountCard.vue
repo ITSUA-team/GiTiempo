@@ -27,6 +27,31 @@ const avatarLabel = computed(() => {
 
   return login ? login.slice(0, 2).toUpperCase() : 'GH';
 });
+const organizationDiscoveryMessage = computed(() => {
+  if (!props.connection || props.connection.capabilities.organizationDiscovery === 'ready') {
+    return null;
+  }
+
+  return props.connection.capabilities.organizationDiscovery === 'permission_required'
+    ? 'GitHub organization permission is missing. Reconnect from your profile to grant it.'
+    : 'Reconnect GitHub from your profile before setting up workspace organizations.';
+});
+const personalDataMessage = computed(() => {
+  if (!props.connection || props.connection.capabilities.personalData === 'ready') {
+    return null;
+  }
+
+  return props.connection.capabilities.personalData === 'permission_required'
+    ? 'GitHub App authorization needs attention before private repository, issue, or Project access can continue.'
+    : 'Authorize GitHub App data from your profile before browsing private repositories, issues, or Projects.';
+});
+const oauthPermissionMessage = computed(() => {
+  if (!props.connection || props.connection.oauth.missingScopes.length === 0) {
+    return null;
+  }
+
+  return 'GitHub account permissions need attention. Reconnect from your profile to finish them.';
+});
 </script>
 
 <template>
@@ -81,13 +106,35 @@ const avatarLabel = computed(() => {
           :label="avatarImage ? undefined : avatarLabel"
           shape="circle"
           size="large"
+          class="min-w-max"
         />
         <div class="flex min-w-0 flex-col gap-0.5">
           <h3 class="text-text-dark truncate text-sm font-semibold">
             {{ connectedAccount.login }}
           </h3>
           <p class="text-text-muted text-xs leading-4">
-            Connected GitHub account for organization validation.
+            Connected GitHub identity.
+          </p>
+          <p
+            v-if="organizationDiscoveryMessage"
+            data-testid="settings-github-account-organization-recovery"
+            class="text-text-muted text-xs leading-4"
+          >
+            {{ organizationDiscoveryMessage }}
+          </p>
+          <p
+            v-else-if="oauthPermissionMessage"
+            data-testid="settings-github-account-oauth-permission-recovery"
+            class="text-text-muted text-xs leading-4"
+          >
+            {{ oauthPermissionMessage }}
+          </p>
+          <p
+            v-if="personalDataMessage"
+            data-testid="settings-github-account-personal-data-recovery"
+            class="text-text-muted text-xs leading-4"
+          >
+            {{ personalDataMessage }}
           </p>
         </div>
       </div>

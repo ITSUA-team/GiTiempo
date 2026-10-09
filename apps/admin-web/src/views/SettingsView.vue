@@ -60,16 +60,29 @@ const canAddGitHubOrganization = computed(
   () =>
     isAuthenticated.value &&
     githubConnection.isConnected.value &&
+    githubConnection.connection.value?.capabilities?.organizationDiscovery === 'ready' &&
+    !githubConnection.loading.value &&
+    !githubConnection.requestError.value,
+);
+const canConfigureGitHubInstallation = computed(
+  () =>
+    isAuthenticated.value &&
+    githubConnection.isConnected.value &&
+    githubConnection.connection.value?.capabilities?.personalData === 'ready' &&
     !githubConnection.loading.value &&
     !githubConnection.requestError.value,
 );
 const canLoadAvailableGitHubOrganizations = computed(
-  () => canAddGitHubOrganization.value,
+  () =>
+    isAuthenticated.value &&
+    githubConnection.isConnected.value &&
+    githubConnection.connection.value?.capabilities?.organizationDiscovery ===
+      'ready' &&
+    !githubConnection.requestError.value,
 );
 const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
   availableOrganizationsEnabled: canLoadAvailableGitHubOrganizations,
   enabled: isAuthenticated,
-  githubAppInstallUrl: appEnv.githubAppInstallUrl,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -79,12 +92,13 @@ const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
   onSuccess(message) {
     successToast(message);
   },
+  refetchGitHubConnectionStatus: githubConnection.retryLoad,
   scope,
   userAppUrl: appEnv.userAppUrl,
 });
 const workspaceGitHubInstallations = useAdminWorkspaceGitHubInstallations({
   organizations: workspaceGitHubOrganizations.items,
-  canConfigure: canAddGitHubOrganization,
+  canConfigure: canConfigureGitHubInstallation,
   enabled: isAuthenticated,
   onError(message, error, action) {
     errorToast(message, {
@@ -128,6 +142,20 @@ const gitHubAddGateMessage = computed(() => {
 
   if (!githubConnection.isConnected.value) {
     return 'Connect your GitHub account before adding workspace organizations.';
+  }
+
+  if (
+    githubConnection.connection.value?.capabilities?.organizationDiscovery ===
+    'authorization_required'
+  ) {
+    return 'Reconnect GitHub from your profile before adding workspace organizations.';
+  }
+
+  if (
+    githubConnection.connection.value?.capabilities?.organizationDiscovery ===
+    'permission_required'
+  ) {
+    return 'Grant GitHub organization permission from your profile before adding workspace organizations.';
   }
 
   return null;

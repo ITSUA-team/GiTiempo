@@ -21,9 +21,10 @@ function dbWithSelectRows(rows: unknown[][]) {
   const limit = vi.fn();
   for (const row of rows) limit.mockResolvedValueOnce(row);
   const where = vi.fn().mockReturnValue({ limit });
-  const from = vi.fn().mockReturnValue({ where });
+  const innerJoin = vi.fn().mockReturnValue({ where });
+  const from = vi.fn().mockReturnValue({ where, innerJoin });
   const select = vi.fn().mockReturnValue({ from });
-  return { select, from, where, limit };
+  return { select, from, innerJoin, where, limit };
 }
 
 function dbWithUpdateReturning(rows: unknown[][]) {
@@ -73,6 +74,12 @@ describe('GithubConnectionsService', () => {
     await expect(service.status('user-1')).resolves.toEqual({
       status: 'disconnected',
       account: null,
+      oauth: { status: 'not_authorized', missingScopes: [] },
+      capabilities: {
+        organizationDiscovery: 'authorization_required',
+        personalData: 'authorization_required',
+      },
+      disconnect: 'allowed',
     });
   });
 
@@ -89,6 +96,12 @@ describe('GithubConnectionsService', () => {
         connectedAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
       },
+      oauth: { status: 'not_authorized', missingScopes: [] },
+      capabilities: {
+        organizationDiscovery: 'authorization_required',
+        personalData: 'ready',
+      },
+      disconnect: 'verification_unavailable',
     });
   });
 
@@ -104,7 +117,17 @@ describe('GithubConnectionsService', () => {
     const { service, encryption } = buildService(insertDb);
 
     await expect(
-      service.upsertConnected(
+      (
+        service as unknown as {
+          upsertConnectedWith: (
+            db: unknown,
+            userId: string,
+            profile: unknown,
+            tokens: unknown,
+          ) => Promise<unknown>;
+        }
+      ).upsertConnectedWith(
+        insertDb,
         'user-1',
         { githubUserId: '123', login: 'octo', avatarUrl: null },
         {
@@ -168,6 +191,12 @@ describe('GithubConnectionsService', () => {
     };
     const { service } = buildService({ ...selectDb, ...updateDb }, oauth);
 
+    const internals = service as unknown as {
+      getVersion: (userId: string) => Promise<{ generation: number }>;
+      updateTokensIfCurrent: () => Promise<null>;
+    };
+    vi.spyOn(internals, 'getVersion').mockResolvedValue({ generation: 0 });
+    vi.spyOn(internals, 'updateTokensIfCurrent').mockResolvedValue(null);
     await expect(service.getValidAccessToken('user-1')).resolves.toBe(
       'new-access',
     );

@@ -1,18 +1,15 @@
 import { createAppToast, type ToastLike } from "@gitiempo/web-shared";
 import { ref } from "vue";
 
-import type { ProfileGitHubClient } from "@/services/profile-github-client";
-
-
 interface UseProfileGithubAuthorizationRedirectOptions {
-  client: Pick<ProfileGitHubClient, "getAuthUrl">;
+  getAuthorizationUrl: () => Promise<{ authorizationUrl: string }>;
   locationAssign: (url: string) => void;
   toast: ToastLike;
 }
 
 
 export function useProfileGithubAuthorizationRedirect({
-  client,
+  getAuthorizationUrl,
   locationAssign,
   toast,
 }: UseProfileGithubAuthorizationRedirectOptions) {
@@ -27,7 +24,7 @@ export function useProfileGithubAuthorizationRedirect({
     isConnecting.value = true;
 
     try {
-      const response = await client.getAuthUrl();
+      const response = await getAuthorizationUrl();
 
       if (requestId !== connectRequestId) {
         return;

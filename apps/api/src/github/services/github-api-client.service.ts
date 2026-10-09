@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import type {
   GitHubBrowsingPagination,
@@ -282,6 +283,12 @@ export class GithubApiClientService {
       });
     }
 
+    if (response.status === 401) {
+      throw new UnauthorizedException({
+        code: 'github_authorization_required',
+        message: 'GitHub authorization is required',
+      });
+    }
     if (!response.ok) {
       this.logger.warn({
         event: 'github.api.request_failed',
@@ -645,6 +652,12 @@ export class GithubApiClientService {
     if (response.status === 404 && notFoundMessage) {
       throw new NotFoundException(notFoundMessage);
     }
+    if (response.status === 401) {
+      throw new UnauthorizedException({
+        code: 'github_authorization_required',
+        message: 'GitHub authorization is required',
+      });
+    }
     if (!response.ok) {
       this.logger.warn({
         event: 'github.api.request_failed',
@@ -693,6 +706,12 @@ export class GithubApiClientService {
         throw new ServiceUnavailableException('GitHub API rate limit exceeded');
       }
       throw new GithubInstallationPermissionError();
+    }
+    if (response.status === 401) {
+      throw new UnauthorizedException({
+        code: 'github_authorization_required',
+        message: 'GitHub authorization is required',
+      });
     }
     if (!response.ok) {
       this.logger.warn({

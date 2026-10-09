@@ -65,6 +65,31 @@ export class GithubOauthClientService {
     });
   }
 
+  /** Best-effort revocation of one personal GitHub App user token. */
+  async revoke(accessToken: string): Promise<boolean> {
+    try {
+      const clientId = this.requireConfig('GITHUB_APP_CLIENT_ID');
+      const credentials = Buffer.from(
+        `${clientId}:${this.requireConfig('GITHUB_APP_CLIENT_SECRET')}`,
+      ).toString('base64');
+      const response = await fetch(
+        `https://api.github.com/applications/${clientId}/token`,
+        {
+          method: 'DELETE',
+          signal: AbortSignal.timeout(5_000),
+          headers: {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Basic ${credentials}`,
+          },
+          body: JSON.stringify({ access_token: accessToken }),
+        },
+      );
+      return response.ok || response.status === 404;
+    } catch {
+      return false;
+    }
+  }
+
   async getCurrentUser(accessToken: string): Promise<GithubUserProfile> {
     const response = await fetch('https://api.github.com/user', {
       headers: {
@@ -126,7 +151,7 @@ export class GithubOauthClientService {
       this.logger.warn({
         event: 'github.oauth.token_failed',
         status: response.status,
-        error: body.error,
+        hasError: Boolean(body.error),
       });
       throw new ServiceUnavailableException('GitHub OAuth request failed');
     }

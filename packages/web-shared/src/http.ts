@@ -4,6 +4,7 @@ interface RequestJsonOptions<TResponse> {
   accessToken?: string;
   apiBaseUrl?: string;
   body?: unknown;
+  credentials?: "include" | "omit" | "same-origin";
   fetchFn?: typeof fetch;
   headers?: Record<string, string>;
   method?: string;
@@ -15,6 +16,7 @@ interface RequestJsonOptions<TResponse> {
 export interface ApiRequestOptions {
   auth?: boolean;
   body?: unknown;
+  credentials?: "include" | "omit" | "same-origin";
   headers?: Record<string, string>;
   method?: string;
   path: string;
@@ -135,6 +137,7 @@ export async function requestJson<TResponse>({
   accessToken,
   apiBaseUrl,
   body,
+  credentials,
   fetchFn = getDefaultFetchFn(),
   headers,
   method = "GET",
@@ -160,6 +163,7 @@ export async function requestJson<TResponse>({
           }
         : requestHeaders,
     method,
+    ...(credentials ? { credentials } : {}),
     ...(signal ? { signal } : {}),
   });
 
@@ -235,6 +239,7 @@ export function createAuthenticatedApiClient({
         token,
       }),
       method: options.method ?? "GET",
+      ...(options.credentials ? { credentials: options.credentials } : {}),
       ...(options.signal ? { signal: options.signal } : {}),
     });
   }

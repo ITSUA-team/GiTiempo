@@ -51,7 +51,7 @@ Entity definitions and relationships for GI Tiempo.
 
 ### User (`users`)
 
-A person authenticated via Firebase Auth (Google SSO or email/password). GitHub connection is optional and stored separately in `github_connections`.
+A person authenticated via Firebase Auth (Google SSO or email/password). GitHub identity is optional and stored in `github_account_links`; OAuth and personal App credentials are separate.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -69,9 +69,17 @@ A person authenticated via Firebase Auth (Google SSO or email/password). GitHub 
 
 ---
 
+### GitHub account ownership and OAuth grants
+
+`github_account_links` owns the workspace-independent identity: one unique user ID and one globally unique immutable GitHub ID, safe display metadata and timestamps. The separate `github_oauth_grants` row stores encrypted OAuth access/optional refresh tokens, actual granted scopes and optional provider expiry metadata. No OAuth grant is fabricated during migration.
+
+`github_authorization_generations` persists after unlink. Its per-user generation and disconnect cutoff serialize authorization/refresh commits against Disconnect and reject guest sign-in flows started before the cutoff. Disconnect deletes active ownership and both personal credentials, releasing the GitHub ID; it preserves installations, policy, core projects/tasks/time records and GiTiempo sessions.
+
+Migration backfills only unambiguous active legacy App identities. For every GitHub ID with multiple active legacy owners, it removes all matching personal connection rows (including historical rows), invalidates pending authorizations and records a durable generation/cutoff. It selects no owner and preserves GiTiempo users, sessions, workspace records and history; affected users must explicitly relink. Disconnected history otherwise reserves no identity. See [rollout rules](github-oauth-account-linking.md).
+
 ### GitHubConnection (`github_connections`)
 
-Stores the user's GitHub App connection. Optional — users can work with manual tasks without GitHub. Connected via user-to-server OAuth flow in profile settings.
+Stores the user's GitHub App connection. Optional — users can work with manual tasks without GitHub. Authorized through the separate personal GitHub App data action in Profile; its GitHub ID must match account ownership.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|

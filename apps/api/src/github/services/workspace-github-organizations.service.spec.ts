@@ -189,7 +189,10 @@ describe('WorkspaceGitHubOrganizationsService', () => {
       organizationLogin: ' octo-org ',
     });
 
-    expect(connections.getValidAccessToken).toHaveBeenCalledWith('user-1');
+    expect(connections.getValidAccessToken).toHaveBeenCalledWith(
+      'user-1',
+      'read:org',
+    );
     expect(apiClient.listOwners).toHaveBeenCalledWith(
       'ghu_token',
       { login: 'octocat', avatarUrl: null },
@@ -418,9 +421,9 @@ describe('WorkspaceGitHubOrganizationsService', () => {
           organizationLogin: 'octo-org',
           reason: 'workspace_github_organization_connection_required',
           steps: [
-            { id: 'install', status: 'unknown' },
-            { id: 'approve', status: 'action_required' },
-            { id: 'reconnect', status: 'disconnected' },
+            { id: 'authorize', status: 'disconnected' },
+            { id: 'permission', status: 'blocked' },
+            { id: 'approve', status: 'unknown' },
             { id: 'retry', status: 'blocked' },
           ],
         },
@@ -467,9 +470,9 @@ describe('WorkspaceGitHubOrganizationsService', () => {
           organizationLogin: 'octo-org',
           reason: 'workspace_github_organization_not_visible',
           steps: [
-            { id: 'install', status: 'action_required' },
+            { id: 'authorize', status: 'complete' },
+            { id: 'permission', status: 'complete' },
             { id: 'approve', status: 'action_required' },
-            { id: 'reconnect', status: 'complete' },
             { id: 'retry', status: 'blocked' },
           ],
         },
@@ -501,7 +504,8 @@ describe('WorkspaceGitHubOrganizationsService', () => {
           new BadRequestException({
             code: 'github_app_access_blocked',
             error: 'BadRequest',
-            message: 'GitHub organization blocks this GitHub App',
+            message:
+              'GitHub organization restricts OAuth access. Request approval from an organization owner.',
           }),
         ),
         listActiveOrganizationMemberships: vi.fn(),
@@ -511,16 +515,17 @@ describe('WorkspaceGitHubOrganizationsService', () => {
     await expect(
       service.add(user, { organizationLogin: 'octo-org' }),
     ).rejects.toMatchObject({
-      message: 'GitHub organization blocks this GitHub App',
+      message:
+        'GitHub organization restricts OAuth access. Request approval from an organization owner.',
       response: expect.objectContaining({
-        code: 'workspace_github_organization_app_access_blocked',
+        code: 'workspace_github_organization_oauth_access_blocked',
         recovery: {
           organizationLogin: 'octo-org',
-          reason: 'workspace_github_organization_app_access_blocked',
+          reason: 'workspace_github_organization_oauth_access_blocked',
           steps: [
-            { id: 'install', status: 'complete' },
-            { id: 'approve', status: 'blocked' },
-            { id: 'reconnect', status: 'action_required' },
+            { id: 'authorize', status: 'complete' },
+            { id: 'permission', status: 'complete' },
+            { id: 'approve', status: 'action_required' },
             { id: 'retry', status: 'blocked' },
           ],
         },
@@ -566,9 +571,9 @@ describe('WorkspaceGitHubOrganizationsService', () => {
           organizationLogin: 'octo-org',
           reason: 'workspace_github_organization_provider_retryable',
           steps: [
-            { id: 'install', status: 'unknown' },
-            { id: 'approve', status: 'action_required' },
-            { id: 'reconnect', status: 'complete' },
+            { id: 'authorize', status: 'complete' },
+            { id: 'permission', status: 'complete' },
+            { id: 'approve', status: 'unknown' },
             { id: 'retry', status: 'ready' },
           ],
         },
@@ -615,9 +620,9 @@ describe('WorkspaceGitHubOrganizationsService', () => {
           organizationLogin: 'octo-org',
           reason: 'workspace_github_organization_provider_retryable',
           steps: [
-            { id: 'install', status: 'unknown' },
-            { id: 'approve', status: 'action_required' },
-            { id: 'reconnect', status: 'complete' },
+            { id: 'authorize', status: 'complete' },
+            { id: 'permission', status: 'complete' },
+            { id: 'approve', status: 'unknown' },
             { id: 'retry', status: 'ready' },
           ],
         },
@@ -834,5 +839,41 @@ describe('WorkspaceGitHubOrganizationsService', () => {
     await expect(
       service.add(user, { organizationLogin: 'octo-org' }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+});
+
+describe('OAuth membership validation', () => {
+  it('rejects missing OAuth scope before any manual-input provider lookup or policy write', async () => {
+    const db = createAddDb({});
+    const accounts = {
+      status: vi.fn().mockResolvedValue({
+        status: 'connected',
+        account: { login: 'octo', avatarUrl: null },
+      }),
+      getValidAccessToken: vi
+        .fn()
+        .mockRejectedValue(
+          new BadRequestException({ code: 'github_oauth_permission_required' }),
+        ),
+    };
+    const api = {
+      listOwners: vi.fn(),
+      getAuthenticatedUserOrganizationMembership: vi.fn(),
+    };
+    const service = new WorkspaceGitHubOrganizationsService(
+      db.db as never,
+      accounts as never,
+      api as never,
+    );
+    await expect(
+      service.add(user, { organizationLogin: 'manual-org' }),
+    ).rejects.toMatchObject({
+      response: { code: 'workspace_github_organization_permission_required' },
+    });
+    expect(api.listOwners).not.toHaveBeenCalled();
+    expect(
+      api.getAuthenticatedUserOrganizationMembership,
+    ).not.toHaveBeenCalled();
+    expect(db.db.transaction).not.toHaveBeenCalled();
   });
 });

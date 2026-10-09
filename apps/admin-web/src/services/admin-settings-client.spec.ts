@@ -37,6 +37,15 @@ const githubConnectionStatusResponse = {
     login: 'octocat',
     updatedAt: '2026-05-01T10:00:00.000Z',
   },
+  capabilities: {
+    organizationDiscovery: 'ready',
+    personalData: 'ready',
+  },
+  disconnect: 'allowed',
+  oauth: {
+    missingScopes: [],
+    status: 'authorized',
+  },
   status: 'connected',
 } as const;
 

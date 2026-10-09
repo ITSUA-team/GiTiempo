@@ -169,7 +169,13 @@ async function chooseOrganization(
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	getGitHubConnectionStatus.mockResolvedValue({ status: 'connected' });
+	getGitHubConnectionStatus.mockResolvedValue({
+		account: null,
+		capabilities: { organizationDiscovery: 'ready', personalData: 'ready' },
+		disconnect: 'allowed',
+		oauth: { missingScopes: [], status: 'authorized' },
+		status: 'connected',
+	});
 	listWorkspaceGitHubOrganizations.mockResolvedValue({
 		items: [{ organizationLogin: 'ITSUA-team' }],
 	});
@@ -444,15 +450,48 @@ describe('GitHubProjectFields', () => {
 	});
 
 	it('refuses to offer projects without a connected GitHub account', async () => {
-		getGitHubConnectionStatus.mockResolvedValue({ status: 'disconnected' });
+		getGitHubConnectionStatus.mockResolvedValue({
+			account: null,
+			capabilities: {
+				organizationDiscovery: 'authorization_required',
+				personalData: 'authorization_required',
+			},
+			disconnect: 'allowed',
+			oauth: { missingScopes: [], status: 'not_authorized' },
+			status: 'disconnected',
+		});
 		const wrapper = mountFields();
 		await flushPromises();
 
 		expect(lastAvailability(wrapper)).toBe('no-connection');
-		expect(wrapper.text()).toContain('Connect a GitHub account in Settings');
+		expect(wrapper.text()).toContain(
+			'Authorize GitHub data from your profile to import projects.',
+		);
 		expect(wrapper.find('[data-testid="github-import-project"]').exists()).toBe(
 			false,
 		);
+	});
+
+	it('requires personal GitHub App data authorization before listing projects', async () => {
+		getGitHubConnectionStatus.mockResolvedValue({
+			account: null,
+			capabilities: {
+				organizationDiscovery: 'ready',
+				personalData: 'authorization_required',
+			},
+			disconnect: 'allowed',
+			oauth: { missingScopes: [], status: 'authorized' },
+			status: 'connected',
+		});
+
+		const wrapper = mountFields();
+		await flushPromises();
+
+		expect(lastAvailability(wrapper)).toBe('no-connection');
+		expect(wrapper.text()).toContain(
+			'Authorize GitHub data from your profile to import projects.',
+		);
+		expect(listWorkspaceGitHubOrganizations).not.toHaveBeenCalled();
 	});
 
 	it('refuses to offer projects without an approved organization', async () => {

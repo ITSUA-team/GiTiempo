@@ -5,16 +5,22 @@
 
 ## Context
 
-The application needs to access GitHub data (organizations, projects, repositories, issues) on behalf of individual users. Two main options exist:
+The application needs to access private GitHub data (projects, repositories, issues) on behalf of individual users. Two main options exist:
 
-1. **GitHub OAuth App** — simpler setup, but tokens don't expire (security risk), and scopes are coarse-grained.
+1. **GitHub OAuth App** — scopes are coarse-grained; token expiry and refresh metadata depend on the issuing configuration. It serves identity and organization discovery.
 2. **GitHub App (user-to-server)** — more setup, but tokens expire (8h access, 6mo refresh), fine-grained permissions, and user-scoped access without a shared organization token model.
+
+## Identity and organization discovery update — 2026-10-08
+
+The existing sign-in OAuth App now also links an account from Profile and discovers organizations before installation. Both entry points request `user:email read:org read:project`, without `repo`; granted scopes and optional expiry metadata determine each capability. GitHub numeric ID owns one global GiTiempo identity link. OAuth and personal App tokens have separate encrypted stores. Missing OAuth permissions allow a valid login and do not disable App-backed Projects.
+
+Full personal Disconnect verifies an enabled Firebase account with password or Google sign-in, removes identity ownership and both personal grants, invalidates older authorization transactions, and attempts bounded token-specific revocation. Current GiTiempo sessions, workspace installations, policy, imported records and history survive. Provider revocation failure is reported after authoritative local unlink.
 
 ## Decision
 
 Use a **GitHub App** with **user-to-server authentication** flow:
 
-- Users connect their GitHub account in profile settings via OAuth web flow.
+- Users authorize personal GitHub App data access separately in Profile after linking the same GitHub identity through OAuth.
 - The backend receives a short-lived user access token (`ghu_`, 8h) and a refresh token (`ghr_`, 6mo).
 - Tokens are AES-encrypted at rest in the `GitHubConnection` table.
 - Access tokens are refreshed automatically when expired.

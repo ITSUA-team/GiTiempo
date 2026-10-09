@@ -49,7 +49,12 @@ export function useProfileGithubConnection(
   const locationAssign =
     options.locationAssign ?? ((url: string) => window.location.assign(url));
   const authorizationRedirect = useProfileGithubAuthorizationRedirect({
-    client,
+    getAuthorizationUrl: () => client.getAccountAuthUrl(),
+    locationAssign,
+    toast,
+  });
+  const personalDataAuthorizationRedirect = useProfileGithubAuthorizationRedirect({
+    getAuthorizationUrl: () => client.getAuthUrl(),
     locationAssign,
     toast,
   });
@@ -120,11 +125,19 @@ export function useProfileGithubConnection(
     isDisconnecting.value = true;
 
     try {
-      await client.disconnect();
+      const result = await client.disconnect();
       appToast.showSuccessToast(
         "GitHub disconnected",
         "Your GitHub account has been disconnected.",
       );
+      if (result.providerRevocation === "unconfirmed") {
+        appToast.showErrorToast({
+          detail: "GiTiempo removed the connection, but GitHub could not confirm revocation. Review GitHub authorized applications if needed.",
+          error: new Error("GitHub provider revocation could not be confirmed"),
+          logContext: { action: "disconnect", feature: "profile-github" },
+          summary: "GitHub revocation needs review",
+        });
+      }
       await refreshConnectionStatus();
     } catch (error) {
       appToast.showErrorToast({
@@ -139,11 +152,33 @@ export function useProfileGithubConnection(
   }
 
   function requestDisconnect(): void {
+    const eligibility = connection.value?.disconnect;
+
+    if (eligibility === "alternative_signin_required") {
+      appToast.showErrorToast({
+        detail: "Add another sign-in method before disconnecting GitHub so you do not lose access to GiTiempo.",
+        error: new Error("Alternative sign-in required"),
+        logContext: { action: "disconnect", feature: "profile-github" },
+        summary: "Another sign-in method is required",
+      });
+      return;
+    }
+
+    if (eligibility === "verification_unavailable") {
+      appToast.showErrorToast({
+        detail: "GiTiempo could not verify another sign-in method. Retry when verification is available.",
+        error: new Error("Alternative sign-in verification unavailable"),
+        logContext: { action: "disconnect", feature: "profile-github" },
+        summary: "Could not verify sign-in methods",
+      });
+      return;
+    }
+
     appConfirm.confirmDestructive({
       accept: disconnect,
       acceptLabel: "Disconnect",
       header: "Disconnect GitHub?",
-      message: "This will remove your current GitHub connection from the profile.",
+      message: "This removes your GitHub identity and personal GitHub access from GiTiempo. Workspace installations, projects, tasks, and time history remain available.",
     });
   }
 
@@ -154,8 +189,10 @@ export function useProfileGithubConnection(
 
   return {
     connect: authorizationRedirect.connect,
+    authorizePersonalData: personalDataAuthorizationRedirect.connect,
     connection,
     isConnecting: authorizationRedirect.isConnecting,
+    isAuthorizingPersonalData: personalDataAuthorizationRedirect.isConnecting,
     isDisconnecting,
     refreshConnectionStatus,
     requestDisconnect,

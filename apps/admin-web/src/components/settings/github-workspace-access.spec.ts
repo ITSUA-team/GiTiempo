@@ -2,55 +2,43 @@ import { describe, expect, it } from 'vitest';
 
 import { buildGitHubWorkspaceAccessChecklist } from './github-workspace-access';
 
-function getInstallHref(githubAppInstallUrl?: string | null): string {
+function getProfileHref(): string {
   const checklist = buildGitHubWorkspaceAccessChecklist({
-    githubAppInstallUrl,
     recovery: {
       organizationLogin: 'My-test-org-for-clock',
-      reason: 'workspace_github_organization_not_visible',
+      reason: 'workspace_github_organization_permission_required',
       steps: [
-        { id: 'install', status: 'action_required' },
+        { id: 'authorize', status: 'action_required' },
+        { id: 'permission', status: 'action_required' },
         { id: 'approve', status: 'action_required' },
-        { id: 'reconnect', status: 'complete' },
         { id: 'retry', status: 'blocked' },
       ],
     },
     userAppUrl: 'http://localhost:5173',
   });
-  const action = checklist.steps.find((step) => step.id === 'install')?.action;
+  const action = checklist.steps.find((step) => step.id === 'authorize')?.action;
 
   if (!action || action.kind !== 'link') {
-    throw new Error('Expected install step to expose a link action.');
+    throw new Error('Expected OAuth authorization step to expose a link action.');
   }
 
   return action.href;
 }
 
 describe('buildGitHubWorkspaceAccessChecklist', () => {
-  it('opens the GitHub App installation request page by default', () => {
-    expect(getInstallHref()).toBe(
-      'https://github.com/apps/gi-tiempo/installations/new',
-    );
-    expect(getInstallHref('   ')).toBe(
-      'https://github.com/apps/gi-tiempo/installations/new',
-    );
-  });
-
-  it('uses a configured GitHub App install URL when provided', () => {
-    expect(
-      getInstallHref('https://github.com/apps/gitiempo-dev/installations/new'),
-    ).toBe('https://github.com/apps/gitiempo-dev/installations/new');
+  it('uses the Profile OAuth flow for authorization recovery', () => {
+    expect(getProfileHref()).toBe('http://localhost:5173/profile');
   });
 
   it('derives recovery instructions from backend-provided recovery step values', () => {
     const checklist = buildGitHubWorkspaceAccessChecklist({
       recovery: {
         organizationLogin: 'My-test-org-for-clock',
-        reason: 'workspace_github_organization_app_access_blocked',
+        reason: 'workspace_github_organization_oauth_access_blocked',
         steps: [
-          { id: 'install', status: 'complete' },
+          { id: 'authorize', status: 'complete' },
+          { id: 'permission', status: 'action_required' },
           { id: 'approve', status: 'blocked' },
-          { id: 'reconnect', status: 'action_required' },
           { id: 'retry', status: 'blocked' },
         ],
       },
@@ -58,9 +46,9 @@ describe('buildGitHubWorkspaceAccessChecklist', () => {
     });
 
     expect(checklist.steps.map((step) => step.description)).toEqual([
-      'GiTiempo is already installed for this organization. Continue to the organization access review step.',
-      'Open organization settings and unblock or approve the installed GiTiempo app before retrying.',
-      'Reconnect after GitHub-side approval so GiTiempo gets a fresh authorization.',
+      'Your GitHub identity is authorized. Continue with any required organization permission review.',
+      'Reconnect GitHub from your profile and grant organization permission before retrying.',
+      'Open organization settings and approve or unblock OAuth access before retrying.',
       'Return to this Settings card and retry the same organization login after you finish the earlier steps.',
     ]);
   });

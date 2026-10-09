@@ -400,8 +400,8 @@ watch(
         class="text-text-muted text-xs"
         data-testid="top-bar-timer-github-no-connection"
       >
-        Connect your GitHub account in your profile to track issues from
-        organization project boards.
+        GitHub project boards are unavailable for this workspace. Ask a workspace
+        administrator to confirm the GitHub App installation and organization access.
       </p>
 
       <p

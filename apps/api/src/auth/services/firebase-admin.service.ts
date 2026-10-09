@@ -3,17 +3,17 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigService } from '@nestjs/config';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getAuth, type UserRecord } from 'firebase-admin/auth';
 import type { Env } from '../../config/env.validation';
-import {
+import type {
   DecodedFirebaseToken,
-  FirebaseAdminAuthError,
   FirebaseAdminService,
   InvitedFirebaseUser,
   RegisteredFirebaseUser,
 } from './firebase-admin.interface';
+import { FirebaseAdminAuthError } from './firebase-admin.interface';
 
 const APP_NAME = 'gitiempo-api';
 const PASSWORD_SETUP_QUERY_KEYS = ['mode', 'oobCode'] as const;
@@ -73,6 +73,22 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
     } catch {
       throw new ServiceUnavailableException(
         'Failed to delete Firebase registration user',
+      );
+    }
+  }
+
+  async hasUsableAlternativeLogin(firebaseUid: string): Promise<boolean> {
+    try {
+      const user = await getAuth(this.getApp()).getUser(firebaseUid);
+      if (user.uid !== firebaseUid || user.disabled) return false;
+      return user.providerData.some(
+        (provider) =>
+          (provider.providerId === 'password' && Boolean(provider.email)) ||
+          (provider.providerId === 'google.com' && Boolean(provider.uid)),
+      );
+    } catch {
+      throw new ServiceUnavailableException(
+        'Failed to verify Firebase sign-in providers',
       );
     }
   }

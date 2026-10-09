@@ -11,7 +11,7 @@ The Add organization selector currently discovers organizations through the pers
 - Discover and validate workspace organization additions using the admin's OAuth membership access, without requiring App installation. Organization policy remains a workspace filter and does not grant provider or tracking access.
 - **BREAKING**: Replace the single connection feature gate with explicit identity, OAuth permission, personal App access, and disconnect-eligibility states in shared contracts and both SPAs. Keep workspace installation status separate.
 - **BREAKING**: Full Disconnect removes the personal identity binding and both personal credential families, releases the GitHub ID, and prevents pending flows from recreating the link. Require an alternative usable sign-in method first. Preserve workspace installations, organization policy, projects, tasks, history, and existing GiTiempo timer authorization.
-- Migrate unambiguous legacy personal App connections without converting their tokens to OAuth. Audit conflicting ownership before enforcing uniqueness; never silently merge users or choose a duplicate owner.
+- Migrate unambiguous legacy personal App connections without converting their tokens to OAuth. For a duplicate legacy GitHub ID, unlink every conflicting personal binding/credential rather than merging users or choosing an owner; affected users explicitly relink afterward.
 
 ## Capabilities
 
@@ -35,7 +35,7 @@ None; this change updates the existing GitHub integration domains.
 
 - Layers: API/authentication/database, user-web, admin-web, shared contracts/browser helpers, and architecture/API/UI documentation. This changes authentication behavior and connection response contracts; coordinate API and SPA rollout. No new dependencies.
 - Preserve `/auth/github/start`, `/auth/github/callback`, `/auth/github/session` sign-in entry points and extension handoff protocol; add authenticated OAuth linking without repurposing the current GitHub App callback. Retain installation verification checks and credential routing.
-- A database migration and duplicate-ownership preflight are required. Existing App-only users keep unambiguous data grants but must authorize OAuth for discovery. Test token-family isolation and unlink/callback races.
+- A database migration and duplicate-ownership preflight are required. Existing App-only users keep unambiguous data grants but must authorize OAuth for discovery. Duplicate legacy groups are reported before migration and all of their personal bindings are removed by migration; GiTiempo users, sessions, workspaces and history remain intact. Test token-family isolation and unlink/callback races.
 - Follow the nearest app/package `AGENTS.md` files. Update ADR 003's identity/discovery boundary while retaining its App browsing decision and ADR 009's installation-tracking decision.
 - Coordinate with `require-project-assignment-for-saved-github-timers`: disconnect never bypasses GiTiempo assignment/visibility checks or deletes history. Coordinate data-retention and OAuth disclosures with `prepare-chrome-web-store-privacy`; do not duplicate its publication work.
 - No GitHub issue or parent issue has been supplied. This change produces planning artifacts only; implementation, external OAuth configuration, migrations, and deployment are separate work.
