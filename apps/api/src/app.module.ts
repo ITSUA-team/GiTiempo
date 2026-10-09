@@ -21,6 +21,7 @@ import { ProjectImportsModule } from './project-imports/project-imports.module';
 import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TimeEntriesModule } from './time-entries/time-entries.module';
+import { InvoicesModule } from './invoices/invoices.module';
 import { ReportsModule } from './reports/reports.module';
 import { GithubModule } from './github/github.module';
 import { AppThrottlerGuard } from './commons/guards/app-throttler.guard';
@@ -53,6 +54,7 @@ import { AppThrottlerGuard } from './commons/guards/app-throttler.guard';
     ProjectImportsModule,
     TasksModule,
     TimeEntriesModule,
+    InvoicesModule,
     ReportsModule,
     GithubModule,
     CommonsModule,
