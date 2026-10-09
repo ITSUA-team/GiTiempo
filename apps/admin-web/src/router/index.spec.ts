@@ -170,7 +170,7 @@ describe("admin router", () => {
         name: routeNames.reports,
       },
       {
-        allowedRoles: [WorkspaceRoles.Admin],
+        allowedRoles: [WorkspaceRoles.Admin, WorkspaceRoles.PM],
         path: "/invoices",
         name: routeNames.invoices,
       },
