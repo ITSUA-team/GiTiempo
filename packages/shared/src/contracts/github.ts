@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 const dateTimeSchema = z.iso.datetime();
 const githubUrlSchema = z.url();
@@ -7,7 +7,7 @@ const optionalSearchSchema = z
   .string()
   .trim()
   .max(200)
-  .transform((value) => (value === "" ? undefined : value))
+  .transform((value) => (value === '' ? undefined : value))
   .optional();
 
 const pageTokenSchema = z.string().min(1).max(2000);
@@ -19,62 +19,127 @@ const githubBrowsingQueryBaseSchema = z.object({
 
 const githubOwnerScopedQueryBaseSchema = githubBrowsingQueryBaseSchema
   .extend({
-    ownerType: z.enum(["personal", "organization"]),
+    ownerType: z.enum(['personal', 'organization']),
     owner: z.string().min(1).max(255).optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
-    if (data.ownerType === "organization" && data.owner === undefined) {
+    if (data.ownerType === 'organization' && data.owner === undefined) {
       ctx.addIssue({
-        code: "custom",
-        message: "owner is required for organization scope",
-        path: ["owner"],
+        code: 'custom',
+        message: 'owner is required for organization scope',
+        path: ['owner'],
       });
     }
-    if (data.ownerType === "personal" && data.owner !== undefined) {
+    if (data.ownerType === 'personal' && data.owner !== undefined) {
       ctx.addIssue({
-        code: "custom",
-        message: "owner is only accepted for organization scope",
-        path: ["owner"],
+        code: 'custom',
+        message: 'owner is only accepted for organization scope',
+        path: ['owner'],
       });
     }
   });
 
-export const githubConnectionAccountSchema = z.object({
-  githubUserId: z.string().min(1),
-  login: z.string().min(1),
-  avatarUrl: z.string().nullable(),
-  connectedAt: dateTimeSchema,
-  updatedAt: dateTimeSchema,
-});
+export const githubConnectionAccountSchema = z
+  .object({
+    githubUserId: z.string().min(1),
+    login: z.string().min(1),
+    avatarUrl: z.string().nullable(),
+    connectedAt: dateTimeSchema,
+    updatedAt: dateTimeSchema,
+  })
+  .strict();
+
+export const githubOauthScopeSchema = z.enum([
+  'user:email',
+  'read:org',
+  'read:project',
+]);
+
+export const githubOauthStatusSchema = z.enum([
+  'not_authorized',
+  'authorized',
+  'reauthorization_required',
+]);
+
+export const githubCapabilityStatusSchema = z.enum([
+  'ready',
+  'authorization_required',
+  'permission_required',
+]);
+
+export const githubDisconnectEligibilitySchema = z.enum([
+  'allowed',
+  'alternative_signin_required',
+  'verification_unavailable',
+]);
+
+export const githubOauthConnectionSchema = z
+  .object({
+    status: githubOauthStatusSchema,
+    missingScopes: z.array(githubOauthScopeSchema),
+  })
+  .strict();
+
+export const githubConnectionCapabilitiesSchema = z
+  .object({
+    organizationDiscovery: githubCapabilityStatusSchema,
+    personalData: githubCapabilityStatusSchema,
+  })
+  .strict();
 
 export const githubConnectionStatusResponseSchema = z.discriminatedUnion(
-  "status",
+  'status',
   [
-    z.object({
-      status: z.literal("disconnected"),
-      account: z.null(),
-    }),
-    z.object({
-      status: z.literal("connected"),
-      account: githubConnectionAccountSchema,
-    }),
+    z
+      .object({
+        status: z.literal('disconnected'),
+        account: z.null(),
+        oauth: githubOauthConnectionSchema,
+        capabilities: githubConnectionCapabilitiesSchema,
+        disconnect: githubDisconnectEligibilitySchema,
+      })
+      .strict(),
+    z
+      .object({
+        status: z.literal('connected'),
+        account: githubConnectionAccountSchema,
+        oauth: githubOauthConnectionSchema,
+        capabilities: githubConnectionCapabilitiesSchema,
+        disconnect: githubDisconnectEligibilitySchema,
+      })
+      .strict(),
   ],
 );
 
-export const githubAuthUrlResponseSchema = z.object({
-  authorizationUrl: z.url(),
-});
+export const githubAuthUrlResponseSchema = z
+  .object({
+    authorizationUrl: z.url(),
+  })
+  .strict();
 
-export const githubOwnerTypeSchema = z.enum([
-  "all",
-  "personal",
-  "organization",
+export const githubProviderRevocationSchema = z.enum([
+  'confirmed',
+  'unconfirmed',
+  'not_required',
 ]);
 
-export const githubOwnerScopeSchema = z.enum(["personal", "organization"]);
+export const githubDisconnectResponseSchema = z
+  .object({
+    disconnected: z.literal(true),
+    providerRevocation: githubProviderRevocationSchema,
+  })
+  .strict();
 
-export const githubIssueStateSchema = z.enum(["open", "closed", "all"]);
+export const githubOwnerTypeSchema = z.enum([
+  'all',
+  'personal',
+  'organization',
+]);
+
+export const githubOwnerScopeSchema = z.enum(['personal', 'organization']);
+
+export const githubIssueStateSchema = z.enum(['open', 'closed', 'all']);
 
 export const githubRepoKeySchema = z
   .string()
@@ -95,7 +160,7 @@ export const githubBrowsingPaginationSchema = z.object({
 
 export const githubOwnerListQuerySchema = z
   .object({
-    type: githubOwnerTypeSchema.default("all"),
+    type: githubOwnerTypeSchema.default('all'),
   })
   .strict();
 
@@ -111,8 +176,7 @@ export const githubOwnerListResponseSchema = z.object({
   items: z.array(githubOwnerSchema),
 });
 
-export const githubRepositoryListQuerySchema =
-  githubOwnerScopedQueryBaseSchema;
+export const githubRepositoryListQuerySchema = githubOwnerScopedQueryBaseSchema;
 
 export const githubRepositorySchema = z.object({
   id: z.string().min(1),
@@ -120,7 +184,7 @@ export const githubRepositorySchema = z.object({
   owner: z.string().min(1),
   name: z.string().min(1),
   fullName: z.string().min(1),
-  visibility: z.enum(["public", "private", "internal"]),
+  visibility: z.enum(['public', 'private', 'internal']),
   isArchived: z.boolean(),
   description: z.string().nullable(),
   url: githubUrlSchema,
@@ -139,7 +203,7 @@ export const githubProjectSchema = z.object({
   number: z.number().int().min(1),
   title: z.string().min(1),
   owner: z.string().min(1),
-  state: z.enum(["open", "closed"]),
+  state: z.enum(['open', 'closed']),
   description: z.string().nullable(),
   url: githubUrlSchema.nullable(),
   updatedAt: dateTimeSchema,
@@ -152,7 +216,7 @@ export const githubProjectListResponseSchema = z.object({
 
 export const githubIssueListQuerySchema = githubBrowsingQueryBaseSchema
   .extend({
-    state: githubIssueStateSchema.default("all"),
+    state: githubIssueStateSchema.default('all'),
     q: optionalSearchSchema,
   })
   .strict();
@@ -169,7 +233,7 @@ export const githubIssueSchema = z.object({
   repository: githubIssueRepositorySchema,
   number: z.number().int().min(1),
   title: z.string().min(1),
-  state: z.enum(["open", "closed"]),
+  state: z.enum(['open', 'closed']),
   url: githubUrlSchema,
   updatedAt: dateTimeSchema,
 });
@@ -204,6 +268,9 @@ export type GitHubConnectionAccount = z.infer<
 export type GitHubConnectionStatusResponse = z.infer<
   typeof githubConnectionStatusResponseSchema
 >;
+export type GitHubDisconnectResponse = z.infer<
+  typeof githubDisconnectResponseSchema
+>;
 export type GitHubAuthUrlResponse = z.infer<typeof githubAuthUrlResponseSchema>;
 export type GitHubOwnerType = z.infer<typeof githubOwnerTypeSchema>;
 export type GitHubOwnerScope = z.infer<typeof githubOwnerScopeSchema>;
@@ -213,9 +280,7 @@ export type SyncedGitHubIssue = z.infer<typeof syncedGitHubIssueSchema>;
 export type GitHubBrowsingPagination = z.infer<
   typeof githubBrowsingPaginationSchema
 >;
-export type GitHubOwnerListQuery = z.infer<
-  typeof githubOwnerListQuerySchema
->;
+export type GitHubOwnerListQuery = z.infer<typeof githubOwnerListQuerySchema>;
 export type GitHubOwner = z.infer<typeof githubOwnerSchema>;
 export type GitHubOwnerListResponse = z.infer<
   typeof githubOwnerListResponseSchema
@@ -235,9 +300,7 @@ export type GitHubProjectListResponse = z.infer<
   typeof githubProjectListResponseSchema
 >;
 export type GitHubIssueListQuery = z.infer<typeof githubIssueListQuerySchema>;
-export type GitHubIssueRepository = z.infer<
-  typeof githubIssueRepositorySchema
->;
+export type GitHubIssueRepository = z.infer<typeof githubIssueRepositorySchema>;
 export type GitHubIssue = z.infer<typeof githubIssueSchema>;
 export type GitHubRepositoryIssueListResponse = z.infer<
   typeof githubRepositoryIssueListResponseSchema

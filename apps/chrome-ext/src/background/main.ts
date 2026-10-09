@@ -320,20 +320,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       case "auth/sign-in-github": {
         sendResponse(
-          await handleInteractiveSignIn(async () => {
-            const { code, verifier } = await signInWithGithub();
-
-            return handleMutation(() =>
-              apiClient.exchangeGithubSession(code, verifier),
-            );
-          }),
+          await handleInteractiveSignIn(() =>
+            handleMutation(async () => {
+              const { code, verifier } = await signInWithGithub();
+              await apiClient.exchangeGithubSession(code, verifier);
+            }),
+          ),
         );
         return;
       }
       case "auth/sign-in-google": {
         sendResponse(
-          await handleInteractiveSignIn(async () =>
-            handleAuthExchange(await signInWithGoogle()),
+          await handleInteractiveSignIn(() =>
+            handleMutation(async () => {
+              await apiClient.loginWithFirebaseToken(await signInWithGoogle());
+            }),
           ),
         );
         return;

@@ -94,6 +94,7 @@ interface WorkspaceGitHubInstallationsClient {
     input: GitHubInstallationCompleteRequest,
   ): Promise<WorkspaceGitHubInstallation>;
   listWorkspaceGitHubInstallations(): Promise<WorkspaceGitHubInstallationList>;
+  reverifyWorkspaceGitHubInstallation(associationId: string): Promise<WorkspaceGitHubInstallation>;
   setupWorkspaceGitHubInstallation(
     input: GitHubInstallationSetupRequest,
   ): Promise<GitHubInstallationSetupResponse>;
@@ -343,6 +344,14 @@ export const useCompleteWorkspaceGitHubInstallationMutation = (
     },
   });
 };
+
+export const useReverifyWorkspaceGitHubInstallationMutation = (
+  options: UseWorkspaceGitHubInstallationsMutationOptions<'reverifyWorkspaceGitHubInstallation'>,
+) =>
+  useMutation({
+    mutationFn: (associationId: string) =>
+      options.client.reverifyWorkspaceGitHubInstallation(associationId),
+  });
 
 export const useWorkspaceInvitesQuery = (options: UseWorkspaceInvitesQueryOptions) =>
   useQuery({

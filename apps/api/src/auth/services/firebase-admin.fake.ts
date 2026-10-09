@@ -19,6 +19,7 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
   private readonly invitedUsers = new Map<string, InvitedFirebaseUser>();
   private readonly registeredUsers = new Map<string, RegisteredFirebaseUser>();
   private readonly registeredUserEmailsByUid = new Map<string, string>();
+  private readonly alternativeProvidersByUid = new Map<string, Set<string>>();
 
   async verifyIdToken(idToken: string): Promise<DecodedFirebaseToken> {
     if (typeof idToken !== 'string' || !idToken.startsWith('test:')) {
@@ -103,7 +104,24 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
     }
 
     this.registeredUserEmailsByUid.delete(uid);
+    this.alternativeProvidersByUid.delete(uid);
     this.registeredUsers.delete(email);
+  }
+
+  async hasUsableAlternativeLogin(firebaseUid: string): Promise<boolean> {
+    const providers = this.alternativeProvidersByUid.get(firebaseUid);
+    return (
+      (providers?.has('password') ?? true) ||
+      providers?.has('google.com') === true
+    );
+  }
+
+  /** Test helper for provider-specific disconnect eligibility. */
+  setAlternativeProviders(
+    firebaseUid: string,
+    providers: readonly string[],
+  ): void {
+    this.alternativeProvidersByUid.set(firebaseUid, new Set(providers));
   }
 
   async generatePasswordSetupLink(

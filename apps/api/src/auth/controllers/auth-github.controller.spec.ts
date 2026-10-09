@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Request, Response } from 'express';
+import { GithubAccountService } from '../../github/services/github-account.service';
+import { GithubEncryptionService } from '../../github/services/github-encryption.service';
 import { AuthGithubController } from './auth-github.controller';
 import {
   AuthGithubService,
@@ -28,12 +30,19 @@ describe('AuthGithubController', () => {
     exchangeSession: vi.fn(),
   };
 
+  const accounts = { completeCallback: vi.fn() };
+  const encryption = { decrypt: vi.fn(() => 'session-token') };
+
   beforeEach(async () => {
     vi.clearAllMocks();
     github.stateCookieOptions.mockReturnValue(cookieOptions);
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthGithubController],
-      providers: [{ provide: AuthGithubService, useValue: github }],
+      providers: [
+        { provide: AuthGithubService, useValue: github },
+        { provide: GithubAccountService, useValue: accounts },
+        { provide: GithubEncryptionService, useValue: encryption },
+      ],
     }).compile();
     controller = module.get(AuthGithubController);
   });
@@ -249,5 +258,86 @@ describe('AuthGithubController', () => {
     await controller.session({ code: 'handoff', verifier: 'v' } as never);
 
     expect(github.exchangeSession).toHaveBeenCalledWith('handoff', 'v');
+  });
+});
+
+describe('account-link callback namespace', () => {
+  it.each([false, true])(
+    'never falls back to sign-in when the session cookie is invalid (%s)',
+    async (invalidCookie) => {
+      const signIn = { completeCallback: vi.fn() };
+      const accounts = {
+        completeCallback: vi
+          .fn()
+          .mockResolvedValue(
+            'http://localhost/profile?github=error&code=invalid_state',
+          ),
+      };
+      const encryption = {
+        decrypt: vi.fn(() => {
+          throw new Error('invalid envelope');
+        }),
+      };
+      const controller = new AuthGithubController(
+        signIn as never,
+        accounts as never,
+        encryption as never,
+      );
+      const res = makeRes();
+      await controller.callback(
+        'code',
+        'account_link.opaque',
+        undefined,
+        {
+          cookies: invalidCookie ? { github_account_session: 'invalid' } : {},
+        } as unknown as Request,
+        res as unknown as Response,
+      );
+      expect(signIn.completeCallback).not.toHaveBeenCalled();
+      expect(accounts.completeCallback).toHaveBeenCalledWith({
+        code: 'code',
+        state: 'account_link.opaque',
+        error: undefined,
+        sessionToken: undefined,
+      });
+      expect(res.clearCookie).toHaveBeenCalledWith('github_account_session', {
+        path: '/auth/github',
+      });
+    },
+  );
+
+  it('routes a bound OAuth callback exclusively to account linking', async () => {
+    const signIn = { completeCallback: vi.fn() };
+    const accounts = {
+      completeCallback: vi
+        .fn()
+        .mockResolvedValue('http://localhost/profile?github=connected'),
+    };
+    const controller = new AuthGithubController(
+      signIn as never,
+      accounts as never,
+      { decrypt: () => 'session-token' } as never,
+    );
+    const res = makeRes();
+    await controller.callback(
+      'code',
+      'account_link.opaque',
+      undefined,
+      {
+        cookies: { github_account_session: 'encrypted' },
+      } as unknown as Request,
+      res as unknown as Response,
+    );
+    expect(accounts.completeCallback).toHaveBeenCalledWith({
+      code: 'code',
+      state: 'account_link.opaque',
+      error: undefined,
+      sessionToken: 'session-token',
+    });
+    expect(signIn.completeCallback).not.toHaveBeenCalled();
+    expect(res.redirect).toHaveBeenCalledWith(
+      302,
+      'http://localhost/profile?github=connected',
+    );
   });
 });

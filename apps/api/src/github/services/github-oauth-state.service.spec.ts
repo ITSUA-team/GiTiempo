@@ -31,6 +31,30 @@ describe('GithubOauthStateService', () => {
     expect(returning).toHaveBeenCalled();
   });
 
+  it('uses an isolated opaque namespace for account-link states', async () => {
+    const values = vi.fn().mockResolvedValue(undefined);
+    const insert = vi.fn().mockReturnValue({ values });
+    const service = new GithubOauthStateService({ insert } as never);
+
+    const created = await service.create({
+      userId: 'user-1',
+      provider: 'oauth_app',
+      purpose: 'account_link',
+      sessionTokenHash: 'a'.repeat(64),
+      generation: 4,
+    });
+
+    expect(created.state).toMatch(/^account_link\.[A-Za-z0-9_-]{43}$/);
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'oauth_app',
+        purpose: 'account_link',
+        sessionTokenHash: 'a'.repeat(64),
+        generation: 4,
+      }),
+    );
+  });
+
   it('returns null when atomic claim does not match a row', async () => {
     const returning = vi.fn().mockResolvedValue([]);
     const where = vi.fn().mockReturnValue({ returning });

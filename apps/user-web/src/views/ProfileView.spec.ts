@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import type { Component } from "vue";
+import { computed, ref, type Component } from "vue";
 import {
   afterAll,
   afterEach,
@@ -26,11 +26,25 @@ import { useAuthStore } from "@/stores/auth";
 
 const toastAddSpy = vi.fn();
 const mountedWrappers: Array<{ unmount: () => void }> = [];
-const useProfileGithubConnectionMock = vi.hoisted(() =>
-  vi.fn(() => {
-    throw new Error("ProfileView must not own GitHub connection state.");
-  }),
-);
+const githubCardState = ref<
+  "connected" | "connecting" | "disconnected" | "loading" | "request-error"
+>("connected");
+const githubCardConnection = ref({
+  account: {
+    avatarUrl: null,
+    connectedAt: "2026-05-01T10:15:00.000Z",
+    githubUserId: "123456",
+    login: "alexeytsukanov",
+    updatedAt: "2026-05-04T08:45:00.000Z",
+  },
+  capabilities: { organizationDiscovery: "ready", personalData: "ready" },
+  disconnect: "allowed",
+  oauth: { missingScopes: [], status: "authorized" },
+  status: "connected",
+} as const);
+const githubCardRequestErrorMessage = ref<string | null>(null);
+const githubCardRefresh = vi.fn(async () => undefined);
+const useProfileGithubConnectionMock = vi.hoisted(() => vi.fn());
 let ProfileView: Component;
 
 function createUserProfile(overrides: Partial<UserResponse> = {}): UserResponse {
@@ -104,7 +118,10 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   };
 }
 
-async function mountProfileView(options: { profile?: UserResponse | null } = {}) {
+async function mountProfileView(options: {
+  profile?: UserResponse | null;
+  renderGithubCard?: boolean;
+} = {}) {
   const pinia = createPinia();
 
   setActivePinia(pinia);
@@ -153,9 +170,13 @@ async function mountProfileView(options: { profile?: UserResponse | null } = {})
             />
           `,
         },
-        ProfileGithubConnectionCard: {
-          template: '<section data-testid="profile-github-section">GitHub Connection</section>',
-        },
+        ...(options.renderGithubCard
+          ? {}
+          : {
+              ProfileGithubConnectionCard: {
+                template: '<section data-testid="profile-github-section">GitHub Connection</section>',
+              },
+            }),
         Skeleton: { template: '<div data-testid="profile-skeleton" />' },
         SurfaceCard: { template: "<section><slot /></section>" },
       },
@@ -186,6 +207,34 @@ describe("ProfileView", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     toastAddSpy.mockClear();
     useProfileGithubConnectionMock.mockClear();
+    githubCardState.value = "connected";
+    githubCardConnection.value = {
+      account: {
+        avatarUrl: null,
+        connectedAt: "2026-05-01T10:15:00.000Z",
+        githubUserId: "123456",
+        login: "alexeytsukanov",
+        updatedAt: "2026-05-04T08:45:00.000Z",
+      },
+      capabilities: { organizationDiscovery: "ready", personalData: "ready" },
+      disconnect: "allowed",
+      oauth: { missingScopes: [], status: "authorized" },
+      status: "connected",
+    };
+    githubCardRequestErrorMessage.value = null;
+    githubCardRefresh.mockClear();
+    useProfileGithubConnectionMock.mockImplementation(() => ({
+      authorizePersonalData: vi.fn(),
+      connect: vi.fn(),
+      connection: computed(() => githubCardConnection.value),
+      isAuthorizingPersonalData: computed(() => false),
+      isConnecting: computed(() => false),
+      isDisconnecting: computed(() => false),
+      refreshConnectionStatus: githubCardRefresh,
+      requestDisconnect: vi.fn(),
+      requestErrorMessage: computed(() => githubCardRequestErrorMessage.value),
+      state: computed(() => githubCardState.value),
+    }));
   });
 
   afterEach(() => {
@@ -351,5 +400,26 @@ describe("ProfileView", () => {
     expect(
       (wrapper.get('[data-testid="profile-display-name-input"]').element as HTMLInputElement).value,
     ).toBe("Alexey Draft");
+  });
+
+  it("keeps profile edits available when the embedded GitHub status refresh fails", async () => {
+    githubCardState.value = "request-error";
+    githubCardConnection.value = null as never;
+    githubCardRequestErrorMessage.value = "GitHub status is temporarily unavailable.";
+    githubCardRefresh.mockResolvedValueOnce(undefined);
+
+    const { wrapper } = await mountProfileView({ renderGithubCard: true });
+    await wrapper.get('[data-testid="profile-display-name-input"]').setValue("Alexey Draft");
+    await wrapper
+      .findAll("button")
+      .find((button) => button.text() === "Retry")
+      ?.trigger("click");
+    await flushPromises();
+
+    expect(githubCardRefresh).toHaveBeenCalledOnce();
+    expect(
+      (wrapper.get('[data-testid="profile-display-name-input"]').element as HTMLInputElement).value,
+    ).toBe("Alexey Draft");
+    expect(wrapper.text()).toContain("GitHub status is temporarily unavailable.");
   });
 });

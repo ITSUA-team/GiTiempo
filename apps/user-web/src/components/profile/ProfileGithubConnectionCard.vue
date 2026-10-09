@@ -11,7 +11,9 @@ import { formatLocalTimestampLabel } from "@/lib/time-formatters";
 
 const {
   connect,
+  authorizePersonalData,
   connection,
+  isAuthorizingPersonalData,
   isConnecting,
   isDisconnecting,
   refreshConnectionStatus,
@@ -66,18 +68,38 @@ const updatedAtLabel = computed(() =>
     ? formatLocalTimestampLabel(connection.value.account.updatedAt)
     : "",
 );
+const oauthNeedsRecovery = computed(
+  () =>
+    connection.value?.oauth.status === "not_authorized" ||
+    connection.value?.oauth.status === "reauthorization_required",
+);
+const organizationDiscoveryReady = computed(
+  () => connection.value?.capabilities.organizationDiscovery === "ready",
+);
+const personalDataReady = computed(
+  () => connection.value?.capabilities.personalData === "ready",
+);
+const hasMissingOAuthPermissions = computed(
+  () => (connection.value?.oauth.missingScopes.length ?? 0) > 0,
+);
+const canDisconnect = computed(
+  () => connection.value?.disconnect === "allowed",
+);
 </script>
 
 <template>
-  <SurfaceCard border body-class="flex flex-col gap-4">
+  <SurfaceCard
+    border
+    body-class="flex flex-col gap-4"
+  >
     <div class="flex items-start justify-between gap-3">
       <div class="flex flex-col gap-1">
         <h2 class="text-text-dark text-base font-semibold">
           GitHub Connection
         </h2>
         <p class="text-text-muted text-xs">
-          Connect your account to start timers from organizations,
-          repositories, and issues.
+          Connect your GitHub identity to discover organizations. Authorize
+          private GitHub data separately when needed.
         </p>
       </div>
 
@@ -160,6 +182,57 @@ const updatedAtLabel = computed(() =>
         </dd>
       </dl>
 
+      <div
+        v-if="!organizationDiscoveryReady"
+        data-testid="profile-github-oauth-recovery"
+        class="border-divider bg-app-bg rounded-lg border p-3 text-sm leading-5"
+      >
+        <p class="text-text-dark font-medium">
+          Organization access needs permission
+        </p>
+        <p class="text-text-muted">
+          {{ oauthNeedsRecovery
+            ? 'Reconnect GitHub to grant the organization permissions needed for workspace setup.'
+            : 'GitHub organization access is not available for this account yet.' }}
+        </p>
+      </div>
+
+      <div
+        v-else-if="hasMissingOAuthPermissions"
+        data-testid="profile-github-oauth-permission-recovery"
+        class="border-divider bg-app-bg rounded-lg border p-3 text-sm leading-5"
+      >
+        <p class="text-text-dark font-medium">
+          GitHub account permissions need attention
+        </p>
+        <p class="text-text-muted">
+          Reconnect GitHub to finish your account permissions.
+        </p>
+      </div>
+
+      <div
+        v-if="!personalDataReady"
+        data-testid="profile-github-personal-data-recovery"
+        class="border-divider bg-app-bg rounded-lg border p-3 text-sm leading-5"
+      >
+        <p class="text-text-dark font-medium">
+          Private GitHub data needs a separate authorization
+        </p>
+        <p class="text-text-muted">
+          Authorize GitHub App access to browse repositories, issues, and Projects.
+        </p>
+      </div>
+
+      <p
+        v-if="connection.disconnect !== 'allowed'"
+        data-testid="profile-github-disconnect-guidance"
+        class="text-text-muted text-xs leading-4"
+      >
+        {{ connection.disconnect === 'alternative_signin_required'
+          ? 'Add another sign-in method before disconnecting GitHub to keep access to GiTiempo.'
+          : 'GiTiempo cannot verify another sign-in method right now. Retry later before disconnecting GitHub.' }}
+      </p>
+
       <div class="flex flex-wrap justify-end gap-2">
         <Button
           type="button"
@@ -172,12 +245,23 @@ const updatedAtLabel = computed(() =>
           @click="connect"
         />
         <Button
+          v-if="!personalDataReady"
+          type="button"
+          label="Authorize GitHub data"
+          severity="secondary"
+          variant="outlined"
+          size="small"
+          :disabled="isDisconnecting || isConnecting"
+          :loading="isAuthorizingPersonalData"
+          @click="authorizePersonalData"
+        />
+        <Button
           type="button"
           label="Disconnect"
           severity="danger"
           variant="outlined"
           size="small"
-          :disabled="isConnecting"
+          :disabled="isConnecting || isAuthorizingPersonalData || !canDisconnect"
           :loading="isDisconnecting"
           @click="requestDisconnect"
         />
@@ -232,7 +316,8 @@ const updatedAtLabel = computed(() =>
 
     <template v-else>
       <p class="text-text-muted text-sm leading-5">
-        Connect GitHub to enable provider-backed timer sync.
+        Connect GitHub to discover organizations. Authorize private GitHub
+        data separately when needed.
       </p>
       <div class="flex flex-wrap justify-end gap-2">
         <Button

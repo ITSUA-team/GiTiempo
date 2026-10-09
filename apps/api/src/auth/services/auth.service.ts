@@ -1,3 +1,4 @@
+import { GithubAccountService } from '../../github/services/github-account.service';
 import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
@@ -171,6 +172,7 @@ export class AuthService {
     private readonly refreshRepo: RefreshTokenRepository,
     private readonly users: UsersService,
     private readonly members: MembersService,
+    private readonly githubAccounts: GithubAccountService,
   ) {
     this.refreshTtlMs = parseDurationMs(
       config.get('JWT_REFRESH_TTL', { infer: true }),
@@ -268,7 +270,18 @@ export class AuthService {
     return memberIds;
   }
 
-  async createSessionForMember(memberId: string): Promise<TokenPair> {
+  async assertActiveMember(memberId: string): Promise<void> {
+    const user = await this.users.findRowById(memberId);
+    const membership = user
+      ? await this.members.resolveActiveMembershipForUser(memberId)
+      : null;
+    if (!user || !membership) throw new UnauthorizedException('Unauthorized');
+  }
+
+  async createSessionForMember(
+    memberId: string,
+    executor?: Pick<DrizzleDB, 'insert'>,
+  ): Promise<TokenPair> {
     const existingUser = await this.users.findRowById(memberId);
     if (!existingUser) {
       this.logger.warn({
@@ -298,6 +311,7 @@ export class AuthService {
       },
       membership.id,
       randomUUID(),
+      executor,
     );
     this.logger.log({
       event: 'auth.github_login.success',
@@ -425,6 +439,7 @@ export class AuthService {
   async logout(refreshToken: string, subjectUserId: string): Promise<void> {
     const hash = this.tokens.hashRefreshToken(refreshToken);
     const row = await this.refreshRepo.findByHashIncludingRevoked(hash);
+    await this.githubAccounts.invalidatePendingAuthorizations(subjectUserId);
     if (row && row.userId === subjectUserId) {
       await this.refreshRepo.deleteById(row.id);
       this.logger.log({
@@ -442,17 +457,21 @@ export class AuthService {
     user: AuthUser,
     membershipId: string,
     familyId: string,
+    executor?: Pick<DrizzleDB, 'insert'>,
   ): Promise<TokenPair> {
     const { token, hash } = this.tokens.generateRefreshToken();
     const expiresAt = new Date(Date.now() + this.refreshTtlMs);
-    await this.refreshRepo.create({
-      userId: user.sub,
-      workspaceMemberId: membershipId,
-      workspaceId: user.workspaceId,
-      familyId,
-      tokenHash: hash,
-      expiresAt,
-    });
+    await this.refreshRepo.create(
+      {
+        userId: user.sub,
+        workspaceMemberId: membershipId,
+        workspaceId: user.workspaceId,
+        familyId,
+        tokenHash: hash,
+        expiresAt,
+      },
+      executor,
+    );
     const accessToken = this.tokens.signAccess(user);
     return {
       accessToken,

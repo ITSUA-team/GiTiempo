@@ -37,8 +37,11 @@ export interface CreateRefreshTokenInput {
 export class RefreshTokenRepository {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
 
-  async create(input: CreateRefreshTokenInput): Promise<RefreshTokenRow> {
-    const [row] = await this.db
+  async create(
+    input: CreateRefreshTokenInput,
+    executor: Pick<DrizzleDB, 'insert'> = this.db,
+  ): Promise<RefreshTokenRow> {
+    const [row] = await executor
       .insert(refreshTokens)
       .values({
         userId: input.userId,

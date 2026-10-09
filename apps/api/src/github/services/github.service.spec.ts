@@ -1,3 +1,4 @@
+import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Env } from '../../config/env.validation';
@@ -17,6 +18,13 @@ describe('GithubService', () => {
     status: vi.fn(),
     disconnect: vi.fn(),
     upsertConnected: vi.fn(),
+    getValidAccessToken: vi.fn(),
+  };
+  const accounts = {
+    status: vi.fn(),
+    disconnect: vi.fn(),
+    findByUserId: vi.fn(),
+    getVersion: vi.fn(),
     getValidAccessToken: vi.fn(),
   };
   const apiClient = {
@@ -52,11 +60,22 @@ describe('GithubService', () => {
       connections as never,
       apiClient as never,
       workspaceGitHubOrganizations as never,
+      accounts as never,
     );
   }
 
   beforeEach(() => {
     vi.clearAllMocks();
+    accounts.findByUserId.mockResolvedValue({
+      githubUserId: '123',
+      login: 'octo',
+      avatarUrl: null,
+    });
+    accounts.getVersion.mockResolvedValue({
+      generation: 2,
+      disconnectedAt: null,
+    });
+    accounts.getValidAccessToken.mockResolvedValue('oauth_token');
   });
 
   it('creates an auth URL from opaque state and PKCE challenge', async () => {
@@ -66,7 +85,12 @@ describe('GithubService', () => {
     await expect(service().authUrl(user)).resolves.toEqual({
       authorizationUrl: 'https://github/auth',
     });
-    expect(states.create).toHaveBeenCalledWith('user-1');
+    expect(states.create).toHaveBeenCalledWith({
+      userId: 'user-1',
+      provider: 'github_app',
+      purpose: 'personal_data',
+      generation: 2,
+    });
     expect(oauthClient.buildAuthorizationUrl).toHaveBeenCalledWith({
       state: 'opaque',
       codeChallenge: 'pkce',
@@ -77,6 +101,10 @@ describe('GithubService', () => {
     states.claim.mockResolvedValue({
       userId: 'user-1',
       codeVerifier: 'verifier',
+      provider: 'github_app',
+      purpose: 'personal_data',
+      generation: 2,
+      createdAt: new Date(),
     });
     oauthClient.exchangeCode.mockResolvedValue({ accessToken: 'ghu_access' });
     oauthClient.getCurrentUser.mockResolvedValue({
@@ -106,6 +134,10 @@ describe('GithubService', () => {
     states.claim.mockResolvedValue({
       userId: 'user-1',
       codeVerifier: 'verifier',
+      provider: 'github_app',
+      purpose: 'personal_data',
+      generation: 2,
+      createdAt: new Date(),
     });
     oauthClient.exchangeCode.mockRejectedValue(
       new Error('raw provider detail'),
@@ -347,13 +379,18 @@ describe('GithubService', () => {
       'Membership-Org',
     ]);
     expect(apiClient.listOwners).toHaveBeenCalledWith(
-      'ghu_token',
-      { login: 'octocat', avatarUrl: null },
+      'oauth_token',
+      expect.objectContaining({ login: 'octo', avatarUrl: null }),
       'organization',
     );
     expect(apiClient.listActiveOrganizationMemberships).toHaveBeenCalledWith(
-      'ghu_token',
+      'oauth_token',
     );
+    expect(accounts.getValidAccessToken).toHaveBeenCalledWith(
+      user.sub,
+      'read:org',
+    );
+    expect(connections.getValidAccessToken).not.toHaveBeenCalled();
     expect(
       workspaceGitHubOrganizations.listAllowedOrganizationLogins,
     ).not.toHaveBeenCalled();
@@ -584,5 +621,99 @@ describe('GithubService', () => {
       'item-1',
       'item-2',
     ]);
+  });
+});
+
+// The setup path must never fall back to the separate personal App credential.
+describe('OAuth organization capability boundary', () => {
+  function setup(oauthResult: unknown) {
+    const accounts = {
+      invalidateOAuthAccess: vi.fn(),
+      getValidAccessToken: vi.fn().mockImplementation(async () => {
+        if (oauthResult instanceof Error) throw oauthResult;
+        return 'oauth-only-token';
+      }),
+      findByUserId: vi
+        .fn()
+        .mockResolvedValue({ login: 'octo', avatarUrl: null }),
+    };
+    const app = { getValidAccessToken: vi.fn(), status: vi.fn() };
+    const api = {
+      listOwners: vi.fn().mockResolvedValue({ items: [] }),
+      listActiveOrganizationMemberships: vi
+        .fn()
+        .mockResolvedValue({ items: [] }),
+    };
+    const svc = new GithubService(
+      {} as never,
+      {} as never,
+      {} as never,
+      app as never,
+      api as never,
+      {} as never,
+      accounts as never,
+    );
+    return { svc, accounts, app, api };
+  }
+
+  it('keeps a legitimate empty membership list distinct from failed discovery', async () => {
+    const { svc, api, app } = setup(null);
+    await expect(
+      svc.listAvailableOrganizations({ sub: 'user' } as never),
+    ).resolves.toEqual({ items: [] });
+    api.listActiveOrganizationMemberships.mockRejectedValueOnce(
+      new Error('page failed'),
+    );
+    await expect(
+      svc.listAvailableOrganizations({ sub: 'user' } as never),
+    ).rejects.toThrow('page failed');
+    expect(app.getValidAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('does not use working App access when OAuth permission is unavailable', async () => {
+    const { svc, app, api } = setup(new Error('OAuth permission required'));
+    app.getValidAccessToken.mockResolvedValue('working-app-token');
+    await expect(
+      svc.listAvailableOrganizations({ sub: 'user' } as never),
+    ).rejects.toThrow('OAuth permission required');
+    expect(app.getValidAccessToken).not.toHaveBeenCalled();
+    expect(api.listOwners).not.toHaveBeenCalled();
+  });
+
+  it('invalidates only the rejected OAuth token when the provider returns unauthorized', async () => {
+    const { svc, accounts, api, app } = setup(null);
+    api.listOwners.mockRejectedValueOnce(
+      new UnauthorizedException('GitHub authorization is required'),
+    );
+    await expect(
+      svc.listAvailableOrganizations({ sub: 'user' } as never),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(accounts.invalidateOAuthAccess).toHaveBeenCalledWith(
+      'user',
+      'oauth-only-token',
+    );
+    expect(app.getValidAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('rejects account-link state at the personal App callback without token exchange', async () => {
+    const oauth = { exchangeCode: vi.fn() };
+    const states = {
+      claim: vi
+        .fn()
+        .mockResolvedValue({ provider: 'oauth_app', purpose: 'account_link' }),
+    };
+    const svc = new GithubService(
+      { get: () => 'http://localhost:5173' } as never,
+      states as never,
+      oauth as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    await expect(
+      svc.completeCallback({ code: 'code', state: 'account_link.opaque' }),
+    ).resolves.toContain('invalid_state');
+    expect(oauth.exchangeCode).not.toHaveBeenCalled();
   });
 });

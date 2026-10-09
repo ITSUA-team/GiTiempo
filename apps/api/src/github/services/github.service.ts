@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type {
   GitHubAuthUrlResponse,
   GitHubConnectionStatusResponse,
+  GitHubDisconnectResponse,
   GitHubIssue,
   GitHubIssueListQuery,
   GitHubOwnerListQuery,
@@ -17,6 +18,11 @@ import type {
 } from '@gitiempo/shared';
 import type { Env } from '../../config/env.validation';
 import type { AuthUser } from '../../auth/types/auth-user';
+import {
+  GithubAccountService,
+  GithubAccountLinkConflictError,
+  GithubAccountIdentityMismatchError,
+} from './github-account.service';
 import { GithubApiClientService } from './github-api-client.service';
 import { GithubConnectionsService } from './github-connections.service';
 import { GithubOauthClientService } from './github-oauth-client.service';
@@ -28,7 +34,9 @@ export type GithubCallbackError =
   | 'invalid_callback'
   | 'invalid_state'
   | 'github_config'
-  | 'github_exchange_failed';
+  | 'github_exchange_failed'
+  | 'github_account_conflict'
+  | 'github_identity_mismatch';
 
 @Injectable()
 export class GithubService {
@@ -39,21 +47,34 @@ export class GithubService {
     private readonly connections: GithubConnectionsService,
     private readonly apiClient: GithubApiClientService,
     private readonly workspaceGitHubOrganizations: WorkspaceGitHubOrganizationsService,
+    private readonly accounts: GithubAccountService,
   ) {}
 
   connectionStatus(user: AuthUser): Promise<GitHubConnectionStatusResponse> {
-    return this.connections.status(user.sub);
+    return this.accounts.status(user.sub);
   }
 
   async authUrl(user: AuthUser): Promise<GitHubAuthUrlResponse> {
-    const state = await this.states.create(user.sub);
+    if (!(await this.accounts.findByUserId(user.sub))) {
+      throw new NotFoundException({
+        code: 'github_connection_required',
+        message: 'Connect your GitHub account before authorizing personal data',
+      });
+    }
+    const version = await this.accounts.getVersion(user.sub);
+    const state = await this.states.create({
+      userId: user.sub,
+      provider: 'github_app',
+      purpose: 'personal_data',
+      generation: version.generation,
+    });
     return {
       authorizationUrl: this.oauthClient.buildAuthorizationUrl(state),
     };
   }
 
-  async disconnect(user: AuthUser): Promise<void> {
-    await this.connections.disconnect(user.sub);
+  disconnect(user: AuthUser): Promise<GitHubDisconnectResponse> {
+    return this.accounts.disconnect(user.sub);
   }
 
   async listOwners(
@@ -88,19 +109,26 @@ export class GithubService {
   async listAvailableOrganizations(
     user: AuthUser,
   ): Promise<GitHubOwnerListResponse> {
-    const connection = await this.connectedConnection(user.sub);
-    const [owners, memberships] = await Promise.all([
-      this.apiClient.listOwners(
-        connection.accessToken,
-        connection.account,
-        'organization',
-      ),
-      this.apiClient.listActiveOrganizationMemberships(connection.accessToken),
-    ]);
-
-    return {
-      items: this.uniqueOwners([...owners.items, ...memberships.items]),
-    };
+    const accessToken = await this.accounts.getValidAccessToken(
+      user.sub,
+      'read:org',
+    );
+    const account = await this.accounts.findByUserId(user.sub);
+    if (!account) throw new NotFoundException('GitHub account link not found');
+    try {
+      const [owners, memberships] = await Promise.all([
+        this.apiClient.listOwners(accessToken, account, 'organization'),
+        this.apiClient.listActiveOrganizationMemberships(accessToken),
+      ]);
+      return {
+        items: this.uniqueOwners([...owners.items, ...memberships.items]),
+      };
+    } catch (error) {
+      if (error instanceof HttpException && error.getStatus() === 401) {
+        await this.accounts.invalidateOAuthAccess(user.sub, accessToken);
+      }
+      throw error;
+    }
   }
 
   async listRepositories(
@@ -297,7 +325,12 @@ export class GithubService {
     }
 
     const state = await this.states.claim(query.state);
-    if (!state) return this.profileRedirect('invalid_state');
+    if (
+      !state ||
+      state.provider !== 'github_app' ||
+      state.purpose !== 'personal_data'
+    )
+      return this.profileRedirect('invalid_state');
 
     try {
       const tokens = await this.oauthClient.exchangeCode(
@@ -305,9 +338,16 @@ export class GithubService {
         state.codeVerifier,
       );
       const profile = await this.oauthClient.getCurrentUser(tokens.accessToken);
-      await this.connections.upsertConnected(state.userId, profile, tokens);
+      await this.connections.upsertConnected(state.userId, profile, tokens, {
+        generation: state.generation,
+        startedAt: state.createdAt,
+      });
       return this.profileRedirect(null);
     } catch (err) {
+      if (err instanceof GithubAccountLinkConflictError)
+        return this.profileRedirect('github_account_conflict');
+      if (err instanceof GithubAccountIdentityMismatchError)
+        return this.profileRedirect('github_identity_mismatch');
       if (
         err instanceof Error &&
         err.message.includes('GitHub integration is not configured')

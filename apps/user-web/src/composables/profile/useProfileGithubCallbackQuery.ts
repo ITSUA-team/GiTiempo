@@ -21,9 +21,11 @@ interface ProfileGithubCallbackToast {
 
 
 const callbackErrorMessages: Record<string, string> = {
+  github_account_conflict: "This GitHub account is already connected to another GiTiempo account.",
   github_config: "GitHub is not configured for this environment yet.",
   github_denied: "GitHub authorization was cancelled before the connection completed.",
   github_exchange_failed: "GitHub could not complete the authorization exchange.",
+  github_identity_mismatch: "A different GitHub account is already connected. Disconnect it before connecting another account.",
   invalid_callback: "GitHub returned an incomplete callback response.",
   invalid_state: "The GitHub callback could not be validated. Start the connection again.",
 };

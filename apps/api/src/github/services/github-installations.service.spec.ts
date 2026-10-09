@@ -1,7 +1,6 @@
 import { createHmac } from 'node:crypto';
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   NotFoundException,
   ServiceUnavailableException,
@@ -218,7 +217,7 @@ describe('GithubInstallationsService lifecycle webhooks', () => {
   });
 });
 
-describe('GithubInstallationsService setup authority', () => {
+describe('GithubInstallationsService installation setup', () => {
   const user = {
     sub: '11111111-1111-1111-1111-111111111111',
     workspaceId: '22222222-2222-2222-2222-222222222222',
@@ -229,14 +228,9 @@ describe('GithubInstallationsService setup authority', () => {
 
   function authoritySubject(
     overrides: {
-      accessible?: boolean;
-      membership?: object;
       installation?: object;
     } = {},
   ) {
-    const connections = {
-      getValidAccessToken: vi.fn().mockResolvedValue('user-token'),
-    };
     const tokens = {
       appToken: vi.fn().mockResolvedValue('app-token'),
       getToken: vi.fn().mockResolvedValue('installation-token'),
@@ -246,30 +240,13 @@ describe('GithubInstallationsService setup authority', () => {
       {
         get: (key: string) => ({ GITHUB_APP_ID: '123' })[key],
       } as unknown as ConfigService<Env, true>,
-      connections as never,
+      {} as never,
       tokens as never,
       {} as never,
     );
     const privateSubject = subject as unknown as {
-      userCanAccessInstallation: (
-        token: string,
-        installationId: string,
-      ) => Promise<boolean>;
-      fetchOrganizationMembership: (
-        organizationLogin: string,
-        token: string,
-      ) => Promise<unknown>;
       fetchGitHub: (path: string, token: string) => Promise<unknown>;
-      verifySetupAuthority: (...args: unknown[]) => Promise<unknown>;
-    };
-    vi.spyOn(privateSubject, 'userCanAccessInstallation').mockResolvedValue(
-      overrides.accessible ?? true,
-    );
-    const membership = {
-      state: 'active',
-      role: 'admin',
-      organization: { id: 7, login: 'octo' },
-      ...overrides.membership,
+      verifyInstallation: (...args: unknown[]) => Promise<unknown>;
     };
     const installation = {
       id: 55,
@@ -279,56 +256,85 @@ describe('GithubInstallationsService setup authority', () => {
       permissions: { issues: 'read', members: 'read' },
       ...overrides.installation,
     };
-    vi.spyOn(privateSubject, 'fetchOrganizationMembership').mockResolvedValue(
-      membership,
-    );
     vi.spyOn(privateSubject, 'fetchGitHub').mockResolvedValue(installation);
     return privateSubject;
   }
 
-  it('refuses visible installations when the user is not an active organization owner', async () => {
-    const subject = authoritySubject({ membership: { role: 'member' } });
+  it('verifies an exact organization installation without a personal App token or owner role', async () => {
+    const subject = authoritySubject();
     await expect(
-      subject.verifySetupAuthority(user, 'ignored', 'octo', '55'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+      subject.verifyInstallation('workspace', '7', 'octo', '55'),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        workspaceId: 'workspace',
+        organizationId: '7',
+        organizationLogin: 'octo',
+        installationId: '55',
+        appId: '123',
+      }),
+    );
+  });
+
+  it('resolves the selected active organization through OAuth read:org without requiring an owner role', async () => {
+    const accounts = {
+      getValidAccessToken: vi.fn().mockResolvedValue('oauth-token'),
+    };
+    const api = {
+      getAuthenticatedUserOrganizationMembership: vi.fn().mockResolvedValue({
+        id: '7',
+        login: 'octo',
+        state: 'active',
+        role: 'member',
+      }),
+    };
+    const subject = new GithubInstallationsService(
+      {} as never,
+      { get: () => '123' } as unknown as ConfigService<Env, true>,
+      accounts as never,
+      {} as never,
+      api as never,
+    ) as unknown as {
+      resolveSetupOrganizationId: (
+        user: AuthUser,
+        organizationLogin: string,
+      ) => Promise<string>;
+    };
+
+    await expect(
+      subject.resolveSetupOrganizationId(user, 'octo'),
+    ).resolves.toBe('7');
+    expect(accounts.getValidAccessToken).toHaveBeenCalledWith(
+      user.sub,
+      'read:org',
+    );
+    expect(api.getAuthenticatedUserOrganizationMembership).toHaveBeenCalledWith(
+      'oauth-token',
+      'octo',
+    );
   });
 
   it('refuses a spoofed installation from another App and missing required permissions', async () => {
     const wrongApp = authoritySubject({ installation: { app_id: 999 } });
     await expect(
-      wrongApp.verifySetupAuthority(user, '7', 'octo', '55'),
+      wrongApp.verifyInstallation('workspace', '7', 'octo', '55'),
     ).rejects.toBeInstanceOf(BadRequestException);
     const missingPermission = authoritySubject({
       installation: { permissions: { issues: 'read' } },
     });
     await expect(
-      missingPermission.verifySetupAuthority(user, '7', 'octo', '55'),
+      missingPermission.verifyInstallation('workspace', '7', 'octo', '55'),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it('asks the user to reconnect GitHub when their token cannot see the installation', async () => {
-    const subject = authoritySubject({ accessible: false });
-    await expect(
-      subject.verifySetupAuthority(user, '7', 'octo', '55'),
-    ).rejects.toEqual(
-      expect.objectContaining({
-        message: 'Reconnect GitHub, then retry installation verification',
-      }),
-    );
-    await expect(
-      subject.verifySetupAuthority(user, '7', 'octo', '55'),
-    ).rejects.toBeInstanceOf(ConflictException);
-  });
-
   it.each([
-    [{ membership: { organization: { id: 8, login: 'octo' } } }],
-    [{ membership: { organization: { id: 7, login: 'other-org' } } }],
+    [{ installation: { account: { id: 8, login: 'octo' } } }],
+    [{ installation: { account: { id: 7, login: 'other-org' } } }],
   ])(
-    'refuses setup authority when the active owner proof is no longer bound to the requested organization',
+    'refuses an installation that is not bound to the selected organization',
     async (overrides) => {
       const subject = authoritySubject(overrides);
       await expect(
-        subject.verifySetupAuthority(user, '7', 'octo', '55'),
+        subject.verifyInstallation('workspace', '7', 'octo', '55'),
       ).rejects.toBeInstanceOf(ForbiddenException);
     },
   );
@@ -344,18 +350,18 @@ describe('GithubInstallationsService setup authority', () => {
     };
     const subject = service(db) as unknown as {
       requireAdmin: () => Promise<void>;
-      verifySetupAuthority: () => Promise<unknown>;
+      verifyInstallation: () => Promise<unknown>;
       complete: (
         user: AuthUser,
         input: { state: string; installationId: string },
       ) => Promise<unknown>;
     };
     vi.spyOn(subject, 'requireAdmin').mockResolvedValue();
-    vi.spyOn(subject, 'verifySetupAuthority').mockResolvedValue({});
+    vi.spyOn(subject, 'verifyInstallation').mockResolvedValue({});
     await expect(
       subject.complete(user, { state: 'a'.repeat(32), installationId: '55' }),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(subject.verifySetupAuthority).not.toHaveBeenCalled();
+    expect(subject.verifyInstallation).not.toHaveBeenCalled();
   });
 });
 
@@ -578,5 +584,71 @@ describe('GithubInstallationsService board verification', () => {
     await expect(subject.verifyBoard(context, 'PVT_removed')).resolves.toBe(
       false,
     );
+  });
+});
+
+describe('GithubInstallationsService manual installation recheck', () => {
+  it('returns an unavailable association when GitHub confirms the App was uninstalled', async () => {
+    const association = {
+      id: 'association-1',
+      workspaceId: 'workspace-1',
+      organizationId: '654321',
+      organizationLogin: 'Octo-Org',
+      normalizedOrganizationLogin: 'octo-org',
+      installationId: '55',
+      appId: '123',
+      status: 'verified',
+      authorizationVersion: 4,
+      verifiedAt: new Date('2026-05-01T10:00:00.000Z'),
+      recoveryReason: null,
+    };
+    const refreshed = {
+      ...association,
+      status: 'unavailable',
+      recoveryReason: 'GitHub App installation is no longer available',
+      authorizationVersion: 5,
+    };
+    const selectedRows = [[{ id: 'member-1' }], [association], [refreshed]];
+    const select = vi.fn(() => {
+      const rows = selectedRows.shift() ?? [];
+      const query = {
+        from: () => query,
+        where: () => query,
+        limit: async () => rows,
+      };
+      return query;
+    });
+    const where = vi.fn().mockResolvedValue(undefined);
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const invalidate = vi.fn();
+    const subject = service({ select, update });
+    const privateSubject = subject as unknown as {
+      githubFetch: (path: string, token: string) => Promise<Response>;
+      tokenProvider: {
+        appToken: () => Promise<string>;
+        invalidate: typeof invalidate;
+      };
+    };
+    privateSubject.tokenProvider = {
+      appToken: vi.fn().mockResolvedValue('app-token'),
+      invalidate,
+    };
+    vi.spyOn(privateSubject, 'githubFetch').mockResolvedValue(
+      new Response('{}', { status: 404 }),
+    );
+
+    await expect(
+      subject.reverify(
+        { sub: 'admin-1', workspaceId: 'workspace-1' } as AuthUser,
+        association.id,
+      ),
+    ).resolves.toMatchObject({
+      id: association.id,
+      status: 'unavailable',
+      recoveryReason: 'GitHub App installation is no longer available',
+    });
+    expect(update).toHaveBeenCalledOnce();
+    expect(invalidate).toHaveBeenCalledWith('55');
   });
 });

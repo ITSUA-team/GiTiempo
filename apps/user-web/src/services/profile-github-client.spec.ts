@@ -31,6 +31,15 @@ describe("createProfileGitHubClient", () => {
           login: "alexeytsukanov",
           updatedAt: "2026-05-04T08:45:00.000Z",
         },
+        capabilities: {
+          organizationDiscovery: "ready",
+          personalData: "ready",
+        },
+        disconnect: "allowed",
+        oauth: {
+          missingScopes: [],
+          status: "authorized",
+        },
         status: "connected",
       }),
     );
@@ -71,8 +80,28 @@ describe("createProfileGitHubClient", () => {
     });
   });
 
-  it("disconnects the GitHub connection with bearer auth and no JSON body", async () => {
-    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+  it("starts OAuth account linking with the session-binding cookie included", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({ authorizationUrl: "https://github.com/login/oauth/authorize" }),
+    );
+    const client = createProfileGitHubClient({ apiClient: createTestApiClient(fetchFn) });
+
+    await client.getAccountAuthUrl();
+
+    expect(fetchFn).toHaveBeenCalledWith("/github/account/auth-url", {
+      body: undefined,
+      credentials: "include",
+      headers: {
+        Authorization: "Bearer access-token",
+      },
+      method: "GET",
+    });
+  });
+
+  it("returns the unlink result with bearer auth", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({ disconnected: true, providerRevocation: "confirmed" }),
+    );
     const client = createProfileGitHubClient({ apiClient: createTestApiClient(fetchFn) });
 
     await client.disconnect();

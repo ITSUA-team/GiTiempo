@@ -33,6 +33,7 @@ import {
 import { GithubInstallationsService } from '../src/github/services/github-installations.service';
 import { GithubInstallationTokenProviderService } from '../src/github/services/github-installation-token-provider.service';
 import { GithubConnectionsService } from '../src/github/services/github-connections.service';
+import { GithubAccountService } from '../src/github/services/github-account.service';
 import { GithubApiClientService } from '../src/github/services/github-api-client.service';
 import { TimeEntriesService } from '../src/time-entries/services/time-entries.service';
 
@@ -55,12 +56,24 @@ describe('Installation tracking authorization (real PostgreSQL)', () => {
       return 'owner-user-token';
     }),
   };
+  const oauthAccount = {
+    getValidAccessToken: vi.fn(async (userId: string, scope: string) => {
+      if (userId !== admin.sub || scope !== 'read:org')
+        throw new Error('No OAuth organization authorization');
+      return 'oauth-user-token';
+    }),
+  };
   const tokens = {
     appToken: vi.fn().mockResolvedValue('app-jwt'),
     getToken: vi.fn().mockResolvedValue('installation-token'),
     invalidate: vi.fn(),
   };
   const api = {
+    getAuthenticatedUserOrganizationMembership: vi.fn().mockResolvedValue({
+      id: '321',
+      login: 'InstallationE2E',
+      state: 'active',
+    }),
     getRepository: vi.fn().mockResolvedValue({
       id: '500',
       name: 'private',
@@ -98,6 +111,8 @@ describe('Installation tracking authorization (real PostgreSQL)', () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(GithubConnectionsService)
       .useValue(connection)
+      .overrideProvider(GithubAccountService)
+      .useValue(oauthAccount)
       .overrideProvider(GithubInstallationTokenProviderService)
       .useValue(tokens)
       .overrideProvider(GithubApiClientService)
@@ -118,14 +133,6 @@ describe('Installation tracking authorization (real PostgreSQL)', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) => {
-        if (url.includes('/user/installations'))
-          return Response.json({ installations: [{ id: 420 }] });
-        if (url.includes('/user/memberships/orgs/'))
-          return Response.json({
-            state: 'active',
-            role: 'admin',
-            organization: { id: 321, login: 'InstallationE2E' },
-          });
         if (url.includes('/app/installations/'))
           return Response.json(installation);
         if (url.includes('/orgs/') && url.endsWith('/installation'))
@@ -218,11 +225,15 @@ describe('Installation tracking authorization (real PostgreSQL)', () => {
     await app?.close();
   });
 
-  it('completes owner setup and starts a private issue for an assigned member with no personal connection', async () => {
+  it('completes OAuth-member setup and starts a private issue for an assigned member with no personal App connection', async () => {
     const result = await timers.startTimerFromGitHub(member, input);
     expect(result.source).toBe('extension');
     expect(result.isBillable).toBe(false);
     expect(connection.getValidAccessToken).not.toHaveBeenCalled();
+    expect(oauthAccount.getValidAccessToken).toHaveBeenCalledWith(
+      admin.sub,
+      'read:org',
+    );
     const status = await installations.list(workspaceId);
     expect(status.items[0]?.status).toBe('verified');
     expect(JSON.stringify(status)).not.toMatch(
@@ -248,8 +259,8 @@ describe('Installation tracking authorization (real PostgreSQL)', () => {
   it.each([
     'wrong-app',
     'wrong-org',
-    'not-owner',
-    'not-accessible',
+    'suspended',
+    'personal-installation',
     'permissions',
   ])(
     'preserves the verified link when replacement fails: %s',
@@ -261,10 +272,7 @@ describe('Installation tracking authorization (real PostgreSQL)', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async (url: string) => {
-          if (
-            url.includes('/app/installations/') &&
-            ['wrong-app', 'wrong-org', 'permissions'].includes(failure)
-          ) {
+          if (url.includes('/app/installations/')) {
             return Response.json({
               ...installation,
               ...(failure === 'wrong-app' ? { app_id: 99 } : {}),
@@ -274,19 +282,14 @@ describe('Installation tracking authorization (real PostgreSQL)', () => {
               ...(failure === 'permissions'
                 ? { permissions: { metadata: 'read' } }
                 : {}),
+              ...(failure === 'suspended'
+                ? { suspended_at: new Date().toISOString() }
+                : {}),
+              ...(failure === 'personal-installation'
+                ? { target_type: 'User' }
+                : {}),
             });
           }
-          if (url.includes('/user/memberships/') && failure === 'not-owner')
-            return Response.json({
-              state: 'active',
-              role: 'member',
-              organization: { id: 321, login: 'InstallationE2E' },
-            });
-          if (
-            url.includes('/user/installations') &&
-            failure === 'not-accessible'
-          )
-            return Response.json({ installations: [] });
           return originalFetch(url);
         }),
       );
@@ -334,7 +337,7 @@ describe('Installation tracking authorization (real PostgreSQL)', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) => {
-        if (url.includes('/user/installations'))
+        if (url.includes('/app/installations/'))
           await db
             .update(workspaceMembers)
             .set({ role: 'member' })

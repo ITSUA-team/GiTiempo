@@ -11,7 +11,7 @@ ADR 003 uses a user-to-server GitHub App connection for each person's browsing a
 
 - Keep ADR 003's personal connection for GitHub browsing and import.
 - Require a verified GitHub App installation associated with the current workspace before starting a timer from a GitHub issue.
-- A workspace administrator begins setup and GitHub confirms the installation; the server verifies installation identity, organization ownership, configured organization policy, and repository access before marking it usable.
+- A workspace administrator with OAuth `read:org` membership begins setup; GitHub decides whether a new App installation may be added. The server verifies the exact installation, configured App and organization identities, required permissions, workspace organization policy, and repository access before marking it usable. Personal App authorization and organization-owner role are not setup prerequisites.
 - Store only installation metadata and status. The server creates short-lived installation tokens from the GitHub App ID and private key; it does not expose tokens or private keys to either web client or the extension.
 - On every GitHub-backed start, resolve canonical issue and repository data with the verified installation, confirm the repository is in an allowed organization and still accessible, then require access to an existing mapped GiTiempo project. A task may be materialized inside that project; the flow never creates a project or a member assignment.
 - Return stable error codes for assignment, installation, permission, organization, resource, mapping, and provider failures. Clients show the matching recovery path without suggesting that a personal GitHub reconnect will fix installation-backed tracking.

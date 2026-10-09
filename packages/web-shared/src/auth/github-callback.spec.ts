@@ -46,6 +46,19 @@ describe("resolveGithubSignInError", () => {
       githubCallbackErrorMessages.nomember,
     );
   });
+
+  it("explains when a GitHub identity is linked to another account", () => {
+    const message = resolveGithubSignInError("github_identity_mismatch");
+
+    expect(message).toBe(githubCallbackErrorMessages.github_identity_mismatch);
+    expect(message).toContain("A different GitHub account is already connected");
+  });
+
+  it("explains a GitHub account-link conflict", () => {
+    expect(resolveGithubSignInError("github_account_conflict")).toBe(
+      githubCallbackErrorMessages.github_account_conflict,
+    );
+  });
 });
 
 describe("resolveGithubSignInErrorLink", () => {
@@ -58,6 +71,8 @@ describe("resolveGithubSignInErrorLink", () => {
 
   it("offers no link for a failure GitHub settings cannot fix", () => {
     expect(resolveGithubSignInErrorLink("ambiguous")).toBeNull();
+    expect(resolveGithubSignInErrorLink("github_identity_mismatch")).toBeNull();
+    expect(resolveGithubSignInErrorLink("github_account_conflict")).toBeNull();
     expect(resolveGithubSignInErrorLink("state")).toBeNull();
   });
 

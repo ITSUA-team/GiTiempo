@@ -42,7 +42,7 @@ import {
   workspaceGitHubOrganizations,
 } from '../schemas/workspace-github-organizations.schema';
 import { GithubApiClientService } from './github-api-client.service';
-import { GithubConnectionsService } from './github-connections.service';
+import { GithubAccountService } from './github-account.service';
 
 type WorkspaceGitHubOrganizationRow =
   typeof workspaceGitHubOrganizations.$inferSelect;
@@ -114,7 +114,7 @@ function isDuplicateWorkspaceGitHubOrganizationError(error: unknown): boolean {
 export class WorkspaceGitHubOrganizationsService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
-    private readonly connections: GithubConnectionsService,
+    private readonly accounts: GithubAccountService,
     private readonly apiClient: GithubApiClientService,
   ) {}
 
@@ -450,7 +450,7 @@ export class WorkspaceGitHubOrganizationsService {
     user: AuthUser,
     input: AddWorkspaceGitHubOrganizationInput,
   ): Promise<string> {
-    const status = await this.connections.status(user.sub);
+    const status = await this.accounts.status(user.sub);
     if (status.status !== 'connected') {
       throw createGitHubOrganizationBadRequest(
         'workspace_github_organization_connection_required',
@@ -459,9 +459,13 @@ export class WorkspaceGitHubOrganizationsService {
       );
     }
 
-    const accessToken = await this.connections.getValidAccessToken(user.sub);
+    let accessToken: string | undefined;
     let owners;
     try {
+      accessToken = await this.accounts.getValidAccessToken(
+        user.sub,
+        'read:org',
+      );
       owners = await this.apiClient.listOwners(
         accessToken,
         {
@@ -471,6 +475,7 @@ export class WorkspaceGitHubOrganizationsService {
         'organization',
       );
     } catch (error) {
+      await this.invalidateRejectedOAuth(user.sub, accessToken, error);
       throw this.toValidationFailure(error, input.organizationLogin);
     }
     const normalizedLogin = normalizeGitHubLogin(input.organizationLogin);
@@ -490,6 +495,7 @@ export class WorkspaceGitHubOrganizationsService {
           input.organizationLogin,
         );
     } catch (error) {
+      await this.invalidateRejectedOAuth(user.sub, accessToken, error);
       throw this.toValidationFailure(error, input.organizationLogin);
     }
     if (
@@ -505,6 +511,7 @@ export class WorkspaceGitHubOrganizationsService {
       memberships =
         await this.apiClient.listActiveOrganizationMemberships(accessToken);
     } catch (error) {
+      await this.invalidateRejectedOAuth(user.sub, accessToken, error);
       throw this.toValidationFailure(error, input.organizationLogin);
     }
     const matchedMembership = memberships.items.find(
@@ -522,15 +529,49 @@ export class WorkspaceGitHubOrganizationsService {
     return matchedMembership.login;
   }
 
+  private async invalidateRejectedOAuth(
+    userId: string,
+    accessToken: string | undefined,
+    error: unknown,
+  ): Promise<void> {
+    if (
+      accessToken &&
+      error instanceof HttpException &&
+      error.getStatus() === 401
+    ) {
+      await this.accounts.invalidateOAuthAccess(userId, accessToken);
+    }
+  }
+
   private toValidationFailure(
     error: unknown,
     organizationLogin: string,
   ): BadRequestException | ServiceUnavailableException {
     const code = getExceptionCode(error);
-    if (code === 'github_app_access_blocked') {
+    if (code === 'github_oauth_permission_required') {
       return createGitHubOrganizationBadRequest(
-        'workspace_github_organization_app_access_blocked',
-        'GitHub organization blocks this GitHub App',
+        'workspace_github_organization_permission_required',
+        'Allow GitHub organization access before adding an organization',
+        organizationLogin,
+      );
+    }
+    if (
+      error instanceof NotFoundException ||
+      (error instanceof HttpException && error.getStatus() === 401)
+    ) {
+      return createGitHubOrganizationBadRequest(
+        'workspace_github_organization_connection_required',
+        'Authorize your GitHub account before adding an organization',
+        organizationLogin,
+      );
+    }
+    if (
+      code === 'github_app_access_blocked' ||
+      code === 'github_oauth_access_blocked'
+    ) {
+      return createGitHubOrganizationBadRequest(
+        'workspace_github_organization_oauth_access_blocked',
+        'GitHub organization restricts OAuth access. Request approval from an organization owner.',
         organizationLogin,
       );
     }

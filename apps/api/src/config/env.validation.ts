@@ -95,7 +95,7 @@ export const envSchema = z
       .transform((val) => val?.replace(/\\n/g, '\n')),
     GITHUB_APP_WEBHOOK_SECRET: optionalNonEmptyString,
 
-    // --- GitHub sign-in OAuth App (identity only, separate from the App above) ---
+    // --- GitHub OAuth App (sign-in, account linking and organization discovery) ---
     GITHUB_SIGNIN_CLIENT_ID: optionalNonEmptyString,
     GITHUB_SIGNIN_CLIENT_SECRET: optionalNonEmptyString,
     // Where the GitHub sign-in callback returns the browser for the browser

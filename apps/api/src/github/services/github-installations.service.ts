@@ -8,6 +8,7 @@ import {
   Logger,
   NotFoundException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -45,7 +46,7 @@ import {
   GithubInstallationAuthenticationError,
   GithubInstallationPermissionError,
 } from './github-api-client.service';
-import { GithubConnectionsService } from './github-connections.service';
+import { GithubAccountService } from './github-account.service';
 import {
   GithubInstallationTokenPermissionError,
   GithubInstallationTokenProviderService,
@@ -53,8 +54,6 @@ import {
 
 const SETUP_TTL_MS = 10 * 60_000;
 const API_URL = 'https://api.github.com';
-const OWNER_AUTHORITY_REQUIRED =
-  'GitHub organization owner authority is required';
 
 type InstallationRest = {
   id?: number | string;
@@ -64,13 +63,6 @@ type InstallationRest = {
   suspended_at?: string | null;
   permissions?: Record<string, string>;
 };
-type UserInstallation = { id?: number | string };
-type Membership = {
-  state?: string;
-  role?: string;
-  organization?: { id?: number | string; login?: string };
-};
-
 export interface VerifiedInstallationIssue {
   associationId: string;
   authorizationVersion: number;
@@ -94,7 +86,7 @@ export class GithubInstallationsService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
     private readonly config: ConfigService<Env, true>,
-    private readonly connections: GithubConnectionsService,
+    private readonly accounts: GithubAccountService,
     private readonly tokenProvider: GithubInstallationTokenProviderService,
     private readonly api: GithubApiClientService,
   ) {}
@@ -173,8 +165,8 @@ export class GithubInstallationsService {
       );
     // Membership can change after state issuance.
     await this.requireAdmin(user);
-    const verified = await this.verifySetupAuthority(
-      user,
+    const verified = await this.verifyInstallation(
+      user.workspaceId,
       state.organizationId,
       state.organizationLogin,
       input.installationId,
@@ -188,8 +180,28 @@ export class GithubInstallationsService {
   ): Promise<WorkspaceGitHubInstallation> {
     await this.requireAdmin(user);
     const row = await this.findAssociation(user.workspaceId, associationId);
-    const verified = await this.verifySetupAuthority(
-      user,
+    try {
+      await this.assertLiveInstallation(row);
+    } catch (error) {
+      // A stale `verified` association can survive when the App is uninstalled
+      // outside GiTiempo. Reconciliation marks it unavailable so Settings can
+      // offer the install flow again.
+      if (
+        error instanceof DomainError &&
+        (error.getResponse() as { code?: string }).code ===
+          'github_installation_unavailable'
+      ) {
+        const refreshed = await this.findAssociation(
+          user.workspaceId,
+          associationId,
+        );
+        if (refreshed.status === 'unavailable')
+          return this.toResponse(refreshed);
+      }
+      throw error;
+    }
+    const verified = await this.verifyInstallation(
+      user.workspaceId,
       row.organizationId,
       row.organizationLogin,
       row.installationId,
@@ -451,8 +463,8 @@ export class GithubInstallationsService {
     if (invalidate) this.tokenProvider.invalidate(installationId);
   }
 
-  private async verifySetupAuthority(
-    user: AuthUser,
+  private async verifyInstallation(
+    workspaceId: string,
     organizationId: string,
     organizationLogin: string,
     installationId: string,
@@ -467,31 +479,9 @@ export class GithubInstallationsService {
       | 'appId'
     >
   > {
-    let userToken: string;
-    try {
-      userToken = await this.connections.getValidAccessToken(user.sub);
-    } catch {
-      throw new ConflictException(
-        'Connect GitHub to verify installation ownership',
-      );
-    }
-    const [accessible, membership, installation] = await Promise.all([
-      this.userCanAccessInstallation(userToken, installationId),
-      this.fetchOrganizationMembership(organizationLogin, userToken),
-      this.fetchGitHub<InstallationRest>(
-        `/app/installations/${encodeURIComponent(installationId)}`,
-        await this.tokenProvider.appToken(),
-      ),
-    ]);
-    if (!accessible) {
-      throw new ConflictException(
-        'Reconnect GitHub, then retry installation verification',
-      );
-    }
-    const resolvedOrganizationId = this.assertOwnerMembership(
-      membership,
-      organizationLogin,
-      organizationId,
+    const installation = await this.fetchGitHub<InstallationRest>(
+      `/app/installations/${encodeURIComponent(installationId)}`,
+      await this.tokenProvider.appToken(),
     );
     if (
       String(installation.id) !== installationId ||
@@ -500,8 +490,14 @@ export class GithubInstallationsService {
       installation.suspended_at
     )
       throw new BadRequestException('GitHub installation cannot be verified');
-    if (String(installation.account?.id) !== resolvedOrganizationId)
-      throw new ForbiddenException(OWNER_AUTHORITY_REQUIRED);
+    if (
+      String(installation.account?.id) !== organizationId ||
+      normalizeGitHubLogin(installation.account?.login ?? '') !==
+        normalizeGitHubLogin(organizationLogin)
+    )
+      throw new ForbiddenException(
+        'GitHub installation does not belong to the selected organization',
+      );
     if (
       !this.hasReadPermission(installation.permissions?.issues) ||
       !this.hasReadPermission(installation.permissions?.members)
@@ -526,8 +522,8 @@ export class GithubInstallationsService {
       throw error;
     }
     return {
-      workspaceId: user.workspaceId,
-      organizationId: resolvedOrganizationId,
+      workspaceId,
+      organizationId,
       organizationLogin: installation.account?.login ?? organizationLogin,
       normalizedOrganizationLogin: normalizeGitHubLogin(
         installation.account?.login ?? organizationLogin,
@@ -771,85 +767,34 @@ export class GithubInstallationsService {
   ): Promise<string> {
     let token: string;
     try {
-      token = await this.connections.getValidAccessToken(user.sub);
+      token = await this.accounts.getValidAccessToken(user.sub, 'read:org');
     } catch {
       throw new ConflictException(
-        'Connect GitHub to verify installation ownership',
+        'Authorize GitHub organization access to set up the App',
       );
     }
-    const membership = await this.fetchOrganizationMembership(
-      organizationLogin,
-      token,
-    );
-    return this.assertOwnerMembership(membership, organizationLogin);
-  }
-
-  private assertOwnerMembership(
-    membership: Membership | null,
-    organizationLogin: string,
-    expectedOrganizationId?: string,
-  ): string {
-    const organizationId = String(membership?.organization?.id ?? '');
+    let membership;
+    try {
+      membership = await this.api.getAuthenticatedUserOrganizationMembership(
+        token,
+        organizationLogin,
+      );
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        await this.accounts.invalidateOAuthAccess(user.sub, token);
+      }
+      throw error;
+    }
     if (
       membership?.state !== 'active' ||
-      membership?.role !== 'admin' ||
-      !organizationId ||
-      (expectedOrganizationId !== undefined &&
-        organizationId !== expectedOrganizationId) ||
-      normalizeGitHubLogin(membership.organization?.login ?? '') !==
+      normalizeGitHubLogin(membership.login) !==
         normalizeGitHubLogin(organizationLogin)
     ) {
-      throw new ForbiddenException(OWNER_AUTHORITY_REQUIRED);
-    }
-    return organizationId;
-  }
-
-  private async fetchOrganizationMembership(
-    organizationLogin: string,
-    token: string,
-  ): Promise<Membership | null> {
-    const path = `/user/memberships/orgs/${encodeURIComponent(organizationLogin)}`;
-    const response = await this.githubFetch(path, token);
-    if (response.status === 404) return null;
-    if (!response.ok) {
-      this.logger.warn({
-        event: 'github.installation.verify_failed',
-        status: response.status,
-        path,
-      });
-      throw new ServiceUnavailableException(
-        'GitHub installation verification is unavailable',
+      throw new ForbiddenException(
+        'The selected organization is not an active organization for this GitHub account',
       );
     }
-    return response.json() as Promise<Membership>;
-  }
-
-  private async userCanAccessInstallation(
-    token: string,
-    installationId: string,
-  ): Promise<boolean> {
-    let page = 1;
-    while (true) {
-      const response = await this.githubFetch(
-        `/user/installations?per_page=100&page=${page}`,
-        token,
-      );
-      if (!response.ok)
-        throw new ServiceUnavailableException(
-          'GitHub installation verification is unavailable',
-        );
-      const body = (await response.json()) as {
-        installations?: UserInstallation[];
-      };
-      if (
-        (body.installations ?? []).some(
-          (item) => String(item.id) === installationId,
-        )
-      )
-        return true;
-      if (!response.headers.get('link')?.includes('rel="next"')) return false;
-      page += 1;
-    }
+    return membership.id;
   }
 
   private async activeAssociationForOwner(

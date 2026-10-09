@@ -18,11 +18,29 @@ const connectedStatus: GitHubConnectionStatusResponse = {
     login: 'octocat',
     updatedAt: '2026-05-01T10:00:00.000Z',
   },
+  capabilities: {
+    organizationDiscovery: 'ready',
+    personalData: 'ready',
+  },
+  disconnect: 'allowed',
+  oauth: {
+    missingScopes: [],
+    status: 'authorized',
+  },
   status: 'connected',
 };
 
 const disconnectedStatus: GitHubConnectionStatusResponse = {
   account: null,
+  capabilities: {
+    organizationDiscovery: 'authorization_required',
+    personalData: 'authorization_required',
+  },
+  disconnect: 'allowed',
+  oauth: {
+    missingScopes: [],
+    status: 'not_authorized',
+  },
   status: 'disconnected',
 };
 

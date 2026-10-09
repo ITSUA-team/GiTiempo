@@ -654,12 +654,31 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.emitted("primaryAction")?.length).toBeGreaterThan(0);
   });
 
-  it("explains a missing GitHub connection instead of showing a failure", () => {
-    const wrapper = mountDialog({ githubProjectAvailability: "no-connection" });
+  it("directs a disconnected member to workspace App access without blocking Stop timer", async () => {
+    const wrapper = mountDialog({
+      githubProjectAvailability: "no-connection",
+      primaryActionLabel: "Stop",
+      isConfirmSelectionDisabled: true,
+      projectOptions: [],
+      taskOptions: [],
+      tasksErrorMessage: "Project not found",
+    });
 
-    expect(
-      wrapper.find('[data-testid="top-bar-timer-github-no-connection"]').exists(),
-    ).toBe(true);
+    const availabilityMessage = wrapper.get(
+      '[data-testid="top-bar-timer-github-no-connection"]',
+    );
+
+    expect(availabilityMessage.text()).toContain(
+      "Ask a workspace administrator to confirm the GitHub App installation",
+    );
+    expect(availabilityMessage.text()).not.toContain("Connect your GitHub account");
+    expect(wrapper.text()).toContain("Could not load tasks for this project.");
+    expect(wrapper.text()).toContain("Project not found");
+    const stopButton = findButtonByLabel(wrapper, "Stop timer");
+    expect(stopButton).toBeDefined();
+    expect(stopButton?.attributes("disabled")).toBeUndefined();
+    await stopButton!.trigger("click");
+    expect(wrapper.emitted("primaryAction")).toHaveLength(1);
     expect(
       wrapper.find('[data-testid="top-bar-timer-github-projects-error"]').exists(),
     ).toBe(false);

@@ -20,6 +20,9 @@ import {
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { ZodSerializerDto } from 'nestjs-zod';
+import { GithubAccountService } from '../../github/services/github-account.service';
+import { GithubEncryptionService } from '../../github/services/github-encryption.service';
+import { GITHUB_ACCOUNT_SESSION_COOKIE } from '../../github/services/github-account-session';
 import { SkipAuth } from '../decorators/skip-auth.decorator';
 import { GithubSessionDto } from '../dto/github-session.dto';
 import { TokenPairResponseDto } from '../dto/token-pair-response.dto';
@@ -33,7 +36,11 @@ import {
 @ApiTags('auth')
 @Controller('auth/github')
 export class AuthGithubController {
-  constructor(private readonly github: AuthGithubService) {}
+  constructor(
+    private readonly github: AuthGithubService,
+    private readonly accounts: GithubAccountService,
+    private readonly encryption: GithubEncryptionService,
+  ) {}
 
   @Get('start')
   @SkipAuth()
@@ -123,7 +130,9 @@ export class AuthGithubController {
 
   @Get('callback')
   @SkipAuth()
-  @ApiOperation({ summary: 'GitHub sign-in OAuth callback' })
+  @ApiOperation({
+    summary: 'GitHub OAuth sign-in or authenticated account-link callback',
+  })
   @ApiQuery({
     name: 'code',
     required: false,
@@ -136,7 +145,7 @@ export class AuthGithubController {
     required: false,
     type: String,
     description:
-      'Signed state minted by `/auth/github/start`. Its `app` claim decides which client to return to.',
+      'Signed sign-in state or opaque `account_link.*` state. Each namespace is verified independently without fallback.',
   })
   @ApiQuery({
     name: 'error',
@@ -146,23 +155,25 @@ export class AuthGithubController {
   })
   @ApiFoundResponse({
     description: [
-      'Redirect back to whichever client the signed state names. Never returns a body, and never fails the request — an outcome the caller cannot observe is worse than an error it can.',
+      'Redirect the browser to the outcome destination for the verified flow. Never returns a body.',
       '',
       '**Web targets** return to that app: on success to its `/auth/github/callback` SPA route with a single-use handoff `code`, otherwise to its `/login`.',
       '',
       "**The `extension` target** returns to the configured extension destination on every outcome, with the same `code` or indicator on that URL's own query. It has no route to load: the browser navigation is intercepted as soon as it matches, and an outcome sent to a web page would leave the extension's authorization window waiting forever.",
       '',
-      'Failures carry `githubError` set to `denied`, `state`, `email`, or `failed`.',
+      'Sign-in failures carry a safe `githubError`, including denial, invalid state, email/member resolution, identity mismatch or provider failure.',
+      '',
+      '**Authenticated account linking** uses the separate opaque `account_link.*` namespace and returns only to user-web `/profile`, with `github=connected` or `github=error` and a safe `code`. It does not issue a sign-in handoff or switch the current GiTiempo account.',
     ].join('\n'),
     headers: {
       Location: {
         description:
-          'Absolute URL to return the browser to: an app route for the web targets, the configured extension destination for `extension`.',
+          'Absolute URL to return the browser to: an app route for sign-in, the configured extension destination for extension sign-in, or the fixed user Profile route for authenticated linking.',
         schema: { type: 'string' },
       },
       'Set-Cookie': {
         description:
-          'Cleared `gh_oauth_state` cookie — the state binding is single-use. Web targets only; the `extension` target was never given one.',
+          'Cleared flow-specific binding cookie: `gh_oauth_state` for web sign-in or `github_account_session` for authenticated linking. Extension sign-in uses its existing proof-of-possession binding.',
         schema: { type: 'string' },
       },
     },
@@ -175,6 +186,26 @@ export class AuthGithubController {
     @Res() response: Response,
   ): Promise<void> {
     const cookies = request.cookies as Record<string, string> | undefined;
+    if (state?.startsWith('account_link.')) {
+      let sessionToken: string | undefined;
+      try {
+        const encrypted = cookies?.[GITHUB_ACCOUNT_SESSION_COOKIE];
+        if (encrypted) sessionToken = this.encryption.decrypt(encrypted);
+      } catch {
+        // An invalid session binding must not fall back to sign-in.
+      }
+      response.clearCookie(GITHUB_ACCOUNT_SESSION_COOKIE, {
+        path: '/auth/github',
+      });
+      const redirect = await this.accounts.completeCallback({
+        code,
+        state,
+        error,
+        sessionToken,
+      });
+      response.redirect(302, redirect);
+      return;
+    }
     const stateNonce = cookies?.[GITHUB_OAUTH_STATE_COOKIE];
     // Single-use: consume the binding cookie so the callback cannot be replayed.
     response.clearCookie(GITHUB_OAUTH_STATE_COOKIE, {

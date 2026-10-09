@@ -4,6 +4,7 @@ interface RequestJsonOptions<TResponse> {
   accessToken?: string;
   apiBaseUrl?: string;
   body?: unknown;
+  credentials?: "include" | "omit" | "same-origin";
   fetchFn?: typeof fetch;
   headers?: Record<string, string>;
   method?: string;
@@ -15,6 +16,7 @@ interface RequestJsonOptions<TResponse> {
 export interface ApiRequestOptions {
   auth?: boolean;
   body?: unknown;
+  credentials?: "include" | "omit" | "same-origin";
   headers?: Record<string, string>;
   method?: string;
   path: string;
@@ -135,6 +137,7 @@ export async function requestJson<TResponse>({
   accessToken,
   apiBaseUrl,
   body,
+  credentials,
   fetchFn = getDefaultFetchFn(),
   headers,
   method = "GET",
@@ -160,6 +163,7 @@ export async function requestJson<TResponse>({
           }
         : requestHeaders,
     method,
+    ...(credentials ? { credentials } : {}),
     ...(signal ? { signal } : {}),
   });
 
@@ -235,6 +239,7 @@ export function createAuthenticatedApiClient({
         token,
       }),
       method: options.method ?? "GET",
+      ...(options.credentials ? { credentials: options.credentials } : {}),
       ...(options.signal ? { signal: options.signal } : {}),
     });
   }
@@ -249,6 +254,12 @@ export function createAuthenticatedApiClient({
       }
 
       return response;
+    }
+
+    // Provider credentials can expire independently of the GiTiempo session.
+    const initialError = await createResponseError(response);
+    if (initialError.code === "github_authorization_required") {
+      throw initialError;
     }
 
     let nextToken: string | null | undefined;
@@ -267,12 +278,12 @@ export function createAuthenticatedApiClient({
 
     const retryResponse = await sendRequest(options, nextToken);
 
-    if (retryResponse.status === 401) {
-      await handleRefreshFailure();
-    }
-
     if (!retryResponse.ok) {
-      throw await createResponseError(retryResponse);
+      const error = await createResponseError(retryResponse);
+      if (retryResponse.status === 401 && error.code !== "github_authorization_required") {
+        await handleRefreshFailure();
+      }
+      throw error;
     }
 
     return retryResponse;

@@ -35,7 +35,7 @@ interface UseAdminWorkspaceGitHubOrganizationsOptions {
     action: string,
   ) => void;
   onSuccess?: (message: string, action: string) => void;
-  githubAppInstallUrl?: string | null;
+  refetchGitHubConnectionStatus?: () => Promise<void>;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
   userAppUrl?: string | null;
 }
@@ -87,9 +87,9 @@ export function useAdminWorkspaceGitHubOrganizations({
   availableOrganizationsEnabled,
   client = getAdminSettingsClient(),
   enabled,
-  githubAppInstallUrl = null,
   onError,
   onSuccess,
+  refetchGitHubConnectionStatus,
   scope,
   userAppUrl = null,
 }: UseAdminWorkspaceGitHubOrganizationsOptions) {
@@ -194,7 +194,6 @@ export function useAdminWorkspaceGitHubOrganizations({
     }
 
     return buildGitHubWorkspaceAccessChecklist({
-      githubAppInstallUrl,
       recovery: recovery.value,
       userAppUrl,
     });
@@ -317,7 +316,7 @@ export function useAdminWorkspaceGitHubOrganizations({
 
   watch(
     () => availableOrganizationsQuery.error.value,
-    (error) => {
+    async (error) => {
       if (!error) return;
 
       onError?.(
@@ -325,6 +324,8 @@ export function useAdminWorkspaceGitHubOrganizations({
         error,
         'load-available-github-organizations',
       );
+
+      await refetchGitHubConnectionStatus?.();
     },
   );
 
