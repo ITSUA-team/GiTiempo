@@ -16,10 +16,22 @@ import {
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
-const DATE_FROM = '2027-06-01';
-const DATE_TO = '2027-06-30';
-const ISO_FROM = `${DATE_FROM}T00:00:00.000Z`;
 const PROBE_PROJECT_NAME = 'Invoice Probe Project';
+
+// Each probe entry is on a separate day so tests don't compete for the
+// same billable time entries when creating invoices.
+const PROBE_ENTRY_DATES = [
+  '2027-06-06',
+  '2027-06-07',
+  '2027-06-08',
+  '2027-06-09',
+  '2027-06-10',
+  '2027-06-11',
+  '2027-06-12',
+  '2027-06-13',
+  '2027-06-14',
+  '2027-06-15',
+];
 
 describe('Invoices (e2e)', () => {
   let app: INestApplication;
@@ -38,6 +50,7 @@ describe('Invoices (e2e)', () => {
   let bobUserId: string;
   let carolUserId: string;
   let createdInvoiceIds: string[] = [];
+  let probeDateIndex = 0;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -123,14 +136,14 @@ describe('Invoices (e2e)', () => {
         durationSeconds: 3600,
         isBillable: true,
       },
-      // Probe: bob 0.5h billable (PM cannot see this project)
-      {
+      // Probe: multiple entries on separate days for test isolation
+      ...PROBE_ENTRY_DATES.map((date) => ({
         taskId: probeTaskId,
         userId: bobUserId,
-        startedAt: '2027-06-06T10:00:00.000Z',
+        startedAt: `${date}T10:00:00.000Z`,
         durationSeconds: 1800,
         isBillable: true,
-      },
+      })),
     ];
     await db.insert(timeEntries).values(
       entries.map((e) => ({
@@ -176,7 +189,7 @@ describe('Invoices (e2e)', () => {
       .where(
         and(
           eq(timeEntries.workspaceId, workspaceId),
-          gte(timeEntries.startedAt, new Date(ISO_FROM)),
+          gte(timeEntries.startedAt, new Date('2027-06-01T00:00:00.000Z')),
           lt(timeEntries.startedAt, new Date('2027-07-01T00:00:00.000Z')),
         ),
       );
@@ -236,6 +249,12 @@ describe('Invoices (e2e)', () => {
       .send(body);
   }
 
+  /** Returns a unique single-day date range for probe project invoices. */
+  function nextProbeDateRange(): { dateFrom: string; dateTo: string } {
+    const date = PROBE_ENTRY_DATES[probeDateIndex++]!;
+    return { dateFrom: date, dateTo: date };
+  }
+
   // ===========================================================================
   // Authorization
   // ===========================================================================
@@ -251,19 +270,20 @@ describe('Invoices (e2e)', () => {
     it('rejects member role on create', async () => {
       const res = await createInvoice(memberToken, {
         title: 'Test',
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        dateFrom: '2027-06-01',
+        dateTo: '2027-06-02',
       });
       expect(res.status).toBe(403);
     });
 
     it('rejects PM role on delete', async () => {
-      // First create an invoice as admin so we have an ID.
+      // Create an invoice as admin using a probe date range.
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Delete Auth Test',
-        projectId: platformProjectId,
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        projectId: probeProjectId,
+        dateFrom,
+        dateTo,
         hourlyRate: 100,
       });
       expect(createRes.status).toBe(201);
@@ -276,11 +296,12 @@ describe('Invoices (e2e)', () => {
     });
 
     it('allows admin to delete', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Delete Admin Test',
-        projectId: platformProjectId,
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        projectId: probeProjectId,
+        dateFrom,
+        dateTo,
         hourlyRate: 100,
       });
       expect(createRes.status).toBe(201);
@@ -306,11 +327,12 @@ describe('Invoices (e2e)', () => {
 
   describe('create invoice', () => {
     it('rejects PM creating invoice for unassigned private project', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const res = await createInvoice(pmToken, {
         title: 'PM Forbidden Project',
         projectId: probeProjectId,
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        dateFrom,
+        dateTo,
         hourlyRate: 100,
       });
       expect(res.status).toBe(403);
@@ -320,8 +342,8 @@ describe('Invoices (e2e)', () => {
       const res = await createInvoice(adminToken, {
         title: 'Platform June 2027',
         projectId: platformProjectId,
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        dateFrom: '2027-06-01',
+        dateTo: '2027-06-30',
         hourlyRate: 100,
         discountPercent: 10,
       });
@@ -346,8 +368,8 @@ describe('Invoices (e2e)', () => {
       const res = await createInvoice(adminToken, {
         title: 'Platform June 2027 (duplicate)',
         projectId: platformProjectId,
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        dateFrom: '2027-06-01',
+        dateTo: '2027-06-30',
         hourlyRate: 100,
       });
 
@@ -376,8 +398,8 @@ describe('Invoices (e2e)', () => {
       const res = await createInvoice(adminToken, {
         title: 'Client June 2027',
         projectId: clientProjectId,
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        dateFrom: '2027-06-01',
+        dateTo: '2027-06-30',
       });
 
       // Reset workspace settings after test.
@@ -405,21 +427,23 @@ describe('Invoices (e2e)', () => {
         .set('Authorization', bearer(adminToken))
         .send({ defaultHourlyRate: null });
 
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const res = await createInvoice(adminToken, {
         title: 'No Rate Test',
         projectId: probeProjectId,
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        dateFrom,
+        dateTo,
       });
       expect(res.status).toBe(400);
     });
 
     it('handles 100% discount resulting in zero total', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const res = await createInvoice(adminToken, {
         title: 'Full Discount Test',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 100,
         discountPercent: 100,
       });
@@ -429,7 +453,6 @@ describe('Invoices (e2e)', () => {
         expect(res.body.discountPercent).toBe(100);
         expect(res.body.totalAmount).toBe(0);
       } else {
-        // Entries may have been billed by another test.
         expect(res.status).toBe(422);
       }
     });
@@ -445,8 +468,8 @@ describe('Invoices (e2e)', () => {
       const createRes = await createInvoice(adminToken, {
         title: 'PM Visible Invoice',
         projectId: clientProjectId,
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        dateFrom: '2027-06-05',
+        dateTo: '2027-06-06',
         hourlyRate: 75,
       });
       if (createRes.status === 201) {
@@ -459,19 +482,18 @@ describe('Invoices (e2e)', () => {
         .query({ projectId: clientProjectId });
 
       expect(res.status).toBe(200);
-      // PM should see invoices for Demo Client (assigned).
       if (createRes.status === 201) {
         expect(res.body.items.length).toBeGreaterThanOrEqual(1);
       }
     });
 
     it('PM cannot list invoices for unassigned private projects', async () => {
-      // Create an invoice for the probe project (PM not assigned).
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'PM Hidden Invoice',
         projectId: probeProjectId,
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        dateFrom,
+        dateTo,
         hourlyRate: 75,
       });
       if (createRes.status === 201) {
@@ -488,12 +510,12 @@ describe('Invoices (e2e)', () => {
     });
 
     it('PM cannot get details of invoice for unassigned private project', async () => {
-      // Create invoice for probe project as admin.
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'PM Hidden Detail',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 75,
       });
 
@@ -521,8 +543,8 @@ describe('Invoices (e2e)', () => {
       // projects). The PM must be able to see it in the list.
       const createRes = await createInvoice(pmToken, {
         title: 'PM Project-less Invoice',
-        dateFrom: DATE_FROM,
-        dateTo: DATE_TO,
+        dateFrom: '2027-06-01',
+        dateTo: '2027-06-30',
         hourlyRate: 50,
       });
 
@@ -543,12 +565,11 @@ describe('Invoices (e2e)', () => {
     });
 
     it('PM cannot see admin-created project-less invoices', async () => {
-      // Admin creates an invoice without projectId. PM should NOT see it
-      // (it may aggregate entries from projects the PM can't access).
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Admin Project-less Invoice',
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 50,
       });
 
@@ -569,10 +590,11 @@ describe('Invoices (e2e)', () => {
     });
 
     it('PM cannot get details of admin-created project-less invoice', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Admin Project-less Detail',
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 50,
       });
 
@@ -592,11 +614,12 @@ describe('Invoices (e2e)', () => {
 
   describe('update invoice', () => {
     it('updates status from draft to sent', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Status Update Test',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 80,
       });
       if (createRes.status !== 201) return;
@@ -612,11 +635,12 @@ describe('Invoices (e2e)', () => {
     });
 
     it('rejects invalid status transition (draft to paid)', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Invalid Transition Test',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 80,
       });
       if (createRes.status !== 201) return;
@@ -631,11 +655,12 @@ describe('Invoices (e2e)', () => {
     });
 
     it('rejects rate change on non-draft (sent) invoice', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Rate Lock Test',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 80,
       });
       if (createRes.status !== 201) return;
@@ -657,11 +682,12 @@ describe('Invoices (e2e)', () => {
     });
 
     it('updates notes on any status', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Notes Update Test',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 80,
       });
       if (createRes.status !== 201) return;
@@ -683,11 +709,12 @@ describe('Invoices (e2e)', () => {
     });
 
     it('recalculates totals when rate changes on draft', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Recalc Test',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 80,
       });
       if (createRes.status !== 201) return;
@@ -708,11 +735,12 @@ describe('Invoices (e2e)', () => {
     });
 
     it('rejects status revert (sent to draft)', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Revert Status Test',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 80,
       });
       if (createRes.status !== 201) return;
@@ -734,11 +762,12 @@ describe('Invoices (e2e)', () => {
     });
 
     it('rejects any update on paid invoice except notes', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Paid Lock Test',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 80,
       });
       if (createRes.status !== 201) return;
@@ -791,11 +820,12 @@ describe('Invoices (e2e)', () => {
 
   describe('delete invoice', () => {
     it('deleting invoice unlinks time entries making them eligible again', async () => {
+      const { dateFrom, dateTo } = nextProbeDateRange();
       const createRes = await createInvoice(adminToken, {
         title: 'Delete Reclaim Test',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 80,
       });
       if (createRes.status !== 201) return;
@@ -825,8 +855,8 @@ describe('Invoices (e2e)', () => {
       const recreateRes = await createInvoice(adminToken, {
         title: 'Reclaimed Entries',
         projectId: probeProjectId,
-        dateFrom: '2027-06-06',
-        dateTo: '2027-06-07',
+        dateFrom,
+        dateTo,
         hourlyRate: 80,
       });
       expect(recreateRes.status).toBe(201);
@@ -849,7 +879,6 @@ describe('Invoices (e2e)', () => {
 
   describe('workspace isolation', () => {
     it('getInvoice returns 404 for invoice from another workspace', async () => {
-      // Use a random UUID that doesn't exist in this workspace.
       const res = await request(app.getHttpServer())
         .get('/invoices/00000000-0000-4000-8000-000000000099')
         .set('Authorization', bearer(adminToken));
