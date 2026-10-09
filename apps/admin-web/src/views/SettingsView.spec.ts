@@ -8,6 +8,7 @@ import {
 } from '@gitiempo/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
+import { ApiError } from '@gitiempo/web-shared/http';
 
 import { useAuthStore } from '@/stores/auth';
 import { adminSettingsKeys } from '@/lib/query-keys';
@@ -367,7 +368,7 @@ describe('SettingsView', () => {
     });
     testMocks.setupWorkspaceGitHubInstallation.mockResolvedValue({
       expiresAt: '2026-05-01T10:10:00.000Z',
-      installationUrl: 'https://github.com/apps/gi-tiempo/installations/new',
+      installationUrl: 'https://github.com/apps/gitiempo/installations/new',
       state: 'a'.repeat(32),
     });
     testMocks.removeWorkspaceGitHubOrganization.mockResolvedValue(undefined);
@@ -376,7 +377,7 @@ describe('SettingsView', () => {
     testMocks.updateWorkspaceSettings.mockResolvedValue(settingsResponse);
     vi.stubEnv(
       'VITE_GITHUB_APP_INSTALL_URL',
-      'https://github.com/apps/gi-tiempo/installations/new',
+      'https://github.com/apps/gitiempo/installations/new',
     );
     vi.stubEnv('VITE_USER_APP_URL', 'https://user.example.test/login');
 
@@ -1293,5 +1294,28 @@ describe('SettingsView', () => {
     await flushPromises();
 
     expect(testMocks.completeWorkspaceGitHubInstallation).not.toHaveBeenCalled();
+  });
+
+  it('shows a user-friendly toast when the installations endpoint returns 404', async () => {
+    testMocks.listWorkspaceGitHubInstallations.mockRejectedValue(
+      new ApiError('Cannot GET /workspace/github/installations', {
+        code: null,
+        status: 404,
+      }),
+    );
+
+    mountSettingsView();
+    await flushPromises();
+
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'GitHub integration is not available on this server. Please contact support to update the server.',
+      expect.objectContaining({
+        error: expect.any(ApiError),
+        logContext: expect.objectContaining({
+          action: 'load-workspace-github-installations',
+          feature: 'settings-github-installations',
+        }),
+      }),
+    );
   });
 });

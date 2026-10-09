@@ -18,6 +18,9 @@ export const giTiempoDropdownControlBaseClass =
 export const giTiempoDropdownControlInputClass =
   `${giTiempoDropdownControlBaseClass} w-full rounded-[6px] px-3`;
 
+export const giTiempoDatePickerInputClass =
+  `${giTiempoDropdownControlBaseClass} w-full rounded-[6px] ps-3`;
+
 export const giTiempoDropdownControlJoinedInputClass =
   "h-full min-w-0 flex-1 rounded-none border-0 bg-transparent px-3 font-sans text-[14px] font-medium text-text-dark shadow-none ring-0 focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none";
 
@@ -76,11 +79,9 @@ export const giTiempoAddLevelSelectMobilePt = {
 export const giTiempoDatePickerPt = {
   root: { class: "h-[38px] w-full" },
   pcInputText: {
-    root: { class: giTiempoDropdownControlInputClass },
+    root: { class: giTiempoDatePickerInputClass },
   },
   dropdown: { class: giTiempoDropdownControlTriggerClass },
-  // The clear icon overlays the input text, so back it with the surface
-  // color and keep it clear of the input-mode calendar icon at the end.
   clearIcon: { class: "box-content bg-surface-primary end-10" },
   panel: {
     class:

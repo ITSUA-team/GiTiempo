@@ -268,7 +268,7 @@ describe('createAdminSettingsClient', () => {
     fetchFn.mockResolvedValue(
       jsonResponse({
         expiresAt: '2026-05-01T10:10:00.000Z',
-        installationUrl: 'https://github.com/apps/gi-tiempo/installations/new',
+        installationUrl: 'https://github.com/apps/gitiempo/installations/new',
         state: 'a'.repeat(32),
       }),
     );

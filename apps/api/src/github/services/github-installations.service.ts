@@ -134,6 +134,7 @@ export class GithubInstallationsService {
     });
     return {
       state,
+      // there
       installationUrl: `https://github.com/apps/${encodeURIComponent(appSlug)}/installations/new?state=${encodeURIComponent(state)}`,
       expiresAt: expiresAt.toISOString(),
       ...(existingInstallationId ? { existingInstallationId } : {}),

@@ -7,6 +7,8 @@ import {
 } from '@gitiempo/shared';
 import { computed, onScopeDispose, ref, shallowRef, watch, type ComputedRef, type Ref } from 'vue';
 
+import { ApiError } from '@gitiempo/web-shared/http';
+
 import {
   useCompleteWorkspaceGitHubInstallationMutation,
   useReverifyWorkspaceGitHubInstallationMutation,
@@ -40,6 +42,16 @@ interface UseAdminWorkspaceGitHubInstallationsOptions {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'An unexpected error occurred';
+}
+
+function getInstallationsErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 404) {
+    return 'GitHub integration is not available on this server. Please contact support to update the server.';
+  }
+  if (error instanceof ApiError && error.status === 503) {
+    return 'GitHub App integration is not configured.';
+  }
+  return getErrorMessage(error);
 }
 
 export function useAdminWorkspaceGitHubInstallations({
@@ -110,7 +122,7 @@ export function useAdminWorkspaceGitHubInstallations({
       return isCurrentScope(currentScope) && canConfigure.value ? response : null;
     } catch (error) {
       if (isCurrentScope(currentScope)) {
-        onError?.(getErrorMessage(error), error, 'setup-workspace-github-installation');
+        onError?.(getInstallationsErrorMessage(error), error, 'setup-workspace-github-installation');
       }
       return null;
     }
@@ -170,7 +182,7 @@ export function useAdminWorkspaceGitHubInstallations({
       }
     } catch (error) {
       if (isCurrentScope(currentScope)) {
-        onError?.(getErrorMessage(error), error, 'complete-workspace-github-installation');
+        onError?.(getInstallationsErrorMessage(error), error, 'complete-workspace-github-installation');
       }
     }
   }
@@ -268,7 +280,7 @@ export function useAdminWorkspaceGitHubInstallations({
   watch(
     () => query.error.value,
     (error) => {
-      if (error) onError?.(getErrorMessage(error), error, 'load-workspace-github-installations');
+      if (error) onError?.(getInstallationsErrorMessage(error), error, 'load-workspace-github-installations');
     },
   );
 

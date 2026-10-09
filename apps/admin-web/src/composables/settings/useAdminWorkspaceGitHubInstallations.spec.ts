@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceGitHubOrganizationResponse } from '@gitiempo/shared';
+import { ApiError } from '@gitiempo/web-shared/http';
 import type { AdminSettingsClient } from '@/services/admin-settings-client';
 import { createTestQueryPlugin } from '@/test/query-client';
 
@@ -41,7 +42,7 @@ function createClient(overrides: Partial<InstallationsClient> = {}): Installatio
     reverifyWorkspaceGitHubInstallation: vi.fn().mockResolvedValue(installation),
     setupWorkspaceGitHubInstallation: vi.fn().mockResolvedValue({
       expiresAt: '2026-05-01T10:10:00.000Z',
-      installationUrl: 'https://github.com/apps/gi-tiempo/installations/new',
+      installationUrl: 'https://github.com/apps/gitiempo/installations/new',
       state: 'a'.repeat(32),
     }),
     ...overrides,
@@ -158,7 +159,7 @@ describe('useAdminWorkspaceGitHubInstallations', () => {
       setupWorkspaceGitHubInstallation: vi.fn().mockResolvedValue({
         existingInstallationId: '987654',
         expiresAt: '2026-05-01T10:10:00.000Z',
-        installationUrl: 'https://github.com/apps/gi-tiempo/installations/new',
+        installationUrl: 'https://github.com/apps/gitiempo/installations/new',
         state: 'a'.repeat(32),
       }),
     });
@@ -334,7 +335,7 @@ describe('useAdminWorkspaceGitHubInstallations', () => {
   });
 
   it('opens the stateful installation URL after binding setup to the selected organization', async () => {
-    const installationUrl = `https://github.com/apps/gi-tiempo/installations/new?state=${'a'.repeat(32)}`;
+    const installationUrl = `https://github.com/apps/gitiempo/installations/new?state=${'a'.repeat(32)}`;
     const client = createClient({
       setupWorkspaceGitHubInstallation: vi.fn().mockResolvedValue({
         expiresAt: '2026-05-01T10:10:00.000Z',
@@ -352,6 +353,69 @@ describe('useAdminWorkspaceGitHubInstallations', () => {
       organizationLogin: 'Octo-Org',
     });
     expect(navigate).toHaveBeenCalledWith(installationUrl);
+  });
+
+  it('shows a user-friendly message when the installations endpoint returns 404', async () => {
+    const client = createClient({
+      listWorkspaceGitHubInstallations: vi.fn().mockRejectedValue(
+        new ApiError('Cannot GET /workspace/github/installations', {
+          code: null,
+          status: 404,
+        }),
+      ),
+    });
+    const { errors } = createSubject({ client });
+    await flushPromises();
+
+    expect(errors).toHaveBeenCalledWith(
+      'GitHub integration is not available on this server. Please contact support to update the server.',
+      expect.any(ApiError),
+      'load-workspace-github-installations',
+    );
+  });
+
+  it('shows a user-friendly message when the installations endpoint returns 503', async () => {
+    const client = createClient({
+      listWorkspaceGitHubInstallations: vi.fn().mockRejectedValue(
+        new ApiError('GitHub App integration is not configured', {
+          code: null,
+          status: 503,
+        }),
+      ),
+    });
+    const { errors } = createSubject({ client });
+    await flushPromises();
+
+    expect(errors).toHaveBeenCalledWith(
+      'GitHub App integration is not configured.',
+      expect.any(ApiError),
+      'load-workspace-github-installations',
+    );
+  });
+
+  it('shows a user-friendly message when setup returns 404', async () => {
+    const client = createClient({
+      listWorkspaceGitHubInstallations: vi.fn().mockResolvedValue({ items: [] }),
+      setupWorkspaceGitHubInstallation: vi.fn().mockRejectedValue(
+        new ApiError('Cannot POST /workspace/github/installations/setup', {
+          code: null,
+          status: 404,
+        }),
+      ),
+    });
+    const { errors, result } = createSubject({
+      client,
+      organizations: [organization],
+    });
+    await flushPromises();
+    await flushPromises();
+
+    expect(errors).toHaveBeenCalledWith(
+      'GitHub integration is not available on this server. Please contact support to update the server.',
+      expect.any(ApiError),
+      'setup-workspace-github-installation',
+    );
+    expect(result.installingOrganizationLogin.value).toBeNull();
   });
 
 });
