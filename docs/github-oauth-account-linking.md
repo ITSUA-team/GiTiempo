@@ -13,6 +13,8 @@ The existing OAuth App is reused for sign-in, linking from Profile and organizat
 
 Identity ownership is global across workspaces. Reauthorization for the same GitHub ID updates only its selected credential family. A GitHub ID owned by another GiTiempo user is rejected; changing an existing link to another ID requires full Disconnect first. OAuth-only identity does not grant private repository/project browsing or import. Workspace installation setup uses OAuth organization membership and GitHub App server credentials independently of the user's personal App grant. A migrated App-only identity can keep browsing but must authorize OAuth for organization discovery and installation setup.
 
+GitHub credential failures use `github_authorization_required` independently of the GiTiempo session. Shared browser clients surface this provider error without refreshing or clearing the app session, including after a genuine session-token refresh. Ordinary session `401` responses retain the existing refresh/logout behavior. Malformed OAuth token or profile payloads return a controlled `503` provider failure.
+
 ## Full personal Disconnect
 
 The server checks Firebase's enabled user and password or Google provider eligibility again on DELETE. Email or client provider metadata alone is insufficient. An unavailable check blocks mutation with retry guidance. An already unlinked user receives idempotent cleanup without an unnecessary provider lookup.

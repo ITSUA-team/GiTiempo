@@ -256,6 +256,12 @@ export function createAuthenticatedApiClient({
       return response;
     }
 
+    // Provider credentials can expire independently of the GiTiempo session.
+    const initialError = await createResponseError(response);
+    if (initialError.code === "github_authorization_required") {
+      throw initialError;
+    }
+
     let nextToken: string | null | undefined;
 
     try {
@@ -272,12 +278,12 @@ export function createAuthenticatedApiClient({
 
     const retryResponse = await sendRequest(options, nextToken);
 
-    if (retryResponse.status === 401) {
-      await handleRefreshFailure();
-    }
-
     if (!retryResponse.ok) {
-      throw await createResponseError(retryResponse);
+      const error = await createResponseError(retryResponse);
+      if (retryResponse.status === 401 && error.code !== "github_authorization_required") {
+        await handleRefreshFailure();
+      }
+      throw error;
     }
 
     return retryResponse;

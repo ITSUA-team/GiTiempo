@@ -49,26 +49,28 @@ function createClient(overrides: Partial<InstallationsClient> = {}): Installatio
 }
 
 function createSubject({
-  canConfigure = true,
+  canConfigure: initialCanConfigure = true,
   client = createClient(),
   navigate = vi.fn(),
   organizations: initialOrganizations = [] as readonly WorkspaceGitHubOrganizationResponse[],
 } = {}) {
   const errors = vi.fn();
+  const canConfigure = ref(initialCanConfigure);
   const organizations = shallowRef(initialOrganizations);
+  const scope = shallowRef({ role: 'admin' as const, userId: 'user-1', workspaceId: 'workspace-1' });
   let result!: ReturnType<typeof useAdminWorkspaceGitHubInstallations>;
 
   mount(
     defineComponent({
       setup() {
         result = useAdminWorkspaceGitHubInstallations({
-          canConfigure: ref(canConfigure),
+          canConfigure,
           client,
           enabled: ref(true),
           navigate,
           onError: errors,
           organizations,
-          scope: shallowRef({ role: 'admin', userId: 'user-1', workspaceId: 'workspace-1' }),
+          scope,
         });
         return () => null;
       },
@@ -76,10 +78,58 @@ function createSubject({
     { global: { plugins: [createTestQueryPlugin()] } },
   );
 
-  return { client, errors, navigate, organizations, result };
+  return { canConfigure, client, errors, navigate, organizations, result, scope };
 }
 
 describe('useAdminWorkspaceGitHubInstallations', () => {
+  it('does not set up an organization removed while a previous organization is checked', async () => {
+    let resolveFirst!: (value: typeof installation) => void;
+    const secondOrganization = { ...organization, id: '44444444-4444-4444-8444-444444444444', organizationLogin: 'Other-Org' };
+    const client = createClient({
+      reverifyWorkspaceGitHubInstallation: vi.fn(() => new Promise<typeof installation>((resolve) => { resolveFirst = resolve; })),
+    });
+    const { organizations } = createSubject({ client, organizations: [organization, secondOrganization] });
+    await flushPromises();
+
+    organizations.value = [organization];
+    resolveFirst(installation);
+    await flushPromises();
+
+    expect(client.setupWorkspaceGitHubInstallation).not.toHaveBeenCalled();
+  });
+
+  it('keeps the new workspace check pending when an older same-login check finishes', async () => {
+    const resolvers: ((value: typeof installation) => void)[] = [];
+    const client = createClient({
+      reverifyWorkspaceGitHubInstallation: vi.fn(() => new Promise<typeof installation>((resolve) => { resolvers.push(resolve); })),
+    });
+    const { result, scope } = createSubject({ client, organizations: [organization] });
+    await flushPromises();
+
+    scope.value = { ...scope.value, workspaceId: 'workspace-2' };
+    await flushPromises();
+    expect(resolvers).toHaveLength(2);
+
+    resolvers[0]!(installation);
+    await flushPromises();
+    expect(result.checkingOrganizationLogins.value).toEqual(['octo-org']);
+
+    resolvers[1]!(installation);
+    await flushPromises();
+    expect(result.checkingOrganizationLogins.value).toEqual([]);
+  });
+
+  it('does not rediscover an explicitly disconnected installation', async () => {
+    const client = createClient({
+      listWorkspaceGitHubInstallations: vi.fn().mockResolvedValue({ items: [{ ...installation, status: 'disconnected' }] }),
+    });
+    createSubject({ client, organizations: [organization] });
+    await flushPromises();
+
+    expect(client.setupWorkspaceGitHubInstallation).not.toHaveBeenCalled();
+    expect(client.reverifyWorkspaceGitHubInstallation).not.toHaveBeenCalled();
+  });
+
   it('shows saved installation state even when the admin cannot configure GitHub', async () => {
     const { client, result } = createSubject({ canConfigure: false });
     await flushPromises();
@@ -144,6 +194,29 @@ describe('useAdminWorkspaceGitHubInstallations', () => {
     expect(client.setupWorkspaceGitHubInstallation).toHaveBeenCalledWith({
       organizationLogin: 'Octo-Org',
     });
+  });
+
+  it('discovers a missing installation after OAuth organization access becomes ready', async () => {
+    const client = createClient({
+      listWorkspaceGitHubInstallations: vi.fn().mockResolvedValue({ items: [] }),
+    });
+    const { canConfigure, errors, navigate } = createSubject({
+      canConfigure: false,
+      client,
+      organizations: [organization],
+    });
+    await flushPromises();
+
+    expect(client.setupWorkspaceGitHubInstallation).not.toHaveBeenCalled();
+    expect(errors).not.toHaveBeenCalled();
+
+    canConfigure.value = true;
+    await flushPromises();
+
+    expect(client.setupWorkspaceGitHubInstallation).toHaveBeenCalledWith({
+      organizationLogin: 'Octo-Org',
+    });
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('automatically rechecks a verified installation when Settings opens', async () => {
@@ -213,6 +286,50 @@ describe('useAdminWorkspaceGitHubInstallations', () => {
     expect(client.completeWorkspaceGitHubInstallation).toHaveBeenCalledWith({
       installationId: '987654',
       state: 'c'.repeat(32),
+    });
+  });
+
+  it('discovers an unavailable verified installation after OAuth organization access becomes ready', async () => {
+    const unavailableInstallation = {
+      ...installation,
+      recoveryReason: 'GitHub App installation is no longer available',
+      status: 'unavailable' as const,
+    };
+    const client = createClient({
+      listWorkspaceGitHubInstallations: vi
+        .fn()
+        .mockResolvedValueOnce({ items: [installation] })
+        .mockResolvedValue({ items: [unavailableInstallation] }),
+      reverifyWorkspaceGitHubInstallation: vi.fn().mockResolvedValue(unavailableInstallation),
+      setupWorkspaceGitHubInstallation: vi.fn().mockResolvedValue({
+        existingInstallationId: '987654',
+        expiresAt: '2026-05-01T10:10:00.000Z',
+        installationUrl: 'https://github.com/apps/gi-tiempo/installations/new',
+        state: 'd'.repeat(32),
+      }),
+    });
+    const { canConfigure } = createSubject({
+      canConfigure: false,
+      client,
+      organizations: [organization],
+    });
+
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.reverifyWorkspaceGitHubInstallation).toHaveBeenCalledWith(installation.id);
+    expect(client.setupWorkspaceGitHubInstallation).not.toHaveBeenCalled();
+
+    canConfigure.value = true;
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.setupWorkspaceGitHubInstallation).toHaveBeenCalledWith({
+      organizationLogin: 'Octo-Org',
+    });
+    expect(client.completeWorkspaceGitHubInstallation).toHaveBeenCalledWith({
+      installationId: '987654',
+      state: 'd'.repeat(32),
     });
   });
 

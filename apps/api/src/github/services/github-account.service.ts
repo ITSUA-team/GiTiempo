@@ -397,9 +397,10 @@ export class GithubAccountService {
       (row.grant.refreshTokenExpiresAt !== null &&
         row.grant.refreshTokenExpiresAt.getTime() <= Date.now())
     ) {
-      throw new UnauthorizedException(
-        'GitHub OAuth authorization requires reconnection',
-      );
+      throw new UnauthorizedException({
+        code: 'github_authorization_required',
+        message: 'GitHub OAuth authorization requires reconnection',
+      });
     }
     const version = await this.getVersion(userId);
     const refreshToken = this.encryption.decrypt(
@@ -439,9 +440,10 @@ export class GithubAccountService {
       version.generation,
     );
     if (!updated)
-      throw new UnauthorizedException(
-        'GitHub authorization is no longer current',
-      );
+      throw new UnauthorizedException({
+        code: 'github_authorization_required',
+        message: 'GitHub authorization is no longer current',
+      });
     if (!scopeGrants(updated.scopes, requiredScope)) {
       throw new ForbiddenException({
         code: 'github_oauth_permission_required',

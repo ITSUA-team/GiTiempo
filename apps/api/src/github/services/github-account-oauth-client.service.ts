@@ -4,7 +4,7 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation';
 import type { GithubUserProfile } from './github-oauth-client.service';
 
@@ -86,12 +86,19 @@ export class GithubAccountOauthClientService {
       });
       throw new ServiceUnavailableException('GitHub API request failed');
     }
-    const body = (await response.json()) as {
-      id?: number | string;
-      login?: string;
-      avatar_url?: string | null;
-    };
-    if (body.id === undefined || !body.login) {
+    const body = await readJsonObject(
+      response,
+      'GitHub API returned invalid user',
+    );
+    if (
+      (typeof body.id !== 'number' && typeof body.id !== 'string') ||
+      (typeof body.id === 'string' && body.id.length === 0) ||
+      typeof body.login !== 'string' ||
+      body.login.length === 0 ||
+      (body.avatar_url !== undefined &&
+        body.avatar_url !== null &&
+        typeof body.avatar_url !== 'string')
+    ) {
       throw new ServiceUnavailableException('GitHub API returned invalid user');
     }
     return {
@@ -150,23 +157,29 @@ export class GithubAccountOauthClientService {
         }),
       },
     );
-    const body = (await response.json()) as OAuthTokenResponse;
-    if (!response.ok || body.error || !body.access_token) {
+    const body = await readJsonObject(response, 'GitHub OAuth request failed');
+    const error =
+      typeof body.error === 'string' && body.error.length > 0
+        ? body.error
+        : undefined;
+    const hasValidToken = isOAuthTokenResponse(body);
+    if (!response.ok || error || !hasValidToken) {
       this.logger.warn({
         event: 'github.account_oauth.token_failed',
         status: response.status,
-        hasError: Boolean(body.error),
+        hasError: Boolean(error),
       });
-      if ([400, 401, 403].includes(response.status)) {
-        throw new UnauthorizedException(
-          'GitHub OAuth authorization requires reconnection',
-        );
+      if (error && [400, 401, 403].includes(response.status)) {
+        throw new UnauthorizedException({
+          code: 'github_authorization_required',
+          message: 'GitHub OAuth authorization requires reconnection',
+        });
       }
       throw new ServiceUnavailableException('GitHub OAuth request failed');
     }
     return {
       accessToken: body.access_token,
-      refreshToken: body.refresh_token ?? null,
+      refreshToken: body.refresh_token || null,
       tokenExpiresAt: expiryAt(body.expires_in),
       refreshTokenExpiresAt: expiryAt(body.refresh_token_expires_in),
       scopes: normalizeScopes(body.scope),
@@ -197,9 +210,50 @@ export function normalizeScopes(scope: string | undefined): string[] {
 }
 
 function expiryAt(seconds: number | undefined): Date | null {
+  if (seconds === undefined) return null;
   if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) {
-    return null;
+    throw new ServiceUnavailableException('GitHub OAuth request failed');
   }
   const value = new Date(Date.now() + seconds * 1_000);
-  return Number.isNaN(value.getTime()) ? null : value;
+  if (Number.isNaN(value.getTime())) {
+    throw new ServiceUnavailableException('GitHub OAuth request failed');
+  }
+  return value;
+}
+
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === 'string';
+}
+
+function isOptionalNumber(value: unknown): value is number | undefined {
+  return value === undefined || typeof value === 'number';
+}
+
+function isOAuthTokenResponse(
+  body: Record<string, unknown>,
+): body is Record<string, unknown> &
+  OAuthTokenResponse & { access_token: string } {
+  return (
+    typeof body.access_token === 'string' &&
+    body.access_token.length > 0 &&
+    isOptionalString(body.refresh_token) &&
+    isOptionalNumber(body.expires_in) &&
+    isOptionalNumber(body.refresh_token_expires_in) &&
+    isOptionalString(body.scope)
+  );
+}
+
+async function readJsonObject(
+  response: Pick<Response, 'json'>,
+  errorMessage: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const body: unknown = await response.json();
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+      throw new TypeError('Expected a JSON object');
+    }
+    return body as Record<string, unknown>;
+  } catch {
+    throw new ServiceUnavailableException(errorMessage);
+  }
 }

@@ -5,7 +5,7 @@ import {
   type WorkspaceGitHubOrganizationResponse,
   type WorkspaceGitHubInstallation,
 } from '@gitiempo/shared';
-import { computed, onScopeDispose, ref, watch, type ComputedRef, type Ref } from 'vue';
+import { computed, onScopeDispose, ref, shallowRef, watch, type ComputedRef, type Ref } from 'vue';
 
 import {
   useCompleteWorkspaceGitHubInstallationMutation,
@@ -61,8 +61,11 @@ export function useAdminWorkspaceGitHubInstallations({
     () => query.data.value !== undefined && query.error.value === null,
   );
   const installingOrganizationLogin = ref<string | null>(null);
-  const checkingOrganizationLogins = ref<string[]>([]);
   const scopeKey = computed(() => JSON.stringify(scope.value));
+  const pendingChecks = shallowRef<{ login: string; scope: string }[]>([]);
+  const checkingOrganizationLogins = computed(() => [...new Set(
+    pendingChecks.value.filter((check) => check.scope === scopeKey.value).map((check) => check.login),
+  )]);
   const attemptedReconciliations = new Set<string>();
   let disposed = false;
   onScopeDispose(() => { disposed = true; });
@@ -117,6 +120,7 @@ export function useAdminWorkspaceGitHubInstallations({
     organizationLogin: string,
     isStillAllowed: () => boolean = () => true,
   ): Promise<void> {
+    if (!isStillAllowed()) return;
     const response = await requestSetup(organizationLogin);
     if (!response || !isStillAllowed()) return;
 
@@ -190,11 +194,12 @@ export function useAdminWorkspaceGitHubInstallations({
     }
   }
 
-  function setOrganizationCheckPending(organizationLogin: string, pending: boolean): void {
-    const normalizedLogin = organizationLogin.trim().toLowerCase();
-    checkingOrganizationLogins.value = pending
-      ? [...new Set([...checkingOrganizationLogins.value, normalizedLogin])]
-      : checkingOrganizationLogins.value.filter((login) => login !== normalizedLogin);
+  function beginOrganizationCheck(organizationLogin: string, currentScope: string): () => void {
+    const check = { login: organizationLogin.trim().toLowerCase(), scope: currentScope };
+    pendingChecks.value = [...pendingChecks.value, check];
+    return () => {
+      pendingChecks.value = pendingChecks.value.filter((pending) => pending !== check);
+    };
   }
 
   watch(
@@ -230,9 +235,11 @@ export function useAdminWorkspaceGitHubInstallations({
           attemptedReconciliations.add(attemptKey);
           continue;
         }
-        if (association && association.status !== 'verified' && !canConfigure.value) continue;
+        // Setup discovery requires OAuth organization access. Do not consume this
+        // organization's one automatic discovery attempt until that access is ready.
+        if (association?.status !== 'verified' && !canConfigure.value) continue;
         attemptedReconciliations.add(attemptKey);
-        setOrganizationCheckPending(organization.organizationLogin, true);
+        const finishCheck = beginOrganizationCheck(organization.organizationLogin, currentScope);
         try {
           if (association?.status === 'verified') {
             const result = await reverifyInstallation(association.id);
@@ -240,6 +247,10 @@ export function useAdminWorkspaceGitHubInstallations({
               const isStillAllowed = () =>
                 !!organizations?.value.some((item) => item.id === organization.id);
               await beginSetup(organization.organizationLogin, isStillAllowed);
+            } else if (result && result.status !== 'verified') {
+              // Keep the verified-row recheck one-time, but let the later
+              // unavailable-association discovery run once OAuth access arrives.
+              attemptedReconciliations.delete(attemptKey);
             }
           } else {
             const isStillAllowed = () =>
@@ -247,7 +258,7 @@ export function useAdminWorkspaceGitHubInstallations({
             await beginSetup(organization.organizationLogin, isStillAllowed);
           }
         } finally {
-          setOrganizationCheckPending(organization.organizationLogin, false);
+          finishCheck();
         }
       }
     },

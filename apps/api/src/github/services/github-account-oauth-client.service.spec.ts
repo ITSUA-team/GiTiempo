@@ -1,5 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigService } from '@nestjs/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Env } from '../../config/env.validation';
 import {
@@ -66,6 +65,44 @@ describe('GithubAccountOauthClientService', () => {
     ]);
   });
 
+  it.each([
+    { expires_in: -1 },
+    { expires_in: 1e100 },
+    { refresh_token_expires_in: -1 },
+    { refresh_token_expires_in: 1e100 },
+  ])(
+    'rejects malformed expiry metadata instead of treating it as non-expiring: %j',
+    async (expiry) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          json: async () => ({ access_token: 'oauth-token', ...expiry }),
+        }),
+      );
+
+      await expect(service().exchangeCode('code')).rejects.toMatchObject({
+        response: { statusCode: 503 },
+      });
+    },
+  );
+
+  it('normalizes an empty optional refresh token to absent', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: 'oauth-token', refresh_token: '' }),
+      }),
+    );
+
+    await expect(service().exchangeCode('code')).resolves.toMatchObject({
+      refreshToken: null,
+    });
+  });
+
   it('maps failed OAuth exchanges to a safe service exception', async () => {
     vi.stubGlobal(
       'fetch',
@@ -77,6 +114,42 @@ describe('GithubAccountOauthClientService', () => {
     );
     await expect(
       service().exchangeCode('bad', 'verifier'),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    ).rejects.toMatchObject({
+      response: {
+        code: 'github_authorization_required',
+      },
+    });
+  });
+
+  it('maps malformed OAuth token payloads to a service exception', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => {
+          throw new SyntaxError('Unexpected token < in JSON');
+        },
+      }),
+    );
+
+    await expect(
+      service().exchangeCode('bad', 'verifier'),
+    ).rejects.toMatchObject({ response: { statusCode: 503 } });
+  });
+
+  it('maps malformed GitHub profile payloads to a service exception', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => null,
+      }),
+    );
+
+    await expect(service().getCurrentUser('oauth-token')).rejects.toMatchObject(
+      { response: { statusCode: 503 } },
+    );
   });
 });
