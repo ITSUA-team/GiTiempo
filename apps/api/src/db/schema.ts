@@ -17,6 +17,7 @@ export * from '../projects/schemas/project-external-refs.schema';
 export * from '../tasks/schemas/tasks.schema';
 export * from '../tasks/schemas/task-external-refs.schema';
 export * from '../time-entries/schemas/time-entries.schema';
+export * from '../invoices/schemas/invoices.schema';
 export * from '../github/schemas/github-connections.schema';
 export * from '../github/schemas/github-oauth-states.schema';
 export * from '../github/schemas/workspace-github-organizations.schema';

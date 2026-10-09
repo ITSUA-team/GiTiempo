@@ -141,6 +141,13 @@
       "when": 1790334141520,
       "tag": "0019_happy_major_mapleleaf",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791538989798,
+      "tag": "0020_tearful_chat",
+      "breakpoints": true
     }
   ]
 }
