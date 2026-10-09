@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import { eq } from 'drizzle-orm';
@@ -119,6 +120,13 @@ describe('manual HTTP acceptance: partial OAuth permission and App isolation', (
     accounts = app.get(GithubAccountService);
     connections = app.get(GithubConnectionsService);
     accountOauth = app.get(GithubAccountOauthClientService);
+    const config = app.get(ConfigService);
+    config.set('APP_URL', 'http://localhost:3000');
+    config.set('USER_SPA_URL', 'http://localhost:5173');
+    config.set('GITHUB_SIGNIN_CLIENT_ID', 'simulated-oauth-client');
+    config.set('GITHUB_SIGNIN_CLIENT_SECRET', 'simulated-oauth-secret');
+    config.set('GITHUB_APP_CLIENT_ID', 'simulated-app-client');
+    config.set('GITHUB_APP_CLIENT_SECRET', 'simulated-app-secret');
   });
   beforeEach(() => {
     vi.restoreAllMocks();

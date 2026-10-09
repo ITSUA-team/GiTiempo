@@ -249,7 +249,7 @@ describe('manual HTTP acceptance: GitHub organization discovery', () => {
       if (url.pathname === '/user/memberships/orgs/ManualRecovery') {
         return githubResponse({
           state: 'active',
-          organization: { login: 'ManualRecovery' },
+          organization: { id: 1, login: 'ManualRecovery' },
         });
       }
       throw new Error(`Unexpected GitHub request: ${url}`);
@@ -311,7 +311,7 @@ describe('manual HTTP acceptance: GitHub organization discovery', () => {
       if (url.pathname === '/user/memberships/orgs/Inactive') {
         return githubResponse({
           state: 'pending',
-          organization: { login: 'Inactive' },
+          organization: { id: 2, login: 'Inactive' },
         });
       }
       if (url.pathname === '/user/memberships/orgs/Absent') {

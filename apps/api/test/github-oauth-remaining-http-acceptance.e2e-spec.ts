@@ -34,12 +34,14 @@ import {
 } from '../src/db/schema';
 import { GithubAccountOauthClientService } from '../src/github/services/github-account-oauth-client.service';
 import { GithubAccountService } from '../src/github/services/github-account.service';
+import { GithubInstallationTokenProviderService } from '../src/github/services/github-installation-token-provider.service';
 import { GithubOauthClientService } from '../src/github/services/github-oauth-client.service';
 import { bearer, login } from './helpers/auth';
 
 /**
  * Controlled HTTP acceptance probe. Nest routing, cookies, OAuth persistence and
- * authorization-generation checks are real; provider responses are simulated.
+ * authorization-generation checks are real; provider responses and App token
+ * minting are simulated.
  */
 describe('manual HTTP acceptance: remaining OAuth account-linking boundaries', () => {
   let app: INestApplication;
@@ -180,6 +182,8 @@ describe('manual HTTP acceptance: remaining OAuth account-linking boundaries', (
     config.set('GITHUB_SIGNIN_CLIENT_SECRET', 'simulated-secret');
     config.set('GITHUB_APP_CLIENT_ID', 'simulated-app-client');
     config.set('GITHUB_APP_CLIENT_SECRET', 'simulated-app-secret');
+    config.set('GITHUB_APP_ID', '42');
+    config.set('GITHUB_APP_SLUG', 'simulated-app');
     config.set('USER_SPA_URL', 'http://localhost:5173');
     config.set('ADMIN_SPA_URL', 'http://localhost:5174');
     const [workspace] = await db
@@ -212,9 +216,13 @@ describe('manual HTTP acceptance: remaining OAuth account-linking boundaries', (
     await app.close();
   });
 
-  it('accepts an OAuth-only organization policy while keeping private browsing and installation tracking unavailable without the GitHub App', async () => {
+  it('accepts an OAuth-only organization policy and starts App setup while keeping private browsing and tracking unavailable before installation', async () => {
     const member = await createMember('policy-only');
     await saveOAuthIdentity(member.id, `policy-only-${member.id}`);
+    vi.spyOn(
+      app.get(GithubInstallationTokenProviderService),
+      'appToken',
+    ).mockResolvedValue('simulated-app-jwt');
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string | URL) => {
@@ -225,8 +233,11 @@ describe('manual HTTP acceptance: remaining OAuth account-linking boundaries', (
         if (parsed.pathname === '/user/memberships/orgs/PolicyOnly') {
           return Response.json({
             state: 'active',
-            organization: { login: 'PolicyOnly' },
+            organization: { id: 1, login: 'PolicyOnly' },
           });
+        }
+        if (parsed.pathname === '/orgs/PolicyOnly/installation') {
+          return new Response(null, { status: 404 });
         }
         throw new Error(
           `Unexpected controlled GitHub request: ${parsed.pathname}`,
@@ -251,11 +262,17 @@ describe('manual HTTP acceptance: remaining OAuth account-linking boundaries', (
       .set('Authorization', bearer(member.accessToken))
       .query({ ownerType: 'organization', owner: 'PolicyOnly', limit: 10 })
       .expect(404);
-    await request(app.getHttpServer())
+    const setup = await request(app.getHttpServer())
       .post('/workspace/github/installations/setup')
       .set('Authorization', bearer(member.accessToken))
       .send({ organizationLogin: 'PolicyOnly' })
-      .expect(409);
+      .expect(201);
+    expect(setup.body.state).toEqual(expect.any(String));
+    expect(setup.body.existingInstallationId).toBeUndefined();
+    const installUrl = new URL(setup.body.installationUrl);
+    expect(installUrl.origin).toBe('https://github.com');
+    expect(installUrl.pathname).toBe('/apps/simulated-app/installations/new');
+    expect(installUrl.searchParams.get('state')).toBe(setup.body.state);
     const tracking = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github')
       .set('Authorization', bearer(member.accessToken))
