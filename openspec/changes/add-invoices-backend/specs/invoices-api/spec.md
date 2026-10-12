@@ -67,6 +67,12 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 - **WHEN** no default rate is configured and no rate is supplied
 - **THEN** the backend rejects with a validation error
 
+#### Scenario: Discount with more than two decimal places is rejected
+
+- **GIVEN** a create request carries a `discountPercent` with more than 2 decimal places
+- **WHEN** the shared schema validates the body
+- **THEN** the request is rejected
+
 ### Requirement: Invoice Eligibility Excludes Ineligible Time Entries
 
 Invoice creation MUST select only time entries that are completed, billable, belong to the requested workspace, and fall within the requested project and date range, and MUST exclude running, non-billable, and already-invoiced entries.
@@ -180,6 +186,13 @@ The backend MUST expose a protected `DELETE /invoices/:id` endpoint restricted t
 - **WHEN** an admin requests `DELETE /invoices/:id` for an invoice with status `paid`
 - **THEN** the backend rejects with `409 Conflict`
 - **AND** the invoice remains in the database
+
+#### Scenario: Concurrent status change blocks deletion
+
+- **GIVEN** an admin issues `DELETE /invoices/:id` for a draft invoice
+- **AND** a concurrent request changes the invoice status to `sent` before the delete executes
+- **THEN** the delete fails with `409 Conflict`
+- **AND** the invoice remains in the database with the updated status
 
 #### Scenario: PM is denied deletion
 

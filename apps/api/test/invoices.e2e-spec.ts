@@ -1335,6 +1335,56 @@ describe('Invoices (e2e)', () => {
     expect(deleteRes.status).toBe(409);
   });
 
+  it('concurrent PATCH to sent blocks deletion', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Concurrent Delete Probe',
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        projectId: probeProjectId,
+        hourlyRate: 50,
+      });
+    expect(createRes.status).toBe(201);
+    const invoiceId = createRes.body.id;
+
+    // PATCH advances the draft to 'sent' while DELETE removes it. The
+    // draft-only lock is enforced inside the DELETE predicate, so exactly
+    // one of the two wins regardless of interleaving.
+    const [patchRes, deleteRes] = await Promise.all([
+      request(app.getHttpServer())
+        .patch(`/invoices/${invoiceId}`)
+        .set('Authorization', bearer(adminToken))
+        .send({ status: 'sent' }),
+      request(app.getHttpServer())
+        .delete(`/invoices/${invoiceId}`)
+        .set('Authorization', bearer(adminToken)),
+    ]);
+
+    // DELETE won → 204, and PATCH observes the invoice as gone (the
+    // update's re-read 404s). PATCH won → 200, and DELETE was rejected
+    // with 409 because the row was no longer 'draft'.
+    if (deleteRes.status === 204) {
+      expect(patchRes.status).toBe(404);
+    } else {
+      expect(patchRes.status).toBe(200);
+      expect(deleteRes.status).toBe(409);
+    }
+
+    // Key invariant: the invoice either exists as 'sent' (PATCH won) or
+    // does not exist (DELETE won) — it is never deleted while non-draft.
+    const getRes = await request(app.getHttpServer())
+      .get(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken));
+    if (deleteRes.status === 204) {
+      expect(getRes.status).toBe(404);
+    } else {
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.status).toBe('sent');
+    }
+  });
+
   it('admin deletes an invoice and unlinks its time entries', async () => {
     // Reset ENTRY_PROBE_1 eligibility: unlink it from any prior invoice.
     await db

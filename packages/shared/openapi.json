@@ -8609,7 +8609,8 @@
                 "discountPercent": {
                   "type": "number",
                   "minimum": 0,
-                  "maximum": 100
+                  "maximum": 100,
+                  "multipleOf": 0.01
                 },
                 "totalHours": {
                   "type": "number",
@@ -8764,7 +8765,8 @@
             "default": 0,
             "type": "number",
             "minimum": 0,
-            "maximum": 100
+            "maximum": 100,
+            "multipleOf": 0.01
           },
           "notes": {
             "type": "string",
@@ -8834,7 +8836,8 @@
           "discountPercent": {
             "type": "number",
             "minimum": 0,
-            "maximum": 100
+            "maximum": 100,
+            "multipleOf": 0.01
           },
           "totalHours": {
             "type": "number",

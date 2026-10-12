@@ -219,7 +219,7 @@ function stageCreateDb(
     /** Row the transaction's detail re-read returns. */
     detailRow?: unknown;
     /** Completed billable entries locked by the SELECT FOR UPDATE. */
-    eligibleEntries?: Array<{ id: string }>;
+    eligibleEntries?: Array<{ id: string; durationSeconds?: number }>;
   },
 ): CreateDbStage {
   const detailRow = options.detailRow ?? sampleInvoiceRow;
@@ -432,6 +432,25 @@ describe('InvoicesService', () => {
     expect(compute(1800, 33.33, 0)).toEqual({
       totalHours: 0.5,
       totalAmount: 16.67,
+    });
+  });
+
+  it('rounds half-cent amounts correctly for 0.5h × $75.21', () => {
+    const { service } = createService('admin');
+    const compute = priv<
+      [number, number, number],
+      {
+        totalHours: number;
+        totalAmount: number;
+      }
+    >(service, 'computeInvoiceTotals');
+
+    // 0.5h × 75.21 = 37.605 — binary floating point evaluates
+    // 37.605 * 100 as 3760.4999999999995, so the fixed-point path must
+    // round the exact half up to 37.61 instead of down to 37.60.
+    expect(compute(1800, 75.21, 0)).toEqual({
+      totalHours: 0.5,
+      totalAmount: 37.61,
     });
   });
 
@@ -985,6 +1004,38 @@ describe('InvoicesService', () => {
     expect(transactionSpy).not.toHaveBeenCalled();
   });
 
+  it('rejects creation when the computed total overflows NUMERIC(12,2)', async () => {
+    const { service } = createService('admin');
+    const { insertSpy, transactionSpy } = stageCreateDb(service, {
+      settings: [{ defaultHourlyRate: 150_000, currency: 'USD' }],
+      // 360,000,000 seconds = 100,000 hours →
+      // 100,000h × $150,000 = $15,000,000,000, far above the
+      // NUMERIC(12,2) ceiling of $9,999,999,999.99.
+      eligibleEntries: [{ id: createdInvoiceId, durationSeconds: 360_000_000 }],
+    });
+
+    const thrown = await service
+      .createInvoice(adminUser, {
+        title: 'Overflow Invoice',
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+        discountPercent: 0,
+      })
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
+
+    expect(thrown).toBeInstanceOf(DomainError);
+    expect((thrown as DomainError).getResponse()).toMatchObject({
+      code: 'invoice_total_overflow',
+    });
+    expect((thrown as DomainError).getStatus()).toBe(422);
+    // The transaction started, but no invoice row was written.
+    expect(transactionSpy).toHaveBeenCalled();
+    expect(insertSpy).not.toHaveBeenCalled();
+  });
+
   it('falls back to workspace settings for both rate and currency', async () => {
     const { service } = createService('admin');
     const { insertValuesSpy } = stageCreateDb(service, {
@@ -1289,7 +1340,12 @@ describe('InvoicesService', () => {
 
   it('deletes the found invoice by id for admins', async () => {
     const { service } = createService('admin');
-    const deleteWhereSpy = vi.fn().mockResolvedValue(undefined);
+    const deleteReturningSpy = vi
+      .fn()
+      .mockResolvedValue([{ id: sampleInvoiceRow.id }]);
+    const deleteWhereSpy = vi.fn().mockReturnValue({
+      returning: deleteReturningSpy,
+    });
     const deleteSpy = vi.fn().mockReturnValue({ where: deleteWhereSpy });
     Object.defineProperty(service, 'findInvoiceOrThrow', {
       value: vi.fn().mockResolvedValue(sampleInvoiceRow),
@@ -1305,11 +1361,20 @@ describe('InvoicesService', () => {
     expect(deleteSpy).toHaveBeenCalledTimes(1);
     expect(deleteSpy).toHaveBeenCalledWith(invoices);
     expect(deleteWhereSpy).toHaveBeenCalledTimes(1);
+    // The draft-only lock must live inside the DELETE predicate so a
+    // concurrent PATCH cannot slip between the check and the delete.
+    const whereArg = deleteWhereSpy.mock.calls[0]?.[0];
+    expect(collectSqlText(whereArg)).toContain('draft');
   });
 
   it('rejects deletion of a sent invoice', async () => {
     const { service } = createService('admin');
-    const deleteSpy = vi.fn();
+    // The guarded DELETE matches zero rows for a non-draft invoice.
+    const deleteReturningSpy = vi.fn().mockResolvedValue([]);
+    const deleteWhereSpy = vi.fn().mockReturnValue({
+      returning: deleteReturningSpy,
+    });
+    const deleteSpy = vi.fn().mockReturnValue({ where: deleteWhereSpy });
     Object.defineProperty(service, 'findInvoiceOrThrow', {
       value: vi.fn().mockResolvedValue({ ...sampleInvoiceRow, status: 'sent' }),
     });
@@ -1317,16 +1382,29 @@ describe('InvoicesService', () => {
       value: { delete: deleteSpy },
     });
 
-    await expect(
-      service.deleteInvoice(adminUser, sampleInvoiceRow.id),
-    ).rejects.toThrow('Only draft invoices');
+    const thrown = await service
+      .deleteInvoice(adminUser, sampleInvoiceRow.id)
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
 
-    expect(deleteSpy).not.toHaveBeenCalled();
+    expect(thrown).toBeInstanceOf(DomainError);
+    expect((thrown as DomainError).getResponse()).toMatchObject({
+      code: 'invoice_not_deletable',
+      message: expect.stringContaining('sent'),
+    });
+    expect((thrown as DomainError).getStatus()).toBe(409);
+    expect(deleteSpy).toHaveBeenCalledTimes(1);
   });
 
   it('rejects deletion of a paid invoice', async () => {
     const { service } = createService('admin');
-    const deleteSpy = vi.fn();
+    const deleteReturningSpy = vi.fn().mockResolvedValue([]);
+    const deleteWhereSpy = vi.fn().mockReturnValue({
+      returning: deleteReturningSpy,
+    });
+    const deleteSpy = vi.fn().mockReturnValue({ where: deleteWhereSpy });
     Object.defineProperty(service, 'findInvoiceOrThrow', {
       value: vi.fn().mockResolvedValue({ ...sampleInvoiceRow, status: 'paid' }),
     });
@@ -1334,11 +1412,53 @@ describe('InvoicesService', () => {
       value: { delete: deleteSpy },
     });
 
-    await expect(
-      service.deleteInvoice(adminUser, sampleInvoiceRow.id),
-    ).rejects.toThrow('Only draft invoices');
+    const thrown = await service
+      .deleteInvoice(adminUser, sampleInvoiceRow.id)
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
 
-    expect(deleteSpy).not.toHaveBeenCalled();
+    expect(thrown).toBeInstanceOf(DomainError);
+    expect((thrown as DomainError).getResponse()).toMatchObject({
+      code: 'invoice_not_deletable',
+      message: expect.stringContaining('paid'),
+    });
+    expect((thrown as DomainError).getStatus()).toBe(409);
+    expect(deleteSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects deletion when status changed concurrently', async () => {
+    // The read sees a draft invoice, but the atomic DELETE matches zero
+    // rows because a concurrent PATCH flipped the status in between —
+    // exactly the race the guarded predicate closes.
+    const { service } = createService('admin');
+    const deleteReturningSpy = vi.fn().mockResolvedValue([]);
+    const deleteWhereSpy = vi.fn().mockReturnValue({
+      returning: deleteReturningSpy,
+    });
+    const deleteSpy = vi.fn().mockReturnValue({ where: deleteWhereSpy });
+    Object.defineProperty(service, 'findInvoiceOrThrow', {
+      value: vi.fn().mockResolvedValue(sampleInvoiceRow), // draft
+    });
+    Object.defineProperty(service, 'db', {
+      value: { delete: deleteSpy },
+    });
+
+    const thrown = await service
+      .deleteInvoice(adminUser, sampleInvoiceRow.id)
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
+
+    expect(thrown).toBeInstanceOf(DomainError);
+    expect((thrown as DomainError).getResponse()).toMatchObject({
+      code: 'invoice_not_deletable',
+      message: expect.stringContaining('changed concurrently'),
+    });
+    expect((thrown as DomainError).getStatus()).toBe(409);
+    expect(deleteSpy).toHaveBeenCalledTimes(1);
   });
 
   // ── PM access to invoices ─────────────────────────────────────────────

@@ -37,7 +37,7 @@ export const invoiceResponseSchema = z.object({
   dateTo: dateSchema,
   hourlyRate: z.number().nonnegative().max(99999999.99).multipleOf(0.01),
   currency: z.string().length(3).regex(/^[A-Za-z]{3}$/),
-  discountPercent: z.number().min(0).max(100),
+  discountPercent: z.number().min(0).max(100).multipleOf(0.01),
   totalHours: z.number().nonnegative().max(99999999.99).multipleOf(0.01),
   totalAmount: z.number().nonnegative().max(9999999999.99).multipleOf(0.01),
   notes: z.string().nullable(),
@@ -113,7 +113,7 @@ export const createInvoiceSchema = z
       .regex(/^[A-Za-z]{3}$/)
       .transform((c) => c.toUpperCase())
       .optional(),
-    discountPercent: z.number().min(0).max(100).default(0),
+    discountPercent: z.number().min(0).max(100).multipleOf(0.01).default(0),
     notes: z.string().max(5000).nullable().optional(),
   })
   .strict()

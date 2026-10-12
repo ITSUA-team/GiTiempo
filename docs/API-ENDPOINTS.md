@@ -230,7 +230,7 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 - PMs see only invoices scoped to active public projects or private projects assigned to them. Workspace-wide invoices (no project scope) are admin-only.
 
-**POST /invoices** body: `{ title: string, dateFrom: string (YYYY-MM-DD), dateTo: string (YYYY-MM-DD), projectId?: string, hourlyRate?: number, currency?: string, discountPercent?: number (0–100, default 0), notes?: string | null }`
+**POST /invoices** body: `{ title: string, dateFrom: string (YYYY-MM-DD), dateTo: string (YYYY-MM-DD), projectId?: string, hourlyRate?: number, currency?: string, discountPercent?: number (0–100, step 0.01, default 0), notes?: string | null }`
 
 - Creates an invoice from eligible time entries in the requested workspace, project, and date range.
 - **Eligibility:** only completed, billable time entries with a finalized duration that are not already linked to another invoice are selected. Running, non-billable, and already-invoiced entries are excluded.

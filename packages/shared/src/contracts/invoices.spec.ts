@@ -139,6 +139,15 @@ describe("invoiceResponseSchema", () => {
     expect(result.error?.issues[0]?.path).toEqual(["discountPercent"]);
   });
 
+  it("rejects a discountPercent with more than 2 decimal places in response", () => {
+    const result = invoiceResponseSchema.safeParse({
+      ...validInvoiceResponse,
+      discountPercent: 33.333,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   // Unlike createInvoiceSchema, the response contract has no uppercase
   // transform; the regex alone decides casing, so lowercase is accepted.
   it("accepts lowercase currency as stored", () => {
@@ -374,6 +383,26 @@ describe("createInvoiceSchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["discountPercent"]);
+  });
+
+  it("rejects a discount with more than 2 decimal places", () => {
+    const result = createInvoiceSchema.safeParse({
+      ...validCreate,
+      discountPercent: 12.345,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["discountPercent"]);
+  });
+
+  it("accepts a discount with exactly 2 decimal places", () => {
+    const result = createInvoiceSchema.safeParse({
+      ...validCreate,
+      discountPercent: 12.34,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.discountPercent).toBe(12.34);
   });
 
   it("rejects a non-alphabetic currency", () => {

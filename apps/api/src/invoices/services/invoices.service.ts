@@ -105,6 +105,10 @@ const linkedTimeEntrySelection = {
   description: timeEntries.description,
 } as const;
 
+// NUMERIC(12,2) ceiling: 9_999_999_999.99. Snapshot totals above this cannot
+// be stored; createInvoice rejects them with 422 before touching the DB.
+const MAX_TOTAL_AMOUNT = 9_999_999_999.99;
+
 @Injectable()
 export class InvoicesService {
   constructor(
@@ -346,6 +350,16 @@ export class InvoicesService {
         discountPercent,
       );
 
+      // Capacity guard: an extreme rate × hours combination can exceed the
+      // NUMERIC(12,2) column; fail with 422 instead of a database error.
+      if (totalAmount > MAX_TOTAL_AMOUNT) {
+        throw new DomainError(
+          'invoice_total_overflow',
+          'The computed invoice total exceeds the maximum supported amount',
+          422,
+        );
+      }
+
       const [invoice] = await tx
         .insert(invoices)
         .values({
@@ -454,20 +468,28 @@ export class InvoicesService {
     // Admin-only: enforce at membership level.
     await this.members.requireRole(user.sub, user.workspaceId, ['admin']);
 
+    // Verify the invoice exists in this workspace first (correct 404 vs 409).
     const invoice = await this.findInvoiceOrThrow(user.workspaceId, id);
 
-    // Only draft invoices can be deleted; sent or paid invoices are locked
-    // to prevent re-billing already invoiced time entries.
-    if (invoice.status !== 'draft') {
+    // Atomic delete: the draft-only lock lives inside the DELETE predicate,
+    // so a concurrent PATCH cannot flip the status between our read and the
+    // delete to bypass it. Zero affected rows means the invoice was not
+    // draft at delete time (or changed concurrently).
+    // FK ON DELETE SET NULL unlinks time entries automatically.
+    const result = await this.db
+      .delete(invoices)
+      .where(and(eq(invoices.id, invoice.id), eq(invoices.status, 'draft')))
+      .returning({ id: invoices.id });
+
+    if (result.length === 0) {
+      const currentStatus =
+        invoice.status === 'draft' ? 'changed concurrently' : invoice.status;
       throw new DomainError(
         'invoice_not_deletable',
-        `Only draft invoices can be deleted (current status: ${invoice.status})`,
+        `Only draft invoices can be deleted (current status: ${currentStatus})`,
         409,
       );
     }
-
-    // FK ON DELETE SET NULL unlinks time entries automatically.
-    await this.db.delete(invoices).where(eq(invoices.id, invoice.id));
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────
@@ -531,17 +553,33 @@ export class InvoicesService {
    * Pure snapshot-totals computation: hours from seconds, then amount with
    * optional percentage discount. Both values are rounded to 2 decimal
    * places to match the stored DECIMAL precision.
+   *
+   * The amount is computed in integer fixed-point (centihours × cents ×
+   * discount basis points) so half-cent boundaries round half-up exactly;
+   * binary floating point can represent e.g. 37.605 as 3760.4999… and round
+   * it down to 37.60 instead of 37.61.
    */
   private computeInvoiceTotals(
     totalSeconds: number,
     hourlyRate: number,
     discountPercent: number,
   ): { totalHours: number; totalAmount: number } {
-    const totalHours = Math.round((totalSeconds / 3600) * 100) / 100;
-    const totalAmount =
-      Math.round(totalHours * hourlyRate * (1 - discountPercent / 100) * 100) /
-      100;
-    return { totalHours, totalAmount };
+    const totalHoursCents = Math.round((totalSeconds / 3600) * 100);
+    const rateCents = Math.round(hourlyRate * 100);
+    const discountBps = Math.round(discountPercent * 100); // 0–10000
+    const discountFactor = 10_000 - discountBps; // 0–10000
+
+    // totalAmount = (totalHoursCents/100) × (rateCents/100) ×
+    //                (discountFactor/10_000)
+    //             = totalHoursCents × rateCents × discountFactor / 1e8
+    const amountCents = Math.round(
+      (totalHoursCents * rateCents * discountFactor) / 1_000_000,
+    );
+
+    return {
+      totalHours: totalHoursCents / 100,
+      totalAmount: amountCents / 100,
+    };
   }
 
   private async requirePmProjectAccess(
