@@ -231,3 +231,17 @@ The backend MUST compute invoice totals as the sum of tracked hours of selected 
 - **GIVEN** an invoice exists with snapshot totals
 - **WHEN** a linked time entry is edited after invoice creation
 - **THEN** the invoice `total_hours` and `total_amount` remain as originally captured
+
+#### Scenario: Totals are rounded correctly at half-cent boundaries
+
+- **GIVEN** an invoice is created with 0.5 tracked hours at a rate of $75.21
+- **WHEN** the backend computes the total amount
+- **THEN** the stored `total_amount` is $37.61 (rounded up from 37.605)
+- **AND** the computation uses integer fixed-point arithmetic to avoid floating-point drift
+
+#### Scenario: Computed total exceeding the storage limit is rejected
+
+- **GIVEN** the computed `total_amount` exceeds the maximum value storable in `NUMERIC(12,2)`
+- **WHEN** the backend attempts to create the invoice
+- **THEN** the backend rejects with `422 Unprocessable Entity`
+- **AND** no invoice row is persisted

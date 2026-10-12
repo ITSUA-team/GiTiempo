@@ -21,7 +21,7 @@ The shared contracts SHALL define a validated invoice create request body with a
 - **GIVEN** an admin or PM creates an invoice
 - **WHEN** the request body is validated
 - **THEN** the title, date range, and rate requirements are enforced
-- **AND** the discount percent is constrained to the 0–100 range
+- **AND** the discount percent is constrained to the 0–100 range with a step of 0.01
 
 #### Scenario: Unknown property is rejected
 
