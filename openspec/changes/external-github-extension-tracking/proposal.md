@@ -27,6 +27,7 @@ Workspace members need to record time on customers' GitHub issues even when thos
 - `project-member-count`: Retire the obsolete scalar-count requirement in favor of the existing members-array contract and scoped rendering.
 - `task-management`: Enforce task-level own-time reads and prevent derived project visibility from granting shared-task mutation.
 - `chrome-extension`: Submit reliable issue context, display destination workspace, and offer one Start action without GitHub linking or installation setup for external targets.
+- `public-landing-page`: Disclose transmitted issue title and canonical URL, distinguish reference recording from managed GitHub retrieval, and describe scoped sharing before distributing the updated extension.
 - `user-projects-list-page`: Render only authorized projects/tasks, gate management controls, and refresh visibility after own-time changes.
 - `user-pages`: Apply the same scoped data and repeat-start behavior to timer pickers, history, and dashboard actions.
 - `data-model`: Persist external tracking policy and reference provenance; enforce case-insensitive repository identity.
@@ -36,9 +37,9 @@ Workspace members need to record time on customers' GitHub issues even when thos
 
 ## Impact
 
-- **Layers:** API/database, shared contracts/OpenAPI, Chrome/Firefox extension, user-web, and admin-web compatibility/reporting verification. No new dependencies are planned.
+- **Layers:** API/database, shared contracts/OpenAPI, Chrome/Firefox extension, user-web, admin-web compatibility/reporting verification, and landing-web privacy content. No new dependencies are planned.
 - **Contracts/authentication:** Add a reference-start API and scoped project/task responses. GiTiempo authentication and membership remain mandatory; personal GitHub identity and credentials are not required for reference tracking. Existing provider-backed authentication remains intact.
 - **Storage:** Add a persisted project tracking mode and reference provenance, default existing projects to managed behavior, and migrate repository-reference uniqueness after collision preflight. No automatic assignment or persistent participation grant is created by tracking.
-- **Documentation/design:** Update ADR 009 and affected API, data-model, and UI guidance; inspect/update approved Pencil screens before implementation. Coordinate collection descriptions with `prepare-chrome-web-store-privacy` without publishing store changes in this task.
-- **Related changes:** Preserve implemented rules in `require-project-assignment-for-saved-github-timers` and account separation in `unify-github-oauth-account-linking`. Their pending canonical-spec synchronization must be reconciled before archiving this delta.
+- **Documentation/design:** Update ADR 009 and affected API, data-model, and UI guidance; inspect/update approved Pencil screens before implementation. Update public privacy disclosures and the candidate-specific collection inventory against the canonical requirements synchronized from archived `prepare-chrome-web-store-privacy`. Verify the deployed policy matches the new data flow before extension distribution; Store Dashboard changes and submission remain publisher-owned and outside this task.
+- **Related changes:** `require-project-assignment-for-saved-github-timers` and `unify-github-oauth-account-linking` were archived and synchronized into canonical specs on 2026-10-12. Preserve their implemented managed authorization and account separation as the baseline for this delta. `prepare-chrome-web-store-privacy` was also archived and synchronized on that date; its historical package handoff does not certify the new reference-start payload.
 - **Planning source:** `.omx/plans/github-extension-flexible-tracking.md`, incorporating the user's final decisions. No GitHub issue or parent issue was supplied. This change creates planning artifacts only.

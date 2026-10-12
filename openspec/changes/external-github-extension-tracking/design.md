@@ -4,7 +4,9 @@ The extension detects direct GitHub issues and Projects issue panes, but its sta
 
 Customers may refuse App installation. The approved solution records work from page context, with one shared repository/issue identity per workspace and restricted personal visibility. The feature is on by default and requires no GitHub account link. See `proposal.md` and the approved planning source for scope.
 
-The completed, unarchived `require-project-assignment-for-saved-github-timers` and `unify-github-oauth-account-linking` changes describe behavior already present in code. This change adds a narrow exception for newly created external-reference projects; managed projects retain those protections. Before archiving, synchronize prerequisite specs, then apply this delta to `Saved GitHub Task Starts Require Project Authorization Across Connection States` with managed-only assignment rules and the explicit external exception; do not rewrite their completed artifacts.
+The completed `require-project-assignment-for-saved-github-timers` and `unify-github-oauth-account-linking` changes were archived and synchronized into canonical specs on 2026-10-12. This change adds a narrow exception for newly created external-reference projects; managed projects retain those protections. Use that synchronized baseline and apply this delta to `Saved GitHub Task Starts Require Project Authorization Across Connection States` with managed-only assignment rules and the explicit external exception; do not rewrite the archived artifacts.
+
+`prepare-chrome-web-store-privacy` was also archived and synchronized on 2026-10-12. Its policy and package handoff describe the earlier repository/issue-number payload. This delta modifies `Privacy Policy Matches Actual Data Handling` to cover transmitted issue titles and canonical URLs, external recording without GitHub API calls, and own-time sharing boundaries. The historical handoff does not establish privacy readiness for this new release.
 
 ## Goals / Non-Goals
 
@@ -112,6 +114,7 @@ Provider credentials remain required by actual browsing/import operations. Exter
 - **User-web — `apps/user-web/AGENTS.md`:** Projects list/details, task dialogs/actions, top-bar task picker, dashboard/history repeat controls, API clients and query invalidation. Follow `docs/ui/pages-user.md`, `patterns.md`, the frontend skill, and approved screen parity before UI edits.
 - **Admin-web — `apps/admin-web/AGENTS.md`:** tolerate scoped contract changes; retain full admin data and assigned PM scope in projects/reports. Add no enablement settings. Update rendering only where contracts require it and verify role-sensitive queries/actions.
 - **Shared frontend — `packages/web-shared/AGENTS.md` if touched:** reuse existing shared HTTP/query leaves only where proven identical; verify both SPAs if those leaves change.
+- **Landing — `apps/landing-web`:** update public privacy content for the implemented reference payload, managed provider retrieval, and scoped sharing. Follow the landing skill and existing static legal-page requirements; verify the deployed policy before extension distribution.
 - **Docs:** ADR 009, `docs/PROPOSAL.md`, `API-ENDPOINTS.md`, `DATA-MODEL.md`, `github-installations.md`, affected UI sections, and extension collection disclosures. This proposal does not edit those implementation-era sources or approved designs.
 
 ## Risks / Trade-offs
@@ -129,6 +132,7 @@ Provider credentials remain required by actual browsing/import operations. Exter
 1. Validate schema and preflight duplicate repository keys. Persist managed mode for existing projects, external-reference mode only for new reference creation, and explicit provenance. Add the case-insensitive repository constraint and update all matching conflict writers together.
 2. Deploy access-safe API/contracts and both SPA consumers before distributing the updated extension. No user-facing enablement toggle is introduced; the feature is available by default with the updated release.
 3. Verify isolation, parallel starts, all read/write boundaries, deletion/reassignment effects, billing, import preservation, old managed flows, and both browsers. Regenerate OpenAPI using the repository's supported build-based workflow when required.
+   Update and verify the deployed public policy and candidate-specific collection inventory before distributing the extension with the changed payload. Retain package version/hash and policy verification evidence; do not reuse the historical privacy handoff as approval of this candidate. Publisher confirmation of Store declarations remains a separate release prerequisite; this task does not edit the Dashboard or submit the extension.
 4. Rollback must preserve records, own stopping/history, and external policy enforcement. Do not downgrade to a version that interprets external projects as ordinary full-access projects. Temporarily withdrawing the new start route through an operational release is distinct from adding a workspace product setting.
 
 ## Open Questions
