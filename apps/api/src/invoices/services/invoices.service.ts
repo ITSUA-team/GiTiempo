@@ -1,0 +1,676 @@
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
+import type {
+  CreateInvoiceInput,
+  InvoiceListItem,
+  InvoiceListQuery,
+  InvoiceListResponse,
+  InvoiceResponse,
+  InvoiceTimeEntrySummary,
+  UpdateInvoiceInput,
+} from '@gitiempo/shared';
+import type { AuthUser } from '../../auth/types/auth-user';
+import { DomainError } from '../../commons/errors/domain-error';
+import { escapeLikePattern } from '../../commons/utils/escape-like-pattern';
+import { DRIZZLE } from '../../db/db.constants';
+import type { DbTransaction, DrizzleDB } from '../../db/db.types';
+import { MembersService } from '../../members/services/members.service';
+import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
+import { projects } from '../../projects/schemas/projects.schema';
+import { tasks } from '../../tasks/schemas/tasks.schema';
+import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
+import { workspaceSettings } from '../../workspaces/schemas/workspace-settings.schema';
+import { invoices } from '../schemas/invoices.schema';
+
+interface InvoiceDetailRow {
+  id: string;
+  workspaceId: string;
+  projectId: string | null;
+  title: string;
+  status: string;
+  dateFrom: string;
+  dateTo: string;
+  hourlyRate: number;
+  currency: string;
+  discountPercent: number;
+  totalHours: number;
+  totalAmount: number;
+  notes: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  projectName: string | null;
+}
+
+interface LinkedTimeEntryRow {
+  id: string;
+  taskId: string;
+  userId: string;
+  startedAt: Date;
+  endedAt: Date | null;
+  durationSeconds: number | null;
+  isBillable: boolean;
+  description: string | null;
+}
+
+// Shared column selections so list, detail, and transaction reads stay in
+// sync with the response mapping in one place.
+const invoiceDetailSelection = {
+  id: invoices.id,
+  workspaceId: invoices.workspaceId,
+  projectId: invoices.projectId,
+  title: invoices.title,
+  status: invoices.status,
+  dateFrom: invoices.dateFrom,
+  dateTo: invoices.dateTo,
+  hourlyRate: invoices.hourlyRate,
+  currency: invoices.currency,
+  discountPercent: invoices.discountPercent,
+  totalHours: invoices.totalHours,
+  totalAmount: invoices.totalAmount,
+  notes: invoices.notes,
+  createdBy: invoices.createdBy,
+  createdAt: invoices.createdAt,
+  updatedAt: invoices.updatedAt,
+  projectName: projects.name,
+} as const;
+
+const linkedTimeEntrySelection = {
+  id: timeEntries.id,
+  taskId: timeEntries.taskId,
+  userId: timeEntries.userId,
+  startedAt: timeEntries.startedAt,
+  endedAt: timeEntries.endedAt,
+  durationSeconds: timeEntries.durationSeconds,
+  isBillable: timeEntries.isBillable,
+  description: timeEntries.description,
+} as const;
+
+@Injectable()
+export class InvoicesService {
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    private readonly members: MembersService,
+  ) {}
+
+  // ── List ──────────────────────────────────────────────────────────────
+
+  async listInvoices(
+    user: AuthUser,
+    query: InvoiceListQuery,
+  ): Promise<InvoiceListResponse> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+
+    const isPm = membership.role === 'pm';
+    const conditions: SQL[] = [eq(invoices.workspaceId, user.workspaceId)];
+
+    if (query.projectId !== undefined) {
+      conditions.push(eq(invoices.projectId, query.projectId));
+    }
+    if (query.status !== undefined) {
+      conditions.push(eq(invoices.status, query.status));
+    }
+    if (query.dateFrom !== undefined) {
+      conditions.push(gte(invoices.dateFrom, query.dateFrom));
+    }
+    if (query.dateTo !== undefined) {
+      conditions.push(lte(invoices.dateTo, query.dateTo));
+    }
+    if (query.search !== undefined) {
+      const pattern = `%${escapeLikePattern(query.search)}%`;
+      conditions.push(sql`${invoices.title} ILIKE ${pattern}`);
+    }
+
+    let listQuery = this.db
+      .select(invoiceDetailSelection)
+      .from(invoices)
+      .leftJoin(projects, eq(projects.id, invoices.projectId));
+
+    if (isPm) {
+      // PMs see only invoices scoped to a visible project (active public or
+      // assigned private). Workspace-wide invoices (null projectId) are
+      // admin-only. The assignment join is a LEFT JOIN so public projects
+      // without an assignment row still satisfy the visibility condition.
+      listQuery = listQuery.leftJoin(
+        projectAssignments,
+        and(
+          eq(projectAssignments.projectId, invoices.projectId),
+          eq(projectAssignments.userId, user.sub),
+        ),
+      );
+      conditions.push(eq(projects.isActive, true));
+      conditions.push(
+        or(
+          eq(projects.visibility, 'public'),
+          eq(projectAssignments.userId, user.sub),
+        )!,
+      );
+    }
+
+    const total = await this.countInvoices(conditions, isPm, user.sub);
+
+    const offset = (query.page - 1) * query.limit;
+    const rows = await listQuery
+      .where(and(...conditions))
+      .orderBy(desc(invoices.createdAt), desc(invoices.id))
+      .limit(query.limit)
+      .offset(offset);
+
+    // Fetch time-entry counts per invoice in one query.
+    const invoiceIds = rows.map((r) => r.id);
+    const countRows = invoiceIds.length
+      ? await this.db
+          .select({
+            invoiceId: timeEntries.invoiceId,
+            entryCount: count(),
+          })
+          .from(timeEntries)
+          .where(inArray(timeEntries.invoiceId, invoiceIds))
+          .groupBy(timeEntries.invoiceId)
+      : [];
+
+    const countByInvoice = new Map<string, number>();
+    for (const r of countRows) {
+      countByInvoice.set(r.invoiceId!, r.entryCount);
+    }
+
+    const items = rows.map((row) =>
+      this.toInvoiceListItem(row, countByInvoice.get(row.id) ?? 0),
+    );
+
+    return {
+      items,
+      meta: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / query.limit),
+      },
+    };
+  }
+
+  private async countInvoices(
+    conditions: SQL[],
+    isPm: boolean,
+    userId: string,
+  ): Promise<number> {
+    let countQuery = this.db
+      .select({ value: count() })
+      .from(invoices)
+      .leftJoin(projects, eq(projects.id, invoices.projectId));
+
+    if (isPm) {
+      countQuery = countQuery.leftJoin(
+        projectAssignments,
+        and(
+          eq(projectAssignments.projectId, invoices.projectId),
+          eq(projectAssignments.userId, userId),
+        ),
+      );
+    }
+
+    const [row] = await countQuery.where(and(...conditions));
+    return row?.value ?? 0;
+  }
+
+  // ── Create ────────────────────────────────────────────────────────────
+
+  async createInvoice(
+    user: AuthUser,
+    input: CreateInvoiceInput,
+  ): Promise<InvoiceResponse> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+
+    // PMs must scope invoice creation to a visible project.
+    if (membership.role === 'pm') {
+      if (input.projectId === undefined) {
+        throw new ForbiddenException(
+          'Project managers must scope invoices to an assigned project',
+        );
+      }
+      await this.requirePmProjectAccess(
+        user.sub,
+        user.workspaceId,
+        input.projectId,
+      );
+    } else if (input.projectId !== undefined) {
+      // Admins: verify the project belongs to the workspace.
+      await this.requireWorkspaceProject(user.workspaceId, input.projectId);
+    }
+
+    // Resolve snapshot rate and currency from workspace settings when omitted.
+    const [settings] = await this.db
+      .select({
+        defaultHourlyRate: workspaceSettings.defaultHourlyRate,
+        currency: workspaceSettings.currency,
+      })
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, user.workspaceId))
+      .limit(1);
+
+    const hourlyRate = input.hourlyRate ?? settings?.defaultHourlyRate ?? null;
+    if (hourlyRate === null) {
+      throw new DomainError(
+        'invoice_rate_required',
+        'An hourly rate is required: provide one or configure a workspace default rate',
+        422,
+      );
+    }
+    const currency = input.currency ?? settings?.currency ?? null;
+    if (currency === null) {
+      throw new DomainError(
+        'invoice_currency_required',
+        'A currency is required: provide one or configure a workspace default currency',
+        422,
+      );
+    }
+    const discountPercent = input.discountPercent;
+
+    return this.db.transaction(async (tx) => {
+      // Lock eligible time entries: completed, billable, not already invoiced,
+      // within the requested workspace/project/date range.
+      const eligibilityConditions = [
+        eq(timeEntries.workspaceId, user.workspaceId),
+        isNotNull(timeEntries.endedAt),
+        isNotNull(timeEntries.durationSeconds),
+        eq(timeEntries.isBillable, true),
+        isNull(timeEntries.invoiceId),
+        // UTC day bounds; the exclusive next-day end keeps the ::date cast
+        // out of the predicate so startedAt can use its timestamp index.
+        gte(timeEntries.startedAt, new Date(input.dateFrom)),
+        lt(
+          timeEntries.startedAt,
+          new Date(new Date(input.dateTo).getTime() + 86_400_000),
+        ),
+      ];
+
+      if (input.projectId !== undefined) {
+        eligibilityConditions.push(
+          inArray(
+            timeEntries.taskId,
+            this.db
+              .select({ id: tasks.id })
+              .from(tasks)
+              .innerJoin(projects, eq(projects.id, tasks.projectId))
+              .where(
+                and(
+                  eq(projects.id, input.projectId),
+                  eq(projects.workspaceId, user.workspaceId),
+                ),
+              ),
+          ),
+        );
+      }
+
+      const eligibleEntries = await tx
+        .select(linkedTimeEntrySelection)
+        .from(timeEntries)
+        .where(and(...eligibilityConditions))
+        .for('update');
+
+      // Compute snapshot totals.
+      const totalSeconds = eligibleEntries.reduce(
+        (sum, e) => sum + (e.durationSeconds ?? 0),
+        0,
+      );
+      const { totalHours, totalAmount } = this.computeInvoiceTotals(
+        totalSeconds,
+        hourlyRate,
+        discountPercent,
+      );
+
+      const [invoice] = await tx
+        .insert(invoices)
+        .values({
+          workspaceId: user.workspaceId,
+          projectId: input.projectId ?? null,
+          title: input.title,
+          status: 'draft',
+          dateFrom: input.dateFrom,
+          dateTo: input.dateTo,
+          hourlyRate,
+          currency,
+          discountPercent,
+          totalHours,
+          totalAmount,
+          notes: input.notes ?? null,
+          createdBy: user.sub,
+        })
+        .returning({ id: invoices.id });
+
+      if (!invoice) {
+        throw DomainError.internal(
+          'invoice_create_failed',
+          'Failed to create invoice',
+        );
+      }
+
+      // Link selected entries to the new invoice.
+      if (eligibleEntries.length > 0) {
+        await tx
+          .update(timeEntries)
+          .set({ invoiceId: invoice.id })
+          .where(
+            and(
+              inArray(
+                timeEntries.id,
+                eligibleEntries.map((e) => e.id),
+              ),
+              isNull(timeEntries.invoiceId),
+            ),
+          );
+      }
+
+      // Re-read the full invoice detail with linked entries.
+      return this.readInvoiceDetail(tx, invoice.id, user.workspaceId);
+    });
+  }
+
+  // ── Detail ────────────────────────────────────────────────────────────
+
+  async getInvoice(user: AuthUser, id: string): Promise<InvoiceResponse> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+
+    const invoice = await this.findInvoiceOrThrow(user.workspaceId, id);
+
+    if (membership.role === 'pm') {
+      await this.requirePmInvoiceAccess(user.sub, invoice);
+    }
+
+    const entryRows = await this.loadLinkedEntries(this.db, id);
+
+    return this.toInvoiceResponse(invoice, entryRows);
+  }
+
+  // ── Update ────────────────────────────────────────────────────────────
+
+  async updateInvoice(
+    user: AuthUser,
+    id: string,
+    input: UpdateInvoiceInput,
+  ): Promise<InvoiceResponse> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+
+    const invoice = await this.findInvoiceOrThrow(user.workspaceId, id);
+
+    if (membership.role === 'pm') {
+      await this.requirePmInvoiceAccess(user.sub, invoice);
+    }
+
+    const updates: Partial<typeof invoices.$inferInsert> = {};
+    if (input.title !== undefined) updates.title = input.title;
+    if (input.status !== undefined) updates.status = input.status;
+    if (input.notes !== undefined) updates.notes = input.notes;
+
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = new Date();
+      await this.db.update(invoices).set(updates).where(eq(invoices.id, id));
+    }
+
+    const refreshed = await this.findInvoiceOrThrow(user.workspaceId, id);
+    const entryRows = await this.loadLinkedEntries(this.db, id);
+
+    return this.toInvoiceResponse(refreshed, entryRows);
+  }
+
+  // ── Delete ────────────────────────────────────────────────────────────
+
+  async deleteInvoice(user: AuthUser, id: string): Promise<void> {
+    // Admin-only: enforce at membership level.
+    await this.members.requireRole(user.sub, user.workspaceId, ['admin']);
+
+    const invoice = await this.findInvoiceOrThrow(user.workspaceId, id);
+
+    // Only draft invoices can be deleted; sent or paid invoices are locked
+    // to prevent re-billing already invoiced time entries.
+    if (invoice.status !== 'draft') {
+      throw new DomainError(
+        'invoice_not_deletable',
+        `Only draft invoices can be deleted (current status: ${invoice.status})`,
+        409,
+      );
+    }
+
+    // FK ON DELETE SET NULL unlinks time entries automatically.
+    await this.db.delete(invoices).where(eq(invoices.id, invoice.id));
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+
+  private async loadInvoiceDetail(
+    cx: DrizzleDB | DbTransaction,
+    workspaceId: string,
+    id: string,
+  ): Promise<InvoiceDetailRow | null> {
+    const [row] = await cx
+      .select(invoiceDetailSelection)
+      .from(invoices)
+      .leftJoin(projects, eq(projects.id, invoices.projectId))
+      .where(and(eq(invoices.id, id), eq(invoices.workspaceId, workspaceId)))
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  private async findInvoiceOrThrow(
+    workspaceId: string,
+    id: string,
+  ): Promise<InvoiceDetailRow> {
+    const row = await this.loadInvoiceDetail(this.db, workspaceId, id);
+
+    if (!row) throw new NotFoundException('Invoice not found');
+
+    return row;
+  }
+
+  private async readInvoiceDetail(
+    tx: DbTransaction,
+    id: string,
+    workspaceId: string,
+  ): Promise<InvoiceResponse> {
+    const row = await this.loadInvoiceDetail(tx, workspaceId, id);
+
+    if (!row)
+      throw DomainError.internal(
+        'invoice_not_found_after_create',
+        'Invoice not found after creation',
+      );
+
+    const entries = await this.loadLinkedEntries(tx, id);
+
+    return this.toInvoiceResponse(row, entries);
+  }
+
+  private async loadLinkedEntries(
+    cx: DrizzleDB | DbTransaction,
+    invoiceId: string,
+  ): Promise<LinkedTimeEntryRow[]> {
+    return cx
+      .select(linkedTimeEntrySelection)
+      .from(timeEntries)
+      .where(eq(timeEntries.invoiceId, invoiceId))
+      .orderBy(timeEntries.startedAt);
+  }
+
+  /**
+   * Pure snapshot-totals computation: hours from seconds, then amount with
+   * optional percentage discount. Both values are rounded to 2 decimal
+   * places to match the stored DECIMAL precision.
+   */
+  private computeInvoiceTotals(
+    totalSeconds: number,
+    hourlyRate: number,
+    discountPercent: number,
+  ): { totalHours: number; totalAmount: number } {
+    const totalHours = Math.round((totalSeconds / 3600) * 100) / 100;
+    const totalAmount =
+      Math.round(totalHours * hourlyRate * (1 - discountPercent / 100) * 100) /
+      100;
+    return { totalHours, totalAmount };
+  }
+
+  private async requirePmProjectAccess(
+    userId: string,
+    workspaceId: string,
+    projectId: string,
+  ): Promise<void> {
+    const [row] = await this.db
+      .select({ id: projects.id })
+      .from(projects)
+      .leftJoin(
+        projectAssignments,
+        and(
+          eq(projectAssignments.projectId, projects.id),
+          eq(projectAssignments.userId, userId),
+        ),
+      )
+      .where(
+        and(
+          eq(projects.id, projectId),
+          eq(projects.workspaceId, workspaceId),
+          eq(projects.isActive, true),
+          or(
+            eq(projects.visibility, 'public'),
+            eq(projectAssignments.userId, userId),
+          )!,
+        ),
+      )
+      .limit(1);
+
+    if (!row) throw new ForbiddenException('Forbidden');
+  }
+
+  private async requireWorkspaceProject(
+    workspaceId: string,
+    projectId: string,
+  ): Promise<void> {
+    const [row] = await this.db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(
+        and(eq(projects.id, projectId), eq(projects.workspaceId, workspaceId)),
+      )
+      .limit(1);
+
+    if (!row) throw new NotFoundException('Project not found');
+  }
+
+  private async requirePmInvoiceAccess(
+    userId: string,
+    invoice: InvoiceDetailRow,
+  ): Promise<void> {
+    if (invoice.projectId === null) {
+      throw new ForbiddenException('Forbidden');
+    }
+    await this.requirePmProjectAccess(
+      userId,
+      invoice.workspaceId,
+      invoice.projectId,
+    );
+  }
+
+  private toInvoiceResponse(
+    row: InvoiceDetailRow,
+    entries: LinkedTimeEntryRow[],
+  ): InvoiceResponse {
+    const entrySummaries: InvoiceTimeEntrySummary[] = entries.map((e) => ({
+      id: e.id,
+      taskId: e.taskId,
+      userId: e.userId,
+      startedAt: e.startedAt.toISOString(),
+      endedAt: e.endedAt!.toISOString(),
+      durationSeconds: e.durationSeconds!,
+      isBillable: e.isBillable,
+      description: e.description,
+    }));
+
+    return {
+      id: row.id,
+      workspaceId: row.workspaceId,
+      projectId: row.projectId,
+      title: row.title,
+      status: row.status as InvoiceResponse['status'],
+      dateFrom: row.dateFrom,
+      dateTo: row.dateTo,
+      hourlyRate: Number(row.hourlyRate),
+      currency: row.currency,
+      discountPercent: Number(row.discountPercent),
+      totalHours: Number(row.totalHours),
+      totalAmount: Number(row.totalAmount),
+      notes: row.notes,
+      createdBy: row.createdBy,
+      timeEntryCount: entries.length,
+      timeEntries: entrySummaries,
+      project:
+        row.projectId !== null && row.projectName !== null
+          ? { id: row.projectId, name: row.projectName }
+          : null,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  private toInvoiceListItem(
+    row: InvoiceDetailRow,
+    entryCount: number,
+  ): InvoiceListItem {
+    return {
+      id: row.id,
+      workspaceId: row.workspaceId,
+      projectId: row.projectId,
+      title: row.title,
+      status: row.status as InvoiceResponse['status'],
+      dateFrom: row.dateFrom,
+      dateTo: row.dateTo,
+      hourlyRate: Number(row.hourlyRate),
+      currency: row.currency,
+      discountPercent: Number(row.discountPercent),
+      totalHours: Number(row.totalHours),
+      totalAmount: Number(row.totalAmount),
+      notes: row.notes,
+      createdBy: row.createdBy,
+      timeEntryCount: entryCount,
+      project:
+        row.projectId !== null && row.projectName !== null
+          ? { id: row.projectId, name: row.projectName }
+          : null,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+}

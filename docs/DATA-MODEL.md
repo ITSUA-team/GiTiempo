@@ -388,7 +388,9 @@ Billing record generated from time entries. MVP: data only, no document generati
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 
-**Indexes:** `invoices_workspace_id_idx` on `workspace_id`
+**Indexes:**
+- `invoices_workspace_id_idx` on `workspace_id`
+- `invoices_workspace_status_idx` on `(workspace_id, status)` — optimizes filtered list queries by workspace and status.
 
 **Note:** Invoice stores `hourly_rate`, `currency`, `total_hours`, and `total_amount` as snapshot values at creation time. Individual time entries are linked back to the invoice via `time_entries.invoice_id`. If time entries are edited after invoice creation, the invoice totals are **not** automatically recalculated — this is an explicit MVP limitation.
 

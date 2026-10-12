@@ -155,6 +155,13 @@
       "when": 1791538989798,
       "tag": "0021_drop_invoice_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791796554260,
+      "tag": "0022_tricky_black_panther",
+      "breakpoints": true
     }
   ]
 }

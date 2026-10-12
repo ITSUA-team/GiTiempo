@@ -221,10 +221,38 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 | Method | Path            | Auth | Role     | Description                                |
 | ------ | --------------- | ---- | -------- | ------------------------------------------ |
 | GET    | `/invoices`     | JWT  | Admin/PM | List invoices (PM: assigned projects only) |
-| POST   | `/invoices`     | JWT  | Admin/PM | Create invoice from time report data       |
+| POST   | `/invoices`     | JWT  | Admin/PM | Create invoice from eligible time entries  |
 | GET    | `/invoices/:id` | JWT  | Admin/PM | Get invoice details                        |
-| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, rates)      |
+| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, title)      |
 | DELETE | `/invoices/:id` | JWT  | Admin    | Delete invoice                             |
+
+**GET /invoices** query: `page?`, `limit?`, `projectId?`, `status?`, `dateFrom?`, `dateTo?`, `search?`
+
+- PMs see only invoices scoped to active public projects or private projects assigned to them. Workspace-wide invoices (no project scope) are admin-only.
+
+**POST /invoices** body: `{ title: string, dateFrom: string (YYYY-MM-DD), dateTo: string (YYYY-MM-DD), projectId?: string, hourlyRate?: number, currency?: string, discountPercent?: number (0–100, default 0), notes?: string | null }`
+
+- Creates an invoice from eligible time entries in the requested workspace, project, and date range.
+- **Eligibility:** only completed, billable time entries with a finalized duration that are not already linked to another invoice are selected. Running, non-billable, and already-invoiced entries are excluded.
+- **Atomicity:** entry selection, invoice insert, and `time_entries.invoice_id` association happen in a single transaction with `SELECT ... FOR UPDATE`, so concurrent requests cannot bill the same entry twice.
+- **Totals:** `totalHours = SUM(duration_seconds) / 3600`, `totalAmount = totalHours × hourlyRate × (1 − discountPercent / 100)`. Both are stored as snapshot values at creation time.
+- **Rate fallback:** when `hourlyRate` is omitted, the workspace `default_hourly_rate` is used. When `currency` is omitted, the workspace `currency` is used. If neither is configured and no rate is supplied, the request is rejected with `422`.
+- PMs must scope invoice creation to a project they can see (active public project or private project assigned to them); workspace-wide invoices (no `projectId`) are admin-only.
+
+**PATCH /invoices/:id** body: `{ title?: string, status?: "draft" | "sent" | "paid", notes?: string | null }`
+
+- Updates only editable fields (`title`, `status`, `notes`). Snapshot fields (`hourlyRate`, `currency`, `discountPercent`, `totalHours`, `totalAmount`, `dateFrom`, `dateTo`) and the linked time-entry set are immutable after creation. Totals are never recomputed by an update.
+
+**DELETE /invoices/:id** (Admin only)
+
+- Only `draft` invoices can be deleted. `sent` or `paid` invoices are locked (409 Conflict) to prevent re-billing of already invoiced time entries.
+- Deleting a draft invoice unlinks its time entries via `time_entries.invoice_id` `ON DELETE SET NULL`, making them eligible for a later invoice. Time entries themselves are not deleted.
+
+**Invoice list response** items include snapshot fields (`hourlyRate`, `currency`, `totalHours`, `totalAmount`, `discountPercent`), `status`, billing date range, optional `project` summary, and `timeEntryCount` (no `timeEntries` array in list items).
+
+**Invoice detail response** (`GET /invoices/:id`) includes all list fields plus the `timeEntries` array with linked entry summaries.
+
+**Time entry responses** include an `invoiceId` field (nullable) so clients can surface billed state.
 
 ---
 
@@ -294,14 +322,15 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 ## Common Query Parameters
 
-| Parameter   | Used in               | Description                            |
-| ----------- | --------------------- | -------------------------------------- |
-| `page`      | List endpoints        | Page number (1-based, default: 1)      |
-| `limit`     | List endpoints        | Items per page (default: 20, max: 100) |
-| `dateFrom`  | Time entries, reports | Filter start date (ISO 8601)           |
-| `dateTo`    | Time entries, reports | Filter end date (ISO 8601)             |
-| `projectId` | Time entries, reports | Filter by project                      |
-| `taskId`    | Time entries          | Filter by task                         |
+| Parameter   | Used in                         | Description                             |
+| ----------- | ------------------------------- | --------------------------------------- |
+| `page`      | List endpoints                  | Page number (1-based, default: 1)       |
+| `limit`     | List endpoints                  | Items per page (default: 20, max: 100)  |
+| `dateFrom`  | Time entries, reports, invoices | Filter start date (ISO 8601)            |
+| `dateTo`    | Time entries, reports, invoices | Filter end date (ISO 8601)              |
+| `projectId` | Time entries, reports, invoices | Filter by project                       |
+| `taskId`    | Time entries                    | Filter by task                          |
+| `search`    | Time entries, invoices          | Text search filter (task/invoice title) |
 
 ## Standard Error Response
 

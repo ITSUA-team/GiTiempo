@@ -10,45 +10,56 @@ import {
   updateTimeEntrySchema,
 } from "./time-entries.js";
 
+// Running-entry fixture: no endedAt yet, nothing billed to an invoice.
+const validTimeEntryResponse = {
+  id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+  workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+  taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+  projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+  userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+  startedAt: "2026-04-21T09:00:00.000Z",
+  endedAt: null,
+  durationSeconds: null,
+  description: null,
+  isBillable: true,
+  source: "extension",
+  invoiceId: null,
+  createdAt: "2026-04-21T09:00:00.000Z",
+  updatedAt: "2026-04-21T09:00:00.000Z",
+  project: {
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    name: "octo/repo",
+  },
+  task: {
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    title: "Improve reports filters",
+  },
+  workspace: {
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+    name: "Workspace Alpha",
+  },
+  user: {
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+    email: "alexey@example.com",
+    displayName: "Alexey Tsukanov",
+    avatarUrl: null,
+  },
+  githubIssue: {
+    githubRepo: "octo/repo",
+    issueNumber: 184,
+  },
+};
+
+const billedEntry = {
+  ...validTimeEntryResponse,
+  endedAt: "2026-04-21T11:00:00.000Z",
+  durationSeconds: 7200,
+  invoiceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9abc",
+};
+
 describe("timeEntryResponseSchema", () => {
   it("accepts stable github issue linkage on time entry responses", () => {
-    const result = timeEntryResponseSchema.parse({
-      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
-      workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-      userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
-      startedAt: "2026-04-21T09:00:00.000Z",
-      endedAt: null,
-      durationSeconds: null,
-      description: null,
-      isBillable: true,
-      source: "extension",
-      createdAt: "2026-04-21T09:00:00.000Z",
-      updatedAt: "2026-04-21T09:00:00.000Z",
-      project: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-        name: "octo/repo",
-      },
-      task: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-        title: "Improve reports filters",
-      },
-      workspace: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
-        name: "Workspace Alpha",
-      },
-      user: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
-        email: "alexey@example.com",
-        displayName: "Alexey Tsukanov",
-        avatarUrl: null,
-      },
-      githubIssue: {
-        githubRepo: "octo/repo",
-        issueNumber: 184,
-      },
-    });
+    const result = timeEntryResponseSchema.parse(validTimeEntryResponse);
 
     expect(result.githubIssue).toEqual({
       githubRepo: "octo/repo",
@@ -58,41 +69,38 @@ describe("timeEntryResponseSchema", () => {
 
   it("allows github issue linkage to be null", () => {
     const result = timeEntryResponseSchema.parse({
-      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
-      workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-      userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
-      startedAt: "2026-04-21T09:00:00.000Z",
-      endedAt: null,
-      durationSeconds: null,
-      description: null,
-      isBillable: true,
+      ...validTimeEntryResponse,
       source: "web",
-      createdAt: "2026-04-21T09:00:00.000Z",
-      updatedAt: "2026-04-21T09:00:00.000Z",
-      project: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-        name: "Project Orion",
-      },
-      task: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-        title: "Improve reports filters",
-      },
-      workspace: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
-        name: "Workspace Alpha",
-      },
-      user: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
-        email: "alexey@example.com",
-        displayName: "Alexey Tsukanov",
-        avatarUrl: null,
-      },
       githubIssue: null,
     });
 
     expect(result.githubIssue).toBeNull();
+  });
+
+  it("accepts a billed time entry with a non-null invoiceId", () => {
+    const result = timeEntryResponseSchema.parse(billedEntry);
+
+    expect(result.invoiceId).toBe("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9abc");
+  });
+
+  it("rejects a malformed invoiceId on a billed entry", () => {
+    const result = timeEntryResponseSchema.safeParse({
+      ...billedEntry,
+      invoiceId: "not-a-uuid",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["invoiceId"]);
+  });
+
+  it("rejects an invoiceId shaped like a uuid but not hexadecimal", () => {
+    const result = timeEntryResponseSchema.safeParse({
+      ...billedEntry,
+      invoiceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9xyz",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["invoiceId"]);
   });
 });
 
