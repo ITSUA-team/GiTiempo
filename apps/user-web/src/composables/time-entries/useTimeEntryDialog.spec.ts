@@ -70,6 +70,7 @@ describe("useTimeEntryDialog", () => {
       durationSeconds: 5400,
       endedAt: "2026-04-21T10:30:00.000Z",
       githubIssue: null,
+      invoiceId: null,
       id: "entry-1",
       isBillable: false,
       project: { id: "project-1", name: "Project Orion" },
