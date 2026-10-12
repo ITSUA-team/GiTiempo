@@ -5,19 +5,23 @@ Define verified workspace associations with organization installations of the co
 
 ## Requirements
 
-### Requirement: Installation Links Require Verified Administrator Authority
-The system SHALL allow only an active GiTiempo workspace admin to link an organization installation of the configured GitHub App. Before activating the link, the backend MUST verify the installation's App identity and stable organization account identity, the requesting admin's access to that exact installation, and their active organization-owner authority through GitHub. A submitted installation identifier, callback query, or existing organization allow-list entry MUST NOT establish authority by itself. Interactive setup state MUST be single-use, expiring, and bound to the initiating GiTiempo user, workspace, and organization.
+### Requirement: Installation Links Require Verified Workspace and GitHub App Authority
+The system SHALL allow only an active GiTiempo workspace admin to link an organization installation of the configured GitHub App to an organization allowed in that workspace. Setup MUST use the admin's OAuth `read:org` grant to resolve and bind the selected active organization membership to its stable GitHub organization ID. The backend MUST verify the configured App identity, installation ID, organization ID and login, active installation status, required permissions, and ability to mint the restricted installation token. It MUST NOT require personal GitHub App authorization, membership in `/user/installations`, or organization-owner/admin role. Interactive setup state MUST be single-use, expiring, and bound to the initiating GiTiempo user, workspace, and organization. A submitted installation identifier or callback query MUST NOT establish authority by itself.
 
-#### Scenario: Authorized owner links an installation
-- **GIVEN** an active workspace admin has a usable personal GitHub connection and is an active owner of the selected allowed GitHub organization
-- **WHEN** the backend verifies their access to the exact active installation and its App and organization identities
+#### Scenario: OAuth-connected workspace admin links an installation
+- **GIVEN** an active workspace admin has OAuth `read:org` access and active membership in the selected allowed GitHub organization
+- **AND** the configured GitHub App has an active installation on that organization with the required permissions
+- **WHEN** the backend verifies the exact installation through GitHub App authentication
 - **THEN** it saves a verified installation association for that workspace and organization
 - **AND** it stores no personal access token as a workspace credential
+- **AND** no personal GitHub App authorization or organization-owner role is required
 
-#### Scenario: Installation identifier does not prove ownership
-- **GIVEN** an admin submits a valid installation ID but is not an active owner of its organization or cannot access that installation
-- **WHEN** setup verification runs
-- **THEN** the backend rejects the link without creating or replacing a verified association
+#### Scenario: GitHub controls permission to install the App
+- **GIVEN** an active workspace admin has OAuth `read:org` access and selects an allowed organization where the configured App is not installed
+- **WHEN** the admin explicitly starts setup and continues to GitHub's App installation page
+- **THEN** GitHub determines whether that GitHub account may install the App on the selected organization
+- **AND** GiTiempo accepts completion only for the App installation and organization bound to the setup state
+- **AND** a denied or cancelled GitHub installation does not create or replace an association
 
 #### Scenario: Wrong installation or callback context is rejected
 - **GIVEN** a setup attempt supplies another App's installation, a personal-account installation, a different organization, an expired or consumed state, or a state bound to another user or workspace
@@ -26,9 +30,15 @@ The system SHALL allow only an active GiTiempo workspace admin to link an organi
 - **AND** the backend returns a safe setup failure
 
 #### Scenario: Admin authority is rechecked at completion
-- **GIVEN** the initiator loses active workspace admin membership after beginning setup
+- **GIVEN** the initiator loses active GiTiempo workspace admin membership after beginning setup
 - **WHEN** the callback or link completion is processed
 - **THEN** the backend refuses the link even if GitHub verification otherwise succeeds
+
+#### Scenario: Personal GitHub App authorization is absent
+- **GIVEN** an admin has OAuth `read:org` access and active membership in the selected organization but no personal GitHub App authorization
+- **WHEN** installation setup or re-verification runs
+- **THEN** setup and verification continue using GitHub App installation authentication
+- **AND** private repository/project browsing and import remain unavailable until personal GitHub App authorization is granted
 
 ### Requirement: Installation Associations Are Workspace Scoped
 The system SHALL keep at most one current installation association per workspace and stable GitHub organization identity. Each workspace MUST independently authorize its association, even if multiple workspaces use the same GitHub installation. Existing policy rows MUST remain unverified until explicit setup succeeds. Replacing or disconnecting a link MUST preserve project, task, assignment, and time-entry history.
@@ -92,14 +102,14 @@ The system SHALL process authenticated GitHub installation and repository-access
 - **AND** a repeated valid delivery causes no duplicate side effects
 
 ### Requirement: Settings Automatically Confirms Existing App Installations
-Admin Settings SHALL retain the existing GitHub Workspace Access organization-policy UI: one allowed-organization row with its login, `Allowed for this workspace`, and `Remove`. It SHALL additionally offer `Install App` beside `Remove` under the explicit setup conditions below, without installation status labels, association-only rows, or a separate installations card. After loading allowed organizations and after successfully adding one, an eligible connected workspace administrator SHALL automatically attempt setup only for organizations with no saved installation association. The automatic flow MUST complete the same state, owner, installation visibility, App, organization, and permission checks as explicit setup. Tracking members MUST NOT be prompted to establish a personal GitHub connection.
+Admin Settings SHALL retain the existing GitHub Workspace Access organization-policy UI: one allowed-organization row with its login, `Allowed for this workspace`, and `Remove`. It SHALL offer `Install App` beside `Remove` only after automatic reconciliation confirms there is no verified installation, without installation status labels, association-only rows, or a separate installations card. After loading allowed organizations and after successfully adding one, an eligible workspace administrator SHALL automatically reconcile every allowed organization with the saved installation state. Verified associations are re-verified using App authentication; absent, suspended, or unavailable associations are discovered through setup using OAuth `read:org`; locally disconnected associations are preserved. The automatic flow MUST complete the same App, organization, permission, and installation-token checks as explicit setup. Tracking members MUST NOT be prompted to establish a personal GitHub connection.
 
 #### Scenario: Existing GitHub App is confirmed automatically
 - **GIVEN** an allowed organization has no saved association but already has the configured GitHub App installed
-- **AND** the current workspace administrator has a usable personal GitHub connection and active organization-owner authority
+- **AND** the current workspace administrator has OAuth `read:org` access and active membership in that organization
 - **WHEN** Admin Settings loads the allowed organizations or successfully adds that organization
 - **THEN** the backend discovers the installation using App authentication and returns its candidate ID with single-use setup state
-- **AND** the client completes the same full owner, installation visibility, App, organization, and permission verification without asking the user to reinstall
+- **AND** the client completes exact App, organization, permission, and installation-token verification without asking the user to reinstall
 - **AND** the existing Workspace Access row remains a policy row
 
 #### Scenario: Missing App installation does not trigger automatic navigation
@@ -109,56 +119,76 @@ Admin Settings SHALL retain the existing GitHub Workspace Access organization-po
 - **AND** the administrator can explicitly use the row's `Install App` action
 - **AND** it leaves the association absent and the allowed-organization policy unchanged
 
-#### Scenario: Existing association is preserved
-- **GIVEN** an organization already has a verified, suspended, unavailable, or locally disconnected saved association
-- **WHEN** Admin Settings loads the allowed organizations or adds another organization
-- **THEN** it does not automatically reverify or reactivate that association
-- **AND** the row retains its policy information and offers `Install App` only when the saved association is not verified
+#### Scenario: Saved installation state is reconciled on Settings load
+- **GIVEN** an organization has a saved verified, suspended, unavailable, or locally disconnected association
+- **WHEN** Admin Settings loads the allowed organizations
+- **THEN** it re-verifies verified associations and rediscovers suspended or unavailable associations
+- **AND** it preserves locally disconnected associations
+- **AND** it retains the policy row and offers `Install App` only after reconciliation confirms that no verified installation exists
 
-#### Scenario: Admin cannot prove setup authority
-- **GIVEN** an allowed organization has no saved association
-- **AND** the current workspace admin has no usable personal GitHub connection or is not an active organization owner
-- **WHEN** Admin Settings loads or adds the organization
-- **THEN** GiTiempo does not persist an association
-- **AND** it leaves the Workspace Access policy UI unchanged
+#### Scenario: Settings load detects an installation removed directly in GitHub
+- **GIVEN** an allowed organization has a stale verified association because the App was removed directly in GitHub
+- **WHEN** Admin Settings opens
+- **THEN** GiTiempo verifies the installation with GitHub App authentication
+- **AND** if GitHub confirms the installation is missing, GiTiempo marks the stale association unavailable and offers `Install App`
+- **AND** a transient GitHub verification failure does not mark the association unavailable
+
+#### Scenario: Organization policy survives setup unavailability
+- **GIVEN** an OAuth-authorized admin adds an organization but OAuth or GitHub App setup is temporarily unavailable
+- **WHEN** the policy addition completes and Settings considers automatic confirmation
+- **THEN** the policy addition SHALL remain successful and saved
+- **AND** automatic installation confirmation SHALL not turn an unavailable setup into a policy failure
 
 ### Requirement: Settings Offers Explicit Installation Setup
-Admin Settings SHALL show `Install App` beside `Remove` only after installation status has loaded successfully and the allowed organization has no `verified` association. The action SHALL be available for absent, suspended, unavailable, and locally disconnected associations. It MUST use authenticated setup and completion with full authority verification. Clicking the action MUST NOT itself mark an installation verified or imply that the App is absent on GitHub. A pending manual setup SHALL show loading on its row and disable other `Install App` clicks.
+Admin Settings SHALL show `Install App` beside `Remove` only after installation status has loaded successfully and the allowed organization has no `verified` association. The action SHALL be available for absent, suspended, unavailable, and locally disconnected associations. It MUST use authenticated setup and completion with exact App, organization, permission, and installation-token verification, without personal GitHub App or organization-owner prerequisites. Clicking the action MUST NOT itself mark an installation verified or imply that the App is absent on GitHub. A pending manual setup SHALL show loading on its row and disable other `Install App` clicks.
 
-#### Scenario: Status is unknown or already verified
-- **GIVEN** installation status has not loaded successfully or the organization has a verified association
+#### Scenario: Installation status is loading or verified
+- **GIVEN** installation status is unknown, currently being checked, or the organization has a verified association
 - **WHEN** Settings renders the organization row
 - **THEN** it hides `Install App`
+- **AND** it shows a loading `Checking App` action while reconciliation is running
 
 #### Scenario: Explicit setup reuses an existing installation
-- **GIVEN** an eligible connected organization owner clicks `Install App`
+- **GIVEN** an admin with OAuth `read:org` access and active membership in an allowed organization clicks `Install App`
 - **WHEN** authenticated setup returns an existing installation candidate
-- **THEN** the client completes full verification without navigating to GitHub or requesting reinstallation
+- **THEN** the client completes exact App, organization, permission, and installation-token verification without navigating to GitHub or requesting reinstallation
 - **AND** successful completion refreshes status and hides the action
 - **AND** a saved non-verified association can be restored only after successful verification following this explicit action
 
 #### Scenario: Explicit setup opens GitHub when no installation is found
-- **GIVEN** an eligible connected organization owner clicks `Install App`
+- **GIVEN** an admin with OAuth `read:org` access and active membership in an allowed organization clicks `Install App`
 - **WHEN** setup succeeds without an existing installation candidate after GitHub returns 404
 - **THEN** the client navigates in the current tab to the configured App installation URL containing the opaque setup state
-- **AND** the administrator selects the intended organization on GitHub
+- **AND** GitHub determines whether the account may install the App on the selected organization
 - **AND** a callback for a personal account or another organization cannot establish the requested workspace link
 
-#### Scenario: Setup cannot proceed
-- **GIVEN** the administrator lacks a usable personal GitHub connection or setup fails an authority, configuration, or discovery check
+#### Scenario: OAuth organization access is unavailable
+- **GIVEN** the administrator lacks OAuth `read:org` access or active membership in the selected organization
 - **WHEN** they click `Install App`
-- **THEN** Settings reports the failure without navigating to GitHub or activating an association
+- **THEN** Settings reports targeted OAuth organization-access guidance without navigating to GitHub or activating an association
+- **AND** it MUST NOT require or suggest personal GitHub App authorization as a substitute
 
-### Requirement: Setup Failures Distinguish Installation Access From Owner Authority
-When provider lookups succeed but the administrator's user token cannot access the exact installation, completion SHALL reject with HTTP 409 and `Reconnect GitHub, then retry installation verification`. When installation access is confirmed but active organization-owner membership or the expected organization identity cannot be confirmed, completion SHALL reject with HTTP 403 and `GitHub organization owner authority is required`. These messages SHALL preserve all existing authorization checks and MUST NOT activate or replace an association on failure. Reconnection is setup recovery guidance and MUST NOT be presented as a guaranteed remedy or a tracking-member prerequisite.
+### Requirement: Setup Failures Distinguish OAuth Organization Access From Installation Verification
+Setup SHALL distinguish OAuth organization-access recovery from GitHub App installation-verification failures. Missing usable OAuth read:org authorization SHALL return HTTP 409 with `Authorize GitHub organization access to set up the App`. Inactive or mismatched organization membership SHALL return HTTP 403 with `The selected organization is not an active organization for this GitHub account`. An installation belonging to a different selected organization SHALL return HTTP 403 with `GitHub installation does not belong to the selected organization`. Invalid App/installation context, missing installation permissions, or failed restricted-token minting MUST prevent activation or replacement of an association. Safe recovery MUST NOT require personal GitHub App authorization or organization-owner role, disclose credentials, or be presented as a tracking-member prerequisite.
 
-#### Scenario: User token cannot access the installed App
-- **GIVEN** provider lookups succeed but the exact installation is absent from the administrator's accessible installations
-- **WHEN** completion verifies setup authority
-- **THEN** it returns the HTTP 409 reconnect guidance
-- **AND** after reconnecting their GitHub account the administrator can retry `Install App` with fresh setup state to verify the existing installation
+#### Scenario: OAuth organization authorization is unavailable
+- **GIVEN** the administrator has no usable OAuth read:org grant
+- **WHEN** setup resolves the selected organization
+- **THEN** it returns the HTTP 409 OAuth organization-access guidance without activating or replacing an association
+- **AND** the administrator can authorize OAuth access and retry with fresh setup state
 
-#### Scenario: User can access the installation but lacks owner authority
-- **GIVEN** the exact installation is accessible but active owner membership or the expected organization identity does not match
-- **WHEN** completion verifies setup authority
-- **THEN** it returns the HTTP 403 owner-authority error
+#### Scenario: Selected organization membership is not active
+- **GIVEN** OAuth organization lookup succeeds but active membership or the expected organization login does not match
+- **WHEN** setup resolves the organization
+- **THEN** it returns the HTTP 403 active-organization error without creating or replacing an association
+
+#### Scenario: Installation organization identity does not match
+- **GIVEN** the supplied installation belongs to a different organization than the selected OAuth-verified organization
+- **WHEN** completion verifies the App installation
+- **THEN** it returns the HTTP 403 selected-organization error without activating or replacing an association
+
+#### Scenario: App verification failure retains safe recovery boundaries
+- **GIVEN** installation context, permissions or restricted-token minting cannot be verified
+- **WHEN** setup or completion fails
+- **THEN** it returns a safe installation-verification failure without activating or replacing an association
+- **AND** it does not suggest personal App authorization or organization-owner role as a substitute for required verification

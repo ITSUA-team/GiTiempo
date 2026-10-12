@@ -74,77 +74,60 @@ The system SHALL compare GitHub organization logins case-insensitively while pre
 
 ### Requirement: Workspace GitHub Organization Setup Requires Connected User Account
 
-The system SHALL expose workspace GitHub organization setup actions only when the current user has a connected GitHub account, while continuing to show existing workspace organization policy state when it can be loaded.
+Workspace organization setup SHALL require the current user's OAuth organization-discovery capability, independent of personal GitHub App authorization. Existing workspace policy SHALL remain visible under workspace permissions while personal authorization is unavailable.
 
-#### Scenario: Add organization is hidden before GitHub account connection
+#### Scenario: OAuth readiness exposes setup
+- **GIVEN** an admin has OAuth read:org access and workspace policy loaded successfully
+- **WHEN** organization setup is displayed
+- **THEN** Add organization SHALL be available under existing workspace permissions even without a personal App grant or installation
 
-- **GIVEN** the current user has no connected GitHub account
-- **WHEN** the user opens workspace GitHub organization policy management
-- **THEN** the `Add organization` setup action is not exposed
-- **AND** the user is told that a connected GitHub account is required before adding organizations
+#### Scenario: Missing OAuth permission offers recovery
+- **GIVEN** an admin is linked but lacks usable OAuth read:org access
+- **WHEN** organization setup is displayed
+- **THEN** the UI SHALL explain the required authorization and offer recovery
+- **AND** it MUST NOT submit an organization addition until the prerequisite is met
 
-#### Scenario: Add organization is hidden when connection status cannot be confirmed
+#### Scenario: Unknown connection status blocks setup
+- **GIVEN** connection status is loading or failed
+- **WHEN** organization setup is displayed
+- **THEN** Add organization MUST NOT submit requests
+- **AND** saved policy and independently loaded workspace settings SHALL remain visible
 
-- **WHEN** the current user's GitHub connection status is loading or failed to load
-- **THEN** workspace GitHub organization policy management does not expose the `Add organization` setup action
-- **AND** no organization add request is sent from that setup UI state
-
-#### Scenario: Existing policy remains visible while disconnected
-
-- **GIVEN** the current user's GitHub account is disconnected
-- **AND** the workspace has saved GitHub organization policy records
-- **WHEN** the user opens workspace GitHub organization policy management and policy data loads successfully
-- **THEN** the saved allowed organization logins remain visible
-- **AND** supported non-add management actions remain governed by the workspace policy response and the user's existing workspace permissions
-
-#### Scenario: Connected user can start organization setup
-
-- **GIVEN** the current user has a connected GitHub account
-- **AND** workspace GitHub organization policy data has loaded successfully
-- **WHEN** the user opens workspace GitHub organization policy management
-- **THEN** the `Add organization` setup action is exposed according to the existing workspace policy management rules
-- **AND** submitted organization additions continue to be validated by the backend against the user's GitHub provider access and workspace policy constraints
+#### Scenario: Disconnected policy management
+- **GIVEN** an admin has no active personal link
+- **WHEN** saved workspace policy is loaded
+- **THEN** existing organizations SHALL remain visible and removable under workspace authorization
+- **AND** adding SHALL require OAuth linking first
 
 ### Requirement: Adding Workspace GitHub Organizations Requires Connected Admin Account
 
-The system MUST require the requesting admin to have a usable connected GitHub account before adding a GitHub organization to the workspace allow-list, while keeping the policy itself workspace-owned.
+Adding a workspace GitHub organization SHALL require workspace admin authority and usable OAuth read:org membership access. The server SHALL validate active membership through that admin's OAuth account before saving the workspace-owned row. Missing App installation alone MUST NOT reject addition. Existing normalization, duplicate prevention and reference reconciliation SHALL remain in force.
 
-#### Scenario: Disconnected admin cannot add organization policy
+#### Scenario: OAuth membership validates addition before installation
+- **GIVEN** a workspace admin has OAuth-visible active membership in an organization with no GiTiempo App installation
+- **WHEN** the admin adds that organization
+- **THEN** the server SHALL validate membership with OAuth and save the policy row
+- **AND** it MUST NOT require App installation, auto-install an App, or authorize browsing/tracking by saving the row
 
-- **GIVEN** an authenticated admin has no usable connected GitHub account
-- **WHEN** the admin requests to add a GitHub organization to the current workspace policy
-- **THEN** the system MUST reject the request without saving a policy row
-- **AND** it MUST NOT call GitHub provider APIs with missing or invalid token material
-- **AND** the response MUST NOT expose GitHub access tokens, refresh tokens, or token secrets
+#### Scenario: Missing OAuth prevents writes
+- **GIVEN** an admin lacks usable OAuth authorization or effective read:org
+- **WHEN** the admin requests an addition
+- **THEN** the server SHALL reject without writing policy and return safe authorization recovery guidance
+- **AND** it MUST NOT call GitHub with missing or invalid token material
 
-#### Scenario: Connected admin adds organization through own provider access
+#### Scenario: Provider membership or policy denies addition
+- **GIVEN** OAuth cannot verify active membership or GitHub restricts access
+- **WHEN** an admin requests an addition
+- **THEN** the server MUST reject without saving a row
+- **AND** it SHALL distinguish membership, OAuth permission/policy and transient provider failures without exposing secrets
 
-- **GIVEN** an authenticated admin has a usable connected GitHub account
-- **WHEN** the admin requests to add a GitHub organization to the current workspace policy
-- **THEN** the system SHALL validate the organization through that admin's connected GitHub account before saving the policy row
-- **AND** the saved policy row remains owned by the workspace rather than by the admin's GitHub token
-- **AND** browsing and import still use each member's own provider access; installation-based timer access separately requires a verified installation link and GiTiempo tracking authorization
+#### Scenario: Read and removal need no personal connection
+- **GIVEN** an authenticated admin has no personal GitHub connection
+- **WHEN** the admin reads or removes existing policy
+- **THEN** the operation SHALL use existing workspace authorization without requiring GitHub provider access
 
-#### Scenario: Reading policy does not require connected GitHub account
-
-- **GIVEN** an authenticated admin has no usable connected GitHub account
-- **WHEN** the admin requests the current workspace GitHub organization policy
-- **THEN** the system SHALL return the workspace policy rows the admin is authorized to manage
-- **AND** it SHALL NOT require a GitHub provider call just to read saved policy rows
-
-#### Scenario: Removing policy does not require connected GitHub account
-
-- **GIVEN** an authenticated admin has no usable connected GitHub account
-- **AND** the current workspace has a saved GitHub organization policy row
-- **WHEN** the admin removes that policy row
-- **THEN** the system SHALL remove the row using workspace authorization
-- **AND** it SHALL NOT require a GitHub provider call just to remove the saved policy row
-
-#### Scenario: Recoverable add failures return safe recovery details
-
-- **GIVEN** an authenticated admin has a connected GitHub account
-- **AND** GitHub reports that the requested organization is unavailable, blocked, suspended, missing app installation, or otherwise not visible to that account
-- **WHEN** the admin requests to add that organization to the current workspace policy
-- **THEN** the system MUST reject the request without saving a policy row
-- **AND** the response SHALL include a stable recovery reason and ordered recovery steps when the failure is recoverable
-- **AND** the response MUST NOT expose GitHub token material or raw provider secrets
+#### Scenario: Policy remains a filter
+- **GIVEN** an organization has been added using OAuth
+- **WHEN** another member browses its data or starts an installation-backed timer
+- **THEN** each operation SHALL still enforce its existing provider credentials and workspace authorization
+- **AND** OAuth membership discovery MUST NOT replace installation verification

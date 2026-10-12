@@ -531,7 +531,8 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **GIVEN** the GitHub connection status API returns `status: "connected"`
 - **WHEN** the Profile page renders the GitHub connection card
 - **THEN** the card shows `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt` from the shared API contract
-- **AND** the card shows `Reconnect` and `Disconnect` actions
+- **AND** the card shows OAuth permission recovery and a separate personal App data authorization action according to their capabilities
+- **AND** it shows `Disconnect` with server-derived eligibility and guidance when another sign-in method is required
 - **AND** the card does not show fields outside the GitHub connection status contract as account metadata
 
 #### Scenario: Profile GitHub connected state omits null avatar
@@ -561,7 +562,7 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 
 - **GIVEN** the Profile page renders a disconnected or reconnectable GitHub connection card
 - **WHEN** the user activates `Connect GitHub` or `Reconnect`
-- **THEN** the page requests a GitHub authorization URL from the API
+- **THEN** the page requests an OAuth account-link authorization URL from the API with user:email, read:org and read:project
 - **AND** the card renders the redirecting/connecting state while the request is pending
 - **AND** the browser navigates to the returned authorization URL after the request succeeds
 - **AND** request failure is surfaced with an error toast and returns the card to a retryable state
@@ -571,11 +572,13 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **GIVEN** the Profile page renders a connected GitHub connection card
 - **WHEN** the user activates `Disconnect`
 - **THEN** the page asks for confirmation using the standard PrimeVue confirmation dialog pattern
-- **AND** accepting the confirmation calls the GitHub disconnect API
+- **AND** the confirmation explains removal of GitHub login and personal access while preserving workspace installations and historical data
+- **AND** accepting the confirmation calls the full GitHub disconnect API only when server-derived eligibility allows it
 - **AND** successful disconnect refetches `GET /github/connection` before settling the card state
 - **AND** the refreshed card settles to the disconnected state
 - **AND** successful disconnect shows a success toast notification
-- **AND** failed disconnect keeps the previous connection state and shows an error toast
+- **AND** rejected unlink keeps the previous connection state and shows an error toast
+- **AND** completed local unlink with unconfirmed provider revocation settles to disconnected and shows a safe warning
 
 #### Scenario: Profile GitHub connect request fails before redirect
 
@@ -676,6 +679,30 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **AND** the editable display-name surface is covered for save success, save failure, and cancel/reset behavior
 - **AND** page or composable tests cover loading, request-error, disconnected, connected, redirecting/connecting, callback success toast, callback error toast, callback-success-followed-by-fetch-failure, connect failure, disconnect success, and disconnect failure behavior
 - **AND** frontend lint and typecheck pass for user-web
+
+#### Scenario: OAuth login already linked the account
+- **GIVEN** the user successfully signed in through GitHub
+- **WHEN** Profile loads authoritative connection status
+- **THEN** the page SHALL display the linked identity without asking for duplicate account linking
+- **AND** it SHALL still distinguish missing OAuth permissions and missing personal App data authorization
+
+#### Scenario: Personal App authorization is a separate action
+- **GIVEN** an identity is linked but its personal App data grant is absent or invalid
+- **WHEN** the user chooses to enable GitHub data access
+- **THEN** the page SHALL start the existing App authorization flow
+- **AND** it SHALL explain that OAuth identity alone does not enable private browsing
+
+#### Scenario: Disconnect cannot remove the only login method
+- **GIVEN** server status reports alternative_signin_required or verification_unavailable
+- **WHEN** the user opens the GitHub card
+- **THEN** the page SHALL explain the required alternative login or retry action
+- **AND** it MUST NOT present full unlink as available until eligibility is verified
+
+#### Scenario: Missing OAuth project consent does not disable App Projects
+- **GIVEN** OAuth lacks read:project but the personal App grant permits Projects access
+- **WHEN** the UI renders GitHub controls
+- **THEN** the page SHALL offer OAuth permission recovery
+- **AND** it MUST NOT disable existing App-backed Projects solely because that OAuth scope is absent
 
 ### Requirement: Profile Account Card Renders Member Avatar
 
