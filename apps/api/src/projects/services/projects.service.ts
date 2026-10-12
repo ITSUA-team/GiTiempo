@@ -6,7 +6,17 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, eq, gte, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  gte,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import type {
   BackfillProjectBillableDefaultInput,
   CreateProjectAssignmentInput,
@@ -356,6 +366,15 @@ export class ProjectsService {
         .returning();
 
       if (!updated) throw new NotFoundException('Project not found');
+
+      if (input.isActive === false && project.isActive) {
+        await this.stopRunningEntriesForProject(
+          tx,
+          user.workspaceId,
+          project.id,
+          updated.updatedAt,
+        );
+      }
       return updated;
     });
 
@@ -699,6 +718,40 @@ export class ProjectsService {
       );
 
     return result.rowCount ?? 0;
+  }
+
+  private async stopRunningEntriesForProject(
+    db: UpdateCountExecutor,
+    workspaceId: string,
+    projectId: string,
+    archivedAt: Date,
+  ): Promise<void> {
+    const endedAt = sql<Date>`CASE
+      WHEN ${archivedAt}::timestamptz > ${timeEntries.startedAt}
+        THEN ${archivedAt}::timestamptz
+      ELSE ${timeEntries.startedAt} + interval '1 second'
+    END`;
+
+    await db
+      .update(timeEntries)
+      .set({
+        durationSeconds: sql<number>`GREATEST(
+          1,
+          FLOOR(EXTRACT(EPOCH FROM (${endedAt} - ${timeEntries.startedAt})))::integer
+        )`,
+        endedAt,
+        updatedAt: endedAt,
+      })
+      .from(tasks)
+      .where(
+        and(
+          eq(timeEntries.workspaceId, workspaceId),
+          eq(timeEntries.taskId, tasks.id),
+          eq(tasks.workspaceId, workspaceId),
+          eq(tasks.projectId, projectId),
+          isNull(timeEntries.endedAt),
+        ),
+      );
   }
 
   private visibleNonAdminProjectCondition(userId: string): SQL {
