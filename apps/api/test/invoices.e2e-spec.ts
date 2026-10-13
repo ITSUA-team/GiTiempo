@@ -1067,8 +1067,8 @@ describe('Invoices (e2e)', () => {
       expect(entry.description).toBeNull();
       expect(entry.taskId).toBe(PLATFORM_API_TASK_ID);
       expect(entry.userId).toBe(bobUserId);
-      expect(entry.userName).toBe('Bob Tester');
-      expect(entry.taskName).toBe('Platform API');
+      expect(entry.userName).toBe('Bob (seed)');
+      expect(entry.taskName).toBe('Set up API project foundation');
     }
 
     // Entries are ordered by startedAt.
