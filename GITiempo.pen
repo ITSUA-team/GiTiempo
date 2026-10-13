@@ -6733,7 +6733,7 @@
                           "type": "text",
                           "id": "DD5a1",
                           "fill": "$color-text-dark",
-                          "content": "$48,200",
+                          "content": "USD 48,200",
                           "fontFamily": "Inter",
                           "fontSize": 28,
                           "fontWeight": "600"
@@ -7312,7 +7312,7 @@
                                   "type": "text",
                                   "id": "r1c5T",
                                   "fill": "$color-text-dark",
-                                  "content": "$12,800",
+                                  "content": "USD 12,800",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "600"
@@ -7478,7 +7478,7 @@
                                   "type": "text",
                                   "id": "r2c5T",
                                   "fill": "$color-text-dark",
-                                  "content": "$8,500",
+                                  "content": "USD 8,500",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "600"
@@ -7644,7 +7644,7 @@
                                   "type": "text",
                                   "id": "r3c5T",
                                   "fill": "$color-text-dark",
-                                  "content": "$5,240",
+                                  "content": "USD 5,240",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "600"
@@ -8291,7 +8291,7 @@
                                       "type": "text",
                                       "id": "Kcbr2",
                                       "fill": "$color-text-dark",
-                                      "content": "$12,800",
+                                      "content": "USD 12,800",
                                       "fontFamily": "Inter",
                                       "fontSize": 14,
                                       "fontWeight": "700"
@@ -8345,7 +8345,7 @@
                                       "type": "text",
                                       "id": "pvHdrT",
                                       "fill": "$color-brand",
-                                      "content": "15 eligible entries · 120h · $12,800",
+                                      "content": "15 eligible entries · 120h · USD 12,800",
                                       "fontFamily": "Inter",
                                       "fontSize": 13,
                                       "fontWeight": "600"
@@ -9611,7 +9611,7 @@
                               "type": "text",
                               "id": "dtlSmRV",
                               "fill": "$color-text-dark",
-                              "content": "$120",
+                              "content": "USD 120",
                               "fontFamily": "Inter",
                               "fontSize": 14,
                               "fontWeight": "500"
@@ -9728,7 +9728,7 @@
                               "type": "text",
                               "id": "dtlSmTaV",
                               "fill": "$color-text-dark",
-                              "content": "$12,800",
+                              "content": "USD 12,800",
                               "fontFamily": "Inter",
                               "fontSize": 14,
                               "fontWeight": "700"
@@ -64744,7 +64744,7 @@
                       "id": "mInvSt2V",
                       "name": "stat value",
                       "fill": "$color-text-dark",
-                      "content": "$48k",
+                      "content": "USD 48k",
                       "fontFamily": "$font-sans",
                       "fontSize": 20,
                       "fontWeight": "600"
@@ -65031,7 +65031,7 @@
                       "id": "mInvCard1HA",
                       "name": "card hours amount",
                       "fill": "$color-text-dark",
-                      "content": "120h · $12,800",
+                      "content": "120h · USD 12,800",
                       "fontFamily": "$font-sans",
                       "fontSize": 13,
                       "fontWeight": "500"
@@ -65111,7 +65111,7 @@
                       "id": "mInvCard2HA",
                       "name": "card hours amount",
                       "fill": "$color-text-dark",
-                      "content": "85h · $8,500",
+                      "content": "85h · USD 8,500",
                       "fontFamily": "$font-sans",
                       "fontSize": 13,
                       "fontWeight": "500"
@@ -65191,7 +65191,7 @@
                       "id": "mInvCard3HA",
                       "name": "card hours amount",
                       "fill": "$color-text-dark",
-                      "content": "52h · $5,240",
+                      "content": "52h · USD 5,240",
                       "fontFamily": "$font-sans",
                       "fontSize": 13,
                       "fontWeight": "500"
@@ -65832,7 +65832,7 @@
                               "id": "mDtlGr2AV",
                               "name": "cell value",
                               "fill": "$color-text-dark",
-                              "content": "$120",
+                              "content": "USD 120",
                               "fontFamily": "$font-sans",
                               "fontSize": 13,
                               "fontWeight": "500"
@@ -65970,7 +65970,7 @@
                               "id": "mDtlGr4AV",
                               "name": "cell value",
                               "fill": "$color-text-dark",
-                              "content": "$12,800",
+                              "content": "USD 12,800",
                               "fontFamily": "$font-sans",
                               "fontSize": 13,
                               "fontWeight": "700"

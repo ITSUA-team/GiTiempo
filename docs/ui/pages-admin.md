@@ -58,6 +58,7 @@
   - "Open Invoices" = draft + sent count. Subtitle: "N ready to send" (draft count).
   - "Billed This Month" = sum of `totalAmount` for invoices created this month. Subtitle: "N invoices · M projects" (invoice count + distinct project count). Currency from workspace default. Totals are approximate if multiple currencies are present.
   - "Drafts" = draft count. Subtitle: "Ready for review".
+- Currency formatting: use `Intl.NumberFormat` with the `currency` field from the API response (e.g., `new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })`). Do not hardcode currency symbols — the workspace may use any 3-letter ISO 4217 currency code.
 
 ### Create dialog (modal)
 
