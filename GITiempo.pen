@@ -9700,6 +9700,33 @@
                               "fontWeight": "500"
                             }
                           ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "dtlUpd",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "dtlUpdL",
+                              "fill": "$color-text-muted",
+                              "content": "Last updated",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "dtlUpdV",
+                              "fill": "$color-text-dark",
+                              "content": "Apr 21, 2026",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
                         }
                       ]
                     }
@@ -65801,6 +65828,33 @@
                                   "id": "mDtlCBV",
                                   "fill": "$color-text-dark",
                                   "content": "Alex T.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mDtlUpd",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mDtlUpdL",
+                                  "fill": "$color-text-muted",
+                                  "content": "Last updated",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "mDtlUpdV",
+                                  "fill": "$color-text-dark",
+                                  "content": "Apr 21, 2026",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "500"
