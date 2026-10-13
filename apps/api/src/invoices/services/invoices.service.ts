@@ -263,9 +263,7 @@ export class InvoicesService {
    * get an approximate sum. The workspace default currency is returned for
    * display purposes.
    */
-  async getInvoiceStats(
-    user: AuthUser,
-  ): Promise<InvoiceStatsResponse> {
+  async getInvoiceStats(user: AuthUser): Promise<InvoiceStatsResponse> {
     const membership = await this.members.requireRole(
       user.sub,
       user.workspaceId,
@@ -284,9 +282,7 @@ export class InvoicesService {
     const currency = settings?.currency ?? 'USD';
 
     // Base condition: invoices in this workspace.
-    const baseConditions: SQL[] = [
-      eq(invoices.workspaceId, user.workspaceId),
-    ];
+    const baseConditions: SQL[] = [eq(invoices.workspaceId, user.workspaceId)];
 
     // PM visibility: only invoices for visible projects (same as list).
     let statusQuery = this.db
@@ -320,7 +316,11 @@ export class InvoicesService {
 
     const byStatus = { draft: 0, sent: 0, paid: 0 };
     for (const row of statusRows) {
-      if (row.status === 'draft' || row.status === 'sent' || row.status === 'paid') {
+      if (
+        row.status === 'draft' ||
+        row.status === 'sent' ||
+        row.status === 'paid'
+      ) {
         byStatus[row.status] = row.value;
       }
     }
@@ -328,7 +328,10 @@ export class InvoicesService {
     // This month: invoices created in the current calendar month.
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthConditions = [...baseConditions, gte(invoices.createdAt, monthStart)];
+    const monthConditions = [
+      ...baseConditions,
+      gte(invoices.createdAt, monthStart),
+    ];
 
     const [monthRow] = await this.db
       .select({
@@ -345,12 +348,7 @@ export class InvoicesService {
         projectCount: sql<number>`COUNT(DISTINCT ${invoices.projectId})`,
       })
       .from(invoices)
-      .where(
-        and(
-          ...monthConditions,
-          isNotNull(invoices.projectId),
-        ),
-      );
+      .where(and(...monthConditions, isNotNull(invoices.projectId)));
 
     if (isPm) {
       projectCountQuery = this.db

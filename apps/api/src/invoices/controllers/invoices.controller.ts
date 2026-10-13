@@ -69,7 +69,9 @@ export class InvoicesController {
 
   @Get('stats')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get invoice stats (counts by status, this month summary)' })
+  @ApiOperation({
+    summary: 'Get invoice stats (counts by status, this month summary)',
+  })
   @ApiOkResponse({ type: InvoiceStatsResponseDto })
   @ApiForbiddenResponse({ description: 'Admin or PM role required' })
   @ZodSerializerDto(InvoiceStatsResponseDto)
