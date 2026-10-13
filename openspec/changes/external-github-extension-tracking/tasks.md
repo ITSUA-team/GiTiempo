@@ -1,9 +1,11 @@
 ## 1. Docs and implementation preparation
 
-- [ ] 1.1 Read affected app AGENTS and UI guidance; map current project/task read, mutation, import, and report authorization callers before changing shared access helpers.
-- [ ] 1.2 Review the canonical baseline already synchronized from the 2026-10-12 archives of `require-project-assignment-for-saved-github-timers`, `unify-github-oauth-account-linking`, and `prepare-chrome-web-store-privacy`. Preserve managed authorization and account separation; apply the named saved-GitHub-task exception and privacy disclosure delta without rewriting archived artifacts.
-- [ ] 1.3 Inspect approved extension and user/admin screens and relevant landing privacy designs; record parity checklists and identify required workspace, context-loading, own-time, and capability states. Add no admin enablement toggle or Connect GitHub prerequisite.
-- [ ] 1.4 Update the affected `.pen` screens and component states in Pencil before frontend implementation, including desktop/mobile workspace context, loading/error states, own-time summaries, and capability-gated controls. Verify the updated designs against the approved product scope and UI guidance, and record the relevant file/frame IDs and parity checklists. Begin frontend implementation only after those designs are approved; implement against the updated `.pen` screens as the design source of truth.
+Evidence: [preparation and authorization map](preparation.md), [design parity and frame IDs](design-parity.md), [review PDF](design-review/export.pdf). Updated designs are review drafts; approval remains a prerequisite for frontend implementation.
+
+- [x] 1.1 Read affected app AGENTS and UI guidance; map current project/task read, mutation, import, and report authorization callers before changing shared access helpers.
+- [x] 1.2 Review the canonical baseline already synchronized from the 2026-10-12 archives of `require-project-assignment-for-saved-github-timers`, `unify-github-oauth-account-linking`, and `prepare-chrome-web-store-privacy`. Preserve managed authorization and account separation; apply the named saved-GitHub-task exception and privacy disclosure delta without rewriting archived artifacts.
+- [x] 1.3 Inspect approved extension and user/admin screens and relevant landing privacy designs; record parity checklists and identify required workspace, context-loading, own-time, and capability states. Add no admin enablement toggle or Connect GitHub prerequisite.
+- [x] 1.4 Update the affected `.pen` screens and component states in Pencil before frontend implementation, including desktop/mobile workspace context, loading/error states, own-time summaries, and capability-gated controls. Verify the updated designs against the approved product scope and UI guidance, and record the relevant file/frame IDs and parity checklists. Begin frontend implementation only after those designs are approved; implement against the updated `.pen` screens as the design source of truth.
 
 ## 2. Shared contracts
 
@@ -43,7 +45,7 @@
 
 ## 6. User-web
 
-- [ ] 6.1 Consume scoped contracts in project/task clients and render only returned projects/tasks, personal totals, and permitted source context; gate all shared-task controls on server capabilities.
+- [ ] 6.1 Consume scoped contracts in existing project/task views; add `External` tags and an own-time-only `?` tooltip with hover/focus/touch support, without new routes or parallel views. Render only returned projects/tasks, scoped totals, and permitted source context; gate all shared-task controls on server capabilities.
 - [ ] 6.2 Update Projects, top-bar pickers, manual-entry selectors, Dashboard/history repeat starts, and direct routes to preserve own-time scope without fetching hidden siblings.
 - [ ] 6.3 Invalidate affected project/task/detail/picker state after start/delete/move and refresh on navigation/refocus for extension or other-tab changes; clear stale wider-scope data and selections.
 - [ ] 6.4 Verify running-entry visibility, final-entry disappearance, stale direct routes, safe repeat starts, and no peer data or management controls across desktop/mobile approved states.

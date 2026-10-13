@@ -1,5 +1,30 @@
 ## ADDED Requirements
 
+### Requirement: External Items Reuse Existing Views
+External-reference projects and tasks SHALL use the existing Projects sections, task rows/cards, dialogs and selectors. The UI SHALL add a compact `External` tag based on server-owned tracking policy without introducing external-only pages, routes, navigation sections, or parallel view components. Existing capability and data-scope restrictions SHALL still apply within those components.
+
+#### Scenario: Managed and external projects share the Projects page
+- **GIVEN** the server returns both managed and external-reference projects
+- **WHEN** the member opens the existing Projects page
+- **THEN** both use the existing project-section and task row/card structure
+- **AND** only external-reference projects and tasks carry the `External` tag
+- **AND** no separate external-project or external-task view is required.
+
+#### Scenario: Own-time project explains its scope with contextual help
+- **GIVEN** an external-reference project has `accessScope: "own-time"`
+- **WHEN** its existing Projects card or section renders
+- **THEN** a `?` help control explains `You can only see your own time and tasks with your time entries.`
+- **AND** the explanation is available on hover, keyboard focus, and tap/click with an accessible control name
+- **AND** Escape or outside interaction dismisses the explanation
+- **AND** it does not require a dedicated page or permanent explanatory panel.
+
+#### Scenario: Full project access does not show an own-time-only explanation
+- **GIVEN** an external-reference project has `accessScope: "project"`
+- **WHEN** an administrator or separately authorized member views it
+- **THEN** its `External` tag remains visible
+- **AND** the UI does not claim that only the viewer's own time is visible
+- **AND** the existing view follows the server-provided scope and capabilities.
+
 ### Requirement: User Projects List Enforces Own-Time Scope
 The user Projects page SHALL render the server-authorized project and task collection only. For an external-reference project returned with `accessScope: "own-time"`, it SHALL show only the member's project/tasks that have own time entries, including a running entry, and SHALL treat that scope as read-only for shared project data.
 

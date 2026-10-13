@@ -72,6 +72,10 @@ Reuse task billing defaults and workspace/project initialization conventions. Pr
 
 ### 4. Separate personal read scope from management scope
 
+Reuse existing Projects, task rows/cards/dialogs, timer/manual-entry pickers, Dashboard/history, and admin views. Do not introduce external-only routes, pages, navigation sections, or parallel view components. Add a compact `External` tag to external-reference projects and tasks within the current components. The tag describes stored project policy, not the caller's access scope, and must not be inferred merely from a GitHub source or missing connection.
+
+On the existing Projects card/section, an external project with `accessScope: own-time` has a `?` help control. Its tooltip says: `You can only see your own time and tasks with your time entries.` Show it on hover and keyboard focus, and allow tap/click on touch devices; provide an accessible name and dismiss it with Escape or outside interaction. Do not show this restrictive explanation for `accessScope: project`, including full-access admins. Keep scoped totals and capability-gated controls in the existing layout; no separate own-time page heading, permanent explanatory panel, or dedicated picker is needed.
+
 Resolve access centrally into `project` (existing full project-read authority), `own-time`, or denied. Administrators retain all workspace projects, including inactive ones. Existing explicit assignments grant only their established role capabilities. An unassigned PM gains no management or peer-record access merely by tracking.
 
 For an active external-reference project without separate project access, an own entry in any of its tasks grants `own-time` project reads. A task is readable in that scope only when that caller has an entry for that exact task. A running entry counts. Project existence and project-name matching do not authorize its other tasks.
