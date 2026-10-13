@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import Column from "primevue/column";
 import Tag from "primevue/tag";
-import { PlusIcon } from "@heroicons/vue/24/outline";
+import { PlusIcon, QuestionMarkCircleIcon } from "@heroicons/vue/24/outline";
+import Button from "primevue/button";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   EntryActionButton,
   ManagementTableEmptyState,
@@ -41,6 +43,13 @@ const emit = defineEmits<{
 
 const statusColumnWidth = "8.125rem";
 const updatedColumnWidth = "10.625rem";
+const ownTimeHelpText =
+  "You can only see your own time and tasks with your time entries.";
+const ownTimeHelpId = computed(
+  () => `own-time-project-help-${props.project.id}`,
+);
+const isOwnTimeHelpOpen = ref(false);
+const ownTimeHelpContainer = ref<HTMLElement | null>(null);
 
 const columns = [
   { key: "task", label: "Task", width: "fill" },
@@ -107,6 +116,42 @@ function getTimerActionTarget(task: TaskResponse) {
   };
 }
 
+function canManageTask(task: TaskResponse): boolean {
+  return task.capabilities.canManageTasks;
+}
+
+function openOwnTimeHelp(): void {
+  isOwnTimeHelpOpen.value = true;
+}
+
+function closeOwnTimeHelp(): void {
+  isOwnTimeHelpOpen.value = false;
+}
+
+function handleOwnTimeHelpKeydown(event: KeyboardEvent): void {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeOwnTimeHelp();
+  }
+}
+
+function handleDocumentPointerDown(event: PointerEvent): void {
+  if (
+    ownTimeHelpContainer.value &&
+    !ownTimeHelpContainer.value.contains(event.target as Node)
+  ) {
+    closeOwnTimeHelp();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener("pointerdown", handleDocumentPointerDown);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("pointerdown", handleDocumentPointerDown);
+});
+
 function handleTimerAction(task: TaskResponse): void {
   if (isTimerOperationPending()) {
     return;
@@ -133,12 +178,47 @@ function handleTimerAction(task: TaskResponse): void {
         <h2 class="text-text-dark truncate text-base font-semibold">
           {{ props.project.name }}
         </h2>
+        <Tag
+          v-if="props.project.trackingMode === 'external-reference'"
+          value="External"
+          :pt="{ root: 'bg-divider rounded-sm px-2 py-1', label: 'text-text-muted text-xs font-semibold' }"
+        />
+        <div
+          v-if="props.project.accessScope === 'own-time'"
+          ref="ownTimeHelpContainer"
+          class="relative"
+          @mouseenter="openOwnTimeHelp"
+          @mouseleave="closeOwnTimeHelp"
+        >
+          <Button
+            :aria-describedby="isOwnTimeHelpOpen ? ownTimeHelpId : undefined"
+            :aria-expanded="isOwnTimeHelpOpen"
+            :aria-label="ownTimeHelpText"
+            severity="secondary"
+            text
+            rounded
+            :pt="{ root: 'size-5 p-0 text-text-muted' }"
+            @click="openOwnTimeHelp"
+            @focus="openOwnTimeHelp"
+            @focusout="closeOwnTimeHelp"
+            @keydown="handleOwnTimeHelpKeydown"
+          >
+            <QuestionMarkCircleIcon class="size-4" />
+          </Button>
+          <span
+            v-if="isOwnTimeHelpOpen"
+            :id="ownTimeHelpId"
+            role="tooltip"
+            class="bg-text-dark text-surface-primary absolute top-6 left-0 z-10 w-60 rounded-md px-3 py-2 text-xs leading-5 shadow-lg"
+          >{{ ownTimeHelpText }}</span>
+        </div>
         <p class="text-text-muted text-xs">
           {{ formatTaskCount(props.tasks.length) }}
         </p>
       </div>
 
       <EntryActionButton
+        v-if="props.project.capabilities.canManageTasks"
         data-testid="project-section-add-task"
         :icon="PlusIcon"
         label="Add task"
@@ -162,10 +242,21 @@ function handleTimerAction(task: TaskResponse): void {
           >
             <div class="flex max-w-full min-w-0 items-center gap-2">
               <TaskNameLink
+                v-if="canManageTask(task)"
                 :label="task.title"
                 :open-label="`Edit task ${task.title}`"
                 test-id="project-task-mobile-title"
                 @open="emit('editTask', task)"
+              />
+              <span
+                v-else
+                class="text-text-dark truncate text-sm font-medium"
+                data-testid="project-task-mobile-title"
+              >{{ task.title }}</span>
+              <Tag
+                v-if="props.project.trackingMode === 'external-reference'"
+                value="External"
+                :pt="{ root: 'bg-divider shrink-0 rounded-sm px-1.5 py-0.5', label: 'text-text-muted text-[11px] font-semibold' }"
               />
               <TaskGitHubIssueLink
                 v-if="task.githubIssue"
@@ -242,10 +333,21 @@ function handleTimerAction(task: TaskResponse): void {
               @trigger="() => handleTimerAction(slotProps.data)"
             />
             <TaskNameLink
+              v-if="canManageTask(slotProps.data)"
               :label="slotProps.data.title"
               :open-label="`Edit task ${slotProps.data.title}`"
               test-id="project-task-title"
               @open="emit('editTask', slotProps.data)"
+            />
+            <span
+              v-else
+              class="text-text-dark truncate text-sm font-medium"
+              data-testid="project-task-title"
+            >{{ slotProps.data.title }}</span>
+            <Tag
+              v-if="props.project.trackingMode === 'external-reference'"
+              value="External"
+              :pt="{ root: 'bg-divider shrink-0 rounded-sm px-1.5 py-0.5', label: 'text-text-muted text-[11px] font-semibold' }"
             />
             <TaskGitHubIssueLink
               v-if="slotProps.data.githubIssue"

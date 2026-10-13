@@ -29,6 +29,8 @@ function createProject(
   overrides: Partial<ProjectResponse> = {},
 ): ProjectResponse {
   return {
+    accessScope: 'project',
+    capabilities: { canManageTasks: true },
     color: null,
     createdAt: '2026-05-01T10:00:00.000Z',
     description: null,
@@ -37,6 +39,8 @@ function createProject(
     members,
     name,
     source: 'manual',
+    referenceProvenance: null,
+    trackingMode: 'managed',
     totalSeconds: 3600,
     updatedAt: '2026-05-01T10:00:00.000Z',
     visibility: 'public',

@@ -177,6 +177,7 @@ const {
 } = display;
 const {
   handleDialogTaskSearch,
+  canCreateDialogTask,
   isDeletingDialogEntry,
   isSavingDialogFlow,
   openCreateDialog,
@@ -352,6 +353,7 @@ onMounted(async () => {
     </template>
 
     <TimeEntryDialog
+      :can-create-task="canCreateDialogTask"
       :dialog-error-message="dialogRequestErrorMessage"
       :ended-at="dialogEndedAt"
       :errors="dialogErrors"

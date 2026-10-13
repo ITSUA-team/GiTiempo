@@ -1,9 +1,23 @@
-import { z } from "zod";
-import { githubRepoKeySchema } from "./github.js";
-import { workspaceRoleSchema } from "./workspace-members.js";
+import { z } from 'zod';
+import { githubRepoKeySchema } from './github.js';
+import { workspaceRoleSchema } from './workspace-members.js';
 
-export const projectVisibilitySchema = z.enum(["public", "private"]);
-export const projectSourceSchema = z.enum(["manual", "github"]);
+export const projectVisibilitySchema = z.enum(['public', 'private']);
+export const projectSourceSchema = z.enum(['manual', 'github']);
+export const projectTrackingModeSchema = z.enum([
+  'managed',
+  'external-reference',
+]);
+export const referenceProvenanceSchema = z.enum([
+  'provider-verified',
+  'user-supplied',
+]);
+export const projectAccessScopeSchema = z.enum(['project', 'own-time']);
+
+/** Server-computed permissions for operations against a project. */
+export const projectCapabilitiesSchema = z.object({
+  canManageTasks: z.boolean(),
+});
 
 const projectDescriptionSchema = z.string().max(2000).nullable();
 
@@ -24,6 +38,10 @@ export const projectResponseSchema = z.object({
   visibility: projectVisibilitySchema,
   defaultBillableForTasks: z.boolean(),
   source: projectSourceSchema,
+  trackingMode: projectTrackingModeSchema,
+  referenceProvenance: referenceProvenanceSchema.nullable(),
+  accessScope: projectAccessScopeSchema,
+  capabilities: projectCapabilitiesSchema,
   totalSeconds: z.number().int().min(0),
   members: z.array(projectMemberSchema),
   isActive: z.boolean(),
@@ -56,7 +74,7 @@ export const projectAssignedMembersSummarySchema = z.object({
 export const projectDetailResponseSchema = projectResponseSchema.extend({
   providerSummary: projectProviderSummarySchema,
   trackedSummary: projectTrackedSummarySchema,
-  assignedMembersSummary: projectAssignedMembersSummarySchema,
+  assignedMembersSummary: projectAssignedMembersSummarySchema.nullable(),
 });
 
 export const managementProjectSummaryResponseSchema = z.object({
@@ -108,7 +126,7 @@ export const updateProjectSchema = z
       data.defaultBillableForTasks !== undefined ||
       data.isActive !== undefined,
     {
-      message: "At least one field must be provided",
+      message: 'At least one field must be provided',
       path: [],
     },
   );
@@ -119,10 +137,13 @@ export const backfillProjectBillableDefaultSchema = z
     updateTimeEntries: z.boolean().optional(),
   })
   .strict()
-  .refine((data) => data.updateTasks === true || data.updateTimeEntries === true, {
-    message: "At least one existing record type must be selected",
-    path: [],
-  });
+  .refine(
+    (data) => data.updateTasks === true || data.updateTimeEntries === true,
+    {
+      message: 'At least one existing record type must be selected',
+      path: [],
+    },
+  );
 
 export const projectBillableDefaultBackfillResponseSchema = z.object({
   tasksUpdated: z.number().int().min(0),
@@ -181,11 +202,11 @@ export const importedGitHubProjectSchema = z.object({
   linkedRepository: z.string().nullable(),
   projectId: z.uuid().nullable(),
   status: z.enum([
-    "imported",
-    "already-imported",
-    "repository-taken",
-    "name-taken",
-    "failed",
+    'imported',
+    'already-imported',
+    'repository-taken',
+    'name-taken',
+    'failed',
   ]),
   message: z.string().nullable(),
   trackingProject: trackingProjectSchema.nullable().default(null),
@@ -209,7 +230,7 @@ export const projectGitHubProjectListResponseSchema = z.object({
 export const importedGitHubRepositorySchema = z.object({
   githubRepo: z.string(),
   projectId: z.uuid().nullable(),
-  status: z.enum(["imported", "already-imported", "failed"]),
+  status: z.enum(['imported', 'already-imported', 'failed']),
   message: z.string().nullable(),
 });
 
@@ -223,7 +244,7 @@ export const projectGitHubRepositoryListResponseSchema = z.object({
       githubRepo: z.string(),
       projectId: z.uuid(),
       projectIsActive: z.boolean(),
-      projectName: z.string().default(""),
+      projectName: z.string().default(''),
     }),
   ),
 });
@@ -236,23 +257,21 @@ export const createProjectAssignmentSchema = z
 
 export type ProjectMember = z.infer<typeof projectMemberSchema>;
 export type ProjectResponse = z.infer<typeof projectResponseSchema>;
-export type ProjectListResponse = z.infer<
-  typeof projectListResponseSchema
->;
+export type ProjectListResponse = z.infer<typeof projectListResponseSchema>;
 export type ProjectProviderSummary = z.infer<
   typeof projectProviderSummarySchema
 >;
-export type ProjectTrackedSummary = z.infer<
-  typeof projectTrackedSummarySchema
->;
+export type ProjectTrackedSummary = z.infer<typeof projectTrackedSummarySchema>;
 export type ProjectAssignedMembersSummary = z.infer<
   typeof projectAssignedMembersSummarySchema
 >;
-export type ProjectDetailResponse = z.infer<
-  typeof projectDetailResponseSchema
->;
+export type ProjectDetailResponse = z.infer<typeof projectDetailResponseSchema>;
 export type ProjectVisibility = z.infer<typeof projectVisibilitySchema>;
 export type ProjectSource = z.infer<typeof projectSourceSchema>;
+export type ProjectTrackingMode = z.infer<typeof projectTrackingModeSchema>;
+export type ReferenceProvenance = z.infer<typeof referenceProvenanceSchema>;
+export type ProjectAccessScope = z.infer<typeof projectAccessScopeSchema>;
+export type ProjectCapabilities = z.infer<typeof projectCapabilitiesSchema>;
 export type ManagementProjectSummaryResponse = z.infer<
   typeof managementProjectSummaryResponseSchema
 >;

@@ -7,6 +7,7 @@ import type {
   TimeEntryResponse,
 } from '@gitiempo/shared';
 import { ApiError } from '@gitiempo/web-shared/http';
+import { focusManager } from '@tanstack/vue-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
 
@@ -49,6 +50,8 @@ function createProject(
   defaultBillableForTasks = true,
 ): ProjectResponse {
   return {
+    accessScope: 'project',
+    capabilities: { canManageTasks: true },
     color: null,
     createdAt: '2026-04-20T12:00:00.000Z',
     defaultBillableForTasks,
@@ -58,6 +61,8 @@ function createProject(
     members: [],
     name,
     source: 'manual',
+    referenceProvenance: null,
+    trackingMode: 'managed',
     totalSeconds: 43200,
     updatedAt: '2026-04-20T12:00:00.000Z',
     visibility: 'public',
@@ -74,6 +79,8 @@ function createTask(
   defaultBillableForTimeEntries = true,
 ): TaskResponse {
   return {
+    accessScope: 'project',
+    capabilities: { canManageTasks: true },
     createdAt: '2026-04-20T12:00:00.000Z',
     defaultBillableForTimeEntries,
     githubIssue: null,
@@ -325,6 +332,7 @@ describe('useTopBarTimer', () => {
 
     vi.restoreAllMocks();
     vi.useRealTimers();
+    focusManager.setFocused(undefined);
   });
 
   it('loads the current running timer and exposes popup stop state', async () => {
@@ -418,6 +426,53 @@ describe('useTopBarTimer', () => {
       taskTitle: 'Improve reports filters',
     });
     expect(client.listOwnEntries).toHaveBeenCalledWith({ limit: 1 });
+  });
+
+  it('clears a stale GitHub last-task context after window refocus removes its final own entry', async () => {
+    const client = createClientMock();
+    const githubIssue = {
+      githubRepo: 'My-test-org-for-clock/external-test-repo',
+      issueNumber: 901,
+    };
+
+    client.listOwnEntries
+      .mockResolvedValueOnce(
+        createOwnEntriesResponse([
+          createCompletedEntry({ githubIssue }),
+        ]),
+      )
+      .mockResolvedValueOnce(createOwnEntriesResponse([]));
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'External repository'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      {
+        ...createTask(TEST_IDS.task, TEST_IDS.project, 'External issue'),
+        githubIssue,
+      },
+    ]);
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+
+    expect(topBarTimer.timerGitHubIssue.value).toEqual(githubIssue);
+    expect(topBarTimer.selectedContext.value?.taskId).toBe(TEST_IDS.task);
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await flushPromises();
+
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
+    expect(topBarTimer.selectedContext.value).toBeNull();
+    expect(topBarTimer.timerGitHubIssue.value).toBeNull();
+    expect(topBarTimer.timerTaskLabel.value).toBe(
+      'Choose a visible project and task.',
+    );
   });
 
   it('loads GitHub issues for a GitHub project and materializes the selected issue before start', async () => {

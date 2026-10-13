@@ -4,7 +4,7 @@ import {
   type TimeEntryResponse,
 } from "@gitiempo/shared";
 import type { ConfirmLike, ToastLike } from "@gitiempo/web-shared";
-import { computed, type ComputedRef } from "vue";
+import { computed, watch, type ComputedRef } from "vue";
 
 import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
@@ -63,6 +63,42 @@ export function useTimeEntryDialogWorkflow({
   const isSavingDialogFlow = computed(
     () => mutations.isSavingDialog.value || taskCreation.isCreatingTask.value,
   );
+  const canCreateDialogTask = computed(() => {
+    const projectId = dialog.dialogProjectId.value;
+
+    return visibleProjects.value.some(
+      (project) =>
+        project.id === projectId && project.capabilities.canManageTasks,
+    );
+  });
+
+  function refreshDialogTaskSuggestions(query = ""): void {
+    dialog.updateTaskSuggestions(
+      query,
+      undefined,
+      canCreateDialogTask.value,
+    );
+  }
+
+  function clearUnauthorizedNewTaskSelection(): void {
+    if (canCreateDialogTask.value || !isNewTaskLookupOption(dialog.dialogTaskValue.value)) {
+      return;
+    }
+
+    dialog.setTaskValue(null);
+    dialog.setNewTaskTitle("");
+  }
+
+  watch(
+    [() => dialog.dialogProjectId.value, canCreateDialogTask],
+    () => {
+      clearUnauthorizedNewTaskSelection();
+
+      if (dialog.dialogProjectId.value) {
+        refreshDialogTaskSuggestions();
+      }
+    },
+  );
 
   async function loadDialogProjectTasks(projectId: string) {
     return taskOptions.loadTargetProjectTaskOptions(projectId, dialog, {
@@ -81,7 +117,7 @@ export function useTimeEntryDialogWorkflow({
       const tasks = await loadDialogProjectTasks(projectId);
 
       if (dialog.dialogProjectId.value === projectId) {
-        dialog.updateTaskSuggestions("", tasks);
+        dialog.updateTaskSuggestions("", tasks, canCreateDialogTask.value);
       }
     } catch {
       // Dialog keeps the request error visible for retryable correction.
@@ -89,6 +125,13 @@ export function useTimeEntryDialogWorkflow({
   }
 
   function setDialogTaskValue(value: TaskLookupValue): void {
+    if (isNewTaskLookupOption(value) && !canCreateDialogTask.value) {
+      dialog.setTaskValue(null);
+      dialog.setNewTaskTitle("");
+      refreshDialogTaskSuggestions();
+      return;
+    }
+
     dialog.setTaskValue(value);
 
     if (dialog.dialogMode.value === "create" && isNewTaskLookupOption(value)) {
@@ -99,7 +142,7 @@ export function useTimeEntryDialogWorkflow({
   }
 
   function handleDialogTaskSearch(query: string): void {
-    dialog.updateTaskSuggestions(query);
+    refreshDialogTaskSuggestions(query);
   }
 
   async function openCreateDialog(day: string | null = null): Promise<void> {
@@ -127,7 +170,7 @@ export function useTimeEntryDialogWorkflow({
           title: entry.task.title,
         },
       );
-      dialog.updateTaskSuggestions("", options);
+      dialog.updateTaskSuggestions("", options, canCreateDialogTask.value);
     } catch {
       dialog.setTaskFromEntryFallback(entry);
     }
@@ -195,6 +238,7 @@ export function useTimeEntryDialogWorkflow({
 
   return {
     handleDialogTaskSearch,
+    canCreateDialogTask,
     isDeletingDialogEntry: deleteConfirmation.isDeletingDialogEntry,
     isSavingDialogFlow,
     openCreateDialog,

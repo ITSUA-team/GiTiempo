@@ -182,6 +182,8 @@ export function useTopBarTaskOptions({
       }
 
       const options: TopBarTaskOption[] = result.issues.map((issue) => ({
+        accessScope: "project",
+        capabilities: { canManageTasks: true },
         createdAt: issue.updatedAt,
         defaultBillableForTimeEntries: true,
         githubIssue: issue.githubIssue,
@@ -303,6 +305,8 @@ export function useTopBarTaskOptions({
         }
 
         return {
+          accessScope: project.accessScope,
+          capabilities: project.capabilities,
           createdAt: issue.updatedAt,
           defaultBillableForTimeEntries: project.defaultBillableForTasks,
           githubIssue: issue.githubIssue,

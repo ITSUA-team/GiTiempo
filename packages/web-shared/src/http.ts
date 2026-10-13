@@ -1,5 +1,7 @@
 import type { ZodType } from "zod";
 
+import { SessionContextChangedError } from "./auth/session-context-changed-error";
+
 interface RequestJsonOptions<TResponse> {
   accessToken?: string;
   apiBaseUrl?: string;
@@ -246,7 +248,8 @@ export function createAuthenticatedApiClient({
 
   async function request(options: ApiRequestOptions): Promise<Response> {
     const auth = options.auth !== false;
-    const response = await sendRequest(options, auth ? getToken() : null);
+    const initialToken = auth ? getToken() : null;
+    const response = await sendRequest(options, initialToken);
 
     if (!auth || response.status !== 401) {
       if (!response.ok) {
@@ -262,11 +265,14 @@ export function createAuthenticatedApiClient({
       throw initialError;
     }
 
+    if (getToken() !== initialToken) throw new SessionContextChangedError();
+
     let nextToken: string | null | undefined;
 
     try {
       nextToken = await refreshOnce();
-    } catch {
+    } catch (error) {
+      if (error instanceof SessionContextChangedError) throw error;
       await handleRefreshFailure();
       throw new Error("Your session has expired. Please sign in again.");
     }
@@ -276,8 +282,10 @@ export function createAuthenticatedApiClient({
       throw new Error("Your session has expired. Please sign in again.");
     }
 
+    if (getToken() !== nextToken) throw new SessionContextChangedError();
     const retryResponse = await sendRequest(options, nextToken);
 
+    if (getToken() !== nextToken) throw new SessionContextChangedError();
     if (!retryResponse.ok) {
       const error = await createResponseError(retryResponse);
       if (retryResponse.status === 401 && error.code !== "github_authorization_required") {

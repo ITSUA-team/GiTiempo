@@ -1,4 +1,4 @@
-import type { UserResponse } from "@gitiempo/shared";
+import type { TokenPairResponse, UserResponse } from "@gitiempo/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,6 +7,7 @@ import {
   setRefreshToken,
 } from "../session-storage";
 import { createAuthSessionCore } from "./session-core";
+import { SessionContextChangedError } from "./session-context-changed-error";
 import type { AuthRuntime } from "./runtime";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
@@ -70,9 +71,147 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+const oldPair: TokenPairResponse = {
+  accessToken: "old-access",
+  refreshToken: "old-refresh",
+  accessTokenExpiresIn: 900,
+};
+const newPair: TokenPairResponse = {
+  accessToken: "new-access",
+  refreshToken: "new-refresh",
+  accessTokenExpiresIn: 900,
+};
+
 describe("createAuthSessionCore", () => {
   beforeEach(() => {
     clearRefreshToken();
+  });
+
+  it.each(["logout", "login", "workspace"] as const)(
+    "rejects an old refresh after %s without replacing the current session",
+    async (transition) => {
+      const pending = deferred<TokenPairResponse>();
+      const runtime = createRuntimeMock({ refreshSession: () => pending.promise });
+      const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+      await session.establishSessionFromTokenPair(oldPair);
+      const refresh = session.refreshAccessToken();
+      const rejected = expect(refresh).rejects.toBeInstanceOf(SessionContextChangedError);
+      if (transition === "logout") await session.logout();
+      if (transition === "login") await session.establishSessionFromTokenPair(newPair);
+      if (transition === "workspace") await session.switchWorkspace("other-workspace");
+      const expectedAccess = session.accessToken.value;
+      const expectedRefresh = getRefreshToken();
+      const expectedProfile = session.profile.value;
+      pending.resolve({ ...oldPair, accessToken: "late-access", refreshToken: "late-refresh" });
+      await rejected;
+      expect(session.accessToken.value).toBe(expectedAccess);
+      expect(getRefreshToken()).toBe(expectedRefresh);
+      expect(session.profile.value).toBe(expectedProfile);
+      if (transition === "logout") expect(session.isAuthenticated.value).toBe(false);
+    },
+  );
+
+  it.each(["logout", "login", "workspace"] as const)(
+    "does not clear the current session when an old refresh fails after %s",
+    async (transition) => {
+      const pending = deferred<TokenPairResponse>();
+      const session = createAuthSessionCore({
+        getAuthRuntime: () => createRuntimeMock({ refreshSession: () => pending.promise }),
+      });
+      await session.establishSessionFromTokenPair(oldPair);
+      const rejected = expect(session.refreshAccessToken()).rejects.toBeInstanceOf(SessionContextChangedError);
+      if (transition === "logout") await session.logout();
+      if (transition === "login") await session.establishSessionFromTokenPair(newPair);
+      if (transition === "workspace") await session.switchWorkspace("other-workspace");
+      const expectedAccess = session.accessToken.value;
+      const expectedRefresh = getRefreshToken();
+      const expectedProfile = session.profile.value;
+      pending.reject(new Error("old refresh revoked"));
+      await rejected;
+      expect(session.accessToken.value).toBe(expectedAccess);
+      expect(getRefreshToken()).toBe(expectedRefresh);
+      expect(session.profile.value).toBe(expectedProfile);
+    },
+  );
+
+  it.each(["success", "failure"] as const)(
+    "preserves a new login when the previous bootstrap completes with %s",
+    async (outcome) => {
+      setRefreshToken(oldPair.refreshToken);
+      const pending = deferred<TokenPairResponse>();
+      const session = createAuthSessionCore({
+        getAuthRuntime: () => createRuntimeMock({ refreshSession: () => pending.promise }),
+      });
+      const bootstrap = session.bootstrapSession();
+      await session.establishSessionFromTokenPair(newPair);
+      if (outcome === "success") pending.resolve(oldPair);
+      else pending.reject(new Error("old bootstrap revoked"));
+      await bootstrap;
+      expect(session.accessToken.value).toBe(newPair.accessToken);
+      expect(getRefreshToken()).toBe(newPair.refreshToken);
+      expect(session.profile.value?.email).toBe("alexey@example.com");
+    },
+  );
+
+  it("clears locally before waiting for the logout endpoint", async () => {
+    const pendingLogout = deferred<void>();
+    const pendingRefresh = deferred<TokenPairResponse>();
+    const session = createAuthSessionCore({ getAuthRuntime: () => createRuntimeMock({
+      logoutSession: () => pendingLogout.promise,
+      refreshSession: () => pendingRefresh.promise,
+    }) });
+    await session.establishSessionFromTokenPair(oldPair);
+    const rejected = expect(session.refreshAccessToken()).rejects.toBeInstanceOf(SessionContextChangedError);
+    const logout = session.logout();
+    expect(session.accessToken.value).toBeNull();
+    pendingRefresh.resolve(oldPair);
+    await rejected;
+    expect(getRefreshToken()).toBeNull();
+    pendingLogout.resolve();
+    await logout;
+  });
+
+  it("does not sign out a new identity when an earlier logout finishes", async () => {
+    const pendingLogout = deferred<void>();
+    const signOutIdentityProvider = vi.fn(async () => undefined);
+    const session = createAuthSessionCore({ getAuthRuntime: () => createRuntimeMock({
+      logoutSession: () => pendingLogout.promise,
+      signOutIdentityProvider,
+    }) });
+    await session.establishSessionFromTokenPair(oldPair);
+    const logout = session.logout();
+    await session.loginWithFirebaseToken("new-firebase-login");
+    pendingLogout.resolve();
+    await logout;
+    expect(signOutIdentityProvider).not.toHaveBeenCalled();
+    expect(session.accessToken.value).toBe("access-token");
+    expect(getRefreshToken()).toBe("refresh-token-next");
+  });
+
+  it("does not restore an old profile after a new login", async () => {
+    const pendingProfile = deferred<UserResponse>();
+    const runtime = createRuntimeMock();
+    const currentUser = await runtime.getCurrentUser("fixture");
+    runtime.getCurrentUser = vi.fn()
+      .mockReturnValueOnce(pendingProfile.promise)
+      .mockResolvedValue({ ...currentUser, id: "new-user", email: "new@example.com" });
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+    const rejected = expect(session.establishSessionFromTokenPair(oldPair)).rejects.toBeInstanceOf(SessionContextChangedError);
+    await session.establishSessionFromTokenPair(newPair);
+    pendingProfile.resolve(currentUser);
+    await rejected;
+    expect(session.profile.value?.email).toBe("new@example.com");
+    expect(session.accessToken.value).toBe(newPair.accessToken);
   });
 
   it("restores and rotates a persisted refresh token", async () => {

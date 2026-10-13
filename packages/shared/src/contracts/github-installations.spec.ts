@@ -36,6 +36,8 @@ describe('installation and tracking contracts', () => {
       startTimerFromGitHubSchema.safeParse({
         githubRepo: 'org/repo',
         issueNumber: 1,
+        issueTitle: 'Issue title',
+        issueUrl: 'https://github.com/org/repo/issues/1',
         [field]: 'forged',
       }).success,
     ).toBe(false);

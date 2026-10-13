@@ -41,7 +41,7 @@ interface AppendUnsyncedProjectGitHubIssueOptionsInput<TTaskOption> {
   localTaskOptions: TTaskOption[];
   localTasks: TaskResponse[];
   hasKnownGitHubIssueSource?: boolean;
-  project: Pick<ProjectResponse, "id" | "source"> | null;
+  project: Pick<ProjectResponse, "accessScope" | "id" | "source"> | null;
   mapGitHubIssue(issue: UnsyncedProjectGitHubIssue): TTaskOption;
 }
 
@@ -57,11 +57,12 @@ export function createProjectGitHubIssuePageFetcher(
 }
 
 export function supportsProjectGitHubIssueSuggestions(
-  project: Pick<ProjectResponse, "source"> | null,
+  project: Pick<ProjectResponse, "accessScope" | "source"> | null,
   localTasks: Pick<TaskResponse, "githubIssue">[],
 ): boolean {
   return (
     project !== null &&
+    project.accessScope === "project" &&
     (project.source === "github" ||
       localTasks.some((task) => task.githubIssue !== null))
   );

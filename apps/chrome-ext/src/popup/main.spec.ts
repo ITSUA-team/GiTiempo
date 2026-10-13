@@ -65,25 +65,25 @@ function createRuntimeClient(overrides?: {
       overrides?.exchangeFirebaseToken ??
       vi.fn(async (): Promise<RuntimeAuthResult> => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       })),
     exchangeGithubSession:
       overrides?.exchangeGithubSession ??
       vi.fn(async (): Promise<RuntimeAuthResult> => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       })),
     signInWithGithub:
       overrides?.signInWithGithub ??
       vi.fn(async (): Promise<RuntimeAuthResult> => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       })),
     signInWithGoogle:
       overrides?.signInWithGoogle ??
       vi.fn(async (): Promise<RuntimeAuthResult> => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       })),
     signOut:
       overrides?.signOut ??
@@ -110,13 +110,13 @@ function createRuntimeClient(overrides?: {
       overrides?.startTimer ??
       vi.fn(async () => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       })),
     stopTimer:
       overrides?.stopTimer ??
       vi.fn(async () => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       })),
   };
 }
@@ -202,7 +202,7 @@ describe("popup app", () => {
     const exchangeGithubSession = vi.fn(async () => ({
       ok: true,
       snapshot: {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: null,
         errorMessage: null,
         user: null,
@@ -210,7 +210,7 @@ describe("popup app", () => {
     }));
     const signInWithGithub = vi.fn(async (): Promise<RuntimeAuthResult> => ({
       ok: true,
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     }));
     const runtimeClient = createRuntimeClient({
       exchangeGithubSession,
@@ -269,7 +269,7 @@ describe("popup app", () => {
     const exchangeFirebaseToken = vi.fn(async () => ({
       ok: true,
       snapshot: {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: null,
         errorMessage: null,
         user: null,
@@ -277,7 +277,7 @@ describe("popup app", () => {
     }));
     const signInWithGoogle = vi.fn(async (): Promise<RuntimeAuthResult> => ({
       ok: true,
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     }));
     const runtimeClient = createRuntimeClient({
       exchangeFirebaseToken,
@@ -335,7 +335,7 @@ describe("popup app", () => {
       overrides?: Partial<RuntimeSnapshot>,
     ): RuntimeSnapshot {
       return {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: null,
         errorMessage: null,
         user: signedInUser,
@@ -574,7 +574,7 @@ describe("popup app", () => {
     const exchangeFirebaseToken = vi.fn(async () => ({
       ok: true,
       snapshot: {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: null,
         errorMessage: null,
         user: null,
@@ -694,7 +694,7 @@ describe("popup app", () => {
 
   it("renders the authenticated no-timer popup state on supported issue pages", async () => {
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     });
     const app = createPopupApp({
       root: document.querySelector<HTMLElement>("#app")!,
@@ -714,7 +714,7 @@ describe("popup app", () => {
   it("renders the avatar from the snapshot user when no timer is running", async () => {
     const runtimeClient = createRuntimeClient({
       snapshot: {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: null,
         errorMessage: null,
         user: {
@@ -738,7 +738,7 @@ describe("popup app", () => {
 
   it("renders the authenticated unsupported-page state", async () => {
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     });
     const app = createPopupApp({
       root: document.querySelector<HTMLElement>("#app")!,
@@ -762,7 +762,7 @@ describe("popup app", () => {
     });
     const runtimeClient = createRuntimeClient({
       snapshot: {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: currentTimer(),
         errorMessage: null,
         user: null,
@@ -803,7 +803,7 @@ describe("popup app", () => {
     });
   });
 
-  it("resolves base GitHub Projects issue pane tabs through the shared parser fallback", async () => {
+  it("rejects board titles when the Projects pane content script is unavailable", async () => {
     vi.stubGlobal("chrome", {
       tabs: {
         query: vi.fn(async () => [{
@@ -818,20 +818,75 @@ describe("popup app", () => {
     });
 
     await expect(resolveActivePageContext()).resolves.toEqual({
-      githubRepo: "octo/repo",
-      issueNumber: 184,
-      issueTitle: "Improve reports filters",
-      issueUrl:
-        "https://github.com/orgs/octo/projects/7?pane=issue&issue=octo|repo|184",
-      kind: "supported",
-      surface: "project-issue-pane",
+      kind: "error",
+      message: "Refresh this GitHub issue page to reconnect GiTiempo, then try again.",
+    });;
+  });
+
+  it("preserves the content script's issue detection error", async () => {
+    const context: PageContext = {
+      kind: "error",
+      message: "We could not detect the GitHub issue title on this page.",
+    };
+    vi.stubGlobal("chrome", {
+      tabs: {
+        query: vi.fn(async () => [{ id: 21, url: "https://github.com/ITSUA-team/GiTiempo/issues/439" }]),
+        sendMessage: vi.fn(async () => context),
+      },
     });
+    await expect(resolveActivePageContext()).resolves.toEqual(context);
+  });
+
+  it("recovers issue context after its content script reconnects", async () => {
+    const context: PageContext = {
+      kind: "supported",
+      surface: "issue-page",
+      issueTitle: "Implement invoice backend and prevent duplicate time entry billing",
+      githubRepo: "ITSUA-team/GiTiempo",
+      issueNumber: 439,
+      issueUrl: "https://github.com/ITSUA-team/GiTiempo/issues/439",
+    };
+    const sendMessage = vi.fn()
+      .mockRejectedValueOnce(new Error("receiver missing"))
+      .mockResolvedValue(context);
+    vi.stubGlobal("chrome", {
+      tabs: {
+        query: vi.fn(async () => [{ id: 21, url: context.issueUrl }]),
+        sendMessage,
+      },
+    });
+    await expect(resolveActivePageContext()).resolves.toMatchObject({
+      kind: "error", message: expect.stringContaining("Refresh this GitHub issue page"),
+    });
+    await expect(resolveActivePageContext()).resolves.toEqual(context);
+  });
+
+  it("distinguishes issue detection failures from API connection failures", async () => {
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient: createRuntimeClient({ snapshot: {
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
+        currentTimer: null, errorMessage: null, user: null,
+      } }),
+      pageContextResolver: async () => ({
+        kind: "error", message: "Refresh this GitHub issue page to reconnect GiTiempo, then try again.",
+      }),
+    });
+    try {
+      await app.load();
+      expect(document.body.textContent).toContain("Unable to read issue");
+      expect(document.body.textContent).not.toContain("Connection lost");
+      expect(document.querySelector('[data-action="start-timer"]')).toBeNull();
+      expect(document.querySelector('[data-action="retry"]')).not.toBeNull();
+    } finally {
+      app.destroy();
+    }
   });
 
   it("renders the running timer popup state", async () => {
     const runtimeClient = createRuntimeClient({
       snapshot: {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: currentTimer(),
         errorMessage: null,
         user: { displayName: "Alexey Tsukanov", email: "alexey@example.com" },
@@ -860,7 +915,7 @@ describe("popup app", () => {
   it("prefers the running timer repo over the active page repo", async () => {
     const runtimeClient = createRuntimeClient({
       snapshot: {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: currentTimer(),
         errorMessage: null,
         user: null,
@@ -883,7 +938,7 @@ describe("popup app", () => {
 
   it("adds explicit focus-visible styles to popup primary actions", async () => {
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     });
     const app = createPopupApp({
       root: document.querySelector<HTMLElement>("#app")!,
@@ -903,10 +958,10 @@ describe("popup app", () => {
   it("starts a timer from the supported popup state", async () => {
     const startTimer = vi.fn(async () => ({
       ok: true,
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     }));
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       startTimer,
     });
     const app = createPopupApp({
@@ -922,18 +977,18 @@ describe("popup app", () => {
 
     await Promise.resolve();
 
-    expect(startTimer).toHaveBeenCalledWith(supportedContext());
+    await vi.waitFor(() => expect(startTimer).toHaveBeenCalledWith(supportedContext(), "workspace-alpha", "alexey@example.com"));
   });
 
   it("shows the retryable error state after a failed stop action", async () => {
     const stopTimer = vi.fn(async () => ({
       ok: false,
       errorMessage: "Timer stop failed",
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     }));
     const runtimeClient = createRuntimeClient({
       snapshot: {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: currentTimer(),
         errorMessage: null,
         user: null,
@@ -960,7 +1015,7 @@ describe("popup app", () => {
 
   it("shows the retryable error state after a rejected start action", async () => {
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       startTimer: vi.fn(async () => {
         throw new Error("Runtime unavailable");
       }),
@@ -976,9 +1031,7 @@ describe("popup app", () => {
       .querySelector<HTMLButtonElement>('[data-action="start-timer"]')!
       .click();
 
-    await Promise.resolve();
-
-    expect(document.body.textContent).toContain("Runtime unavailable");
+    await vi.waitFor(() => expect(document.body.textContent).toContain("Runtime unavailable"));
     expect(document.body.textContent).toContain("Retry connection");
   });
 
@@ -988,12 +1041,12 @@ describe("popup app", () => {
     const app = createPopupApp({
       root: document.querySelector<HTMLElement>("#app")!,
       runtimeClient: createRuntimeClient({
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
         startTimer: vi.fn(async () => ({
           errorCode: "project_assignment_required" as const,
           errorMessage: assignmentMessage,
           ok: false,
-          snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+          snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
         })),
       }),
       pageContextResolver: async () => supportedContext(),
@@ -1001,9 +1054,35 @@ describe("popup app", () => {
 
     await app.load();
     document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')!.click();
-    await Promise.resolve();
-
-    expect(document.body.textContent).toContain(assignmentMessage);
+    await vi.waitFor(() => expect(document.body.textContent).toContain(assignmentMessage));
     expect(document.body.textContent).not.toContain("Connect GitHub");
   });
+  it("allows only one pending start and displays its workspace destination", async () => {
+    let finish!: (value: Awaited<ReturnType<RuntimeClient["startTimer"]>>) => void;
+    const snapshot: RuntimeSnapshot = { authenticated: true, workspace: { id: "workspace-alpha", name: "Customer work" }, currentTimer: null, errorMessage: null, user: { email: "alexey@example.com", displayName: null } };
+    const startTimer = vi.fn(() => new Promise<Awaited<ReturnType<RuntimeClient["startTimer"]>>>(resolve => { finish = resolve; }));
+    const app = createPopupApp({ root: document.querySelector<HTMLElement>("#app")!, runtimeClient: createRuntimeClient({ snapshot, startTimer }), pageContextResolver: async () => supportedContext() });
+    await app.load();
+    expect(document.body.textContent).toContain("Customer work");
+    const button = document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')!;
+    button.click(); button.click();
+    await vi.waitFor(() => expect(startTimer).toHaveBeenCalledTimes(1));
+    expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')!.disabled).toBe(true);
+    finish({ ok: true, snapshot: { ...snapshot, currentTimer: currentTimer() } });
+    await vi.waitFor(() => expect(document.body.textContent).toContain("Stop Timer"));
+    app.destroy();
+  });
+
+  it("rechecks current DOM context before starting and rejects a delayed title", async () => {
+    const startTimer = vi.fn();
+    const resolver = vi.fn().mockResolvedValueOnce(supportedContext()).mockResolvedValue({ kind: "error", message: "Issue title is still loading" });
+    const snapshot: RuntimeSnapshot = { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { email: "alexey@example.com", displayName: null } };
+    const app = createPopupApp({ root: document.querySelector<HTMLElement>("#app")!, runtimeClient: createRuntimeClient({ snapshot, startTimer }), pageContextResolver: resolver });
+    await app.load();
+    document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')!.click();
+    await vi.waitFor(() => expect(document.body.textContent).toContain("Issue title is still loading"));
+    expect(startTimer).not.toHaveBeenCalled();
+    app.destroy();
+  });
+
 });

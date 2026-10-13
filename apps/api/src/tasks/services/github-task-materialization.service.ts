@@ -36,6 +36,27 @@ type QueryExecutor = Pick<
 >;
 type TaskRow = typeof tasks.$inferSelect;
 
+export interface ExternalReferenceMaterializationInput {
+  canonicalIssueUrl: string;
+  githubRepo: string;
+  issueKey: string;
+  issueTitle: string;
+}
+
+export type ExternalReferenceMaterialization =
+  | {
+      kind: 'external-reference';
+      project: ProjectRow;
+      projectCreated: boolean;
+      task: TaskRow;
+      taskCreated: boolean;
+    }
+  | {
+      kind: 'managed';
+      project: ProjectRow;
+      task: TaskRow | null;
+    };
+
 @Injectable()
 export class GithubTaskMaterializationService {
   constructor(
@@ -95,6 +116,23 @@ export class GithubTaskMaterializationService {
 
     await lockProjectNamespace(executor, user.workspaceId);
 
+    const lockedRef = await this.findGitHubProjectRef(
+      executor,
+      user.workspaceId,
+      githubRepo,
+      true,
+    );
+    if (lockedRef) {
+      return {
+        project: await this.requireProjectRow(
+          executor,
+          user.workspaceId,
+          lockedRef.projectId,
+        ),
+        created: false,
+      };
+    }
+
     const name = await resolveAvailableProjectName(
       executor,
       user.workspaceId,
@@ -108,6 +146,7 @@ export class GithubTaskMaterializationService {
           workspaceId: user.workspaceId,
           name,
           color: null,
+          trackingMode: 'managed',
         })
         .returning()
     )[0]!;
@@ -122,16 +161,10 @@ export class GithubTaskMaterializationService {
         externalKey: githubRepo,
         externalUrl: `https://github.com/${githubRepo}`,
         metadata: { githubRepo },
+        referenceProvenance: 'provider-verified',
         syncedAt: new Date(),
       })
-      .onConflictDoNothing({
-        target: [
-          projectExternalRefs.workspaceId,
-          projectExternalRefs.provider,
-          projectExternalRefs.externalType,
-          projectExternalRefs.externalKey,
-        ],
-      })
+      .onConflictDoNothing()
       .returning({ projectId: projectExternalRefs.projectId });
 
     if (!createdRef) {
@@ -223,6 +256,7 @@ export class GithubTaskMaterializationService {
         externalKey: issueKey,
         externalUrl: `https://github.com/${githubRepo}/issues/${issueNumber}`,
         metadata: { githubRepo, issueNumber },
+        referenceProvenance: 'provider-verified',
         syncedAt: new Date(),
       })
       // The unique index guarding this insert is keyed on lower(external_key),
@@ -261,6 +295,116 @@ export class GithubTaskMaterializationService {
     return task;
   }
 
+  /**
+   * Resolves browser-supplied issue context without provider I/O. Callers must
+   * re-authorize through the managed path when this reports a managed target.
+   */
+  async materializeExternalReference(
+    executor: QueryExecutor,
+    user: AuthUser,
+    input: ExternalReferenceMaterializationInput,
+  ): Promise<ExternalReferenceMaterialization> {
+    const normalizedRepo = normalizeGitHubRepoKey(input.githubRepo);
+    const normalizedIssue = normalizeGitHubIssueExternalKey(input.issueKey);
+    if (!normalizedRepo || !normalizedIssue) {
+      throw DomainError.internal(
+        'github_reference_invalid',
+        'GitHub reference is invalid',
+      );
+    }
+
+    await lockProjectNamespace(executor, user.workspaceId);
+
+    const existingIssue = await this.findGitHubTaskRefInWorkspace(
+      executor,
+      user.workspaceId,
+      input.issueKey,
+      true,
+    );
+    if (existingIssue) {
+      const project = await this.requireProjectRow(
+        executor,
+        user.workspaceId,
+        existingIssue.projectId,
+      );
+      const task = await this.requireTaskRow(
+        executor,
+        user.workspaceId,
+        existingIssue.projectId,
+        existingIssue.taskId,
+      );
+      return project.trackingMode === 'external-reference'
+        ? {
+            kind: 'external-reference',
+            project,
+            projectCreated: false,
+            task,
+            taskCreated: false,
+          }
+        : { kind: 'managed', project, task };
+    }
+
+    const existingRepository = await this.findGitHubProjectRef(
+      executor,
+      user.workspaceId,
+      input.githubRepo,
+      true,
+    );
+    const project = existingRepository
+      ? await this.requireProjectRow(
+          executor,
+          user.workspaceId,
+          existingRepository.projectId,
+        )
+      : await this.createExternalProjectForRepo(
+          executor,
+          user.workspaceId,
+          input.githubRepo,
+        );
+
+    if (project.trackingMode !== 'external-reference') {
+      return { kind: 'managed', project, task: null };
+    }
+
+    const { task, created } = await this.findOrCreateExternalTaskForIssue(
+      executor,
+      {
+        canonicalIssueUrl: input.canonicalIssueUrl,
+        githubRepo: input.githubRepo,
+        issueKey: input.issueKey,
+        issueTitle: input.issueTitle,
+        project,
+        workspaceId: user.workspaceId,
+      },
+    );
+
+    return {
+      kind: 'external-reference',
+      project,
+      projectCreated: existingRepository === null,
+      task,
+      taskCreated: created,
+    };
+  }
+
+  async findExistingReferenceProject(
+    executor: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    input: Pick<
+      ExternalReferenceMaterializationInput,
+      'githubRepo' | 'issueKey'
+    >,
+    lockMapping = false,
+  ): Promise<ProjectRow | null> {
+    return this.findExistingIssueProject(
+      executor,
+      workspaceId,
+      input.githubRepo,
+      input.issueKey,
+      lockMapping,
+    );
+  }
+
   /** Read-only lookup; timer requests never create projects or assignments. */
   async findExistingIssueProject(
     executor: Pick<DrizzleDB, 'select'>,
@@ -287,6 +431,164 @@ export class GithubTaskMaterializationService {
     return repositoryRef
       ? this.requireProjectRow(executor, workspaceId, repositoryRef.projectId)
       : null;
+  }
+
+  private async createExternalProjectForRepo(
+    executor: QueryExecutor,
+    workspaceId: string,
+    githubRepo: string,
+  ): Promise<ProjectRow> {
+    const name = await resolveAvailableProjectName(
+      executor,
+      workspaceId,
+      githubRepo,
+    );
+    const [project] = await executor
+      .insert(projects)
+      .values({
+        workspaceId,
+        name,
+        color: null,
+        visibility: 'private',
+        trackingMode: 'external-reference',
+      })
+      .returning();
+    if (!project) {
+      throw DomainError.internal(
+        'external_project_create_failed',
+        'Failed to create external reference project',
+      );
+    }
+
+    const [createdRef] = await executor
+      .insert(projectExternalRefs)
+      .values({
+        workspaceId,
+        projectId: project.id,
+        provider: 'github',
+        externalType: 'repository',
+        externalKey: githubRepo,
+        externalUrl: `https://github.com/${githubRepo}`,
+        metadata: { githubRepo },
+        referenceProvenance: 'user-supplied',
+        syncedAt: null,
+      })
+      .onConflictDoNothing()
+      .returning({ projectId: projectExternalRefs.projectId });
+
+    if (createdRef) {
+      return project;
+    }
+
+    await executor.delete(projects).where(eq(projects.id, project.id));
+    const winner = await this.findGitHubProjectRef(
+      executor,
+      workspaceId,
+      githubRepo,
+      true,
+    );
+    if (!winner) {
+      throw DomainError.internal(
+        'github_project_mapping_missing',
+        'Failed to load GitHub project mapping',
+      );
+    }
+    return this.requireProjectRow(executor, workspaceId, winner.projectId);
+  }
+
+  private async findOrCreateExternalTaskForIssue(
+    executor: QueryExecutor,
+    input: ExternalReferenceMaterializationInput & {
+      project: ProjectRow;
+      workspaceId: string;
+    },
+  ): Promise<{ created: boolean; task: TaskRow }> {
+    const existing = await this.findGitHubTaskRefInWorkspace(
+      executor,
+      input.workspaceId,
+      input.issueKey,
+      true,
+    );
+    if (existing) {
+      const task = await this.requireTaskRow(
+        executor,
+        input.workspaceId,
+        existing.projectId,
+        existing.taskId,
+      );
+      if (existing.projectId !== input.project.id) {
+        throw new NotFoundException('GitHub issue not found');
+      }
+      return { task, created: false };
+    }
+
+    const [task] = await executor
+      .insert(tasks)
+      .values({
+        workspaceId: input.workspaceId,
+        projectId: input.project.id,
+        title: input.issueTitle,
+        defaultBillableForTimeEntries: input.project.defaultBillableForTasks,
+      })
+      .returning();
+    if (!task) {
+      throw DomainError.internal(
+        'github_task_create_failed',
+        'Failed to create GitHub task',
+      );
+    }
+
+    const separatorIndex = input.issueKey.lastIndexOf('#');
+    const issueNumber = Number(input.issueKey.slice(separatorIndex + 1));
+    const [createdRef] = await executor
+      .insert(taskExternalRefs)
+      .values({
+        workspaceId: input.workspaceId,
+        projectId: input.project.id,
+        taskId: task.id,
+        provider: 'github',
+        externalType: 'issue',
+        externalKey: input.issueKey,
+        externalUrl: input.canonicalIssueUrl,
+        metadata: { githubRepo: input.githubRepo, issueNumber },
+        referenceProvenance: 'user-supplied',
+        syncedAt: null,
+      })
+      .onConflictDoNothing()
+      .returning({
+        projectId: taskExternalRefs.projectId,
+        taskId: taskExternalRefs.taskId,
+      });
+
+    if (createdRef) {
+      return { task, created: true };
+    }
+
+    await executor.delete(tasks).where(eq(tasks.id, task.id));
+    const winner = await this.findGitHubTaskRefInWorkspace(
+      executor,
+      input.workspaceId,
+      input.issueKey,
+      true,
+    );
+    if (!winner) {
+      throw DomainError.internal(
+        'github_task_mapping_missing',
+        'Failed to load GitHub task mapping',
+      );
+    }
+    if (winner.projectId !== input.project.id) {
+      throw new NotFoundException('GitHub issue not found');
+    }
+    return {
+      task: await this.requireTaskRow(
+        executor,
+        input.workspaceId,
+        winner.projectId,
+        winner.taskId,
+      ),
+      created: false,
+    };
   }
 
   async listMappedBoardIds(

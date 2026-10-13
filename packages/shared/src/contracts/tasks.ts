@@ -1,8 +1,12 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import { syncedGitHubIssueSchema } from "./github.js";
+import { syncedGitHubIssueSchema } from './github.js';
+import {
+  projectAccessScopeSchema,
+  projectCapabilitiesSchema,
+} from './projects.js';
 
-export const taskStatusSchema = z.enum(["open", "closed"]);
+export const taskStatusSchema = z.enum(['open', 'closed']);
 
 export const taskResponseSchema = z.object({
   id: z.uuid(),
@@ -12,6 +16,8 @@ export const taskResponseSchema = z.object({
   status: taskStatusSchema,
   defaultBillableForTimeEntries: z.boolean(),
   isActive: z.boolean(),
+  accessScope: projectAccessScopeSchema,
+  capabilities: projectCapabilitiesSchema,
   githubIssue: syncedGitHubIssueSchema.nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -23,8 +29,8 @@ export const taskListQuerySchema = z
   .object({
     includeInactive: z
       .preprocess((value) => {
-        if (value === "true") return true;
-        if (value === "false") return false;
+        if (value === 'true') return true;
+        if (value === 'false') return false;
         return value;
       }, z.boolean())
       .optional()
@@ -61,7 +67,7 @@ export const updateTaskSchema = z
       data.defaultBillableForTimeEntries !== undefined ||
       data.isActive !== undefined,
     {
-      message: "At least one field must be provided",
+      message: 'At least one field must be provided',
       path: [],
     },
   );

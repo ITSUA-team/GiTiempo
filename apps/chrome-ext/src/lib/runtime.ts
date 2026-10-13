@@ -21,6 +21,7 @@ export interface RuntimeSnapshot {
   /** Firebase cleanup failed after local GiTiempo cleanup; retry is available. */
   providerCleanupPending?: boolean;
   user: SnapshotUser | null;
+  workspace?: { id: string; name: string } | null;
 }
 
 export interface RuntimeActionResult {
@@ -46,7 +47,7 @@ export interface RuntimeClient {
   openExtension(): Promise<void>;
   retryProviderCleanup(): Promise<RuntimeAuthResult>;
   signOut(): Promise<RuntimeAuthResult>;
-  startTimer(pageContext: SupportedGitHubIssueContext): Promise<RuntimeMutationResult>;
+  startTimer(pageContext: SupportedGitHubIssueContext, expectedWorkspaceId?: string, expectedUserEmail?: string): Promise<RuntimeMutationResult>;
   stopTimer(expectedTimerId: string): Promise<RuntimeMutationResult>;
 }
 
@@ -59,7 +60,7 @@ export type BackgroundMessage =
   | { type: "auth/sign-out" }
   | { type: "auth/retry-provider-cleanup" }
   | { type: "runtime/get-snapshot" }
-  | { type: "timer/start"; pageContext: SupportedGitHubIssueContext }
+  | { type: "timer/start"; pageContext: SupportedGitHubIssueContext; expectedWorkspaceId?: string; expectedUserEmail?: string }
   | { type: "timer/stop"; expectedTimerId: string }
   | { type: "ui/open-extension" };
 
@@ -141,10 +142,12 @@ export function createRuntimeClient(): RuntimeClient {
         type: "auth/retry-provider-cleanup",
       });
     },
-    startTimer(pageContext) {
+    startTimer(pageContext, expectedWorkspaceId, expectedUserEmail) {
       return sendRuntimeMessage<RuntimeMutationResult>({
         type: "timer/start",
         pageContext,
+        expectedWorkspaceId,
+        expectedUserEmail,
       });
     },
     stopTimer(expectedTimerId) {

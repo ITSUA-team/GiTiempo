@@ -57,6 +57,10 @@ function formatVisibility(visibility: ProjectResponse['visibility']): string {
 }
 
 function formatAssignedMembers(project: ProjectResponse): string {
+  if (project.accessScope === 'own-time') {
+    return 'Own time only';
+  }
+
   const count = project.members.length;
   return `${count} member${count === 1 ? '' : 's'}`;
 }
@@ -166,6 +170,7 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
       hoursLabel: formatProjectTotalHours(project),
       id: project.id,
       isActive: project.isActive,
+      isExternal: project.trackingMode === 'external-reference',
       name: project.name,
       nameClass: 'text-brand',
       project,

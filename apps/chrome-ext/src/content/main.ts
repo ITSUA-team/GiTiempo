@@ -26,6 +26,7 @@ interface InjectedAppOptions {
 interface InjectedState {
   actionErrorMessage: string | null;
   isLoading: boolean;
+  isSubmitting: boolean;
   snapshot: RuntimeSnapshot | null;
   theme: "dark" | "light";
 }
@@ -85,7 +86,7 @@ function renderInjectedBody(
 
   const currentTimer = state.snapshot.currentTimer;
   const isCurrentIssueTimer = currentTimer
-    ? currentTimer.githubIssue?.githubRepo === pageContext.githubRepo
+    ? currentTimer.githubIssue?.githubRepo.toLowerCase() === pageContext.githubRepo.toLowerCase()
       && currentTimer.githubIssue.issueNumber === pageContext.issueNumber
     : false;
 
@@ -131,7 +132,7 @@ function renderInjectedBody(
             ? `<p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to start timer.")}</p>`
             : ""}
         </div>
-        <button type="button" data-action="stop-timer" class="bg-destructive text-text-inverse ${injectedActionButtonClass}">Stop Timer</button>
+        <button type="button" data-action="stop-timer" ${state.isSubmitting ? "disabled" : ""} class="bg-destructive text-text-inverse ${injectedActionButtonClass}">Stop Timer</button>
       </div>
     `;
   }
@@ -160,7 +161,7 @@ function renderInjectedBody(
     </div>
     <div class="flex items-center justify-between gap-3">
       <p class="m-0 text-sm ${mutedTextClass}">Start tracking directly from this GitHub issue.</p>
-      <button type="button" data-action="start-timer" class="bg-brand text-text-inverse ${injectedActionButtonClass}">Start Timer</button>
+      <button type="button" data-action="start-timer" ${state.isSubmitting || !state.snapshot.workspace ? "disabled" : ""} class="bg-brand text-text-inverse disabled:opacity-60 ${injectedActionButtonClass}">Start Timer</button>
     </div>
   `;
 }
@@ -199,6 +200,7 @@ export function createInjectedIssueApp({
   const state: InjectedState = {
     actionErrorMessage: null,
     isLoading: true,
+    isSubmitting: false,
     snapshot: null,
     theme: "light",
   };
@@ -271,6 +273,7 @@ export function createInjectedIssueApp({
     root.innerHTML = `
       <div class="${renderInjectedContainerClass(pageContext)}">
         <section class="${renderInjectedSectionClass(pageContext)}">
+          ${state.snapshot?.authenticated ? `<p data-testid="workspace-context" class="m-0 text-xs ${state.theme === "dark" ? "text-text-inverse-muted" : "text-text-muted"}">${escapeHtml(state.snapshot.workspace?.name ?? "Checking workspace…")}</p>` : ""}
           ${renderInjectedBody(pageContext, state, now())}
         </section>
       </div>
@@ -302,22 +305,34 @@ export function createInjectedIssueApp({
   }
 
   async function handleStartTimer(): Promise<void> {
-    try {
-      const result = await runtimeClient.startTimer(pageContext);
-
-      state.snapshot = result.snapshot;
-      state.actionErrorMessage = result.ok
-        ? null
-        : result.errorMessage ?? "Unable to start timer.";
-    } catch (error) {
-      state.actionErrorMessage =
-        error instanceof Error ? error.message : "Unable to start timer.";
+    if (state.isSubmitting) return;
+    const expectedWorkspaceId = state.snapshot?.workspace?.id;
+    const expectedUserEmail = state.snapshot?.user?.email;
+    if (!expectedWorkspaceId || !expectedUserEmail) {
+      state.actionErrorMessage = "Workspace context is unavailable. Refresh before starting.";
+      render();
+      return;
     }
-
+    state.isSubmitting = true;
     render();
+    try {
+      const context = resolveGitHubIssueContext(ownerDocument, ownerDocument.defaultView?.location.href ?? pageContext.issueUrl);
+      if (context.kind !== "supported" || context.githubRepo.toLowerCase() !== pageContext.githubRepo.toLowerCase() || context.issueNumber !== pageContext.issueNumber) {
+        throw new Error("Issue context changed. Refresh before starting.");
+      }
+      const result = await runtimeClient.startTimer(context, expectedWorkspaceId, expectedUserEmail);
+      state.snapshot = result.snapshot;
+      state.actionErrorMessage = result.ok ? null : result.errorMessage ?? "Unable to start timer.";
+    } catch (error) {
+      state.actionErrorMessage = error instanceof Error ? error.message : "Unable to start timer.";
+    } finally {
+      state.isSubmitting = false;
+      render();
+    }
   }
 
   async function handleStopTimer(): Promise<void> {
+    if (state.isSubmitting) return;
     const expectedTimerId = state.snapshot?.currentTimer?.id;
 
     if (!expectedTimerId) {
@@ -326,6 +341,8 @@ export function createInjectedIssueApp({
       return;
     }
 
+    state.isSubmitting = true;
+    render();
     try {
       const result = await runtimeClient.stopTimer(expectedTimerId);
 
@@ -336,9 +353,10 @@ export function createInjectedIssueApp({
     } catch (error) {
       state.actionErrorMessage =
         error instanceof Error ? error.message : "Unable to stop timer.";
+    } finally {
+      state.isSubmitting = false;
+      render();
     }
-
-    render();
   }
 
   return {
@@ -411,6 +429,7 @@ export function bootstrapInjectedIssueControl(
 ): { destroy(): void } {
   let mountedApp: { destroy(): void; load(): Promise<void> } | null = null;
   let currentUrl = "";
+  let currentTitle = "";
 
   function isMountedAtExpectedTarget(
     pageContext: SupportedGitHubIssueContext,
@@ -445,11 +464,12 @@ export function bootstrapInjectedIssueControl(
       return;
     }
 
-    if (nextUrl === currentUrl && mountedApp && isMountedAtExpectedTarget(pageContext)) {
+    if (nextUrl === currentUrl && pageContext.issueTitle === currentTitle && mountedApp && isMountedAtExpectedTarget(pageContext)) {
       return;
     }
 
     currentUrl = nextUrl;
+    currentTitle = pageContext.issueTitle;
     mountedApp?.destroy();
     mountedApp = null;
 
@@ -465,7 +485,13 @@ export function bootstrapInjectedIssueControl(
   });
 
   syncToLocation();
-  observer.observe(doc.documentElement, { childList: true, subtree: true });
+  observer.observe(doc.documentElement, {
+    attributeFilter: ["href"],
+    attributes: true,
+    characterData: true,
+    childList: true,
+    subtree: true,
+  });
   win.addEventListener("popstate", syncToLocation);
   win.addEventListener("hashchange", syncToLocation);
 

@@ -2,20 +2,22 @@
 
 This checklist is the package-specific record for the GiTiempo Chrome extension. It distinguishes facts established from the source/package, statements that require the publisher's confirmation, and values actually entered in Chrome Web Store (CWS). A draft is not evidence that a CWS Dashboard field has been reviewed or saved.
 
-## Release identity and status
+## Historical September candidate identity and status
+
+The tables and declarations below retain the September candidate review. For the current 0.1.1 implementation, use the [13 October external-reference inventory](#external-reference-candidate-inventory--13-october-2026); the historical review does not certify its package or revised public policy.
 
 Historical public-identity evidence retained from the incoming branch: on 16 September 2026, [itsua.com](https://itsua.com/) identified ITSUA as an engineering studio and published `hello@itsua.com`, Sakala tn 7-2, Tallinn, 10141, Estonia, and VAT `EE102549430`. This corroborates public identity, not control of GiTiempo processing or monitoring of `admin@itsua.com`; those rely on the publisher confirmations below.
 
 | Item | Status | Evidence or required action |
 | --- | --- | --- |
-| Package version | Technical fact | `0.1.0` in `apps/chrome-ext/package.json` and the generated-manifest source. |
+| Package version | Historical technical fact | `0.1.0` in the reviewed September package and generated manifest. Current source is `0.1.1`. |
 | Local Chrome candidate | Reviewed candidate, 2026-09-25; historical package evidence | `apps/chrome-ext/dist/gitiempo-chrome-0.1.0-review-20260925.zip`, SHA-256 `9f7b5b690b9f8fcad08062f4057092d126cc40b40a5a61663915fb4b17e951a2`. All 10 files were compared byte-for-byte with the tested unpacked build; `manifest.json` is at the root, with no macOS metadata. Includes Project URL fix and removal of PR matches/broadcasts. Not uploaded or Store-approved. Earlier archives, including the temporary `c62ddc5f…` review archive and the unqualified ZIP in `dist`, are superseded and must not be submitted. On 12 October the named review archive is absent from this checkout; the historical hash and runtime evidence remain the identity of the reviewed candidate. The currently present unqualified ZIP has a different hash and is not approved by this review. |
 | Candidate API environment | Production configuration and narrowed Chrome runtime pass verified | The reviewed 25 September candidate manifests use `https://api.gitiempo.com/*`; app navigation targets `https://app.gitiempo.com`. The 14 September staging candidate below and the current development outputs are not that reviewed package. |
-| Public privacy-policy URL | Published revision verified, 2026-10-12 | Store URL: `https://gitiempo.com/privacy`, redirecting to `/privacy/`. Both staging and production anonymously serve the 22 September 2026 revision with content identical to the current local policy build. Footer navigation, canonical, sitemap and script absence verified; see the dated evidence below. This covers the September policy, not the later OAuth delta. |
+| Public privacy-policy URL | Published revision verified, 2026-10-12 | Store URL: `https://gitiempo.com/privacy`, redirecting to `/privacy/`. Both staging and production anonymously served the 22 September 2026 revision with content identical to the September policy build. Footer navigation, canonical, sitemap and script absence verified; see the dated evidence below. This covers the September policy, not the later OAuth or external-reference deltas. |
 | Controller and privacy contact | Publisher-confirmed; production inputs verified 2026-09-25 | The publisher confirmed `ITSUA` as controller and `admin@itsua.com` as its monitored contact. Actual GitHub production-environment public variables match, and a local build with them passed. The revised deployed output now matches; anonymously verified 2026-10-12. |
 | CWS Dashboard values | Publisher-owned follow-up; not verified by the agent | On 2026-09-25 the publisher took over actual Store field and policy-URL verification. Outside agent scope and not an engineering-handoff blocker. The publisher will compare the final values with this checklist and the approved policy before submission. |
 
-## Technical data-flow inventory
+## Historical September technical data-flow inventory
 
 The extension has no extension analytics. Landing-site GA4 is a separate, consent-gated website feature and is not part of this extension declaration.
 
@@ -212,3 +214,42 @@ The 16 September staging/production checks recorded below verified the older 14 
 The account-linking change adds backend encrypted OAuth token storage for identity and organization discovery alongside retained personal App credentials. The existing OAuth App requests `user:email read:org read:project`; it does not request `repo`. Tokens remain server-only; the extension keeps the existing token-pair and destination contracts. Full Disconnect deletes active identity ownership and both personal credential families, attempts bounded provider revocation, and preserves GiTiempo sessions, workspace installation access and time history. It is not account deletion or immediate backup erasure.
 
 Before publishing this build, the privacy change owner must reconcile GitHub OAuth purpose, token retention/deletion and consent disclosures with the current policy and release inventory. This source update does not claim publication, provider revocation guarantees, changed backup retention or a completed Store review. Saved GitHub timer assignment examples remain owned by `require-project-assignment-for-saved-github-timers`; installation and assignment authorization must not be described as repaired by personal OAuth consent.
+
+
+## External-reference candidate inventory — 13 October 2026
+
+This inventory describes the local coordinated QA build, based on `75cdb08d` plus the uncommitted `external-github-extension-tracking` implementation. It does not certify a production package, the public policy deployment, or Store submission. Package and manifest versions are both **0.1.1**. The ZIPs contain the same ten executable/assets files as their unpacked build; each manifest uses Manifest V3 and only `identity` / `storage`, with GitHub issue/organization-Projects content matches. No broad `tabs` permission or new remote executable source was introduced.
+
+| Local candidate | SHA-256 | API host permission |
+| --- | --- | --- |
+| `apps/chrome-ext/dist/gitiempo-chrome-0.1.1-external-reference-candidate.zip` | `b12c6261a77b63728f054510d7f5152e8b32305b00783e02fc91d6a11cc14cbd` | `http://127.0.0.1:3019/*` |
+| `apps/chrome-ext/dist/gitiempo-firefox-0.1.1-external-reference-candidate.zip` | `59342c2717d44fb70491901daaa9b327c46c94af1bb668b85c46cd0ec028529f` | `http://127.0.0.1/*` (Firefox match patterns omit ports) |
+
+Both also permit `https://github.com/*`. These are local QA artifacts, not distribution builds. A rebuild with a production API origin creates a new artifact/hash requiring its own review. The September 0.1.0 handoff above remains historical evidence only.
+
+The current Start action sends exactly `githubRepo`, `issueNumber`, bounded issue-specific `issueTitle`, and the direct canonical HTTPS `issueUrl` to GiTiempo. Incidental query parameters, fragments and the enclosing Projects URL are discarded. Repository/issue context is supplied by the user and does not attest access to GitHub. Existing managed mappings retain installation-backed retrieval and authorization with no external fallback; external-reference starts record this context without a GitHub API request. The latter creates/reuses one private project/task mapping per workspace and grants derived reads only for the caller's own entries and exact tasks, including running entries. Admins and separately authorized participants retain established rights. Removing the last own entry removes derived access while shared records remain. Personal GitHub linking is optional and separate from GiTiempo sign-in.
+
+GiTiempo tokens remain in extension-local storage; existing Firebase sign-in persistence, credential-free cleanup flag, logout, retention, recipients, deletion and Limited Use disclosures remain applicable. No Store Dashboard access, edits, upload or submission occurred. Publisher-owned Store confirmation remains separate.
+
+The revised local privacy source is dated **13 October 2026**. Landing lint, typecheck, all 17 tests, static build and the two analytics-configured/unconfigured browser runs passed. At 390/768/1024/1440px, route forms, canonical/sitemap/footer metadata, keyboard skip/contact focus, readable text and no overflow were checked. The policy contains no scripts or hydrated framework islands; mobile and desktop screenshots were inspected. Browser fixtures use a clearly invalid test identity/domain, not production inputs.
+
+The initial anonymous production policy retrieval at `https://gitiempo.com/privacy/` returned HTTP 403. A later anonymous check on 13 October returned **HTTP 200**, but the published policy was still dated **22 September 2026** and described repository/number-only transmission followed by GitHub title retrieval. That does not match this candidate's title/canonical-URL payload and external no-provider flow. The revised policy is therefore **confirmed stale and release-blocking**, rather than inaccessible. Deploy and anonymously verify the new revision before distributing the extension; this implementation did not deploy or publish. See [extension completion QA](../openspec/changes/external-github-extension-tracking/qa-extension-completion.md). The user subsequently attested successful private-customer direct/Projects Start/Stop in Chrome and Firefox as admin and in the requested member repeat; see the follow-up QA evidence for the independent role-verification limit. Full Firefox transition/error coverage remains pending. Rename/transfer, policy conversion, synchronization and automatic rebinding remain deferred.
+
+See [current QA coverage](../openspec/changes/external-github-extension-tracking/qa.md) and [controlled API requests](../openspec/changes/external-github-extension-tracking/qa-api.md).
+
+### GitHub navigation registration follow-up — 13 October 2026
+
+The current local unpacked development builds register their content script on `https://github.com/*`, with pull-request paths excluded, so GitHub same-document navigation from a repository, issue list or Projects board can reach a supported issue. The script validates supported issue identity before extracting its title or mounting controls; pull requests, boards without an issue pane and unrelated GitHub pages remain unsupported for timer starts. Existing GitHub host permission already covered this origin; no new permission or browsing-history API was added. The earlier ZIP hashes and narrow content matches above identify historical QA packages, not these rebuilt unpacked outputs. Current tree hashes and navigation results are recorded in [extension follow-up](../openspec/changes/external-github-extension-tracking/qa-extension-follow-up.md). No package was uploaded or submitted.
+
+### Current local package snapshot — 13 October 2026
+
+The following archives snapshot the final local development outputs after the navigation/private-heading fixes. All ten files in each archive were compared byte-for-byte with its unpacked output; `manifest.json` is at the root. These replace the earlier QA ZIPs for local review. They use localhost and are not production distribution packages.
+
+| Current local archive | SHA-256 | API host permission |
+| --- | --- | --- |
+| `apps/chrome-ext/dist/gitiempo-chrome-0.1.1-local-final-20261013.zip` | `5e4eaaa99bd77aa0ada81afe54e049ad65e0428d030b97d99a516b7d7c9d0792` | `http://localhost:3000/*` |
+| `apps/chrome-ext/dist/gitiempo-firefox-0.1.1-local-final-20261013.zip` | `56d788ba1ad9047e92b79ee7533a0ecba3045bab75208876bbf7a3e0b3403f8f` | `http://localhost/*` |
+
+Both remain version `0.1.1`, with `identity`/`storage` permissions, the existing GitHub host permission, GitHub-wide navigation registration and PR exclusions. The executable HTML/JavaScript contains no remote script tags; executable entries point to packaged scripts. The Firefox port omission is match-pattern syntax; its bundled API origin remains localhost:3000. Package evidence is retained in `/private/tmp/gitiempo-final-extension-package-evidence.json`. Runtime coverage and remaining browser gaps are recorded in the QA reports; a package hash does not certify unexecuted scenarios.
+
+The landing build produced during this continuation used the local staging environment values, so its output is not a production deployment artifact. The existing production workflow obtains public URLs, controller/contact and Cloudflare credentials from the GitHub production environment, rebuilds, then deploys. Publishing that revision and verifying the anonymous production page remain outstanding; no workflow was dispatched.

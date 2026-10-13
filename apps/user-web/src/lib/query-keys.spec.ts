@@ -84,7 +84,14 @@ describe("user-web query keys", () => {
       "projects",
       "project-tasks",
       "project-1",
+      null,
     ]);
+  });
+
+  it("separates project-task caches when the server narrows access", () => {
+    expect(userProjectsKeys.projectTasks(scope, "project-1", "project")).not.toEqual(
+      userProjectsKeys.projectTasks(scope, "project-1", "own-time"),
+    );
   });
 
   it("keeps all-page time-entry keys separate from paginated list keys", () => {
@@ -115,6 +122,7 @@ describe("user-web query keys", () => {
     expect(userMutationInvalidationKeys.afterTimeEntryMutation(scope)).toEqual([
       timeEntriesKeys.all(scope),
       timerKeys.all(scope),
+      userProjectsKeys.all(scope),
     ]);
     expect(userMutationInvalidationKeys.afterTaskMutation(scope, "project-1")).toEqual([
       userProjectsKeys.all(scope),

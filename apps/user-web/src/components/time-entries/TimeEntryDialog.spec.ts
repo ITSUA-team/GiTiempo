@@ -25,6 +25,7 @@ function mountDialog(
 ) {
   return mount(TimeEntryDialog, {
     props: {
+      canCreateTask: true,
       dialogErrorMessage: null,
       endedAt: new Date("2026-04-21T10:30:00.000Z"),
       errors: {
@@ -45,6 +46,8 @@ function mountDialog(
       projectId: "project-1",
       projects: [
         {
+          accessScope: "project",
+          capabilities: { canManageTasks: true },
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
           defaultBillableForTasks: true,
@@ -54,12 +57,16 @@ function mountDialog(
           members: [],
           name: "Project Orion",
           source: "manual",
+          referenceProvenance: null,
+          trackingMode: "managed",
           totalSeconds: 43200,
           updatedAt: "2026-04-20T12:00:00.000Z",
           visibility: "public",
           workspaceId: "workspace-1",
         },
         {
+          accessScope: "project",
+          capabilities: { canManageTasks: true },
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
           defaultBillableForTasks: true,
@@ -69,6 +76,8 @@ function mountDialog(
           members: [],
           name: "Admin Web",
           source: "manual",
+          referenceProvenance: null,
+          trackingMode: "managed",
           totalSeconds: 3600,
           updatedAt: "2026-04-20T12:00:00.000Z",
           visibility: "private",
@@ -331,6 +340,25 @@ describe("TimeEntryDialog", () => {
     expect(autoComplete.props("completeOnFocus")).toBe("");
     expect(autoComplete.props("dropdownMode")).toBe("blank");
     expect(autoComplete.props("minLength")).toBe(0);
+  });
+
+  it("does not show new-task guidance or inputs without task-management capability", () => {
+    const wrapper = mountDialog({
+      canCreateTask: false,
+      taskSuggestions: [
+        {
+          id: "task-1",
+          isActive: true,
+          projectId: "project-1",
+          title: "Improve reports filters",
+        },
+      ],
+      taskValue: createNewTaskLookupOption("project-1"),
+    });
+
+    expect(wrapper.text()).toContain("Visible tasks are listed first.");
+    expect(wrapper.text()).not.toContain("New task is the last option.");
+    expect(wrapper.find('[data-testid="time-entry-new-task-title"]').exists()).toBe(false);
   });
 
   it("shows all project suggestions again when the project query is empty", async () => {

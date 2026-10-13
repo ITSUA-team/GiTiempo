@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, exists, isNull, sql } from 'drizzle-orm';
 import type {
   BackfillTaskBillableDefaultInput,
   CreateTaskInput,
@@ -56,7 +56,8 @@ export class TasksService {
     projectId: string,
     query: TaskListQuery = { includeInactive: false },
   ): Promise<TaskResponse[]> {
-    const project = await this.projects.requireVisibleProject(user, projectId);
+    const access = await this.resolveProjectAccess(user, projectId);
+    const { project } = access;
     if (!project.isActive) {
       throw new NotFoundException('Project not found');
     }
@@ -68,6 +69,22 @@ export class TasksService {
 
     if (!query.includeInactive) {
       conditions.push(eq(tasks.isActive, true));
+    }
+    if (access.scope === 'own-time') {
+      conditions.push(
+        exists(
+          this.db
+            .select({ id: timeEntries.id })
+            .from(timeEntries)
+            .where(
+              and(
+                eq(timeEntries.workspaceId, user.workspaceId),
+                eq(timeEntries.userId, user.sub),
+                eq(timeEntries.taskId, tasks.id),
+              ),
+            ),
+        ),
+      );
     }
 
     const rows = await this.db
@@ -85,7 +102,7 @@ export class TasksService {
       )
       .where(and(...conditions));
 
-    return rows.map((row) => this.toResponse(row));
+    return rows.map((row) => this.toResponse(row, undefined, access));
   }
 
   async createTask(
@@ -93,7 +110,10 @@ export class TasksService {
     projectId: string,
     input: CreateTaskInput,
   ): Promise<TaskResponse> {
-    const project = await this.projects.requireVisibleProject(user, projectId);
+    const access = await this.resolveProjectAccess(user, projectId);
+    if (access.scope === 'own-time')
+      throw new NotFoundException('Project not found');
+    const { project } = access;
     if (!project.isActive) {
       throw new UnprocessableEntityException('Project is inactive');
     }
@@ -112,7 +132,7 @@ export class TasksService {
     if (!row) {
       throw DomainError.internal('task_create_failed', 'Failed to create task');
     }
-    return this.toResponse(row, null);
+    return this.toResponse(row, null, access);
   }
 
   async listProjectGitHubIssues(
@@ -120,7 +140,10 @@ export class TasksService {
     projectId: string,
     query: GitHubIssueListQuery,
   ): Promise<GitHubRepositoryIssueListResponse> {
-    const project = await this.projects.requireVisibleProject(user, projectId);
+    const access = await this.resolveProjectAccess(user, projectId);
+    if (access.scope === 'own-time')
+      throw new NotFoundException('Project not found');
+    const { project } = access;
     if (!project.isActive) {
       throw new NotFoundException('Project not found');
     }
@@ -207,16 +230,19 @@ export class TasksService {
       return nextTask;
     });
 
-    return this.toResponse(task, issueKey);
+    return this.toResponse(task, issueKey, {
+      scope: 'project',
+      canManageTasks: true,
+    });
   }
 
   async getTask(user: AuthUser, taskId: string): Promise<TaskResponse> {
-    const { task } = await this.requireVisibleTask(user, taskId);
+    const { task, access } = await this.requireReadableTask(user, taskId);
     const githubIssueExternalKey = await this.findGitHubIssueExternalKey(
       user.workspaceId,
       task.id,
     );
-    return this.toResponse(task, githubIssueExternalKey);
+    return this.toResponse(task, githubIssueExternalKey, access);
   }
 
   async updateTask(
@@ -224,7 +250,10 @@ export class TasksService {
     taskId: string,
     input: UpdateTaskInput,
   ): Promise<TaskResponse> {
-    const { task, project } = await this.requireVisibleTask(user, taskId);
+    const { task, project, access } = await this.requireVisibleTask(
+      user,
+      taskId,
+    );
     if (!project.isActive) {
       throw new UnprocessableEntityException('Project is inactive');
     }
@@ -273,7 +302,7 @@ export class TasksService {
         user.workspaceId,
         row.id,
       );
-      return this.toResponse(row, githubIssueExternalKey);
+      return this.toResponse(row, githubIssueExternalKey, access);
     }
 
     const [row] = await this.db
@@ -287,7 +316,7 @@ export class TasksService {
       user.workspaceId,
       row.id,
     );
-    return this.toResponse(row, githubIssueExternalKey);
+    return this.toResponse(row, githubIssueExternalKey, access);
   }
 
   async backfillBillableDefault(
@@ -360,20 +389,49 @@ export class TasksService {
     user: AuthUser,
     taskId: string,
     db: Pick<DrizzleDB, 'select'> = this.db,
-  ): Promise<{ task: TaskRow; project: ProjectRow }> {
-    const [row] = await db
+  ): Promise<{
+    task: TaskRow;
+    project: ProjectRow;
+    access: Awaited<ReturnType<ProjectsService['resolveProjectAccess']>>;
+  }> {
+    const result = await this.requireReadableTask(user, taskId, db);
+    if (result.access.scope === 'own-time') {
+      throw new NotFoundException('Task not found');
+    }
+    return result;
+  }
+
+  async requireReadableTask(
+    user: AuthUser,
+    taskId: string,
+    db: Pick<DrizzleDB, 'select'> = this.db,
+  ): Promise<{
+    task: TaskRow;
+    project: ProjectRow;
+    access: Awaited<ReturnType<ProjectsService['resolveProjectAccess']>>;
+  }> {
+    const [task] = await db
       .select(taskRowSelection)
       .from(tasks)
       .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, user.workspaceId)))
       .limit(1);
-    if (!row) throw new NotFoundException('Task not found');
-
-    const project = await this.projects.requireVisibleProject(
-      user,
-      row.projectId,
-      db,
-    );
-    return { task: row, project };
+    if (!task) throw new NotFoundException('Task not found');
+    const access = await this.resolveProjectAccess(user, task.projectId, db);
+    if (access.scope === 'own-time') {
+      const [ownEntry] = await db
+        .select({ id: timeEntries.id })
+        .from(timeEntries)
+        .where(
+          and(
+            eq(timeEntries.workspaceId, user.workspaceId),
+            eq(timeEntries.userId, user.sub),
+            eq(timeEntries.taskId, task.id),
+          ),
+        )
+        .limit(1);
+      if (!ownEntry) throw new NotFoundException('Task not found');
+    }
+    return { task, project: access.project, access };
   }
 
   async requireTrackableTask(
@@ -395,11 +453,22 @@ export class TasksService {
       user.workspaceId,
       taskId,
     );
-    const project = await this.projects.requireVisibleProject(
-      user,
-      task.projectId,
-      db,
-    );
+    const access = await this.resolveProjectAccess(user, task.projectId, db);
+    if (access.scope === 'own-time') {
+      const [ownEntry] = await db
+        .select({ id: timeEntries.id })
+        .from(timeEntries)
+        .where(
+          and(
+            eq(timeEntries.workspaceId, user.workspaceId),
+            eq(timeEntries.userId, user.sub),
+            eq(timeEntries.taskId, task.id),
+          ),
+        )
+        .limit(1);
+      if (!ownEntry) throw new NotFoundException('Task not found');
+    }
+    const project = access.project;
 
     this.assertTrackableTask(task, project);
     return { task, project };
@@ -426,6 +495,20 @@ export class TasksService {
     return task;
   }
 
+  private async resolveProjectAccess(
+    user: AuthUser,
+    projectId: string,
+    db?: Pick<DrizzleDB, 'select'>,
+  ): Promise<{
+    project: ProjectRow;
+    scope: 'project' | 'own-time';
+    canManageTasks: boolean;
+  }> {
+    return db === undefined
+      ? this.projects.resolveProjectAccess(user, projectId)
+      : this.projects.resolveProjectAccess(user, projectId, db);
+  }
+
   private taskResponseSelection() {
     return {
       id: tasks.id,
@@ -444,6 +527,7 @@ export class TasksService {
   private toResponse(
     row: TaskRow | TaskResponseRow,
     githubIssueExternalKey?: string | null,
+    access?: { scope: 'project' | 'own-time'; canManageTasks: boolean },
   ): TaskResponse {
     const resolvedGitHubIssueExternalKey =
       githubIssueExternalKey !== undefined
@@ -460,6 +544,8 @@ export class TasksService {
       status: row.status,
       defaultBillableForTimeEntries: row.defaultBillableForTimeEntries,
       isActive: row.isActive,
+      accessScope: access?.scope ?? 'project',
+      capabilities: { canManageTasks: access?.canManageTasks ?? false },
       githubIssue: parseGitHubIssueExternalKey(resolvedGitHubIssueExternalKey),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),

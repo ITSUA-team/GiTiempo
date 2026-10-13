@@ -52,6 +52,43 @@ function createTestConfig() {
 }
 
 describe("createExtensionApiClient", () => {
+  it.each(["getWorkspace", "getCurrentTimer", "loginWithFirebaseToken"] as const)(
+    "bounds a stalled %s request and allows retry",
+    async (method) => {
+      const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 0);
+        return controller.signal;
+      });
+      const { storage } = createStorage({
+        [EXTENSION_SESSION_STORAGE_KEY]: {
+          accessToken: "access-token",
+          accessTokenExpiresIn: 900,
+          refreshToken: "refresh-token",
+        },
+      });
+      const fetchFn = vi.fn<typeof fetch>(async (_url, options) => {
+        if (!options?.signal) throw new Error("Missing timeout signal");
+        return new Promise<Response>((_resolve, reject) => {
+          options.signal!.addEventListener("abort", () => reject(new Error("Timed out")), { once: true });
+        });
+      });
+      const client = createExtensionApiClient({ config: createTestConfig(), fetchFn, storage });
+      try {
+        const pending = method === "loginWithFirebaseToken"
+          ? client.loginWithFirebaseToken("firebase-id-token")
+          : client[method]();
+        await expect(pending).rejects.toThrow("Unable to reach GiTiempo API");
+        expect(timeout).toHaveBeenCalledWith(15_000);
+        await expect(storage.get()).resolves.toHaveProperty(EXTENSION_SESSION_STORAGE_KEY);
+        fetchFn.mockResolvedValueOnce(jsonResponse({ timeEntry: null }));
+        await expect(client.getCurrentTimer()).resolves.toEqual({ timeEntry: null });
+      } finally {
+        timeout.mockRestore();
+      }
+    },
+  );
+
   it("preserves safe GitHub tracking failure codes without treating them as session expiry", async () => {
     const { storage } = createStorage({
       [EXTENSION_SESSION_STORAGE_KEY]: {
@@ -114,6 +151,7 @@ describe("createExtensionApiClient", () => {
       body: JSON.stringify({ firebaseIdToken: "firebase-id-token" }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
+      signal: expect.any(AbortSignal),
     });
     expect(data).toEqual({
       [EXTENSION_SESSION_STORAGE_KEY]: {
@@ -150,6 +188,7 @@ describe("createExtensionApiClient", () => {
         body: JSON.stringify({ code: "handoff-code", verifier: VERIFIER }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
+        signal: expect.any(AbortSignal),
       },
     );
     // The stored session is indistinguishable from one established through
@@ -209,6 +248,7 @@ describe("createExtensionApiClient", () => {
           "Content-Type": "application/json",
         },
         method: "POST",
+        signal: expect.any(AbortSignal),
       }),
     );
     // Bounded, because nothing downstream waits on it and an MV3 worker can be
@@ -403,6 +443,7 @@ describe("createExtensionApiClient", () => {
           Authorization: "Bearer access-token",
         },
         method: "GET",
+        signal: expect.any(AbortSignal),
       },
     );
   });
@@ -482,17 +523,20 @@ describe("createExtensionApiClient", () => {
     });
 
     expect(fetchFn).toHaveBeenCalledWith(
-      "http://localhost:3000/time-entries/timer/start-from-github",
+      "http://localhost:3000/time-entries/timer/start-from-github-reference",
       {
         body: JSON.stringify({
           githubRepo: "octo/repo",
           issueNumber: 184,
+          issueTitle: "Improve reports filters",
+          issueUrl: "https://github.com/octo/repo/issues/184",
         }),
         headers: {
           Authorization: "Bearer access-token",
           "Content-Type": "application/json",
         },
         method: "POST",
+        signal: expect.any(AbortSignal),
       },
     );
   });
@@ -531,6 +575,7 @@ describe("createExtensionApiClient", () => {
           "Content-Type": "application/json",
         },
         method: "POST",
+        signal: expect.any(AbortSignal),
       },
     );
   });
@@ -568,6 +613,7 @@ describe("createExtensionApiClient", () => {
         body: JSON.stringify({ refreshToken: "refresh-token" }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
+        signal: expect.any(AbortSignal),
       },
     );
     expect(fetchFn).toHaveBeenNthCalledWith(
@@ -579,6 +625,7 @@ describe("createExtensionApiClient", () => {
           Authorization: "Bearer access-token-next",
         },
         method: "GET",
+        signal: expect.any(AbortSignal),
       },
     );
     expect(data).toEqual({
@@ -673,21 +720,25 @@ describe("createExtensionApiClient", () => {
           Authorization: "Bearer access-token-next",
         },
         method: "GET",
+        signal: expect.any(AbortSignal),
       },
     );
     expect(fetchFn).toHaveBeenNthCalledWith(
       5,
-      "http://localhost:3000/time-entries/timer/start-from-github",
+      "http://localhost:3000/time-entries/timer/start-from-github-reference",
       {
         body: JSON.stringify({
           githubRepo: "octo/repo",
           issueNumber: 184,
+          issueTitle: "Improve reports filters",
+          issueUrl: "https://github.com/octo/repo/issues/184",
         }),
         headers: {
           Authorization: "Bearer access-token-next",
           "Content-Type": "application/json",
         },
         method: "POST",
+        signal: expect.any(AbortSignal),
       },
     );
     expect(data).toEqual({
@@ -723,6 +774,38 @@ describe("createExtensionApiClient", () => {
     await expect(storage.get()).resolves.toEqual({});
   });
 
+  it("bounds a stalled refresh instead of blocking workspace loading", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 0);
+      return controller.signal;
+    });
+    const { storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const fetchFn = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ message: "Unauthorized" }, { status: 401 }))
+      .mockImplementationOnce(async (_url, options) => {
+        if (!options?.signal) throw new Error("Missing timeout signal");
+        return new Promise<Response>((_resolve, reject) => {
+          options.signal!.addEventListener("abort", () => reject(new Error("Timed out")), { once: true });
+        });
+      });
+    const client = createExtensionApiClient({ config: createTestConfig(), fetchFn, storage });
+    try {
+      await expect(client.getWorkspace()).rejects.toThrow("Your session has expired");
+      expect(fetchFn).toHaveBeenLastCalledWith("http://localhost:3000/auth/refresh", expect.objectContaining({ signal: expect.any(AbortSignal) }));
+      expect(timeout).toHaveBeenCalledTimes(2);
+      await expect(storage.get()).resolves.toEqual({});
+    } finally {
+      timeout.mockRestore();
+    }
+  });
+
   it("clears the local session when refresh throws before returning a response", async () => {
     const { storage } = createStorage({
       [EXTENSION_SESSION_STORAGE_KEY]: {
@@ -746,4 +829,13 @@ describe("createExtensionApiClient", () => {
     );
     await expect(storage.get()).resolves.toEqual({});
   });
+  it("binds reference submission to the reviewed token workspace and account", async () => {
+    const encode = (value: object) => btoa(JSON.stringify(value)).replace(/=/g, "");
+    const { storage } = createStorage({ [EXTENSION_SESSION_STORAGE_KEY]: { accessToken: `${encode({ alg: "HS256" })}.${encode({ sub: "user-2", email: "other@example.com", workspaceId: "workspace-2" })}.signature`, accessTokenExpiresIn: 900, refreshToken: "refresh-token" } });
+    const fetchFn = vi.fn();
+    const client = createExtensionApiClient({ config: createTestConfig(), storage, fetchFn });
+    await expect(client.startTimerFromGitHub({ kind: "supported", surface: "issue-page", githubRepo: "octo/repo", issueNumber: 184, issueTitle: "Issue", issueUrl: "https://github.com/octo/repo/issues/184" }, { workspaceId: "workspace-1", email: "alexey@example.com" })).rejects.toThrow("session or workspace changed");
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
 });

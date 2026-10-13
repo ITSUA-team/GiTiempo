@@ -26,6 +26,7 @@ import type {
   CreateManualTimeEntryInput,
   CurrentTimeEntryResponse,
   StartTimerFromGitHubInput,
+  StartTimerFromGitHubReferenceInput,
   StartTimerInput,
   StopTimerInput,
   TimeEntryListQuery,
@@ -122,9 +123,13 @@ export class TimeEntriesService {
     projectId: string,
     query: TimeEntryListQuery,
   ): Promise<TimeEntryListResponse> {
-    const project = await this.projects.requireVisibleProject(user, projectId);
+    const access = await this.projects.resolveProjectAccess(user, projectId);
+    const { project } = access;
     const conditions = this.buildListConditions(user.workspaceId, query);
     conditions.push(eq(tasksTable.projectId, project.id));
+    if (access.scope === 'own-time') {
+      conditions.push(eq(timeEntries.userId, user.sub));
+    }
 
     return this.listEntries(this.db, conditions, query.page, query.limit);
   }
@@ -342,6 +347,16 @@ export class TimeEntriesService {
     }
 
     await this.members.requireActiveMembership(user.sub, user.workspaceId);
+    const requestedIssueKey = `${input.githubRepo}#${input.issueNumber}`;
+    const existingReference =
+      await this.githubTasks.findExistingReferenceProject(
+        this.db,
+        user.workspaceId,
+        { githubRepo: input.githubRepo, issueKey: requestedIssueKey },
+      );
+    if (existingReference?.trackingMode === 'external-reference') {
+      throw new NotFoundException('GitHub project not found');
+    }
     const verified = await this.installations.prepareIssue(
       user,
       repoParts.owner,
@@ -481,6 +496,103 @@ export class TimeEntriesService {
       const result = await this.requireEntryResponse(this.db, entryId);
       void this.usersActivity.touchLastActive(user.sub);
       return result;
+    } catch (error) {
+      this.handleRunningTimerConflict(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Starts a timer from browser issue context. External references are never
+   * sent to GitHub; a matching managed project deliberately goes through the
+   * existing installation-verified route instead.
+   */
+  async startTimerFromGitHubReference(
+    user: AuthUser,
+    input: StartTimerFromGitHubReferenceInput,
+  ): Promise<TimeEntryResponse> {
+    const repoParts = parseGitHubRepoKey(input.githubRepo);
+    if (!repoParts) {
+      throw new UnprocessableEntityException('GitHub repository is invalid');
+    }
+    const issueKey = `${input.githubRepo}#${input.issueNumber}`;
+    await this.members.requireActiveMembership(user.sub, user.workspaceId);
+
+    const existing = await this.githubTasks.findExistingReferenceProject(
+      this.db,
+      user.workspaceId,
+      { githubRepo: input.githubRepo, issueKey },
+    );
+    if (existing?.trackingMode === 'managed') {
+      return this.startTimerFromGitHub(user, {
+        githubRepo: input.githubRepo,
+        issueNumber: input.issueNumber,
+      });
+    }
+
+    try {
+      const result = await this.db.transaction(async (tx) => {
+        const [membership] = await tx
+          .select({ id: workspaceMembers.userId })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, user.workspaceId),
+              eq(workspaceMembers.userId, user.sub),
+            ),
+          )
+          .for('update');
+        if (!membership) throw new UnauthorizedException('Unauthorized');
+
+        const materialized =
+          await this.githubTasks.materializeExternalReference(tx, user, {
+            githubRepo: input.githubRepo,
+            issueKey,
+            issueTitle: input.issueTitle,
+            canonicalIssueUrl: input.issueUrl,
+          });
+        if (materialized.kind === 'managed') {
+          return { managed: true as const };
+        }
+        const { project, task } = materialized;
+        if (!project.isActive) {
+          throw new UnprocessableEntityException('Project is inactive');
+        }
+        if (!task.isActive) {
+          throw new UnprocessableEntityException('Task is inactive');
+        }
+        if (task.status === 'closed') {
+          throw new UnprocessableEntityException('Task is closed');
+        }
+        const [entry] = await tx
+          .insert(timeEntries)
+          .values({
+            workspaceId: user.workspaceId,
+            taskId: task.id,
+            userId: user.sub,
+            isBillable: task.defaultBillableForTimeEntries,
+            startedAt: new Date(),
+            source: 'extension',
+          })
+          .returning({ id: timeEntries.id });
+        if (!entry) {
+          throw DomainError.internal(
+            'timer_start_failed',
+            'Failed to start timer',
+          );
+        }
+        return { managed: false as const, entryId: entry.id };
+      });
+
+      if (result.managed) {
+        return this.startTimerFromGitHub(user, {
+          githubRepo: input.githubRepo,
+          issueNumber: input.issueNumber,
+        });
+      }
+      const response = await this.requireEntryResponse(this.db, result.entryId);
+      void this.usersActivity.touchLastActive(user.sub);
+      return response;
     } catch (error) {
       this.handleRunningTimerConflict(error);
       throw error;
@@ -645,11 +757,27 @@ export class TimeEntriesService {
       )
       .limit(1);
 
+    const hasOwnExternalTaskEntry =
+      project.trackingMode === 'external-reference' &&
+      (
+        await db
+          .select({ id: timeEntries.id })
+          .from(timeEntries)
+          .where(
+            and(
+              eq(timeEntries.workspaceId, user.workspaceId),
+              eq(timeEntries.userId, user.sub),
+              eq(timeEntries.taskId, taskId),
+            ),
+          )
+          .limit(1)
+      )[0] !== undefined;
+
     const requiresAssignment =
       membership.role !== 'admin' &&
       (project.visibility === 'private' ||
         (membership.role === 'member' && Boolean(githubIssue)));
-    if (requiresAssignment) {
+    if (requiresAssignment && !hasOwnExternalTaskEntry) {
       const [assignment] = await db
         .select({ id: projectAssignments.id })
         .from(projectAssignments)

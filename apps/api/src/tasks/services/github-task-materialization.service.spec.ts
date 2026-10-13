@@ -13,6 +13,117 @@ function orgsMock(canonicalOwner: string | null) {
 }
 
 describe('GithubTaskMaterializationService', () => {
+  it('materializes browser context as an external reference without provider lookup', async () => {
+    const organizations = {
+      resolveCanonicalOrganizationLogin: vi.fn(),
+    };
+    const service = new GithubTaskMaterializationService(
+      {} as never,
+      organizations as never,
+    );
+    const project = {
+      id: 'project-1',
+      workspaceId: 'workspace-1',
+      trackingMode: 'external-reference',
+      defaultBillableForTasks: true,
+    };
+    const task = { id: 'task-1', projectId: project.id };
+    const createProject = vi.fn().mockResolvedValue(project);
+    const createTask = vi.fn().mockResolvedValue({ created: true, task });
+    Object.defineProperty(service, 'findGitHubTaskRefInWorkspace', {
+      value: vi.fn().mockResolvedValue(null),
+    });
+    Object.defineProperty(service, 'findGitHubProjectRef', {
+      value: vi.fn().mockResolvedValue(null),
+    });
+    Object.defineProperty(service, 'createExternalProjectForRepo', {
+      value: createProject,
+    });
+    Object.defineProperty(service, 'findOrCreateExternalTaskForIssue', {
+      value: createTask,
+    });
+
+    await expect(
+      service.materializeExternalReference(
+        { execute: vi.fn().mockResolvedValue(undefined) } as never,
+        {
+          sub: 'user-1',
+          email: 'user@example.com',
+          firebaseUid: 'user-uid',
+          workspaceId: 'workspace-1',
+          role: 'member',
+        },
+        {
+          githubRepo: 'Customer/API',
+          issueKey: 'Customer/API#184',
+          issueTitle: 'Customer issue',
+          canonicalIssueUrl: 'https://github.com/Customer/API/issues/184',
+        },
+      ),
+    ).resolves.toEqual({
+      kind: 'external-reference',
+      project,
+      projectCreated: true,
+      task,
+      taskCreated: true,
+    });
+
+    expect(
+      organizations.resolveCanonicalOrganizationLogin,
+    ).not.toHaveBeenCalled();
+    expect(createTask).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        canonicalIssueUrl: 'https://github.com/Customer/API/issues/184',
+        issueTitle: 'Customer issue',
+      }),
+    );
+  });
+
+  it('returns a managed issue target for caller-side managed authorization', async () => {
+    const service = new GithubTaskMaterializationService(
+      {} as never,
+      orgsMock(null),
+    );
+    const project = {
+      id: 'project-1',
+      workspaceId: 'workspace-1',
+      trackingMode: 'managed',
+    };
+    const task = { id: 'task-1', projectId: project.id };
+    Object.defineProperty(service, 'findGitHubTaskRefInWorkspace', {
+      value: vi.fn().mockResolvedValue({
+        projectId: project.id,
+        taskId: task.id,
+      }),
+    });
+    Object.defineProperty(service, 'requireProjectRow', {
+      value: vi.fn().mockResolvedValue(project),
+    });
+    Object.defineProperty(service, 'requireTaskRow', {
+      value: vi.fn().mockResolvedValue(task),
+    });
+
+    await expect(
+      service.materializeExternalReference(
+        { execute: vi.fn().mockResolvedValue(undefined) } as never,
+        {
+          sub: 'user-1',
+          email: 'user@example.com',
+          firebaseUid: 'user-uid',
+          workspaceId: 'workspace-1',
+          role: 'member',
+        },
+        {
+          githubRepo: 'Customer/API',
+          issueKey: 'Customer/API#184',
+          issueTitle: 'Ignored request title',
+          canonicalIssueUrl: 'https://github.com/Customer/API/issues/184',
+        },
+      ),
+    ).resolves.toEqual({ kind: 'managed', project, task });
+  });
+
   it('rewrites the issue owner to the connected organization casing', async () => {
     const createdTask = {
       id: 'task-new',

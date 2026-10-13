@@ -8,6 +8,8 @@ import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
 import { mockMatchMedia } from "@/test/mockMatchMedia";
 
 const projectOrion = {
+  accessScope: "project",
+  capabilities: { canManageTasks: true },
   color: null,
   createdAt: "2026-04-20T12:00:00.000Z",
   defaultBillableForTasks: true,
@@ -17,6 +19,8 @@ const projectOrion = {
   members: [],
   name: "Project Orion",
   source: "manual",
+  referenceProvenance: null,
+  trackingMode: "managed",
   totalSeconds: 43200,
   updatedAt: "2026-04-20T12:00:00.000Z",
   visibility: "public",
@@ -30,6 +34,8 @@ const internalOpsProject = {
 } satisfies ProjectResponse;
 
 const reportsTask = {
+  accessScope: "project",
+  capabilities: { canManageTasks: true },
   createdAt: "2026-04-20T12:00:00.000Z",
   defaultBillableForTimeEntries: true,
   githubIssue: null,

@@ -51,25 +51,17 @@ export async function resolveActivePageContext(): Promise<PageContext> {
       type: "page-context/get",
     })) as PageContext;
 
-    if (response?.kind === "supported") {
+    if (response?.kind === "supported" || response?.kind === "error") {
       return response;
     }
   } catch {
-    const fallbackTitle = activeTab.title?.split("·")[0]?.trim();
-
-    if (fallbackTitle) {
-      return {
-        ...parsed,
-        issueTitle: fallbackTitle,
-        issueUrl: activeTab.url,
-        kind: "supported",
-      };
-    }
+    // Reloading an unpacked extension disconnects scripts in existing tabs.
+    // Do not guess context from the tab title; the page needs a fresh script.
   }
 
   return {
     kind: "error",
-    message: "Open a supported GitHub issue to start a timer.",
+    message: "Refresh this GitHub issue page to reconnect GiTiempo, then try again.",
   };
 }
 
@@ -412,24 +404,33 @@ export function createPopupApp({
   }
 
   async function handleStartTimer(): Promise<void> {
-    if (state.pageContext?.kind !== "supported") {
+    if (state.isSubmitting || state.pageContext?.kind !== "supported") return;
+    const expectedWorkspaceId = state.snapshot?.workspace?.id;
+    const expectedUserEmail = state.snapshot?.user?.email;
+    if (!expectedWorkspaceId || !expectedUserEmail) {
+      state.errorMessage = "Workspace context is unavailable. Refresh before starting.";
+      render();
       return;
     }
-
+    state.isSubmitting = true;
+    render();
     try {
-      const result = await runtimeClient.startTimer(state.pageContext);
-
+      const context = await pageContextResolver();
+      state.pageContext = context;
+      if (context.kind !== "supported") throw new Error(context.kind === "error" ? context.message : "Open a supported GitHub issue to start a timer.");
+      const result = await runtimeClient.startTimer(context, expectedWorkspaceId, expectedUserEmail);
       state.snapshot = result.snapshot;
       state.errorMessage = result.ok ? null : result.errorMessage ?? "Unable to start timer.";
     } catch (error) {
-      state.errorMessage =
-        error instanceof Error ? error.message : "Unable to start timer.";
+      state.errorMessage = error instanceof Error ? error.message : "Unable to start timer.";
+    } finally {
+      state.isSubmitting = false;
+      render();
     }
-
-    render();
   }
 
   async function handleStopTimer(): Promise<void> {
+    if (state.isSubmitting) return;
     const expectedTimerId = state.snapshot?.currentTimer?.id;
 
     if (!expectedTimerId) {
@@ -438,6 +439,8 @@ export function createPopupApp({
       return;
     }
 
+    state.isSubmitting = true;
+    render();
     try {
       const result = await runtimeClient.stopTimer(expectedTimerId);
 
@@ -446,9 +449,10 @@ export function createPopupApp({
     } catch (error) {
       state.errorMessage =
         error instanceof Error ? error.message : "Unable to stop timer.";
+    } finally {
+      state.isSubmitting = false;
+      render();
     }
-
-    render();
   }
 
   return {

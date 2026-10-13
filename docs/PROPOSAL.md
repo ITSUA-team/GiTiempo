@@ -28,7 +28,7 @@ The data model preserves `workspaceId` foreign keys on all workspace-owned entit
 
 GitHub connection is optional — users can work exclusively with manual tasks and projects.
 
-A separate verified workspace GitHub App installation authorizes timer starts from supported GitHub issue surfaces. It is set up by a workspace administrator and does not require each member to connect GitHub personally.
+A separate verified workspace GitHub App installation authorizes managed timer starts from supported GitHub issue surfaces. It is set up by a workspace administrator and does not require each member to connect GitHub personally; external reference starts have their own default-on path below.
 
 In the future, the same profile-based integration pattern will support Jira, Trello, and other task providers.
 
@@ -38,7 +38,7 @@ In the future, the same profile-based integration pattern will support Jira, Tre
 
 ### 1. GitHub Issues & Projects Integration
 
-Users who connect their GitHub account can access organizations, projects, and issues visible to them in GitHub for browsing and import. The connection uses a **GitHub App** with user-to-server OAuth flow. GitHub-backed timer starts require a separate verified workspace installation.
+Users who connect their GitHub account can access organizations, projects, and issues visible to them in GitHub for browsing and import. The connection uses a **GitHub App** with user-to-server OAuth flow. Managed GitHub-backed timer starts require a separate verified workspace installation; external reference starts do not.
 
 User access tokens expire after 8 hours and are refreshed automatically using a refresh token (valid for 6 months). This follows GitHub's recommended security practice for token rotation.
 
@@ -47,6 +47,10 @@ Data is synced **on-demand**: when a user opens the task selector, the backend q
 **Project = GitHub Project or GitHub Repository.** A project in the application can map to either a GitHub Project (board that groups issues from multiple repos) or a GitHub Repository (issues within a single repo). The default is GitHub Project. Users choose the grouping mode when selecting or creating a project.
 
 The current timer interaction scope uses visible workspace data for task selection through the global top-bar task-picker dialog: **Project → Task**.
+
+**External GitHub reference tracking:** The browser extension can also record time from a supported issue surface when the customer's organization has not installed the GitHub App. This path is enabled by default for an authenticated workspace member and sends the repository, issue number, visible issue title, and canonical issue URL as user-supplied reference data. It does not require a personal GitHub connection, a workspace installation, organization allow-list membership, or an administrator toggle. The first successful start creates a private external-reference project and task atomically; later starts reuse that workspace identity.
+
+Managed imported projects retain installation, mapping, and project-authorization checks. A matching managed mapping never falls back to external recording. An external-reference project is visible to an otherwise unauthorized member only while they have their own time in it, and then exposes only tasks with that member's own entries. Administrators retain full workspace access; explicit project access remains unchanged. Reference projects cannot be converted to managed projects, made public, or rebound after a repository rename or transfer in this release.
 
 ### 2. Time Entry
 
@@ -96,9 +100,9 @@ A Chrome extension adds **Start/Stop Timer** and other controls directly onto su
 - Detect the current GitHub issue from the current GitHub issue surface, including direct issue URLs (`org/repo/issues/123`) and supported GitHub Projects issue panes
 - Start/stop a timer against that issue
 - Display running timer indicator
-- Request a GitHub-backed start using the detected issue identifiers; the server verifies the workspace installation, repository, existing project mapping, and member access before writing anything
+- Request one reference start using the detected issue context. The server either preserves the existing managed installation-and-access route or records an external reference without GitHub API access.
 
-For a GitHub-backed start, the server can materialize the issue as a task only in an existing mapped GiTiempo project. It never creates a project or a member assignment. A connected personal GitHub account is not required for start/stop.
+For a managed GitHub-backed start, the server can materialize the issue only in an existing mapped GiTiempo project and never creates an assignment. For a previously unmapped external reference, the first successful timer start creates the private project/task identity and its own entry in one transaction. A connected personal GitHub account is not required for either path.
 
 ## User Roles
 
@@ -168,7 +172,7 @@ Members track time through **two independent workflows**:
 
 1. Navigate to any supported GitHub issue surface.
 2. Click **Start Timer** on the injected button.
-3. The extension calls the API. The server verifies the workspace GitHub App installation and the member's access to an existing mapped project, then may materialize the issue as a task in that project.
+3. The extension calls the reference-start API. A matching managed project keeps its workspace-installation and access checks; an unmapped external issue can be materialized privately without GitHub setup.
 4. Click **Stop Timer** when done.
 5. The time entry appears in the User SPA automatically.
 
@@ -198,6 +202,7 @@ The following are explicitly **out of scope for the MVP**:
 - Scheduling and capacity planning
 - API rate-limit handling beyond basic caching
 - Multi-tenant SaaS account switching, tenant isolation controls, and cross-organization administration
+- External-reference project conversion, repository rename/transfer rebinding, and merge tooling
 
 **Architectural requirement:** The codebase must support an adapter pattern for task synchronization so that adding future integrations (Jira, Trello, etc.) requires only a new adapter module without modifying core time-tracking logic.
 

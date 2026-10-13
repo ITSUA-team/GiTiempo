@@ -1,7 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { readonly, shallowRef } from "vue";
+import { nextTick, readonly, shallowRef } from "vue";
 import type {
   ProjectResponse,
   TaskResponse,
@@ -11,6 +11,9 @@ import type {
 import { ApiError } from "@gitiempo/web-shared/http";
 
 import { INPUT_DEBOUNCE_MS } from "@gitiempo/web-shared";
+import {
+  userProjectsKeys,
+} from "@/lib/query-keys";
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
 import { TIME_ENTRY_NEW_TASK_ID } from "@/composables/time-entries/time-entry-task-lookup";
 import { topBarTimerDialogControllerKey } from "@/composables/timer/useTopBarTimerDialogController";
@@ -83,6 +86,8 @@ afterAll(() => {
 
 function createProject(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
   return {
+    accessScope: "project",
+    capabilities: { canManageTasks: true },
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
     defaultBillableForTasks: true,
@@ -92,6 +97,8 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
     members: [],
     name: "Project Orion",
     source: "manual",
+    referenceProvenance: null,
+    trackingMode: "managed",
     totalSeconds: 43200,
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
@@ -102,6 +109,8 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
 
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
   return {
+    accessScope: "project",
+    capabilities: { canManageTasks: true },
     createdAt: "2026-04-20T12:00:00.000Z",
     defaultBillableForTimeEntries: true,
     githubIssue: null,
@@ -1858,6 +1867,87 @@ describe("TimeEntriesView", () => {
         summary: "Task created",
       }),
     );
+  });
+
+  it("clears an inline New task when selected-project access narrows to own-time", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+    const fullProject = createProject({
+      id: TEST_IDS.projectAdmin,
+      name: "Admin Web",
+    });
+    const ownTimeProject = createProject({
+      accessScope: "own-time",
+      capabilities: { canManageTasks: false },
+      id: TEST_IDS.projectAdmin,
+      name: "Admin Web",
+    });
+
+    client.listVisibleProjects.mockResolvedValueOnce([createProject(), fullProject]);
+
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-new"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-new-task-title"]').trigger("click");
+
+    expect(wrapper.get('[data-testid="dialog-task-value"]').text()).toBe("New task");
+    expect(wrapper.get('[data-testid="dialog-new-task-title-value"]').text()).toBe(
+      "Write release checklist",
+    );
+
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [createProject(), ownTimeProject],
+    );
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="dialog-task-suggestions"]').text()).not.toContain(
+      "New task",
+    );
+    expect(wrapper.get('[data-testid="dialog-task-value"]').text()).toBe("");
+    expect(wrapper.get('[data-testid="dialog-new-task-title-value"]').text()).toBe("");
+
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.createTask).not.toHaveBeenCalled();
+    expect(client.createManualEntry).not.toHaveBeenCalled();
+  });
+
+  it("rejects a stale New task selection in an own-time project before requesting creation", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+      visibleProjects: [
+        createProject({
+          accessScope: "own-time",
+          capabilities: { canManageTasks: false },
+          id: TEST_IDS.projectAdmin,
+          name: "Admin Web",
+        }),
+      ],
+    });
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-new"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-new-task-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="dialog-task-suggestions"]').text()).not.toContain(
+      "New task",
+    );
+    expect(client.createTask).not.toHaveBeenCalled();
+    expect(client.createManualEntry).not.toHaveBeenCalled();
   });
 
   it("validates the final new-task entry payload after task creation", async () => {

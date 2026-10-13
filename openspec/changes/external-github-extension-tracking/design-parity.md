@@ -53,7 +53,7 @@ Removed standalone web mockups: `NFZT3`, `uymXH`, `lw1w1`, `ULwkN`, `y3igB`, `b6
 
 ## Evidence and save boundary
 
-The earlier version was saved by the user. This revision was made through the live Pencil canvas and exported to the current PDF; the editor has no save operation exposed through its MCP API. The user previously chose to save the Pen file manually. Saving this revision in Pen is still required unless performed since the last edit. The PDF is the durable review artifact for the revised presentation.
+The revision was initially made through the live Pencil canvas and exported to the current PDF; the user chose to save the Pen file manually. The grouped design is now stored in `GITiempo.pen` in commit `75cdb08d` (`Organize external tracking designs`), and the file has no working-tree changes. A fresh read-only Pencil inspection on 13 October confirmed Projects frames `yAu6B`/`FRM1d` inside `Z0XM0S`, including the External tags, own-time help and restricted controls. Both screenshots were inspected. The PDF remains the review export; there is no pending save request for this revision.
 
 The user approved reusing current views with tags/contextual help. Detailed implementation must follow this revised presentation; saving a file does not imply approval of unrelated design changes. No application code changed in this revision.
 

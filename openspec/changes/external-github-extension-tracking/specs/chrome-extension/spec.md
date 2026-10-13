@@ -202,6 +202,32 @@ For managed routing, both popup and injected timer control SHALL interpret stabl
 - **THEN** it explains that the issue context must be refreshed and offers retry without pretending a timer started
 
 
+### Requirement: Extension Uses Minimum Browser Permissions
+
+The Chrome release package MUST request only `identity`, `storage`, and the host access needed for the configured GiTiempo API and supported GitHub integration. It MUST NOT request broad `tabs` access, wildcard access to unrelated hosts, or permissions reserved for future features. Supported browser behavior MUST be verified after permission changes.
+
+#### Scenario: Chrome release manifest is inspected
+
+- **GIVEN** the release package has been built with its intended environment
+- **WHEN** its manifest permissions are reviewed
+- **THEN** API permissions are limited to `identity` and `storage`
+- **AND** host permissions are limited to the configured API origin and GitHub
+- **AND** content-script registration is restricted to GitHub, including navigation entry pages needed for same-document transitions to supported issues, and excludes pull-request pages
+
+#### Scenario: Supported tab behavior works with scoped access
+
+- **GIVEN** the extension is installed with its minimum permissions
+- **WHEN** the user opens supported GitHub issues and organization-project issue panes, with or without a `/views/{view}` path segment, and operates the timer
+- **THEN** popup context resolution, injected controls, and updates across matching tabs continue to work
+- **AND** opening the web app and profile continues to work
+- **AND** Chrome verification records identify any necessary permission difference; Firefox runtime verification is explicitly deferred for this release-preparation pass, not reported as passed
+
+#### Scenario: Pull requests remain outside extension scope
+
+- **WHEN** the user opens a GitHub pull request
+- **THEN** the extension does not inject timer controls or treat that page as a supported timer context
+- **AND** content-script matches, background tab broadcasts, and release declarations exclude pull-request pages
+
 ## ADDED Requirements
 
 ### Requirement: Extension Presents Reference Tracking Without GitHub Setup Gates

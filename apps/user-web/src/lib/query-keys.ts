@@ -120,8 +120,17 @@ export const timerGithubKeys = {
 export const userProjectsKeys = {
   all: (scope?: UserServerStateScope) =>
     ["user-web", normalizeScope(scope), "projects"] as const,
-  projectTasks: (scope: UserServerStateScope, projectId: string | null | undefined) =>
-    [...userProjectsKeys.all(scope), "project-tasks", normalizeString(projectId)] as const,
+  projectTasks: (
+    scope: UserServerStateScope,
+    projectId: string | null | undefined,
+    accessScope: "project" | "own-time" | null | undefined = null,
+  ) =>
+    [
+      ...userProjectsKeys.all(scope),
+      "project-tasks",
+      normalizeString(projectId),
+      accessScope,
+    ] as const,
   visibleProjects: (scope: UserServerStateScope) =>
     [...userProjectsKeys.all(scope), "visible-projects"] as const,
 };
@@ -138,12 +147,14 @@ export const userMutationInvalidationKeys = {
     return [
       timeEntriesKeys.all(scope),
       timerKeys.all(scope),
+      userProjectsKeys.all(scope),
     ];
   },
   afterTimerMutation(scope: UserServerStateScope): QueryKey[] {
     return [
       timerKeys.all(scope),
       timeEntriesKeys.all(scope),
+      userProjectsKeys.all(scope),
     ];
   },
 };

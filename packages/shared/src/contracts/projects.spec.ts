@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
 import {
   backfillProjectBillableDefaultSchema,
@@ -8,33 +8,37 @@ import {
   projectDetailResponseSchema,
   projectListResponseSchema,
   updateProjectSchema,
-} from "./projects.js";
+} from './projects.js';
 
 const baseProject = {
   color: null,
-  createdAt: "2026-05-01T10:00:00.000Z",
+  createdAt: '2026-05-01T10:00:00.000Z',
   description: null,
   defaultBillableForTasks: true,
-  id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+  id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
   isActive: true,
   members: [],
-  name: "Project Orion",
-  source: "manual",
+  name: 'Project Orion',
+  source: 'manual',
+  trackingMode: 'managed',
+  referenceProvenance: null,
+  accessScope: 'project',
+  capabilities: { canManageTasks: true },
   totalSeconds: 43200,
-  updatedAt: "2026-05-01T10:00:00.000Z",
-  visibility: "public",
-  workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+  updatedAt: '2026-05-01T10:00:00.000Z',
+  visibility: 'public',
+  workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
 };
 
-describe("projectListResponseSchema", () => {
-  it("accepts projects with integer total seconds", () => {
+describe('projectListResponseSchema', () => {
+  it('accepts projects with integer total seconds', () => {
     const result = projectListResponseSchema.parse([baseProject]);
 
     expect(result[0]?.totalSeconds).toBe(43200);
     expect(result[0]?.defaultBillableForTasks).toBe(true);
   });
 
-  it("requires totalSeconds even when legacy totalHours is present", () => {
+  it('requires totalSeconds even when legacy totalHours is present', () => {
     const result = projectListResponseSchema.safeParse([
       {
         ...baseProject,
@@ -44,33 +48,33 @@ describe("projectListResponseSchema", () => {
     ]);
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual([0, "totalSeconds"]);
+    expect(result.error?.issues[0]?.path).toEqual([0, 'totalSeconds']);
   });
 });
 
-describe("createProjectSchema", () => {
-  it("accepts defaultBillableForTasks", () => {
+describe('createProjectSchema', () => {
+  it('accepts defaultBillableForTasks', () => {
     const result = createProjectSchema.parse({
       defaultBillableForTasks: false,
-      name: "Project Orion",
+      name: 'Project Orion',
     });
 
     expect(result.defaultBillableForTasks).toBe(false);
   });
 
-  it("rejects non-boolean defaultBillableForTasks", () => {
+  it('rejects non-boolean defaultBillableForTasks', () => {
     const result = createProjectSchema.safeParse({
-      defaultBillableForTasks: "false",
-      name: "Project Orion",
+      defaultBillableForTasks: 'false',
+      name: 'Project Orion',
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(["defaultBillableForTasks"]);
+    expect(result.error?.issues[0]?.path).toEqual(['defaultBillableForTasks']);
   });
 });
 
-describe("updateProjectSchema", () => {
-  it("accepts defaultBillableForTasks as the only update field", () => {
+describe('updateProjectSchema', () => {
+  it('accepts defaultBillableForTasks as the only update field', () => {
     const result = updateProjectSchema.parse({
       defaultBillableForTasks: false,
     });
@@ -79,8 +83,8 @@ describe("updateProjectSchema", () => {
   });
 });
 
-describe("backfillProjectBillableDefaultSchema", () => {
-  it("accepts selected downstream record types", () => {
+describe('backfillProjectBillableDefaultSchema', () => {
+  it('accepts selected downstream record types', () => {
     const result = backfillProjectBillableDefaultSchema.parse({
       updateTasks: true,
       updateTimeEntries: true,
@@ -89,7 +93,7 @@ describe("backfillProjectBillableDefaultSchema", () => {
     expect(result).toEqual({ updateTasks: true, updateTimeEntries: true });
   });
 
-  it("rejects requests with no selected record type", () => {
+  it('rejects requests with no selected record type', () => {
     const result = backfillProjectBillableDefaultSchema.safeParse({
       updateTasks: false,
       updateTimeEntries: false,
@@ -97,11 +101,11 @@ describe("backfillProjectBillableDefaultSchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe(
-      "At least one existing record type must be selected",
+      'At least one existing record type must be selected',
     );
   });
 
-  it("accepts backfill response counts", () => {
+  it('accepts backfill response counts', () => {
     const result = projectBillableDefaultBackfillResponseSchema.parse({
       tasksUpdated: 2,
       timeEntriesUpdated: 3,
@@ -112,8 +116,8 @@ describe("backfillProjectBillableDefaultSchema", () => {
   });
 });
 
-describe("projectDetailResponseSchema", () => {
-  it("accepts project detail responses with tracked summary seconds", () => {
+describe('projectDetailResponseSchema', () => {
+  it('accepts project detail responses with tracked summary seconds', () => {
     const result = projectDetailResponseSchema.parse({
       ...baseProject,
       assignedMembersSummary: {
@@ -125,12 +129,12 @@ describe("projectDetailResponseSchema", () => {
         externalKey: null,
         externalType: null,
         externalUrl: null,
-        source: "manual",
+        source: 'manual',
       },
       trackedSummary: {
         billableSeconds: 21600,
         billableShare: 0.5,
-        lastActivityAt: "2026-05-02T10:00:00.000Z",
+        lastActivityAt: '2026-05-02T10:00:00.000Z',
         totalSeconds: 43200,
       },
     });
@@ -138,25 +142,55 @@ describe("projectDetailResponseSchema", () => {
     expect(result.totalSeconds).toBe(43200);
     expect(result.trackedSummary.totalSeconds).toBe(43200);
   });
+
+  it('redacts member summaries for own-time access without treating them as zero', () => {
+    const result = projectDetailResponseSchema.parse({
+      ...baseProject,
+      accessScope: 'own-time',
+      capabilities: { canManageTasks: false },
+      members: [],
+      referenceProvenance: 'user-supplied',
+      assignedMembersSummary: null,
+      memberCount: 7,
+      providerSummary: {
+        externalKey: null,
+        externalType: null,
+        externalUrl: null,
+        source: 'github',
+      },
+      trackedSummary: {
+        billableSeconds: 0,
+        billableShare: null,
+        lastActivityAt: null,
+        totalSeconds: 0,
+      },
+    });
+
+    expect(result.accessScope).toBe('own-time');
+    expect(result.capabilities.canManageTasks).toBe(false);
+    expect(result.members).toEqual([]);
+    expect(result.assignedMembersSummary).toBeNull();
+    expect(result).not.toHaveProperty('memberCount');
+  });
 });
 
-describe("importGitHubProjectsSchema", () => {
+describe('importGitHubProjectsSchema', () => {
   const baseBoard = {
-    githubProjectId: "PVT_kwDO",
+    githubProjectId: 'PVT_kwDO',
   };
 
-  it("carries per-project visibility and billable default", () => {
+  it('carries per-project visibility and billable default', () => {
     const result = importGitHubProjectsSchema.parse({
       githubProjects: [
-        { ...baseBoard, defaultBillableForTasks: false, visibility: "public" },
+        { ...baseBoard, defaultBillableForTasks: false, visibility: 'public' },
       ],
     });
 
-    expect(result.githubProjects[0]?.visibility).toBe("public");
+    expect(result.githubProjects[0]?.visibility).toBe('public');
     expect(result.githubProjects[0]?.defaultBillableForTasks).toBe(false);
   });
 
-  it("leaves both settings undefined so the server keeps its defaults", () => {
+  it('leaves both settings undefined so the server keeps its defaults', () => {
     const result = importGitHubProjectsSchema.parse({
       githubProjects: [baseBoard],
     });
@@ -166,20 +200,20 @@ describe("importGitHubProjectsSchema", () => {
     expect(result.githubProjects[0]?.githubRepos).toEqual([]);
   });
 
-  it("rejects a visibility the projects table cannot store", () => {
+  it('rejects a visibility the projects table cannot store', () => {
     expect(() =>
       importGitHubProjectsSchema.parse({
-        githubProjects: [{ ...baseBoard, visibility: "internal" }],
+        githubProjects: [{ ...baseBoard, visibility: 'internal' }],
       }),
     ).toThrow();
   });
 
-  it.each(["owner", "title", "number", "url"])(
-    "refuses %s from the caller, because the server reads it from GitHub",
+  it.each(['owner', 'title', 'number', 'url'])(
+    'refuses %s from the caller, because the server reads it from GitHub',
     (field) => {
       expect(() =>
         importGitHubProjectsSchema.parse({
-          githubProjects: [{ ...baseBoard, [field]: "anything" }],
+          githubProjects: [{ ...baseBoard, [field]: 'anything' }],
         }),
       ).toThrow();
     },

@@ -45,13 +45,15 @@
   - `Continue with GitHub` — full width, on GitHub's own `#24292f`, carrying the GitHub mark. Shown only when `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED` is the string `true` for the build; otherwise omitted entirely, leaving the other two untouched.
   - `Sign in with email` — a brand text action below a labelled `or` divider, revealing the email form in place.
 - The two provider actions wear their own brand marks rather than two identically brand-coloured buttons, so they read as two distinct choices. They are the same marks the web logins use.
-- Starting a timer from a GitHub issue is verified server-side before anything is written through a verified workspace GitHub App installation. The repository must be in an allowed organization, remain accessible to that installation, and map to an existing GiTiempo project the member can access. A personal GitHub connection is not a prerequisite or fallback, and GitHub canonical repository names replace the submitted values.
-- GitHub Projects pane URLs expose a human project number, not the canonical ProjectV2 node ID accepted by the timer API. The extension sends no board hint from that number. The server resolves existing verified mappings and fails safely with the mapping-required or mapping-ambiguous remedy when it cannot select one authoritative project.
+- Starting sends one shared reference-start request with the current repository, positive issue number, bounded visible issue title, and canonical direct issue URL. External recording is default-on for an authenticated workspace member and has no personal GitHub link, installation, organization allow-list, or administrator-toggle prerequisite. The extension never exposes separate managed/external actions.
+- If the server finds a managed mapping, it preserves installation, repository, mapping, and project-access checks; a denial is rendered with its returned remedy and never retried through another route. An unmapped external issue is materialized by the server as a private reference project/task with the caller's first entry.
+- GitHub Projects pane URLs expose a human project number, not the canonical ProjectV2 node ID accepted by the timer API. The extension sends no board hint from that number. The server uses repository and issue identity: an existing managed mapping follows its verified route, while an unmapped issue may materialize as an external reference; an ambiguous managed mapping fails safely with its remedy.
 - GitHub sign-in is **not** Firebase-backed: it leaves for the backend flow and returns a one-time handoff code that the service worker exchanges for the ordinary session. Its failures come back as recoverable copy naming the cause, and an authorization window the user closes reads as a cancelled attempt rather than a configuration error.
 
 ### Authenticated, No Active Timer
 
 - Show detected issue context.
+- Show the workspace name that will receive the timer. Disable Start until the authoritative session/workspace context is available, and revalidate that context at submission.
 - Full-width Start Timer button.
 - Keep the issue context card visible above the actions.
 - Reach the full workspace through the header home icon; do not repeat it as a body-level link.
@@ -75,12 +77,14 @@
 - Inline muted message.
 - Keep the branded header visible so the home icon stays reachable.
 - Retry action link.
+- A page-context failure uses `Unable to read issue` and `Retry` in the existing error layout. Preserve the content script's precise issue-detection error; when the script is unavailable after an extension reload, ask the member to refresh the GitHub issue page. Reserve `Connection lost` for API/session connection errors.
 - Map stable tracking error codes to the relevant remedy. For `project_assignment_required`, show exactly: `You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.` Installation, organization, and repository permission failures direct the member to a workspace administrator; mapping failures direct the member to a workspace administrator or project manager; provider failures offer retry.
 - Do not show a personal GitHub reconnect action for an installation-backed tracking error.
 - An error after a failed start does not claim a timer is running. If the authoritative current timer belongs to this member and matches the visible issue, keep `Stop Timer` available.
 
 ## Injected GitHub Issue UI
 
+- Register the content script on GitHub navigation entry pages so issue-list → issue transitions work without a document reload; exclude pull-request pages. Registration alone does not make a page a supported tracking surface. Require matching current rendered issue identity/title before mounting.
 - The injected control appears on two supported GitHub issue surfaces:
   - direct issue pages at `github.com/<owner>/<repo>/issues/<number>`
   - GitHub Projects issue panes reached from URLs such as `github.com/orgs/<org>/projects/<number>/views/<view>?pane=issue&issue=<owner>|<repo>|<number>`
@@ -94,6 +98,7 @@
 
 - Show repository and issue number/title detected from the current page.
 - Show one primary `Start Timer` action.
+- Show the authenticated workspace destination above the action. Disable duplicate clicks while Start is pending, re-read current DOM issue context before submission, and keep the current issue context visible after an error.
 - If auth is missing, keep issue context visible, replace the primary action with `Open extension`, and show helper copy: `Sign in to GiTiempo to start tracking this issue.`
 
 ### Injected Running State
