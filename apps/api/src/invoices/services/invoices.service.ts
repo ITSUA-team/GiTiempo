@@ -597,6 +597,8 @@ export class InvoicesService {
       const eligibleEntries = await tx
         .select(linkedTimeEntrySelection)
         .from(timeEntries)
+        .leftJoin(users, eq(users.id, timeEntries.userId))
+        .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
         .where(and(...eligibilityConditions))
         .for('update');
 
