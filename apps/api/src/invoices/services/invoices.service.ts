@@ -21,6 +21,8 @@ import {
 } from 'drizzle-orm';
 import type {
   CreateInvoiceInput,
+  EligibleEntriesQuery,
+  EligibleEntriesResponse,
   InvoiceListItem,
   InvoiceListQuery,
   InvoiceListResponse,
@@ -238,6 +240,100 @@ export class InvoicesService {
 
     const [row] = await countQuery.where(and(...conditions));
     return row?.value ?? 0;
+  }
+
+  // ── Preview eligible entries ────────────────────────────────────────
+
+  /**
+   * Returns the time entries that would be billed if an invoice is created
+   * with the given project scope and date range. Mirrors the eligibility
+   * logic in createInvoice but performs no writes.
+   */
+  async previewEligibleEntries(
+    user: AuthUser,
+    query: EligibleEntriesQuery,
+  ): Promise<EligibleEntriesResponse> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+
+    if (membership.role === 'pm') {
+      if (query.projectId === undefined) {
+        throw new ForbiddenException(
+          'Project managers must scope invoices to an assigned project',
+        );
+      }
+      await this.requirePmProjectAccess(
+        user.sub,
+        user.workspaceId,
+        query.projectId,
+      );
+    } else if (query.projectId !== undefined) {
+      await this.requireWorkspaceProject(user.workspaceId, query.projectId);
+    }
+
+    const conditions = [
+      eq(timeEntries.workspaceId, user.workspaceId),
+      isNotNull(timeEntries.endedAt),
+      isNotNull(timeEntries.durationSeconds),
+      eq(timeEntries.isBillable, true),
+      isNull(timeEntries.invoiceId),
+      gte(timeEntries.startedAt, new Date(query.dateFrom)),
+      lt(
+        timeEntries.startedAt,
+        new Date(new Date(query.dateTo).getTime() + 86_400_000),
+      ),
+    ];
+
+    if (query.projectId !== undefined) {
+      conditions.push(
+        inArray(
+          timeEntries.taskId,
+          this.db
+            .select({ id: tasks.id })
+            .from(tasks)
+            .innerJoin(projects, eq(projects.id, tasks.projectId))
+            .where(
+              and(
+                eq(projects.id, query.projectId),
+                eq(projects.workspaceId, user.workspaceId),
+              ),
+            ),
+        ),
+      );
+    }
+
+    const rows = await this.db
+      .select(linkedTimeEntrySelection)
+      .from(timeEntries)
+      .where(and(...conditions))
+      .orderBy(timeEntries.startedAt);
+
+    const totalSeconds = rows.reduce(
+      (sum, e) => sum + (e.durationSeconds ?? 0),
+      0,
+    );
+    const totalHoursCents = Math.round((totalSeconds / 3600) * 100);
+    const totalHours = totalHoursCents / 100;
+
+    const entries: InvoiceTimeEntrySummary[] = rows.map((e) => ({
+      id: e.id,
+      taskId: e.taskId,
+      userId: e.userId,
+      startedAt: e.startedAt.toISOString(),
+      endedAt: e.endedAt!.toISOString(),
+      durationSeconds: e.durationSeconds!,
+      isBillable: e.isBillable,
+      description: e.description,
+    }));
+
+    return {
+      count: rows.length,
+      totalHours,
+      entries,
+    };
   }
 
   // ── Create ────────────────────────────────────────────────────────────

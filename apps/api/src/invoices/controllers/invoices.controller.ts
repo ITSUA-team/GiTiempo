@@ -25,6 +25,8 @@ import { ZodSerializerDto } from 'nestjs-zod';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { CreateInvoiceRequestDto } from '../dto/create-invoice-request.dto';
+import { EligibleEntriesQueryDto } from '../dto/eligible-entries-query.dto';
+import { EligibleEntriesResponseDto } from '../dto/eligible-entries-response.dto';
 import { InvoiceListQueryDto } from '../dto/invoice-list-query.dto';
 import { InvoiceListResponseDto } from '../dto/invoice-list-response.dto';
 import { InvoiceResponseDto } from '../dto/invoice-response.dto';
@@ -62,6 +64,21 @@ export class InvoicesController {
     @Body() body: CreateInvoiceRequestDto,
   ): Promise<InvoiceResponseDto> {
     return this.invoices.createInvoice(user, body);
+  }
+
+  @Get('eligible-entries')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Preview eligible time entries for a potential invoice',
+  })
+  @ApiOkResponse({ type: EligibleEntriesResponseDto })
+  @ApiForbiddenResponse({ description: 'Admin or PM role required' })
+  @ZodSerializerDto(EligibleEntriesResponseDto)
+  previewEligibleEntries(
+    @CurrentUser() user: AuthUser,
+    @Query() query: EligibleEntriesQueryDto,
+  ): Promise<EligibleEntriesResponseDto> {
+    return this.invoices.previewEligibleEntries(user, query);
   }
 
   @Get(':id')

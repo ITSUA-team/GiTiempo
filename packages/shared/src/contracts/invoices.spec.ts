@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   createInvoiceSchema,
+  eligibleEntriesQuerySchema,
+  eligibleEntriesResponseSchema,
   invoiceListQuerySchema,
   invoiceListResponseSchema,
   invoiceResponseSchema,
@@ -711,5 +713,109 @@ describe("invoiceListQuerySchema", () => {
     });
 
     expect(result.dateTo).toBe("2026-04-21");
+  });
+});
+
+describe("eligibleEntriesQuerySchema", () => {
+  it("accepts dateFrom, dateTo, and optional projectId", () => {
+    const withoutProject = eligibleEntriesQuerySchema.parse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+    });
+    expect(withoutProject.projectId).toBeUndefined();
+
+    const withProject = eligibleEntriesQuerySchema.parse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      projectId: "00000000-0000-4000-8000-000000000001",
+    });
+    expect(withProject.projectId).toBe(
+      "00000000-0000-4000-8000-000000000001",
+    );
+  });
+
+  it("rejects dateTo before dateFrom", () => {
+    const result = eligibleEntriesQuerySchema.safeParse({
+      dateFrom: "2026-04-21",
+      dateTo: "2026-04-01",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts dateTo equal to dateFrom", () => {
+    const result = eligibleEntriesQuerySchema.parse({
+      dateFrom: "2026-04-21",
+      dateTo: "2026-04-21",
+    });
+    expect(result.dateTo).toBe("2026-04-21");
+  });
+
+  it("rejects an invalid projectId", () => {
+    const result = eligibleEntriesQuerySchema.safeParse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      projectId: "not-a-uuid",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unknown properties", () => {
+    const result = eligibleEntriesQuerySchema.safeParse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      unknown: true,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("eligibleEntriesResponseSchema", () => {
+  const validEntry = {
+    id: "00000000-0000-4000-8000-000000000001",
+    taskId: "00000000-0000-4000-8000-000000000101",
+    userId: "00000000-0000-4000-8000-000000000201",
+    startedAt: "2026-04-15T09:00:00.000Z",
+    endedAt: "2026-04-15T11:30:00.000Z",
+    durationSeconds: 9000,
+    isBillable: true,
+    description: "Backend API implementation",
+  };
+
+  it("accepts a response with entries", () => {
+    const result = eligibleEntriesResponseSchema.parse({
+      count: 1,
+      totalHours: 2.5,
+      entries: [validEntry],
+    });
+    expect(result.count).toBe(1);
+    expect(result.entries).toHaveLength(1);
+  });
+
+  it("accepts an empty entries array with zero count and hours", () => {
+    const result = eligibleEntriesResponseSchema.parse({
+      count: 0,
+      totalHours: 0,
+      entries: [],
+    });
+    expect(result.count).toBe(0);
+    expect(result.entries).toHaveLength(0);
+  });
+
+  it("rejects a negative totalHours", () => {
+    const result = eligibleEntriesResponseSchema.safeParse({
+      count: 0,
+      totalHours: -1,
+      entries: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a negative count", () => {
+    const result = eligibleEntriesResponseSchema.safeParse({
+      count: -1,
+      totalHours: 0,
+      entries: [],
+    });
+    expect(result.success).toBe(false);
   });
 });

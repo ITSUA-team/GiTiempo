@@ -144,6 +144,27 @@ export const updateInvoiceSchema = z
     },
   );
 
+// Preview of time entries that would be billed if an invoice is created
+// with the given project scope and date range. The query mirrors the
+// eligibility conditions used by createInvoice but performs no writes.
+export const eligibleEntriesQuerySchema = z
+  .object({
+    projectId: z.uuid().optional(),
+    dateFrom: dateSchema,
+    dateTo: dateSchema,
+  })
+  .strict()
+  .refine(isValidInvoiceDateRange, {
+    message: "dateTo must be later than or equal to dateFrom",
+    path: ["dateTo"],
+  });
+
+export const eligibleEntriesResponseSchema = z.object({
+  count: z.number().int().min(0),
+  totalHours: z.number().nonnegative().max(99999999.99).multipleOf(0.01),
+  entries: z.array(invoiceTimeEntrySummarySchema),
+});
+
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
 export type InvoiceProjectSummary = z.infer<
   typeof invoiceProjectSummarySchema
@@ -158,3 +179,7 @@ export type InvoiceListResponse = z.infer<typeof invoiceListResponseSchema>;
 export type InvoiceListQuery = z.infer<typeof invoiceListQuerySchema>;
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
+export type EligibleEntriesQuery = z.infer<typeof eligibleEntriesQuerySchema>;
+export type EligibleEntriesResponse = z.infer<
+  typeof eligibleEntriesResponseSchema
+>;

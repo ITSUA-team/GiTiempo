@@ -245,3 +245,52 @@ The backend MUST compute invoice totals as the sum of tracked hours of selected 
 - **WHEN** the backend attempts to create the invoice
 - **THEN** the backend rejects with `422 Unprocessable Entity`
 - **AND** no invoice row is persisted
+
+### Requirement: Eligible Time Entries Can Be Previewed Before Invoice Creation
+
+The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint for `admin` and `pm` users that returns the set of completed, billable, not-yet-invoiced time entries matching a given date range and optional project scope, along with the computed total hours — without creating an invoice or modifying any data.
+
+#### Scenario: Admin previews eligible entries across a date range
+
+- **WHEN** an admin requests `GET /invoices/eligible-entries?dateFrom=2026-04-01&dateTo=2026-04-21` with the workspace JWT claim
+- **THEN** the backend returns all completed, billable, not-yet-invoiced time entries in that workspace and date range
+- **AND** includes the total count and total hours computed from the selected entries
+- **AND** does not create an invoice or link any time entries
+
+#### Scenario: Admin previews eligible entries scoped to a project
+
+- **WHEN** an admin requests `GET /invoices/eligible-entries?dateFrom=2026-04-01&dateTo=2026-04-21&projectId=X`
+- **THEN** the backend returns only entries whose task belongs to the specified project
+- **AND** verifies the project belongs to the workspace
+
+#### Scenario: PM must scope preview to an assigned project
+
+- **WHEN** a PM requests `GET /invoices/eligible-entries` without a `projectId`
+- **THEN** the backend rejects with `403 Forbidden`
+
+#### Scenario: PM cannot preview entries for an unassigned private project
+
+- **WHEN** a PM requests `GET /invoices/eligible-entries?projectId=X` for a private project they are not assigned to
+- **THEN** the backend rejects with `403 Forbidden`
+
+#### Scenario: Member is denied
+
+- **WHEN** an ordinary member requests `GET /invoices/eligible-entries`
+- **THEN** the backend rejects with `403 Forbidden`
+
+#### Scenario: No eligible entries returns an empty result
+
+- **WHEN** no time entries match the eligibility rules for the requested scope
+- **THEN** the backend returns `{ count: 0, totalHours: 0, entries: [] }`
+
+#### Scenario: Preview does not modify data
+
+- **WHEN** a preview request is executed
+- **THEN** no invoice row is created
+- **AND** no time entry `invoice_id` is set
+- **AND** no database transaction is started
+
+#### Scenario: dateTo before dateFrom is rejected
+
+- **WHEN** a request carries `dateTo` earlier than `dateFrom`
+- **THEN** the backend rejects with a validation error
