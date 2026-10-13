@@ -6742,7 +6742,7 @@
                           "type": "text",
                           "id": "CPGra",
                           "fill": "$color-text-muted",
-                          "content": "Across 7 projects",
+                          "content": "7 invoices · 5 projects",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
