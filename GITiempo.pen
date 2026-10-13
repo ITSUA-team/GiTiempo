@@ -8410,7 +8410,7 @@
                                     {
                                       "type": "frame",
                                       "id": "pvH2",
-                                      "width": 90,
+                                      "width": 70,
                                       "height": "fill_container",
                                       "padding": [
                                         0,
@@ -8431,8 +8431,30 @@
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "pvH3",
+                                      "id": "pvH5",
                                       "width": 60,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "pvH5T",
+                                          "fill": "$color-text-dark",
+                                          "content": "Task",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 11,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "pvH3",
+                                      "width": 45,
                                       "height": "fill_container",
                                       "padding": [
                                         0,
@@ -8506,7 +8528,7 @@
                                     {
                                       "type": "frame",
                                       "id": "pvR1U",
-                                      "width": 90,
+                                      "width": 70,
                                       "height": "fill_container",
                                       "padding": [
                                         0,
@@ -8527,8 +8549,30 @@
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "pvR1Dr",
+                                      "id": "pvR1T",
                                       "width": 60,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "pvR1TT",
+                                          "fill": "$color-text-dark",
+                                          "content": "Backend",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "pvR1Dr",
+                                      "width": 45,
                                       "height": "fill_container",
                                       "padding": [
                                         0,
@@ -8576,12 +8620,6 @@
                                   "id": "pvR2",
                                   "width": "fill_container",
                                   "height": 32,
-                                  "stroke": "$color-divider",
-                                  "strokeWidth": {
-                                    "top": 1
-                                  },
-                                  "strokeAlignment": "inner",
-                                  "strokeLinejoin": "round",
                                   "children": [
                                     {
                                       "type": "frame",
@@ -8608,7 +8646,7 @@
                                     {
                                       "type": "frame",
                                       "id": "pvR2U",
-                                      "width": 90,
+                                      "width": 70,
                                       "height": "fill_container",
                                       "padding": [
                                         0,
@@ -8629,8 +8667,30 @@
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "pvR2Dr",
+                                      "id": "pvR2T",
                                       "width": 60,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "pvR2TT",
+                                          "fill": "$color-text-dark",
+                                          "content": "Review",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "pvR2Dr",
+                                      "width": 45,
                                       "height": "fill_container",
                                       "padding": [
                                         0,
@@ -8671,19 +8731,19 @@
                                         }
                                       ]
                                     }
-                                  ]
+                                  ],
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": {
+                                    "top": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round"
                                 },
                                 {
                                   "type": "frame",
                                   "id": "pvR3",
                                   "width": "fill_container",
                                   "height": 32,
-                                  "stroke": "$color-divider",
-                                  "strokeWidth": {
-                                    "top": 1
-                                  },
-                                  "strokeAlignment": "inner",
-                                  "strokeLinejoin": "round",
                                   "children": [
                                     {
                                       "type": "frame",
@@ -8710,7 +8770,7 @@
                                     {
                                       "type": "frame",
                                       "id": "pvR3U",
-                                      "width": 90,
+                                      "width": 70,
                                       "height": "fill_container",
                                       "padding": [
                                         0,
@@ -8731,8 +8791,30 @@
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "pvR3Dr",
+                                      "id": "pvR3T",
                                       "width": 60,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "pvR3TT",
+                                          "fill": "$color-text-dark",
+                                          "content": "DB Migr.",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "pvR3Dr",
+                                      "width": 45,
                                       "height": "fill_container",
                                       "padding": [
                                         0,
@@ -8773,7 +8855,13 @@
                                         }
                                       ]
                                     }
-                                  ]
+                                  ],
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": {
+                                    "top": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "strokeLinejoin": "round"
                                 }
                               ]
                             }
@@ -9983,7 +10071,7 @@
                             {
                               "type": "frame",
                               "id": "dtlTeH2",
-                              "width": 140,
+                              "width": 120,
                               "height": "fill_container",
                               "padding": [
                                 0,
@@ -10004,8 +10092,30 @@
                             },
                             {
                               "type": "frame",
+                              "id": "dtlTeH5",
+                              "width": 120,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dtlTeH5T",
+                                  "fill": "$color-text-dark",
+                                  "content": "Task",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "dtlTeH3",
-                              "width": 100,
+                              "width": 80,
                               "height": "fill_container",
                               "padding": [
                                 0,
@@ -10080,7 +10190,7 @@
                             {
                               "type": "frame",
                               "id": "dtlTeR1U",
-                              "width": 140,
+                              "width": 120,
                               "height": "fill_container",
                               "padding": [
                                 0,
@@ -10101,8 +10211,30 @@
                             },
                             {
                               "type": "frame",
+                              "id": "dtlTeR1T",
+                              "width": 120,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dtlTeR1TT",
+                                  "fill": "$color-text-dark",
+                                  "content": "Backend API",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "dtlTeR1Dr",
-                              "width": 100,
+                              "width": 80,
                               "height": "fill_container",
                               "padding": [
                                 0,
@@ -10177,7 +10309,7 @@
                             {
                               "type": "frame",
                               "id": "dtlTeR2U",
-                              "width": 140,
+                              "width": 120,
                               "height": "fill_container",
                               "padding": [
                                 0,
@@ -10198,8 +10330,30 @@
                             },
                             {
                               "type": "frame",
+                              "id": "dtlTeR2T",
+                              "width": 120,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dtlTeR2TT",
+                                  "fill": "$color-text-dark",
+                                  "content": "Code Review",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "dtlTeR2Dr",
-                              "width": 100,
+                              "width": 80,
                               "height": "fill_container",
                               "padding": [
                                 0,
@@ -10280,7 +10434,7 @@
                             {
                               "type": "frame",
                               "id": "dtlTeR3U",
-                              "width": 140,
+                              "width": 120,
                               "height": "fill_container",
                               "padding": [
                                 0,
@@ -10301,8 +10455,30 @@
                             },
                             {
                               "type": "frame",
+                              "id": "dtlTeR3T",
+                              "width": 120,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dtlTeR3TT",
+                                  "fill": "$color-text-dark",
+                                  "content": "DB Migration",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "dtlTeR3Dr",
-                              "width": 100,
+                              "width": 80,
                               "height": "fill_container",
                               "padding": [
                                 0,
@@ -10383,7 +10559,7 @@
                             {
                               "type": "frame",
                               "id": "dtlTeR4U",
-                              "width": 140,
+                              "width": 120,
                               "height": "fill_container",
                               "padding": [
                                 0,
@@ -10404,8 +10580,30 @@
                             },
                             {
                               "type": "frame",
+                              "id": "dtlTeR4T",
+                              "width": 120,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dtlTeR4TT",
+                                  "fill": "$color-text-dark",
+                                  "content": "Integration",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "dtlTeR4Dr",
-                              "width": 100,
+                              "width": 80,
                               "height": "fill_container",
                               "padding": [
                                 0,
@@ -66179,6 +66377,15 @@
                         },
                         {
                           "type": "text",
+                          "id": "mDtlTr1ST",
+                          "fill": "$color-text-dark",
+                          "content": "Backend API",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
                           "id": "mDtlTr1S",
                           "name": "entry description",
                           "fill": "$color-text-muted",
@@ -66251,6 +66458,15 @@
                               "fontWeight": "500"
                             }
                           ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "mDtlTr2ST",
+                          "fill": "$color-text-dark",
+                          "content": "Backend API",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -66332,6 +66548,15 @@
                               "fontWeight": "500"
                             }
                           ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "mDtlTr3ST",
+                          "fill": "$color-text-dark",
+                          "content": "Backend API",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
