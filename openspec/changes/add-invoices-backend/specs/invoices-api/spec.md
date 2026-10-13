@@ -179,6 +179,8 @@ The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and
 
 The backend MUST expose a protected `PATCH /invoices/:id` endpoint for `admin` and `pm` users that updates editable fields — status, notes, and other fields allowed by the shared update contract — without recalculating snapshot totals or changing the linked time-entry set.
 
+The `sent` status is a semantic marker: the backend does not send an email, generate a PDF, or notify external systems when an invoice transitions to `sent`. Email delivery and PDF generation are deferred to a future milestone. The UI labels this action "Mark as sent" to make the manual nature of the transition clear.
+
 #### Scenario: Admin updates invoice status
 
 - **WHEN** an admin submits a valid update changing the status from `draft` to `sent`

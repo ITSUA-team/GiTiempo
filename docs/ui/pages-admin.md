@@ -73,6 +73,7 @@
   - **Draft**: `Mark as sent` (PATCH status→sent, admin+PM) + `Delete` (DELETE, admin only, draft only — sent/paid return 409).
   - **Sent**: `Mark as paid` (PATCH status→paid, admin+PM). No Delete button.
   - **Paid**: no status actions (terminal state). No Delete button.
+- "Mark as sent" is a semantic status change only — no email is sent and no PDF is generated. Email delivery and PDF generation are deferred to a future milestone. The UI label makes the manual nature of the transition clear.
 - Delete requires a confirmation dialog: "Delete this invoice? Linked time entries will be unlinked and become available for future invoices."
 - Summary card (read-only): Project, Date range, Hourly rate, Currency, Discount, Total hours, Total amount, Created date. All snapshot fields are immutable after creation.
 - Editable card: Title (input), Notes (textarea), `Save changes` button (PATCH title + notes). No Status dropdown — status transitions happen only via header action buttons.
