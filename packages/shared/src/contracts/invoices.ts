@@ -20,6 +20,8 @@ export const invoiceTimeEntrySummarySchema = z.object({
   id: z.uuid(),
   taskId: z.uuid(),
   userId: z.uuid(),
+  userName: z.string().nullable(),
+  taskName: z.string().nullable(),
   startedAt: dateTimeSchema,
   endedAt: dateTimeSchema,
   durationSeconds: z.number().int().positive(),

@@ -344,6 +344,7 @@ The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint fo
 - **THEN** no invoice row is created
 - **AND** no time entry `invoice_id` is set
 - **AND** no database transaction is started
+- **AND** the response includes `userName` and `taskName` for each entry so the UI can display them without additional lookups
 
 #### Scenario: dateTo before dateFrom is rejected
 

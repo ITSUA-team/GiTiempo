@@ -41,6 +41,7 @@ import { projectAssignments } from '../../projects/schemas/project-assignments.s
 import { projects } from '../../projects/schemas/projects.schema';
 import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
+import { users } from '../../users/schemas/users.schema';
 import { workspaceSettings } from '../../workspaces/schemas/workspace-settings.schema';
 import { invoices } from '../schemas/invoices.schema';
 
@@ -68,6 +69,8 @@ interface LinkedTimeEntryRow {
   id: string;
   taskId: string;
   userId: string;
+  userName: string | null;
+  taskName: string | null;
   startedAt: Date;
   endedAt: Date | null;
   durationSeconds: number | null;
@@ -101,6 +104,8 @@ const linkedTimeEntrySelection = {
   id: timeEntries.id,
   taskId: timeEntries.taskId,
   userId: timeEntries.userId,
+  userName: users.displayName,
+  taskName: tasks.title,
   startedAt: timeEntries.startedAt,
   endedAt: timeEntries.endedAt,
   durationSeconds: timeEntries.durationSeconds,
@@ -450,6 +455,8 @@ export class InvoicesService {
     const rows = await this.db
       .select(linkedTimeEntrySelection)
       .from(timeEntries)
+      .leftJoin(users, eq(users.id, timeEntries.userId))
+      .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
       .where(and(...conditions))
       .orderBy(timeEntries.startedAt);
 
@@ -475,6 +482,8 @@ export class InvoicesService {
       id: e.id,
       taskId: e.taskId,
       userId: e.userId,
+      userName: e.userName,
+      taskName: e.taskName,
       startedAt: e.startedAt.toISOString(),
       endedAt: e.endedAt!.toISOString(),
       durationSeconds: e.durationSeconds!,
@@ -796,6 +805,8 @@ export class InvoicesService {
     return cx
       .select(linkedTimeEntrySelection)
       .from(timeEntries)
+      .leftJoin(users, eq(users.id, timeEntries.userId))
+      .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
       .where(eq(timeEntries.invoiceId, invoiceId))
       .orderBy(timeEntries.startedAt);
   }
@@ -901,6 +912,8 @@ export class InvoicesService {
       id: e.id,
       taskId: e.taskId,
       userId: e.userId,
+      userName: e.userName,
+      taskName: e.taskName,
       startedAt: e.startedAt.toISOString(),
       endedAt: e.endedAt!.toISOString(),
       durationSeconds: e.durationSeconds!,
