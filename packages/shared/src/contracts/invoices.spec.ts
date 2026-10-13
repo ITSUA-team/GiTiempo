@@ -27,6 +27,7 @@ const validInvoiceResponse = {
   totalAmount: 750,
   notes: null,
   createdBy: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+  createdByName: "Alex T.",
   timeEntryCount: 1,
   timeEntries: [
     {

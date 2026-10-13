@@ -44,6 +44,7 @@ export const invoiceResponseSchema = z.object({
   totalAmount: z.number().nonnegative().max(9999999999.99).multipleOf(0.01),
   notes: z.string().nullable(),
   createdBy: z.uuid(),
+  createdByName: z.string().nullable(),
   timeEntryCount: z.number().int().min(0),
   timeEntries: z.array(invoiceTimeEntrySummarySchema),
   project: invoiceProjectSummarySchema.nullable(),

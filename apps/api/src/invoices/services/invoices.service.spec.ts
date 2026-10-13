@@ -791,8 +791,8 @@ describe('InvoicesService', () => {
       adminUser.workspaceId,
       ['admin', 'pm'],
     );
-    // Admins join projects only — no assignment scoping.
-    expect(listStage.leftJoin).toHaveBeenCalledTimes(1);
+    // Admins join projects and users (createdByName) — no assignment scoping.
+    expect(listStage.leftJoin).toHaveBeenCalledTimes(2);
     expect(countStage.leftJoin).toHaveBeenCalledTimes(1);
   });
 
@@ -821,7 +821,8 @@ describe('InvoicesService', () => {
       ['admin', 'pm'],
     );
     // PM scoping adds the assignment leftJoin on both list and count queries.
-    expect(listStage.leftJoin).toHaveBeenCalledTimes(2);
+    // List also joins users for createdByName.
+    expect(listStage.leftJoin).toHaveBeenCalledTimes(3);
     expect(countStage.leftJoin).toHaveBeenCalledTimes(2);
   });
 

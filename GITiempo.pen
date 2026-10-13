@@ -9673,6 +9673,33 @@
                               "fontWeight": "500"
                             }
                           ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "dtlPCB",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "dtlPCBL",
+                              "fill": "$color-text-muted",
+                              "content": "Created by",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "dtlPCBV",
+                              "fill": "$color-text-dark",
+                              "content": "Alex T.",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
                         }
                       ]
                     }
@@ -65752,6 +65779,33 @@
                               "fontFamily": "$font-sans",
                               "fontSize": 13,
                               "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mDtlCB",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mDtlCBL",
+                                  "fill": "$color-text-muted",
+                                  "content": "Created by",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "mDtlCBV",
+                                  "fill": "$color-text-dark",
+                                  "content": "Alex T.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
                             }
                           ]
                         }

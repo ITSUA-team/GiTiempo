@@ -60,6 +60,7 @@ interface InvoiceDetailRow {
   totalAmount: number;
   notes: string | null;
   createdBy: string;
+  createdByName: string | null;
   createdAt: Date;
   updatedAt: Date;
   projectName: string | null;
@@ -95,6 +96,7 @@ const invoiceDetailSelection = {
   totalAmount: invoices.totalAmount,
   notes: invoices.notes,
   createdBy: invoices.createdBy,
+  createdByName: users.displayName,
   createdAt: invoices.createdAt,
   updatedAt: invoices.updatedAt,
   projectName: projects.name,
@@ -159,7 +161,8 @@ export class InvoicesService {
     let listQuery = this.db
       .select(invoiceDetailSelection)
       .from(invoices)
-      .leftJoin(projects, eq(projects.id, invoices.projectId));
+      .leftJoin(projects, eq(projects.id, invoices.projectId))
+      .leftJoin(users, eq(users.id, invoices.createdBy));
 
     if (isPm) {
       // PMs see only invoices scoped to a visible project (active public or
@@ -763,6 +766,7 @@ export class InvoicesService {
       .select(invoiceDetailSelection)
       .from(invoices)
       .leftJoin(projects, eq(projects.id, invoices.projectId))
+      .leftJoin(users, eq(users.id, invoices.createdBy))
       .where(and(eq(invoices.id, id), eq(invoices.workspaceId, workspaceId)))
       .limit(1);
 
@@ -936,6 +940,7 @@ export class InvoicesService {
       totalAmount: Number(row.totalAmount),
       notes: row.notes,
       createdBy: row.createdBy,
+      createdByName: row.createdByName,
       timeEntryCount: entries.length,
       timeEntries: entrySummaries,
       project:
@@ -966,6 +971,7 @@ export class InvoicesService {
       totalAmount: Number(row.totalAmount),
       notes: row.notes,
       createdBy: row.createdBy,
+      createdByName: row.createdByName,
       timeEntryCount: entryCount,
       project:
         row.projectId !== null && row.projectName !== null
