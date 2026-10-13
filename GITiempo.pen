@@ -7242,7 +7242,7 @@
                                       "type": "text",
                                       "id": "AS1OQ",
                                       "fill": "$color-status-warn-text",
-                                      "content": "Pending",
+                                      "content": "Sent",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
                                       "fontWeight": "600"
@@ -7512,7 +7512,7 @@
                       "type": "text",
                       "id": "KcDrM",
                       "fill": "$color-text-dark",
-                      "content": "Invoice",
+                      "content": "Create invoice",
                       "fontFamily": "Inter",
                       "fontSize": 18,
                       "fontWeight": "600"
@@ -7525,6 +7525,52 @@
                       "layout": "vertical",
                       "gap": 10,
                       "children": [
+                        {
+                          "type": "frame",
+                          "id": "fldTl",
+                          "name": "fieldTitle",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "lblTl",
+                              "fill": "$color-text-dark",
+                              "content": "Title",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "inpTl",
+                              "width": "fill_container",
+                              "height": 34,
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "phTl",
+                                  "fill": "$color-text-muted",
+                                  "content": "e.g. April 2026 — Project Orion",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
                         {
                           "type": "frame",
                           "id": "D7IZj",
@@ -7639,7 +7685,7 @@
                               "type": "frame",
                               "id": "B8fSJ",
                               "name": "f2b",
-                              "width": 150,
+                              "width": 120,
                               "layout": "vertical",
                               "gap": 6,
                               "children": [
@@ -7680,6 +7726,52 @@
                                   ]
                                 }
                               ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "fldCy",
+                              "name": "f2c",
+                              "width": 90,
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "lblCy",
+                                  "fill": "$color-text-dark",
+                                  "content": "Currency",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "inpCy",
+                                  "width": "fill_container",
+                                  "height": 34,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "valCy",
+                                      "fill": "$color-text-muted",
+                                      "content": "USD",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
                             }
                           ]
                         },
@@ -7694,7 +7786,7 @@
                               "type": "frame",
                               "id": "zshp0",
                               "name": "f3a",
-                              "width": 150,
+                              "width": 120,
                               "layout": "vertical",
                               "gap": 6,
                               "children": [
@@ -7731,6 +7823,52 @@
                                       "fontFamily": "Inter",
                                       "fontSize": 14,
                                       "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "fldHr",
+                              "name": "f3c",
+                              "width": 120,
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "lblHr",
+                                  "fill": "$color-text-dark",
+                                  "content": "Hours (calc.)",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "inpHr",
+                                  "width": "fill_container",
+                                  "height": 34,
+                                  "fill": "$color-app-bg",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "valHr",
+                                      "fill": "$color-text-dark",
+                                      "content": "120h",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 14,
+                                      "fontWeight": "700"
                                     }
                                   ]
                                 }
@@ -7779,6 +7917,107 @@
                                       "fontWeight": "700"
                                     }
                                   ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fldNt",
+                          "name": "fieldNotes",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "lblNt",
+                              "fill": "$color-text-dark",
+                              "content": "Notes",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "inpNt",
+                              "width": "fill_container",
+                              "height": 72,
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "phNt",
+                                  "fill": "$color-text-muted",
+                                  "content": "Add internal notes (visible to team only)",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fldSt",
+                          "name": "fieldStatus",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "lblSt",
+                              "fill": "$color-text-dark",
+                              "content": "Status",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "inpSt",
+                              "width": "fill_container",
+                              "height": 34,
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "valSt",
+                                  "fill": "$color-text-dark",
+                                  "content": "Draft",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "icoSt",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$color-text-muted"
                                 }
                               ]
                             }
