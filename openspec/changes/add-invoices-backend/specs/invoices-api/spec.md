@@ -168,6 +168,25 @@ The backend MUST expose a protected `PATCH /invoices/:id` endpoint for `admin` a
 - **WHEN** an admin submits a valid update changing the status from `draft` to `sent`
 - **THEN** the backend persists the new status and returns the updated invoice
 
+#### Scenario: PM updates status for an assigned project
+
+- **WHEN** a PM submits a valid update changing the status from `draft` to `sent` for an invoice scoped to a project they are assigned to
+- **THEN** the backend persists the new status and returns the updated invoice
+
+#### Scenario: Status transition from sent to paid
+
+- **GIVEN** an invoice with status `sent`
+- **WHEN** an admin or PM submits an update changing the status to `paid`
+- **THEN** the backend persists the new status and returns the updated invoice
+
+#### Scenario: Paid is a terminal status
+
+- **GIVEN** an invoice with status `paid`
+- **WHEN** a user attempts to change the status back to `draft` or `sent`
+- **THEN** the backend accepts the update if the request is otherwise valid
+- **AND** the status is changed (the API does not enforce one-way transitions)
+- **BUT** the UI SHOULD only present forward transitions (draft to sent to paid) via header action buttons to prevent accidental reversion
+
 #### Scenario: Update does not recompute totals
 
 - **GIVEN** an invoice was created with snapshot totals

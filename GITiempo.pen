@@ -9727,61 +9727,6 @@
                               ]
                             }
                           ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "dtlEdS",
-                          "width": 160,
-                          "layout": "vertical",
-                          "gap": 6,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "dtlEdSL",
-                              "fill": "$color-text-dark",
-                              "content": "Status",
-                              "fontFamily": "Inter",
-                              "fontSize": 13,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "dtlEdSI",
-                              "width": "fill_container",
-                              "height": 34,
-                              "fill": "$color-surface",
-                              "cornerRadius": "$radius-sm",
-                              "stroke": "$color-divider",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "space_between",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "dtlEdSV",
-                                  "fill": "$color-text-dark",
-                                  "content": "Draft",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 14,
-                                  "fontWeight": "500"
-                                },
-                                {
-                                  "type": "icon",
-                                  "id": "dtlEdSIc",
-                                  "width": 16,
-                                  "height": 16,
-                                  "icon": "chevron-down",
-                                  "library": "lucide",
-                                  "fill": "$color-text-muted"
-                                }
-                              ]
-                            }
-                          ]
                         }
                       ]
                     },
@@ -10430,6 +10375,38 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "note",
+      "id": "dtlNote",
+      "x": 1400,
+      "y": 3450,
+      "width": 400,
+      "fill": "#FFF9E6",
+      "cornerRadius": 8,
+      "padding": 16,
+      "layout": "vertical",
+      "gap": 8,
+      "children": [
+        {
+          "type": "text",
+          "id": "dtlNoteH",
+          "fill": "#1A1A1A",
+          "content": "Status-dependent header actions",
+          "fontFamily": "Inter",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "dtlNoteT",
+          "fill": "#666666",
+          "content": "Draft: [Mark as sent] + [Delete] (admin only)\nSent: [Mark as paid] (no Delete)\nPaid: no status actions (terminal)\n\nStatus dropdown removed from editable card.\nStatus transitions via header buttons only (PATCH status).\nEditable card: Title + Notes + Save changes (PATCH title/notes).",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
         }
       ]
     },
