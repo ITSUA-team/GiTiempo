@@ -115,6 +115,22 @@ const linkedTimeEntrySelection = {
   description: timeEntries.description,
 } as const;
 
+// Selection without user/task name joins — used in the createInvoice
+// eligibility query where FOR UPDATE requires locking only time_entries
+// rows. LEFT JOINs are incompatible with FOR UPDATE in PostgreSQL.
+const eligibleEntrySelection = {
+  id: timeEntries.id,
+  taskId: timeEntries.taskId,
+  userId: timeEntries.userId,
+  userName: sql<string | null>`null`,
+  taskName: sql<string | null>`null`,
+  startedAt: timeEntries.startedAt,
+  endedAt: timeEntries.endedAt,
+  durationSeconds: timeEntries.durationSeconds,
+  isBillable: timeEntries.isBillable,
+  description: timeEntries.description,
+} as const;
+
 // NUMERIC(12,2) ceiling: 9_999_999_999.99. Snapshot totals above this cannot
 // be stored; createInvoice rejects them with 422 before touching the DB.
 const MAX_TOTAL_AMOUNT = 9_999_999_999.99;
@@ -595,10 +611,8 @@ export class InvoicesService {
       }
 
       const eligibleEntries = await tx
-        .select(linkedTimeEntrySelection)
+        .select(eligibleEntrySelection)
         .from(timeEntries)
-        .leftJoin(users, eq(users.id, timeEntries.userId))
-        .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
         .where(and(...eligibilityConditions))
         .for('update');
 
