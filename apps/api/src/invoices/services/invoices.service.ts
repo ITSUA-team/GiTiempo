@@ -27,6 +27,7 @@ import type {
   InvoiceListQuery,
   InvoiceListResponse,
   InvoiceResponse,
+  InvoiceStatsResponse,
   InvoiceTimeEntrySummary,
   UpdateInvoiceInput,
 } from '@gitiempo/shared';
@@ -240,6 +241,147 @@ export class InvoicesService {
 
     const [row] = await countQuery.where(and(...conditions));
     return row?.value ?? 0;
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────
+
+  /**
+   * Returns aggregate invoice counts by status and a summary of invoices
+   * created in the current calendar month. For PMs, only invoices scoped to
+   * visible projects are counted; workspace-wide invoices are excluded.
+   *
+   * The thisMonth.totalAmount sums all currencies together. Workspaces
+   * using a single currency get accurate totals; multi-currency workspaces
+   * get an approximate sum. The workspace default currency is returned for
+   * display purposes.
+   */
+  async getInvoiceStats(
+    user: AuthUser,
+  ): Promise<InvoiceStatsResponse> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+    const isPm = membership.role === 'pm';
+
+    // Resolve workspace default currency for display.
+    const [settings] = await this.db
+      .select({
+        currency: workspaceSettings.currency,
+      })
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, user.workspaceId))
+      .limit(1);
+    const currency = settings?.currency ?? 'USD';
+
+    // Base condition: invoices in this workspace.
+    const baseConditions: SQL[] = [
+      eq(invoices.workspaceId, user.workspaceId),
+    ];
+
+    // PM visibility: only invoices for visible projects (same as list).
+    let statusQuery = this.db
+      .select({
+        status: invoices.status,
+        value: count(),
+      })
+      .from(invoices)
+      .leftJoin(projects, eq(projects.id, invoices.projectId));
+
+    if (isPm) {
+      statusQuery = statusQuery.leftJoin(
+        projectAssignments,
+        and(
+          eq(projectAssignments.projectId, invoices.projectId),
+          eq(projectAssignments.userId, user.sub),
+        ),
+      );
+      baseConditions.push(eq(projects.isActive, true));
+      baseConditions.push(
+        or(
+          eq(projects.visibility, 'public'),
+          eq(projectAssignments.userId, user.sub),
+        )!,
+      );
+    }
+
+    const statusRows = await statusQuery
+      .where(and(...baseConditions))
+      .groupBy(invoices.status);
+
+    const byStatus = { draft: 0, sent: 0, paid: 0 };
+    for (const row of statusRows) {
+      if (row.status === 'draft' || row.status === 'sent' || row.status === 'paid') {
+        byStatus[row.status] = row.value;
+      }
+    }
+
+    // This month: invoices created in the current calendar month.
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthConditions = [...baseConditions, gte(invoices.createdAt, monthStart)];
+
+    const [monthRow] = await this.db
+      .select({
+        invoiceCount: count(),
+        totalAmount: sql<number>`COALESCE(SUM(${invoices.totalAmount}), 0)`,
+      })
+      .from(invoices)
+      .leftJoin(projects, eq(projects.id, invoices.projectId))
+      .where(and(...monthConditions));
+
+    // Distinct project count for this month.
+    let projectCountQuery = this.db
+      .select({
+        projectCount: sql<number>`COUNT(DISTINCT ${invoices.projectId})`,
+      })
+      .from(invoices)
+      .where(
+        and(
+          ...monthConditions,
+          isNotNull(invoices.projectId),
+        ),
+      );
+
+    if (isPm) {
+      projectCountQuery = this.db
+        .select({
+          projectCount: sql<number>`COUNT(DISTINCT ${invoices.projectId})`,
+        })
+        .from(invoices)
+        .leftJoin(projects, eq(projects.id, invoices.projectId))
+        .leftJoin(
+          projectAssignments,
+          and(
+            eq(projectAssignments.projectId, invoices.projectId),
+            eq(projectAssignments.userId, user.sub),
+          ),
+        )
+        .where(
+          and(
+            ...monthConditions,
+            isNotNull(invoices.projectId),
+            eq(projects.isActive, true),
+            or(
+              eq(projects.visibility, 'public'),
+              eq(projectAssignments.userId, user.sub),
+            )!,
+          ),
+        );
+    }
+
+    const [projRow] = await projectCountQuery;
+
+    return {
+      byStatus,
+      thisMonth: {
+        invoiceCount: monthRow?.invoiceCount ?? 0,
+        projectCount: projRow?.projectCount ?? 0,
+        totalAmount: Number(monthRow?.totalAmount ?? 0),
+        currency,
+      },
+    };
   }
 
   // ── Preview eligible entries ────────────────────────────────────────

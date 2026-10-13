@@ -183,3 +183,19 @@ export type EligibleEntriesQuery = z.infer<typeof eligibleEntriesQuerySchema>;
 export type EligibleEntriesResponse = z.infer<
   typeof eligibleEntriesResponseSchema
 >;
+
+export const invoiceStatsResponseSchema = z.object({
+  byStatus: z.object({
+    draft: z.number().int().min(0),
+    sent: z.number().int().min(0),
+    paid: z.number().int().min(0),
+  }),
+  thisMonth: z.object({
+    invoiceCount: z.number().int().min(0),
+    projectCount: z.number().int().min(0),
+    totalAmount: z.number().nonnegative().max(9999999999.99).multipleOf(0.01),
+    currency: z.string().length(3).regex(/^[A-Za-z]{3}$/),
+  }),
+});
+
+export type InvoiceStatsResponse = z.infer<typeof invoiceStatsResponseSchema>;

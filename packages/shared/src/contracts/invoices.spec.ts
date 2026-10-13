@@ -7,6 +7,7 @@ import {
   invoiceListQuerySchema,
   invoiceListResponseSchema,
   invoiceResponseSchema,
+  invoiceStatsResponseSchema,
   invoiceStatusSchema,
   updateInvoiceSchema,
 } from "./invoices.js";
@@ -815,6 +816,74 @@ describe("eligibleEntriesResponseSchema", () => {
       count: -1,
       totalHours: 0,
       entries: [],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("invoiceStatsResponseSchema", () => {
+  it("accepts a complete stats response", () => {
+    const result = invoiceStatsResponseSchema.parse({
+      byStatus: { draft: 4, sent: 8, paid: 15 },
+      thisMonth: {
+        invoiceCount: 7,
+        projectCount: 5,
+        totalAmount: 48200.0,
+        currency: "USD",
+      },
+    });
+    expect(result.byStatus.draft).toBe(4);
+    expect(result.thisMonth.totalAmount).toBe(48200);
+  });
+
+  it("accepts zero counts and zero amount", () => {
+    const result = invoiceStatsResponseSchema.parse({
+      byStatus: { draft: 0, sent: 0, paid: 0 },
+      thisMonth: {
+        invoiceCount: 0,
+        projectCount: 0,
+        totalAmount: 0,
+        currency: "EUR",
+      },
+    });
+    expect(result.byStatus.draft).toBe(0);
+  });
+
+  it("rejects a negative status count", () => {
+    const result = invoiceStatsResponseSchema.safeParse({
+      byStatus: { draft: -1, sent: 0, paid: 0 },
+      thisMonth: {
+        invoiceCount: 0,
+        projectCount: 0,
+        totalAmount: 0,
+        currency: "USD",
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a negative totalAmount", () => {
+    const result = invoiceStatsResponseSchema.safeParse({
+      byStatus: { draft: 0, sent: 0, paid: 0 },
+      thisMonth: {
+        invoiceCount: 0,
+        projectCount: 0,
+        totalAmount: -1,
+        currency: "USD",
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid currency code", () => {
+    const result = invoiceStatsResponseSchema.safeParse({
+      byStatus: { draft: 0, sent: 0, paid: 0 },
+      thisMonth: {
+        invoiceCount: 0,
+        projectCount: 0,
+        totalAmount: 0,
+        currency: "US",
+      },
     });
     expect(result.success).toBe(false);
   });

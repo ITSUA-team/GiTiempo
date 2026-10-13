@@ -30,6 +30,7 @@ import { EligibleEntriesResponseDto } from '../dto/eligible-entries-response.dto
 import { InvoiceListQueryDto } from '../dto/invoice-list-query.dto';
 import { InvoiceListResponseDto } from '../dto/invoice-list-response.dto';
 import { InvoiceResponseDto } from '../dto/invoice-response.dto';
+import { InvoiceStatsResponseDto } from '../dto/invoice-stats-response.dto';
 import { UpdateInvoiceRequestDto } from '../dto/update-invoice-request.dto';
 import { InvoicesService } from '../services/invoices.service';
 
@@ -64,6 +65,18 @@ export class InvoicesController {
     @Body() body: CreateInvoiceRequestDto,
   ): Promise<InvoiceResponseDto> {
     return this.invoices.createInvoice(user, body);
+  }
+
+  @Get('stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get invoice stats (counts by status, this month summary)' })
+  @ApiOkResponse({ type: InvoiceStatsResponseDto })
+  @ApiForbiddenResponse({ description: 'Admin or PM role required' })
+  @ZodSerializerDto(InvoiceStatsResponseDto)
+  getInvoiceStats(
+    @CurrentUser() user: AuthUser,
+  ): Promise<InvoiceStatsResponseDto> {
+    return this.invoices.getInvoiceStats(user);
   }
 
   @Get('eligible-entries')

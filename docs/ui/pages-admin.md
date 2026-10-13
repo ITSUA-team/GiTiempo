@@ -54,7 +54,10 @@
 - Pagination control below the table (API returns `meta.totalPages`).
 - Table header has a `Create invoice` action button (plus icon).
 - Clicking a row title navigates to the detail page (`/invoices/:id`).
-- Stats cards show invoice counts using only `draft`, `sent`, `paid` statuses. No "pending" status.
+- Stats cards show invoice counts using only `draft`, `sent`, `paid` statuses. No "pending" status. Data from `GET /invoices/stats`.
+  - "Open Invoices" = draft + sent count. Subtitle: "N ready to send" (draft count).
+  - "Billed This Month" = sum of `totalAmount` for invoices created this month. Subtitle: "Across N projects" (distinct project count). Currency from workspace default. Totals are approximate if multiple currencies are present.
+  - "Drafts" = draft count. Subtitle: "Ready for review".
 
 ### Create dialog (modal)
 

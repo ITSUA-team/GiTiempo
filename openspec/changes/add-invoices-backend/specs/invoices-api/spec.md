@@ -349,3 +349,37 @@ The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint fo
 
 - **WHEN** a request carries `dateTo` earlier than `dateFrom`
 - **THEN** the backend rejects with a validation error
+
+### Requirement: Invoice Stats Can Be Retrieved
+
+The backend MUST expose a protected `GET /invoices/stats` endpoint for `admin` and `pm` users that returns aggregate invoice counts grouped by status and a summary of invoices created in the current calendar month, scoped to the caller's visibility (admins see all workspace invoices; PMs see only invoices for visible projects).
+
+#### Scenario: Admin retrieves workspace-wide stats
+
+- **WHEN** an admin requests `GET /invoices/stats`
+- **THEN** the backend returns counts for `draft`, `sent`, and `paid` statuses across all workspace invoices
+- **AND** returns the count of invoices created in the current calendar month, the sum of their `total_amount`, the count of distinct projects, and the workspace default currency
+
+#### Scenario: PM retrieves stats for visible projects only
+
+- **WHEN** a PM requests `GET /invoices/stats`
+- **THEN** the backend returns counts only for invoices scoped to active public projects or private projects assigned to the PM
+- **AND** workspace-wide invoices (null `projectId`) are excluded from the counts
+
+#### Scenario: Member is denied
+
+- **WHEN** an ordinary member requests `GET /invoices/stats`
+- **THEN** the backend rejects with `403 Forbidden`
+
+#### Scenario: Workspace with no invoices returns zero counts
+
+- **WHEN** the workspace has no invoices
+- **THEN** the backend returns zero counts for all statuses and zero totals for the current month
+
+#### Scenario: Multi-currency totalAmount is approximate
+
+- **GIVEN** the workspace contains invoices in multiple currencies
+- **WHEN** the backend computes `thisMonth.totalAmount`
+- **THEN** the sum includes all currencies without conversion
+- **AND** the workspace default currency is returned for display purposes
+- **AND** the UI SHOULD note that totals are approximate when multiple currencies are present
