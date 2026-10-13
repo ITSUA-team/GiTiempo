@@ -460,6 +460,17 @@ export class InvoicesService {
     const totalHoursCents = Math.round((totalSeconds / 3600) * 100);
     const totalHours = totalHoursCents / 100;
 
+    // Resolve workspace defaults so the frontend can display them in the
+    // create form (PMs cannot read workspace settings directly).
+    const [settings] = await this.db
+      .select({
+        defaultHourlyRate: workspaceSettings.defaultHourlyRate,
+        currency: workspaceSettings.currency,
+      })
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, user.workspaceId))
+      .limit(1);
+
     const entries: InvoiceTimeEntrySummary[] = rows.map((e) => ({
       id: e.id,
       taskId: e.taskId,
@@ -475,6 +486,8 @@ export class InvoicesService {
       count: rows.length,
       totalHours,
       entries,
+      defaultHourlyRate: settings?.defaultHourlyRate ?? null,
+      defaultCurrency: settings?.currency ?? null,
     };
   }
 

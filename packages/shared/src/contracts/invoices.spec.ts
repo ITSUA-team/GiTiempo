@@ -787,9 +787,12 @@ describe("eligibleEntriesResponseSchema", () => {
       count: 1,
       totalHours: 2.5,
       entries: [validEntry],
+      defaultHourlyRate: 120,
+      defaultCurrency: "USD",
     });
     expect(result.count).toBe(1);
     expect(result.entries).toHaveLength(1);
+    expect(result.defaultHourlyRate).toBe(120);
   });
 
   it("accepts an empty entries array with zero count and hours", () => {
@@ -797,9 +800,12 @@ describe("eligibleEntriesResponseSchema", () => {
       count: 0,
       totalHours: 0,
       entries: [],
+      defaultHourlyRate: null,
+      defaultCurrency: null,
     });
     expect(result.count).toBe(0);
     expect(result.entries).toHaveLength(0);
+    expect(result.defaultHourlyRate).toBeNull();
   });
 
   it("rejects a negative totalHours", () => {

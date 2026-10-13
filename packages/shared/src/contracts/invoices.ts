@@ -163,6 +163,8 @@ export const eligibleEntriesResponseSchema = z.object({
   count: z.number().int().min(0),
   totalHours: z.number().nonnegative().max(99999999.99).multipleOf(0.01),
   entries: z.array(invoiceTimeEntrySummarySchema),
+  defaultHourlyRate: z.number().nonnegative().nullable(),
+  defaultCurrency: z.string().length(3).regex(/^[A-Za-z]{3}$/).nullable(),
 });
 
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
