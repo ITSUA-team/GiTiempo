@@ -7963,7 +7963,7 @@
                               "type": "text",
                               "id": "9ob5Q",
                               "fill": "$color-text-dark",
-                              "content": "Project",
+                              "content": "Project (optional)",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "500"
@@ -8097,11 +8097,11 @@
                                     {
                                       "type": "text",
                                       "id": "jK3eZ",
-                                      "fill": "$color-text-dark",
-                                      "content": "$120",
+                                      "fill": "$color-text-muted",
+                                      "content": "From workspace settings",
                                       "fontFamily": "Inter",
                                       "fontSize": 14,
-                                      "fontWeight": "500"
+                                      "fontWeight": "normal"
                                     }
                                   ]
                                 }
@@ -8144,7 +8144,7 @@
                                       "type": "text",
                                       "id": "valCy",
                                       "fill": "$color-text-muted",
-                                      "content": "USD",
+                                      "content": "Auto",
                                       "fontFamily": "Inter",
                                       "fontSize": 14,
                                       "fontWeight": "normal"
@@ -8887,6 +8887,38 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "note",
+      "id": "emptyNote",
+      "x": 1900,
+      "y": 1100,
+      "width": 360,
+      "fill": "#FFF4E6",
+      "cornerRadius": 8,
+      "padding": 16,
+      "layout": "vertical",
+      "gap": 8,
+      "children": [
+        {
+          "type": "text",
+          "id": "emptyNoteH",
+          "fill": "#1A1A1A",
+          "content": "Empty state — no eligible entries",
+          "fontFamily": "Inter",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "emptyNoteT",
+          "fill": "#666666",
+          "content": "When preview returns 0 entries:\n- Show warning banner in preview section\n- Text: 'No billable entries found for this project and date range'\n- Hours (calc.) = 0h, Total amount = $0.00\n- Create button stays enabled (API allows empty invoices)\n- User can still create the invoice (e.g. for manual record)",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
         }
       ]
     },
@@ -10404,6 +10436,38 @@
           "id": "dtlNoteT",
           "fill": "#666666",
           "content": "Draft: [Mark as sent] + [Delete] (admin only)\nSent: [Mark as paid] (no Delete)\nPaid: no status actions (terminal)\n\nStatus dropdown removed from editable card.\nStatus transitions via header buttons only (PATCH status).\nEditable card: Title + Notes + Save changes (PATCH title/notes).",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "note",
+      "id": "delConfNote",
+      "x": 1900,
+      "y": 2200,
+      "width": 360,
+      "fill": "#FFEBEE",
+      "cornerRadius": 8,
+      "padding": 16,
+      "layout": "vertical",
+      "gap": 8,
+      "children": [
+        {
+          "type": "text",
+          "id": "delConfNoteH",
+          "fill": "#1A1A1A",
+          "content": "Delete confirmation dialog",
+          "fontFamily": "Inter",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "delConfNoteT",
+          "fill": "#666666",
+          "content": "Before DELETE /invoices/:id:\n- Show confirm dialog\n- Text: 'Delete this invoice? Linked time entries will be unlinked and become available for future invoices.'\n- Primary: 'Delete' (destructive)\n- Secondary: 'Cancel'\n- Only shown for draft status (sent/paid hidden)\n- Admin only (PM has no Delete button)",
           "fontFamily": "Inter",
           "fontSize": 12,
           "fontWeight": "normal"

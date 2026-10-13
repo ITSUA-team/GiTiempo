@@ -46,10 +46,42 @@
 
 ## Invoices Page
 
-- Invoice page UI is deferred until an invoice API/contract exists.
-- Do not expose invoices in authenticated shell navigation, dashboard metrics/activity, or page/table content while the invoice UI is deferred.
-- The protected `/invoices` route may remain as a hidden route-inventory placeholder, but it must not render a temporary invoice table, search control, create action, modal dialog, or fabricated invoice data.
-- When invoice contracts ship, restore the approved invoices page requirements from the design: searchable invoice table, status tags, table-header `Create invoice` action, invoice edit/details dialog, and status-specific invoice actions inside the dialog.
+### List page (`/invoices`)
+
+- Searchable invoice table with columns: Title, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
+- Search filters by invoice title (API `search` param, case-insensitive ILIKE).
+- Filter row: Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
+- Pagination control below the table (API returns `meta.totalPages`).
+- Table header has a `Create invoice` action button (plus icon).
+- Clicking a row title navigates to the detail page (`/invoices/:id`).
+- Stats cards show invoice counts using only `draft`, `sent`, `paid` statuses. No "pending" status.
+
+### Create dialog (modal)
+
+- Triggered from the list page `Create invoice` action button.
+- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From workspace settings" when empty, falls back to workspace default), Currency (optional — placeholder "Auto" when empty, falls back to workspace default), Discount (optional, default 0), Notes (optional).
+- Calculated fields: Total hours and Total amount update live from `GET /invoices/eligible-entries` preview.
+- Expandable preview section: shows eligible time entries (count, total hours, computed amount). Collapsed by default; expands to a scrollable table with Date, User, Duration, Description.
+- Empty state: if preview returns 0 entries, show a warning banner ("No billable entries found for this project and date range"). Create button stays enabled — the API allows empty invoices.
+- Actions: `Cancel` and `Create invoice` (POST). No Status field (always `draft` on creation). No Preview/Send/Delete buttons.
+
+### Detail page (`/invoices/:id`)
+
+- Full page route with topbar breadcrumb (GiTiempo Admin / Invoices / {title}).
+- Page header: Back button, invoice title, status badge, and status-dependent action buttons.
+- Status-dependent header actions:
+  - **Draft**: `Mark as sent` (PATCH status→sent, admin+PM) + `Delete` (DELETE, admin only, draft only — sent/paid return 409).
+  - **Sent**: `Mark as paid` (PATCH status→paid, admin+PM). No Delete button.
+  - **Paid**: no status actions (terminal state). No Delete button.
+- Delete requires a confirmation dialog: "Delete this invoice? Linked time entries will be unlinked and become available for future invoices."
+- Summary card (read-only): Project, Date range, Hourly rate, Currency, Discount, Total hours, Total amount, Created date. All snapshot fields are immutable after creation.
+- Editable card: Title (input), Notes (textarea), `Save changes` button (PATCH title + notes). No Status dropdown — status transitions happen only via header action buttons.
+- Time entries card: scrollable table of linked time entries (Date, User, Duration, Description) with entry count and total hours in the header.
+
+### Navigation
+
+- The `/invoices` route is admin-only. PMs access invoices via the list page but cannot delete.
+- Invoices nav item is hidden by default (`SHOW_INVOICES_NAV = false`). Enable when invoice UI ships.
 
 ## Members Page
 

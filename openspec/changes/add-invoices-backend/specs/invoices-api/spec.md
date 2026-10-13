@@ -77,12 +77,28 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 - **WHEN** a PM submits a create body without a `projectId`
 - **THEN** the backend rejects with `403 Forbidden`
 
+#### Scenario: Admin creates a workspace-wide invoice without a project
+
+- **WHEN** an admin submits a valid create body without a `projectId`
+- **THEN** the backend selects completed, billable, not-yet-invoiced time entries across the entire workspace within the date range
+- **AND** creates the invoice with `projectId` set to null
+- **AND** links each selected entry to the invoice
+- **AND** returns the created invoice with its details
+
 #### Scenario: Missing rate falls back to workspace settings
 
 - **GIVEN** the create body omits the hourly rate
 - **WHEN** the workspace settings define a default hourly rate
 - **THEN** the backend uses that default rate as the snapshot rate
 - **WHEN** no default rate is configured and no rate is supplied
+- **THEN** the backend rejects with a validation error
+
+#### Scenario: Missing currency falls back to workspace settings
+
+- **GIVEN** the create body omits the currency
+- **WHEN** the workspace settings define a default currency
+- **THEN** the backend uses that default currency as the snapshot currency
+- **WHEN** no default currency is configured and no currency is supplied
 - **THEN** the backend rejects with a validation error
 
 #### Scenario: Discount with more than two decimal places is rejected
