@@ -32,6 +32,24 @@ The backend MUST expose a protected `GET /invoices` endpoint for `admin` and `pm
 - **WHEN** a PM requests `GET /invoices`
 - **THEN** invoices with no project scope (workspace-wide invoices) are not included in the result
 
+#### Scenario: Search filters invoices by title
+
+- **GIVEN** the workspace contains invoices with titles "April Billing" and "March Retainer"
+- **WHEN** an admin requests `GET /invoices?search=April`
+- **THEN** only invoices whose `title` matches the search text (case-insensitive) are returned
+- **AND** invoices whose title does not contain the search text are excluded
+
+#### Scenario: Date range filter narrows results
+
+- **GIVEN** the workspace contains invoices with `date_from` values spanning multiple months
+- **WHEN** an admin requests `GET /invoices?dateFrom=2026-04-01&dateTo=2026-04-30`
+- **THEN** only invoices whose `date_from` is on or after `2026-04-01` and whose `date_to` is on or before `2026-04-30` are returned
+
+#### Scenario: Date range filter rejects reversed bounds
+
+- **WHEN** a request carries `dateTo` earlier than `dateFrom`
+- **THEN** the backend rejects with a validation error
+
 ### Requirement: Invoice Can Be Created From Eligible Time Entries
 
 The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `pm` users that creates an invoice from a validated body containing a title, billing date range, optional project scope, hourly rate, optional discount, and optional notes.
