@@ -1267,7 +1267,126 @@ describe('Invoices (e2e)', () => {
       .set('Authorization', bearer(adminToken));
   });
 
-  // ── Delete ────────────────────────────────────────────────────────────
+  // ── Status transition enforcement ─────────────────────────────────────
+
+  it('rejects backward status transition from sent to draft', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Transition Probe sent-to-draft',
+        dateFrom: '2099-06-01',
+        dateTo: '2099-06-30',
+        projectId: PLATFORM_PROJECT_ID,
+        hourlyRate: 10,
+      });
+    expect(createRes.status).toBe(201);
+    const invoiceId = createRes.body.id;
+
+    const sentRes = await request(app.getHttpServer())
+      .patch(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ status: 'sent' });
+    expect(sentRes.status).toBe(200);
+    expect(sentRes.body.status).toBe('sent');
+
+    const revertRes = await request(app.getHttpServer())
+      .patch(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ status: 'draft' });
+    expect(revertRes.status).toBe(409);
+
+    const getRes = await request(app.getHttpServer())
+      .get(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken));
+    expect(getRes.body.status).toBe('sent');
+  });
+
+  it('rejects backward status transition from paid to draft', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Transition Probe paid-to-draft',
+        dateFrom: '2099-07-01',
+        dateTo: '2099-07-31',
+        projectId: PLATFORM_PROJECT_ID,
+        hourlyRate: 10,
+      });
+    expect(createRes.status).toBe(201);
+    const invoiceId = createRes.body.id;
+
+    await request(app.getHttpServer())
+      .patch(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ status: 'sent' });
+    const paidRes = await request(app.getHttpServer())
+      .patch(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ status: 'paid' });
+    expect(paidRes.status).toBe(200);
+    expect(paidRes.body.status).toBe('paid');
+
+    const revertRes = await request(app.getHttpServer())
+      .patch(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ status: 'draft' });
+    expect(revertRes.status).toBe(409);
+  });
+
+  it('rejects backward status transition from paid to sent', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Transition Probe paid-to-sent',
+        dateFrom: '2099-08-01',
+        dateTo: '2099-08-31',
+        projectId: PLATFORM_PROJECT_ID,
+        hourlyRate: 10,
+      });
+    expect(createRes.status).toBe(201);
+    const invoiceId = createRes.body.id;
+
+    await request(app.getHttpServer())
+      .patch(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ status: 'sent' });
+    await request(app.getHttpServer())
+      .patch(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ status: 'paid' });
+
+    const revertRes = await request(app.getHttpServer())
+      .patch(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ status: 'sent' });
+    expect(revertRes.status).toBe(409);
+  });
+
+  it('allows direct draft to paid transition', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Transition Probe draft-to-paid',
+        dateFrom: '2099-09-01',
+        dateTo: '2099-09-30',
+        projectId: PLATFORM_PROJECT_ID,
+        hourlyRate: 10,
+      });
+    expect(createRes.status).toBe(201);
+    const invoiceId = createRes.body.id;
+
+    const paidRes = await request(app.getHttpServer())
+      .patch(`/invoices/${invoiceId}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ status: 'paid' });
+    expect(paidRes.status).toBe(200);
+    expect(paidRes.body.status).toBe('paid');
+  });
+
+  // ── Delete ────────────────────────────────────────────────────────────────
 
   it('returns 404 when deleting an unknown invoice', async () => {
     const res = await request(app.getHttpServer())

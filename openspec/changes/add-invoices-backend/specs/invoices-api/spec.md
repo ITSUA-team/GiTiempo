@@ -197,13 +197,19 @@ The `sent` status is a semantic marker: the backend does not send an email, gene
 - **WHEN** an admin or PM submits an update changing the status to `paid`
 - **THEN** the backend persists the new status and returns the updated invoice
 
-#### Scenario: Paid is a terminal status
+#### Scenario: Status transitions are one-way and irreversible
+
+- **GIVEN** an invoice with status `sent`
+- **WHEN** a user attempts to change the status back to `draft`
+- **THEN** the backend rejects with `409 Conflict`
+- **AND** the invoice status remains `sent`
 
 - **GIVEN** an invoice with status `paid`
 - **WHEN** a user attempts to change the status back to `draft` or `sent`
-- **THEN** the backend accepts the update if the request is otherwise valid
-- **AND** the status is changed (the API does not enforce one-way transitions)
-- **BUT** the UI SHOULD only present forward transitions (draft to sent to paid) via header action buttons to prevent accidental reversion
+- **THEN** the backend rejects with `409 Conflict`
+- **AND** the invoice status remains `paid`
+
+The allowed forward transitions are: `draft → sent`, `draft → paid`, and `sent → paid`. Once an invoice reaches `sent` or `paid`, it cannot return to `draft`, which prevents the re-billing bypass where a paid invoice could be reverted to `draft`, deleted, and re-created for the same time entries.
 
 #### Scenario: Update does not recompute totals
 
@@ -223,7 +229,7 @@ The `sent` status is a semantic marker: the backend does not send an email, gene
 
 ### Requirement: Invoice Can Be Deleted By Admin Only
 
-The backend MUST expose a protected `DELETE /invoices/:id` endpoint restricted to `admin` users that removes the invoice. Only invoices in `draft` status can be deleted; `sent` or `paid` invoices are locked to prevent re-billing of already invoiced time entries.
+The backend MUST expose a protected `DELETE /invoices/:id` endpoint restricted to `admin` users that removes the invoice. Only invoices in `draft` status can be deleted; `sent` or `paid` invoices are locked to prevent re-billing of already invoiced time entries. Combined with the one-way status transition enforcement, this ensures that once an invoice has been sent or paid, its linked time entries can never be re-billed through status reversion followed by deletion.
 
 #### Scenario: Admin deletes a draft invoice
 

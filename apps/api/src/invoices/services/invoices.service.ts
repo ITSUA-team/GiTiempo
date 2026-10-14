@@ -736,7 +736,10 @@ export class InvoicesService {
 
     const updates: Partial<typeof invoices.$inferInsert> = {};
     if (input.title !== undefined) updates.title = input.title;
-    if (input.status !== undefined) updates.status = input.status;
+    if (input.status !== undefined) {
+      this.assertValidStatusTransition(invoice.status, input.status);
+      updates.status = input.status;
+    }
     if (input.notes !== undefined) updates.notes = input.notes;
 
     if (Object.keys(updates).length > 0) {
@@ -781,6 +784,25 @@ export class InvoicesService {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────
+
+  private static readonly FORWARD_TRANSITIONS: Record<string, Set<string>> = {
+    draft: new Set(['sent', 'paid']),
+    sent: new Set(['paid']),
+    paid: new Set(),
+  };
+
+  private assertValidStatusTransition(current: string, next: string): void {
+    if (current === next) return;
+    const allowed =
+      InvoicesService.FORWARD_TRANSITIONS[current] ?? new Set<string>();
+    if (!allowed.has(next)) {
+      throw new DomainError(
+        'invoice_invalid_status_transition',
+        `Invoice status cannot transition from ${current} to ${next}`,
+        409,
+      );
+    }
+  }
 
   private async loadInvoiceDetail(
     cx: DrizzleDB | DbTransaction,
