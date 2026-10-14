@@ -170,13 +170,27 @@ function createRuntimeClient(overrides?: {
         user: { displayName: "Alexey", email: "alexey@example.com" },
       },
     })),
-    getSnapshot: vi.fn(async () =>
-        overrides?.snapshot ?? {
-          authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
-          currentTimer: null,
-          errorMessage: null,
-          user: { displayName: "Alexey", email: "alexey@example.com" },
-        }),
+    getSnapshot: vi.fn(async (pageContext) => {
+      const snapshot = overrides?.snapshot ?? {
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
+        currentTimer: null,
+        errorMessage: null,
+        user: { displayName: "Alexey", email: "alexey@example.com" },
+      };
+
+      return pageContext && !overrides?.snapshot
+        ? {
+            ...snapshot,
+            trackingCapability: {
+              accessScope: "project" as const,
+              canStartTracking: true as const,
+              githubRepo: pageContext.githubRepo,
+              issueNumber: pageContext.issueNumber,
+              reason: null,
+            },
+          }
+        : snapshot;
+    }),
     onSnapshotUpdated: vi.fn(() => () => undefined),
     openExtension: vi.fn(async () => undefined),
     startTimer:
@@ -314,6 +328,30 @@ describe("injected issue control", () => {
     root.querySelector<HTMLButtonElement>('[data-action="start-timer"]')!.click();
     await Promise.resolve();
     expect(startTimer).toHaveBeenCalledWith(supportedContext(), "workspace-alpha", "alexey@example.com");
+  });
+
+  it("keeps the matching Stop action when issue capability is unavailable", async () => {
+    const context = supportedContext();
+    const mounted = mountInjectedIssueControl(
+      document,
+      context,
+      createRuntimeClient({
+        snapshot: {
+          authenticated: true,
+          workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
+          currentTimer: currentIssueTimer(),
+          errorMessage: null,
+          trackingCapability: null,
+          user: { displayName: "Alexey", email: "alexey@example.com" },
+        },
+      }),
+    )!;
+
+    await mounted.load();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+    expect(root.querySelector('[data-action="stop-timer"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="start-timer"]')).toBeNull();
   });
 
   it("keeps the issue context and renders the exact assignment remedy after a denied start", async () => {

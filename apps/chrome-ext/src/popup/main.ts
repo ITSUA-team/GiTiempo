@@ -6,7 +6,11 @@ import { getExtensionConfig } from "@/lib/config";
 import type { PageContext } from "@/lib/github-context";
 import { parseGitHubIssueUrl } from "@/lib/github-context";
 import { signInWithEmailPassword } from "@/lib/firebase";
-import { createRuntimeClient, type RuntimeClient } from "@/lib/runtime";
+import {
+  createRuntimeClient,
+  hasCurrentTrackingCapability,
+  type RuntimeClient,
+} from "@/lib/runtime";
 import { formatElapsedTime } from "@/lib/time";
 import { renderPopupBody, type PopupState } from "./render";
 
@@ -92,6 +96,7 @@ export function createPopupApp({
   const unsubscribe = runtimeClient.onSnapshotUpdated((snapshot) => {
     state.snapshot = snapshot;
     render();
+    void load();
   });
 
   function closeAccountMenu(): void {
@@ -245,13 +250,11 @@ export function createPopupApp({
     render();
 
     try {
-      const [snapshot, pageContext] = await Promise.all([
-        runtimeClient.getSnapshot(),
-        pageContextResolver(),
-      ]);
-
-      state.snapshot = snapshot;
+      const pageContext = await pageContextResolver();
       state.pageContext = pageContext;
+      state.snapshot = await runtimeClient.getSnapshot(
+        pageContext.kind === "supported" ? pageContext : undefined,
+      );
     } catch (error) {
       state.snapshot = {
         authenticated: false,
@@ -405,6 +408,13 @@ export function createPopupApp({
 
   async function handleStartTimer(): Promise<void> {
     if (state.isSubmitting || state.pageContext?.kind !== "supported") return;
+    if (!hasCurrentTrackingCapability(state.snapshot, state.pageContext) ||
+        !state.snapshot?.trackingCapability?.canStartTracking) {
+      state.errorMessage = state.snapshot?.trackingCapability?.reason ??
+        "Unable to confirm whether you can track this issue. Refresh and try again.";
+      render();
+      return;
+    }
     const expectedWorkspaceId = state.snapshot?.workspace?.id;
     const expectedUserEmail = state.snapshot?.user?.email;
     if (!expectedWorkspaceId || !expectedUserEmail) {

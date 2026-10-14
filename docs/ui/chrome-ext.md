@@ -54,6 +54,7 @@
 
 - Show detected issue context.
 - Show the workspace name that will receive the timer. Disable Start until the authoritative session/workspace context is available, and revalidate that context at submission.
+- Load the server tracking capability for the current canonical issue context alongside the current timer. Enable Start only when the capability permits it and belongs to the current issue and session. A denial displays the safe server reason; an unavailable preflight keeps Start disabled and offers Retry. Refresh capability after issue navigation, retry, or session changes, and recheck it before submission. A matching owned running timer retains Stop even when starting is denied.
 - Full-width Start Timer button.
 - Keep the issue context card visible above the actions.
 - Reach the full workspace through the header home icon; do not repeat it as a body-level link.

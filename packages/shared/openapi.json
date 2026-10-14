@@ -3030,6 +3030,44 @@
         ]
       }
     },
+    "/time-entries/timer/capability": {
+      "post": {
+        "description": "Checks the current workspace authorization without creating or changing a project, task, reference, or time entry.",
+        "operationId": "TimeEntriesController_getTrackingCapability",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartTimerFromGitHubReferenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingCapabilityResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get tracking capability for an external GitHub issue reference",
+        "tags": [
+          "time-entries"
+        ]
+      }
+    },
     "/time-entries/timer/stop": {
       "post": {
         "operationId": "TimeEntriesController_stopTimer",
@@ -7255,6 +7293,34 @@
           "issueNumber",
           "issueTitle",
           "issueUrl"
+        ],
+        "additionalProperties": false
+      },
+      "TrackingCapabilityResponseDto": {
+        "type": "object",
+        "properties": {
+          "canStartTracking": {
+            "type": "boolean"
+          },
+          "accessScope": {
+            "type": "string",
+            "enum": [
+              "project",
+              "own-time"
+            ],
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "canStartTracking",
+          "accessScope",
+          "reason"
         ],
         "additionalProperties": false
       },

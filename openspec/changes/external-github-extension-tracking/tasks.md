@@ -98,9 +98,20 @@ Run after implementation and automated verification using an isolated QA environ
 - [x] 9.24 Verify rollout and rollback on disposable fixtures: access-safe API/contracts and SPA consumers precede extension distribution; old supported clients retain managed behavior and cannot bypass external policy through legacy installation endpoints. Rollback preserves stored external mode, owned stopping, and history and never exposes external records through older full-access interpretation. Check deferred rename/transfer/conversion limitations against documented behavior without introducing automatic rebinding or merging.
 - [x] 9.25 Publish the manual QA evidence summary with scenario coverage and results for the browser/surface, role/access, and desktop/mobile matrices. Link reproducible defects, fix and rerun failed scenarios plus affected regressions, and leave blocked/unexecuted scenarios explicitly pending. Confirm every required scenario passed and fixtures were cleaned up safely before marking the manual QA complete or declaring implementation ready for archival/release.
 
+## 10. Review corrections
+
+- [x] 10.1 Make manual-entry project-task caches scope-aware and consistent with canonical query keys; verify closed-dialog scope changes, invalidation, and authoritative task refreshes.
+- [x] 10.2 Implement read-only issue tracking capability preflight and consume it in popup/injected state; verify safe denial, retry, session/context binding, owned stopping, and no preflight writes.
+- [x] 10.3 Repair authority-override contract tests using a valid baseline and field-specific rejection checks; run affected verification and strict OpenSpec validation.
+
+Evidence and verification limits: [qa-review-corrections.md](qa-review-corrections.md).
+
 ## Final local completion boundary
 
-**14 October 2026: 67/67 resolved locally.** The focused Projects parity audit
+**14 October 2026: 70/70 local tasks resolved.** Review corrections and their
+automated checks are recorded in [qa-review-corrections.md](qa-review-corrections.md),
+including the successful isolated API E2E rerun and initial harness issue. The earlier 67/67 checkpoint and
+manual QA describe the preceding candidate. The focused Projects parity audit
 is closed by the existing-component correction and executed checks in
 [qa-projects-parity-final.md](qa-projects-parity-final.md). Tasks 9.21, 8.6 and
 9.25 now have final visual/spec/evidence support. Earlier 64/67 checkpoints are

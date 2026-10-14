@@ -7,6 +7,7 @@ import {
   startTimerSchema,
   startTimerFromGitHubReferenceSchema,
   stopTimerSchema,
+  trackingCapabilityResponseSchema,
   timeEntryResponseSchema,
   updateTimeEntrySchema,
 } from './time-entries.js';
@@ -287,6 +288,39 @@ describe('startTimerFromGitHubReferenceSchema', () => {
         [field]: 'forged',
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('trackingCapabilityResponseSchema', () => {
+  it.each([
+    {
+      canStartTracking: true,
+      accessScope: 'project',
+      reason: null,
+    },
+    {
+      canStartTracking: true,
+      accessScope: 'own-time',
+      reason: null,
+    },
+    {
+      canStartTracking: false,
+      accessScope: null,
+      reason: 'Tracking is not available for this issue.',
+    },
+  ])('accepts a valid capability snapshot', (response) => {
+    expect(trackingCapabilityResponseSchema.parse(response)).toEqual(response);
+  });
+
+  it.each([
+    { canStartTracking: true, accessScope: null, reason: null },
+    { canStartTracking: true, accessScope: 'project', reason: 'Denied' },
+    { canStartTracking: false, accessScope: 'project', reason: 'Denied' },
+    { canStartTracking: false, accessScope: null, reason: null },
+  ])('rejects inconsistent capability states', (response) => {
+    expect(trackingCapabilityResponseSchema.safeParse(response).success).toBe(
+      false,
+    );
   });
 });
 

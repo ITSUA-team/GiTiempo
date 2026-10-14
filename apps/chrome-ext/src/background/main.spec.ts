@@ -6,6 +6,7 @@ const backgroundApiMocks = vi.hoisted(() => ({
   exchangeGithubSession: vi.fn(),
   exitSession: vi.fn(),
   getCurrentTimer: vi.fn(),
+  getTrackingCapability: vi.fn(),
   getWorkspace: vi.fn(),
   loginWithFirebaseToken: vi.fn(),
   startTimerFromGitHub: vi.fn(),
@@ -114,6 +115,11 @@ describe('background snapshot broadcast', () => {
     backgroundApiMocks.getWorkspace.mockResolvedValue({
       id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
       name: 'Workspace Alpha',
+    });
+    backgroundApiMocks.getTrackingCapability.mockResolvedValue({
+      accessScope: 'project',
+      canStartTracking: true,
+      reason: null,
     });
   });
 
@@ -661,6 +667,58 @@ describe('background snapshot broadcast', () => {
         ),
       );
     }
+    expect(backgroundApiMocks.startTimerFromGitHub).not.toHaveBeenCalled();
+  });
+
+  it('does not start when the current issue capability is denied', async () => {
+    sessionMocks.getStoredSession.mockResolvedValue({
+      accessToken: makeAccessToken({
+        email: 'alexey@example.com',
+        workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
+      }),
+      refreshToken: 'refresh-token',
+    });
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+    backgroundApiMocks.getTrackingCapability.mockResolvedValue({
+      accessScope: null,
+      canStartTracking: false,
+      reason: 'You are not assigned to this project.',
+    });
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]![0];
+    const sendResponse = vi.fn();
+    const pageContext = {
+      kind: 'supported' as const,
+      surface: 'issue-page' as const,
+      githubRepo: 'octo/repo',
+      issueNumber: 184,
+      issueTitle: 'Issue',
+      issueUrl: 'https://github.com/octo/repo/issues/184',
+    };
+
+    onMessage(
+      {
+        type: 'timer/start',
+        pageContext,
+        expectedWorkspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
+        expectedUserEmail: 'alexey@example.com',
+      },
+      {},
+      sendResponse,
+    );
+
+    await vi.waitFor(() =>
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          errorMessage: 'You are not assigned to this project.',
+          ok: false,
+        }),
+      ),
+    );
+    expect(backgroundApiMocks.getTrackingCapability).toHaveBeenCalledWith(
+      pageContext,
+      { email: 'alexey@example.com', workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000' },
+    );
     expect(backgroundApiMocks.startTimerFromGitHub).not.toHaveBeenCalled();
   });
 

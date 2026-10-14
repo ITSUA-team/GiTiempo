@@ -125,7 +125,7 @@ export const userProjectsKeys = {
   projectTasks: (
     scope: UserServerStateScope,
     projectId: string | null | undefined,
-    accessScope: "project" | "own-time" | null | undefined = null,
+    accessScope: "project" | "own-time" | null | undefined,
   ) =>
     [
       ...userProjectsKeys.all(scope),
@@ -138,10 +138,12 @@ export const userProjectsKeys = {
 };
 
 export const userMutationInvalidationKeys = {
-  afterTaskMutation(scope: UserServerStateScope, projectId: string): QueryKey[] {
+  afterTaskMutation(
+    scope: UserServerStateScope,
+    _projectId?: string,
+  ): QueryKey[] {
     return [
       userProjectsKeys.all(scope),
-      userProjectsKeys.projectTasks(scope, projectId),
       timerKeys.all(scope),
     ];
   },

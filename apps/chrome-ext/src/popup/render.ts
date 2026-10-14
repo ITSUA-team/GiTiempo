@@ -3,6 +3,7 @@ import { deriveProfileInitials } from "@gitiempo/shared";
 import { getExtensionConfig } from "@/lib/config";
 import { escapeHtml } from "@/lib/html";
 import type { PageContext, SupportedGitHubIssueContext } from "@/lib/github-context";
+import { hasCurrentTrackingCapability } from "@/lib/runtime";
 import type { RuntimeSnapshot, SnapshotUser } from "@/lib/runtime";
 import { formatElapsedTime } from "@/lib/time";
 
@@ -268,13 +269,26 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
   }
 
   if (state.pageContext?.kind === "supported") {
+    const hasTrackingCapability = hasCurrentTrackingCapability(
+      state.snapshot,
+      state.pageContext,
+    );
+    const trackingCapability = hasTrackingCapability
+      ? state.snapshot.trackingCapability
+      : null;
+    const canStartTracking = trackingCapability?.canStartTracking === true;
+    const trackingMessage = trackingCapability?.reason ??
+      "Unable to confirm whether you can track this issue.";
+
     return `
       <div class="flex h-full flex-col gap-5">
         ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state) : "", state.isAccountMenuOpen)}
         <p data-testid="workspace-context" class="m-0 text-xs text-text-muted">${escapeHtml(state.snapshot.workspace?.name ?? "Checking workspace…")}</p>
         ${renderIssueCard(state.pageContext)}
+        ${canStartTracking ? "" : `<p class="m-0 text-sm text-text-muted">${escapeHtml(trackingMessage)}</p>`}
         <div class="mt-auto flex flex-col gap-3">
-          <button data-action="start-timer" class="${popupPrimaryButtonClass}" ${state.isSubmitting || !state.snapshot.workspace ? "disabled" : ""}>Start Timer</button>
+          <button data-action="start-timer" class="${popupPrimaryButtonClass}" ${state.isSubmitting || !state.snapshot.workspace || !canStartTracking ? "disabled" : ""}>Start Timer</button>
+          ${canStartTracking ? "" : `<button data-action="retry" class="${popupTextActionClass}">Retry</button>`}
         </div>
       </div>
     `;

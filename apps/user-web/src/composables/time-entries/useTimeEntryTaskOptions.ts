@@ -1,6 +1,6 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
-import { useQueryClient } from "@tanstack/vue-query";
+import { useQueryClient, type QueryKey } from "@tanstack/vue-query";
 import type { ComputedRef } from "vue";
 
 import {
@@ -50,6 +50,13 @@ interface CachedProjectTaskOptions {
   localTasks: TaskResponse[];
 }
 
+interface ProjectTaskCacheContext {
+  cacheKey: string;
+  project: ProjectResponse | null;
+  queryKey: QueryKey;
+  requestScope: UserServerStateScope;
+}
+
 export function useTimeEntryTaskOptions({
   client,
   getProjectById,
@@ -58,24 +65,72 @@ export function useTimeEntryTaskOptions({
   const queryClient = useQueryClient();
   const taskCache = new Map<string, CachedProjectTaskOptions>();
 
-  const fetchProjectGitHubIssuePage: ProjectGitHubIssuePageFetcher = (page) =>
+  function getProjectTaskCacheContext(projectId: string): ProjectTaskCacheContext {
+    const currentScope = scope.value;
+    const project = getProjectById(projectId);
+    const accessScope = project?.accessScope ?? null;
+    const queryKey = userProjectsKeys.projectTasks(
+      currentScope,
+      projectId,
+      accessScope,
+    );
+
+    return {
+      cacheKey: JSON.stringify(queryKey),
+      project,
+      queryKey,
+      requestScope: currentScope,
+    };
+  }
+
+  function isQueryDataCurrent(queryKey: QueryKey): boolean {
+    const queryState = queryClient.getQueryState(queryKey);
+
+    return queryState !== undefined &&
+      !queryState.isInvalidated &&
+      queryState.dataUpdatedAt > 0 &&
+      Date.now() - queryState.dataUpdatedAt < TIMER_OPTIONS_STALE_TIME;
+  }
+
+  function getCurrentProjectTasks(queryKey: QueryKey): TaskResponse[] | null {
+    return isQueryDataCurrent(queryKey)
+      ? queryClient.getQueryData<TaskResponse[]>(queryKey) ?? null
+      : null;
+  }
+
+  function isCurrentProjectTaskCacheContext(
+    projectId: string,
+    context: ProjectTaskCacheContext,
+  ): boolean {
+    return getProjectTaskCacheContext(projectId).cacheKey === context.cacheKey;
+  }
+
+  function createProjectGitHubIssuePageFetcherForScope(
+    requestScope: UserServerStateScope,
+  ): ProjectGitHubIssuePageFetcher {
+    return (page) =>
     queryClient.fetchQuery({
       queryKey: timerGithubKeys.repositoryIssuePage(
-        scope.value,
+        requestScope,
         page.projectId,
         page.pageToken ?? null,
       ),
       queryFn: () => createProjectGitHubIssuePageFetcher(client)(page),
       staleTime: TIMER_OPTIONS_STALE_TIME,
     });
+  }
 
   async function loadProjectTaskOptions(
     projectId: string,
     options: LoadTaskOptionsOptions = {},
   ): Promise<LoadedTaskOptionsResult> {
-    const cached = taskCache.get(projectId);
+    const context = getProjectTaskCacheContext(projectId);
+    const cached = taskCache.get(context.cacheKey);
 
-    if (cached) {
+    if (
+      cached &&
+      cached.localTasks === getCurrentProjectTasks(context.queryKey)
+    ) {
       return {
         errorMessage: null,
         taskOptions: buildTaskOptions(
@@ -87,19 +142,30 @@ export function useTimeEntryTaskOptions({
     }
 
     const localTasks = await queryClient.fetchQuery({
-      queryKey: userProjectsKeys.projectTasks(scope.value, projectId),
+      queryKey: context.queryKey,
       queryFn: () => client.listProjectTasks(projectId),
       staleTime: TIMER_OPTIONS_STALE_TIME,
     });
+
+    if (!isCurrentProjectTaskCacheContext(projectId, context)) {
+      return loadProjectTaskOptions(projectId, options);
+    }
+
     const localTaskOptions = buildLocalTaskOptions(localTasks, options.trackableOnly);
     const result = await appendGitHubIssueOptions(
       projectId,
       localTaskOptions,
       localTasks,
+      context.project,
+      context.requestScope,
     );
 
+    if (!isCurrentProjectTaskCacheContext(projectId, context)) {
+      return loadProjectTaskOptions(projectId, options);
+    }
+
     if (result.errorMessage === null) {
-      taskCache.set(projectId, {
+      taskCache.set(context.cacheKey, {
         githubIssueOptions: result.taskOptions.filter(
           (task) => task.isGitHubIssueOption === true,
         ),
@@ -114,22 +180,33 @@ export function useTimeEntryTaskOptions({
     task: TaskResponse,
     options: LoadTaskOptionsOptions = {},
   ): TaskLookupOption[] {
-    const cached = taskCache.get(task.projectId) ?? {
-      githubIssueOptions: [],
-      localTasks: [],
-    };
+    const context = getProjectTaskCacheContext(task.projectId);
+    const currentLocalTasks = getCurrentProjectTasks(context.queryKey);
+    const cached = taskCache.get(context.cacheKey);
+    const cachedTasksAreCurrent =
+      currentLocalTasks !== null && cached?.localTasks === currentLocalTasks;
+    const localTasks = cachedTasksAreCurrent
+      ? cached.localTasks
+      : currentLocalTasks ?? [];
+    const githubIssueOptions = cachedTasksAreCurrent
+      ? cached.githubIssueOptions
+      : [];
     const nextLocalTasks = [
-      ...cached.localTasks.filter((cachedTask) => cachedTask.id !== task.id),
+      ...localTasks.filter((cachedTask) => cachedTask.id !== task.id),
       task,
     ];
 
-    taskCache.set(task.projectId, {
-      githubIssueOptions: cached.githubIssueOptions,
+    if (currentLocalTasks !== null) {
+      queryClient.setQueryData(context.queryKey, nextLocalTasks);
+    }
+
+    taskCache.set(context.cacheKey, {
+      githubIssueOptions,
       localTasks: nextLocalTasks,
     });
     return buildTaskOptions(
       nextLocalTasks,
-      cached.githubIssueOptions,
+      githubIssueOptions,
       options.trackableOnly,
     );
   }
@@ -171,11 +248,12 @@ export function useTimeEntryTaskOptions({
   }
 
   function invalidateProjectTaskOptions(projectId: string): void {
-    taskCache.delete(projectId);
+    const context = getProjectTaskCacheContext(projectId);
+    taskCache.delete(context.cacheKey);
     void queryClient.invalidateQueries(
       {
         refetchType: "none",
-        queryKey: userProjectsKeys.projectTasks(scope.value, projectId),
+        queryKey: context.queryKey,
         exact: true,
       },
     );
@@ -214,12 +292,12 @@ export function useTimeEntryTaskOptions({
     projectId: string,
     localTaskOptions: TaskLookupOption[],
     localTasks: TaskResponse[],
+    project: ProjectResponse | null,
+    requestScope: UserServerStateScope,
   ): Promise<LoadedTaskOptionsResult> {
-    const project = getProjectById(projectId);
-
     return appendUnsyncedProjectGitHubIssueOptions({
       client,
-      fetchPage: fetchProjectGitHubIssuePage,
+      fetchPage: createProjectGitHubIssuePageFetcherForScope(requestScope),
       localTaskOptions,
       localTasks,
       mapGitHubIssue(issue) {

@@ -33,6 +33,7 @@ import type {
   TimeEntryListResponse,
   TimeEntryResponse,
   TimeEntrySource,
+  TrackingCapabilityResponse,
   UpdateTimeEntryInput,
 } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
@@ -51,7 +52,10 @@ import {
   projectRowSelection,
   projects as projectsTable,
 } from '../../projects/schemas/projects.schema';
-import { ProjectsService } from '../../projects/services/projects.service';
+import {
+  ProjectsService,
+  type ProjectRow,
+} from '../../projects/services/projects.service';
 import { taskExternalRefs } from '../../tasks/schemas/task-external-refs.schema';
 import {
   taskRowSelection,
@@ -426,10 +430,7 @@ export class TimeEntriesService {
         if (!project) throw new NotFoundException('Project not found');
         if (!project.isActive)
           throw new UnprocessableEntityException('Project is inactive');
-        if (
-          membership.role !== 'admin' &&
-          !(membership.role === 'pm' && project.visibility === 'public')
-        ) {
+        if (!this.isManagedProjectAuthorized(membership.role, project, false)) {
           const [assignment] = await tx
             .select({ id: projectAssignments.id })
             .from(projectAssignments)
@@ -441,7 +442,13 @@ export class TimeEntriesService {
               ),
             )
             .for('update');
-          if (!assignment) {
+          if (
+            !this.isManagedProjectAuthorized(
+              membership.role,
+              project,
+              assignment !== undefined,
+            )
+          ) {
             if (membership.role === 'member') {
               throw new DomainError(
                 'project_assignment_required',
@@ -597,6 +604,94 @@ export class TimeEntriesService {
       this.handleRunningTimerConflict(error);
       throw error;
     }
+  }
+
+  async getTrackingCapability(
+    user: AuthUser,
+    input: StartTimerFromGitHubReferenceInput,
+  ): Promise<TrackingCapabilityResponse> {
+    const issueKey = `${input.githubRepo}#${input.issueNumber}`;
+    const repoParts = parseGitHubRepoKey(input.githubRepo);
+    if (!repoParts) return this.deniedTrackingCapability();
+    const membership = await this.members.requireActiveMembership(
+      user.sub,
+      user.workspaceId,
+    );
+
+    const project = await this.githubTasks.findExistingReferenceProject(
+      this.db,
+      user.workspaceId,
+      { githubRepo: input.githubRepo, issueKey },
+    );
+    if (!project) {
+      return this.trackingCapability('own-time');
+    }
+
+    if (!project.isActive) {
+      return this.deniedTrackingCapability();
+    }
+
+    if (project.trackingMode === 'external-reference') {
+      if (
+        !(await this.isExistingReferenceTaskTrackable(
+          user.workspaceId,
+          issueKey,
+        ))
+      ) {
+        return this.deniedTrackingCapability();
+      }
+      const hasProjectAccess = await this.hasFullProjectAccess(
+        user,
+        project.id,
+        project.visibility,
+        membership.role,
+      );
+      return this.trackingCapability(hasProjectAccess ? 'project' : 'own-time');
+    }
+
+    try {
+      const verified = await this.installations.prepareIssue(
+        user,
+        repoParts.owner,
+        repoParts.repo,
+        input.issueNumber,
+      );
+      const verifiedIssueKey = `${verified.repository.fullName}#${verified.issue.number}`;
+      const verifiedProject = await this.githubTasks.findExistingIssueProject(
+        this.db,
+        user.workspaceId,
+        verified.repository.fullName,
+        verifiedIssueKey,
+      );
+      if (
+        !verifiedProject ||
+        verifiedProject.id !== project.id ||
+        !verifiedProject.isActive ||
+        !(await this.isExistingReferenceTaskTrackable(
+          user.workspaceId,
+          verifiedIssueKey,
+        ))
+      ) {
+        return this.deniedTrackingCapability();
+      }
+    } catch (error) {
+      return this.deniedTrackingCapability(
+        this.trackingCapabilityErrorReason(error),
+      );
+    }
+
+    const canUseManagedProject = this.isManagedProjectAuthorized(
+      membership.role,
+      project,
+      await this.hasProjectAssignment(user, project.id),
+    );
+    return canUseManagedProject
+      ? this.trackingCapability('project')
+      : this.deniedTrackingCapability(
+          membership.role === 'member'
+            ? githubTrackingErrorMessages.project_assignment_required
+            : undefined,
+        );
   }
 
   async stopTimer(
@@ -1026,6 +1121,96 @@ export class TimeEntriesService {
       .for('update');
     if (!task) throw new NotFoundException('Task not found');
     return task;
+  }
+
+  private trackingCapability(
+    accessScope: 'project' | 'own-time',
+  ): TrackingCapabilityResponse {
+    return { canStartTracking: true, accessScope, reason: null };
+  }
+
+  private deniedTrackingCapability(
+    reason = 'Tracking is not available for this issue.',
+  ): TrackingCapabilityResponse {
+    return {
+      canStartTracking: false,
+      accessScope: null,
+      reason,
+    };
+  }
+
+  private trackingCapabilityErrorReason(error: unknown): string | undefined {
+    if (!(error instanceof DomainError)) return undefined;
+    const response = error.getResponse();
+    if (typeof response !== 'object' || response === null) return undefined;
+    const { code } = response as { code?: unknown };
+    if (typeof code !== 'string' || !(code in githubTrackingErrorMessages)) {
+      return undefined;
+    }
+    return githubTrackingErrorMessages[
+      code as keyof typeof githubTrackingErrorMessages
+    ];
+  }
+
+  private async isExistingReferenceTaskTrackable(
+    workspaceId: string,
+    issueKey: string,
+  ): Promise<boolean> {
+    const [task] = await this.db
+      .select({ isActive: tasksTable.isActive, status: tasksTable.status })
+      .from(taskExternalRefs)
+      .innerJoin(tasksTable, eq(tasksTable.id, taskExternalRefs.taskId))
+      .where(
+        and(
+          eq(taskExternalRefs.workspaceId, workspaceId),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+          sql`lower(${taskExternalRefs.externalKey}) = lower(${issueKey})`,
+        ),
+      )
+      .limit(1);
+
+    return task === undefined || (task.isActive && task.status !== 'closed');
+  }
+
+  private async hasFullProjectAccess(
+    user: AuthUser,
+    projectId: string,
+    visibility: 'public' | 'private',
+    role: 'admin' | 'pm' | 'member',
+  ): Promise<boolean> {
+    if (role === 'admin' || visibility === 'public') return true;
+    return this.hasProjectAssignment(user, projectId);
+  }
+
+  private isManagedProjectAuthorized(
+    role: 'admin' | 'pm' | 'member',
+    project: Pick<ProjectRow, 'visibility'>,
+    hasAssignment: boolean,
+  ): boolean {
+    return (
+      role === 'admin' ||
+      (role === 'pm' && project.visibility === 'public') ||
+      hasAssignment
+    );
+  }
+
+  private async hasProjectAssignment(
+    user: AuthUser,
+    projectId: string,
+  ): Promise<boolean> {
+    const [assignment] = await this.db
+      .select({ id: projectAssignments.id })
+      .from(projectAssignments)
+      .where(
+        and(
+          eq(projectAssignments.workspaceId, user.workspaceId),
+          eq(projectAssignments.projectId, projectId),
+          eq(projectAssignments.userId, user.sub),
+        ),
+      )
+      .limit(1);
+    return assignment !== undefined;
   }
 
   private handleRunningTimerConflict(error: unknown): void {

@@ -59,10 +59,6 @@ interface OwnTimeEntriesClient {
   ): Promise<TimeEntryListResponse>;
 }
 
-interface ProjectTasksClient {
-  listProjectTasks(projectId: string): Promise<TaskResponse[]>;
-}
-
 interface StartTimerClient {
   startTimer(input: StartTimerInput): Promise<TimeEntryResponse>;
 }
@@ -115,12 +111,6 @@ interface UseOwnTimeEntriesQueryOptions extends UserScopedQueryOptions {
   queryKey?: MaybeRefOrGetter<QueryKey>;
 }
 
-interface UseProjectTasksQueryOptions extends UserScopedQueryOptions {
-  client: ProjectTasksClient;
-  projectId: MaybeRefOrGetter<string | null | undefined>;
-  queryKey?: MaybeRefOrGetter<QueryKey>;
-}
-
 interface UseVisibleProjectsQueryOptions extends UserScopedQueryOptions {
   client: VisibleProjectsClient;
   queryKey?: MaybeRefOrGetter<QueryKey>;
@@ -164,14 +154,6 @@ interface UseUpdateTimeEntryMutationOptions extends UserScopedMutationOptions {
 }
 
 const recentOwnTimeEntriesQuery = { limit: 10, page: 1 } as const;
-
-function requireProjectId(projectId: string | null | undefined): string {
-  if (!projectId) {
-    throw new Error("Project is required to load tasks.");
-  }
-
-  return projectId;
-}
 
 function isQueryEnabled(options: UserScopedQueryOptions): boolean {
   return Boolean(toValue(options.enabled));
@@ -240,22 +222,6 @@ export const useOwnTimeEntriesQuery = (options: UseOwnTimeEntriesQueryOptions) =
     refetchOnWindowFocus: true,
   });
 
-export const useProjectTasksQuery = (options: UseProjectTasksQueryOptions) =>
-  useQuery({
-    queryKey: computed(() =>
-      toValue(options.queryKey) ??
-      userProjectsKeys.projectTasks(
-        toValue(options.scope),
-        toValue(options.projectId),
-      ),
-    ),
-    enabled: computed(() => isQueryEnabled(options) && Boolean(toValue(options.projectId))),
-    queryFn: () =>
-      options.client.listProjectTasks(
-        requireProjectId(toValue(options.projectId)),
-      ),
-  });
-
 export const useRecentOwnTimeEntriesQuery = (
   options: Omit<UseOwnTimeEntriesQueryOptions, "query">,
 ) =>
@@ -302,10 +268,10 @@ export const useCreateTaskMutation = (options: UseCreateTaskMutationOptions) => 
   return useMutation({
     mutationFn: ({ projectId, input }: { projectId: string; input: CreateTaskInput }) =>
       options.client.createTask(projectId, input),
-    onSuccess: async (_task, { projectId }) => {
+    onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,
-        userMutationInvalidationKeys.afterTaskMutation(toValue(options.scope), projectId),
+        userMutationInvalidationKeys.afterTaskMutation(toValue(options.scope)),
       );
     },
   });
@@ -317,10 +283,10 @@ export const useDeleteTaskMutation = (options: UseDeleteTaskMutationOptions) => 
   return useMutation({
     mutationFn: ({ taskId }: { projectId: string; taskId: string }) =>
       options.client.deleteTask(taskId),
-    onSuccess: async (_result, { projectId }) => {
+    onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,
-        userMutationInvalidationKeys.afterTaskMutation(toValue(options.scope), projectId),
+        userMutationInvalidationKeys.afterTaskMutation(toValue(options.scope)),
       );
     },
   });
@@ -410,13 +376,10 @@ export const useUpdateTaskMutation = (options: UseUpdateTaskMutationOptions) => 
   return useMutation({
     mutationFn: ({ taskId, input }: { projectId: string; taskId: string; input: UpdateTaskInput }) =>
       options.client.updateTask(taskId, input),
-    onSuccess: async (task, { projectId }) => {
+    onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,
-        userMutationInvalidationKeys.afterTaskMutation(
-          toValue(options.scope),
-          task.projectId || projectId,
-        ),
+        userMutationInvalidationKeys.afterTaskMutation(toValue(options.scope)),
       );
     },
   });

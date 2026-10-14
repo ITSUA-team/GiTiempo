@@ -79,7 +79,7 @@ describe("user-web query keys", () => {
       "project-1",
       null,
     ]);
-    expect(userProjectsKeys.projectTasks(scope, "project-1")).toEqual([
+    expect(userProjectsKeys.projectTasks(scope, "project-1", null)).toEqual([
       "user-web",
       { userId: "user-1", workspaceId: "workspace-1" },
       "projects",
@@ -130,7 +130,6 @@ describe("user-web query keys", () => {
     ]);
     expect(userMutationInvalidationKeys.afterTaskMutation(scope, "project-1")).toEqual([
       userProjectsKeys.all(scope),
-      userProjectsKeys.projectTasks(scope, "project-1"),
       timerKeys.all(scope),
     ]);
   });

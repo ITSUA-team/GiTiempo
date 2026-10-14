@@ -243,6 +243,29 @@ export const startTimerFromGitHubReferenceSchema = z
     }
   });
 
+export const trackingCapabilityResponseSchema = z
+  .object({
+    canStartTracking: z.boolean(),
+    accessScope: z.enum(['project', 'own-time']).nullable(),
+    reason: z.string().trim().min(1).max(500).nullable(),
+  })
+  .strict()
+  .superRefine((response, ctx) => {
+    if (response.canStartTracking) {
+      if (response.accessScope !== null && response.reason === null) return;
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Allowed tracking requires an access scope and no reason',
+      });
+      return;
+    }
+    if (response.accessScope === null && response.reason !== null) return;
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Denied tracking requires a reason and no access scope',
+    });
+  });
+
 export type TimeEntrySource = z.infer<typeof timeEntrySourceSchema>;
 export type TimeEntryResponse = z.infer<typeof timeEntryResponseSchema>;
 export type TimeEntryListResponse = z.infer<typeof timeEntryListResponseSchema>;
@@ -268,3 +291,14 @@ export type StartTimerFromGitHubInput = z.infer<
 export type StartTimerFromGitHubReferenceInput = z.infer<
   typeof startTimerFromGitHubReferenceSchema
 >;
+export type TrackingCapabilityResponse =
+  | {
+      canStartTracking: true;
+      accessScope: 'project' | 'own-time';
+      reason: null;
+    }
+  | {
+      canStartTracking: false;
+      accessScope: null;
+      reason: string;
+    };

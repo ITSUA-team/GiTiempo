@@ -541,6 +541,54 @@ describe("createExtensionApiClient", () => {
     );
   });
 
+  it("requests an issue-bound tracking capability before a reference start", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        accessScope: "project",
+        canStartTracking: true,
+        reason: null,
+      }),
+    );
+    const { storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn,
+      storage,
+    });
+    const context = {
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+      issueTitle: "Improve reports filters",
+      issueUrl: "https://github.com/octo/repo/issues/184",
+      kind: "supported" as const,
+      surface: "issue-page" as const,
+    };
+
+    await expect(client.getTrackingCapability(context)).resolves.toEqual({
+      accessScope: "project",
+      canStartTracking: true,
+      reason: null,
+    });
+    expect(fetchFn).toHaveBeenCalledWith(
+      "http://localhost:3000/time-entries/timer/capability",
+      expect.objectContaining({
+        body: JSON.stringify({
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+          issueTitle: "Improve reports filters",
+          issueUrl: "https://github.com/octo/repo/issues/184",
+        }),
+        method: "POST",
+      }),
+    );
+  });
+
   it("posts the authoritative timer identity when stopping a timer", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({ message: "Running timer changed" }, { status: 409 }),

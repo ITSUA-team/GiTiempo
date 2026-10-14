@@ -161,6 +161,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | PATCH  | `/time-entries/:id`                     | JWT  | Any  | Update own time entry (task, description, times, billable)                                         |
 | DELETE | `/time-entries/:id`                     | JWT  | Any  | Delete own time entry                                                                              |
 | GET    | `/time-entries/current`                 | JWT  | Any  | Get the authenticated user's currently running timer across workspaces, if any                      |
+| POST   | `/time-entries/timer/capability`        | JWT  | Any  | Read-only tracking preflight for canonical GitHub issue context; returns scope or a safe denial reason |
 | POST   | `/time-entries/timer/start`             | JWT  | Any  | Start timer against an existing task                                                               |
 | POST   | `/time-entries/timer/start-from-github-reference` | JWT | Any | Start from strict browser issue context; managed delegation or atomic external reference recording |
 | POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Legacy managed GitHub start; requires verified workspace installation and existing authorized managed mapping |
@@ -188,6 +189,8 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 **POST /time-entries/timer/start** body: `{ taskId: string, description?: string | null }`
 **POST /time-entries/timer/start-from-github** body: `{ githubRepo: "org/repo", issueNumber: number, githubProjectId?: string }`
 **POST /time-entries/timer/start-from-github-reference** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string, issueUrl: "https://github.com/org/repo/issues/123" }`
+
+**POST /time-entries/timer/capability** accepts the same strict issue-context body and returns `{ canStartTracking: boolean, accessScope: "project" | "own-time" | null, reason: string | null }`. Allowed results have a null reason; denied results have a safe reason and null scope. The read-only preflight creates no projects, tasks, references, or entries and returns no protected mapping metadata. External reference tracking remains available to active workspace members without GitHub setup. Managed targets retain their authorization and installation checks. The extension refreshes this issue-bound capability before enabling Start; the start endpoint independently rechecks authorization at the write boundary.
 
 - This strict request rejects unknown fields, unsafe/non-positive numbers, missing/overlong/control-character titles and nonmatching URLs. It accepts canonical direct HTTPS `github.com` URLs only; no queries/fragments, board URLs, credentials, port, or caller-supplied authority. Session workspace and fresh active membership determine the destination.
 - Existing issue identity wins over repository identity. Managed mappings delegate to installation-backed authorization with no fallback after denial. Legacy `/start-from-github` rejects external mappings before provider access.

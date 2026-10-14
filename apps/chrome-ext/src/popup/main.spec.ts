@@ -97,13 +97,27 @@ function createRuntimeClient(overrides?: {
         ok: true,
         snapshot: { authenticated: false, currentTimer: null, errorMessage: null, user: null },
       })),
-    getSnapshot: vi.fn(async () =>
-        overrides?.snapshot ?? {
-          authenticated: false,
-          currentTimer: null,
-          errorMessage: null,
-          user: null,
-        }),
+    getSnapshot: vi.fn(async (pageContext) => {
+      const snapshot = overrides?.snapshot ?? {
+        authenticated: false,
+        currentTimer: null,
+        errorMessage: null,
+        user: null,
+      };
+
+      return pageContext && snapshot.authenticated && snapshot.trackingCapability === undefined
+        ? {
+            ...snapshot,
+            trackingCapability: {
+              accessScope: "project" as const,
+              canStartTracking: true as const,
+              githubRepo: pageContext.githubRepo,
+              issueNumber: pageContext.issueNumber,
+              reason: null,
+            },
+          }
+        : snapshot;
+    }),
     onSnapshotUpdated: vi.fn(() => () => undefined),
     openExtension: vi.fn(async () => undefined),
     startTimer:
@@ -121,7 +135,7 @@ function createRuntimeClient(overrides?: {
   };
 }
 
-function supportedContext(): PageContext {
+function supportedContext(): Extract<PageContext, { kind: "supported" }> {
   return {
     githubRepo: "octo/repo",
     issueNumber: 184,
@@ -1007,6 +1021,36 @@ describe("popup app", () => {
     await Promise.resolve();
 
     await vi.waitFor(() => expect(startTimer).toHaveBeenCalledWith(supportedContext(), "workspace-alpha", "alexey@example.com"));
+  });
+
+  it("keeps Start disabled and exposes Retry when this issue is denied", async () => {
+    const context = supportedContext();
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient: createRuntimeClient({
+        snapshot: {
+          authenticated: true,
+          workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
+          currentTimer: null,
+          errorMessage: null,
+          trackingCapability: {
+            accessScope: null,
+            canStartTracking: false,
+            githubRepo: context.githubRepo,
+            issueNumber: context.issueNumber,
+            reason: "You are not assigned to this project.",
+          },
+          user: { displayName: "Alexey", email: "alexey@example.com" },
+        },
+      }),
+      pageContextResolver: async () => context,
+    });
+
+    await app.load();
+
+    expect(document.body.textContent).toContain("You are not assigned to this project.");
+    expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')?.disabled).toBe(true);
+    expect(document.querySelector('[data-action="retry"]')).not.toBeNull();
   });
 
   it("shows the retryable error state after a failed stop action", async () => {

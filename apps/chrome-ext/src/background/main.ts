@@ -15,6 +15,7 @@ import type {
   RuntimeAuthResult,
   RuntimeMutationResult,
   RuntimeSnapshot,
+  RuntimeTrackingCapability,
   SnapshotUser,
 } from '@/lib/runtime';
 import {
@@ -28,6 +29,7 @@ import {
   decodeAccessTokenWorkspaceId,
 } from '@/lib/token';
 import { getGitHubTrackingErrorCode } from '@/lib/github-tracking-error';
+import type { SupportedGitHubIssueContext } from '@/lib/github-context';
 
 const config = getExtensionConfig();
 const apiClient = createExtensionApiClient({ config });
@@ -57,7 +59,9 @@ function deriveSnapshotUser(
 
 let lastSnapshot: RuntimeSnapshot | null = null;
 
-async function loadSnapshot(): Promise<RuntimeSnapshot> {
+async function loadSnapshot(
+  pageContext?: SupportedGitHubIssueContext,
+): Promise<RuntimeSnapshot> {
   const [session, providerCleanupPending] = await Promise.all([
     getStoredSession(),
     getProviderCleanupPending(),
@@ -74,9 +78,17 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
     };
   }
 
-  const [timerResult, workspaceResult] = await Promise.allSettled([
+  const email = decodeAccessTokenEmail(session.accessToken);
+  const workspaceId = decodeAccessTokenWorkspaceId(session.accessToken);
+  const expectedContext = email && workspaceId
+    ? { email, workspaceId }
+    : undefined;
+  const [timerResult, workspaceResult, capabilityResult] = await Promise.allSettled([
     apiClient.getCurrentTimer(),
     apiClient.getWorkspace(),
+    pageContext
+      ? apiClient.getTrackingCapability(pageContext, expectedContext)
+      : Promise.resolve(null),
   ]);
   const nextSession = await getStoredSession();
   if (!nextSession) {
@@ -89,11 +101,11 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
       user: null,
     };
   }
-  const email = decodeAccessTokenEmail(nextSession.accessToken);
-  const workspaceId = decodeAccessTokenWorkspaceId(nextSession.accessToken);
+  const nextEmail = decodeAccessTokenEmail(nextSession.accessToken);
+  const nextWorkspaceId = decodeAccessTokenWorkspaceId(nextSession.accessToken);
   const sessionChanged =
-    email !== decodeAccessTokenEmail(session.accessToken) ||
-    workspaceId !== decodeAccessTokenWorkspaceId(session.accessToken);
+    nextEmail !== email ||
+    nextWorkspaceId !== workspaceId;
   if (sessionChanged) {
     lastSnapshot = null;
     return {
@@ -106,14 +118,22 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
         'Your session or workspace changed. Refresh and review the destination before starting.',
     };
   }
-  const sameUser = email !== null && lastSnapshot?.user?.email === email;
+  const sameUser = nextEmail !== null && lastSnapshot?.user?.email === nextEmail;
   const returnedTimer =
     timerResult.status === 'fulfilled' ? timerResult.value.timeEntry : null;
   const timerMatches =
-    returnedTimer === null || returnedTimer.user.email === email;
+    returnedTimer === null || returnedTimer.user.email === nextEmail;
   const workspaceMatches =
     workspaceResult.status === 'fulfilled' &&
-    (workspaceId === null || workspaceResult.value.id === workspaceId);
+    (nextWorkspaceId === null || workspaceResult.value.id === nextWorkspaceId);
+  const trackingCapability: RuntimeTrackingCapability | null =
+    pageContext && capabilityResult.status === 'fulfilled' && capabilityResult.value
+      ? {
+          ...capabilityResult.value,
+          githubRepo: pageContext.githubRepo,
+          issueNumber: pageContext.issueNumber,
+        }
+      : null;
   const currentTimer =
     timerResult.status === 'fulfilled'
       ? timerMatches
@@ -127,6 +147,8 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
       ? timerResult.reason
       : workspaceResult.status === 'rejected'
         ? workspaceResult.reason
+        : capabilityResult.status === 'rejected'
+          ? capabilityResult.reason
         : null;
   const snapshot: RuntimeSnapshot = {
     authenticated: true,
@@ -145,6 +167,7 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
             : 'Unable to load timer state.'
           : null,
     providerCleanupPending,
+    ...(pageContext ? { trackingCapability } : {}),
     user: deriveSnapshotUser(nextSession, currentTimer),
   };
   lastSnapshot = snapshot;
@@ -432,13 +455,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return;
       }
       case 'runtime/get-snapshot': {
-        sendResponse(await loadSnapshot());
+        sendResponse(await loadSnapshot(request.pageContext));
         return;
       }
       case 'timer/start': {
         sendResponse(
           await handleMutation(async () => {
-            const snapshot = await loadSnapshot();
+            const snapshot = await loadSnapshot(request.pageContext);
             if (
               !snapshot.authenticated ||
               !snapshot.workspace ||
@@ -447,6 +470,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             ) {
               throw new Error(
                 'Your session or workspace changed. Refresh and review the destination before starting.',
+              );
+            }
+            if (!snapshot.trackingCapability?.canStartTracking) {
+              throw new Error(
+                snapshot.trackingCapability?.reason ??
+                  'Tracking permission could not be confirmed. Refresh and try again.',
               );
             }
             await apiClient.startTimerFromGitHub(request.pageContext, {

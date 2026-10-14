@@ -563,6 +563,7 @@ async function mountView(
                 title: 'New task'
               })">New task</button>
               <button data-testid="dialog-new-task-title" type="button" @click="$emit('update:newTaskTitle', 'Write release checklist')">New task title</button>
+              <button data-testid="dialog-close" type="button" @click="$emit('close')">Close</button>
               <button data-testid="dialog-description" type="button" @click="$emit('update:description', 'Manual cleanup')">Description</button>
               <button data-testid="dialog-started" type="button" @click="$emit('update:startedAt', new Date('2026-04-21T09:15:00.000Z'))">Started</button>
               <button data-testid="dialog-ended" type="button" @click="$emit('update:endedAt', new Date('2026-04-21T10:45:00.000Z'))">Ended</button>
@@ -1951,6 +1952,63 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(client.createManualEntry).not.toHaveBeenCalled();
+  });
+
+  it("reloads task suggestions with the narrowed project scope after the dialog reopens", async () => {
+    const fullAccessTask = createTask({
+      id: TEST_IDS.taskAdmin,
+      projectId: TEST_IDS.projectAdmin,
+      title: "Ship admin polish",
+    });
+    const restrictedSiblingTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2998",
+      projectId: TEST_IDS.projectAdmin,
+      title: "Restricted sibling task",
+    });
+    const ownTask = createTask({
+      accessScope: "own-time",
+      capabilities: { canManageTasks: false },
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2999",
+      projectId: TEST_IDS.projectAdmin,
+      title: "Own task",
+    });
+    const narrowedProject = createProject({
+      accessScope: "own-time",
+      capabilities: { canManageTasks: false },
+      id: TEST_IDS.projectAdmin,
+      name: "Admin Web",
+    });
+    const client = createClientMock();
+    client.listProjectTasks
+      .mockResolvedValueOnce([fullAccessTask, restrictedSiblingTask])
+      .mockResolvedValueOnce([ownTask]);
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="dialog-task-suggestions"]').text()).toContain(
+      "Restricted sibling task",
+    );
+
+    await wrapper.get('[data-testid="dialog-close"]').trigger("click");
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [createProject(), narrowedProject],
+    );
+    await nextTick();
+
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+
+    const taskSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]').text();
+
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(2);
+    expect(taskSuggestions).toContain("Own task");
+    expect(taskSuggestions).not.toContain("Restricted sibling task");
   });
 
   it("clears a selected task when project access remains but that task no longer is visible", async () => {

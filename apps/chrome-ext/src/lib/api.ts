@@ -9,12 +9,14 @@ import {
   logoutRequestSchema,
   refreshRequestSchema,
   startTimerFromGitHubReferenceSchema,
+  trackingCapabilityResponseSchema,
   conditionalStopTimerSchema,
   timeEntryResponseSchema,
   tokenPairResponseSchema,
   type CurrentTimeEntryResponse,
   type TimeEntryResponse,
   type ConditionalStopTimerInput,
+  type TrackingCapabilityResponse,
   type TokenPairResponse,
 } from "@gitiempo/shared";
 import type { ZodType } from "zod";
@@ -37,6 +39,10 @@ export interface ExtensionApiClient {
   ): Promise<TokenPairResponse>;
   exitSession(): Promise<void>;
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
+  getTrackingCapability(
+    pageContext: SupportedGitHubIssueContext,
+    expectedContext?: { workspaceId: string; email: string },
+  ): Promise<TrackingCapabilityResponse>;
   getWorkspace(): Promise<WorkspaceResponse>;
   loginWithFirebaseToken(firebaseIdToken: string): Promise<TokenPairResponse>;
   startTimerFromGitHub(
@@ -349,6 +355,23 @@ export function createExtensionApiClient({
       return requestWithAuth({
         path: "/time-entries/current",
         responseSchema: currentTimeEntryResponseSchema,
+      });
+    },
+    getTrackingCapability(pageContext, expectedContext): Promise<TrackingCapabilityResponse> {
+      return requestWithAuth<TrackingCapabilityResponse>({
+        expectedContext,
+        body: startTimerFromGitHubReferenceSchema.parse({
+          githubRepo: pageContext.githubRepo,
+          issueNumber: pageContext.issueNumber,
+          issueTitle: pageContext.issueTitle,
+          issueUrl: pageContext.issueUrl,
+        }),
+        method: "POST",
+        path: "/time-entries/timer/capability",
+        responseSchema: trackingCapabilityResponseSchema as Pick<
+          ZodType<TrackingCapabilityResponse>,
+          "parse"
+        >,
       });
     },
     getWorkspace() {

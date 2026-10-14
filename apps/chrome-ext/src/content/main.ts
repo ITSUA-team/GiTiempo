@@ -9,7 +9,12 @@ import {
   type PageContext,
   type SupportedGitHubIssueContext,
 } from "@/lib/github-context";
-import { createRuntimeClient, type RuntimeClient, type RuntimeSnapshot } from "@/lib/runtime";
+import {
+  createRuntimeClient,
+  hasCurrentTrackingCapability,
+  type RuntimeClient,
+  type RuntimeSnapshot,
+} from "@/lib/runtime";
 import { formatElapsedTime } from "@/lib/time";
 
 interface InjectedAppOptions {
@@ -85,6 +90,13 @@ function renderInjectedBody(
   }
 
   const currentTimer = state.snapshot.currentTimer;
+  const hasTrackingCapability = hasCurrentTrackingCapability(
+    state.snapshot,
+    pageContext,
+  );
+  const trackingCapability = hasTrackingCapability
+    ? state.snapshot.trackingCapability
+    : null;
   const isCurrentIssueTimer = currentTimer
     ? currentTimer.githubIssue?.githubRepo.toLowerCase() === pageContext.githubRepo.toLowerCase()
       && currentTimer.githubIssue.issueNumber === pageContext.issueNumber
@@ -160,6 +172,22 @@ function renderInjectedBody(
     `;
   }
 
+  if (!trackingCapability || !trackingCapability.canStartTracking) {
+    const message = trackingCapability?.reason ??
+      "Unable to confirm whether you can track this issue.";
+
+    return `
+      <div>
+        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
+        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(message)}</p>
+        <button type="button" data-action="retry" class="${injectedTextActionClass}">Retry</button>
+      </div>
+    `;
+  }
+
   return `
     <div>
       <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
@@ -216,6 +244,7 @@ export function createInjectedIssueApp({
   const unsubscribe = runtimeClient.onSnapshotUpdated((snapshot) => {
     state.snapshot = snapshot;
     render();
+    void load();
   });
 
   function syncTheme(): void {
@@ -294,7 +323,7 @@ export function createInjectedIssueApp({
     render();
 
     try {
-      state.snapshot = await runtimeClient.getSnapshot();
+      state.snapshot = await runtimeClient.getSnapshot(pageContext);
     } catch (error) {
       state.snapshot = {
         authenticated: false,
@@ -312,6 +341,13 @@ export function createInjectedIssueApp({
 
   async function handleStartTimer(): Promise<void> {
     if (state.isSubmitting) return;
+    if (!hasCurrentTrackingCapability(state.snapshot, pageContext) ||
+        !state.snapshot?.trackingCapability?.canStartTracking) {
+      state.actionErrorMessage = state.snapshot?.trackingCapability?.reason ??
+        "Unable to confirm whether you can track this issue. Refresh and try again.";
+      render();
+      return;
+    }
     const expectedWorkspaceId = state.snapshot?.workspace?.id;
     const expectedUserEmail = state.snapshot?.user?.email;
     if (!expectedWorkspaceId || !expectedUserEmail) {

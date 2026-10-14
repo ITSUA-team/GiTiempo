@@ -3,6 +3,7 @@
 import type {
   CurrentTimeEntryResponse,
   GitHubTrackingErrorCode,
+  TrackingCapabilityResponse,
   TimeEntryResponse,
 } from "@gitiempo/shared";
 
@@ -22,6 +23,22 @@ export interface RuntimeSnapshot {
   providerCleanupPending?: boolean;
   user: SnapshotUser | null;
   workspace?: { id: string; name: string } | null;
+  trackingCapability?: RuntimeTrackingCapability | null;
+}
+
+export type RuntimeTrackingCapability = TrackingCapabilityResponse & {
+  githubRepo: string;
+  issueNumber: number;
+};
+
+export function hasCurrentTrackingCapability(
+  snapshot: RuntimeSnapshot | null,
+  pageContext: SupportedGitHubIssueContext,
+): boolean {
+  const capability = snapshot?.trackingCapability;
+
+  return capability?.githubRepo.toLowerCase() === pageContext.githubRepo.toLowerCase()
+    && capability.issueNumber === pageContext.issueNumber;
 }
 
 export interface RuntimeActionResult {
@@ -42,7 +59,7 @@ export interface RuntimeClient {
     code: string,
     verifier: string,
   ): Promise<RuntimeAuthResult>;
-  getSnapshot(): Promise<RuntimeSnapshot>;
+  getSnapshot(pageContext?: SupportedGitHubIssueContext): Promise<RuntimeSnapshot>;
   onSnapshotUpdated(listener: (snapshot: RuntimeSnapshot) => void): () => void;
   openExtension(): Promise<void>;
   retryProviderCleanup(): Promise<RuntimeAuthResult>;
@@ -59,7 +76,7 @@ export type BackgroundMessage =
   | { type: "auth/sign-in-google" }
   | { type: "auth/sign-out" }
   | { type: "auth/retry-provider-cleanup" }
-  | { type: "runtime/get-snapshot" }
+  | { type: "runtime/get-snapshot"; pageContext?: SupportedGitHubIssueContext }
   | { type: "timer/start"; pageContext: SupportedGitHubIssueContext; expectedWorkspaceId?: string; expectedUserEmail?: string }
   | { type: "timer/stop"; expectedTimerId: string }
   | { type: "ui/open-extension" };
@@ -113,8 +130,8 @@ export function createRuntimeClient(): RuntimeClient {
         type: "auth/sign-in-google",
       });
     },
-    getSnapshot() {
-      return sendRuntimeMessage<RuntimeSnapshot>({ type: "runtime/get-snapshot" });
+    getSnapshot(pageContext) {
+      return sendRuntimeMessage<RuntimeSnapshot>({ type: "runtime/get-snapshot", pageContext });
     },
     onSnapshotUpdated(listener) {
       const runtimeListener = (message: unknown) => {

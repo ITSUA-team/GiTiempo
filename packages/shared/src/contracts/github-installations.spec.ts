@@ -32,15 +32,30 @@ describe('installation and tracking contracts', () => {
     'assignments',
     'issueTitle',
   ])('rejects a client authority override: %s', (field) => {
+    const result = startTimerFromGitHubSchema.safeParse({
+      githubRepo: 'org/repo',
+      issueNumber: 1,
+      [field]: 'forged',
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unrecognized_keys',
+          keys: expect.arrayContaining([field]),
+        }),
+      ]),
+    );
+  });
+  it('accepts the baseline payload before testing authority fields', () => {
     expect(
       startTimerFromGitHubSchema.safeParse({
         githubRepo: 'org/repo',
         issueNumber: 1,
-        issueTitle: 'Issue title',
-        issueUrl: 'https://github.com/org/repo/issues/1',
-        [field]: 'forged',
       }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
   it('accepts an optional board hint but no claimed verification', () => {
     expect(

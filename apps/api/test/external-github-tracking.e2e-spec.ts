@@ -3,6 +3,8 @@ import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
+import { githubTrackingErrorMessages } from '@gitiempo/shared';
+import { ThrottlerStorage } from '@nestjs/throttler';
 import {
   afterAll,
   afterEach,
@@ -28,6 +30,7 @@ import {
   workspaceMembers,
 } from '../src/db/schema';
 import { GithubInstallationsService } from '../src/github/services/github-installations.service';
+import { DomainError } from '../src/commons/errors/domain-error';
 import { bearer, login } from './helpers/auth';
 
 describe('External GitHub extension tracking (e2e)', () => {
@@ -45,6 +48,14 @@ describe('External GitHub extension tracking (e2e)', () => {
       throw new NotFoundException('Managed GitHub access denied');
     }),
   };
+  const throttlerStorage = {
+    increment: vi.fn().mockResolvedValue({
+      totalHits: 0,
+      timeToExpire: 60_000,
+      isBlocked: false,
+      timeToBlockExpire: 0,
+    }),
+  };
 
   const repo = `ExternalE2E/${randomUUID().slice(0, 12)}`;
   const issue = (issueNumber: number) => ({
@@ -58,6 +69,8 @@ describe('External GitHub extension tracking (e2e)', () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(GithubInstallationsService)
       .useValue(installations)
+      .overrideProvider(ThrottlerStorage)
+      .useValue(throttlerStorage)
       .compile();
     app = module.createNestApplication();
     await app.init();
@@ -117,6 +130,46 @@ describe('External GitHub extension tracking (e2e)', () => {
       .post('/time-entries/timer/start-from-github-reference')
       .set('Authorization', bearer(token))
       .send(issue(issueNumber));
+  }
+
+  async function capability(token: string, issueNumber = 41) {
+    return request(app.getHttpServer())
+      .post('/time-entries/timer/capability')
+      .set('Authorization', bearer(token))
+      .send(issue(issueNumber));
+  }
+
+  async function workspaceRecordCounts() {
+    const [projectRows, taskRows, projectRefRows, taskRefRows, entryRows] =
+      await Promise.all([
+        db
+          .select({ id: projects.id })
+          .from(projects)
+          .where(eq(projects.workspaceId, workspaceId)),
+        db
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(eq(tasks.workspaceId, workspaceId)),
+        db
+          .select({ id: projectExternalRefs.id })
+          .from(projectExternalRefs)
+          .where(eq(projectExternalRefs.workspaceId, workspaceId)),
+        db
+          .select({ id: taskExternalRefs.id })
+          .from(taskExternalRefs)
+          .where(eq(taskExternalRefs.workspaceId, workspaceId)),
+        db
+          .select({ id: timeEntries.id })
+          .from(timeEntries)
+          .where(eq(timeEntries.workspaceId, workspaceId)),
+      ]);
+    return [
+      projectRows.length,
+      taskRows.length,
+      projectRefRows.length,
+      taskRefRows.length,
+      entryRows.length,
+    ];
   }
 
   async function stop(token: string, expectedTimerId: string) {
@@ -260,6 +313,206 @@ describe('External GitHub extension tracking (e2e)', () => {
       .get(`/projects/${project!.id}`)
       .set('Authorization', bearer(peerToken))
       .expect(200);
+  });
+
+  it('returns an own-time capability for a new external reference without writing records', async () => {
+    const before = await workspaceRecordCounts();
+
+    const response = await capability(memberToken, 70);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      canStartTracking: true,
+      accessScope: 'own-time',
+      reason: null,
+    });
+    expect(installations.prepareIssue).not.toHaveBeenCalled();
+    expect(await workspaceRecordCounts()).toEqual(before);
+  });
+
+  it('denies an inactive saved external task without writing records', async () => {
+    const started = await start(memberToken, 71);
+    expect(started.status).toBe(201);
+    await stop(memberToken, started.body.id);
+    await db
+      .update(tasks)
+      .set({ isActive: false })
+      .where(eq(tasks.id, started.body.taskId));
+    const before = await workspaceRecordCounts();
+
+    const response = await capability(memberToken, 71);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      canStartTracking: false,
+      accessScope: null,
+    });
+    expect(response.body.reason).toEqual(expect.any(String));
+    expect(response.body.reason.length).toBeGreaterThan(0);
+    expect(installations.prepareIssue).not.toHaveBeenCalled();
+    expect(await workspaceRecordCounts()).toEqual(before);
+  });
+
+  it('denies a managed mapping when installation authorization fails without writing records', async () => {
+    const managedRepo = `ManagedE2E/${randomUUID().slice(0, 12)}`;
+    const [managed] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Managed ${randomUUID()}`,
+        visibility: 'private',
+      })
+      .returning();
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId: managed!.id,
+      provider: 'github',
+      externalType: 'repository',
+      externalKey: managedRepo,
+    });
+    installations.prepareIssue.mockRejectedValueOnce(
+      new DomainError(
+        'github_installation_required',
+        githubTrackingErrorMessages.github_installation_required,
+        409,
+      ) as never,
+    );
+    const before = await workspaceRecordCounts();
+
+    const response = await request(app.getHttpServer())
+      .post('/time-entries/timer/capability')
+      .set('Authorization', bearer(memberToken))
+      .send({
+        githubRepo: managedRepo,
+        issueNumber: 72,
+        issueTitle: 'Managed issue',
+        issueUrl: `https://github.com/${managedRepo}/issues/72`,
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      canStartTracking: false,
+      accessScope: null,
+      reason: githubTrackingErrorMessages.github_installation_required,
+    });
+    expect(installations.prepareIssue).toHaveBeenCalledTimes(1);
+    expect(await workspaceRecordCounts()).toEqual(before);
+  });
+
+  it('denies an unassigned member for a verified managed mapping without writing records', async () => {
+    const managedRepo = `ManagedE2E/${randomUUID().slice(0, 12)}`;
+    const [managed] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Managed ${randomUUID()}`,
+        visibility: 'public',
+      })
+      .returning();
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId: managed!.id,
+      provider: 'github',
+      externalType: 'repository',
+      externalKey: managedRepo,
+    });
+    installations.prepareIssue.mockResolvedValueOnce({
+      repository: { fullName: managedRepo },
+      issue: { number: 73 },
+    } as never);
+    const before = await workspaceRecordCounts();
+
+    const response = await request(app.getHttpServer())
+      .post('/time-entries/timer/capability')
+      .set('Authorization', bearer(memberToken))
+      .send({
+        githubRepo: managedRepo,
+        issueNumber: 73,
+        issueTitle: 'Managed issue',
+        issueUrl: `https://github.com/${managedRepo}/issues/73`,
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      canStartTracking: false,
+      accessScope: null,
+      reason: githubTrackingErrorMessages.project_assignment_required,
+    });
+    expect(installations.prepareIssue).toHaveBeenCalledTimes(1);
+    expect(await workspaceRecordCounts()).toEqual(before);
+  });
+
+  it('allows an authorized managed mapping without writing records', async () => {
+    const managedRepo = `ManagedE2E/${randomUUID().slice(0, 12)}`;
+    const [managed] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Managed ${randomUUID()}`,
+        visibility: 'private',
+      })
+      .returning();
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId: managed!.id,
+      provider: 'github',
+      externalType: 'repository',
+      externalKey: managedRepo,
+    });
+    await db
+      .update(workspaceMembers)
+      .set({ role: 'admin' })
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, memberId),
+        ),
+      );
+    const adminToken = (
+      await login(app, `test:${memberUid}:${memberEmail}:External admin`)
+    ).accessToken;
+    installations.prepareIssue.mockResolvedValueOnce({
+      repository: { fullName: managedRepo },
+      issue: { number: 74 },
+    } as never);
+    const before = await workspaceRecordCounts();
+
+    const response = await request(app.getHttpServer())
+      .post('/time-entries/timer/capability')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        githubRepo: managedRepo,
+        issueNumber: 74,
+        issueTitle: 'Managed issue',
+        issueUrl: `https://github.com/${managedRepo}/issues/74`,
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      canStartTracking: true,
+      accessScope: 'project',
+      reason: null,
+    });
+    expect(installations.prepareIssue).toHaveBeenCalledTimes(1);
+    expect(await workspaceRecordCounts()).toEqual(before);
+  });
+
+  it('keeps a removed member from receiving capability or causing writes', async () => {
+    await db
+      .delete(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, memberId),
+        ),
+      );
+    const before = await workspaceRecordCounts();
+
+    const response = await capability(memberToken, 73);
+    expect(response.status).toBe(401);
+
+    expect(installations.prepareIssue).not.toHaveBeenCalled();
+    expect(await workspaceRecordCounts()).toEqual(before);
   });
 
   it('never falls back to external materialization for existing managed mappings and rejects legacy access to external mappings', async () => {
