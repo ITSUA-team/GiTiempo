@@ -339,7 +339,7 @@ export class InvoicesService {
         row.status === 'sent' ||
         row.status === 'paid'
       ) {
-        byStatus[row.status] = row.value;
+        byStatus[row.status] = Number(row.value);
       }
     }
 
@@ -354,7 +354,7 @@ export class InvoicesService {
     let monthQuery = this.db
       .select({
         invoiceCount: count(),
-        totalAmount: sql<number>`COALESCE(SUM(${invoices.totalAmount}), 0)`,
+        totalAmount: sql<number>`COALESCE(SUM(${invoices.totalAmount}), 0)`.mapWith(Number),
       })
       .from(invoices)
       .leftJoin(projects, eq(projects.id, invoices.projectId));
@@ -374,7 +374,7 @@ export class InvoicesService {
     // Distinct project count for this month.
     let projectCountQuery = this.db
       .select({
-        projectCount: sql<number>`COUNT(DISTINCT ${invoices.projectId})`,
+        projectCount: sql<number>`COUNT(DISTINCT ${invoices.projectId})`.mapWith(Number),
       })
       .from(invoices)
       .where(and(...monthConditions, isNotNull(invoices.projectId)));
@@ -382,7 +382,7 @@ export class InvoicesService {
     if (isPm) {
       projectCountQuery = this.db
         .select({
-          projectCount: sql<number>`COUNT(DISTINCT ${invoices.projectId})`,
+          projectCount: sql<number>`COUNT(DISTINCT ${invoices.projectId})`.mapWith(Number),
         })
         .from(invoices)
         .leftJoin(projects, eq(projects.id, invoices.projectId))
@@ -401,7 +401,7 @@ export class InvoicesService {
     return {
       byStatus,
       thisMonth: {
-        invoiceCount: monthRow?.invoiceCount ?? 0,
+        invoiceCount: Number(monthRow?.invoiceCount ?? 0),
         projectCount: Number(projRow?.projectCount ?? 0),
         totalAmount: Number(monthRow?.totalAmount ?? 0),
         currency,

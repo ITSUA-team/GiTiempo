@@ -390,6 +390,7 @@ The backend MUST expose a protected `GET /invoices/stats` endpoint for `admin` a
 
 - **WHEN** the workspace has no invoices
 - **THEN** the backend returns zero counts for all statuses and zero totals for the current month
+- **AND** all numeric values are returned as JSON numbers (not strings) regardless of the database driver's textual representation of SQL aggregate results
 
 #### Scenario: Multi-currency totalAmount is approximate
 
