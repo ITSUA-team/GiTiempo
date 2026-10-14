@@ -291,11 +291,13 @@ export class InvoicesService {
     const [settings] = await this.db
       .select({
         currency: workspaceSettings.currency,
+        timeZone: workspaceSettings.timeZone,
       })
       .from(workspaceSettings)
       .where(eq(workspaceSettings.workspaceId, user.workspaceId))
       .limit(1);
     const currency = settings?.currency ?? 'USD';
+    const timeZone = settings?.timeZone ?? 'UTC';
 
     // Base condition: invoices in this workspace.
     const baseConditions: SQL[] = [eq(invoices.workspaceId, user.workspaceId)];
@@ -341,12 +343,12 @@ export class InvoicesService {
       }
     }
 
-    // This month: invoices created in the current calendar month.
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    // This month: invoices created in the current calendar month,
+    // interpreted in the workspace timezone (not the server's local tz).
+    const monthStartExpr = sql`date_trunc('month', now() AT TIME ZONE ${timeZone})::timestamptz`;
     const monthConditions = [
       ...baseConditions,
-      gte(invoices.createdAt, monthStart),
+      gte(invoices.createdAt, monthStartExpr),
     ];
 
     let monthQuery = this.db
@@ -449,16 +451,30 @@ export class InvoicesService {
       await this.requireWorkspaceProject(user.workspaceId, query.projectId);
     }
 
+    const [settings] = await this.db
+      .select({
+        defaultHourlyRate: workspaceSettings.defaultHourlyRate,
+        currency: workspaceSettings.currency,
+        timeZone: workspaceSettings.timeZone,
+      })
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, user.workspaceId))
+      .limit(1);
+    const timeZone = settings?.timeZone ?? 'UTC';
+
     const conditions = [
       eq(timeEntries.workspaceId, user.workspaceId),
       isNotNull(timeEntries.endedAt),
       isNotNull(timeEntries.durationSeconds),
       eq(timeEntries.isBillable, true),
       isNull(timeEntries.invoiceId),
-      gte(timeEntries.startedAt, new Date(query.dateFrom)),
+      gte(
+        timeEntries.startedAt,
+        sql`${query.dateFrom}::date::timestamp AT TIME ZONE ${timeZone}`,
+      ),
       lt(
         timeEntries.startedAt,
-        new Date(new Date(query.dateTo).getTime() + 86_400_000),
+        sql`(${query.dateTo}::date + 1)::timestamp AT TIME ZONE ${timeZone}`,
       ),
     ];
 
@@ -494,18 +510,6 @@ export class InvoicesService {
     );
     const totalHoursCents = Math.round((totalSeconds / 3600) * 100);
     const totalHours = totalHoursCents / 100;
-
-    // Resolve workspace defaults so the frontend can display them in the
-    // create form (PMs cannot read workspace settings directly).
-    const [settings] = await this.db
-      .select({
-        defaultHourlyRate: workspaceSettings.defaultHourlyRate,
-        currency: workspaceSettings.currency,
-      })
-      .from(workspaceSettings)
-      .where(eq(workspaceSettings.workspaceId, user.workspaceId))
-      .limit(1);
-
     const entries: InvoiceTimeEntrySummary[] = rows.map((e) => ({
       id: e.id,
       taskId: e.taskId,
@@ -562,6 +566,7 @@ export class InvoicesService {
       .select({
         defaultHourlyRate: workspaceSettings.defaultHourlyRate,
         currency: workspaceSettings.currency,
+        timeZone: workspaceSettings.timeZone,
       })
       .from(workspaceSettings)
       .where(eq(workspaceSettings.workspaceId, user.workspaceId))
@@ -584,6 +589,7 @@ export class InvoicesService {
       );
     }
     const discountPercent = input.discountPercent;
+    const timeZone = settings?.timeZone ?? 'UTC';
 
     return this.db.transaction(async (tx) => {
       // Lock eligible time entries: completed, billable, not already invoiced,
@@ -594,12 +600,13 @@ export class InvoicesService {
         isNotNull(timeEntries.durationSeconds),
         eq(timeEntries.isBillable, true),
         isNull(timeEntries.invoiceId),
-        // UTC day bounds; the exclusive next-day end keeps the ::date cast
-        // out of the predicate so startedAt can use its timestamp index.
-        gte(timeEntries.startedAt, new Date(input.dateFrom)),
+        gte(
+          timeEntries.startedAt,
+          sql`${input.dateFrom}::date::timestamp AT TIME ZONE ${timeZone}`,
+        ),
         lt(
           timeEntries.startedAt,
-          new Date(new Date(input.dateTo).getTime() + 86_400_000),
+          sql`(${input.dateTo}::date + 1)::timestamp AT TIME ZONE ${timeZone}`,
         ),
       ];
 

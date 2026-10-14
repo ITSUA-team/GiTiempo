@@ -109,7 +109,7 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 
 ### Requirement: Invoice Eligibility Excludes Ineligible Time Entries
 
-Invoice creation MUST select only time entries that are completed, billable, belong to the requested workspace, and fall within the requested project and date range, and MUST exclude running, non-billable, and already-invoiced entries.
+Invoice creation MUST select only time entries that are completed, billable, belong to the requested workspace, and fall within the requested project and date range, and MUST exclude running, non-billable, and already-invoiced entries. Date range boundaries (`dateFrom` inclusive, `dateTo` inclusive) are interpreted in the workspace's configured IANA timezone (`workspace_settings.time_zone`), not in UTC or the server's local timezone. This ensures that entries near midnight are attributed to the correct calendar day, including across daylight saving time transitions. The same timezone-aware boundaries apply to `previewEligibleEntries` and the `getInvoiceStats` current-month calculation.
 
 #### Scenario: Running entries are excluded
 
@@ -133,6 +133,14 @@ Invoice creation MUST select only time entries that are completed, billable, bel
 
 - **WHEN** no time entries match the eligibility rules for the requested scope
 - **THEN** the backend creates the invoice with zero total hours and zero total amount
+
+#### Scenario: Date range boundaries use the workspace timezone
+
+- **GIVEN** the workspace timezone is set to a non-UTC IANA identifier (e.g. `Europe/Kyiv`)
+- **AND** a completed billable time entry started at 23:30 local time on the `dateFrom` day
+- **WHEN** invoice creation selects entries for that date range
+- **THEN** the entry is included because its local-time start falls within the billing period
+- **AND** the backend interprets `dateFrom` as 00:00:00 in the workspace timezone and `dateTo` as 23:59:59.999 in the workspace timezone (exclusive next-day 00:00:00 boundary)
 
 ### Requirement: Invoice Creation Is Atomic And Prevents Duplicate Billing
 
