@@ -41,6 +41,7 @@ const props = defineProps<{
   };
   isLoadingProjects: boolean;
   isLoadingTasks: boolean;
+  isReconcilingTarget?: boolean;
   isDeleting: boolean;
   isOpen: boolean;
   isSaving: boolean;
@@ -483,8 +484,8 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
         <Button
           type="button"
           :label="props.saveLabel"
-          :disabled="props.isDeleting"
-          :loading="props.isSaving"
+          :disabled="props.isDeleting || props.isReconcilingTarget"
+          :loading="props.isSaving || props.isReconcilingTarget"
           @click="emit('save')"
         />
       </DialogFooterActionGroups>

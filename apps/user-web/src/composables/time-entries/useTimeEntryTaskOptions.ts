@@ -172,6 +172,13 @@ export function useTimeEntryTaskOptions({
 
   function invalidateProjectTaskOptions(projectId: string): void {
     taskCache.delete(projectId);
+    void queryClient.invalidateQueries(
+      {
+        refetchType: "none",
+        queryKey: userProjectsKeys.projectTasks(scope.value, projectId),
+        exact: true,
+      },
+    );
   }
 
   return {

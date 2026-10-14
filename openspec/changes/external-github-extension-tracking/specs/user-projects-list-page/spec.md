@@ -26,7 +26,7 @@ External-reference projects and tasks SHALL use the existing Projects sections, 
 - **AND** the existing view follows the server-provided scope and capabilities.
 
 ### Requirement: User Projects List Enforces Own-Time Scope
-The user Projects page SHALL render the server-authorized project and task collection only. For an external-reference project returned with `accessScope: "own-time"`, it SHALL show only the member's project/tasks that have own time entries, including a running entry, and SHALL treat that scope as read-only for shared project data.
+The user Projects page SHALL render the server-authorized project and task collection only. For an external-reference project returned with `accessScope: "own-time"`, it SHALL show only the member's project/tasks that have own time entries, including a running entry, and SHALL treat that scope as read-only for shared project data. The Projects page SHALL NOT display tracked-duration totals for projects or tasks; tracked time remains in the existing Time Entries view.
 
 #### Scenario: External project stays absent before own time exists
 - **GIVEN** another workspace member has recorded time in an external-reference project
@@ -47,11 +47,17 @@ The user Projects page SHALL render the server-authorized project and task colle
 - **THEN** it does not render Add task, task create, task edit, task delete, project member, or shared configuration controls
 - **AND** it does not infer management authority from the task's presence in the list.
 
-#### Scenario: Own-time summaries remain personal
+#### Scenario: Own-time task counts remain personal
 - **GIVEN** a project response has `accessScope: "own-time"`
-- **WHEN** the Projects page renders count or time summary data
+- **WHEN** the Projects page renders task count data
 - **THEN** it uses only server-provided values scoped to the current member
 - **AND** it does not render members, member count, assigned-member summary, colleague totals, or a placeholder implying those values are zero.
+
+#### Scenario: Projects keeps durations in Time Entries
+- **GIVEN** the server returns an authorized managed or external-reference project with tasks
+- **WHEN** the Projects page renders its desktop table or mobile task cards
+- **THEN** it shows task status and updated metadata without project or task tracked-duration totals
+- **AND** time tracking actions and the existing Time Entries view remain available according to server capabilities.
 
 #### Scenario: Losing final own-time visibility clears stale data
 - **GIVEN** the current member's visible external project or task has only one own time entry

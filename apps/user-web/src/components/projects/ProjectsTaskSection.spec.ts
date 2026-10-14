@@ -153,6 +153,46 @@ describe("ProjectsTaskSection", () => {
     expect(wrapper.find('[data-testid="project-task-start-timer-task-1"]').exists()).toBe(true);
   });
 
+  it.each([false, true])("keeps external own-time records readonly with source links and no duration at mobile=%s", (mobile) => {
+    mockMatchMedia(mobile);
+    const task = createTask({
+      accessScope: "own-time",
+      capabilities: { canManageTasks: false },
+      githubIssue: { githubRepo: "customer/billing-api", issueNumber: 42 },
+    });
+    const wrapper = mountSection([task], {}, {
+      accessScope: "own-time",
+      capabilities: { canManageTasks: false },
+      trackingMode: "external-reference",
+      totalSeconds: 43200,
+    });
+    const prefix = mobile ? "project-task-mobile" : "project-task";
+    expect(wrapper.findComponent(ManagementTableShell).exists()).toBe(!mobile);
+    expect(wrapper.findAll('[data-testid="project-task-mobile-card"]')).toHaveLength(mobile ? 1 : 0);
+    expect(wrapper.find('[data-testid="project-section-add-task"]').exists()).toBe(false);
+    expect(wrapper.get(`[data-testid="${prefix}-title"]`).element.tagName).toBe("SPAN");
+    expect(wrapper.text().match(/External/g)).toHaveLength(2);
+    expect(wrapper.text()).toContain("Open");
+    expect(wrapper.text()).toContain("Today, 10:00");
+    expect(wrapper.text()).not.toMatch(/12:00|12h|Duration/);
+    const source = wrapper.get(`[data-testid="${prefix}-github-task-1"]`);
+    expect(source.attributes("href")).toBe("https://github.com/customer/billing-api/issues/42");
+    expect(source.attributes("aria-label")).toContain("42");
+    expect(wrapper.find(`[data-testid="${prefix}-start-timer-task-1"]`).exists()).toBe(true);
+  });
+
+  it.each([false, true])("retains full-scope external management without own-time help at mobile=%s", async (mobile) => {
+    mockMatchMedia(mobile);
+    const task = createTask();
+    const wrapper = mountSection([task], {}, { trackingMode: "external-reference" });
+    expect(wrapper.text()).toContain("External");
+    expect(wrapper.find('button[aria-label="You can only see your own time and tasks with your time entries."]').exists()).toBe(false);
+    await wrapper.get('[data-testid="project-section-add-task"]').trigger("click");
+    await wrapper.get(`[data-testid="${mobile ? "project-task-mobile" : "project-task"}-title"]`).trigger("click");
+    expect(wrapper.emitted("addTask")).toEqual([["project-1"]]);
+    expect(wrapper.emitted("editTask")).toEqual([[task]]);
+  });
+
   it("opens and dismisses own-time help through hover, focus, touch click, Escape, and outside pointerdown", async () => {
     const wrapper = mountSection(
       [createTask({ accessScope: "own-time", capabilities: { canManageTasks: false } })],
@@ -368,21 +408,23 @@ describe("ProjectsTaskSection", () => {
     ).toBeDefined();
   });
 
-  it("renders the desktop task table branch without column headers", () => {
+  it("renders desktop task, status, and updated headers without duration totals", () => {
     const wrapper = mountSection();
     const tableShell = wrapper.getComponent(ManagementTableShell);
 
     expect(tableShell.props("headerClass")).toContain("min-w-[740px]");
-    expect(tableShell.props("showHeader")).toBe(false);
+    expect(tableShell.props("showHeader")).toBe(true);
     expect(tableShell.props("singleScroll")).toBe(true);
     expect(tableShell.props("shellClass")).toContain("overflow-x-auto");
     expect(tableShell.props("tableContainerClass")).toBe(
       "overflow-visible rounded-none border-none",
     );
     expect(wrapper.findAll('[data-testid="project-task-mobile-card"]')).toHaveLength(0);
-    expect(wrapper.text()).not.toContain("Task");
-    expect(wrapper.text()).not.toContain("Status");
-    expect(wrapper.text()).not.toContain("Updated");
+    expect(wrapper.get('[data-testid="management-table-header-task"]').text()).toBe("Task");
+    expect(wrapper.get('[data-testid="management-table-header-status"]').text()).toBe("Status");
+    expect(wrapper.get('[data-testid="management-table-header-updated"]').text()).toBe("Updated");
+    expect(wrapper.text()).not.toContain("12:00");
+    expect(wrapper.text()).not.toContain("Duration");
     expect(wrapper.text()).not.toContain("Actions");
     expect(wrapper.text()).toContain("Improve reports filters");
     expect(wrapper.get('[data-testid="project-task-title"]').classes()).toContain("truncate");

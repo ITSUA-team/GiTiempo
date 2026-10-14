@@ -253,3 +253,18 @@ The following archives snapshot the final local development outputs after the na
 Both remain version `0.1.1`, with `identity`/`storage` permissions, the existing GitHub host permission, GitHub-wide navigation registration and PR exclusions. The executable HTML/JavaScript contains no remote script tags; executable entries point to packaged scripts. The Firefox port omission is match-pattern syntax; its bundled API origin remains localhost:3000. Package evidence is retained in `/private/tmp/gitiempo-final-extension-package-evidence.json`. Runtime coverage and remaining browser gaps are recorded in the QA reports; a package hash does not certify unexecuted scenarios.
 
 The landing build produced during this continuation used the local staging environment values, so its output is not a production deployment artifact. The existing production workflow obtains public URLs, controller/contact and Cloudflare credentials from the GitHub production environment, rebuilds, then deploys. Publishing that revision and verifying the anonymous production page remain outstanding; no workflow was dispatched.
+
+### Production-configured review candidates — 13 October 2026
+
+Source revision `e0714382` was built in an isolated copy with explicit production configuration. The following archives are preserved under `apps/chrome-ext/dist/release-candidate-20261013/`; they are review artifacts and have not been distributed or submitted.
+
+| Archive | SHA-256 | API host permission |
+| --- | --- | --- |
+| `gitiempo-chrome-0.1.1-production-candidate-20261013.zip` | `f0bb01c92dd93c340cc0911705c91fd063462f43d34f1fa5e1266b7159d1a49b` | `https://api.gitiempo.com/*` |
+| `gitiempo-firefox-0.1.1-production-candidate-20261013.zip` | `7ae8bbcafa05f637d534af8060c1b5f34b05b8f876fd77ef589e8602d23fe8f3` | `https://api.gitiempo.com/*` |
+
+Both remain version **0.1.1** with exactly ten files matching their unpacked candidates, only `identity`/`storage` permissions, the existing GitHub host access, and packaged executable entries. Direct artifact inspection found no remote script tags, literal remote dynamic imports, `importScripts` or `eval` calls. The existing local schema-parser capability/JIT expressions remain bundled. SchemaStore network validation was unavailable; manifest entries were inspected directly. Existing local development outputs were restored and byte-verified against both `local-final` ZIPs.
+
+The revised policy also has a separate production-configured static build under `apps/landing-web/dist/release-candidate-20261013/`, using ITSUA and admin@itsua.com. Its privacy HTML is dated **13 October 2026**, has canonical `https://gitiempo.com/privacy/`, contains no scripts, and has SHA-256 `ef05acfaeac913bc49fb888fd21d2cb2c44b5aac915d61232c9b83eafaf29d80`. The anonymous public page still served **22 September 2026** on this follow-up, so publication remains a distribution gate. The effective production workflow's user-app variable also needs confirmation: it is absent at environment/repository scope, and organization-scope access returned 403. No production setting or workflow was changed. See [release inspection](../openspec/changes/external-github-extension-tracking/qa-release-final.md) for configuration and evidence boundaries.
+
+The user explicitly chose to keep these artifacts local and skip production verification on 13 October 2026. That clause is deferred for this implementation pass, not recorded as passed. The matching published-policy check remains required before future distribution.

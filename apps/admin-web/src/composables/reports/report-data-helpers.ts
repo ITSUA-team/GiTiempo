@@ -11,10 +11,12 @@ export function sortReportProjects(
 export function getVisibleReportProjectsForScope(
   projects: ProjectListResponse,
   projectId: string | null,
+  isAdminScope: boolean,
 ): ProjectResponse[] {
   if (!projectId) {
     return projects.filter(
-      (project) => project.isActive && project.totalSeconds > 0,
+      (project) =>
+        (isAdminScope || project.isActive) && project.totalSeconds > 0,
     );
   }
 

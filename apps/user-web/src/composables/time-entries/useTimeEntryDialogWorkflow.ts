@@ -4,7 +4,7 @@ import {
   type TimeEntryResponse,
 } from "@gitiempo/shared";
 import type { ConfirmLike, ToastLike } from "@gitiempo/web-shared";
-import { computed, watch, type ComputedRef } from "vue";
+import { computed, ref, watch, type ComputedRef } from "vue";
 
 import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
@@ -12,6 +12,7 @@ import type { TimeEntriesClient } from "@/services/time-entries-client";
 import {
   isGitHubIssueTaskLookupOption,
   isNewTaskLookupOption,
+  isTaskLookupOption,
   toTaskLookupOption,
   type TaskLookupValue,
 } from "./time-entry-task-lookup";
@@ -63,6 +64,8 @@ export function useTimeEntryDialogWorkflow({
   const isSavingDialogFlow = computed(
     () => mutations.isSavingDialog.value || taskCreation.isCreatingTask.value,
   );
+  const isReconcilingDialogTarget = ref(false);
+  let dialogScopeRefreshId = 0;
   const canCreateDialogTask = computed(() => {
     const projectId = dialog.dialogProjectId.value;
 
@@ -88,6 +91,90 @@ export function useTimeEntryDialogWorkflow({
     dialog.setTaskValue(null);
     dialog.setNewTaskTitle("");
   }
+
+  async function reconcileDialogTargetAfterProjectRefresh(
+    nextProjects: ProjectResponse[],
+    previousProjects: ProjectResponse[],
+  ): Promise<void> {
+    const refreshId = ++dialogScopeRefreshId;
+    isReconcilingDialogTarget.value = false;
+    const projectId = dialog.dialogProjectId.value;
+
+    if (!dialog.isDialogOpen.value || !projectId) {
+      return;
+    }
+
+    const wasVisible = previousProjects.some((project) => project.id === projectId);
+    const isVisible = nextProjects.some((project) => project.id === projectId);
+
+    // Only clear a current selection after an authoritative visible-projects
+    // update removes it. This keeps edit/create state during an ordinary
+    // refetch while preventing a dialog from retaining a target after access
+    // to its workspace or project is revoked.
+    if (wasVisible && !isVisible) {
+      if (dialog.dialogMode.value === "create") {
+        dialog.setProjectId(null);
+        return;
+      }
+
+      isReconcilingDialogTarget.value = true;
+      try {
+        const projects = await ensureProjectsLoaded();
+
+        if (
+          refreshId === dialogScopeRefreshId &&
+          dialog.isDialogOpen.value &&
+          dialog.dialogProjectId.value === projectId &&
+          !projects.some((project) => project.id === projectId)
+        ) {
+          dialog.setProjectId(null);
+        }
+      } catch {
+        // Do not clear an existing entry while its authoritative access check failed.
+      } finally {
+        if (refreshId === dialogScopeRefreshId) {
+          isReconcilingDialogTarget.value = false;
+        }
+      }
+      return;
+    }
+
+    if (!wasVisible || !isVisible || dialog.dialogMode.value !== "create") {
+      return;
+    }
+
+    // A project can remain visible while one formerly owned task stops being
+    // eligible. Drop the cache before reloading so a successful scope refresh
+    // cannot leave that task selectable in an already-open create dialog.
+    isReconcilingDialogTarget.value = true;
+    taskOptions.invalidateProjectTaskOptions(projectId);
+
+    try {
+      const options = await loadDialogProjectTasks(projectId);
+      const selectedTask = dialog.dialogTaskValue.value;
+
+      if (
+        refreshId === dialogScopeRefreshId &&
+        dialog.dialogMode.value === "create" &&
+        dialog.dialogProjectId.value === projectId &&
+        visibleProjects.value.some((project) => project.id === projectId) &&
+        isTaskLookupOption(selectedTask) &&
+        !options.some((task) => task.id === selectedTask.id)
+      ) {
+        dialog.setTaskValue(null);
+      }
+    } catch {
+      // Keep a still-authorized selection while task scope cannot be refreshed.
+    } finally {
+      if (refreshId === dialogScopeRefreshId) {
+        isReconcilingDialogTarget.value = false;
+      }
+    }
+  }
+
+  watch(visibleProjects, (nextProjects, previousProjects) => {
+    void reconcileDialogTargetAfterProjectRefresh(nextProjects, previousProjects);
+  });
 
   watch(
     [() => dialog.dialogProjectId.value, canCreateDialogTask],
@@ -159,27 +246,61 @@ export function useTimeEntryDialogWorkflow({
     dialog.openEditDialogState(entry);
 
     try {
-      await ensureProjectsLoaded();
+      const projects = await ensureProjectsLoaded();
+
+      if (dialog.editingEntry.value?.id !== entry.id) {
+        return;
+      }
+
+      if (!projects.some((project) => project.id === entry.projectId)) {
+        dialog.setProjectId(null);
+        return;
+      }
+
       const options = await loadDialogProjectTasks(entry.projectId);
 
-      dialog.setTaskValue(
-        options.find((task) => task.id === entry.taskId) ?? {
-          id: entry.task.id,
-          isActive: true,
-          projectId: entry.projectId,
-          title: entry.task.title,
-        },
-      );
-      dialog.updateTaskSuggestions("", options, canCreateDialogTask.value);
+      if (
+        dialog.editingEntry.value?.id === entry.id &&
+        dialog.dialogProjectId.value === entry.projectId
+      ) {
+        dialog.setTaskValue(
+          options.find((task) => task.id === entry.taskId) ?? {
+            id: entry.task.id,
+            isActive: true,
+            projectId: entry.projectId,
+            title: entry.task.title,
+          },
+        );
+        dialog.updateTaskSuggestions("", options, canCreateDialogTask.value);
+      }
     } catch {
-      dialog.setTaskFromEntryFallback(entry);
+      if (
+        dialog.editingEntry.value?.id === entry.id &&
+        dialog.dialogProjectId.value === entry.projectId
+      ) {
+        dialog.setTaskFromEntryFallback(entry);
+      }
     }
   }
 
   async function saveDialog(): Promise<void> {
+    if (isReconcilingDialogTarget.value || dialog.isLoadingDialogTasks.value) {
+      return;
+    }
+
     const validationResult = dialog.validateDialog();
 
     if (!validationResult) {
+      return;
+    }
+
+    if (
+      dialog.dialogMode.value === "create" &&
+      !visibleProjects.value.some(
+        (project) => project.id === dialog.dialogProjectId.value,
+      )
+    ) {
+      dialog.setProjectId(null);
       return;
     }
 
@@ -240,6 +361,7 @@ export function useTimeEntryDialogWorkflow({
     handleDialogTaskSearch,
     canCreateDialogTask,
     isDeletingDialogEntry: deleteConfirmation.isDeletingDialogEntry,
+    isReconcilingDialogTarget,
     isSavingDialogFlow,
     openCreateDialog,
     openEditDialog,

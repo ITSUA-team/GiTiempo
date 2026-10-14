@@ -237,6 +237,7 @@ export const useOwnTimeEntriesQuery = (options: UseOwnTimeEntriesQueryOptions) =
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: ({ signal }) =>
       options.client.listOwnEntries(toValue(options.query), { signal }),
+    refetchOnWindowFocus: true,
   });
 
 export const useProjectTasksQuery = (options: UseProjectTasksQueryOptions) =>
@@ -275,6 +276,7 @@ export const useVisibleProjectsQuery = (options: UseVisibleProjectsQueryOptions)
     ),
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () => options.client.listVisibleProjects(),
+    refetchOnWindowFocus: true,
   });
 
 export const useCreateManualTimeEntryMutation = (

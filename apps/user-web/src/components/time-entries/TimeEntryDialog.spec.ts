@@ -574,6 +574,14 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.emitted("save")?.length).toBeGreaterThan(0);
   });
 
+  it("disables save while the selected task is being revalidated", () => {
+    const wrapper = mountDialog({ isReconcilingTarget: true });
+    const saveButton = findButtonByLabel(wrapper, "Save changes");
+
+    expect(saveButton?.attributes("disabled")).toBeDefined();
+    expect(saveButton?.attributes("data-loading")).toBe("true");
+  });
+
   it("emits delete from the edit-only destructive action", async () => {
     const wrapper = mountDialog();
     const deleteButton = findButtonByLabel(wrapper, "Delete entry");

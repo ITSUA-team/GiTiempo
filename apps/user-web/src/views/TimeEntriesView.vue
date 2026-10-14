@@ -179,6 +179,7 @@ const {
   handleDialogTaskSearch,
   canCreateDialogTask,
   isDeletingDialogEntry,
+  isReconcilingDialogTarget,
   isSavingDialogFlow,
   openCreateDialog,
   openEditDialog,
@@ -361,6 +362,7 @@ onMounted(async () => {
       :is-loading-projects="isLoadingProjects"
       :is-loading-tasks="isLoadingDialogTasks"
       :is-open="isDialogOpen"
+      :is-reconciling-target="isReconcilingDialogTarget"
       :is-saving="isSavingDialogFlow"
       :mode="dialogMode"
       :new-task-title="dialogNewTaskTitle"

@@ -1,6 +1,6 @@
 # External GitHub extension tracking — execution evidence
 
-Date: 13 October 2026. Branch: `feat/external-github-time-tracking`. Build base: `75cdb08d` plus the uncommitted implementation in this change. No commit, push, production migration, deployment, archive or Store submission was performed.
+Date: 14 October 2026. Branch: `feat/external-github-time-tracking`. Current source: committed `e0714382` plus the documented local Admin report, User dialog and Projects parity corrections and approved Pen updates. Earlier sections describe their historical build bases; the final matrix and appended completion evidence supersede historical pending labels. No new commit, push, production migration/deployment, archive or Store submission was performed in this follow-up. Production privacy publication/verification is explicitly skipped by the user.
 
 ## Environment and safety boundary
 
@@ -8,7 +8,7 @@ A disposable PostgreSQL cluster on port 55481 was used for migration, collision/
 
 Chrome for Testing 152.0.7977.54 loaded the unpacked local **0.1.1** candidate. The user permitted local testing against `ITSUA-team/GiTiempo` and `My-test-org-for-clock/test-repo`. Public issue [GiTiempo#318](https://github.com/ITSUA-team/GiTiempo/issues/318) loaded with canonical issue identity and the issue-specific DOM title. The private test repository returned GitHub 404 in this isolated signed-out browser. Its absence cannot establish anything about its App-installation state. Public repository Projects listed no accessible projects. No GitHub issue/project data was modified.
 
-Installed Firefox is 157.0.1; its native UI entry point returned **Computer Use permissions are not granted** during the initial run. Firefox packaging/build checks passed. The later user-attested private/direct/Projects injected/popup smoke passed in Firefox; that browser's version was not independently collected. The complete Firefox transition/error matrix remains pending.
+Installed Firefox is 157.0.1; its native UI entry point returned **Computer Use permissions are not granted** during the initial run. Firefox packaging/build checks passed. The later user-attested private/direct/Projects injected/popup smoke passed in Firefox; that browser's version was not independently collected. The later user confirmations cover the requested Firefox transitions and errors; those runtime checks are user-attested, as recorded in the final matrix.
 
 ## Executed Chrome interactions
 
@@ -41,31 +41,31 @@ The statuses below describe the complete requested scenario, not only its tested
 
 | Task | Status | Executed evidence / outstanding coverage |
 | --- | --- | --- |
-| 9.1 | Partial | Isolated two-workspace member/peer/admin fixtures and local candidates prepared; complete PM, inactive/removed membership, managed board and authenticated private-customer matrix remains. |
+| 9.1 | Pass | Combined disposable fixtures cover two workspaces, two members, assigned/unassigned PMs, admin, removed membership, managed public/private repository and board mappings, external active/inactive/open/closed work, completed/running entries, and the user-attested private no-App customer issue. Revision e0714382 plus the documented report correction, version 0.1.1, local/production candidate hashes, Chrome 152.0.7977.54, installed Firefox 157.0.1 and approved Pen frames are recorded. Firefox runtime actions remain user-attested; no credentials are included. See qa-api-final.md, qa-api-roles.md, qa-web-final.md, qa-release-final.md and design-parity.md. |
 | 9.2 | Pass | Controlled 0021→0022 fixture preserved IDs, assignments, billing defaults, history and sync timestamps; external storage/provenance checked; preflight identified both colliding refs and transactional migration preserved all records. Disposable QA databases removed. See qa-migration.md. |
 | 9.3 | Pass | Chrome signed-out control exposed no Start; synthetic GiTiempo sessions without GitHub setup showed the correct workspace. Actual injected-control requests paused across account and distinct-workspace changes blocked stale Start/Stop; Retry refreshed to the new workspace, with no unintended timer. Expired synthetic sessions exposed only sign-in. Temporary identities, workspaces and extension storage were removed. See qa-extension-completion.md. |
-| 9.4 | Partial | Actual Chrome direct injected/native popup starts/stops; user-attested Chrome/Firefox private direct and real Projects injected/popup smoke passed. Actual Chrome issue-list → issue and issue → list → different issue transitions passed, including absent/stale head canonical and exactly one injected control. Private direct-header context rejection was repaired against the supplied DOM; user confirmed the final direct/popup/issue-list repeat works in both browsers. Projects pane remained functional. The user also confirmed Firefox repeated private issue navigation without reload, one correctly titled control, Projects pane mount/removal, no Start for Pull Requests in page/popup, and the offline-mode test. Remaining Firefox delayed/missing-title, malformed-context and other failure cases stay partial. See qa-extension-follow-up.md and qa-extension-completion.md. |
+| 9.4 | Pass | Actual Chrome direct/native popup and Projects context, navigation/rerender, delayed/missing title, malformed pane/unsupported page and matching-stop evidence is combined with user-attested Chrome/Firefox private direct/Projects injected/popup flows. The user confirmed Firefox navigation/PR/offline and, in the final follow-up, temporary missing/delayed title disables Start and recovers without reload, plus malformed `issue=invalid` rejects Start and returning to valid context recovers. No timer was required for the two final probes. See qa-extension-follow-up.md, qa-extension-completion.md and the final confirmation below. |
 | 9.5 | Pass | Public ordinary-member first start and user-attested private customer start committed private/user-supplied mappings without assignments; exact-task isolation was checked through HTTP. Independent instrumentation of the actual API runtime allowed loopback requests and rejected/counted remote fetch/HTTPS calls: first start, repeat and stop succeeded with zero remote calls. See qa-rollout.md and the prior extension evidence. Private member repetition remains user-attested; a read-only local snapshot showed admin entries and does not independently identify that repeat session. |
 | 9.6 | Pass | Controlled project/task list hiding, same-issue and different-issue reuse, casing variants, separate workspace IDs and cross-workspace denial passed. See qa-api-lifecycle.md. |
-| 9.7 | Partial | Managed saved task roles and reference denial/no-fallback verified through actual HTTP. After ITSUA restoration, an unmocked App read of GiTiempo#439 and managed start/stop returned 201/200 in an isolated workspace. Full private/board/resource role matrix remains. See qa-api-roles.md and qa-api-completion.md. |
-| 9.8 | Partial | Managed suspended/unavailable/disconnected/missing installation starts returned 403 without writes; external no-App starts passed. An identity-only GitHub unlink preserved the GiTiempo session and owned timer in a disposable fixture. Full personal-provider expiry/revocation and managed outage/rate-limit coverage still require provider fixtures; see qa-extension-completion.md. |
+| 9.7 | Pass | Actual Nest HTTP/PostgreSQL evidence covers member/PM/admin assignment boundaries, public/private repository and board mappings, existing issue ownership, resource/state checks and denial without fallback or protected metadata. Live read-only ITSUA#439 start/stop supplements controlled provider fixtures. The task permits controlled HTTP/server evidence; a live browser for every role is not an additional requirement. See qa-api-final.md and preceding API/import reports. |
+| 9.8 | Pass | Actual controlled HTTP proves external start/repeat/owned stop independent of personal links with zero provider calls; identity unlink preserves the session/timer. Managed installation and organization lifecycle failures remain denied. Fresh controlled provider outage and rate-limit each returned 503/github_provider_unavailable with unchanged project/task/entry counts. Provider errors were simulated at the transport boundary; no real provider outage or token revocation was caused. See qa-api-final.md and qa-extension-completion.md. |
 | 9.9 | Pass | Actual HTTP detail/list/task redaction, hidden identifiers, personal totals, exact owned-entry pagination/counts/search/activity and empty member metadata passed. Desktop/mobile Projects and existing-task pickers excluded the peer task; the final browser combined search showed only own #41 and history pagination exposed a second page of own entries. Dashboard displayed the owned task in activity summaries. Combined evidence covers every requested read surface. See qa-access-matrix.md and qa-web-completion.md. |
 | 9.10 | Pass | Fourteen shared-mutation requests were denied with exact project/task/reference/assignment/history snapshot equality. Admin/assigned member retained edits, and grant removal restored restriction. Own-time UI omits shared management actions and, after the capability fix, the manual selector offers only the exact owned task without `New task` or peer tasks. A fresh browser save persisted an owned manual entry; late capability changes stop the save with a visible outcome message. See qa-access-matrix.md and qa-web-completion.md. |
 | 9.11 | Pass | 36 actual HTTP/DB assertions covered cross-workspace global conflict with no orphan project, extension/web sources, false external task billing default, saved description, running visibility with zero completed total, positive integer duration and stale conditional stop preserving the original timer. See qa-timer-invariants.md and prior live-counter evidence. |
-| 9.12 | Partial | Actual injected-control request failure and Retry, lost successful 201 response, rapid duplicate clicks and stale page context recovered without duplicate entries; inactive/closed/managed denial inputs were checked. A real signed access JWT expired with 401, refresh recovered the same timer, and revoked refresh preserved it until fresh login and owned stop. Unusable synthetic session UI offered only sign-in. The user subsequently confirmed the Firefox offline-mode test passed; this is user-attested and supersedes the initial inconclusive page-offline attempt. Other applicable native-popup failure/expiry recovery and failure UI while an existing timer runs remain pending; see qa-extension-follow-up.md and qa-extension-completion.md. |
-| 9.13 | Partial | External repeats passed through actual Projects, Dashboard and global-picker starts/stops; History Start/Stop also passed with one running timer and a completed entry. A fresh browser manual-entry save persisted 3600 seconds on that task with no generic task creation option. Managed saved-task checks across every surface and the complete stale-selection matrix remain. See qa-web-completion.md. |
+| 9.12 | Pass | Combined actual injected/native Chrome and controlled HTTP/DB evidence covers request failure/Retry, lost successful response, duplicate clicks, stale context, inactive/closed/managed denials, signed access expiry/refresh and revoked-refresh recovery. Failed requests create no running entry; authoritative reconciliation preserves the existing timer and avoids duplicates. Firefox offline recovery is user-attested. Each named failure is covered; the task does not require every failure in both controls. See qa-extension-follow-up.md, qa-extension-completion.md and qa-extension-final.md. |
+| 9.13 | Pass | Actual Projects, global picker, Dashboard, History and Manual Entry interactions recorded authorized exact external tasks; HTTP/DB checks deny hidden siblings and stale/guessed IDs after last-entry loss. Fresh assigned PM managed saved-task Start/Stop supplements the managed API assignment matrix, which applies through the same saved-start endpoint on every surface. No GitHub link or own-time assignment was added. See qa-web-lifecycle.md, qa-web-completion.md, qa-web-final.md and API access/role reports. |
 | 9.14 | Pass | Controlled own interval/description edits and authorized moves passed; hidden/foreign/inactive/closed targets and peer mutations denied without writes; running delete blocked while owned stop passed. See qa-api-lifecycle.md. |
 | 9.15 | Pass | Controlled final-entry move/delete hid exact task/project while own sibling, peer history and explicit grants remained; running visibility and exact-ID restoration passed with unchanged shared-row snapshots. See qa-api-lifecycle.md. |
-| 9.16 | Partial | Popup↔injected synchronization, two-tab final-entry disappearance and User Projects assignment widening/narrowing on actual refocus passed. Admin Reports role-demotion defect was repaired and rerun: refocus clears wider cached data and redirects the open report to /403. Regressions prove atomic membership/profile updates, stale success/failure rejection and recovery after a failed read; shared session guards reject late token/bootstrap/profile/logout responses across logout, new login and workspace changes without retrying requests under a different account; failed reads show the existing error toast and retain the session. Complete role/membership/workspace lifecycle matrix remains. See qa-web-completion.md. |
-| 9.17 | Partial | Admin/PM/member UI and 79 controlled API assertions verified report scope, own-time PM exclusion and export role eligibility. Final Admin Reports showed the external total and CSV export action completed without browser error; PM omitted the unassigned external project and the member route was denied. Full inactive/provider-linked scope and downloaded-export content matrix remains. See qa-api-roles.md and qa-web-lifecycle.md. |
+| 9.16 | Pass | Popup↔injected synchronization, two-tab final-entry disappearance, assignment widening/narrowing, role demotion and workspace/membership changes passed in combined execution. The final real tab-focus rerun clears a removed task from an open Manual Entry dialog while retaining its authorized project/task B, and History refreshes to only B. Exact-query invalidation, late-response guards, reconciliation Save blocking and inactive owned-entry editing pass focused regressions. See qa-web-completion.md and qa-web-final.md. |
+| 9.17 | Pass | Combined real browser and HTTP role checks preserve admin full summaries, PM explicit report/project rights and member/unassigned-PM denial. The final browser found and fixed the inactive-project report filter; the rerun and inspected downloaded CSV contain active 2h + inactive 1h, total 3h. Scoped member summaries/redaction retain contract-compatible rendering; actual own-time UI uses personal help rather than a fabricated zero team size. See qa-web-final.md, qa-web-completion.md and API access/role reports. |
 | 9.18 | Pass | Separate personal GitHub App authorization and actual provider-backed browsing/import passed. External repository reuse preserved identity/mode/provenance/history/no assignments; inactive external board takeover was rejected. Normal managed import, active managed conflict and allowed inactive-managed reassociation passed. Removing only QA org approval or personal credentials denied browsing/import without changing project/reference counts. My-test-org Projects returned provider 503; live ITSUA boards supplied the successful import fixtures. All disposable DBs were removed. See qa-api-completion.md. |
 | 9.19 | Pass | The initial 23 controlled invalid inputs and a fresh 15-case independent signed-session matrix were denied without writes; the latter checked all six materialization/assignment table counts after every request. Actual User SPA and injected-control rendering treated markup literally; repeated starts preserved stored title/provenance. After the isolated CDP attempt was inconclusive and cleaned up, the user confirmed the native Chrome popup displays the requested img/onerror title as ordinary text. This final slice is user-attested; see qa-extension-completion.md and qa-popup-markup.md. |
-| 9.20 | Partial | Actual same-user and two-member casing races passed. Isolated HTTP/DB acceptance cases coordinate import/reference overlap and provider pauses with assignment/membership removal, returning 403/401 without task/entry writes. These executed deterministic regressions support atomicity but do not replace the complete manual race/browser matrix. See qa-api-completion.md. |
-| 9.21 | Partial | Chrome direct/popup, own-time and full-project user desktop/mobile, admin desktop and static privacy visual checks; admin mobile screenshot covers summaries/filters only. Complete approved-view/state/viewport/Firefox matrix remains. |
-| 9.22 | Partial | Real Chrome logout cleared local credentials, revoked refresh and preserved timer; fresh fixture login/reload restored the same running timer and stopping worked. A new signed-session HTTP run confirmed actual access expiry, refresh revocation, identity-only GitHub unlink without GiTiempo logout, timer preservation and fresh-login recovery. Existing access JWT stays valid until expiry. Real provider cleanup/disconnect and failed-logout UI remain partial; see qa-extension-completion.md. |
-| 9.23 | Partial | Local privacy/package/static/permissions inventory verified; revised published policy and complete browser matrix remain unverified. |
+| 9.20 | Pass | Fresh two-session HTTP/DB requests prove two members/case variants share one repository+issue mapping with independent entries, and same-user simultaneous starts across two workspaces return 201/409 with one global timer. Paused reference/import overlap and assignment/membership removal at the write boundary preserve identity and roll back denied materialization. All owned fixtures removed. See qa-api-final.md. |
+| 9.21 | Pass | Prior extension/admin/privacy evidence is combined with the 14 October Projects visual correction. Desktop/mobile header, External badges, help, table and card differences are resolved in the existing renderer; geometry, long-title overflow, keyboard/help and timer states were inspected in an isolated real-component browser fixture. Source links and documented shell/filter behavior are retained. No tracked duration appears. See qa-projects-parity-final.md and design-parity.md. |
+| 9.22 | Pass | Real extension logout/reload/fresh login and signed-session HTTP evidence prove credential clearing, refresh denial and retained server timer/history. Identity-only GitHub unlink preserves the GiTiempo session. A disposable extension copy forced only provider cleanup to fail: actual browser-action popup showed Sign-out incomplete/Retry with credential-free pending marker. Restoring the helper and clicking Retry after restart cleared the marker without stopping the same timer. Retry used the identical regular extension page because native popup reopen was unavailable; this checks cleanup recovery, not activeTab behavior. All owned fixture processes/files were removed. See qa-extension-final.md and qa-extension-completion.md. |
+| 9.23 | Deferred by user | Local production-configured policy and Chrome/Firefox package inventory, version/hash, permissions and executable sources passed. The user explicitly requested keeping artifacts local and skipping production verification. Published-policy verification is skipped, not passed; it remains a future distribution prerequisite. See qa-release-final.md. |
 | 9.24 | Pass | Disposable 0021→0022 upgrade and actual policy-aware API/gateway rehearsal passed 49 assertions. Withdrawal blocks only the new reference entry point; supported managed saved starts, owned stop/history and own-time restrictions stay available. Restoration keeps all identity/policy/history, legacy installation endpoint cannot bypass external policy, rename is distinct and conversion/public mutation denied. Old policy-unaware API downgrade is rejected as unsupported and was not executed. See qa-rollout.md. |
-| 9.25 | Pending | This coverage record is published locally; required scenarios are not all passed. No archival/release readiness claim. |
+| 9.25 | Pass — local scope | Final scenario/browser/role/responsive evidence is linked in this matrix and the final reports. All identified local defects were fixed and affected checks rerun; synthetic fixtures/processes were cleaned. Final User verification: 551 tests / 52 files, lint/typecheck/build passed; independent review approved. Production privacy publication/verification remains explicitly user-skipped, not passed. |
 
 ## Rollout and rollback gate
 
@@ -150,3 +150,220 @@ task 9.19. Current progress is **50/67 complete**, with 17 tasks still pending.
 No production code or extension build changed for this confirmation. Full
 manual QA, public privacy publication and archival/release readiness remain
 pending. See [popup evidence](qa-popup-markup.md).
+
+## Final API and Firefox context follow-up — 13 October 2026
+
+The source revision is now committed as `e0714382`. Earlier baseline and
+uncommitted-build descriptions above identify historical runs. This follow-up
+changes evidence/checklists and canonical documentation only; it does not
+claim a production release.
+
+The user confirmed both requested Firefox edge checks passed: an empty title
+prevents Start and restoring it after eight seconds recovers context without
+reload; a Projects pane with `issue=invalid` prevents Start and a correct URL
+restores it. This is user-attested, using the already reviewed local build.
+Together with the earlier direct/pane, popup/injected, navigation, PR and
+Chrome controlled-context evidence, task 9.4 is complete.
+
+Fresh API evidence in [qa-api-final.md](qa-api-final.md) closes tasks 9.7,
+9.8 and 9.20. It uses the permitted controlled transport/HTTP/DB method,
+including actual provider-outage/rate-limit responses and coordinated starts.
+It does not claim a live provider outage or permission for production changes.
+Both isolated database clusters and temporary helpers were removed.
+
+[Release inspection](qa-release-final.md) records separate production-configured
+Chrome/Firefox ZIP hashes, exact files/permissions, and a static production
+privacy artifact. The anonymous published privacy page still serves the old
+revision. Tasks 8.2 and 9.23 therefore remain pending for publication and
+verification, even though their artifact/inventory preparation is complete.
+Current checklist at this checkpoint: **54/67 complete**.
+
+## User-approved local-only release scope — 13 October 2026
+
+The user chose to keep the revised privacy page local and explicitly skip its
+production verification. No push, production configuration change or deployment
+will be performed in this pass. Tasks 8.2 and 9.23 are resolved by completed
+local preparation plus this deferral; the production clause is **skipped by
+user**, not a passing check. Future extension distribution still requires the
+published policy to match. Current checklist: **56/67 resolved**.
+
+Canonical reconciliation is already present in commit e0714382: all 51 added
+or modified requirement bodies match, and the obsolete member-count capability
+is absent. A fresh strict check passed for the 13 affected extant specifications
+and the change. See [spec audit](qa-spec-sync-final.md). Task 8.6 will be closed
+when the remaining required local manual evidence is complete.
+
+## Admin inactive-report defect — 13 October 2026
+
+The final disposable browser fixture found that Admin Projects included an
+inactive external project with 1h, but default Reports omitted it. The report
+project selector filtered inactive projects for every role. It now receives
+the existing admin scope and includes inactive projects for admins, preserving
+PM filtering. A regression locks both role outcomes.
+
+The browser rerun shows active 2h plus inactive 1h. The actual downloaded CSV
+contains both rows and Total 3h; see [web evidence](qa-web-final.md). Fresh full
+Admin verification passed **570 tests / 66 files**, typecheck and lint (zero
+errors, two existing callback warnings), plus a root Turbo Admin build with
+its workspace dependencies. The build retains its existing chunk-size warning.
+Only three Admin report source/test files changed. No layout change was needed
+against Admin Reports V2. Codebase-memory reindex tools are unavailable in this
+session, so no graph-index freshness is claimed.
+
+The combined fixture-preparation audit closes 9.1. Current checklist is
+**57/67 resolved**, including the user-deferred production publication clause.
+
+## Combined web acceptance evidence
+
+Tasks 6.4, 7.2, 9.13 and 9.17 are complete through the combined reports, not a
+claim that the final lane repeated every earlier interaction. Earlier browser
+runs proved final-entry disappearance on desktop/mobile and two-tab refocus,
+scoped repeat controls, manual selector behavior, peer/control exclusion,
+admin/PM role boundaries and full metadata. Controlled HTTP proves stale IDs
+and unchanged managed assignment checks; the real read-only import run proves
+managed/external conflicts. The final run adds workspace/membership changes,
+managed PM saved starts, responsive admin reports and actual CSV contents after
+the inactive-project fix. Current checklist: **61/67 resolved**.
+
+## Combined extension recovery acceptance — 13 October 2026
+
+Tasks 9.12 and 9.22 are complete using the named combined execution evidence.
+The provider-cleanup failure is a controlled temporary helper seam, with the
+production logout/retry flow unchanged. Its initial error was inspected in the
+actual Chrome browser-action popup; the post-restart Retry used the same popup
+UI in a regular extension page and makes no activeTab claim. Local credentials
+and the pending marker cleared, while the same owned server timer stayed active.
+All fixture processes and temporary credentials/helpers were cleaned up.
+Current checklist: **63/67 resolved**, including the user-deferred publication
+clause. Remaining local work is the open-dialog access fix/rerun, final runtime
+visual evidence, and completion/spec rollup.
+
+## User dialog correction verification — 13 October 2026
+
+The open Manual Entry dialog retained a hidden task and enabled Save after
+workspace membership was removed in an isolated fixture. The local correction
+clears a previously visible project/task when authoritative scope narrows, guards
+new-entry saving, and prevents late edit lookup success/fallback from restoring
+a cleared or replaced dialog. The added revocation regression passes.
+Fresh full User verification passed **543 tests / 52 files** and the root Turbo
+User build; targeted tests, typecheck and lint passed with zero lint errors and
+11 existing warnings. The build retains its existing chunk-size warning. The
+actual browser rerun and final mobile tooltip evidence are tracked in
+[qa-web-final.md](qa-web-final.md) before closing task 9.16.
+
+## Final dialog regression review — 13 October 2026
+
+The task-only scope-loss case exposed a second cache boundary: clearing the
+dialog's local task map did not invalidate the five-minute TanStack task query.
+The correction invalidates that exact query before reloading, guards late
+responses by generation, and blocks Save during reconciliation. Existing owned
+entry editing still retains an inactive project when the raw authorized project
+response includes it. Visible-project and own-entry queries now refresh on window
+focus so the actual Time Entries page receives authoritative scope changes in
+both dialog targets and History.
+
+Independent review found no remaining concrete issues in the narrowed patch.
+Fresh full User verification passed **547 tests / 52 files** and the root Turbo
+User build with workspace dependencies. The existing lockfile synchronization
+and build chunk-size warnings remain non-failing. This supersedes the earlier
+543-test checkpoint for the User source changed in this pass. The final actual
+task-only browser rerun clears task A while retaining project/task B; History
+refreshes to only task B and 1h after a real tab-focus transition. Evidence is
+recorded in [qa-web-final.md](qa-web-final.md).
+
+The mobile own-time tooltip now clamps its position to the viewport; direct
+inspection of `qa-web-final-tooltip-mobile-fixed.png` at 390x844 confirms the
+complete text fits with a 16px right margin. The desktop positioning retains
+its existing transform. Full task 9.21 remains partial because the extension
+Pen/documentation layout decision is awaiting the user's answer.
+
+## Current local completion checkpoint — 13 October 2026
+
+Task 9.16 is complete using the combined browser, API and regression evidence.
+The final patch, including both focus-refresh overrides, passes **547 User tests
+/ 52 files**, **80 focused tests / 3 files**, User lint/typecheck and the root
+Turbo User build. Admin verification remains **570 tests / 66 files**, with its
+lint/typecheck and root Turbo build passed. Both web lint runs have zero errors;
+the previously recorded warnings remain. Independent final review approves the
+patch with no remaining concrete findings. QA listeners on ports 3053, 3055,
+3057, 5392, 5393 and 5395 are absent after cleanup.
+
+Current checklist: **64/67 resolved**, including the user-skipped production
+publication clause. The remaining tasks are **9.21** (resolve the existing
+extension Pen/documentation layout discrepancy), then **8.6** and **9.25**
+(final completion/spec/evidence rollup). Required layout clarification is
+pending; no extension-layout or Pen edit is made while it awaits an answer.
+No push, production configuration change, deployment, archival or new commit
+was performed in this pass. Local preparation is not a production or
+distribution-readiness claim.
+
+## Final local acceptance and presentation resolution — 13 October 2026
+
+The user approved preserving current popup UI/documentation and updating the
+existing Pen states. The six popup frames are now saved locally, with the review
+PDF refreshed. All six were visually inspected; the final live traversal found
+no layout problems. Saved roots exactly match the final live Pencil roots, and
+all other design nodes/grouping equal HEAD. No popup product source changed in
+this presentation pass. See [design parity](design-parity.md) and
+[extension evidence](qa-extension-final.md).
+
+Task 9.21 is complete through the combined execution evidence. The canonical
+reconciliation audit already proves all 51 added/modified bodies match, with the
+removed capability absent. Final strict validation and whitespace checks are
+recorded in [spec audit](qa-spec-sync-final.md). Tasks 8.6 and 9.25 close the local
+completion/evidence rollup.
+
+Final checklist: **67/67 resolved**, including the explicitly user-skipped
+production publication/verification clause. Every required local scenario is
+supported by the linked automated, executed browser/API or explicitly
+user-attested evidence; earlier partial/pending checkpoints above are historical.
+Owned QA fixtures and listeners were cleaned up. Previously verified product
+source is unchanged by this Pen/documentation-only pass, so its recorded fresh
+User/Admin and other package checks remain the applicable execution evidence.
+No commit, push, production configuration/deployment, archive or Store submission
+was performed. Publishing matching privacy remains required before distribution.
+
+## Superseding Projects parity audit — 13 October 2026
+
+The user confirmed that Projects must not show tracked-duration totals; Time
+Entries is the existing duration surface. Missing project/task time in the
+current implementation is therefore intentional. UI documentation, design
+notes and both canonical/delta Projects specs were clarified. Desktop/mobile
+canvas examples were corrected and the review PDF refreshed; the user confirmed
+manually saving the latest `.pen` revision on 13 October.
+
+This decision does not close the separately identified badge/header/help-size,
+table-header or mobile-card visual differences. The earlier 67/67 and full
+parity claim is superseded: **64/67 resolved**, with 9.21 and the dependent 8.6/
+9.25 rollup open. Existing product checks remain applicable; no product source
+was changed by this presentation/documentation pass.
+
+
+## Final local completion — 14 October 2026
+
+The remaining Projects differences are resolved in the existing component:
+stacked header/count, purple External tags, 44px own-time help, visible desktop
+headers and compact mobile cards. The page shows no project/task tracked duration.
+The final browser fixture covers 1280, 640, 390 and 320px, long names, tooltip
+bounds, full-scope versus own-time controls and timer state feedback. It renders
+the real component/theme with synthetic props, without backend writes. Earlier
+API-backed scope/visibility/start-stop checks remain the functional evidence.
+See [final Projects review](qa-projects-parity-final.md) and screenshots.
+
+Fresh full User checks passed **551 tests / 52 files**, lint with zero errors
+(11 existing unrelated warnings), typecheck and root Turbo build. Independent
+read-only review approved the two changed Projects files with no actionable
+findings. No shared component or Admin source changed in this final visual pass;
+previous Admin **570 tests / 66 files** and its lint/typecheck/build remain valid.
+Other package evidence is unchanged. Final strict change/Projects validation and
+51-body canonical reconciliation passed; `git diff --check` passed.
+
+Current checklist: **67/67 resolved locally**. This supersedes the preceding
+64/67 Projects audit. All required local scenarios have executed or explicitly
+user-attested evidence; production privacy publication/verification alone stays
+user-skipped, and remains necessary before distribution. No production Pass,
+new cross-browser end-to-end claim, archival or distribution readiness is implied.
+Temporary visual fixture files/process/browser were removed or closed, and port
+5398 is not listening; prior QA cleanup remains recorded in the linked reports.
+No commit, push, production configuration/deployment, archive or Store action was
+performed in this continuation.

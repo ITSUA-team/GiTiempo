@@ -99,7 +99,9 @@
 - `Status` and `Updated` filters narrow task rows and only keep project groups that still contain at least one matching task.
 - Clearing the search and resetting the status and updated selects restores the full grouped project list.
 - Content is grouped by visible project instead of by day.
+- Projects does not display tracked-duration totals for projects or tasks. Keep task status and updated metadata here; tracked time is displayed in the existing Time Entries view.
 - Render external-reference projects and their tasks in these existing groups, with a compact `External` tag. Do not add external-only pages, routes, sections, or pickers.
+- Project headers stack the title and visible task count; desktop places the External tag and own-time help on the right and shows `Task`, `Status`, `Updated` table headers. External mobile cards keep title/source and timer first, status/updated metadata next, and the External tag below.
 - For a project returned with `accessScope: own-time`, show a focusable/tappable `?` help control on the project card. Its tooltip says `You can only see your own time and tasks with your time entries.` Hide peer members, peer time, member counts, and tasks without the current user's entries. Do not show the restriction for full `project` scope.
 - Use server `capabilities` for controls. Own-time scope cannot create, edit, close, delete, or otherwise manage shared tasks/projects; full project scope keeps existing controls and rights.
 - Each project section header shows the project name on the left and a primary icon-only PrimeVue `<Button>` with a `plus` icon on the right. The action uses tooltip/accessibility copy `Add task`.

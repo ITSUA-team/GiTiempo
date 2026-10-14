@@ -5299,7 +5299,7 @@
                                       "type": "text",
                                       "id": "BJeNQ",
                                       "fill": "$color-text-muted",
-                                      "content": "2 tasks · Your completed time: 1h 20m",
+                                      "content": "2 active tasks",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
                                       "fontWeight": "normal"
@@ -5437,7 +5437,7 @@
                                           "type": "text",
                                           "id": "m0nqFQ",
                                           "fill": "$color-text-dark",
-                                          "content": "Your time",
+                                          "content": "Updated",
                                           "fontFamily": "Inter",
                                           "fontSize": 13,
                                           "fontWeight": "600"
@@ -5586,7 +5586,7 @@
                                           "type": "text",
                                           "id": "hgycO",
                                           "fill": "$color-text-muted",
-                                          "content": "0m · Running",
+                                          "content": "Today, 14:32",
                                           "fontFamily": "Inter",
                                           "fontSize": 13,
                                           "fontWeight": "normal"
@@ -5741,7 +5741,7 @@
                                           "type": "text",
                                           "id": "V42uz",
                                           "fill": "$color-text-muted",
-                                          "content": "1h 20m",
+                                          "content": "Yesterday, 18:05",
                                           "fontFamily": "Inter",
                                           "fontSize": 13,
                                           "fontWeight": "normal"
@@ -5982,7 +5982,7 @@
                           "id": "K0DGKA",
                           "name": "Task count",
                           "fill": "#71717A",
-                          "content": "4 tasks · Your completed time: 1h 20m",
+                          "content": "4 active tasks",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "normal"
@@ -6105,7 +6105,7 @@
                           "id": "joOmu",
                           "name": "Start task metadata",
                           "fill": "#71717A",
-                          "content": "Open · Your time: 40m",
+                          "content": "Open · Today, 14:32",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "normal"
@@ -6197,7 +6197,7 @@
                           "id": "Egjqr",
                           "name": "Blocked task metadata",
                           "fill": "#71717A",
-                          "content": "Open · Your time: 20m",
+                          "content": "Open · Yesterday, 18:05",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "normal"
@@ -6287,7 +6287,7 @@
                           "id": "T3ggl4",
                           "name": "Stop task metadata",
                           "fill": "#71717A",
-                          "content": "Open · Your time: 0m · Running",
+                          "content": "Open · Today, 14:40",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "normal"
@@ -6377,7 +6377,7 @@
                           "id": "V5AGr",
                           "name": "Pending task metadata",
                           "fill": "#71717A",
-                          "content": "Open · Your time: 20m",
+                          "content": "Open · Yesterday, 16:20",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "normal"
@@ -49674,20 +49674,10 @@
           "x": 64,
           "y": 148,
           "name": "External tracking — Popup — Ready",
+          "clip": true,
           "width": 320,
           "height": 480,
           "fill": "$color-surface",
-          "cornerRadius": "$radius-lg",
-          "effect": {
-            "type": "shadow",
-            "shadowType": "outer",
-            "color": "#00000014",
-            "offset": {
-              "x": 0,
-              "y": 1
-            },
-            "blur": 3
-          },
           "layout": "vertical",
           "gap": 20,
           "padding": 20,
@@ -49697,48 +49687,73 @@
               "id": "P9MYFH",
               "name": "extBbrand",
               "width": "fill_container",
+              "height": 36,
+              "gap": 12,
               "justifyContent": "space_between",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "TvXJB",
-                  "name": "extBbLeft",
-                  "gap": 10,
+                  "id": "r3gPu",
+                  "name": "GiTiempo branded header",
+                  "gap": 12,
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "F8yBW9",
-                      "name": "extBbLogo",
-                      "width": 28,
-                      "height": 28,
+                      "id": "f0Lk5V",
+                      "name": "GiTiempo logo chip",
+                      "width": 32,
+                      "height": 32,
                       "fill": "$color-accent-tint",
-                      "cornerRadius": 9,
+                      "cornerRadius": 8,
                       "justifyContent": "center",
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "af7ZO",
-                          "name": "extBbLogoText",
-                          "fill": "$color-brand",
-                          "content": "GT",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
+                          "type": "rectangle",
+                          "id": "dFBgs",
+                          "name": "GiTiempo logo image",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "apps/chrome-ext/public/icons/icon-32.png",
+                            "mode": "fit"
+                          },
+                          "width": 28,
+                          "height": 28
                         }
                       ]
                     },
                     {
-                      "type": "text",
-                      "id": "rBK81",
-                      "name": "extBbText",
-                      "fill": "$color-text-dark",
-                      "content": "GiTiempo",
-                      "fontFamily": "Inter",
-                      "fontSize": 15,
-                      "fontWeight": "600"
+                      "type": "frame",
+                      "id": "M83Xnw",
+                      "name": "Product name and subtitle",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "g35PO",
+                          "name": "GiTiempo product name",
+                          "fill": "$color-text-dark",
+                          "content": "GiTiempo",
+                          "lineHeight": 1.4285714285714286,
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "rLsTD",
+                          "name": "GitHub timer subtitle",
+                          "fill": "$color-text-muted",
+                          "content": "GitHub timer",
+                          "lineHeight": 1.3333333333333333,
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -49787,7 +49802,7 @@
               "id": "I52oD",
               "name": "Workspace context",
               "width": "fill_container",
-              "height": 24,
+              "height": 16,
               "alignItems": "center",
               "children": [
                 {
@@ -49796,6 +49811,7 @@
                   "name": "Workspace destination label",
                   "fill": "$color-text-muted",
                   "content": "Acme workspace",
+                  "lineHeight": 1.3333333333333333,
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -49818,7 +49834,8 @@
                   "id": "E1y5V",
                   "name": "extBlabel",
                   "fill": "$color-text-muted",
-                  "content": "Current issue",
+                  "content": "Current task context",
+                  "lineHeight": 1.3333333333333333,
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "500"
@@ -49831,6 +49848,7 @@
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "#184 Improve reports filters",
+                  "lineHeight": 1.5555555555555556,
                   "fontFamily": "Inter",
                   "fontSize": 18,
                   "fontWeight": "600"
@@ -49843,7 +49861,7 @@
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "customer/admin-web",
-                  "lineHeight": 1.45,
+                  "lineHeight": 1.3333333333333333,
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -49853,23 +49871,22 @@
             {
               "type": "frame",
               "id": "bFhAk",
-              "name": "extBsp",
+              "name": "Timer action below context",
               "width": "fill_container",
-              "height": "fill_container",
               "layout": "vertical",
               "gap": 12,
-              "justifyContent": "end",
               "children": [
                 {
                   "type": "frame",
                   "id": "WaJHI",
                   "name": "extBbtn",
                   "width": "fill_container",
+                  "height": 44,
                   "fill": "$color-brand",
                   "cornerRadius": "$radius-sm",
                   "padding": [
                     12,
-                    18
+                    16
                   ],
                   "justifyContent": "center",
                   "alignItems": "center",
@@ -49880,8 +49897,9 @@
                       "name": "extBbtnText",
                       "fill": "$color-surface",
                       "content": "Start Timer",
+                      "lineHeight": 1.4285714285714286,
                       "fontFamily": "Inter",
-                      "fontSize": 15,
+                      "fontSize": 14,
                       "fontWeight": "600"
                     }
                   ]
@@ -49896,20 +49914,10 @@
           "x": 464,
           "y": 148,
           "name": "External tracking — Popup — Running",
+          "clip": true,
           "width": 320,
           "height": 480,
           "fill": "$color-surface",
-          "cornerRadius": "$radius-lg",
-          "effect": {
-            "type": "shadow",
-            "shadowType": "outer",
-            "color": "#00000014",
-            "offset": {
-              "x": 0,
-              "y": 1
-            },
-            "blur": 3
-          },
           "layout": "vertical",
           "gap": 20,
           "padding": 20,
@@ -49919,48 +49927,73 @@
               "id": "jV4hK",
               "name": "extCbrand",
               "width": "fill_container",
+              "height": 36,
+              "gap": 12,
               "justifyContent": "space_between",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "pEtMa",
-                  "name": "extCbLeft",
-                  "gap": 10,
+                  "id": "R3b0Zw",
+                  "name": "GiTiempo branded header",
+                  "gap": 12,
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "mTSQX",
-                      "name": "extCbLogo",
-                      "width": 28,
-                      "height": 28,
+                      "id": "vDUKy",
+                      "name": "GiTiempo logo chip",
+                      "width": 32,
+                      "height": 32,
                       "fill": "$color-accent-tint",
-                      "cornerRadius": 9,
+                      "cornerRadius": 8,
                       "justifyContent": "center",
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "X5IAlQ",
-                          "name": "extCbLogoText",
-                          "fill": "$color-brand",
-                          "content": "GT",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
+                          "type": "rectangle",
+                          "id": "ouOjH",
+                          "name": "GiTiempo logo image",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "apps/chrome-ext/public/icons/icon-32.png",
+                            "mode": "fit"
+                          },
+                          "width": 28,
+                          "height": 28
                         }
                       ]
                     },
                     {
-                      "type": "text",
-                      "id": "wGN9r",
-                      "name": "extCbText",
-                      "fill": "$color-text-dark",
-                      "content": "GiTiempo",
-                      "fontFamily": "Inter",
-                      "fontSize": 15,
-                      "fontWeight": "600"
+                      "type": "frame",
+                      "id": "RDAIj",
+                      "name": "Product name and subtitle",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "QNdfw",
+                          "name": "GiTiempo product name",
+                          "fill": "$color-text-dark",
+                          "content": "GiTiempo",
+                          "lineHeight": 1.4285714285714286,
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "lFkEs",
+                          "name": "GitHub timer subtitle",
+                          "fill": "$color-text-muted",
+                          "content": "GitHub timer",
+                          "lineHeight": 1.3333333333333333,
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -50009,7 +50042,7 @@
               "id": "Yr9ta",
               "name": "Workspace context",
               "width": "fill_container",
-              "height": 24,
+              "height": 16,
               "alignItems": "center",
               "children": [
                 {
@@ -50017,7 +50050,8 @@
                   "id": "NhuZL",
                   "name": "Workspace destination label",
                   "fill": "$color-text-muted",
-                  "content": "Running in Acme workspace",
+                  "content": "Acme workspace",
+                  "lineHeight": 1.3333333333333333,
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -50032,7 +50066,7 @@
               "fill": "$color-app-bg",
               "cornerRadius": "$radius-lg",
               "layout": "vertical",
-              "gap": 10,
+              "gap": 12,
               "padding": 20,
               "alignItems": "center",
               "children": [
@@ -50040,11 +50074,12 @@
                   "type": "frame",
                   "id": "DyV5K",
                   "name": "extCtag",
+                  "height": 24,
                   "fill": "$color-status-active-bg",
                   "cornerRadius": "$radius-sm",
                   "padding": [
-                    6,
-                    10
+                    4,
+                    12
                   ],
                   "children": [
                     {
@@ -50053,6 +50088,7 @@
                       "name": "extCtagText",
                       "fill": "$color-status-active-text",
                       "content": "Running timer",
+                      "lineHeight": 1.3333333333333333,
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -50065,8 +50101,9 @@
                   "name": "extCtime",
                   "fill": "$color-brand",
                   "content": "01:42:18",
+                  "lineHeight": 1.3333333333333333,
                   "fontFamily": "Inter",
-                  "fontSize": 36,
+                  "fontSize": 24,
                   "fontWeight": "600"
                 },
                 {
@@ -50076,7 +50113,8 @@
                   "fill": "$color-text-dark",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "#184 Improve reports filters",
+                  "content": "Improve reports filters",
+                  "lineHeight": 1.4285714285714286,
                   "textAlign": "center",
                   "fontFamily": "Inter",
                   "fontSize": 14,
@@ -50087,7 +50125,11 @@
                   "id": "rhLdU",
                   "name": "extCmeta",
                   "fill": "$color-text-muted",
-                  "content": "customer/admin-web",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "admin-web / customer/admin-web",
+                  "lineHeight": 1.3333333333333333,
+                  "textAlign": "center",
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -50097,23 +50139,22 @@
             {
               "type": "frame",
               "id": "yYQlk",
-              "name": "extCbottom",
+              "name": "Timer action below context",
               "width": "fill_container",
-              "height": "fill_container",
               "layout": "vertical",
               "gap": 12,
-              "justifyContent": "end",
               "children": [
                 {
                   "type": "frame",
                   "id": "H3zNDq",
                   "name": "extCstop",
                   "width": "fill_container",
-                  "fill": "#D32F2F",
+                  "height": 44,
+                  "fill": "#C62828",
                   "cornerRadius": "$radius-sm",
                   "padding": [
                     12,
-                    18
+                    16
                   ],
                   "justifyContent": "center",
                   "alignItems": "center",
@@ -50124,8 +50165,9 @@
                       "name": "extCstopText",
                       "fill": "$color-surface",
                       "content": "Stop Timer",
+                      "lineHeight": 1.4285714285714286,
                       "fontFamily": "Inter",
-                      "fontSize": 15,
+                      "fontSize": 14,
                       "fontWeight": "600"
                     }
                   ]
@@ -50140,22 +50182,11 @@
           "x": 864,
           "y": 148,
           "name": "External tracking — Popup — Context loading",
+          "clip": true,
           "width": 320,
           "height": 480,
           "fill": "$color-surface",
-          "cornerRadius": "$radius-lg",
-          "effect": {
-            "type": "shadow",
-            "shadowType": "outer",
-            "color": "#00000014",
-            "offset": {
-              "x": 0,
-              "y": 1
-            },
-            "blur": 3
-          },
           "layout": "vertical",
-          "gap": 20,
           "padding": 20,
           "children": [
             {
@@ -50163,55 +50194,83 @@
               "id": "kDoaR",
               "name": "extBbrand",
               "width": "fill_container",
+              "height": 36,
+              "gap": 12,
               "justifyContent": "space_between",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "ZH0It",
-                  "name": "extBbLeft",
-                  "gap": 10,
+                  "id": "pYZhY",
+                  "name": "GiTiempo branded header",
+                  "gap": 12,
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "Pz9lU",
-                      "name": "extBbLogo",
-                      "width": 28,
-                      "height": 28,
+                      "id": "f4RQk",
+                      "name": "GiTiempo logo chip",
+                      "width": 32,
+                      "height": 32,
                       "fill": "$color-accent-tint",
-                      "cornerRadius": 9,
+                      "cornerRadius": 8,
                       "justifyContent": "center",
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "qiQZl",
-                          "name": "extBbLogoText",
-                          "fill": "$color-brand",
-                          "content": "GT",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
+                          "type": "rectangle",
+                          "id": "y7yBe1",
+                          "name": "GiTiempo logo image",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "apps/chrome-ext/public/icons/icon-32.png",
+                            "mode": "fit"
+                          },
+                          "width": 28,
+                          "height": 28
                         }
                       ]
                     },
                     {
-                      "type": "text",
-                      "id": "sflFk",
-                      "name": "extBbText",
-                      "fill": "$color-text-dark",
-                      "content": "GiTiempo",
-                      "fontFamily": "Inter",
-                      "fontSize": 15,
-                      "fontWeight": "600"
+                      "type": "frame",
+                      "id": "BKCNY",
+                      "name": "Product name and subtitle",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "lr2KB",
+                          "name": "GiTiempo product name",
+                          "fill": "$color-text-dark",
+                          "content": "GiTiempo",
+                          "lineHeight": 1.4285714285714286,
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "IW6PP",
+                          "name": "GitHub timer subtitle",
+                          "fill": "$color-text-muted",
+                          "content": "GitHub timer",
+                          "lineHeight": 1.3333333333333333,
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
                 },
                 {
                   "type": "frame",
                   "id": "rS0aS",
+                  "x": 216,
+                  "y": 4,
                   "name": "extBbRight",
+                  "enabled": false,
                   "gap": 8,
                   "alignItems": "center",
                   "children": [
@@ -50250,108 +50309,39 @@
             },
             {
               "type": "frame",
-              "id": "B6mX78",
-              "name": "Workspace context",
+              "id": "nWtDC",
+              "name": "Session and timer loading state",
               "width": "fill_container",
-              "height": 24,
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "justifyContent": "center",
               "alignItems": "center",
               "children": [
                 {
                   "type": "text",
-                  "id": "FHIpI",
-                  "name": "Workspace destination label",
-                  "fill": "$color-text-muted",
-                  "content": "Acme workspace",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "f3vQnZ",
-              "name": "extBissue",
-              "width": "fill_container",
-              "fill": "$color-app-bg",
-              "cornerRadius": "$radius-lg",
-              "layout": "vertical",
-              "gap": 8,
-              "padding": 16,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "bDbYk",
-                  "name": "extBlabel",
-                  "fill": "$color-text-muted",
-                  "content": "Loading issue context…",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "500"
-                },
-                {
-                  "type": "text",
-                  "id": "F5P0q",
-                  "name": "extBtitle",
+                  "id": "m60Mj",
+                  "name": "Loading extension state heading",
                   "fill": "$color-text-dark",
-                  "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "Waiting for the issue title",
+                  "content": "Loading extension state",
+                  "lineHeight": 1.5555555555555556,
                   "fontFamily": "Inter",
                   "fontSize": 18,
                   "fontWeight": "600"
                 },
                 {
                   "type": "text",
-                  "id": "V3Ynt",
-                  "name": "extBmeta",
+                  "id": "S1XgO",
+                  "name": "Session and timer loading help",
                   "fill": "$color-text-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Keep this GitHub issue open.",
-                  "lineHeight": 1.45,
+                  "content": "Checking your session and timer context.",
+                  "lineHeight": 1.4285714285714286,
+                  "textAlign": "center",
                   "fontFamily": "Inter",
-                  "fontSize": 12,
+                  "fontSize": 14,
                   "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "JTENE",
-              "name": "extBsp",
-              "width": "fill_container",
-              "height": "fill_container",
-              "layout": "vertical",
-              "gap": 12,
-              "justifyContent": "end",
-              "children": [
-                {
-                  "type": "frame",
-                  "id": "demeG",
-                  "name": "extBbtn",
-                  "opacity": 0.45,
-                  "width": "fill_container",
-                  "fill": "$color-brand",
-                  "cornerRadius": "$radius-sm",
-                  "padding": [
-                    12,
-                    18
-                  ],
-                  "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "v4Nvf",
-                      "name": "extBbtnText",
-                      "fill": "$color-surface",
-                      "content": "Start Timer",
-                      "fontFamily": "Inter",
-                      "fontSize": 15,
-                      "fontWeight": "600"
-                    }
-                  ]
                 }
               ]
             }
@@ -50363,20 +50353,10 @@
           "x": 1264,
           "y": 148,
           "name": "External tracking — Popup — Workspace loading",
+          "clip": true,
           "width": 320,
           "height": 480,
           "fill": "$color-surface",
-          "cornerRadius": "$radius-lg",
-          "effect": {
-            "type": "shadow",
-            "shadowType": "outer",
-            "color": "#00000014",
-            "offset": {
-              "x": 0,
-              "y": 1
-            },
-            "blur": 3
-          },
           "layout": "vertical",
           "gap": 20,
           "padding": 20,
@@ -50386,48 +50366,73 @@
               "id": "Ad5Hg",
               "name": "extBbrand",
               "width": "fill_container",
+              "height": 36,
+              "gap": 12,
               "justifyContent": "space_between",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "z2fzh",
-                  "name": "extBbLeft",
-                  "gap": 10,
+                  "id": "lBsYf",
+                  "name": "GiTiempo branded header",
+                  "gap": 12,
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "nBzmy",
-                      "name": "extBbLogo",
-                      "width": 28,
-                      "height": 28,
+                      "id": "tllBz",
+                      "name": "GiTiempo logo chip",
+                      "width": 32,
+                      "height": 32,
                       "fill": "$color-accent-tint",
-                      "cornerRadius": 9,
+                      "cornerRadius": 8,
                       "justifyContent": "center",
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "pfiuS",
-                          "name": "extBbLogoText",
-                          "fill": "$color-brand",
-                          "content": "GT",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
+                          "type": "rectangle",
+                          "id": "qQ5E3",
+                          "name": "GiTiempo logo image",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "apps/chrome-ext/public/icons/icon-32.png",
+                            "mode": "fit"
+                          },
+                          "width": 28,
+                          "height": 28
                         }
                       ]
                     },
                     {
-                      "type": "text",
-                      "id": "mC5M2",
-                      "name": "extBbText",
-                      "fill": "$color-text-dark",
-                      "content": "GiTiempo",
-                      "fontFamily": "Inter",
-                      "fontSize": 15,
-                      "fontWeight": "600"
+                      "type": "frame",
+                      "id": "pdnKs",
+                      "name": "Product name and subtitle",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "N0bsmY",
+                          "name": "GiTiempo product name",
+                          "fill": "$color-text-dark",
+                          "content": "GiTiempo",
+                          "lineHeight": 1.4285714285714286,
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "OqRQv",
+                          "name": "GitHub timer subtitle",
+                          "fill": "$color-text-muted",
+                          "content": "GitHub timer",
+                          "lineHeight": 1.3333333333333333,
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -50476,7 +50481,7 @@
               "id": "jBzwv",
               "name": "Workspace context",
               "width": "fill_container",
-              "height": 24,
+              "height": 16,
               "alignItems": "center",
               "children": [
                 {
@@ -50485,6 +50490,7 @@
                   "name": "Workspace destination label",
                   "fill": "$color-text-muted",
                   "content": "Checking workspace…",
+                  "lineHeight": 1.3333333333333333,
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -50507,7 +50513,8 @@
                   "id": "EgrsX",
                   "name": "extBlabel",
                   "fill": "$color-text-muted",
-                  "content": "Current issue",
+                  "content": "Current task context",
+                  "lineHeight": 1.3333333333333333,
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "500"
@@ -50520,6 +50527,7 @@
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "#184 Improve reports filters",
+                  "lineHeight": 1.5555555555555556,
                   "fontFamily": "Inter",
                   "fontSize": 18,
                   "fontWeight": "600"
@@ -50531,8 +50539,8 @@
                   "fill": "$color-text-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Confirming your session and timer before starting.",
-                  "lineHeight": 1.45,
+                  "content": "customer/admin-web",
+                  "lineHeight": 1.3333333333333333,
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -50542,24 +50550,23 @@
             {
               "type": "frame",
               "id": "G7fe1k",
-              "name": "extBsp",
+              "name": "Timer action below context",
               "width": "fill_container",
-              "height": "fill_container",
               "layout": "vertical",
               "gap": 12,
-              "justifyContent": "end",
               "children": [
                 {
                   "type": "frame",
                   "id": "FYWjT",
                   "name": "extBbtn",
-                  "opacity": 0.45,
+                  "opacity": 0.6,
                   "width": "fill_container",
+                  "height": 44,
                   "fill": "$color-brand",
                   "cornerRadius": "$radius-sm",
                   "padding": [
                     12,
-                    18
+                    16
                   ],
                   "justifyContent": "center",
                   "alignItems": "center",
@@ -50570,8 +50577,9 @@
                       "name": "extBbtnText",
                       "fill": "$color-surface",
                       "content": "Start Timer",
+                      "lineHeight": 1.4285714285714286,
                       "fontFamily": "Inter",
-                      "fontSize": 15,
+                      "fontSize": 14,
                       "fontWeight": "600"
                     }
                   ]
@@ -50586,22 +50594,12 @@
           "x": 1664,
           "y": 148,
           "name": "External tracking — Popup — Context error",
+          "clip": true,
           "width": 320,
           "height": 480,
           "fill": "$color-surface",
-          "cornerRadius": "$radius-lg",
-          "effect": {
-            "type": "shadow",
-            "shadowType": "outer",
-            "color": "#00000014",
-            "offset": {
-              "x": 0,
-              "y": 1
-            },
-            "blur": 3
-          },
           "layout": "vertical",
-          "gap": 20,
+          "gap": 24,
           "padding": 20,
           "children": [
             {
@@ -50609,48 +50607,73 @@
               "id": "onA5f",
               "name": "extBbrand",
               "width": "fill_container",
+              "height": 36,
+              "gap": 12,
               "justifyContent": "space_between",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "Kzwue",
-                  "name": "extBbLeft",
-                  "gap": 10,
+                  "id": "dQ6UM",
+                  "name": "GiTiempo branded header",
+                  "gap": 12,
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "r5Thl",
-                      "name": "extBbLogo",
-                      "width": 28,
-                      "height": 28,
+                      "id": "B9zgK",
+                      "name": "GiTiempo logo chip",
+                      "width": 32,
+                      "height": 32,
                       "fill": "$color-accent-tint",
-                      "cornerRadius": 9,
+                      "cornerRadius": 8,
                       "justifyContent": "center",
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "JrHqQ",
-                          "name": "extBbLogoText",
-                          "fill": "$color-brand",
-                          "content": "GT",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
+                          "type": "rectangle",
+                          "id": "schRM",
+                          "name": "GiTiempo logo image",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "apps/chrome-ext/public/icons/icon-32.png",
+                            "mode": "fit"
+                          },
+                          "width": 28,
+                          "height": 28
                         }
                       ]
                     },
                     {
-                      "type": "text",
-                      "id": "WWYbh",
-                      "name": "extBbText",
-                      "fill": "$color-text-dark",
-                      "content": "GiTiempo",
-                      "fontFamily": "Inter",
-                      "fontSize": 15,
-                      "fontWeight": "600"
+                      "type": "frame",
+                      "id": "gPuJU",
+                      "name": "Product name and subtitle",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "SaxTk",
+                          "name": "GiTiempo product name",
+                          "fill": "$color-text-dark",
+                          "content": "GiTiempo",
+                          "lineHeight": 1.4285714285714286,
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "kiVGG",
+                          "name": "GitHub timer subtitle",
+                          "fill": "$color-text-muted",
+                          "content": "GitHub timer",
+                          "lineHeight": 1.3333333333333333,
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -50699,7 +50722,7 @@
               "id": "fpmQZ",
               "name": "Workspace context",
               "width": "fill_container",
-              "height": 24,
+              "height": 16,
               "alignItems": "center",
               "children": [
                 {
@@ -50708,6 +50731,7 @@
                   "name": "Workspace destination label",
                   "fill": "$color-text-muted",
                   "content": "Acme workspace",
+                  "lineHeight": 1.3333333333333333,
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -50717,32 +50741,47 @@
             {
               "type": "frame",
               "id": "c9wHm5",
-              "name": "extBissue",
+              "name": "Centered popup error and Retry",
               "width": "fill_container",
-              "fill": "$color-app-bg",
-              "cornerRadius": "$radius-lg",
+              "fill": "#00000000",
               "layout": "vertical",
-              "gap": 8,
-              "padding": 16,
+              "gap": 16,
+              "alignItems": "center",
               "children": [
                 {
-                  "type": "text",
-                  "id": "nec5v",
-                  "name": "extBlabel",
-                  "fill": "$color-text-muted",
-                  "content": "Issue context unavailable",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "500"
+                  "type": "frame",
+                  "id": "ZRFWs",
+                  "name": "Error indicator",
+                  "width": 72,
+                  "height": 72,
+                  "fill": "$color-status-error-bg",
+                  "cornerRadius": 36,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "h2Ow2k",
+                      "name": "Error exclamation",
+                      "fill": "$color-status-error-text",
+                      "content": "!",
+                      "lineHeight": 1.4,
+                      "fontFamily": "Inter",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    }
+                  ]
                 },
                 {
                   "type": "text",
                   "id": "Jf8HJ",
-                  "name": "extBtitle",
+                  "name": "Popup error heading",
                   "fill": "$color-text-dark",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Refresh this issue to continue",
+                  "content": "Unable to read issue",
+                  "lineHeight": 1.5555555555555556,
+                  "textAlign": "center",
                   "fontFamily": "Inter",
                   "fontSize": 18,
                   "fontWeight": "600"
@@ -50750,39 +50789,24 @@
                 {
                   "type": "text",
                   "id": "uILrV",
-                  "name": "extBmeta",
+                  "name": "Precise error remedy",
                   "fill": "$color-text-muted",
                   "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "We could not read a current issue title.",
-                  "lineHeight": 1.45,
+                  "width": 220,
+                  "content": "We could not detect the GitHub issue title on this page.",
+                  "lineHeight": 1.4285714285714286,
+                  "textAlign": "center",
                   "fontFamily": "Inter",
-                  "fontSize": 12,
+                  "fontSize": 14,
                   "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "p63MCm",
-              "name": "extBsp",
-              "width": "fill_container",
-              "height": "fill_container",
-              "layout": "vertical",
-              "gap": 12,
-              "justifyContent": "end",
-              "children": [
+                },
                 {
                   "type": "frame",
                   "id": "CHeC6",
-                  "name": "extBbtn",
-                  "width": "fill_container",
-                  "fill": "$color-brand",
-                  "cornerRadius": "$radius-sm",
-                  "padding": [
-                    12,
-                    18
-                  ],
+                  "name": "Text Retry action",
+                  "height": 20,
+                  "fill": "#00000000",
+                  "cornerRadius": 6,
                   "justifyContent": "center",
                   "alignItems": "center",
                   "children": [
@@ -50790,10 +50814,11 @@
                       "type": "text",
                       "id": "fWU0f",
                       "name": "extBbtnText",
-                      "fill": "$color-surface",
+                      "fill": "$color-brand",
                       "content": "Retry",
+                      "lineHeight": 1.4285714285714286,
                       "fontFamily": "Inter",
-                      "fontSize": 15,
+                      "fontSize": 14,
                       "fontWeight": "600"
                     }
                   ]
@@ -50808,22 +50833,12 @@
           "x": 2064,
           "y": 148,
           "name": "External tracking — Popup — Access denied",
+          "clip": true,
           "width": 320,
           "height": 480,
           "fill": "$color-surface",
-          "cornerRadius": "$radius-lg",
-          "effect": {
-            "type": "shadow",
-            "shadowType": "outer",
-            "color": "#00000014",
-            "offset": {
-              "x": 0,
-              "y": 1
-            },
-            "blur": 3
-          },
           "layout": "vertical",
-          "gap": 20,
+          "gap": 24,
           "padding": 20,
           "children": [
             {
@@ -50831,48 +50846,73 @@
               "id": "BZrFF",
               "name": "extBbrand",
               "width": "fill_container",
+              "height": 36,
+              "gap": 12,
               "justifyContent": "space_between",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "YUhWE",
-                  "name": "extBbLeft",
-                  "gap": 10,
+                  "id": "exBfU",
+                  "name": "GiTiempo branded header",
+                  "gap": 12,
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "Mp7oa",
-                      "name": "extBbLogo",
-                      "width": 28,
-                      "height": 28,
+                      "id": "dVeko",
+                      "name": "GiTiempo logo chip",
+                      "width": 32,
+                      "height": 32,
                       "fill": "$color-accent-tint",
-                      "cornerRadius": 9,
+                      "cornerRadius": 8,
                       "justifyContent": "center",
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "UX48p",
-                          "name": "extBbLogoText",
-                          "fill": "$color-brand",
-                          "content": "GT",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "600"
+                          "type": "rectangle",
+                          "id": "TCK1E",
+                          "name": "GiTiempo logo image",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "apps/chrome-ext/public/icons/icon-32.png",
+                            "mode": "fit"
+                          },
+                          "width": 28,
+                          "height": 28
                         }
                       ]
                     },
                     {
-                      "type": "text",
-                      "id": "JeEjs",
-                      "name": "extBbText",
-                      "fill": "$color-text-dark",
-                      "content": "GiTiempo",
-                      "fontFamily": "Inter",
-                      "fontSize": 15,
-                      "fontWeight": "600"
+                      "type": "frame",
+                      "id": "NlVed",
+                      "name": "Product name and subtitle",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "k2GO8",
+                          "name": "GiTiempo product name",
+                          "fill": "$color-text-dark",
+                          "content": "GiTiempo",
+                          "lineHeight": 1.4285714285714286,
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Fmjmj",
+                          "name": "GitHub timer subtitle",
+                          "fill": "$color-text-muted",
+                          "content": "GitHub timer",
+                          "lineHeight": 1.3333333333333333,
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -50921,7 +50961,7 @@
               "id": "WBXiw",
               "name": "Workspace context",
               "width": "fill_container",
-              "height": 24,
+              "height": 16,
               "alignItems": "center",
               "children": [
                 {
@@ -50930,6 +50970,7 @@
                   "name": "Workspace destination label",
                   "fill": "$color-text-muted",
                   "content": "Acme workspace",
+                  "lineHeight": 1.3333333333333333,
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -50939,32 +50980,47 @@
             {
               "type": "frame",
               "id": "AVmec",
-              "name": "extBissue",
+              "name": "Centered popup error and Retry",
               "width": "fill_container",
-              "fill": "$color-app-bg",
-              "cornerRadius": "$radius-lg",
+              "fill": "#00000000",
               "layout": "vertical",
-              "gap": 8,
-              "padding": 16,
+              "gap": 16,
+              "alignItems": "center",
               "children": [
                 {
-                  "type": "text",
-                  "id": "s68QI6",
-                  "name": "extBlabel",
-                  "fill": "$color-text-muted",
-                  "content": "Unable to start timer",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "500"
+                  "type": "frame",
+                  "id": "G1gPdi",
+                  "name": "Error indicator",
+                  "width": 72,
+                  "height": 72,
+                  "fill": "$color-status-error-bg",
+                  "cornerRadius": 36,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "v4ULP",
+                      "name": "Error exclamation",
+                      "fill": "$color-status-error-text",
+                      "content": "!",
+                      "lineHeight": 1.4,
+                      "fontFamily": "Inter",
+                      "fontSize": 20,
+                      "fontWeight": "600"
+                    }
+                  ]
                 },
                 {
                   "type": "text",
                   "id": "XEjdT",
-                  "name": "extBtitle",
+                  "name": "Popup error heading",
                   "fill": "$color-text-dark",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "#184 Improve reports filters",
+                  "content": "Connection lost",
+                  "lineHeight": 1.5555555555555556,
+                  "textAlign": "center",
                   "fontFamily": "Inter",
                   "fontSize": 18,
                   "fontWeight": "600"
@@ -50972,39 +51028,24 @@
                 {
                   "type": "text",
                   "id": "Vqurh",
-                  "name": "extBmeta",
+                  "name": "Precise error remedy",
                   "fill": "$color-text-muted",
                   "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.",
-                  "lineHeight": 1.45,
+                  "width": 220,
+                  "content": "Your workspace GitHub App installation is unavailable. Contact your workspace administrator to restore access.",
+                  "lineHeight": 1.4285714285714286,
+                  "textAlign": "center",
                   "fontFamily": "Inter",
-                  "fontSize": 12,
+                  "fontSize": 14,
                   "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "MdPq1",
-              "name": "extBsp",
-              "width": "fill_container",
-              "height": "fill_container",
-              "layout": "vertical",
-              "gap": 12,
-              "justifyContent": "end",
-              "children": [
+                },
                 {
                   "type": "frame",
                   "id": "Gg6BF",
-                  "name": "extBbtn",
-                  "width": "fill_container",
-                  "fill": "$color-brand",
-                  "cornerRadius": "$radius-sm",
-                  "padding": [
-                    12,
-                    18
-                  ],
+                  "name": "Text Retry action",
+                  "height": 20,
+                  "fill": "#00000000",
+                  "cornerRadius": 6,
                   "justifyContent": "center",
                   "alignItems": "center",
                   "children": [
@@ -51012,10 +51053,11 @@
                       "type": "text",
                       "id": "X1Zpd",
                       "name": "extBbtnText",
-                      "fill": "$color-surface",
-                      "content": "Retry",
+                      "fill": "$color-brand",
+                      "content": "Retry connection",
+                      "lineHeight": 1.4285714285714286,
                       "fontFamily": "Inter",
-                      "fontSize": 15,
+                      "fontSize": 14,
                       "fontWeight": "600"
                     }
                   ]
