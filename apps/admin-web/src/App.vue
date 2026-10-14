@@ -26,6 +26,7 @@ async function refreshAuthorizationOnFocus(): Promise<void> {
     errorToast("Could not refresh your access. Please try again.", {
       logContext: { action: "refresh-authorization", feature: "auth" },
     });
+    return;
   }
 
   if (

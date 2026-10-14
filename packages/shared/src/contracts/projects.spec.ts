@@ -7,6 +7,7 @@ import {
   projectBillableDefaultBackfillResponseSchema,
   projectDetailResponseSchema,
   projectListResponseSchema,
+  projectResponseSchema,
   updateProjectSchema,
 } from './projects.js';
 
@@ -49,6 +50,42 @@ describe('projectListResponseSchema', () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual([0, 'totalSeconds']);
+  });
+
+  it('rejects own-time project access with task-management capability', () => {
+    const result = projectResponseSchema.safeParse({
+      ...baseProject,
+      accessScope: 'own-time',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(
+      expect.objectContaining({
+        path: ['capabilities', 'canManageTasks'],
+      }),
+    );
+  });
+
+  it('rejects own-time project access with unredacted members', () => {
+    const result = projectResponseSchema.safeParse({
+      ...baseProject,
+      accessScope: 'own-time',
+      capabilities: { canManageTasks: false },
+      members: [
+        {
+          avatarUrl: null,
+          displayName: 'Peer member',
+          email: 'peer@example.com',
+          role: 'member',
+          userId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003',
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(
+      expect.objectContaining({ path: ['members'] }),
+    );
   });
 });
 
@@ -159,10 +196,10 @@ describe('projectDetailResponseSchema', () => {
         source: 'github',
       },
       trackedSummary: {
-        billableSeconds: 0,
-        billableShare: null,
-        lastActivityAt: null,
-        totalSeconds: 0,
+        billableSeconds: 3600,
+        billableShare: 1,
+        lastActivityAt: '2026-05-02T10:00:00.000Z',
+        totalSeconds: 3600,
       },
     });
 
@@ -170,7 +207,42 @@ describe('projectDetailResponseSchema', () => {
     expect(result.capabilities.canManageTasks).toBe(false);
     expect(result.members).toEqual([]);
     expect(result.assignedMembersSummary).toBeNull();
+    expect(result.trackedSummary).toMatchObject({
+      totalSeconds: 3600,
+      billableSeconds: 3600,
+    });
     expect(result).not.toHaveProperty('memberCount');
+  });
+
+  it('rejects assigned-member summaries for own-time access', () => {
+    const result = projectDetailResponseSchema.safeParse({
+      ...baseProject,
+      accessScope: 'own-time',
+      capabilities: { canManageTasks: false },
+      members: [],
+      assignedMembersSummary: {
+        count: 1,
+        previewMembers: [],
+        remainingCount: 1,
+      },
+      providerSummary: {
+        externalKey: null,
+        externalType: null,
+        externalUrl: null,
+        source: 'github',
+      },
+      trackedSummary: {
+        billableSeconds: 3600,
+        billableShare: 1,
+        lastActivityAt: '2026-05-02T10:00:00.000Z',
+        totalSeconds: 3600,
+      },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(
+      expect.objectContaining({ path: ['assignedMembersSummary'] }),
+    );
   });
 });
 

@@ -21,6 +21,14 @@ export const taskResponseSchema = z.object({
   githubIssue: syncedGitHubIssueSchema.nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
+}).superRefine((data, ctx) => {
+  if (data.accessScope === 'own-time' && data.capabilities.canManageTasks) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Own-time access cannot manage tasks',
+      path: ['capabilities', 'canManageTasks'],
+    });
+  }
 });
 
 export const taskListResponseSchema = z.array(taskResponseSchema);

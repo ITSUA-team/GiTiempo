@@ -1333,6 +1333,51 @@ describe('useTopBarTimer', () => {
     );
   });
 
+  it.each([false, true])('blocks task creation without permission, including revoked access (%s)', async (revokePermission) => {
+    const client = createClientMock();
+    client.listVisibleProjects.mockResolvedValue([{
+      ...createProject(TEST_IDS.project, 'Project Orion'),
+      capabilities: { canManageTasks: revokePermission },
+    }]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
+    const mounted = mountTopBarTimer({ client, toast: { add: vi.fn() } });
+    wrappers.push(mounted.wrapper);
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    topBarTimer.setCreateTaskTitle('Write release checklist');
+    await flushPromises();
+
+    if (revokePermission) {
+      expect(topBarTimer.isCreateTaskDisabled.value).toBe(false);
+      topBarTimer.selectedProject.value!.capabilities.canManageTasks = false;
+    }
+
+    expect(topBarTimer.isCreateTaskDisabled.value).toBe(true);
+    expect(topBarTimer.isDialogPrimaryActionDisabled.value).toBe(true);
+    expect(topBarTimer.isConfirmSelectionDisabled.value).toBe(true);
+    await topBarTimer.createTaskFromDialog();
+    await topBarTimer.handleDialogPrimaryAction();
+    await topBarTimer.confirmSelectedTask();
+
+    expect(client.createTask).not.toHaveBeenCalled();
+    expect(client.startTimer).not.toHaveBeenCalled();
+    expect(client.updateEntry).not.toHaveBeenCalled();
+    expect(topBarTimer.createTaskErrorMessage.value).toBe(
+      'You do not have permission to create tasks in this project.',
+    );
+
+    topBarTimer.setSelectedTaskId(TEST_IDS.task);
+    await topBarTimer.handleDialogPrimaryAction();
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.task });
+    expect(client.createTask).not.toHaveBeenCalled();
+  });
+
   it('creates an inline New task before starting from the dialog', async () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
@@ -2770,7 +2815,7 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     queryClient.setQueryData(
-      userProjectsKeys.projectTasks(TEST_SCOPE, TEST_IDS.project),
+      userProjectsKeys.projectTasks(TEST_SCOPE, TEST_IDS.project, 'project'),
       [
         createTask(TEST_IDS.task, TEST_IDS.project, 'Write release checklist'),
         createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'Review PM scope rules'),
@@ -2787,5 +2832,83 @@ describe('useTopBarTimer', () => {
       'Write release checklist',
       'Review PM scope rules',
     ]);
+  });
+
+  it('reloads task options when project access narrows without a task mutation', async () => {
+    const client = createClientMock();
+    const project = createProject(TEST_IDS.project, 'External project');
+    const ownTask = createTask(TEST_IDS.task, TEST_IDS.project, 'My tracked task');
+    const peerTask = createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'Peer task');
+    client.listVisibleProjects.mockResolvedValue([project]);
+    client.listProjectTasks.mockResolvedValue([ownTask, peerTask]);
+    const mounted = mountTopBarTimer({ client });
+    wrappers.push(mounted.wrapper);
+    const { queryClient, topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+    expect(topBarTimer.taskOptions.value).toHaveLength(2);
+
+    const restrictedProject: ProjectResponse = {
+      ...project,
+      accessScope: 'own-time',
+      capabilities: { canManageTasks: false },
+      totalSeconds: 0,
+    };
+    const restrictedTask: TaskResponse = {
+      ...ownTask,
+      accessScope: 'own-time',
+      capabilities: { canManageTasks: false },
+    };
+    queryClient.setQueryData(userProjectsKeys.visibleProjects(TEST_SCOPE), [restrictedProject]);
+    client.listVisibleProjects.mockResolvedValue([restrictedProject]);
+    client.listProjectTasks.mockResolvedValue([restrictedTask]);
+    topBarTimer.closeDialog();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    expect(topBarTimer.taskOptions.value).toEqual([restrictedTask]);
+    expect(topBarTimer.selectedProject.value?.capabilities.canManageTasks).toBe(false);
+  });
+
+  it('drops an own-time task after its last time entry is removed or moved', async () => {
+    const client = createClientMock();
+    const project: ProjectResponse = {
+      ...createProject(TEST_IDS.project, 'External project'),
+      accessScope: 'own-time',
+      capabilities: { canManageTasks: false },
+      totalSeconds: 0,
+    };
+    client.listVisibleProjects.mockResolvedValue([project]);
+    client.listOwnEntries.mockResolvedValue(createOwnEntriesResponse([createCompletedEntry()]));
+    client.listProjectTasks.mockResolvedValue([
+      { ...createTask(TEST_IDS.task, TEST_IDS.project, 'My task'), accessScope: 'own-time', capabilities: { canManageTasks: false } },
+      { ...createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'Other own task'), accessScope: 'own-time', capabilities: { canManageTasks: false } },
+    ]);
+    const mounted = mountTopBarTimer({ client });
+    wrappers.push(mounted.wrapper);
+    const { queryClient, topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    expect(topBarTimer.taskOptions.value).toHaveLength(2);
+
+    const remainingTask: TaskResponse = {
+      ...createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'Other own task'),
+      accessScope: 'own-time', capabilities: { canManageTasks: false },
+    };
+    client.listProjectTasks.mockResolvedValue([remainingTask]);
+    await Promise.all(userMutationInvalidationKeys.afterTimeEntryMutation(TEST_SCOPE)
+      .map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+    topBarTimer.closeDialog();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    expect(topBarTimer.taskOptions.value).toEqual([remainingTask]);
+    expect(topBarTimer.isDialogPrimaryActionDisabled.value).toBe(true);
   });
 });

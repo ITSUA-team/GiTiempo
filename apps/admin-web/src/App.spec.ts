@@ -148,25 +148,47 @@ describe("admin App", () => {
     expect(refreshAuthorizationContext).toHaveBeenCalledOnce();
   });
 
-  it("shows recoverable feedback when a focus refresh fails closed", async () => {
-    const { authStore, wrapper } = await mountAppAt("/reports", (store) => {
+  it("keeps the protected route after a failed focus refresh and recovers on retry", async () => {
+    const { authStore, router, wrapper } = await mountAppAt("/reports", (store) => {
       store.accessToken = "admin-access-token";
       store.bootstrapComplete = true;
       store.profile = createProfile("admin");
     });
-    vi.spyOn(authStore, "refreshAuthorizationContext").mockImplementation(async () => {
-      authStore.profile = null;
-      return true;
-    });
+    const replace = vi.spyOn(router, "replace");
+    const refreshAuthorizationContext = vi
+      .spyOn(authStore, "refreshAuthorizationContext")
+      .mockImplementationOnce(async () => {
+        authStore.profile = null;
+        return true;
+      })
+      .mockImplementationOnce(async () => {
+        authStore.profile = createProfile("admin");
+        return true;
+      });
 
-    window.dispatchEvent(new Event("focus"));
-    await vi.waitFor(() => expect(toastMocks.errorToast).toHaveBeenCalledOnce());
+    try {
+      window.dispatchEvent(new Event("focus"));
+      await vi.waitFor(() => expect(toastMocks.errorToast).toHaveBeenCalledOnce());
 
-    expect(toastMocks.errorToast).toHaveBeenCalledWith(
-      "Could not refresh your access. Please try again.",
-      expect.any(Object),
-    );
-    wrapper.unmount();
+      expect(toastMocks.errorToast).toHaveBeenCalledWith(
+        "Could not refresh your access. Please try again.",
+        expect.any(Object),
+      );
+      expect(replace).not.toHaveBeenCalled();
+      expect(router.currentRoute.value.path).toBe("/reports");
+
+      window.dispatchEvent(new Event("focus"));
+      await vi.waitFor(() => {
+        expect(refreshAuthorizationContext).toHaveBeenCalledTimes(2);
+        expect(authStore.profile?.role).toBe("admin");
+      });
+
+      expect(replace).not.toHaveBeenCalled();
+      expect(router.currentRoute.value.path).toBe("/reports");
+      expect(toastMocks.errorToast).toHaveBeenCalledOnce();
+    } finally {
+      wrapper.unmount();
+    }
   });
 
   it("leaves the protected route when focus refresh expires the session", async () => {

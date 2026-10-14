@@ -431,6 +431,43 @@ describe("TopBarTimerTaskDialog", () => {
     ]);
   });
 
+  it.each([false, true])("hides task creation without permission (mobile: %s)", async (isMobile) => {
+    mockMatchMedia(isMobile);
+    const wrapper = mountDialog({
+      projectOptions: [{
+        ...projectOrion,
+        accessScope: "own-time",
+        capabilities: { canManageTasks: false },
+      }],
+    });
+    const taskAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1]!;
+
+    expect(taskAutoComplete.props("suggestions")).toEqual([reportsTask]);
+    await taskAutoComplete.vm.$emit("complete", { query: "" });
+    await nextTick();
+    expect(taskAutoComplete.props("suggestions")).toEqual([reportsTask]);
+    expect(wrapper.text()).not.toContain("New task");
+    expect(findButtonByLabel(wrapper, "Start timer")?.attributes("disabled")).toBeUndefined();
+
+    await wrapper.setProps({ selectedTaskId: null, taskOptions: [] });
+    expect(wrapper.text()).not.toContain("New task");
+    expect(findButtonByLabel(wrapper, "Start timer")?.attributes("disabled")).toBeDefined();
+    wrapper.unmount();
+  });
+
+  it("removes a selected New task when project creation permission is revoked", async () => {
+    const wrapper = mountDialog({ selectedTaskId: TOP_BAR_TIMER_NEW_TASK_ID });
+
+    expect(wrapper.text()).toContain("New task title");
+    await wrapper.setProps({
+      projectOptions: [{ ...projectOrion, capabilities: { canManageTasks: false } }],
+    });
+
+    expect(wrapper.text()).not.toContain("New task");
+    expect(findButtonByLabel(wrapper, "Start timer")?.attributes("disabled")).toBeDefined();
+    wrapper.unmount();
+  });
+
   it("explains an empty GitHub project instead of offering New task", () => {
     const wrapper = mountDialog({
       githubProjectOptions: [{ id: "PVT_board", title: "Test project without repository" }],

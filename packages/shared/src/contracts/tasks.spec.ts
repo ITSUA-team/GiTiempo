@@ -61,6 +61,21 @@ describe('taskResponseSchema', () => {
     expect(result.accessScope).toBe('own-time');
     expect(result.capabilities).toEqual({ canManageTasks: false });
   });
+
+  it('rejects own-time tasks with task-management capability', () => {
+    const result = taskResponseSchema.safeParse({
+      ...baseTaskResponse,
+      accessScope: 'own-time',
+      githubIssue: null,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(
+      expect.objectContaining({
+        path: ['capabilities', 'canManageTasks'],
+      }),
+    );
+  });
 });
 
 describe('createTaskSchema', () => {

@@ -77,6 +77,7 @@ describe("user-web query keys", () => {
       "top-bar-timer",
       "project-task-options",
       "project-1",
+      null,
     ]);
     expect(userProjectsKeys.projectTasks(scope, "project-1")).toEqual([
       "user-web",
@@ -91,6 +92,9 @@ describe("user-web query keys", () => {
   it("separates project-task caches when the server narrows access", () => {
     expect(userProjectsKeys.projectTasks(scope, "project-1", "project")).not.toEqual(
       userProjectsKeys.projectTasks(scope, "project-1", "own-time"),
+    );
+    expect(timerKeys.projectTaskOptions(scope, "project-1", "project")).not.toEqual(
+      timerKeys.projectTaskOptions(scope, "project-1", "own-time"),
     );
   });
 

@@ -62,7 +62,8 @@ export function useTopBarTaskOptions({
   }
 
   function getTaskOptionsQueryKey(projectId: string): QueryKey {
-    return timerKeys.projectTaskOptions(scope.value, projectId);
+    const project = picker.projects.value.find((project) => project.id === projectId);
+    return timerKeys.projectTaskOptions(scope.value, projectId, project?.accessScope);
   }
 
   const fetchProjectGitHubIssuePage: ProjectGitHubIssuePageFetcher = (page) =>
@@ -113,7 +114,10 @@ export function useTopBarTaskOptions({
       for (const project of projects) {
         const previousProject = previousProjectsById.get(project.id);
 
-        if (previousProject && previousProject.source !== project.source) {
+        if (previousProject && (
+          previousProject.source !== project.source ||
+          previousProject.accessScope !== project.accessScope
+        )) {
           queryClient.removeQueries({
             queryKey: getTaskOptionsQueryKey(project.id),
           });
@@ -227,9 +231,10 @@ export function useTopBarTaskOptions({
     picker.setTasksError(null);
 
     try {
-      const hasProjectMetadata = picker.projects.value.some(
+      const project = picker.projects.value.find(
         (project) => project.id === projectId,
       );
+      const hasProjectMetadata = project !== undefined;
       const cachedTaskOptions = isQueryDataCurrent(
         getTaskOptionsQueryKey(projectId),
       )
@@ -243,7 +248,7 @@ export function useTopBarTaskOptions({
       }
 
       const localTaskQueryOptions = {
-        queryKey: userProjectsKeys.projectTasks(scope.value, projectId),
+        queryKey: userProjectsKeys.projectTasks(scope.value, projectId, project?.accessScope),
         queryFn: () => client.listProjectTasks(projectId),
       };
       const localTasks = isQueryDataCurrent(localTaskQueryOptions.queryKey)

@@ -143,6 +143,7 @@ export async function appendUnsyncedProjectGitHubIssueOptions<TTaskOption>(
 
   if (
     project === null ||
+    project.accessScope !== "project" ||
     (!input.hasKnownGitHubIssueSource &&
       !supportsProjectGitHubIssueSuggestions(project, input.localTasks))
   ) {

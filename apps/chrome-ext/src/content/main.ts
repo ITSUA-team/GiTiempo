@@ -90,7 +90,10 @@ function renderInjectedBody(
       && currentTimer.githubIssue.issueNumber === pageContext.issueNumber
     : false;
 
-  if ((state.actionErrorMessage || state.snapshot.errorMessage) && !isCurrentIssueTimer) {
+  // A workspace refresh can fail independently of the current-timer request.
+  // Do not replace an authoritative timer from another issue with a generic
+  // readiness error: that timer remains the only actionable state on this page.
+  if ((state.actionErrorMessage || state.snapshot.errorMessage) && !currentTimer) {
     return `
       <div>
         <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
@@ -148,6 +151,9 @@ function renderInjectedBody(
           <p class="m-0 text-sm font-semibold ${headlineTextClass}">Timer running elsewhere</p>
           <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(currentTimer.task.title)} · ${escapeHtml(currentTimer.project.name)}</p>
           <p class="m-0 text-xs ${mutedTextClass}">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
+          ${(state.actionErrorMessage || state.snapshot.errorMessage)
+            ? `<div class="flex items-center gap-3"><p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to update timer state.")}</p><button type="button" data-action="retry" class="${injectedTextActionClass}">Retry</button></div>`
+            : ""}
         </div>
         <button type="button" data-action="open-extension" class="bg-brand text-text-inverse ${injectedActionButtonClass}">Open extension</button>
       </div>

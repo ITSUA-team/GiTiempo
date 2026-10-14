@@ -29,6 +29,33 @@ export const projectMemberSchema = z.object({
   role: workspaceRoleSchema,
 });
 
+function addOwnTimeProjectResponseIssues(
+  data: {
+    accessScope: ProjectAccessScope;
+    capabilities: ProjectCapabilities;
+    members: ProjectMember[];
+  },
+  ctx: z.RefinementCtx,
+): void {
+  if (data.accessScope !== 'own-time') return;
+
+  if (data.capabilities.canManageTasks) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Own-time access cannot manage tasks',
+      path: ['capabilities', 'canManageTasks'],
+    });
+  }
+
+  if (data.members.length > 0) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Own-time access cannot include project members',
+      path: ['members'],
+    });
+  }
+}
+
 export const projectResponseSchema = z.object({
   id: z.uuid(),
   workspaceId: z.uuid(),
@@ -47,7 +74,7 @@ export const projectResponseSchema = z.object({
   isActive: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
-});
+}).superRefine(addOwnTimeProjectResponseIssues);
 
 export const projectListResponseSchema = z.array(projectResponseSchema);
 
@@ -75,6 +102,17 @@ export const projectDetailResponseSchema = projectResponseSchema.extend({
   providerSummary: projectProviderSummarySchema,
   trackedSummary: projectTrackedSummarySchema,
   assignedMembersSummary: projectAssignedMembersSummarySchema.nullable(),
+}).superRefine((data, ctx) => {
+  if (
+    data.accessScope === 'own-time' &&
+    data.assignedMembersSummary !== null
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Own-time access cannot include assigned member summaries',
+      path: ['assignedMembersSummary'],
+    });
+  }
 });
 
 export const managementProjectSummaryResponseSchema = z.object({

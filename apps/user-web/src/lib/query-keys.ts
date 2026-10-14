@@ -80,11 +80,13 @@ export const timerKeys = {
   projectTaskOptions: (
     scope: UserServerStateScope,
     projectId: string | null | undefined,
+    accessScope: "project" | "own-time" | null | undefined = null,
   ) =>
     [
       ...timerKeys.all(scope),
       "project-task-options",
       normalizeString(projectId),
+      accessScope,
     ] as const,
 };
 

@@ -388,6 +388,34 @@ describe("injected issue control", () => {
     expect(root.textContent).toContain("Project Orion");
   });
 
+  it("keeps an authoritative timer visible when workspace readiness fails", async () => {
+    const mounted = mountInjectedIssueControl(
+      document,
+      supportedContext(),
+      createRuntimeClient({
+        snapshot: {
+          authenticated: true,
+          currentTimer: otherIssueTimer(),
+          errorMessage: "Workspace context is temporarily unavailable.",
+          user: { displayName: "Alexey", email: "alexey@example.com" },
+          workspace: null,
+        },
+      }),
+    )!;
+
+    await mounted.load();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+
+    expect(root.textContent).toContain("Timer running elsewhere");
+    expect(root.textContent).toContain("Improve reports filters");
+    expect(root.textContent).toContain("Workspace context is temporarily unavailable.");
+    expect(root.querySelector('[data-action="open-extension"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="retry"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="stop-timer"]')).toBeNull();
+    expect(root.querySelector('[data-action="start-timer"]')).toBeNull();
+  });
+
   it("keeps the current timer non-destructive when github issue linkage is unavailable", async () => {
     const mounted = mountInjectedIssueControl(
       document,

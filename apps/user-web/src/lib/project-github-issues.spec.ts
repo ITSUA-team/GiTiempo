@@ -6,7 +6,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
-import { loadUnsyncedProjectGitHubIssues } from "./project-github-issues";
+import {
+  appendUnsyncedProjectGitHubIssueOptions,
+  loadUnsyncedProjectGitHubIssues,
+} from "./project-github-issues";
 
 const PROJECT_ID = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f900";
 
@@ -207,6 +210,71 @@ describe("loadUnsyncedProjectGitHubIssues", () => {
     expect(result).toEqual({
       errorMessage: "GitHub is temporarily unavailable",
       issues: [],
+    });
+  });
+});
+
+describe("appendUnsyncedProjectGitHubIssueOptions", () => {
+  it("loads suggestions from a known GitHub issue when full project metadata is stale", async () => {
+    const listProjectGitHubIssues = vi
+      .fn<TimeEntriesClient["listProjectGitHubIssues"]>()
+      .mockResolvedValue(createGitHubIssueResponse([createIssue(2)]));
+    const client = createClientMock(listProjectGitHubIssues);
+
+    const result = await appendUnsyncedProjectGitHubIssueOptions({
+      client,
+      hasKnownGitHubIssueSource: true,
+      localTaskOptions: [],
+      localTasks: [],
+      mapGitHubIssue: (issue) => ({ id: issue.issueTitle }),
+      project: {
+        accessScope: "project",
+        id: PROJECT_ID,
+        source: "manual",
+      },
+    });
+
+    expect(listProjectGitHubIssues).toHaveBeenCalledWith(PROJECT_ID, {
+      limit: 30,
+      state: "open",
+    });
+    expect(result).toEqual({
+      errorMessage: null,
+      taskOptions: [{ id: "Issue 2" }],
+    });
+  });
+
+  it("keeps saved GitHub tasks without fetching suggestions for an own-time project", async () => {
+    const listProjectGitHubIssues = vi
+      .fn<TimeEntriesClient["listProjectGitHubIssues"]>()
+      .mockResolvedValue(createGitHubIssueResponse([createIssue(2)]));
+    const client = createClientMock(listProjectGitHubIssues);
+    const savedTask = { id: "saved-github-task" };
+
+    const result = await appendUnsyncedProjectGitHubIssueOptions({
+      client,
+      hasKnownGitHubIssueSource: true,
+      localTaskOptions: [savedTask],
+      localTasks: [
+        {
+          githubIssue: {
+            githubRepo: "octo-org/repo-name",
+            issueNumber: 1,
+          },
+        },
+      ] as TaskResponse[],
+      mapGitHubIssue: (issue) => ({ id: issue.issueTitle }),
+      project: {
+        accessScope: "own-time",
+        id: PROJECT_ID,
+        source: "github",
+      },
+    });
+
+    expect(listProjectGitHubIssues).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      errorMessage: null,
+      taskOptions: [savedTask],
     });
   });
 });

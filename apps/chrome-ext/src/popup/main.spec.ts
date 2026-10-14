@@ -912,6 +912,35 @@ describe("popup app", () => {
     ).not.toBeNull();
   });
 
+  it("keeps a known running timer stoppable when workspace readiness fails", async () => {
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient: createRuntimeClient({
+        snapshot: {
+          authenticated: true,
+          currentTimer: currentTimer(),
+          errorMessage: "Workspace context is temporarily unavailable.",
+          user: { displayName: "Alexey Tsukanov", email: "alexey@example.com" },
+          workspace: null,
+        },
+      }),
+      pageContextResolver: async () => supportedContext(),
+    });
+
+    try {
+      await app.load();
+
+      expect(document.body.textContent).toContain("Stop Timer");
+      expect(document.body.textContent).toContain("Project Orion / octo/timer-repo");
+      expect(document.body.textContent).toContain(
+        "Workspace context is temporarily unavailable.",
+      );
+      expect(document.querySelector('[data-action="retry"]')).toBeNull();
+    } finally {
+      app.destroy();
+    }
+  });
+
   it("prefers the running timer repo over the active page repo", async () => {
     const runtimeClient = createRuntimeClient({
       snapshot: {
