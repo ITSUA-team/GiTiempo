@@ -354,7 +354,10 @@ export class InvoicesService {
     let monthQuery = this.db
       .select({
         invoiceCount: count(),
-        totalAmount: sql<number>`COALESCE(SUM(${invoices.totalAmount}), 0)`.mapWith(Number),
+        totalAmount:
+          sql<number>`COALESCE(SUM(${invoices.totalAmount}), 0)`.mapWith(
+            Number,
+          ),
       })
       .from(invoices)
       .leftJoin(projects, eq(projects.id, invoices.projectId));
@@ -374,7 +377,8 @@ export class InvoicesService {
     // Distinct project count for this month.
     let projectCountQuery = this.db
       .select({
-        projectCount: sql<number>`COUNT(DISTINCT ${invoices.projectId})`.mapWith(Number),
+        projectCount:
+          sql<number>`COUNT(DISTINCT ${invoices.projectId})`.mapWith(Number),
       })
       .from(invoices)
       .where(and(...monthConditions, isNotNull(invoices.projectId)));
@@ -382,7 +386,8 @@ export class InvoicesService {
     if (isPm) {
       projectCountQuery = this.db
         .select({
-          projectCount: sql<number>`COUNT(DISTINCT ${invoices.projectId})`.mapWith(Number),
+          projectCount:
+            sql<number>`COUNT(DISTINCT ${invoices.projectId})`.mapWith(Number),
         })
         .from(invoices)
         .leftJoin(projects, eq(projects.id, invoices.projectId))
@@ -878,6 +883,10 @@ export class InvoicesService {
    * discount basis points) so half-cent boundaries round half-up exactly;
    * binary floating point can represent e.g. 37.605 as 3760.4999… and round
    * it down to 37.60 instead of 37.61.
+   *
+   * The triple product (centihours × cents × discount-factor) can exceed
+   * Number.MAX_SAFE_INTEGER for large but allowed invoice totals; BigInt
+   * keeps the intermediate exact so the final cent value is never off by one.
    */
   private computeInvoiceTotals(
     totalSeconds: number,
@@ -891,9 +900,12 @@ export class InvoicesService {
 
     // totalAmount = (totalHoursCents/100) × (rateCents/100) ×
     //                (discountFactor/10_000)
-    //             = totalHoursCents × rateCents × discountFactor / 1e8
-    const amountCents = Math.round(
-      (totalHoursCents * rateCents * discountFactor) / 1_000_000,
+    //             = totalHoursCents × rateCents × discountFactor / 1_000_000
+    // BigInt half-up rounding: add half the divisor before integer division.
+    const amountCents = Number(
+      (BigInt(totalHoursCents) * BigInt(rateCents) * BigInt(discountFactor) +
+        500_000n) /
+        1_000_000n,
     );
 
     return {

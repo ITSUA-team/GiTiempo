@@ -537,6 +537,26 @@ describe('InvoicesService', () => {
     });
   });
 
+  it('preserves exact cents when the triple product exceeds MAX_SAFE_INTEGER', () => {
+    const { service } = createService('admin');
+    const compute = priv<
+      [number, number, number],
+      {
+        totalHours: number;
+        totalAmount: number;
+      }
+    >(service, 'computeInvoiceTotals');
+
+    // 360000036 s → 100000.01 centihours × $1000.01/hr × no discount.
+    // The intermediate product 10000001 × 100001 × 10000 = 10000101000010000
+    // exceeds Number.MAX_SAFE_INTEGER (9007199254740991). BigInt arithmetic
+    // keeps the intermediate exact: amountCents = 10000101000 → $100001010.00.
+    expect(compute(360000036, 1000.01, 0)).toEqual({
+      totalHours: 100000.01,
+      totalAmount: 100001010,
+    });
+  });
+
   // ── Response mapping ──────────────────────────────────────────────────
 
   it('maps an invoice row with linked entries to the response contract', () => {
