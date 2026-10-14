@@ -11,7 +11,7 @@ See `proposal.md` for motivation and `specs/` for the behavior contract.
 **Goals:**
 
 - Re-introduce the `invoices` table and `time_entries.invoice_id` FK with a forward migration matching the documented schema.
-- Implement the five documented invoice endpoints with Admin/PM authorization, PM assigned-project visibility, and Admin-only deletion.
+- Implement the seven documented invoice endpoints with Admin/PM authorization, PM assigned-project visibility, and Admin-only deletion, including an eligible-entry preview and a stats endpoint.
 - Make invoice creation atomic so a time entry can never be billed twice, even under concurrent requests.
 - Store invoice totals as snapshots that survive later rate and time-entry changes.
 - Add shared Zod contracts, regenerate OpenAPI, and cover authorization, validation, totals, eligibility, atomicity, and deletion unlinking with unit and e2e tests.
@@ -72,6 +72,9 @@ apps/api/src/invoices/
     invoice-list-query.dto.ts
     invoice-response.dto.ts
     invoice-list-response.dto.ts
+    eligible-entries-query.dto.ts
+    eligible-entries-response.dto.ts
+    invoice-stats-response.dto.ts
   schemas/invoices.schema.ts
   services/invoices.service.ts
   services/invoices.service.spec.ts
@@ -79,10 +82,18 @@ apps/api/src/invoices/
 
 `invoices.schema.ts` is re-exported from `src/db/schema.ts`. `time-entries.schema.ts` gains the `invoiceId` column and the partial index, re-exported through the existing barrel.
 
-### Planned files by area
+### 7. Eligible-entry preview reuses the create eligibility filter without writes
+
+`GET /invoices/eligible-entries` applies the same eligibility conditions as `createInvoice` (completed, billable, not running, not already invoiced, within the date range, optionally scoped to a project) but performs only a `SELECT` — no transaction, no invoice row, no `invoice_id` update. The response includes `userName` and `taskName` for each entry (joined from `users` and `tasks`) so the UI can display them without additional lookups. It also returns the workspace `defaultHourlyRate` and `defaultCurrency` so the create form can pre-fill them. PMs must scope the preview to a project they can see (assigned or public); admins can preview across the entire workspace or a specific project. `dateTo` before `dateFrom` is rejected with a validation error, mirroring the create contract.
+
+### 8. Stats endpoint aggregates by status and current calendar month
+
+`GET /invoices/stats` returns counts grouped by `draft`/`sent`/`paid` and a `thisMonth` summary (invoice count, distinct project count, total amount, workspace default currency). PM visibility mirrors the list scope: only invoices for active public projects or assigned private projects; workspace-wide invoices (null `projectId`) are excluded. The `thisMonth.totalAmount` sums all currencies without conversion — single-currency workspaces get accurate totals, multi-currency workspaces get an approximate sum. The workspace default currency is returned for display purposes.
+
+## Planned files by area
 
 - **API** — follow `apps/api/AGENTS.md`: `src/invoices/**`, `src/time-entries/schemas/time-entries.schema.ts` (add `invoiceId` + partial index), `src/db/schema.ts` (re-export invoice schema), `src/app.module.ts` (register module), new migration under `apps/api/drizzle`, `test/invoices.e2e-spec.ts`.
-- **Shared** — `packages/shared/src/contracts/invoices.ts`, `packages/shared/src/index.ts`, extended time-entry response contract, regenerated `packages/shared/openapi.json`, and a `packages/shared/src/contracts/invoices.spec.ts`.
+- **Shared** — `packages/shared/src/contracts/invoices.ts`, `packages/shared/src/index.ts`, extended time-entry response contract, regenerated `packages/shared/openapi.json`, and a `packages/shared/src/contracts/invoices.spec.ts` (includes eligible-entries query/response and stats response schema tests).
 - **Docs** — expand `docs/API-ENDPOINTS.md` Invoices section with request/response contracts and eligibility rules; keep `docs/DATA-MODEL.md` consistent (it already documents the target schema).
 
 ## Risks / Trade-offs

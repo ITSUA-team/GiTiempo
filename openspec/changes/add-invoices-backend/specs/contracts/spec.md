@@ -83,6 +83,47 @@ The shared contracts SHALL define stable invoice list and detail response shapes
 - **AND** includes snapshot `hourlyRate`, `currency`, `totalHours`, and `totalAmount`
 - **AND** includes the linked time entries as an array of summaries
 
+### Requirement: Shared Eligible Entries Query Contract
+
+The shared contracts SHALL define a validated eligible-entries query with a required date range and optional project id, rejecting any property outside the contract and any reversed date bounds.
+
+#### Scenario: Eligible entries query uses shared schema
+
+- **GIVEN** an admin or PM previews eligible entries
+- **WHEN** the query parameters are validated
+- **THEN** `dateFrom` and `dateTo` are required and `projectId` is optional
+- **AND** `dateTo` earlier than `dateFrom` is rejected
+
+#### Scenario: Unknown query property is rejected
+
+- **GIVEN** an eligible-entries query carries a property outside the contract
+- **WHEN** the shared schema validates the query
+- **THEN** the request is rejected
+
+### Requirement: Shared Eligible Entries Response Contract
+
+The shared contracts SHALL define a stable eligible-entries response shape that includes a count, computed total hours, an array of time-entry summaries with user and task names, and the workspace default hourly rate and currency.
+
+#### Scenario: Eligible entries response uses shared schema
+
+- **GIVEN** the backend returns eligible time entries
+- **WHEN** frontend code consumes the response
+- **THEN** the payload matches the shared eligible-entries response contract
+- **AND** includes `count`, `totalHours`, `entries`, `defaultHourlyRate`, and `defaultCurrency`
+- **AND** each entry includes `userName` and `taskName` for display
+
+### Requirement: Shared Invoice Stats Response Contract
+
+The shared contracts SHALL define a stable invoice stats response shape that includes counts grouped by status and a summary of invoices created in the current calendar month.
+
+#### Scenario: Stats response uses shared schema
+
+- **GIVEN** the backend returns invoice stats
+- **WHEN** frontend code consumes the response
+- **THEN** the payload matches the shared invoice stats response contract
+- **AND** includes `byStatus` with `draft`, `sent`, and `paid` counts
+- **AND** includes `thisMonth` with `invoiceCount`, `projectCount`, `totalAmount`, and `currency`
+
 ## MODIFIED Requirements
 
 ### Requirement: Shared Time Entry Response Contract

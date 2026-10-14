@@ -3657,6 +3657,100 @@
         ]
       }
     },
+    "/invoices/stats": {
+      "get": {
+        "operationId": "InvoicesController_getInvoiceStats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceStatsResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get invoice stats (counts by status, this month summary)",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/invoices/eligible-entries": {
+      "get": {
+        "operationId": "InvoicesController_previewEligibleEntries",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": true,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": true,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EligibleEntriesResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Preview eligible time entries for a potential invoice",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
     "/invoices/{id}": {
       "get": {
         "operationId": "InvoicesController_getInvoice",
@@ -8633,6 +8727,10 @@
                   "format": "uuid",
                   "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                 },
+                "createdByName": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "timeEntryCount": {
                   "type": "integer",
                   "minimum": 0,
@@ -8682,6 +8780,7 @@
                 "totalAmount",
                 "notes",
                 "createdBy",
+                "createdByName",
                 "timeEntryCount",
                 "project",
                 "createdAt",
@@ -8860,6 +8959,10 @@
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
+          "createdByName": {
+            "type": "string",
+            "nullable": true
+          },
           "timeEntryCount": {
             "type": "integer",
             "minimum": 0,
@@ -8884,6 +8987,14 @@
                   "type": "string",
                   "format": "uuid",
                   "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "userName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "taskName": {
+                  "type": "string",
+                  "nullable": true
                 },
                 "startedAt": {
                   "type": "string",
@@ -8912,6 +9023,8 @@
                 "id",
                 "taskId",
                 "userId",
+                "userName",
+                "taskName",
                 "startedAt",
                 "endedAt",
                 "durationSeconds",
@@ -8964,11 +9077,179 @@
           "totalAmount",
           "notes",
           "createdBy",
+          "createdByName",
           "timeEntryCount",
           "timeEntries",
           "project",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "InvoiceStatsResponseDto": {
+        "type": "object",
+        "properties": {
+          "byStatus": {
+            "type": "object",
+            "properties": {
+              "draft": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "sent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "paid": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "draft",
+              "sent",
+              "paid"
+            ]
+          },
+          "thisMonth": {
+            "type": "object",
+            "properties": {
+              "invoiceCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "projectCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "totalAmount": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 9999999999.99,
+                "multipleOf": 0.01
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3,
+                "pattern": "^[A-Za-z]{3}$"
+              }
+            },
+            "required": [
+              "invoiceCount",
+              "projectCount",
+              "totalAmount",
+              "currency"
+            ]
+          }
+        },
+        "required": [
+          "byStatus",
+          "thisMonth"
+        ]
+      },
+      "EligibleEntriesResponseDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "totalHours": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 99999999.99,
+            "multipleOf": 0.01
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "taskId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "userId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "userName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "taskName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "startedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "endedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "durationSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "isBillable": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "taskId",
+                "userId",
+                "userName",
+                "taskName",
+                "startedAt",
+                "endedAt",
+                "durationSeconds",
+                "isBillable",
+                "description"
+              ]
+            }
+          },
+          "defaultHourlyRate": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true
+          },
+          "defaultCurrency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "pattern": "^[A-Za-z]{3}$",
+            "nullable": true
+          }
+        },
+        "required": [
+          "count",
+          "totalHours",
+          "entries",
+          "defaultHourlyRate",
+          "defaultCurrency"
         ]
       },
       "UpdateInvoiceRequestDto": {

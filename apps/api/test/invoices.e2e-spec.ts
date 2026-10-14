@@ -1562,4 +1562,260 @@ describe('Invoices (e2e)', () => {
     expect(loser.totalHours).toBe(0);
     expect(loser.totalAmount).toBe(0);
   });
+
+  // ── Eligible entries preview ──────────────────────────────────────────
+
+  it('rejects member on eligible-entries preview', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/invoices/eligible-entries')
+      .set('Authorization', bearer(memberToken))
+      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects PM eligible-entries preview without a projectId', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/invoices/eligible-entries')
+      .set('Authorization', bearer(pmToken))
+      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects PM eligible-entries preview for an unassigned private project', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/invoices/eligible-entries')
+      .set('Authorization', bearer(pmToken))
+      .query({
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        projectId: probeProjectId,
+      });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects reversed date bounds on eligible-entries', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/invoices/eligible-entries')
+      .set('Authorization', bearer(adminToken))
+      .query({ dateFrom: DATE_TO, dateTo: DATE_FROM });
+    expect(res.status).toBe(400);
+  });
+
+  it('admin previews eligible entries across a date range', async () => {
+    const entry1 = '00000000-0000-4000-8000-200000000001';
+    const entry2 = '00000000-0000-4000-8000-200000000002';
+    await db.insert(timeEntries).values([
+      {
+        id: entry1,
+        workspaceId,
+        taskId: PLATFORM_API_TASK_ID,
+        userId: bobUserId,
+        source: 'manual',
+        startedAt: new Date('2027-06-10T09:00:00.000Z'),
+        endedAt: new Date('2027-06-10T11:00:00.000Z'),
+        durationSeconds: 7200,
+        isBillable: true,
+      },
+      {
+        id: entry2,
+        workspaceId,
+        taskId: PLATFORM_API_TASK_ID,
+        userId: bobUserId,
+        source: 'manual',
+        startedAt: new Date('2027-06-11T14:00:00.000Z'),
+        endedAt: new Date('2027-06-11T15:30:00.000Z'),
+        durationSeconds: 5400,
+        isBillable: true,
+      },
+    ]);
+
+    const res = await request(app.getHttpServer())
+      .get('/invoices/eligible-entries')
+      .set('Authorization', bearer(adminToken))
+      .query({ dateFrom: DATE_FROM, dateTo: DATE_TO });
+
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBeGreaterThanOrEqual(2);
+    expect(res.body.totalHours).toBeGreaterThan(0);
+
+    const ids = res.body.entries.map((e: { id: string }) => e.id);
+    expect(ids).toContain(entry1);
+    expect(ids).toContain(entry2);
+
+    for (const entry of res.body.entries) {
+      expect(entry.userName).not.toBeNull();
+      expect(entry.taskName).not.toBeNull();
+    }
+
+    expect(res.body.defaultHourlyRate).not.toBeNull();
+    expect(res.body.defaultCurrency).not.toBeNull();
+
+    await db.delete(timeEntries).where(eq(timeEntries.id, entry1));
+    await db.delete(timeEntries).where(eq(timeEntries.id, entry2));
+  });
+
+  it('admin previews eligible entries scoped to a project', async () => {
+    const entry = '00000000-0000-4000-8000-200000000003';
+    await db.insert(timeEntries).values({
+      id: entry,
+      workspaceId,
+      taskId: probeTaskId,
+      userId: bobUserId,
+      source: 'manual',
+      startedAt: new Date('2027-06-15T10:00:00.000Z'),
+      endedAt: new Date('2027-06-15T11:00:00.000Z'),
+      durationSeconds: 3600,
+      isBillable: true,
+    });
+
+    const res = await request(app.getHttpServer())
+      .get('/invoices/eligible-entries')
+      .set('Authorization', bearer(adminToken))
+      .query({
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        projectId: probeProjectId,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBeGreaterThanOrEqual(1);
+    const ids = res.body.entries.map((e: { id: string }) => e.id);
+    expect(ids).toContain(entry);
+
+    await db.delete(timeEntries).where(eq(timeEntries.id, entry));
+  });
+
+  it('no eligible entries returns an empty result', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/invoices/eligible-entries')
+      .set('Authorization', bearer(adminToken))
+      .query({ dateFrom: '2099-12-01', dateTo: '2099-12-02' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBe(0);
+    expect(res.body.totalHours).toBe(0);
+    expect(res.body.entries).toEqual([]);
+  });
+
+  it('preview does not modify data', async () => {
+    const entry = '00000000-0000-4000-8000-200000000004';
+    await db.insert(timeEntries).values({
+      id: entry,
+      workspaceId,
+      taskId: PLATFORM_API_TASK_ID,
+      userId: bobUserId,
+      source: 'manual',
+      startedAt: new Date('2027-06-20T10:00:00.000Z'),
+      endedAt: new Date('2027-06-20T11:00:00.000Z'),
+      durationSeconds: 3600,
+      isBillable: true,
+    });
+
+    const listBefore = await request(app.getHttpServer())
+      .get('/invoices')
+      .set('Authorization', bearer(adminToken));
+    const beforeTotal = listBefore.body.meta.total;
+
+    const res = await request(app.getHttpServer())
+      .get('/invoices/eligible-entries')
+      .set('Authorization', bearer(adminToken))
+      .query({
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        projectId: PLATFORM_PROJECT_ID,
+      });
+
+    expect(res.status).toBe(200);
+
+    const listAfter = await request(app.getHttpServer())
+      .get('/invoices')
+      .set('Authorization', bearer(adminToken));
+    expect(listAfter.body.meta.total).toBe(beforeTotal);
+
+    const [row] = await db
+      .select({ invoiceId: timeEntries.invoiceId })
+      .from(timeEntries)
+      .where(eq(timeEntries.id, entry))
+      .limit(1);
+    expect(row?.invoiceId).toBeNull();
+
+    await db.delete(timeEntries).where(eq(timeEntries.id, entry));
+  });
+
+  // ── Stats ─────────────────────────────────────────────────────────────
+
+  it('rejects member on invoice stats', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/invoices/stats')
+      .set('Authorization', bearer(memberToken));
+    expect(res.status).toBe(403);
+  });
+
+  it('admin retrieves workspace-wide stats', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/invoices/stats')
+      .set('Authorization', bearer(adminToken));
+
+    expect(res.status).toBe(200);
+    expect(res.body.byStatus).toBeDefined();
+    expect(typeof res.body.byStatus.draft).toBe('number');
+    expect(typeof res.body.byStatus.sent).toBe('number');
+    expect(typeof res.body.byStatus.paid).toBe('number');
+    expect(res.body.thisMonth).toBeDefined();
+    expect(typeof res.body.thisMonth.invoiceCount).toBe('number');
+    expect(typeof res.body.thisMonth.projectCount).toBe('number');
+    expect(typeof res.body.thisMonth.totalAmount).toBe('number');
+    expect(typeof res.body.thisMonth.currency).toBe('string');
+
+    const total =
+      res.body.byStatus.draft + res.body.byStatus.sent + res.body.byStatus.paid;
+    expect(total).toBeGreaterThan(0);
+  });
+
+  it('PM stats exclude workspace-wide invoices', async () => {
+    const pmBefore = await request(app.getHttpServer())
+      .get('/invoices/stats')
+      .set('Authorization', bearer(pmToken));
+    expect(pmBefore.status).toBe(200);
+    const pmBeforeTotal =
+      pmBefore.body.byStatus.draft +
+      pmBefore.body.byStatus.sent +
+      pmBefore.body.byStatus.paid;
+
+    const createRes = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Stats Workspace-wide Probe',
+        dateFrom: '2099-11-01',
+        dateTo: '2099-11-30',
+        hourlyRate: 10,
+      });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.projectId).toBeNull();
+
+    const adminAfter = await request(app.getHttpServer())
+      .get('/invoices/stats')
+      .set('Authorization', bearer(adminToken));
+    expect(adminAfter.status).toBe(200);
+    const adminAfterTotal =
+      adminAfter.body.byStatus.draft +
+      adminAfter.body.byStatus.sent +
+      adminAfter.body.byStatus.paid;
+    expect(adminAfterTotal).toBeGreaterThanOrEqual(1);
+
+    const pmAfter = await request(app.getHttpServer())
+      .get('/invoices/stats')
+      .set('Authorization', bearer(pmToken));
+    expect(pmAfter.status).toBe(200);
+    const pmAfterTotal =
+      pmAfter.body.byStatus.draft +
+      pmAfter.body.byStatus.sent +
+      pmAfter.body.byStatus.paid;
+    expect(pmAfterTotal).toBe(pmBeforeTotal);
+
+    await request(app.getHttpServer())
+      .delete(`/invoices/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken));
+  });
 });

@@ -349,14 +349,25 @@ export class InvoicesService {
       gte(invoices.createdAt, monthStart),
     ];
 
-    const [monthRow] = await this.db
+    let monthQuery = this.db
       .select({
         invoiceCount: count(),
         totalAmount: sql<number>`COALESCE(SUM(${invoices.totalAmount}), 0)`,
       })
       .from(invoices)
-      .leftJoin(projects, eq(projects.id, invoices.projectId))
-      .where(and(...monthConditions));
+      .leftJoin(projects, eq(projects.id, invoices.projectId));
+
+    if (isPm) {
+      monthQuery = monthQuery.leftJoin(
+        projectAssignments,
+        and(
+          eq(projectAssignments.projectId, invoices.projectId),
+          eq(projectAssignments.userId, user.sub),
+        ),
+      );
+    }
+
+    const [monthRow] = await monthQuery.where(and(...monthConditions));
 
     // Distinct project count for this month.
     let projectCountQuery = this.db
@@ -399,7 +410,7 @@ export class InvoicesService {
       byStatus,
       thisMonth: {
         invoiceCount: monthRow?.invoiceCount ?? 0,
-        projectCount: projRow?.projectCount ?? 0,
+        projectCount: Number(projRow?.projectCount ?? 0),
         totalAmount: Number(monthRow?.totalAmount ?? 0),
         currency,
       },
