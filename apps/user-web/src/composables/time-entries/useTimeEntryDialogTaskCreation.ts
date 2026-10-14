@@ -41,6 +41,13 @@ export function useTimeEntryDialogTaskCreation({
     scope,
   });
 
+  function canManageProjectTasks(projectId: string): boolean {
+    return visibleProjects.value.some(
+      (project) =>
+        project.id === projectId && project.capabilities.canManageTasks,
+    );
+  }
+
   function getProjectDefaultBillable(projectId: string | null): boolean {
     return (
       visibleProjects.value.find((project) => project.id === projectId)
@@ -54,6 +61,13 @@ export function useTimeEntryDialogTaskCreation({
     const projectId = dialog.dialogProjectId.value;
 
     if (!projectId) {
+      return null;
+    }
+
+    if (!canManageProjectTasks(projectId)) {
+      dialog.setNewTaskTitleError(
+        "You do not have permission to create tasks in this project.",
+      );
       return null;
     }
 
@@ -75,6 +89,17 @@ export function useTimeEntryDialogTaskCreation({
         input: parsedTaskInput.data,
         projectId,
       });
+
+      if (
+        dialog.dialogProjectId.value !== projectId ||
+        !canManageProjectTasks(projectId)
+      ) {
+        dialog.setRequestError(
+          "The project or your access changed before the task was ready. The time entry was not saved; the task may already have been created.",
+        );
+        return null;
+      }
+
       const options = taskOptions.upsertProjectTask(task, { trackableOnly: true });
       const taskOption = toTaskLookupOption(task);
 

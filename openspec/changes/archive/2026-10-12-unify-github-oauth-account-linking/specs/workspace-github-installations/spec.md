@@ -1,3 +1,11 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: Installation Links Require Verified Administrator Authority`
+- TO: `### Requirement: Installation Links Require Verified Workspace and GitHub App Authority`
+
+- FROM: `### Requirement: Setup Failures Distinguish Installation Access From Owner Authority`
+- TO: `### Requirement: Setup Failures Distinguish OAuth Organization Access From Installation Verification`
+
 ## MODIFIED Requirements
 
 ### Requirement: Installation Links Require Verified Workspace and GitHub App Authority
@@ -101,3 +109,28 @@ Admin Settings SHALL show `Install App` beside `Remove` only after installation 
 - **WHEN** they click `Install App`
 - **THEN** Settings reports targeted OAuth organization-access guidance without navigating to GitHub or activating an association
 - **AND** it MUST NOT require or suggest personal GitHub App authorization as a substitute
+
+### Requirement: Setup Failures Distinguish OAuth Organization Access From Installation Verification
+Setup SHALL distinguish OAuth organization-access recovery from GitHub App installation-verification failures. Missing usable OAuth read:org authorization SHALL return HTTP 409 with `Authorize GitHub organization access to set up the App`. Inactive or mismatched organization membership SHALL return HTTP 403 with `The selected organization is not an active organization for this GitHub account`. An installation belonging to a different selected organization SHALL return HTTP 403 with `GitHub installation does not belong to the selected organization`. Invalid App/installation context, missing installation permissions, or failed restricted-token minting MUST prevent activation or replacement of an association. Safe recovery MUST NOT require personal GitHub App authorization or organization-owner role, disclose credentials, or be presented as a tracking-member prerequisite.
+
+#### Scenario: OAuth organization authorization is unavailable
+- **GIVEN** the administrator has no usable OAuth read:org grant
+- **WHEN** setup resolves the selected organization
+- **THEN** it returns the HTTP 409 OAuth organization-access guidance without activating or replacing an association
+- **AND** the administrator can authorize OAuth access and retry with fresh setup state
+
+#### Scenario: Selected organization membership is not active
+- **GIVEN** OAuth organization lookup succeeds but active membership or the expected organization login does not match
+- **WHEN** setup resolves the organization
+- **THEN** it returns the HTTP 403 active-organization error without creating or replacing an association
+
+#### Scenario: Installation organization identity does not match
+- **GIVEN** the supplied installation belongs to a different organization than the selected OAuth-verified organization
+- **WHEN** completion verifies the App installation
+- **THEN** it returns the HTTP 403 selected-organization error without activating or replacing an association
+
+#### Scenario: App verification failure retains safe recovery boundaries
+- **GIVEN** installation context, permissions or restricted-token minting cannot be verified
+- **WHEN** setup or completion fails
+- **THEN** it returns a safe installation-verification failure without activating or replacing an association
+- **AND** it does not suggest personal App authorization or organization-owner role as a substitute for required verification

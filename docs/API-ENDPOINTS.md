@@ -161,8 +161,10 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | PATCH  | `/time-entries/:id`                     | JWT  | Any  | Update own time entry (task, description, times, billable)                                         |
 | DELETE | `/time-entries/:id`                     | JWT  | Any  | Delete own time entry                                                                              |
 | GET    | `/time-entries/current`                 | JWT  | Any  | Get the authenticated user's currently running timer across workspaces, if any                      |
+| POST   | `/time-entries/timer/capability`        | JWT  | Any  | Read-only tracking preflight for canonical GitHub issue context; returns scope or a safe denial reason |
 | POST   | `/time-entries/timer/start`             | JWT  | Any  | Start timer against an existing task                                                               |
-| POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Start timer from GitHub issue — auto-creates project and task if needed (used by Chrome extension) |
+| POST   | `/time-entries/timer/start-from-github-reference` | JWT | Any | Start from strict browser issue context; managed delegation or atomic external reference recording |
+| POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Legacy managed GitHub start; requires verified workspace installation and existing authorized managed mapping |
 | POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop the authenticated user's running timer across workspaces; supports conditional identity checks |
 
 **GET /time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `projectId?`, `taskId?`, `search?`
@@ -186,10 +188,20 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 **POST /time-entries/timer/start** body: `{ taskId: string, description?: string | null }`
 **POST /time-entries/timer/start-from-github** body: `{ githubRepo: "org/repo", issueNumber: number, githubProjectId?: string }`
+**POST /time-entries/timer/start-from-github-reference** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string, issueUrl: "https://github.com/org/repo/issues/123" }`
+
+**POST /time-entries/timer/capability** accepts the same strict issue-context body and returns `{ canStartTracking: boolean, accessScope: "project" | "own-time" | null, reason: string | null }`. Allowed results have a null reason; denied results have a safe reason and null scope. The read-only preflight creates no projects, tasks, references, or entries and returns no protected mapping metadata. External reference tracking remains available to active workspace members without GitHub setup. Managed targets retain their authorization and installation checks. The extension refreshes this issue-bound capability before enabling Start; the start endpoint independently rechecks authorization at the write boundary.
+
+- This strict request rejects unknown fields, unsafe/non-positive numbers, missing/overlong/control-character titles and nonmatching URLs. It accepts canonical direct HTTPS `github.com` URLs only; no queries/fragments, board URLs, credentials, port, or caller-supplied authority. Session workspace and fresh active membership determine the destination.
+- Existing issue identity wins over repository identity. Managed mappings delegate to installation-backed authorization with no fallback after denial. Legacy `/start-from-github` rejects external mappings before provider access.
+- Missing/external mappings atomically create/reuse a private external project and exact issue task, preserving IDs/title/state/defaults/history. Context is user-supplied, no GitHub request or provider verification occurs, and no GitHub link, customer App approval, assignment or admin toggle is required. Failed/conflicting starts roll back materialization.
+- Project responses include `trackingMode`, nullable `referenceProvenance`, `accessScope: project | own-time`, and `capabilities.canManageTasks`; task responses include scope/capability. Own-time reads expose only exact tasks with owned entries and personal completed totals/activity, `members: []`, `assignedMembersSummary: null`, and no memberCount. Running entries grant visibility with zero completed duration. Management/report/export eligibility is separate.
+- Manual entry creation/moves and saved external starts require current exact-task access. Last own entry deletion/move removes derived visibility; a fresh reference start can restore it. Shared task/project/billing/assignment mutations are denied for own-time-only access.
+
 
 - `GET /time-entries/current` returns `{ timeEntry: TimeEntryResponse | null }`. It is user-global: it returns the caller's own running timer even when the entry belongs to a different workspace than the active JWT workspace claim.
 - `/time-entries/timer/start` requires `taskId` to reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`.
-- For a saved task linked to a GitHub issue, an ordinary member must be explicitly assigned to its GiTiempo project, including public projects. This applies whether their personal GitHub account is connected, disconnected, absent, or expired. Missing assignment to a public project returns `403` with code `project_assignment_required` and message `You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.` An invisible private target remains `404` without protected details.
+- For a saved managed task linked to a GitHub issue, an ordinary member must be explicitly assigned to its GiTiempo project, including public projects. This applies whether their personal GitHub account is connected, disconnected, absent, or expired. Missing assignment to a public project returns `403` with code `project_assignment_required` and message `You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.` An invisible private target remains `404` without protected details.
 - Assigned members can start saved GitHub tasks after personal disconnect. GitHub issue assignee status grants no GiTiempo project access. Administrators retain implicit project access; PMs retain visibility-based access. Eligible manual tasks, including those in GitHub-backed public projects, retain existing access rules. This start-specific rule does not change completed manual entries, historical edits, or running-task reassignment.
 - `/time-entries/timer/start` remains scoped to the active JWT workspace through task visibility. If the user already has any running timer in any workspace, it rejects with `409 Conflict` and leaves the existing running timer unchanged.
 - `/time-entries/timer/start-from-github` creates or reuses the local GitHub issue mapping, but an existing closed mapped task is rejected with `422 Unprocessable Entity` and no running entry is created.
@@ -203,7 +215,7 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 | Method | Path                         | Auth | Role | Description                                                                                                                                               |
 | ------ | ---------------------------- | ---- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/projects/:id/time-entries` | JWT  | Any  | List all time entries for a visible project, with optional task-title search. Private projects require assignment for non-admin users. Members remain read-only for other users' entries. |
+| GET    | `/projects/:id/time-entries` | JWT  | Any  | List entries within the resolved project scope, with optional task-title search. Own-time external access returns owned entries and totals only; explicit project access retains established team reads. |
 
 ---
 

@@ -29,6 +29,7 @@ type TaskAutoCompleteValue = string | TaskLookupOption | null;
 
 const props = defineProps<{
   dialogErrorMessage: string | null;
+  canCreateTask: boolean;
   endedAt: Date | null;
   errors: {
     description: string | null;
@@ -40,6 +41,7 @@ const props = defineProps<{
   };
   isLoadingProjects: boolean;
   isLoadingTasks: boolean;
+  isReconcilingTarget?: boolean;
   isDeleting: boolean;
   isOpen: boolean;
   isSaving: boolean;
@@ -118,7 +120,7 @@ const newTaskTitleModel = computed({
 
 const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
 const isNewTaskSelected = computed(() =>
-  isNewTaskLookupOption(props.taskValue),
+  props.canCreateTask && isNewTaskLookupOption(props.taskValue),
 );
 const selectedProjectName = computed(() => selectedProject.value?.name ?? null);
 const newTaskHint = computed(() => {
@@ -330,7 +332,9 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           v-else
           class="text-text-muted text-xs"
         >
-          Visible tasks are listed first. New task is the last option.
+          {{ props.canCreateTask
+            ? "Visible tasks are listed first. New task is the last option."
+            : "Visible tasks are listed first." }}
         </small>
 
         <div
@@ -480,8 +484,8 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
         <Button
           type="button"
           :label="props.saveLabel"
-          :disabled="props.isDeleting"
-          :loading="props.isSaving"
+          :disabled="props.isDeleting || props.isReconcilingTarget"
+          :loading="props.isSaving || props.isReconcilingTarget"
           @click="emit('save')"
         />
       </DialogFooterActionGroups>

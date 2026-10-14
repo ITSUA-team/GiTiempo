@@ -3,6 +3,7 @@ import { deriveProfileInitials } from "@gitiempo/shared";
 import { getExtensionConfig } from "@/lib/config";
 import { escapeHtml } from "@/lib/html";
 import type { PageContext, SupportedGitHubIssueContext } from "@/lib/github-context";
+import { getCurrentTrackingCapability } from "@/lib/runtime";
 import type { RuntimeSnapshot, SnapshotUser } from "@/lib/runtime";
 import { formatElapsedTime } from "@/lib/time";
 
@@ -220,6 +221,8 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
     (state.errorMessage || state.snapshot.errorMessage || state.pageContext?.kind === "error") &&
     !state.snapshot.currentTimer
   ) {
+    const isPageContextError =
+      !state.errorMessage && !state.snapshot.errorMessage && state.pageContext?.kind === "error";
     const message =
       state.errorMessage ??
       state.snapshot.errorMessage ??
@@ -228,11 +231,12 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
     return `
       <div class="flex h-full flex-col gap-6">
         ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state) : "", state.isAccountMenuOpen)}
+        <p data-testid="workspace-context" class="m-0 text-xs text-text-muted">${escapeHtml(state.snapshot.workspace?.name ?? "Checking workspace…")}</p>
         <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
           <div class="bg-status-error-bg text-status-error-text flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
-          <p class="m-0 text-lg font-semibold text-text-dark">Connection lost</p>
+          <p class="m-0 text-lg font-semibold text-text-dark">${isPageContextError ? "Unable to read issue" : "Connection lost"}</p>
           <p class="m-0 max-w-[220px] text-sm text-text-muted">${escapeHtml(message)}</p>
-          <button data-action="retry" class="${popupTextActionClass}">Retry connection</button>
+          <button data-action="retry" class="${popupTextActionClass}">${isPageContextError ? "Retry" : "Retry connection"}</button>
         </div>
       </div>
     `;
@@ -247,6 +251,7 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
     return `
       <div class="flex h-full flex-col gap-5">
         ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state) : "", state.isAccountMenuOpen)}
+        <p data-testid="workspace-context" class="m-0 text-xs text-text-muted">${escapeHtml(state.snapshot.workspace?.name ?? "Checking workspace…")}</p>
         <div class="bg-app-bg flex flex-col items-center gap-3 rounded-lg p-5 text-center">
           <div class="bg-status-active-bg text-status-active-text flex items-center rounded-sm px-3 py-1 text-xs font-semibold">Running timer</div>
           <p data-elapsed class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
@@ -257,19 +262,30 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
             : ""}
         </div>
         <div class="mt-auto flex flex-col gap-3">
-          <button data-action="stop-timer" class="bg-destructive text-text-inverse w-full rounded-sm px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Stop Timer</button>
+          <button data-action="stop-timer" ${state.isSubmitting ? "disabled" : ""} class="bg-destructive text-text-inverse w-full rounded-sm px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Stop Timer</button>
         </div>
       </div>
     `;
   }
 
   if (state.pageContext?.kind === "supported") {
+    const trackingCapability = getCurrentTrackingCapability(
+      state.snapshot,
+      state.pageContext,
+    );
+    const canStartTracking = trackingCapability?.canStartTracking === true;
+    const trackingMessage = trackingCapability?.reason ??
+      "Unable to confirm whether you can track this issue.";
+
     return `
       <div class="flex h-full flex-col gap-5">
         ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state) : "", state.isAccountMenuOpen)}
+        <p data-testid="workspace-context" class="m-0 text-xs text-text-muted">${escapeHtml(state.snapshot.workspace?.name ?? "Checking workspace…")}</p>
         ${renderIssueCard(state.pageContext)}
+        ${canStartTracking ? "" : `<p class="m-0 text-sm text-text-muted">${escapeHtml(trackingMessage)}</p>`}
         <div class="mt-auto flex flex-col gap-3">
-          <button data-action="start-timer" class="${popupPrimaryButtonClass}">Start Timer</button>
+          <button data-action="start-timer" class="${popupPrimaryButtonClass}" ${state.isSubmitting || !state.snapshot.workspace || !canStartTracking ? "disabled" : ""}>Start Timer</button>
+          ${canStartTracking ? "" : `<button data-action="retry" class="${popupTextActionClass}">Retry</button>`}
         </div>
       </div>
     `;
@@ -278,6 +294,7 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
   return `
     <div class="flex h-full flex-col gap-5">
       ${renderBrandHeader({ authenticated: true, user: state.snapshot.user }, state.isAccountMenuOpen ? renderAccountMenu(state) : "", state.isAccountMenuOpen)}
+        <p data-testid="workspace-context" class="m-0 text-xs text-text-muted">${escapeHtml(state.snapshot.workspace?.name ?? "Checking workspace…")}</p>
       <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
         <p class="m-0 text-xs font-medium text-text-muted">GitHub issue required</p>
         <p class="m-0 text-lg font-semibold text-text-dark">Open a supported GitHub issue to start a timer.</p>

@@ -1,8 +1,8 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import { syncedGitHubIssueSchema } from "./github.js";
+import { syncedGitHubIssueSchema } from './github.js';
 
-export const timeEntrySourceSchema = z.enum(["web", "extension", "manual"]);
+export const timeEntrySourceSchema = z.enum(['web', 'extension', 'manual']);
 
 const dateTimeSchema = z.iso.datetime();
 
@@ -10,7 +10,7 @@ const optionalSearchSchema = z
   .string()
   .trim()
   .max(200)
-  .transform((value) => (value === "" ? undefined : value))
+  .transform((value) => (value === '' ? undefined : value))
   .optional();
 
 const timeEntryProjectSummarySchema = z.object({
@@ -89,8 +89,8 @@ export const timeEntryListQuerySchema = z
       data.dateTo === undefined ||
       new Date(data.dateTo).getTime() > new Date(data.dateFrom).getTime(),
     {
-      message: "dateTo must be later than dateFrom",
-      path: ["dateTo"],
+      message: 'dateTo must be later than dateFrom',
+      path: ['dateTo'],
     },
   );
 
@@ -114,16 +114,16 @@ function hasPositiveManualTimeEntryDuration(data: {
 export const createManualTimeEntrySchema = manualTimeEntryInputBaseSchema
   .strict()
   .refine(hasPositiveManualTimeEntryDuration, {
-    message: "endedAt must be later than startedAt",
-    path: ["endedAt"],
+    message: 'endedAt must be later than startedAt',
+    path: ['endedAt'],
   });
 
 export const createManualTimeEntryDraftSchema = manualTimeEntryInputBaseSchema
   .omit({ taskId: true })
   .strict()
   .refine(hasPositiveManualTimeEntryDuration, {
-    message: "endedAt must be later than startedAt",
-    path: ["endedAt"],
+    message: 'endedAt must be later than startedAt',
+    path: ['endedAt'],
   });
 
 export const updateTimeEntrySchema = z
@@ -143,7 +143,7 @@ export const updateTimeEntrySchema = z
       data.description !== undefined ||
       data.isBillable !== undefined,
     {
-      message: "At least one field must be provided",
+      message: 'At least one field must be provided',
       path: [],
     },
   )
@@ -153,8 +153,8 @@ export const updateTimeEntrySchema = z
       data.endedAt === undefined ||
       new Date(data.endedAt).getTime() > new Date(data.startedAt).getTime(),
     {
-      message: "endedAt must be later than startedAt",
-      path: ["endedAt"],
+      message: 'endedAt must be later than startedAt',
+      path: ['endedAt'],
     },
   );
 
@@ -178,6 +178,30 @@ export const conditionalStopTimerSchema = z
   })
   .strict();
 
+export const githubReferenceIssueTitleMaxLength = 500;
+
+const plainIssueTitleSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(githubReferenceIssueTitleMaxLength)
+  .refine(
+    (value) =>
+      [...value].every((character) => {
+        const codePoint = character.charCodeAt(0);
+        return codePoint >= 0x20 && codePoint !== 0x7f;
+      }),
+    {
+      message: 'issueTitle must be plain text',
+    },
+  );
+
+const safePositiveIssueNumberSchema = z
+  .number()
+  .int()
+  .positive()
+  .max(Number.MAX_SAFE_INTEGER);
+
 export const startTimerFromGitHubSchema = z
   .object({
     githubProjectId: z.string().min(1).max(255).optional(),
@@ -190,11 +214,61 @@ export const startTimerFromGitHubSchema = z
   })
   .strict();
 
+/**
+ * Validates page context for an external reference start. The URL must already
+ * be the canonical direct issue URL; callers cannot submit a board URL, query/
+ * hash, or an authority claim for the server to trust.
+ */
+export const startTimerFromGitHubReferenceSchema = z
+  .object({
+    githubRepo: z
+      .string()
+      .min(3)
+      .max(200)
+      .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
+    issueNumber: safePositiveIssueNumberSchema,
+    issueTitle: plainIssueTitleSchema,
+    issueUrl: z.string().url(),
+  })
+  .strict()
+  .superRefine((input, ctx) => {
+    const expectedUrl = `https://github.com/${input.githubRepo}/issues/${input.issueNumber}`;
+    if (input.issueUrl !== expectedUrl) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'issueUrl must be the canonical URL for githubRepo and issueNumber',
+        path: ['issueUrl'],
+      });
+    }
+  });
+
+export const trackingCapabilityResponseSchema = z
+  .object({
+    canStartTracking: z.boolean(),
+    accessScope: z.enum(['project', 'own-time']).nullable(),
+    reason: z.string().trim().min(1).max(500).nullable(),
+  })
+  .strict()
+  .superRefine((response, ctx) => {
+    if (response.canStartTracking) {
+      if (response.accessScope !== null && response.reason === null) return;
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Allowed tracking requires an access scope and no reason',
+      });
+      return;
+    }
+    if (response.accessScope === null && response.reason !== null) return;
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Denied tracking requires a reason and no access scope',
+    });
+  });
+
 export type TimeEntrySource = z.infer<typeof timeEntrySourceSchema>;
 export type TimeEntryResponse = z.infer<typeof timeEntryResponseSchema>;
-export type TimeEntryListResponse = z.infer<
-  typeof timeEntryListResponseSchema
->;
+export type TimeEntryListResponse = z.infer<typeof timeEntryListResponseSchema>;
 export type CurrentTimeEntryResponse = z.infer<
   typeof currentTimeEntryResponseSchema
 >;
@@ -208,7 +282,23 @@ export type CreateManualTimeEntryDraftInput = z.infer<
 export type UpdateTimeEntryInput = z.infer<typeof updateTimeEntrySchema>;
 export type StartTimerInput = z.infer<typeof startTimerSchema>;
 export type StopTimerInput = z.infer<typeof stopTimerSchema>;
-export type ConditionalStopTimerInput = z.infer<typeof conditionalStopTimerSchema>;
+export type ConditionalStopTimerInput = z.infer<
+  typeof conditionalStopTimerSchema
+>;
 export type StartTimerFromGitHubInput = z.infer<
   typeof startTimerFromGitHubSchema
 >;
+export type StartTimerFromGitHubReferenceInput = z.infer<
+  typeof startTimerFromGitHubReferenceSchema
+>;
+export type TrackingCapabilityResponse =
+  | {
+      canStartTracking: true;
+      accessScope: 'project' | 'own-time';
+      reason: null;
+    }
+  | {
+      canStartTracking: false;
+      accessScope: null;
+      reason: string;
+    };

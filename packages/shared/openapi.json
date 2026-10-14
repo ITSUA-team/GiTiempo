@@ -2983,6 +2983,91 @@
         ]
       }
     },
+    "/time-entries/timer/start-from-github-reference": {
+      "post": {
+        "description": "Records validated browser issue context without GitHub API access for external-reference projects. Existing managed projects use the installation-verified route.",
+        "operationId": "TimeEntriesController_startTimerFromGitHubReference",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartTimerFromGitHubReferenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeEntryResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or task not available"
+          },
+          "409": {
+            "description": "Timer already running"
+          },
+          "422": {
+            "description": "Project or task inactive"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Start timer from an external GitHub issue reference",
+        "tags": [
+          "time-entries"
+        ]
+      }
+    },
+    "/time-entries/timer/capability": {
+      "post": {
+        "description": "Checks the current workspace authorization without creating or changing a project, task, reference, or time entry.",
+        "operationId": "TimeEntriesController_getTrackingCapability",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartTimerFromGitHubReferenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingCapabilityResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get tracking capability for an external GitHub issue reference",
+        "tags": [
+          "time-entries"
+        ]
+      }
+    },
     "/time-entries/timer/stop": {
       "post": {
         "operationId": "TimeEntriesController_stopTimer",
@@ -5367,6 +5452,39 @@
               "github"
             ]
           },
+          "trackingMode": {
+            "type": "string",
+            "enum": [
+              "managed",
+              "external-reference"
+            ]
+          },
+          "referenceProvenance": {
+            "type": "string",
+            "enum": [
+              "provider-verified",
+              "user-supplied"
+            ],
+            "nullable": true
+          },
+          "accessScope": {
+            "type": "string",
+            "enum": [
+              "project",
+              "own-time"
+            ]
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "canManageTasks": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "canManageTasks"
+            ]
+          },
           "totalSeconds": {
             "type": "integer",
             "minimum": 0,
@@ -5436,6 +5554,10 @@
           "visibility",
           "defaultBillableForTasks",
           "source",
+          "trackingMode",
+          "referenceProvenance",
+          "accessScope",
+          "capabilities",
           "totalSeconds",
           "members",
           "isActive",
@@ -5565,6 +5687,39 @@
             "enum": [
               "manual",
               "github"
+            ]
+          },
+          "trackingMode": {
+            "type": "string",
+            "enum": [
+              "managed",
+              "external-reference"
+            ]
+          },
+          "referenceProvenance": {
+            "type": "string",
+            "enum": [
+              "provider-verified",
+              "user-supplied"
+            ],
+            "nullable": true
+          },
+          "accessScope": {
+            "type": "string",
+            "enum": [
+              "project",
+              "own-time"
+            ]
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "canManageTasks": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "canManageTasks"
             ]
           },
           "totalSeconds": {
@@ -5749,7 +5904,8 @@
               "count",
               "previewMembers",
               "remainingCount"
-            ]
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -5761,6 +5917,10 @@
           "visibility",
           "defaultBillableForTasks",
           "source",
+          "trackingMode",
+          "referenceProvenance",
+          "accessScope",
+          "capabilities",
           "totalSeconds",
           "members",
           "isActive",
@@ -6210,6 +6370,24 @@
           "isActive": {
             "type": "boolean"
           },
+          "accessScope": {
+            "type": "string",
+            "enum": [
+              "project",
+              "own-time"
+            ]
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "canManageTasks": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "canManageTasks"
+            ]
+          },
           "githubIssue": {
             "type": "object",
             "properties": {
@@ -6250,6 +6428,8 @@
           "status",
           "defaultBillableForTimeEntries",
           "isActive",
+          "accessScope",
+          "capabilities",
           "githubIssue",
           "createdAt",
           "updatedAt"
@@ -7081,6 +7261,66 @@
         "required": [
           "githubRepo",
           "issueNumber"
+        ],
+        "additionalProperties": false
+      },
+      "StartTimerFromGitHubReferenceDto": {
+        "type": "object",
+        "properties": {
+          "githubRepo": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$"
+          },
+          "issueNumber": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "issueTitle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "issueUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "githubRepo",
+          "issueNumber",
+          "issueTitle",
+          "issueUrl"
+        ],
+        "additionalProperties": false
+      },
+      "TrackingCapabilityResponseDto": {
+        "type": "object",
+        "properties": {
+          "canStartTracking": {
+            "type": "boolean"
+          },
+          "accessScope": {
+            "type": "string",
+            "enum": [
+              "project",
+              "own-time"
+            ],
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "canStartTracking",
+          "accessScope",
+          "reason"
         ],
         "additionalProperties": false
       },

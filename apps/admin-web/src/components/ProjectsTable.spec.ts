@@ -80,6 +80,8 @@ function mockMatchMedia(matches = false): void {
 function createProjects(): ProjectListResponse {
   return [
     {
+      accessScope: 'project',
+      capabilities: { canManageTasks: true },
       color: null,
       createdAt: '2026-05-01T10:00:00.000Z',
       defaultBillableForTasks: true,
@@ -89,12 +91,16 @@ function createProjects(): ProjectListResponse {
       members: [],
       name: 'Project Orion',
       source: 'github',
+      referenceProvenance: null,
+      trackingMode: 'managed',
       totalSeconds: 532800,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'public',
       workspaceId: 'workspace-1',
     },
     {
+      accessScope: 'project',
+      capabilities: { canManageTasks: true },
       color: null,
       createdAt: '2026-05-01T10:00:00.000Z',
       defaultBillableForTasks: true,
@@ -104,6 +110,8 @@ function createProjects(): ProjectListResponse {
       members: [],
       name: 'Legacy Project',
       source: 'manual',
+      referenceProvenance: null,
+      trackingMode: 'managed',
       totalSeconds: 14400,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'private',
@@ -118,6 +126,7 @@ function createRows(projects = createProjects()): ProjectsTableRow[] {
     hoursLabel: `${project.totalSeconds / 3600}h`,
     id: project.id,
     isActive: project.isActive,
+      isExternal: project.trackingMode === 'external-reference',
     name: project.name,
     nameClass: 'text-brand',
     project,

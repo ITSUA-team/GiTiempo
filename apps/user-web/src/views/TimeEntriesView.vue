@@ -177,7 +177,9 @@ const {
 } = display;
 const {
   handleDialogTaskSearch,
+  canCreateDialogTask,
   isDeletingDialogEntry,
+  isReconcilingDialogTarget,
   isSavingDialogFlow,
   openCreateDialog,
   openEditDialog,
@@ -352,6 +354,7 @@ onMounted(async () => {
     </template>
 
     <TimeEntryDialog
+      :can-create-task="canCreateDialogTask"
       :dialog-error-message="dialogRequestErrorMessage"
       :ended-at="dialogEndedAt"
       :errors="dialogErrors"
@@ -359,6 +362,7 @@ onMounted(async () => {
       :is-loading-projects="isLoadingProjects"
       :is-loading-tasks="isLoadingDialogTasks"
       :is-open="isDialogOpen"
+      :is-reconciling-target="isReconcilingDialogTarget"
       :is-saving="isSavingDialogFlow"
       :mode="dialogMode"
       :new-task-title="dialogNewTaskTitle"

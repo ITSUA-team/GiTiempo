@@ -77,14 +77,25 @@ describe("user-web query keys", () => {
       "top-bar-timer",
       "project-task-options",
       "project-1",
+      null,
     ]);
-    expect(userProjectsKeys.projectTasks(scope, "project-1")).toEqual([
+    expect(userProjectsKeys.projectTasks(scope, "project-1", null)).toEqual([
       "user-web",
       { userId: "user-1", workspaceId: "workspace-1" },
       "projects",
       "project-tasks",
       "project-1",
+      null,
     ]);
+  });
+
+  it("separates project-task caches when the server narrows access", () => {
+    expect(userProjectsKeys.projectTasks(scope, "project-1", "project")).not.toEqual(
+      userProjectsKeys.projectTasks(scope, "project-1", "own-time"),
+    );
+    expect(timerKeys.projectTaskOptions(scope, "project-1", "project")).not.toEqual(
+      timerKeys.projectTaskOptions(scope, "project-1", "own-time"),
+    );
   });
 
   it("keeps all-page time-entry keys separate from paginated list keys", () => {
@@ -115,10 +126,10 @@ describe("user-web query keys", () => {
     expect(userMutationInvalidationKeys.afterTimeEntryMutation(scope)).toEqual([
       timeEntriesKeys.all(scope),
       timerKeys.all(scope),
+      userProjectsKeys.all(scope),
     ]);
     expect(userMutationInvalidationKeys.afterTaskMutation(scope, "project-1")).toEqual([
       userProjectsKeys.all(scope),
-      userProjectsKeys.projectTasks(scope, "project-1"),
       timerKeys.all(scope),
     ]);
   });

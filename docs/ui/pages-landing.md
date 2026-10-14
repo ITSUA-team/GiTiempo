@@ -36,7 +36,7 @@
 
 - The page must identify the data controller and provide a monitored privacy contact email from `PUBLIC_PRIVACY_CONTROLLER_NAME` and `PUBLIC_PRIVACY_CONTACT_EMAIL`. These build-time values are mandatory; do not replace them with example addresses or product-name guesses.
 - Cover account/profile and time records; Google/email-password authentication through Firebase and GitHub sign-in; GiTiempo tokens in `chrome.storage.local`, Firebase authentication in extension-local IndexedDB, and the token-free pending-provider-cleanup flag. Successful sign-out clears both authentication stores; incomplete cleanup exposes `Retry sign-out` after reopening.
-- Distinguish locally read GitHub URL/title from the repository name and issue number in a timer-start request, followed by server retrieval of issue information from GitHub. Describe authorized workspace access. Logout/uninstall does not delete server records, stop a running timer, or end other app/provider website sessions.
+- Disclose transmission of repository name, issue number, bounded issue-specific title and canonical direct issue URL. Distinguish managed starts that retrieve and verify GitHub metadata from external-reference starts that record user-supplied context without GitHub API calls. Describe own-time visibility and separate authorized workspace access. Logout/uninstall does not delete server records, stop a running timer, or end other app/provider website sessions.
 - State service purposes, recipients, retention, security limitations, rights/contact-based deletion requests, and policy revisions. Limited Use covers all extension user data, including GitHub-derived data. Separate reported infrastructure facts from confirmed organizational practices in `docs/chrome-web-store-privacy.md`. Distinguish monitoring-log retention from host logs, token validity from stored-record retention, and contact-based requests from an implemented deletion procedure. Do not claim verified SCC coverage, uniform log deletion, or account-deletion guarantees without operator evidence. Include operational notification recipients when they may receive user data; unresolved publication facts remain release gates.
 - Disclose optional, consent-gated homepage GA4: page views with sanitized title/location/campaign fields, fixed CTA metadata, analytics cookies and local consent storage, homepage settings, best-effort cookie cleanup, and no retroactive deletion after withdrawal. Do not guarantee anonymity or imply extension analytics. Consume `add-landing-ga4-analytics` without changing its runtime or marking its external Tag Assistant/DebugView verification complete.
 - The compact header links back to `/`; it does not reuse the home-page in-page navigation or app-entry CTAs. Its footer uses the dark landing treatment and marks `Privacy Policy` as the current page.
@@ -113,11 +113,11 @@ No. Create local projects and tasks, then connect GitHub only when synced issue 
 
 ### Can I start timers from GitHub?
 
-Yes. After signing in to the Chrome extension, supported GitHub issue pages can start a timer with repository and issue context attached.
+Yes. After signing in to the Chrome extension, supported GitHub issue pages can start a timer with repository and issue context attached. External reference tracking works without a personal GitHub connection, customer App installation, or administrator enablement; existing managed workspaces keep their configured access checks.
 
 ### Who can review tracked time?
 
-Members manage their own entries. Project managers and admins review time according to their workspace role and project visibility.
+Members manage their own entries. Project managers and admins review time according to their workspace role and project visibility. On an external reference that a member can see only through their own entry, that member sees only their own time and tasks with their own entries.
 
 ### Where do reports and invoice records fit?
 

@@ -22,6 +22,8 @@ function setMatchMedia(matches: boolean): void {
 
 function createProject(): ProjectResponse {
   return {
+    accessScope: 'project',
+    capabilities: { canManageTasks: true },
     id: 'project-1',
     workspaceId: 'workspace-1',
     name: 'Project Orion',
@@ -30,6 +32,8 @@ function createProject(): ProjectResponse {
     visibility: 'public',
     defaultBillableForTasks: true,
     source: 'manual',
+    referenceProvenance: null,
+    trackingMode: 'managed',
     totalSeconds: 0,
     members: [],
     isActive: true,
@@ -40,6 +44,8 @@ function createProject(): ProjectResponse {
 
 function createTask(): TaskResponse {
   return {
+    accessScope: 'project',
+    capabilities: { canManageTasks: true },
     id: 'task-1',
     githubIssue: null,
     workspaceId: 'workspace-1',

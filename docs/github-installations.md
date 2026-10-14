@@ -1,6 +1,8 @@
 # Workspace GitHub App Installations
 
-Timer starts from GitHub issue identifiers use a verified GitHub App installation associated with the workspace. This is separate from a member's personal GitHub connection: personal connection supports browsing and import, while an installation authorizes server-side issue verification for those starts. Starting an already saved local task uses its stored GitHub linkage and current GiTiempo project authorization.
+Managed timer starts from GitHub issue identifiers use a verified GitHub App installation associated with the workspace. This is separate from a member's personal GitHub connection: personal connection supports browsing and import, while an installation authorizes server-side issue verification for managed starts. Starting an already saved local task uses its stored GitHub linkage and current GiTiempo project authorization.
+
+External-reference starts are separate. They are enabled by default for authenticated workspace members and use browser-provided repository, issue number, title, and canonical URL without GitHub API access, a personal GitHub link, organization allow-list entry, or App installation. If the workspace already has a managed mapping, the server preserves the managed route and its denial; it never falls back to external recording.
 
 ## Administrator setup
 
@@ -37,7 +39,9 @@ Monitor failed webhook delivery and reverify requests. Do not manually mark an i
 
 ## Start-time enforcement and recovery
 
-Each `start-from-github` request rechecks the installation, allowed organization, repository access, canonical GitHub identifiers, existing project mapping, and the member's project access. The server may materialize the issue as a task only inside that existing mapped project. It never auto-creates a project or assignment.
+Each managed `start-from-github` request rechecks the installation, allowed organization, repository access, canonical GitHub identifiers, existing project mapping, and the member's project access. The server may materialize the issue as a task only inside that existing mapped project. It never auto-creates a project or assignment.
+
+The reference-start endpoint instead resolves shared repository/issue identity locally under namespace locks. When neither a managed nor external mapping exists, the first successful start atomically creates a private `external-reference` project, a user-supplied repository/issue reference, its task, and the caller's time entry. It does not create an assignment. Later members reuse those records; absent an existing project grant they receive only own-time reads. Imports and board association cannot take over an external mapping.
 
 For `POST /time-entries/timer/start`, a saved task's own GitHub issue reference requires an ordinary member to have an explicit assignment to its GiTiempo project, even when the project is public or mapped only to a GitHub board. Personal connection state and GitHub issue assignee status do not affect this check: an assigned member may start after disconnect, and a connected unassigned member is denied. Public-project denial returns `403 project_assignment_required`; an invisible private target returns `404`. Administrators retain implicit access and PMs retain visibility-based access. Manual tasks retain their existing rules, including in GitHub-backed public projects. Completed manual entries, historical edits, running-task reassignment, and stopping an owned timer are unchanged.
 

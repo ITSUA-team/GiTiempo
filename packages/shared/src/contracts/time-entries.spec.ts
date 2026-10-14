@@ -1,92 +1,94 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
 import {
   createManualTimeEntryDraftSchema,
   createManualTimeEntrySchema,
   conditionalStopTimerSchema,
   startTimerSchema,
+  startTimerFromGitHubReferenceSchema,
   stopTimerSchema,
+  trackingCapabilityResponseSchema,
   timeEntryResponseSchema,
   updateTimeEntrySchema,
-} from "./time-entries.js";
+} from './time-entries.js';
 
-describe("timeEntryResponseSchema", () => {
-  it("accepts stable github issue linkage on time entry responses", () => {
+describe('timeEntryResponseSchema', () => {
+  it('accepts stable github issue linkage on time entry responses', () => {
     const result = timeEntryResponseSchema.parse({
-      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
-      workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-      userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
-      startedAt: "2026-04-21T09:00:00.000Z",
+      id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002',
+      workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
+      projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f',
+      userId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003',
+      startedAt: '2026-04-21T09:00:00.000Z',
       endedAt: null,
       durationSeconds: null,
       description: null,
       isBillable: true,
-      source: "extension",
-      createdAt: "2026-04-21T09:00:00.000Z",
-      updatedAt: "2026-04-21T09:00:00.000Z",
+      source: 'extension',
+      createdAt: '2026-04-21T09:00:00.000Z',
+      updatedAt: '2026-04-21T09:00:00.000Z',
       project: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-        name: "octo/repo",
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f',
+        name: 'octo/repo',
       },
       task: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-        title: "Improve reports filters",
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
+        title: 'Improve reports filters',
       },
       workspace: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
-        name: "Workspace Alpha",
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
+        name: 'Workspace Alpha',
       },
       user: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
-        email: "alexey@example.com",
-        displayName: "Alexey Tsukanov",
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003',
+        email: 'alexey@example.com',
+        displayName: 'Alexey Tsukanov',
         avatarUrl: null,
       },
       githubIssue: {
-        githubRepo: "octo/repo",
+        githubRepo: 'octo/repo',
         issueNumber: 184,
       },
     });
 
     expect(result.githubIssue).toEqual({
-      githubRepo: "octo/repo",
+      githubRepo: 'octo/repo',
       issueNumber: 184,
     });
   });
 
-  it("allows github issue linkage to be null", () => {
+  it('allows github issue linkage to be null', () => {
     const result = timeEntryResponseSchema.parse({
-      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
-      workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-      userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
-      startedAt: "2026-04-21T09:00:00.000Z",
+      id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002',
+      workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
+      projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f',
+      userId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003',
+      startedAt: '2026-04-21T09:00:00.000Z',
       endedAt: null,
       durationSeconds: null,
       description: null,
       isBillable: true,
-      source: "web",
-      createdAt: "2026-04-21T09:00:00.000Z",
-      updatedAt: "2026-04-21T09:00:00.000Z",
+      source: 'web',
+      createdAt: '2026-04-21T09:00:00.000Z',
+      updatedAt: '2026-04-21T09:00:00.000Z',
       project: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-        name: "Project Orion",
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f',
+        name: 'Project Orion',
       },
       task: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-        title: "Improve reports filters",
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
+        title: 'Improve reports filters',
       },
       workspace: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
-        name: "Workspace Alpha",
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
+        name: 'Workspace Alpha',
       },
       user: {
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
-        email: "alexey@example.com",
-        displayName: "Alexey Tsukanov",
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003',
+        email: 'alexey@example.com',
+        displayName: 'Alexey Tsukanov',
         avatarUrl: null,
       },
       githubIssue: null,
@@ -96,57 +98,57 @@ describe("timeEntryResponseSchema", () => {
   });
 });
 
-describe("updateTimeEntrySchema", () => {
-  it("accepts task reassignment by task id", () => {
+describe('updateTimeEntrySchema', () => {
+  it('accepts task reassignment by task id', () => {
     const result = updateTimeEntrySchema.parse({
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
     });
 
-    expect(result.taskId).toBe("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001");
+    expect(result.taskId).toBe('018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001');
   });
 
-  it("rejects invalid task ids", () => {
-    const result = updateTimeEntrySchema.safeParse({ taskId: "not-a-uuid" });
+  it('rejects invalid task ids', () => {
+    const result = updateTimeEntrySchema.safeParse({ taskId: 'not-a-uuid' });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(["taskId"]);
+    expect(result.error?.issues[0]?.path).toEqual(['taskId']);
   });
 
-  it("rejects embedded task or project objects", () => {
+  it('rejects embedded task or project objects', () => {
     const result = updateTimeEntrySchema.safeParse({
-      task: { id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001" },
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      task: { id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001' },
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+    expect(result.error?.issues[0]?.message).toContain('Unrecognized key');
   });
 
-  it("rejects unknown fields", () => {
+  it('rejects unknown fields', () => {
     const result = updateTimeEntrySchema.safeParse({
-      description: "Updated",
+      description: 'Updated',
       unknown: true,
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+    expect(result.error?.issues[0]?.message).toContain('Unrecognized key');
   });
 });
 
-describe("createManualTimeEntrySchema", () => {
+describe('createManualTimeEntrySchema', () => {
   const validManualEntry = {
-    endedAt: "2026-04-21T10:00:00.000Z",
-    startedAt: "2026-04-21T09:00:00.000Z",
-    taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    endedAt: '2026-04-21T10:00:00.000Z',
+    startedAt: '2026-04-21T09:00:00.000Z',
+    taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
   };
 
-  it("accepts manual create payloads without isBillable", () => {
+  it('accepts manual create payloads without isBillable', () => {
     const result = createManualTimeEntrySchema.parse(validManualEntry);
 
     expect(result.isBillable).toBeUndefined();
   });
 
-  it("accepts manual create payloads with isBillable override", () => {
+  it('accepts manual create payloads with isBillable override', () => {
     const result = createManualTimeEntrySchema.parse({
       ...validManualEntry,
       isBillable: false,
@@ -156,114 +158,199 @@ describe("createManualTimeEntrySchema", () => {
   });
 });
 
-describe("createManualTimeEntryDraftSchema", () => {
+describe('createManualTimeEntryDraftSchema', () => {
   const validManualEntryDraft = {
-    endedAt: "2026-04-21T10:00:00.000Z",
-    startedAt: "2026-04-21T09:00:00.000Z",
+    endedAt: '2026-04-21T10:00:00.000Z',
+    startedAt: '2026-04-21T09:00:00.000Z',
   };
 
-  it("accepts manual create draft values before a task id exists", () => {
-    const result = createManualTimeEntryDraftSchema.parse(validManualEntryDraft);
+  it('accepts manual create draft values before a task id exists', () => {
+    const result = createManualTimeEntryDraftSchema.parse(
+      validManualEntryDraft,
+    );
 
     expect(result).toEqual(validManualEntryDraft);
   });
 
-  it("rejects task id placeholders on draft values", () => {
+  it('rejects task id placeholders on draft values', () => {
     const result = createManualTimeEntryDraftSchema.safeParse({
       ...validManualEntryDraft,
-      taskId: "selected-project",
+      taskId: 'selected-project',
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+    expect(result.error?.issues[0]?.message).toContain('Unrecognized key');
   });
 });
 
-describe("startTimerSchema", () => {
-  it("accepts start payloads without a description", () => {
+describe('startTimerSchema', () => {
+  it('accepts start payloads without a description', () => {
     const result = startTimerSchema.parse({
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
     });
 
     expect(result).toEqual({
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
     });
   });
 
-  it("accepts a string description", () => {
+  it('accepts a string description', () => {
     const result = startTimerSchema.parse({
-      description: "Investigate release blocker",
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      description: 'Investigate release blocker',
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
     });
 
-    expect(result.description).toBe("Investigate release blocker");
+    expect(result.description).toBe('Investigate release blocker');
   });
 
-  it("accepts a null description", () => {
+  it('accepts a null description', () => {
     const result = startTimerSchema.parse({
       description: null,
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
     });
 
     expect(result.description).toBeNull();
   });
 
-  it("rejects unknown fields", () => {
+  it('rejects unknown fields', () => {
     const result = startTimerSchema.safeParse({
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
       unknown: true,
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+    expect(result.error?.issues[0]?.message).toContain('Unrecognized key');
   });
 
-  it("rejects billable overrides", () => {
+  it('rejects billable overrides', () => {
     const result = startTimerSchema.safeParse({
       isBillable: true,
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+    expect(result.error?.issues[0]?.message).toContain('Unrecognized key');
   });
 
-  it("rejects descriptions over the contract limit", () => {
+  it('rejects descriptions over the contract limit', () => {
     const result = startTimerSchema.safeParse({
-      description: "x".repeat(2001),
-      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      description: 'x'.repeat(2001),
+      taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(["description"]);
+    expect(result.error?.issues[0]?.path).toEqual(['description']);
   });
 });
 
-describe("stopTimerSchema", () => {
-  it("accepts the authoritative timer identity", () => {
+describe('startTimerFromGitHubReferenceSchema', () => {
+  const validReference = {
+    githubRepo: 'octo/repo',
+    issueNumber: 184,
+    issueTitle: 'Improve reports filters',
+    issueUrl: 'https://github.com/octo/repo/issues/184',
+  };
+
+  it('accepts a canonical direct GitHub issue reference', () => {
+    expect(startTimerFromGitHubReferenceSchema.parse(validReference)).toEqual(
+      validReference,
+    );
+  });
+
+  it.each([
+    { ...validReference, issueNumber: 0 },
+    { ...validReference, issueNumber: Number.MAX_SAFE_INTEGER + 1 },
+    { ...validReference, issueTitle: 'Issue\nname' },
+    { ...validReference, issueTitle: 'x'.repeat(501) },
+    { ...validReference, issueUrl: 'http://github.com/octo/repo/issues/184' },
+    { ...validReference, issueUrl: 'https://github.com/octo/repo/issues/185' },
+    {
+      ...validReference,
+      issueUrl: 'https://github.com/octo/repo/issues/184?pane=issue',
+    },
+    { ...validReference, issueUrl: 'https://github.com/orgs/octo/projects/1' },
+  ])('rejects an unsafe or noncanonical reference', (input) => {
+    expect(startTimerFromGitHubReferenceSchema.safeParse(input).success).toBe(
+      false,
+    );
+  });
+
+  it.each([
+    'workspaceId',
+    'userId',
+    'trackingMode',
+    'verified',
+    'githubProjectId',
+  ])('rejects caller-controlled %s', (field) => {
+    expect(
+      startTimerFromGitHubReferenceSchema.safeParse({
+        ...validReference,
+        [field]: 'forged',
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('trackingCapabilityResponseSchema', () => {
+  it.each([
+    {
+      canStartTracking: true,
+      accessScope: 'project',
+      reason: null,
+    },
+    {
+      canStartTracking: true,
+      accessScope: 'own-time',
+      reason: null,
+    },
+    {
+      canStartTracking: false,
+      accessScope: null,
+      reason: 'Tracking is not available for this issue.',
+    },
+  ])('accepts a valid capability snapshot', (response) => {
+    expect(trackingCapabilityResponseSchema.parse(response)).toEqual(response);
+  });
+
+  it.each([
+    { canStartTracking: true, accessScope: null, reason: null },
+    { canStartTracking: true, accessScope: 'project', reason: 'Denied' },
+    { canStartTracking: false, accessScope: 'project', reason: 'Denied' },
+    { canStartTracking: false, accessScope: null, reason: null },
+  ])('rejects inconsistent capability states', (response) => {
+    expect(trackingCapabilityResponseSchema.safeParse(response).success).toBe(
+      false,
+    );
+  });
+});
+
+describe('stopTimerSchema', () => {
+  it('accepts the authoritative timer identity', () => {
     expect(
       stopTimerSchema.parse({
-        expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        expectedTimerId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002',
       }),
     ).toEqual({
-      expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      expectedTimerId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002',
     });
   });
 
-  it("accepts targetless legacy stop requests but rejects malformed identities", () => {
+  it('accepts targetless legacy stop requests but rejects malformed identities', () => {
     expect(stopTimerSchema.parse({})).toEqual({});
     expect(stopTimerSchema.parse(undefined)).toEqual({});
-    expect(stopTimerSchema.safeParse({ expectedTimerId: "not-a-uuid" }).success).toBe(false);
+    expect(
+      stopTimerSchema.safeParse({ expectedTimerId: 'not-a-uuid' }).success,
+    ).toBe(false);
   });
 
-  it("requires the authoritative identity for current clients", () => {
+  it('requires the authoritative identity for current clients', () => {
     expect(conditionalStopTimerSchema.safeParse({}).success).toBe(false);
     expect(
       conditionalStopTimerSchema.parse({
-        expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        expectedTimerId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002',
       }),
     ).toEqual({
-      expectedTimerId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      expectedTimerId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002',
     });
   });
 });

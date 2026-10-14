@@ -1,7 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { readonly, shallowRef } from "vue";
+import { nextTick, readonly, shallowRef } from "vue";
 import type {
   ProjectResponse,
   TaskResponse,
@@ -11,6 +11,9 @@ import type {
 import { ApiError } from "@gitiempo/web-shared/http";
 
 import { INPUT_DEBOUNCE_MS } from "@gitiempo/web-shared";
+import {
+  userProjectsKeys,
+} from "@/lib/query-keys";
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
 import { TIME_ENTRY_NEW_TASK_ID } from "@/composables/time-entries/time-entry-task-lookup";
 import { topBarTimerDialogControllerKey } from "@/composables/timer/useTopBarTimerDialogController";
@@ -83,6 +86,8 @@ afterAll(() => {
 
 function createProject(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
   return {
+    accessScope: "project",
+    capabilities: { canManageTasks: true },
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
     defaultBillableForTasks: true,
@@ -92,6 +97,8 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
     members: [],
     name: "Project Orion",
     source: "manual",
+    referenceProvenance: null,
+    trackingMode: "managed",
     totalSeconds: 43200,
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
@@ -102,6 +109,8 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
 
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
   return {
+    accessScope: "project",
+    capabilities: { canManageTasks: true },
     createdAt: "2026-04-20T12:00:00.000Z",
     defaultBillableForTimeEntries: true,
     githubIssue: null,
@@ -496,6 +505,7 @@ async function mountView(
             "errors",
             "isDeleting",
             "isOpen",
+            "isReconcilingTarget",
             "isSaving",
             "newTaskTitle",
             "startedAt",
@@ -553,12 +563,13 @@ async function mountView(
                 title: 'New task'
               })">New task</button>
               <button data-testid="dialog-new-task-title" type="button" @click="$emit('update:newTaskTitle', 'Write release checklist')">New task title</button>
+              <button data-testid="dialog-close" type="button" @click="$emit('close')">Close</button>
               <button data-testid="dialog-description" type="button" @click="$emit('update:description', 'Manual cleanup')">Description</button>
               <button data-testid="dialog-started" type="button" @click="$emit('update:startedAt', new Date('2026-04-21T09:15:00.000Z'))">Started</button>
               <button data-testid="dialog-ended" type="button" @click="$emit('update:endedAt', new Date('2026-04-21T10:45:00.000Z'))">Ended</button>
               <button data-testid="dialog-billable" type="button" @click="$emit('update:isBillable', true)">Billable</button>
               <button data-testid="dialog-delete" type="button" @click="$emit('deleteEntry')">Delete entry</button>
-              <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
+              <button :disabled="isReconcilingTarget" data-testid="dialog-save" type="button" @click="!isReconcilingTarget && $emit('save')">Save</button>
             </div>
           `,
         },
@@ -1858,6 +1869,290 @@ describe("TimeEntriesView", () => {
         summary: "Task created",
       }),
     );
+  });
+
+  it("clears an inline New task when selected-project access narrows to own-time", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+    const fullProject = createProject({
+      id: TEST_IDS.projectAdmin,
+      name: "Admin Web",
+    });
+    const ownTimeProject = createProject({
+      accessScope: "own-time",
+      capabilities: { canManageTasks: false },
+      id: TEST_IDS.projectAdmin,
+      name: "Admin Web",
+    });
+
+    client.listVisibleProjects.mockResolvedValueOnce([createProject(), fullProject]);
+
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-new"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-new-task-title"]').trigger("click");
+
+    expect(wrapper.get('[data-testid="dialog-task-value"]').text()).toBe("New task");
+    expect(wrapper.get('[data-testid="dialog-new-task-title-value"]').text()).toBe(
+      "Write release checklist",
+    );
+
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [createProject(), ownTimeProject],
+    );
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="dialog-task-suggestions"]').text()).not.toContain(
+      "New task",
+    );
+    expect(wrapper.get('[data-testid="dialog-task-value"]').text()).toBe("");
+    expect(wrapper.get('[data-testid="dialog-new-task-title-value"]').text()).toBe("");
+
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.createTask).not.toHaveBeenCalled();
+    expect(client.createManualEntry).not.toHaveBeenCalled();
+  });
+
+  it("clears an open dialog target when a visible-project refresh revokes access", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-admin"]').trigger("click");
+
+    expect(wrapper.get('[data-testid="time-entry-dialog"]').attributes("project-id")).toBe(
+      TEST_IDS.projectAdmin,
+    );
+    expect(wrapper.get('[data-testid="dialog-task-value"]').text()).toBe("Ship admin polish");
+
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [],
+    );
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="time-entry-dialog"]').attributes("project-id")).toBeUndefined();
+    expect(wrapper.get('[data-testid="dialog-task-value"]').text()).toBe("");
+
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.createManualEntry).not.toHaveBeenCalled();
+  });
+
+  it("reloads task suggestions with the narrowed project scope after the dialog reopens", async () => {
+    const fullAccessTask = createTask({
+      id: TEST_IDS.taskAdmin,
+      projectId: TEST_IDS.projectAdmin,
+      title: "Ship admin polish",
+    });
+    const restrictedSiblingTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2998",
+      projectId: TEST_IDS.projectAdmin,
+      title: "Restricted sibling task",
+    });
+    const ownTask = createTask({
+      accessScope: "own-time",
+      capabilities: { canManageTasks: false },
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2999",
+      projectId: TEST_IDS.projectAdmin,
+      title: "Own task",
+    });
+    const narrowedProject = createProject({
+      accessScope: "own-time",
+      capabilities: { canManageTasks: false },
+      id: TEST_IDS.projectAdmin,
+      name: "Admin Web",
+    });
+    const client = createClientMock();
+    client.listProjectTasks
+      .mockResolvedValueOnce([fullAccessTask, restrictedSiblingTask])
+      .mockResolvedValueOnce([ownTask]);
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="dialog-task-suggestions"]').text()).toContain(
+      "Restricted sibling task",
+    );
+
+    await wrapper.get('[data-testid="dialog-close"]').trigger("click");
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [createProject(), narrowedProject],
+    );
+    await nextTick();
+
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+
+    const taskSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]').text();
+
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(2);
+    expect(taskSuggestions).toContain("Own task");
+    expect(taskSuggestions).not.toContain("Restricted sibling task");
+  });
+
+  it("clears a selected task when project access remains but that task no longer is visible", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-admin"]').trigger("click");
+
+    expect(wrapper.get('[data-testid="dialog-task-value"]').text()).toBe("Ship admin polish");
+
+    client.listProjectTasks.mockResolvedValueOnce([]);
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [
+        createProject(),
+        createProject({
+          id: TEST_IDS.projectAdmin,
+          name: "Admin Web",
+          totalSeconds: 1800,
+        }),
+      ],
+    );
+    await flushPromises();
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="dialog-task-value"]').text()).toBe("");
+
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.createManualEntry).not.toHaveBeenCalled();
+  });
+
+  it("blocks save until an authoritative task-scope refresh clears a stale selection", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+    let resolveTaskRefresh: (tasks: TaskResponse[]) => void;
+    const taskRefresh = new Promise<TaskResponse[]>((resolve) => {
+      resolveTaskRefresh = resolve;
+    });
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-admin"]').trigger("click");
+
+    client.listProjectTasks.mockImplementationOnce(() => taskRefresh);
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [
+        createProject(),
+        createProject({
+          id: TEST_IDS.projectAdmin,
+          name: "Admin Web",
+          totalSeconds: 1800,
+        }),
+      ],
+    );
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="dialog-save"]').attributes("disabled")).toBeDefined();
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    expect(client.createManualEntry).not.toHaveBeenCalled();
+
+    resolveTaskRefresh!([]);
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="dialog-task-value"]').text()).toBe("");
+    expect(wrapper.get('[data-testid="dialog-save"]').attributes("disabled")).toBeUndefined();
+  });
+
+  it("keeps an owned entry target while its project becomes inactive", async () => {
+    const entry = createEntry({
+      project: { id: TEST_IDS.projectAdmin, name: "Admin Web" },
+      projectId: TEST_IDS.projectAdmin,
+      task: { id: TEST_IDS.taskAdmin, title: "Ship admin polish" },
+      taskId: TEST_IDS.taskAdmin,
+    });
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([entry]),
+    });
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger("click");
+    await flushPromises();
+
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [
+        createProject(),
+        createProject({
+          id: TEST_IDS.projectAdmin,
+          isActive: false,
+          name: "Admin Web",
+        }),
+      ],
+    );
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="time-entry-dialog"]').attributes("project-id")).toBe(
+      TEST_IDS.projectAdmin,
+    );
+    expect(wrapper.get('[data-testid="dialog-task-value"]').text()).toBe("Ship admin polish");
+  });
+
+  it("rejects a stale New task selection in an own-time project before requesting creation", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+      visibleProjects: [
+        createProject({
+          accessScope: "own-time",
+          capabilities: { canManageTasks: false },
+          id: TEST_IDS.projectAdmin,
+          name: "Admin Web",
+        }),
+      ],
+    });
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-new"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-new-task-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="dialog-task-suggestions"]').text()).not.toContain(
+      "New task",
+    );
+    expect(client.createTask).not.toHaveBeenCalled();
+    expect(client.createManualEntry).not.toHaveBeenCalled();
   });
 
   it("validates the final new-task entry payload after task creation", async () => {

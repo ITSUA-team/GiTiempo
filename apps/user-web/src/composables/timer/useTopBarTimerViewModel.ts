@@ -120,7 +120,7 @@ export function useTopBarTimerViewModel({
   });
   const isCreateTaskDisabled = computed(() => {
     return (
-      !picker.selectedProjectId.value ||
+      !picker.canCreateTask.value ||
       taskCreation.isCreatingTask.value ||
       picker.isCreateTaskTitleEmpty.value
     );

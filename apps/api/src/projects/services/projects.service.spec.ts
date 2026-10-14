@@ -34,6 +34,7 @@ const projectRow = {
   description: 'Project description',
   color: null,
   visibility: 'private' as const,
+  trackingMode: 'managed' as const,
   defaultBillableForTasks: true,
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00Z'),
@@ -43,6 +44,7 @@ const projectRow = {
 const projectResponseRow = {
   ...projectRow,
   source: 'manual' as const,
+  referenceProvenance: null,
   totalSeconds: 0,
   members: [
     {

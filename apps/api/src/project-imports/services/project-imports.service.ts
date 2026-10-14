@@ -128,7 +128,11 @@ export class ProjectImportsService {
           : null;
 
       const existing = await this.db
-        .select({ projectId: projectExternalRefs.projectId })
+        .select({
+          projectId: projectExternalRefs.projectId,
+          isActive: projects.isActive,
+          trackingMode: projects.trackingMode,
+        })
         .from(projectExternalRefs)
         .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
         .where(
@@ -137,21 +141,33 @@ export class ProjectImportsService {
             eq(projectExternalRefs.provider, 'github'),
             eq(projectExternalRefs.externalType, 'project'),
             eq(projectExternalRefs.externalKey, board.githubProjectId),
-            eq(projects.isActive, true),
           ),
         )
         .orderBy(projects.createdAt, projectExternalRefs.projectId)
         .limit(1);
 
       if (existing[0]) {
-        return {
-          githubProjectId: board.githubProjectId,
-          linkedRepository: repository,
-          message: null,
-          projectId: existing[0].projectId,
-          status: 'already-imported',
-          trackingProject: null,
-        };
+        if (existing[0].trackingMode === 'external-reference') {
+          return {
+            githubProjectId: board.githubProjectId,
+            linkedRepository: repository,
+            message:
+              'This GitHub Project mapping belongs to an external-reference project and cannot be reassigned by import.',
+            projectId: null,
+            status: 'failed',
+            trackingProject: null,
+          };
+        }
+        if (existing[0].isActive) {
+          return {
+            githubProjectId: board.githubProjectId,
+            linkedRepository: repository,
+            message: null,
+            projectId: existing[0].projectId,
+            status: 'already-imported',
+            trackingProject: null,
+          };
+        }
       }
 
       if (repository !== null) {
@@ -191,6 +207,7 @@ export class ProjectImportsService {
             workspaceId: user.workspaceId,
             name: derivedName,
             color: null,
+            trackingMode: 'managed',
             ...(board.visibility === undefined
               ? {}
               : { visibility: board.visibility }),
@@ -214,6 +231,7 @@ export class ProjectImportsService {
               githubProjectOwner: verified.ownerLogin,
               githubProjectTitle: verified.title,
             },
+            referenceProvenance: 'provider-verified',
             syncedAt: new Date(),
           })
           .onConflictDoNothing({
@@ -251,7 +269,12 @@ export class ProjectImportsService {
                   tx
                     .select({ id: projects.id })
                     .from(projects)
-                    .where(eq(projects.isActive, false)),
+                    .where(
+                      and(
+                        eq(projects.isActive, false),
+                        eq(projects.trackingMode, 'managed'),
+                      ),
+                    ),
                 ),
               ),
             )
@@ -276,6 +299,7 @@ export class ProjectImportsService {
             .select({
               id: projectExternalRefs.id,
               isActive: projects.isActive,
+              trackingMode: projects.trackingMode,
             })
             .from(projectExternalRefs)
             .innerJoin(projects, eq(projects.id, projectExternalRefs.projectId))
@@ -295,15 +319,24 @@ export class ProjectImportsService {
             )
             .limit(1);
 
-          if (heldRef?.isActive) {
+          if (
+            heldRef?.isActive ||
+            heldRef?.trackingMode === 'external-reference'
+          ) {
             await tx.delete(projects).where(eq(projects.id, project!.id));
-            return { kind: 'repository-taken' as const };
+            return {
+              kind:
+                heldRef?.trackingMode === 'external-reference'
+                  ? ('external-repository-taken' as const)
+                  : ('repository-taken' as const),
+            };
           }
 
           const repositoryValues = {
             externalKey: repository,
             externalUrl: `https://github.com/${repository}`,
             metadata: { githubRepo: repository },
+            referenceProvenance: 'provider-verified' as const,
             syncedAt: new Date(),
           };
 
@@ -323,6 +356,7 @@ export class ProjectImportsService {
               projectId: project!.id,
               provider: 'github',
               externalType: 'repository',
+              referenceProvenance: 'provider-verified',
             });
           }
         }
@@ -369,11 +403,23 @@ export class ProjectImportsService {
         );
       }
 
+      if (outcome.kind === 'external-repository-taken') {
+        return {
+          githubProjectId: board.githubProjectId,
+          linkedRepository: repository,
+          message:
+            'This repository is already associated with an external-reference project and cannot be reassigned by a GitHub Project import.',
+          projectId: null,
+          status: 'repository-taken',
+          trackingProject: null,
+        };
+      }
+
       return {
         githubProjectId: board.githubProjectId,
         linkedRepository: repository,
         message: null,
-        projectId: outcome.projectId,
+        projectId: outcome.projectId ?? null,
         status: 'imported',
         trackingProject: null,
       };
