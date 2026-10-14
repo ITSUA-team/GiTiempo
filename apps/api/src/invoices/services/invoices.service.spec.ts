@@ -517,6 +517,26 @@ describe('InvoicesService', () => {
     });
   });
 
+  it('rounds 522 seconds to 0.15 hours, not 0.14 (floating-point drift)', () => {
+    const { service } = createService('admin');
+    const compute = priv<
+      [number, number, number],
+      {
+        totalHours: number;
+        totalAmount: number;
+      }
+    >(service, 'computeInvoiceTotals');
+
+    // 522 seconds = 0.145 hours. The naive (seconds / 3600) * 100 produces
+    // 14.499999999999998 in IEEE 754, which Math.round truncates to 14
+    // centihours (0.14h). Integer-first arithmetic (seconds * 100 / 3600)
+    // yields the exact 14.5, rounding to 15 centihours (0.15h) → $15.00.
+    expect(compute(522, 100, 0)).toEqual({
+      totalHours: 0.15,
+      totalAmount: 15,
+    });
+  });
+
   // ── Response mapping ──────────────────────────────────────────────────
 
   it('maps an invoice row with linked entries to the response contract', () => {

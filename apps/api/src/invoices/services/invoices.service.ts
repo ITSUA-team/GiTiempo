@@ -498,8 +498,7 @@ export class InvoicesService {
       (sum, e) => sum + (e.durationSeconds ?? 0),
       0,
     );
-    const totalHoursCents = Math.round((totalSeconds / 3600) * 100);
-    const totalHours = totalHoursCents / 100;
+    const totalHours = InvoicesService.secondsToCentihours(totalSeconds) / 100;
     const entries: InvoiceTimeEntrySummary[] = rows.map((e) => ({
       id: e.id,
       taskId: e.taskId,
@@ -860,6 +859,17 @@ export class InvoicesService {
   }
 
   /**
+   * Converts seconds to centihours (1 hour = 100 centihours) using integer
+   * arithmetic to avoid floating-point drift. Dividing first (seconds/3600)
+   * then multiplying by 100 can produce values like 14.499999999999998 for
+   * 522 seconds; multiplying first (seconds*100) keeps the intermediate as
+   * an exact integer so the division result is precise enough for Math.round.
+   */
+  private static secondsToCentihours(totalSeconds: number): number {
+    return Math.round((totalSeconds * 100) / 3600);
+  }
+
+  /**
    * Pure snapshot-totals computation: hours from seconds, then amount with
    * optional percentage discount. Both values are rounded to 2 decimal
    * places to match the stored DECIMAL precision.
@@ -874,7 +884,7 @@ export class InvoicesService {
     hourlyRate: number,
     discountPercent: number,
   ): { totalHours: number; totalAmount: number } {
-    const totalHoursCents = Math.round((totalSeconds / 3600) * 100);
+    const totalHoursCents = InvoicesService.secondsToCentihours(totalSeconds);
     const rateCents = Math.round(hourlyRate * 100);
     const discountBps = Math.round(discountPercent * 100); // 0–10000
     const discountFactor = 10_000 - discountBps; // 0–10000

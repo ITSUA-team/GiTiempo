@@ -308,6 +308,14 @@ The backend MUST compute invoice totals as the sum of tracked hours of selected 
 - **THEN** the stored `total_amount` is $37.61 (rounded up from 37.605)
 - **AND** the computation uses integer fixed-point arithmetic to avoid floating-point drift
 
+#### Scenario: Hours rounding avoids floating-point drift from seconds conversion
+
+- **GIVEN** an invoice is created with 522 tracked seconds at a rate of $100
+- **WHEN** the backend converts seconds to centihours
+- **THEN** the result is 15 centihours (0.15 hours), not 14 (0.14 hours)
+- **AND** the stored `total_amount` is $15.00
+- **AND** the conversion multiplies seconds by 100 before dividing by 3600 to keep the intermediate as an exact integer
+
 #### Scenario: Computed total exceeding the storage limit is rejected
 
 - **GIVEN** the computed `total_amount` exceeds the maximum value storable in `NUMERIC(12,2)`
