@@ -3,7 +3,7 @@ import { deriveProfileInitials } from "@gitiempo/shared";
 import { getExtensionConfig } from "@/lib/config";
 import { escapeHtml } from "@/lib/html";
 import type { PageContext, SupportedGitHubIssueContext } from "@/lib/github-context";
-import { hasCurrentTrackingCapability } from "@/lib/runtime";
+import { getCurrentTrackingCapability } from "@/lib/runtime";
 import type { RuntimeSnapshot, SnapshotUser } from "@/lib/runtime";
 import { formatElapsedTime } from "@/lib/time";
 
@@ -269,13 +269,10 @@ export function renderPopupBody(state: PopupState, nowMs: number): string {
   }
 
   if (state.pageContext?.kind === "supported") {
-    const hasTrackingCapability = hasCurrentTrackingCapability(
+    const trackingCapability = getCurrentTrackingCapability(
       state.snapshot,
       state.pageContext,
     );
-    const trackingCapability = hasTrackingCapability
-      ? state.snapshot.trackingCapability
-      : null;
     const canStartTracking = trackingCapability?.canStartTracking === true;
     const trackingMessage = trackingCapability?.reason ??
       "Unable to confirm whether you can track this issue.";

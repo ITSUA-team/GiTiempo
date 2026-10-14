@@ -5,7 +5,13 @@ import type {
   TaskResponse,
 } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
+import type { QueryClient } from "@tanstack/vue-query";
 
+import {
+  timerGithubKeys,
+  type UserServerStateScope,
+} from "@/lib/query-keys";
+import { TIMER_OPTIONS_STALE_TIME } from "@/lib/timer-options-cache";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 const PROJECT_GITHUB_ISSUE_PAGE_SIZE = 30;
@@ -54,6 +60,23 @@ export function createProjectGitHubIssuePageFetcher(
       ...(pageToken ? { pageToken } : {}),
       state: "open",
     });
+}
+
+export function fetchCachedProjectGitHubIssuePage(input: {
+  client: TimeEntriesClient;
+  page: Parameters<ProjectGitHubIssuePageFetcher>[0];
+  queryClient: QueryClient;
+  scope: UserServerStateScope;
+}): ReturnType<ProjectGitHubIssuePageFetcher> {
+  return input.queryClient.fetchQuery({
+    queryKey: timerGithubKeys.repositoryIssuePage(
+      input.scope,
+      input.page.projectId,
+      input.page.pageToken ?? null,
+    ),
+    queryFn: () => createProjectGitHubIssuePageFetcher(input.client)(input.page),
+    staleTime: TIMER_OPTIONS_STALE_TIME,
+  });
 }
 
 export function supportsProjectGitHubIssueSuggestions(

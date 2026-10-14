@@ -5,9 +5,11 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 
 import type { TimeEntriesClient } from "@/services/time-entries-client";
+import { createTestQueryClient } from "@/test/query-client";
 
 import {
   appendUnsyncedProjectGitHubIssueOptions,
+  fetchCachedProjectGitHubIssuePage,
   loadUnsyncedProjectGitHubIssues,
 } from "./project-github-issues";
 
@@ -211,6 +213,40 @@ describe("loadUnsyncedProjectGitHubIssues", () => {
       errorMessage: "GitHub is temporarily unavailable",
       issues: [],
     });
+  });
+});
+
+describe("fetchCachedProjectGitHubIssuePage", () => {
+  it("keeps GitHub issue pages isolated by user scope while reusing a current page", async () => {
+    const listProjectGitHubIssues = vi
+      .fn<TimeEntriesClient["listProjectGitHubIssues"]>()
+      .mockResolvedValue(createGitHubIssueResponse([createIssue(1)]));
+    const client = createClientMock(listProjectGitHubIssues);
+    const queryClient = createTestQueryClient();
+    const page = { pageToken: undefined, projectId: PROJECT_ID };
+    const firstScope = { userId: "user-1", workspaceId: "workspace-1" };
+    const secondScope = { userId: "user-2", workspaceId: "workspace-1" };
+
+    await fetchCachedProjectGitHubIssuePage({
+      client,
+      page,
+      queryClient,
+      scope: firstScope,
+    });
+    await fetchCachedProjectGitHubIssuePage({
+      client,
+      page,
+      queryClient,
+      scope: firstScope,
+    });
+    await fetchCachedProjectGitHubIssuePage({
+      client,
+      page,
+      queryClient,
+      scope: secondScope,
+    });
+
+    expect(listProjectGitHubIssues).toHaveBeenCalledTimes(2);
   });
 });
 

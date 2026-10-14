@@ -58,11 +58,15 @@ describe('External GitHub extension tracking (e2e)', () => {
   };
 
   const repo = `ExternalE2E/${randomUUID().slice(0, 12)}`;
-  const issue = (issueNumber: number) => ({
-    githubRepo: repo,
+  const issue = (
+    issueNumber: number,
+    githubRepo = repo,
+    issueTitle = `External issue ${issueNumber}`,
+  ) => ({
+    githubRepo,
     issueNumber,
-    issueTitle: `External issue ${issueNumber}`,
-    issueUrl: `https://github.com/${repo}/issues/${issueNumber}`,
+    issueTitle,
+    issueUrl: `https://github.com/${githubRepo}/issues/${issueNumber}`,
   });
 
   beforeAll(async () => {
@@ -170,6 +174,26 @@ describe('External GitHub extension tracking (e2e)', () => {
       taskRefRows.length,
       entryRows.length,
     ];
+  }
+
+  async function createManagedProject(visibility: 'private' | 'public') {
+    const managedRepo = `ManagedE2E/${randomUUID().slice(0, 12)}`;
+    const [managed] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Managed ${randomUUID()}`,
+        visibility,
+      })
+      .returning();
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId: managed!.id,
+      provider: 'github',
+      externalType: 'repository',
+      externalKey: managedRepo,
+    });
+    return { managedRepo };
   }
 
   async function stop(token: string, expectedTimerId: string) {
@@ -354,22 +378,7 @@ describe('External GitHub extension tracking (e2e)', () => {
   });
 
   it('denies a managed mapping when installation authorization fails without writing records', async () => {
-    const managedRepo = `ManagedE2E/${randomUUID().slice(0, 12)}`;
-    const [managed] = await db
-      .insert(projects)
-      .values({
-        workspaceId,
-        name: `Managed ${randomUUID()}`,
-        visibility: 'private',
-      })
-      .returning();
-    await db.insert(projectExternalRefs).values({
-      workspaceId,
-      projectId: managed!.id,
-      provider: 'github',
-      externalType: 'repository',
-      externalKey: managedRepo,
-    });
+    const { managedRepo } = await createManagedProject('private');
     installations.prepareIssue.mockRejectedValueOnce(
       new DomainError(
         'github_installation_required',
@@ -382,12 +391,7 @@ describe('External GitHub extension tracking (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/time-entries/timer/capability')
       .set('Authorization', bearer(memberToken))
-      .send({
-        githubRepo: managedRepo,
-        issueNumber: 72,
-        issueTitle: 'Managed issue',
-        issueUrl: `https://github.com/${managedRepo}/issues/72`,
-      });
+      .send(issue(72, managedRepo, 'Managed issue'));
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
@@ -400,22 +404,7 @@ describe('External GitHub extension tracking (e2e)', () => {
   });
 
   it('denies an unassigned member for a verified managed mapping without writing records', async () => {
-    const managedRepo = `ManagedE2E/${randomUUID().slice(0, 12)}`;
-    const [managed] = await db
-      .insert(projects)
-      .values({
-        workspaceId,
-        name: `Managed ${randomUUID()}`,
-        visibility: 'public',
-      })
-      .returning();
-    await db.insert(projectExternalRefs).values({
-      workspaceId,
-      projectId: managed!.id,
-      provider: 'github',
-      externalType: 'repository',
-      externalKey: managedRepo,
-    });
+    const { managedRepo } = await createManagedProject('public');
     installations.prepareIssue.mockResolvedValueOnce({
       repository: { fullName: managedRepo },
       issue: { number: 73 },
@@ -425,12 +414,7 @@ describe('External GitHub extension tracking (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/time-entries/timer/capability')
       .set('Authorization', bearer(memberToken))
-      .send({
-        githubRepo: managedRepo,
-        issueNumber: 73,
-        issueTitle: 'Managed issue',
-        issueUrl: `https://github.com/${managedRepo}/issues/73`,
-      });
+      .send(issue(73, managedRepo, 'Managed issue'));
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -443,22 +427,7 @@ describe('External GitHub extension tracking (e2e)', () => {
   });
 
   it('allows an authorized managed mapping without writing records', async () => {
-    const managedRepo = `ManagedE2E/${randomUUID().slice(0, 12)}`;
-    const [managed] = await db
-      .insert(projects)
-      .values({
-        workspaceId,
-        name: `Managed ${randomUUID()}`,
-        visibility: 'private',
-      })
-      .returning();
-    await db.insert(projectExternalRefs).values({
-      workspaceId,
-      projectId: managed!.id,
-      provider: 'github',
-      externalType: 'repository',
-      externalKey: managedRepo,
-    });
+    const { managedRepo } = await createManagedProject('private');
     await db
       .update(workspaceMembers)
       .set({ role: 'admin' })
@@ -480,12 +449,7 @@ describe('External GitHub extension tracking (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/time-entries/timer/capability')
       .set('Authorization', bearer(adminToken))
-      .send({
-        githubRepo: managedRepo,
-        issueNumber: 74,
-        issueTitle: 'Managed issue',
-        issueUrl: `https://github.com/${managedRepo}/issues/74`,
-      });
+      .send(issue(74, managedRepo, 'Managed issue'));
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -548,31 +512,11 @@ describe('External GitHub extension tracking (e2e)', () => {
       .send({ visibility: 'public' })
       .expect(422);
 
-    const [managed] = await db
-      .insert(projects)
-      .values({
-        workspaceId,
-        name: `Managed ${randomUUID()}`,
-        visibility: 'private',
-      })
-      .returning();
-    const managedRepo = `ManagedE2E/${randomUUID().slice(0, 12)}`;
-    await db.insert(projectExternalRefs).values({
-      workspaceId,
-      projectId: managed!.id,
-      provider: 'github',
-      externalType: 'repository',
-      externalKey: managedRepo,
-    });
+    const { managedRepo } = await createManagedProject('private');
     const response = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github-reference')
       .set('Authorization', bearer(memberToken))
-      .send({
-        githubRepo: managedRepo,
-        issueNumber: 9,
-        issueTitle: 'Managed issue',
-        issueUrl: `https://github.com/${managedRepo}/issues/9`,
-      });
+      .send(issue(9, managedRepo, 'Managed issue'));
     expect(response.status).toBe(404);
     expect(installations.prepareIssue).toHaveBeenCalledTimes(1);
     expect(

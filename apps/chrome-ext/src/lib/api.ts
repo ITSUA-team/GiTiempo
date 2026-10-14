@@ -67,6 +67,15 @@ const REQUEST_TIMEOUT_MS = 15_000;
 /** Nothing waits on a revoke, so it gets a short leash rather than none at all. */
 const REVOKE_TIMEOUT_MS = 5_000;
 
+function parseGitHubReferenceInput(pageContext: SupportedGitHubIssueContext) {
+  return startTimerFromGitHubReferenceSchema.parse({
+    githubRepo: pageContext.githubRepo,
+    issueNumber: pageContext.issueNumber,
+    issueTitle: pageContext.issueTitle,
+    issueUrl: pageContext.issueUrl,
+  });
+}
+
 function getDefaultResponseErrorMessage(status: number): string {
   if ([502, 503, 504].includes(status)) {
     return API_UNAVAILABLE_ERROR_MESSAGE;
@@ -360,12 +369,7 @@ export function createExtensionApiClient({
     getTrackingCapability(pageContext, expectedContext): Promise<TrackingCapabilityResponse> {
       return requestWithAuth<TrackingCapabilityResponse>({
         expectedContext,
-        body: startTimerFromGitHubReferenceSchema.parse({
-          githubRepo: pageContext.githubRepo,
-          issueNumber: pageContext.issueNumber,
-          issueTitle: pageContext.issueTitle,
-          issueUrl: pageContext.issueUrl,
-        }),
+        body: parseGitHubReferenceInput(pageContext),
         method: "POST",
         path: "/time-entries/timer/capability",
         responseSchema: trackingCapabilityResponseSchema as Pick<
@@ -381,12 +385,7 @@ export function createExtensionApiClient({
     startTimerFromGitHub(pageContext, expectedContext) {
       return requestWithAuth({
         expectedContext,
-        body: startTimerFromGitHubReferenceSchema.parse({
-          githubRepo: pageContext.githubRepo,
-          issueNumber: pageContext.issueNumber,
-          issueTitle: pageContext.issueTitle,
-          issueUrl: pageContext.issueUrl,
-        }),
+        body: parseGitHubReferenceInput(pageContext),
         method: "POST",
         path: "/time-entries/timer/start-from-github-reference",
         responseSchema: timeEntryResponseSchema,

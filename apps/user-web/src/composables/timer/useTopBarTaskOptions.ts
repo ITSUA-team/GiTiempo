@@ -5,7 +5,7 @@ import { ref, type ComputedRef } from "vue";
 
 import {
   appendUnsyncedProjectGitHubIssueOptions,
-  createProjectGitHubIssuePageFetcher,
+  fetchCachedProjectGitHubIssuePage,
   type ProjectGitHubIssuePageFetcher,
 } from "@/lib/project-github-issues";
 import {
@@ -67,14 +67,11 @@ export function useTopBarTaskOptions({
   }
 
   const fetchProjectGitHubIssuePage: ProjectGitHubIssuePageFetcher = (page) =>
-    queryClient.fetchQuery({
-      queryKey: timerGithubKeys.repositoryIssuePage(
-        scope.value,
-        page.projectId,
-        page.pageToken ?? null,
-      ),
-      queryFn: () => createProjectGitHubIssuePageFetcher(client)(page),
-      staleTime: TIMER_OPTIONS_STALE_TIME,
+    fetchCachedProjectGitHubIssuePage({
+      client,
+      page,
+      queryClient,
+      scope: scope.value,
     });
 
   function getCachedTaskOptions(projectId: string): TopBarTaskOption[] | undefined {

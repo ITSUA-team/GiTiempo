@@ -11,7 +11,7 @@ import {
 } from "@/lib/github-context";
 import {
   createRuntimeClient,
-  hasCurrentTrackingCapability,
+  getCurrentTrackingCapability,
   type RuntimeClient,
   type RuntimeSnapshot,
 } from "@/lib/runtime";
@@ -71,6 +71,17 @@ function resolveGitHubColorMode(
   return matchMediaFn?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function renderInjectedIssueHeading(
+  pageContext: SupportedGitHubIssueContext,
+  headlineTextClass: string,
+  mutedTextClass: string,
+  indentation: string,
+): string {
+  return `
+${indentation}<p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
+${indentation}<p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>`;
+}
+
 function renderInjectedBody(
   pageContext: SupportedGitHubIssueContext,
   state: InjectedState,
@@ -81,22 +92,17 @@ function renderInjectedBody(
 
   if (state.isLoading || state.snapshot === null) {
     return `
-      <div>
-        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "        ")}
       </div>
       <p class="m-0 text-sm ${mutedTextClass}">Checking your GiTiempo timer state.</p>
     `;
   }
 
   const currentTimer = state.snapshot.currentTimer;
-  const hasTrackingCapability = hasCurrentTrackingCapability(
+  const trackingCapability = getCurrentTrackingCapability(
     state.snapshot,
     pageContext,
   );
-  const trackingCapability = hasTrackingCapability
-    ? state.snapshot.trackingCapability
-    : null;
   const isCurrentIssueTimer = currentTimer
     ? currentTimer.githubIssue?.githubRepo.toLowerCase() === pageContext.githubRepo.toLowerCase()
       && currentTimer.githubIssue.issueNumber === pageContext.issueNumber
@@ -107,9 +113,7 @@ function renderInjectedBody(
   // readiness error: that timer remains the only actionable state on this page.
   if ((state.actionErrorMessage || state.snapshot.errorMessage) && !currentTimer) {
     return `
-      <div>
-        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "        ")}
       </div>
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to update timer state.")}</p>
@@ -120,9 +124,7 @@ function renderInjectedBody(
 
   if (!state.snapshot.authenticated) {
     return `
-      <div>
-        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "        ")}
       </div>
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-sm ${mutedTextClass}">Sign in to GiTiempo to start tracking this issue.</p>
@@ -134,9 +136,7 @@ function renderInjectedBody(
   if (currentTimer && isCurrentIssueTimer) {
     return `
       <div class="flex items-start justify-between gap-3">
-        <div>
-          <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-          <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+        <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "          ")}
         </div>
         <span class="bg-status-active-bg text-status-active-text rounded-sm px-2 py-1 text-xs font-semibold">Running</span>
       </div>
@@ -154,9 +154,7 @@ function renderInjectedBody(
 
   if (currentTimer) {
     return `
-      <div>
-        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "        ")}
       </div>
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-1">
@@ -177,9 +175,7 @@ function renderInjectedBody(
       "Unable to confirm whether you can track this issue.";
 
     return `
-      <div>
-        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "        ")}
       </div>
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(message)}</p>
@@ -189,9 +185,7 @@ function renderInjectedBody(
   }
 
   return `
-    <div>
-      <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-      <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+    <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "      ")}
     </div>
     <div class="flex items-center justify-between gap-3">
       <p class="m-0 text-sm ${mutedTextClass}">Start tracking directly from this GitHub issue.</p>
@@ -341,8 +335,11 @@ export function createInjectedIssueApp({
 
   async function handleStartTimer(): Promise<void> {
     if (state.isSubmitting) return;
-    if (!hasCurrentTrackingCapability(state.snapshot, pageContext) ||
-        !state.snapshot?.trackingCapability?.canStartTracking) {
+    const trackingCapability = getCurrentTrackingCapability(
+      state.snapshot,
+      pageContext,
+    );
+    if (!trackingCapability?.canStartTracking) {
       state.actionErrorMessage = state.snapshot?.trackingCapability?.reason ??
         "Unable to confirm whether you can track this issue. Refresh and try again.";
       render();

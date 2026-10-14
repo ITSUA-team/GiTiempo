@@ -8,7 +8,7 @@ import { parseGitHubIssueUrl } from "@/lib/github-context";
 import { signInWithEmailPassword } from "@/lib/firebase";
 import {
   createRuntimeClient,
-  hasCurrentTrackingCapability,
+  getCurrentTrackingCapability,
   type RuntimeClient,
 } from "@/lib/runtime";
 import { formatElapsedTime } from "@/lib/time";
@@ -408,8 +408,11 @@ export function createPopupApp({
 
   async function handleStartTimer(): Promise<void> {
     if (state.isSubmitting || state.pageContext?.kind !== "supported") return;
-    if (!hasCurrentTrackingCapability(state.snapshot, state.pageContext) ||
-        !state.snapshot?.trackingCapability?.canStartTracking) {
+    const trackingCapability = getCurrentTrackingCapability(
+      state.snapshot,
+      state.pageContext,
+    );
+    if (!trackingCapability?.canStartTracking) {
       state.errorMessage = state.snapshot?.trackingCapability?.reason ??
         "Unable to confirm whether you can track this issue. Refresh and try again.";
       render();

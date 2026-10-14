@@ -5,11 +5,10 @@ import type { ComputedRef } from "vue";
 
 import {
   appendUnsyncedProjectGitHubIssueOptions,
-  createProjectGitHubIssuePageFetcher,
+  fetchCachedProjectGitHubIssuePage,
   type ProjectGitHubIssuePageFetcher,
 } from "@/lib/project-github-issues";
 import {
-  timerGithubKeys,
   userProjectsKeys,
   type UserServerStateScope,
 } from "@/lib/query-keys";
@@ -108,15 +107,11 @@ export function useTimeEntryTaskOptions({
   function createProjectGitHubIssuePageFetcherForScope(
     requestScope: UserServerStateScope,
   ): ProjectGitHubIssuePageFetcher {
-    return (page) =>
-    queryClient.fetchQuery({
-      queryKey: timerGithubKeys.repositoryIssuePage(
-        requestScope,
-        page.projectId,
-        page.pageToken ?? null,
-      ),
-      queryFn: () => createProjectGitHubIssuePageFetcher(client)(page),
-      staleTime: TIMER_OPTIONS_STALE_TIME,
+    return (page) => fetchCachedProjectGitHubIssuePage({
+      client,
+      page,
+      queryClient,
+      scope: requestScope,
     });
   }
 

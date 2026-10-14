@@ -31,14 +31,16 @@ export type RuntimeTrackingCapability = TrackingCapabilityResponse & {
   issueNumber: number;
 };
 
-export function hasCurrentTrackingCapability(
+export function getCurrentTrackingCapability(
   snapshot: RuntimeSnapshot | null,
   pageContext: SupportedGitHubIssueContext,
-): boolean {
-  const capability = snapshot?.trackingCapability;
+): RuntimeTrackingCapability | null {
+  const capability = snapshot?.trackingCapability ?? null;
 
   return capability?.githubRepo.toLowerCase() === pageContext.githubRepo.toLowerCase()
-    && capability.issueNumber === pageContext.issueNumber;
+    && capability.issueNumber === pageContext.issueNumber
+    ? capability
+    : null;
 }
 
 export interface RuntimeActionResult {
