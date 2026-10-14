@@ -393,17 +393,7 @@ export class InvoicesService {
             eq(projectAssignments.userId, user.sub),
           ),
         )
-        .where(
-          and(
-            ...monthConditions,
-            isNotNull(invoices.projectId),
-            eq(projects.isActive, true),
-            or(
-              eq(projects.visibility, 'public'),
-              eq(projectAssignments.userId, user.sub),
-            )!,
-          ),
-        );
+        .where(and(...monthConditions, isNotNull(invoices.projectId)));
     }
 
     const [projRow] = await projectCountQuery;

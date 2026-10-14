@@ -1937,4 +1937,72 @@ describe('Invoices (e2e)', () => {
       .delete(`/invoices/${createRes.body.id}`)
       .set('Authorization', bearer(adminToken));
   });
+
+  it('PM stats include invoices for assigned projects', async () => {
+    const pmBefore = await request(app.getHttpServer())
+      .get('/invoices/stats')
+      .set('Authorization', bearer(pmToken));
+    expect(pmBefore.status).toBe(200);
+    const pmBeforeDraft = pmBefore.body.byStatus.draft;
+
+    const createRes = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Stats PM Assigned Probe',
+        dateFrom: '2099-10-01',
+        dateTo: '2099-10-31',
+        projectId: PLATFORM_PROJECT_ID,
+        hourlyRate: 15,
+      });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.projectId).toBe(PLATFORM_PROJECT_ID);
+
+    const pmAfter = await request(app.getHttpServer())
+      .get('/invoices/stats')
+      .set('Authorization', bearer(pmToken));
+    expect(pmAfter.status).toBe(200);
+    expect(pmAfter.body.byStatus.draft).toBe(pmBeforeDraft + 1);
+
+    const adminAfter = await request(app.getHttpServer())
+      .get('/invoices/stats')
+      .set('Authorization', bearer(adminToken));
+    expect(adminAfter.status).toBe(200);
+    const adminTotal =
+      adminAfter.body.byStatus.draft +
+      adminAfter.body.byStatus.sent +
+      adminAfter.body.byStatus.paid;
+    const pmTotal =
+      pmAfter.body.byStatus.draft +
+      pmAfter.body.byStatus.sent +
+      pmAfter.body.byStatus.paid;
+    expect(pmTotal).toBeLessThanOrEqual(adminTotal);
+
+    await request(app.getHttpServer())
+      .delete(`/invoices/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken));
+  });
+
+  it('empty workspace stats return zero counts', async () => {
+    await db.delete(invoices).where(eq(invoices.workspaceId, workspaceId));
+
+    const adminRes = await request(app.getHttpServer())
+      .get('/invoices/stats')
+      .set('Authorization', bearer(adminToken));
+    expect(adminRes.status).toBe(200);
+    expect(adminRes.body.byStatus).toEqual({ draft: 0, sent: 0, paid: 0 });
+    expect(adminRes.body.thisMonth.invoiceCount).toBe(0);
+    expect(adminRes.body.thisMonth.projectCount).toBe(0);
+    expect(adminRes.body.thisMonth.totalAmount).toBe(0);
+    expect(typeof adminRes.body.thisMonth.currency).toBe('string');
+
+    const pmRes = await request(app.getHttpServer())
+      .get('/invoices/stats')
+      .set('Authorization', bearer(pmToken));
+    expect(pmRes.status).toBe(200);
+    expect(pmRes.body.byStatus).toEqual({ draft: 0, sent: 0, paid: 0 });
+    expect(pmRes.body.thisMonth.invoiceCount).toBe(0);
+    expect(pmRes.body.thisMonth.projectCount).toBe(0);
+    expect(pmRes.body.thisMonth.totalAmount).toBe(0);
+  });
 });
