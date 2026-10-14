@@ -531,7 +531,8 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **GIVEN** the GitHub connection status API returns `status: "connected"`
 - **WHEN** the Profile page renders the GitHub connection card
 - **THEN** the card shows `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt` from the shared API contract
-- **AND** the card shows `Reconnect` and `Disconnect` actions
+- **AND** the card shows OAuth permission recovery and a separate personal App data authorization action according to their capabilities
+- **AND** it shows `Disconnect` with server-derived eligibility and guidance when another sign-in method is required
 - **AND** the card does not show fields outside the GitHub connection status contract as account metadata
 
 #### Scenario: Profile GitHub connected state omits null avatar
@@ -561,7 +562,7 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 
 - **GIVEN** the Profile page renders a disconnected or reconnectable GitHub connection card
 - **WHEN** the user activates `Connect GitHub` or `Reconnect`
-- **THEN** the page requests a GitHub authorization URL from the API
+- **THEN** the page requests an OAuth account-link authorization URL from the API with user:email, read:org and read:project
 - **AND** the card renders the redirecting/connecting state while the request is pending
 - **AND** the browser navigates to the returned authorization URL after the request succeeds
 - **AND** request failure is surfaced with an error toast and returns the card to a retryable state
@@ -571,11 +572,13 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **GIVEN** the Profile page renders a connected GitHub connection card
 - **WHEN** the user activates `Disconnect`
 - **THEN** the page asks for confirmation using the standard PrimeVue confirmation dialog pattern
-- **AND** accepting the confirmation calls the GitHub disconnect API
+- **AND** the confirmation explains removal of GitHub login and personal access while preserving workspace installations and historical data
+- **AND** accepting the confirmation calls the full GitHub disconnect API only when server-derived eligibility allows it
 - **AND** successful disconnect refetches `GET /github/connection` before settling the card state
 - **AND** the refreshed card settles to the disconnected state
 - **AND** successful disconnect shows a success toast notification
-- **AND** failed disconnect keeps the previous connection state and shows an error toast
+- **AND** rejected unlink keeps the previous connection state and shows an error toast
+- **AND** completed local unlink with unconfirmed provider revocation settles to disconnected and shows a safe warning
 
 #### Scenario: Profile GitHub connect request fails before redirect
 
@@ -676,6 +679,30 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **AND** the editable display-name surface is covered for save success, save failure, and cancel/reset behavior
 - **AND** page or composable tests cover loading, request-error, disconnected, connected, redirecting/connecting, callback success toast, callback error toast, callback-success-followed-by-fetch-failure, connect failure, disconnect success, and disconnect failure behavior
 - **AND** frontend lint and typecheck pass for user-web
+
+#### Scenario: OAuth login already linked the account
+- **GIVEN** the user successfully signed in through GitHub
+- **WHEN** Profile loads authoritative connection status
+- **THEN** the page SHALL display the linked identity without asking for duplicate account linking
+- **AND** it SHALL still distinguish missing OAuth permissions and missing personal App data authorization
+
+#### Scenario: Personal App authorization is a separate action
+- **GIVEN** an identity is linked but its personal App data grant is absent or invalid
+- **WHEN** the user chooses to enable GitHub data access
+- **THEN** the page SHALL start the existing App authorization flow
+- **AND** it SHALL explain that OAuth identity alone does not enable private browsing
+
+#### Scenario: Disconnect cannot remove the only login method
+- **GIVEN** server status reports alternative_signin_required or verification_unavailable
+- **WHEN** the user opens the GitHub card
+- **THEN** the page SHALL explain the required alternative login or retry action
+- **AND** it MUST NOT present full unlink as available until eligibility is verified
+
+#### Scenario: Missing OAuth project consent does not disable App Projects
+- **GIVEN** OAuth lacks read:project but the personal App grant permits Projects access
+- **WHEN** the UI renders GitHub controls
+- **THEN** the page SHALL offer OAuth permission recovery
+- **AND** it MUST NOT disable existing App-backed Projects solely because that OAuth scope is absent
 
 ### Requirement: Profile Account Card Renders Member Avatar
 
@@ -1005,3 +1032,52 @@ The user-web top-bar timer task picker SHALL offer the organization's GitHub Pro
 - **AND** it does not collapse a failure into empty-data messaging
 
 The detailed behaviour of board targets — which boards are offered, issue listing, draft reporting, and the guards that keep a board out of project-only code paths — is specified by the `timer-github-project-tracking` capability.
+
+### Requirement: User Timer Pickers Honor Scoped Project Visibility
+The global top-bar timer picker and manual time-entry project/task selectors SHALL use only server-returned visible projects and tasks. They SHALL preserve the distinction between `accessScope: "own-time"` and `accessScope: "project"` without exposing peer data.
+
+#### Scenario: Own-time task is available for repeat tracking
+- **GIVEN** the current member has an external-reference task returned with `accessScope: "own-time"`
+- **WHEN** the idle top-bar picker or a manual-entry task selector lists visible tasks
+- **THEN** it offers that returned task for repeat tracking
+- **AND** it does not append or search sibling tasks from the same project that were not returned.
+
+#### Scenario: Hidden project cannot persist as a stale selection
+- **GIVEN** an external project/task was selected in a picker or dialog
+- **WHEN** a refresh, delete, or moved own time entry removes its authorization
+- **THEN** the picker or dialog clears that selection before submission
+- **AND** it does not submit its former project or task identifier.
+
+#### Scenario: Own-time scope does not expose member summaries
+- **GIVEN** a picker, history row, or dashboard card renders an item with `accessScope: "own-time"`
+- **WHEN** it displays project/task metadata
+- **THEN** it uses only the current member's permitted task and entry information
+- **AND** it does not display team members, assigned-member summaries, project-wide counts, or peer time totals.
+
+### Requirement: User Time Entry Views Maintain Own-Time Derived Visibility
+The Dashboard, Time Entries history, repeat-start controls, and direct routes SHALL keep external-reference project/task visibility synchronized with the current member's own entries. A running entry counts as own time immediately.
+
+#### Scenario: Reference start is visible on the next authoritative refresh
+- **GIVEN** an extension reference start succeeds and returns a running time entry
+- **WHEN** the Dashboard, Time Entries page, or a direct task/project route next refreshes authoritative data on navigation or refocus
+- **THEN** the relevant view adds or refreshes only that returned entry/project/task within its authorized scope
+- **AND** it does not fetch or reveal peer tasks or time while reconciling.
+
+#### Scenario: Last own entry removal removes derived UI visibility
+- **GIVEN** the current member deletes or moves their final entry for an external task or project
+- **WHEN** the mutation response or subsequent list response no longer includes that resource
+- **THEN** Dashboard recent entries, Time Entries filters, history rows, repeat-start actions, picker options, and direct-route data remove the resource
+- **AND** a direct route to the removed resource renders the existing authorized not-found or access state without stale cached content.
+
+#### Scenario: Repeat start keeps scope boundaries
+- **GIVEN** a completed entry for an own-time external task appears in history or Dashboard recent entries
+- **AND** no running timer blocks a new timer
+- **WHEN** the member activates `Start timer`
+- **THEN** the app starts a timer only for that returned task
+- **AND** it does not request project-wide task data as part of the repeat start.
+
+#### Scenario: Scope changes invalidate cached summaries
+- **GIVEN** a response changes an item's `accessScope` from `project` to `own-time`, or removes the item
+- **WHEN** user-page state reconciles the response
+- **THEN** it clears cached members/assignedMembersSummary and project-wide totals before rendering
+- **AND** it recomputes visible dashboard and history values from the authorized current-member entry set.

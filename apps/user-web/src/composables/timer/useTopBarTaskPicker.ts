@@ -71,6 +71,10 @@ export function useTopBarTaskPicker() {
   const selectedProject = computed(
     () => activeProjects.value.find((project) => project.id === selectedProjectId.value) ?? null,
   );
+  const canCreateTask = computed(
+    () => selectedGitHubProjectId.value === null &&
+      selectedProject.value?.capabilities.canManageTasks === true,
+  );
   const selectedGitHubProject = computed(
     () =>
       githubProjects.value.find(
@@ -269,6 +273,7 @@ export function useTopBarTaskPicker() {
   return {
     activeProjects,
     activeTasks,
+    canCreateTask,
     githubProjectAvailability,
     githubProjectDraftCount,
     githubProjects,

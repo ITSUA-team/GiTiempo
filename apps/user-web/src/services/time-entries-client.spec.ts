@@ -59,11 +59,24 @@ function createTestApiClient(fetchFn: typeof fetch, apiBaseUrl?: string) {
   });
 }
 
+const projectResponseMetadata = {
+  accessScope: "project",
+  capabilities: { canManageTasks: true },
+  referenceProvenance: null,
+  trackingMode: "managed",
+};
+
+const taskResponseMetadata = {
+  accessScope: "project",
+  capabilities: { canManageTasks: true },
+};
+
 describe("createTimeEntriesClient", () => {
   it("loads visible projects with a bearer token and parses the response", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse([
         {
+          ...projectResponseMetadata,
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
           defaultBillableForTasks: false,
@@ -154,6 +167,7 @@ describe("createTimeEntriesClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse([
         {
+          ...taskResponseMetadata,
           createdAt: "2026-04-20T12:00:00.000Z",
           defaultBillableForTimeEntries: false,
           githubIssue: {
@@ -199,6 +213,7 @@ describe("createTimeEntriesClient", () => {
   it("creates a new task in the selected project", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
+        ...taskResponseMetadata,
         createdAt: "2026-04-20T12:00:00.000Z",
         defaultBillableForTimeEntries: false,
         githubIssue: null,
@@ -234,6 +249,7 @@ describe("createTimeEntriesClient", () => {
   it("lists GitHub issues for a local project with the shared query shape", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
+        ...taskResponseMetadata,
         items: [
           {
             id: "issue-184",
@@ -278,6 +294,7 @@ describe("createTimeEntriesClient", () => {
   it("materializes a GitHub issue task through the shared task schema", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
+        ...taskResponseMetadata,
         createdAt: "2026-04-20T12:00:00.000Z",
         defaultBillableForTimeEntries: true,
         githubIssue: {
@@ -322,6 +339,7 @@ describe("createTimeEntriesClient", () => {
   it("updates an existing task and parses the response", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
+        ...taskResponseMetadata,
         createdAt: "2026-04-20T12:00:00.000Z",
         defaultBillableForTimeEntries: true,
         githubIssue: null,

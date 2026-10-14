@@ -29,6 +29,8 @@ const githubIssue = { githubRepo: "ITSUA-team/GiTiempo", issueNumber: 343 };
 
 function boardIssueOption(): TopBarTaskOption {
   return {
+    accessScope: "project",
+    capabilities: { canManageTasks: true },
     createdAt: "2026-08-03T10:00:00.000Z",
     defaultBillableForTimeEntries: true,
     githubIssue,
@@ -45,6 +47,8 @@ function boardIssueOption(): TopBarTaskOption {
 }
 
 const project = {
+  accessScope: "project" as const,
+  capabilities: { canManageTasks: true },
   id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
   workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
   name: "Internal Platform",
@@ -53,6 +57,8 @@ const project = {
   visibility: "private" as const,
   defaultBillableForTasks: true,
   source: "manual" as const,
+  referenceProvenance: null,
+  trackingMode: "managed" as const,
   totalSeconds: 0,
   members: [],
   isActive: true,

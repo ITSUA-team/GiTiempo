@@ -128,28 +128,28 @@ function createRuntimeClient(overrides?: {
   return {
     signInWithGithub: vi.fn(async (): Promise<RuntimeAuthResult> => ({
       ok: true,
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     })),
     signInWithGoogle: vi.fn(async (): Promise<RuntimeAuthResult> => ({
       ok: true,
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     })),
     exchangeFirebaseToken: vi.fn(async (): Promise<RuntimeAuthResult> => ({
       ok: true,
       snapshot: {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: null,
         errorMessage: null,
-        user: null,
+        user: { displayName: "Alexey", email: "alexey@example.com" },
       },
     })),
     exchangeGithubSession: vi.fn(async (): Promise<RuntimeAuthResult> => ({
       ok: true,
       snapshot: {
-        authenticated: true,
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
         currentTimer: null,
         errorMessage: null,
-        user: null,
+        user: { displayName: "Alexey", email: "alexey@example.com" },
       },
     })),
     signOut: vi.fn(async (): Promise<RuntimeAuthResult> => ({
@@ -158,7 +158,7 @@ function createRuntimeClient(overrides?: {
         authenticated: false,
         currentTimer: null,
         errorMessage: null,
-        user: null,
+        user: { displayName: "Alexey", email: "alexey@example.com" },
       },
     })),
     retryProviderCleanup: vi.fn(async (): Promise<RuntimeAuthResult> => ({
@@ -167,40 +167,56 @@ function createRuntimeClient(overrides?: {
         authenticated: false,
         currentTimer: null,
         errorMessage: null,
-        user: null,
+        user: { displayName: "Alexey", email: "alexey@example.com" },
       },
     })),
-    getSnapshot: vi.fn(async () =>
-        overrides?.snapshot ?? {
-          authenticated: true,
-          currentTimer: null,
-          errorMessage: null,
-          user: null,
-        }),
+    getSnapshot: vi.fn(async (pageContext) => {
+      const snapshot = overrides?.snapshot ?? {
+        authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
+        currentTimer: null,
+        errorMessage: null,
+        user: { displayName: "Alexey", email: "alexey@example.com" },
+      };
+
+      return pageContext && !overrides?.snapshot
+        ? {
+            ...snapshot,
+            trackingCapability: {
+              accessScope: "project" as const,
+              canStartTracking: true as const,
+              githubRepo: pageContext.githubRepo,
+              issueNumber: pageContext.issueNumber,
+              reason: null,
+            },
+          }
+        : snapshot;
+    }),
     onSnapshotUpdated: vi.fn(() => () => undefined),
     openExtension: vi.fn(async () => undefined),
     startTimer:
       overrides?.startTimer ??
       vi.fn(async () => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       })),
     stopTimer:
       overrides?.stopTimer ??
       vi.fn(async () => ({
         ok: true,
-        snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+        snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       })),
   };
 }
 
 describe("injected issue control", () => {
   beforeEach(() => {
+    window.history.replaceState({}, "", "https://github.com/octo/repo/issues/184");
     document.documentElement.setAttribute("data-color-mode", "light");
+    document.head.innerHTML = '<link rel="canonical" href="https://github.com/octo/repo/issues/184">';
     document.body.innerHTML = `
       <main>
         <div id="partial-discussion-header">
-          <div class="gh-header-actions"></div>
+          <div class="gh-header-actions"></div><h1 class="js-issue-title">Improve reports filters</h1>
         </div>
       </main>
     `;
@@ -224,7 +240,7 @@ describe("injected issue control", () => {
     document.body.innerHTML = `
       <main>
         <section id="project-pane">
-          <div id="issue-viewer-sticky-header">Issue details</div>
+          <div id="issue-viewer-sticky-header"><a href="https://github.com/octo/repo/issues/184">#184</a><h1 class="js-issue-title">Improve reports filters</h1></div>
         </section>
       </main>
     `;
@@ -257,7 +273,7 @@ describe("injected issue control", () => {
 
   it("renders the auth-missing state with an open-extension action", async () => {
     const runtimeClient = createRuntimeClient({
-      snapshot: { authenticated: false, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: false, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     });
     const mounted = mountInjectedIssueControl(
       document,
@@ -297,7 +313,7 @@ describe("injected issue control", () => {
   it("starts a timer from the idle injected state", async () => {
     const startTimer = vi.fn(async () => ({
       ok: true,
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     }));
     const mounted = mountInjectedIssueControl(
       document,
@@ -311,7 +327,31 @@ describe("injected issue control", () => {
 
     root.querySelector<HTMLButtonElement>('[data-action="start-timer"]')!.click();
     await Promise.resolve();
-    expect(startTimer).toHaveBeenCalledWith(supportedContext());
+    expect(startTimer).toHaveBeenCalledWith(supportedContext(), "workspace-alpha", "alexey@example.com");
+  });
+
+  it("keeps the matching Stop action when issue capability is unavailable", async () => {
+    const context = supportedContext();
+    const mounted = mountInjectedIssueControl(
+      document,
+      context,
+      createRuntimeClient({
+        snapshot: {
+          authenticated: true,
+          workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
+          currentTimer: currentIssueTimer(),
+          errorMessage: null,
+          trackingCapability: null,
+          user: { displayName: "Alexey", email: "alexey@example.com" },
+        },
+      }),
+    )!;
+
+    await mounted.load();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+    expect(root.querySelector('[data-action="stop-timer"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="start-timer"]')).toBeNull();
   });
 
   it("keeps the issue context and renders the exact assignment remedy after a denied start", async () => {
@@ -325,7 +365,7 @@ describe("injected issue control", () => {
           errorCode: "project_assignment_required" as const,
           errorMessage: assignmentMessage,
           ok: false,
-          snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+          snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
         })),
       }),
     )!;
@@ -346,10 +386,10 @@ describe("injected issue control", () => {
       supportedContext(),
       createRuntimeClient({
         snapshot: {
-          authenticated: true,
+          authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
           currentTimer: currentIssueTimer(),
           errorMessage: null,
-          user: null,
+          user: { displayName: "Alexey", email: "alexey@example.com" },
         },
       }),
     )!;
@@ -368,10 +408,10 @@ describe("injected issue control", () => {
       supportedContext(),
       createRuntimeClient({
         snapshot: {
-          authenticated: true,
+          authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
           currentTimer: otherIssueTimer(),
           errorMessage: null,
-          user: null,
+          user: { displayName: "Alexey", email: "alexey@example.com" },
         },
       }),
     )!;
@@ -386,16 +426,44 @@ describe("injected issue control", () => {
     expect(root.textContent).toContain("Project Orion");
   });
 
-  it("keeps the current timer non-destructive when github issue linkage is unavailable", async () => {
+  it("keeps an authoritative timer visible when workspace readiness fails", async () => {
     const mounted = mountInjectedIssueControl(
       document,
       supportedContext(),
       createRuntimeClient({
         snapshot: {
           authenticated: true,
+          currentTimer: otherIssueTimer(),
+          errorMessage: "Workspace context is temporarily unavailable.",
+          user: { displayName: "Alexey", email: "alexey@example.com" },
+          workspace: null,
+        },
+      }),
+    )!;
+
+    await mounted.load();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+
+    expect(root.textContent).toContain("Timer running elsewhere");
+    expect(root.textContent).toContain("Improve reports filters");
+    expect(root.textContent).toContain("Workspace context is temporarily unavailable.");
+    expect(root.querySelector('[data-action="open-extension"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="retry"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="stop-timer"]')).toBeNull();
+    expect(root.querySelector('[data-action="start-timer"]')).toBeNull();
+  });
+
+  it("keeps the current timer non-destructive when github issue linkage is unavailable", async () => {
+    const mounted = mountInjectedIssueControl(
+      document,
+      supportedContext(),
+      createRuntimeClient({
+        snapshot: {
+          authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
           currentTimer: currentTimer(),
           errorMessage: null,
-          user: null,
+          user: { displayName: "Alexey", email: "alexey@example.com" },
         },
       }),
     )!;
@@ -413,17 +481,17 @@ describe("injected issue control", () => {
     const stopTimer = vi.fn(async () => ({
       ok: false,
       errorMessage: "Timer stop failed",
-      snapshot: { authenticated: true, currentTimer: null, errorMessage: null, user: null },
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
     }));
     const mounted = mountInjectedIssueControl(
       document,
       supportedContext(),
       createRuntimeClient({
         snapshot: {
-          authenticated: true,
+          authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
           currentTimer: currentIssueTimer(),
           errorMessage: null,
-          user: null,
+          user: { displayName: "Alexey", email: "alexey@example.com" },
         },
         stopTimer,
       }),
@@ -447,7 +515,7 @@ describe("injected issue control", () => {
     document.body.innerHTML = `
       <main>
         <div id="partial-discussion-header">
-          <div class="gh-header-actions"></div>
+          <div class="gh-header-actions"></div><h1 class="js-issue-title">Improve reports filters</h1>
         </div>
       </main>
     `;
@@ -463,6 +531,8 @@ describe("injected issue control", () => {
     expect(root.textContent).toContain("Improve reports filters");
 
     document.title = "Fix billing regression";
+    document.querySelector(".js-issue-title")!.textContent = "Fix billing regression";
+    document.querySelector('link[rel="canonical"]')!.setAttribute("href", "https://github.com/octo/repo/issues/200");
     window.history.pushState({}, "", "https://github.com/octo/repo/issues/200");
     document.body
       .querySelector("main")!
@@ -473,6 +543,39 @@ describe("injected issue control", () => {
     root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
     expect(root.textContent).toContain("Fix billing regression");
     expect(root.textContent).toContain("#200");
+
+    app.destroy();
+  });
+
+  it("mounts once when GitHub opens an issue from an issue list without a document reload", async () => {
+    window.history.replaceState({}, "", "https://github.com/octo/repo/issues");
+    document.head.innerHTML = "";
+    document.body.innerHTML = "<main><h1>Issues</h1></main>";
+
+    const app = bootstrapInjectedIssueControl(document, window, createRuntimeClient());
+
+    await Promise.resolve();
+
+    expect(document.getElementById("gitiempo-extension-root")).toBeNull();
+
+    window.history.pushState({}, "", "https://github.com/octo/repo/issues/200");
+    document.body.innerHTML = `
+      <main>
+        <div data-testid="issue-header">
+          <h1><bdi data-testid="issue-title">Fix billing regression</bdi><span>&nbsp;#200</span></h1>
+        </div>
+        <a data-testid="issue-body-header-link" href="https://github.com/octo/repo/issues/200#issue-123">Opened</a>
+      </main>
+    `;
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const root = document.getElementById("gitiempo-extension-root");
+
+    expect(root?.shadowRoot?.textContent).toContain("Fix billing regression");
+    expect(root?.shadowRoot?.textContent).toContain("#200");
+    expect(document.querySelectorAll("#gitiempo-extension-root")).toHaveLength(1);
 
     app.destroy();
   });
@@ -499,7 +602,7 @@ describe("injected issue control", () => {
     const stickyHeader = document.createElement("div");
 
     stickyHeader.id = "issue-viewer-sticky-header";
-    stickyHeader.textContent = "Issue details";
+    stickyHeader.innerHTML = '<a href="https://github.com/octo/repo/issues/184">#184</a><h1 class="js-issue-title">Improve reports filters</h1>';
     document.getElementById("project-pane")!.append(stickyHeader);
 
     await Promise.resolve();
@@ -514,7 +617,7 @@ describe("injected issue control", () => {
     document.body.innerHTML = `
       <main>
         <div id="partial-discussion-header">
-          <div class="gh-header-actions"></div>
+          <div class="gh-header-actions"></div><h1 class="js-issue-title">Improve reports filters</h1>
         </div>
       </main>
     `;
@@ -565,7 +668,7 @@ describe("injected issue control", () => {
     document.body.innerHTML = `
       <main>
         <div id="partial-discussion-header">
-          <div class="gh-header-actions"></div>
+          <div class="gh-header-actions"></div><h1 class="js-issue-title">Improve reports filters</h1>
         </div>
       </main>
     `;
@@ -602,7 +705,7 @@ describe("injected issue control", () => {
     document.body.innerHTML = `
       <main>
         <section id="project-pane">
-          <div id="issue-viewer-sticky-header">Issue details</div>
+          <div id="issue-viewer-sticky-header"><a href="https://github.com/octo/repo/issues/184">#184</a><h1 class="js-issue-title">Improve reports filters</h1></div>
         </section>
       </main>
     `;
@@ -618,11 +721,13 @@ describe("injected issue control", () => {
     expect(root.textContent).toContain("#184");
 
     document.title = "Fix billing regression";
+    document.querySelector(".js-issue-title")!.textContent = "Fix billing regression";
     window.history.pushState(
       {},
       "",
       "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|200",
     );
+    document.querySelector('#issue-viewer-sticky-header a')!.setAttribute("href", "https://github.com/octo/repo/issues/200");
     document
       .getElementById("project-pane")!
       .append(document.createElement("div"));
@@ -636,6 +741,45 @@ describe("injected issue control", () => {
     app.destroy();
   });
 
+  it("mounts once after GitHub opens a Projects issue pane without a document reload", async () => {
+    window.history.replaceState({}, "", "https://github.com/orgs/octo/projects/7/views/1");
+    document.head.innerHTML = "";
+    document.body.innerHTML = "<main><h1>Project board</h1></main>";
+
+    const app = bootstrapInjectedIssueControl(document, window, createRuntimeClient());
+
+    await Promise.resolve();
+
+    expect(document.getElementById("gitiempo-extension-root")).toBeNull();
+
+    window.history.pushState(
+      {},
+      "",
+      "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|200",
+    );
+    document.body.innerHTML = `
+      <main>
+        <section id="project-pane">
+          <div id="issue-viewer-sticky-header">
+            <a href="https://github.com/octo/repo/issues/200">#200</a>
+            <h1 class="js-issue-title">Fix billing regression</h1>
+          </div>
+        </section>
+      </main>
+    `;
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const root = document.getElementById("gitiempo-extension-root");
+
+    expect(root?.shadowRoot?.textContent).toContain("Fix billing regression");
+    expect(root?.shadowRoot?.textContent).toContain("#200");
+    expect(document.querySelectorAll("#gitiempo-extension-root")).toHaveLength(1);
+
+    app.destroy();
+  });
+
   it("unmounts when a Projects pane stops exposing supported issue context", async () => {
     window.history.replaceState(
       {},
@@ -645,7 +789,7 @@ describe("injected issue control", () => {
     document.body.innerHTML = `
       <main>
         <section id="project-pane">
-          <div id="issue-viewer-sticky-header">Issue details</div>
+          <div id="issue-viewer-sticky-header"><a href="https://github.com/octo/repo/issues/184">#184</a><h1 class="js-issue-title">Improve reports filters</h1></div>
         </section>
       </main>
     `;
@@ -675,14 +819,16 @@ describe("injected issue control", () => {
 
   it("unmounts on issue-to-PR navigation and remounts when returning to an issue", async () => {
     window.history.replaceState({}, "", "https://github.com/octo/repo/issues/200");
+    document.querySelector('link[rel="canonical"]')!.setAttribute("href", "https://github.com/octo/repo/issues/200");
     document.body.innerHTML = `
       <main>
         <div id="partial-discussion-header">
-          <div class="gh-header-actions"></div>
+          <div class="gh-header-actions"></div><h1 class="js-issue-title">Improve reports filters</h1>
         </div>
       </main>
     `;
     document.title = "Fix billing regression";
+    document.querySelector(".js-issue-title")!.textContent = "Fix billing regression";
 
     const app = bootstrapInjectedIssueControl(
       document,
@@ -703,6 +849,8 @@ describe("injected issue control", () => {
     expect(document.getElementById("gitiempo-extension-root")).toBeNull();
 
     document.title = "Fix billing regression";
+    document.querySelector(".js-issue-title")!.textContent = "Fix billing regression";
+    document.querySelector('link[rel="canonical"]')!.setAttribute("href", "https://github.com/octo/repo/issues/200");
     window.history.pushState({}, "", "https://github.com/octo/repo/issues/200");
     document.body.querySelector("main")!.append(document.createElement("div"));
 

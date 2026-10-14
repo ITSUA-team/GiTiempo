@@ -50,7 +50,7 @@ function buildManifest(mode: string): Record<string, unknown> {
     manifest_version: 3,
     name: "GiTiempo",
     ...(extensionKey ? { "{{chrome}}.key": extensionKey } : {}),
-    version: "0.1.0",
+    version: "0.1.1",
     description:
       "Track GiTiempo timers directly from supported GitHub issue surfaces.",
     permissions: ["identity", "storage"],
@@ -87,10 +87,12 @@ function buildManifest(mode: string): Record<string, unknown> {
     },
     content_scripts: [
       {
-        matches: [
-          "https://github.com/*/*/issues/*",
-          "https://github.com/orgs/*/projects/*",
-        ],
+        // GitHub navigates between issue lists, issue pages, and Projects panes
+        // without a document load. Register for the GitHub origin so the content
+        // script remains alive when an issue is opened from one of those routes.
+        // The runtime still mounts only after strict issue-context validation.
+        matches: ["https://github.com/*"],
+        exclude_matches: ["https://github.com/*/*/pull/*"],
         js: ["src/content/main.ts"],
         run_at: "document_idle",
       },

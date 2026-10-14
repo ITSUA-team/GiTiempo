@@ -190,6 +190,33 @@ describe('ProjectImportsService GitHub project import', () => {
     expect(inserts).toHaveLength(0);
   });
 
+  it('rejects an inactive external-reference board mapping before reassociation', async () => {
+    const service = createService(
+      createDbStub(inserts, [], {
+        joinedRows: [
+          [
+            {
+              projectId: 'external-project',
+              isActive: false,
+              trackingMode: 'external-reference',
+            },
+          ],
+        ],
+      }),
+    );
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [{ githubProjectId: 'PVT_kwDO', githubRepos: [] }],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      projectId: null,
+      status: 'failed',
+    });
+    expect(response.results[0]?.message).toContain('external-reference');
+    expect(inserts).toHaveLength(0);
+  });
+
   it('refuses a project whose real owner the workspace has not approved', async () => {
     github.resolveImportableProject.mockRejectedValueOnce(
       new NotFoundException('GitHub project owner could not be verified'),
@@ -302,6 +329,35 @@ describe('ProjectImportsService GitHub project import', () => {
       status: 'imported',
     });
     expect(db.deletedProjectIds).toEqual([]);
+    expect(
+      inserts.filter((row) => row.values.externalType === 'repository'),
+    ).toEqual([]);
+  });
+
+  it('does not reassign an inactive external-reference repository mapping', async () => {
+    const db = createDbStub(inserts, [], {
+      heldRepositoryRef: [
+        {
+          id: 'ref-external',
+          isActive: false,
+          trackingMode: 'external-reference',
+        },
+      ],
+    });
+    const service = createService(db);
+
+    const response = await service.importGitHubProjects(user, {
+      githubProjects: [
+        { githubProjectId: 'PVT_kwDO', githubRepos: ['itsua-team/kesher'] },
+      ],
+    });
+
+    expect(response.results[0]).toMatchObject({
+      projectId: null,
+      status: 'repository-taken',
+    });
+    expect(response.results[0]?.message).toContain('external-reference');
+    expect(db.deletedProjectIds).toEqual(['project-1']);
     expect(
       inserts.filter((row) => row.values.externalType === 'repository'),
     ).toEqual([]);

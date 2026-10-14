@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import {
@@ -119,6 +119,20 @@ const {
 } = search;
 const { isSavingDialog } = mutations;
 const { requestErrorMessage, visibleProjects } = data;
+const manageableProjects = computed(() =>
+  visibleProjects.value.filter((project) => project.capabilities.canManageTasks),
+);
+watch(manageableProjects, (projects) => {
+  const selectedProjectId = dialogProjectId.value;
+
+  if (
+    isDialogOpen.value &&
+    selectedProjectId &&
+    !projects.some((project) => project.id === selectedProjectId)
+  ) {
+    closeDialog();
+  }
+});
 const {
   closeTaskBackfillDialog,
   handleTaskBackfillSubmitted,
@@ -218,7 +232,7 @@ function openActiveTimerDialog(): void {
       :is-saving="isSavingDialog"
       :mode="dialogMode"
       :project-id="dialogProjectId"
-      :projects="visibleProjects"
+      :projects="manageableProjects"
       :request-error-message="dialogRequestErrorMessage"
       :save-label="dialogSaveLabel"
       :status="dialogTaskStatus"

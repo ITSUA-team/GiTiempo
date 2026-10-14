@@ -21,6 +21,8 @@ vi.mock("@/composables/query", () => ({
 import { useProjectTaskDirectTimerActions } from "./useProjectTaskDirectTimerActions";
 
 const task: TaskResponse = {
+  accessScope: "project",
+  capabilities: { canManageTasks: true },
   createdAt: "2026-04-20T12:00:00.000Z",
   defaultBillableForTimeEntries: true,
   githubIssue: null,

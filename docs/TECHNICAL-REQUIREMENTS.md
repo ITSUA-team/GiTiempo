@@ -112,6 +112,8 @@ Full Disconnect verifies an enabled Firebase account with password or Google sig
 - The backend maintains a local cache. Stale data is refreshed on the next request.
 - No background jobs or webhooks for sync in MVP — the user's action triggers the refresh.
 
+**External reference tracking:** A reference start from the browser extension is a separate, default-on path. It accepts bounded issue context from the page and makes no GitHub provider call. It persists `projects.tracking_mode` as `managed` or `external-reference`, and reference provenance as `provider-verified` or `user-supplied`; existing projects default to `managed`. A new external project is private, has no fake synchronization time, and is reused by case-insensitive GitHub repository and issue identity within its workspace. A later import may reuse that identity but must not change its tracking mode, provenance, title, synchronization data, or access policy. Repository rename/transfer rebinding and mode conversion are deferred.
+
 **Workspace organization policy:**
 
 - Workspace admins can maintain a workspace-level allow-list of GitHub organization logins from the admin app.
@@ -134,6 +136,8 @@ Three roles: `admin`, `pm`, `member`.
 **PM management endpoints** require `role IN ('admin', 'pm')`; PMs are limited to assigned projects.
 **Member project endpoints** require any authenticated user with project visibility.
 **Project assignment endpoints** are admin-only; assignment targets may be `pm` or `member` users. Assignments remain valid if a user changes between `pm` and `member`.
+
+External-reference access adds a read-only `own-time` scope. Without separate project access, an active member can read an external project only while they have an entry in it, can read only a task with their own entry, and sees only their time and aggregates. This scope grants no task/project mutation, reports, exports, assignment administration, or peer data. Full `project` scope preserves existing administrator, public-project, and explicit-assignment capabilities.
 
 ### 2.5 API Design Principles
 

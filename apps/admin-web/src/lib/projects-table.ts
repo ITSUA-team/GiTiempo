@@ -33,6 +33,7 @@ export interface ProjectsTableRow {
   name: string;
   nameClass: string;
   project: ProjectResponse;
+  isExternal?: boolean;
   sourceLabel: string;
   visibility: ProjectResponse['visibility'];
   visibilityLabel: string;

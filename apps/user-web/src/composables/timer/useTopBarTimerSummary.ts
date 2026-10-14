@@ -115,6 +115,7 @@ export function useTopBarTimerSummary({
         selectedContext: await loadEligibleLastTrackedContext(client),
       };
     },
+    refetchOnWindowFocus: true,
   });
   const isLoadingSummary = computed(() => summaryQuery.isFetching.value);
   const summaryErrorMessage = computed(() =>

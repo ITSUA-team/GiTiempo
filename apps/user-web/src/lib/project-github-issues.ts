@@ -5,7 +5,13 @@ import type {
   TaskResponse,
 } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
+import type { QueryClient } from "@tanstack/vue-query";
 
+import {
+  timerGithubKeys,
+  type UserServerStateScope,
+} from "@/lib/query-keys";
+import { TIMER_OPTIONS_STALE_TIME } from "@/lib/timer-options-cache";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 const PROJECT_GITHUB_ISSUE_PAGE_SIZE = 30;
@@ -41,7 +47,7 @@ interface AppendUnsyncedProjectGitHubIssueOptionsInput<TTaskOption> {
   localTaskOptions: TTaskOption[];
   localTasks: TaskResponse[];
   hasKnownGitHubIssueSource?: boolean;
-  project: Pick<ProjectResponse, "id" | "source"> | null;
+  project: Pick<ProjectResponse, "accessScope" | "id" | "source"> | null;
   mapGitHubIssue(issue: UnsyncedProjectGitHubIssue): TTaskOption;
 }
 
@@ -56,12 +62,30 @@ export function createProjectGitHubIssuePageFetcher(
     });
 }
 
+export function fetchCachedProjectGitHubIssuePage(input: {
+  client: TimeEntriesClient;
+  page: Parameters<ProjectGitHubIssuePageFetcher>[0];
+  queryClient: QueryClient;
+  scope: UserServerStateScope;
+}): ReturnType<ProjectGitHubIssuePageFetcher> {
+  return input.queryClient.fetchQuery({
+    queryKey: timerGithubKeys.repositoryIssuePage(
+      input.scope,
+      input.page.projectId,
+      input.page.pageToken ?? null,
+    ),
+    queryFn: () => createProjectGitHubIssuePageFetcher(input.client)(input.page),
+    staleTime: TIMER_OPTIONS_STALE_TIME,
+  });
+}
+
 export function supportsProjectGitHubIssueSuggestions(
-  project: Pick<ProjectResponse, "source"> | null,
+  project: Pick<ProjectResponse, "accessScope" | "source"> | null,
   localTasks: Pick<TaskResponse, "githubIssue">[],
 ): boolean {
   return (
     project !== null &&
+    project.accessScope === "project" &&
     (project.source === "github" ||
       localTasks.some((task) => task.githubIssue !== null))
   );
@@ -142,6 +166,7 @@ export async function appendUnsyncedProjectGitHubIssueOptions<TTaskOption>(
 
   if (
     project === null ||
+    project.accessScope !== "project" ||
     (!input.hasKnownGitHubIssueSource &&
       !supportsProjectGitHubIssueSuggestions(project, input.localTasks))
   ) {

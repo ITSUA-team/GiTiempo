@@ -11,6 +11,7 @@ import {
   setRefreshToken,
 } from "../session-storage";
 import type { AuthRuntime } from "./runtime";
+import { SessionContextChangedError } from "./session-context-changed-error";
 
 const SESSION_EXPIRED_MESSAGE =
   "Your session has expired. Please sign in again.";
@@ -45,6 +46,19 @@ export function createAuthSessionCore({
   let bootstrapPromise: Promise<void> | null = null;
   let refreshAccessPromise: Promise<string> | null = null;
 
+  let sessionGeneration = 0;
+
+  function changeSessionContext(): void {
+    sessionGeneration += 1;
+    refreshAccessPromise = null;
+  }
+
+  function assertSessionContext(generation: number): void {
+    if (generation !== sessionGeneration) {
+      throw new SessionContextChangedError();
+    }
+  }
+
   const isAuthenticated = computed(() => accessToken.value !== null);
 
   function applyTokenPair(tokenPair: TokenPairResponse): void {
@@ -53,6 +67,7 @@ export function createAuthSessionCore({
   }
 
   function clearSession(): void {
+    changeSessionContext();
     accessToken.value = null;
     profile.value = null;
     onClearSession?.();
@@ -69,9 +84,14 @@ export function createAuthSessionCore({
   }
 
   async function loadCurrentUser(nextAccessToken: string): Promise<void> {
+    const generation = sessionGeneration;
     try {
-      profile.value = await getAuthRuntime().getCurrentUser(nextAccessToken);
-    } catch {
+      const nextProfile = await getAuthRuntime().getCurrentUser(nextAccessToken);
+      assertSessionContext(generation);
+      profile.value = nextProfile;
+    } catch (error) {
+      assertSessionContext(generation);
+      if (error instanceof SessionContextChangedError) throw error;
       profile.value = null;
     }
   }
@@ -84,9 +104,17 @@ export function createAuthSessionCore({
       return;
     }
 
-    const tokenPair = await getAuthRuntime().refreshSession(refreshToken);
-    applyTokenPair(tokenPair);
-    await loadCurrentUser(tokenPair.accessToken);
+    const generation = sessionGeneration;
+    try {
+      const tokenPair = await getAuthRuntime().refreshSession(refreshToken);
+      assertSessionContext(generation);
+      if (getRefreshToken() !== refreshToken) throw new SessionContextChangedError();
+      applyTokenPair(tokenPair);
+      await loadCurrentUser(tokenPair.accessToken);
+    } catch (error) {
+      assertSessionContext(generation);
+      throw error;
+    }
   }
 
   async function runBootstrapSession(): Promise<void> {
@@ -94,8 +122,8 @@ export function createAuthSessionCore({
 
     try {
       await restoreSessionFromRefreshToken();
-    } catch {
-      clearSession();
+    } catch (error) {
+      if (!(error instanceof SessionContextChangedError)) clearSession();
     } finally {
       completeBootstrap();
       isBootstrapping.value = false;
@@ -121,36 +149,39 @@ export function createAuthSessionCore({
       throw new Error(SESSION_EXPIRED_MESSAGE);
     }
 
+    const generation = sessionGeneration;
     try {
       const tokenPair = await getAuthRuntime().refreshSession(refreshToken);
+      assertSessionContext(generation);
+      if (getRefreshToken() !== refreshToken) throw new SessionContextChangedError();
       applyTokenPair(tokenPair);
       completeBootstrap();
 
       return tokenPair.accessToken;
     } catch (error) {
+      assertSessionContext(generation);
+      if (getRefreshToken() !== refreshToken) throw new SessionContextChangedError();
       clearSessionAndCompleteBootstrap();
       throw error;
     }
   }
 
-  async function runAccessTokenRefresh(): Promise<string> {
-    try {
-      return await refreshStoredAccessToken();
-    } finally {
-      refreshAccessPromise = null;
-    }
-  }
-
   function refreshAccessToken(): Promise<string> {
-    refreshAccessPromise ??= runAccessTokenRefresh();
-
+    if (!refreshAccessPromise) {
+      const pendingRefresh = refreshStoredAccessToken().finally(() => {
+        if (refreshAccessPromise === pendingRefresh) refreshAccessPromise = null;
+      });
+      refreshAccessPromise = pendingRefresh;
+    }
     return refreshAccessPromise;
   }
 
   async function exchangeFirebaseIdToken(firebaseIdToken: string): Promise<void> {
+    const generation = sessionGeneration;
     const tokenPair = await getAuthRuntime().loginWithFirebaseToken(
       firebaseIdToken,
     );
+    assertSessionContext(generation);
 
     await establishSessionFromTokenPair(tokenPair);
   }
@@ -158,7 +189,9 @@ export function createAuthSessionCore({
   // Backend GitHub sign-in returns a one-time handoff code (not a Firebase
   // token); exchange it for the normal session token pair.
   async function exchangeGithubHandoff(code: string): Promise<void> {
+    const generation = sessionGeneration;
     const tokenPair = await getAuthRuntime().exchangeGithubSession(code);
+    assertSessionContext(generation);
 
     await establishSessionFromTokenPair(tokenPair);
   }
@@ -166,6 +199,7 @@ export function createAuthSessionCore({
   async function establishSessionFromTokenPair(
     tokenPair: TokenPairResponse,
   ): Promise<void> {
+    changeSessionContext();
     onSessionContextChanged?.();
     applyTokenPair(tokenPair);
     await loadCurrentUser(tokenPair.accessToken);
@@ -182,23 +216,30 @@ export function createAuthSessionCore({
       throw new Error(SESSION_EXPIRED_MESSAGE);
     }
 
+    const generation = sessionGeneration;
     const tokenPair = await getAuthRuntime().switchWorkspace(
       currentAccessToken,
       currentRefreshToken,
       workspaceId,
     );
+    assertSessionContext(generation);
+    changeSessionContext();
+    const switchedGeneration = sessionGeneration;
     onSessionContextChanged?.();
     applyTokenPair(tokenPair);
     profile.value = null;
 
     try {
-      profile.value = await getAuthRuntime().getCurrentUser(tokenPair.accessToken);
+      const nextProfile = await getAuthRuntime().getCurrentUser(tokenPair.accessToken);
+      assertSessionContext(switchedGeneration);
+      profile.value = nextProfile;
 
       return {
         profileReloaded: true,
         profileReloadError: null,
       };
     } catch (profileReloadError) {
+      assertSessionContext(switchedGeneration);
       return {
         profileReloaded: false,
         profileReloadError,
@@ -209,12 +250,14 @@ export function createAuthSessionCore({
   }
 
   async function runSubmittingLogin(login: () => Promise<void>): Promise<void> {
+    changeSessionContext();
+    const generation = sessionGeneration;
     isSubmitting.value = true;
 
     try {
       await login();
     } catch (error) {
-      clearSessionAndCompleteBootstrap();
+      if (generation === sessionGeneration) clearSessionAndCompleteBootstrap();
       throw error;
     } finally {
       isSubmitting.value = false;
@@ -234,10 +277,12 @@ export function createAuthSessionCore({
     password: string,
   ): Promise<void> {
     return runSubmittingLogin(async () => {
+      const generation = sessionGeneration;
       const firebaseIdToken = await getAuthRuntime().signInWithEmailPassword(
         email,
         password,
       );
+      assertSessionContext(generation);
 
       await exchangeFirebaseIdToken(firebaseIdToken);
     });
@@ -245,7 +290,9 @@ export function createAuthSessionCore({
 
   function loginWithGoogle(): Promise<void> {
     return runSubmittingLogin(async () => {
+      const generation = sessionGeneration;
       const firebaseIdToken = await getAuthRuntime().signInWithGoogle();
+      assertSessionContext(generation);
 
       await exchangeFirebaseIdToken(firebaseIdToken);
     });
@@ -273,15 +320,16 @@ export function createAuthSessionCore({
   async function logout(): Promise<void> {
     const refreshToken = getRefreshToken();
     const currentAccessToken = accessToken.value;
+    clearSession();
+    completeBootstrap();
+    const generation = sessionGeneration;
 
     try {
       if (currentAccessToken && refreshToken) {
         await logoutApiSession(currentAccessToken, refreshToken);
       }
     } finally {
-      clearSession();
-      completeBootstrap();
-      await logoutIdentityProvider();
+      if (generation === sessionGeneration) await logoutIdentityProvider();
     }
   }
 

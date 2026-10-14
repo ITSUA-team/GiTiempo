@@ -4,40 +4,48 @@ import {
   githubTrackingErrorMessages,
   type TimeEntryResponse,
   type TokenPairResponse,
-} from "@gitiempo/shared";
+} from '@gitiempo/shared';
 
-import { getExtensionConfig } from "@/lib/config";
-import { createExtensionApiClient } from "@/lib/api";
-import { signInWithGoogle, signOutFromFirebase } from "@/lib/firebase";
-import { signInWithGithub } from "@/lib/github-signin";
+import { getExtensionConfig } from '@/lib/config';
+import { createExtensionApiClient } from '@/lib/api';
+import { signInWithGoogle, signOutFromFirebase } from '@/lib/firebase';
+import { signInWithGithub } from '@/lib/github-signin';
 import type {
   BackgroundMessage,
   RuntimeAuthResult,
   RuntimeMutationResult,
   RuntimeSnapshot,
+  RuntimeTrackingCapability,
   SnapshotUser,
-} from "@/lib/runtime";
+} from '@/lib/runtime';
 import {
   clearPendingProviderCleanup,
   getStoredSession,
   hasPendingProviderCleanup,
   setPendingProviderCleanup,
-} from "@/lib/session";
-import { decodeAccessTokenEmail } from "@/lib/token";
-import { getGitHubTrackingErrorCode } from "@/lib/github-tracking-error";
+} from '@/lib/session';
+import {
+  decodeAccessTokenEmail,
+  decodeAccessTokenWorkspaceId,
+} from '@/lib/token';
+import { getGitHubTrackingErrorCode } from '@/lib/github-tracking-error';
+import type { SupportedGitHubIssueContext } from '@/lib/github-context';
 
 const config = getExtensionConfig();
 const apiClient = createExtensionApiClient({ config });
 const contentScriptMatches = [
-  "https://github.com/*/*/issues/*",
-  "https://github.com/orgs/*/projects/*",
+  'https://github.com/*/*/issues/*',
+  'https://github.com/orgs/*/projects/*',
 ];
 
 function deriveSnapshotUser(
   session: TokenPairResponse,
   timeEntry: TimeEntryResponse | null,
 ): SnapshotUser | null {
-  const email = decodeAccessTokenEmail(session.accessToken) ?? timeEntry?.user.email ?? null;
+  const email =
+    decodeAccessTokenEmail(session.accessToken) ??
+    timeEntry?.user.email ??
+    null;
 
   if (!email) {
     return null;
@@ -49,13 +57,18 @@ function deriveSnapshotUser(
   };
 }
 
-async function loadSnapshot(): Promise<RuntimeSnapshot> {
+let lastSnapshot: RuntimeSnapshot | null = null;
+
+async function loadSnapshot(
+  pageContext?: SupportedGitHubIssueContext,
+): Promise<RuntimeSnapshot> {
   const [session, providerCleanupPending] = await Promise.all([
     getStoredSession(),
     getProviderCleanupPending(),
   ]);
 
   if (!session) {
+    lastSnapshot = null;
     return {
       authenticated: false,
       currentTimer: null,
@@ -65,32 +78,107 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
     };
   }
 
-  try {
-    const response = await apiClient.getCurrentTimer();
-
+  const email = decodeAccessTokenEmail(session.accessToken);
+  const workspaceId = decodeAccessTokenWorkspaceId(session.accessToken);
+  const expectedContext = email && workspaceId
+    ? { email, workspaceId }
+    : undefined;
+  const [timerResult, workspaceResult, capabilityResult] = await Promise.allSettled([
+    apiClient.getCurrentTimer(),
+    apiClient.getWorkspace(),
+    pageContext
+      ? apiClient.getTrackingCapability(pageContext, expectedContext)
+      : Promise.resolve(null),
+  ]);
+  const nextSession = await getStoredSession();
+  if (!nextSession) {
+    lastSnapshot = null;
     return {
-      authenticated: true,
-      currentTimer: response.timeEntry,
+      authenticated: false,
+      currentTimer: null,
       errorMessage: null,
       providerCleanupPending,
-      user: deriveSnapshotUser(session, response.timeEntry),
-    };
-  } catch (error) {
-    const nextSession = await getStoredSession();
-
-    return {
-      authenticated: nextSession !== null,
-      currentTimer: null,
-      errorMessage: error instanceof Error ? error.message : "Unable to load timer state.",
-      providerCleanupPending,
-      user: nextSession ? deriveSnapshotUser(nextSession, null) : null,
+      user: null,
     };
   }
+  const nextEmail = decodeAccessTokenEmail(nextSession.accessToken);
+  const nextWorkspaceId = decodeAccessTokenWorkspaceId(nextSession.accessToken);
+  const sessionChanged =
+    nextEmail !== email ||
+    nextWorkspaceId !== workspaceId;
+  if (sessionChanged) {
+    lastSnapshot = null;
+    return {
+      authenticated: true,
+      currentTimer: null,
+      workspace: null,
+      user: deriveSnapshotUser(nextSession, null),
+      providerCleanupPending,
+      errorMessage:
+        'Your session or workspace changed. Refresh and review the destination before starting.',
+    };
+  }
+  const sameUser = nextEmail !== null && lastSnapshot?.user?.email === nextEmail;
+  const returnedTimer =
+    timerResult.status === 'fulfilled' ? timerResult.value.timeEntry : null;
+  const timerMatches =
+    returnedTimer === null || returnedTimer.user.email === nextEmail;
+  const workspaceMatches =
+    workspaceResult.status === 'fulfilled' &&
+    (nextWorkspaceId === null || workspaceResult.value.id === nextWorkspaceId);
+  const trackingCapability: RuntimeTrackingCapability | null =
+    pageContext && capabilityResult.status === 'fulfilled' && capabilityResult.value
+      ? {
+          ...capabilityResult.value,
+          githubRepo: pageContext.githubRepo,
+          issueNumber: pageContext.issueNumber,
+        }
+      : null;
+  const currentTimer =
+    timerResult.status === 'fulfilled'
+      ? timerMatches
+        ? returnedTimer
+        : null
+      : sameUser
+        ? (lastSnapshot?.currentTimer ?? null)
+        : null;
+  const failure =
+    timerResult.status === 'rejected'
+      ? timerResult.reason
+      : workspaceResult.status === 'rejected'
+        ? workspaceResult.reason
+        : capabilityResult.status === 'rejected'
+          ? capabilityResult.reason
+        : null;
+  const snapshot: RuntimeSnapshot = {
+    authenticated: true,
+    currentTimer,
+    workspace:
+      workspaceMatches && workspaceResult.status === 'fulfilled'
+        ? { id: workspaceResult.value.id, name: workspaceResult.value.name }
+        : null,
+    errorMessage:
+      !timerMatches ||
+      (workspaceResult.status === 'fulfilled' && !workspaceMatches)
+        ? 'Your session or workspace changed. Refresh and review the destination before starting.'
+        : failure
+          ? failure instanceof Error
+            ? failure.message
+            : 'Unable to load timer state.'
+          : null,
+    providerCleanupPending,
+    ...(pageContext ? { trackingCapability } : {}),
+    user: deriveSnapshotUser(nextSession, currentTimer),
+  };
+  lastSnapshot = snapshot;
+  return snapshot;
 }
 
-export async function broadcastSnapshot(snapshot: RuntimeSnapshot): Promise<void> {
+export async function broadcastSnapshot(
+  snapshot: RuntimeSnapshot,
+): Promise<void> {
   const event = {
-    type: "runtime/snapshot-updated",
+    type: 'runtime/snapshot-updated',
     snapshot,
   } as const;
 
@@ -143,12 +231,11 @@ async function handleMutation(
     return {
       ok: false,
       ...(errorCode ? { errorCode } : {}),
-      errorMessage:
-        errorCode
-          ? githubTrackingErrorMessages[errorCode]
-          : error instanceof Error
-            ? error.message
-            : "Unable to update timer state.",
+      errorMessage: errorCode
+        ? githubTrackingErrorMessages[errorCode]
+        : error instanceof Error
+          ? error.message
+          : 'Unable to update timer state.',
       snapshot,
     };
   }
@@ -157,19 +244,23 @@ async function handleMutation(
 async function handleAuthExchange(
   firebaseIdToken: string,
 ): Promise<RuntimeAuthResult> {
-  return handleMutation(() => apiClient.loginWithFirebaseToken(firebaseIdToken));
+  return handleMutation(() =>
+    apiClient.loginWithFirebaseToken(firebaseIdToken),
+  );
 }
 
 const PROVIDER_CLEANUP_ERROR_MESSAGE =
-  "Sign-out was incomplete. Retry to remove the remaining provider session.";
+  'Sign-out was incomplete. Retry to remove the remaining provider session.';
 const CLEANUP_MARKER_ERROR_MESSAGE =
-  "Sign-out completed, but its recovery status could not be stored.";
+  'Sign-out completed, but its recovery status could not be stored.';
 
 let providerCleanupPendingInMemory = false;
 
 async function getProviderCleanupPending(): Promise<boolean> {
   try {
-    return providerCleanupPendingInMemory || (await hasPendingProviderCleanup());
+    return (
+      providerCleanupPendingInMemory || (await hasPendingProviderCleanup())
+    );
   } catch {
     return providerCleanupPendingInMemory;
   }
@@ -228,27 +319,33 @@ async function signOutEverywhere(): Promise<void> {
     },
   );
 
-  const [sessionResult, providerResult, markerResult] = await Promise.allSettled([
-    sessionPromise,
-    providerCompletionPromise,
-    markerPromise,
-  ]);
+  const [sessionResult, providerResult, markerResult] =
+    await Promise.allSettled([
+      sessionPromise,
+      providerCompletionPromise,
+      markerPromise,
+    ]);
 
-  if (providerResult.status === "rejected") {
-    if (markerResult.status === "rejected") {
-      throw new Error(`${PROVIDER_CLEANUP_ERROR_MESSAGE} Recovery status could not be stored.`, {
-        cause: providerResult.reason,
-      });
+  if (providerResult.status === 'rejected') {
+    if (markerResult.status === 'rejected') {
+      throw new Error(
+        `${PROVIDER_CLEANUP_ERROR_MESSAGE} Recovery status could not be stored.`,
+        {
+          cause: providerResult.reason,
+        },
+      );
     }
 
-    throw new Error(PROVIDER_CLEANUP_ERROR_MESSAGE, { cause: providerResult.reason });
+    throw new Error(PROVIDER_CLEANUP_ERROR_MESSAGE, {
+      cause: providerResult.reason,
+    });
   }
 
-  if (sessionResult.status === "rejected") {
+  if (sessionResult.status === 'rejected') {
     throw sessionResult.reason;
   }
 
-  if (markerResult.status === "rejected" || markerClearError !== null) {
+  if (markerResult.status === 'rejected' || markerClearError !== null) {
     throw new Error(CLEANUP_MARKER_ERROR_MESSAGE, { cause: markerClearError });
   }
 }
@@ -306,11 +403,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   void (async () => {
     switch (request.type) {
-      case "auth/exchange-firebase-token": {
+      case 'auth/exchange-firebase-token': {
         sendResponse(await handleAuthExchange(request.firebaseIdToken));
         return;
       }
-      case "auth/exchange-github-session": {
+      case 'auth/exchange-github-session': {
         sendResponse(
           await handleMutation(() =>
             apiClient.exchangeGithubSession(request.code, request.verifier),
@@ -318,7 +415,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         );
         return;
       }
-      case "auth/sign-in-github": {
+      case 'auth/sign-in-github': {
         sendResponse(
           await handleInteractiveSignIn(() =>
             handleMutation(async () => {
@@ -329,7 +426,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         );
         return;
       }
-      case "auth/sign-in-google": {
+      case 'auth/sign-in-google': {
         sendResponse(
           await handleInteractiveSignIn(() =>
             handleMutation(async () => {
@@ -339,7 +436,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         );
         return;
       }
-      case "auth/sign-out": {
+      case 'auth/sign-out': {
         // Through the mutation wrapper so the snapshot is rebuilt after the
         // session is gone and broadcast to the popup and any injected control,
         // rather than each surface being told separately.
@@ -353,21 +450,43 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse(await handleMutation(signOutEverywhere));
         return;
       }
-      case "auth/retry-provider-cleanup": {
+      case 'auth/retry-provider-cleanup': {
         sendResponse(await handleMutation(retryProviderCleanup));
         return;
       }
-      case "runtime/get-snapshot": {
-        sendResponse(await loadSnapshot());
+      case 'runtime/get-snapshot': {
+        sendResponse(await loadSnapshot(request.pageContext));
         return;
       }
-      case "timer/start": {
+      case 'timer/start': {
         sendResponse(
-          await handleMutation(() => apiClient.startTimerFromGitHub(request.pageContext)),
+          await handleMutation(async () => {
+            const snapshot = await loadSnapshot(request.pageContext);
+            if (
+              !snapshot.authenticated ||
+              !snapshot.workspace ||
+              snapshot.workspace.id !== request.expectedWorkspaceId ||
+              snapshot.user?.email !== request.expectedUserEmail
+            ) {
+              throw new Error(
+                'Your session or workspace changed. Refresh and review the destination before starting.',
+              );
+            }
+            if (!snapshot.trackingCapability?.canStartTracking) {
+              throw new Error(
+                snapshot.trackingCapability?.reason ??
+                  'Tracking permission could not be confirmed. Refresh and try again.',
+              );
+            }
+            await apiClient.startTimerFromGitHub(request.pageContext, {
+              workspaceId: snapshot.workspace.id,
+              email: request.expectedUserEmail!,
+            });
+          }),
         );
         return;
       }
-      case "timer/stop": {
+      case 'timer/stop': {
         sendResponse(
           await handleMutation(() =>
             apiClient.stopTimer({ expectedTimerId: request.expectedTimerId }),
@@ -375,7 +494,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         );
         return;
       }
-      case "ui/open-extension": {
+      case 'ui/open-extension': {
         await openExtension();
         sendResponse(undefined);
         return;

@@ -104,6 +104,7 @@
 
 - Initial page load uses a skeleton matching the stats header, stat cards, and projects table before rendering empty or request-error states.
 - Project list table includes project name, source, assigned members, total hours, and visibility. It does not keep a separate row-actions column.
+- Render external-reference projects in the existing table with a compact `External` tag; do not introduce an external-project management view. Administrators retain full workspace visibility, while external references remain private and cannot be made public or converted through project settings in this release.
 - Project list table is searchable with placeholder `Search projects` and uses column filters for project name, source, assigned members, total hours, and visibility.
 - An icon-only primary action sits in the projects table header next to the search control. Use tooltip/accessibility copy `New project`.
 - The project name is the edit entry point and opens the inline project settings section instead of using a row-level edit icon.

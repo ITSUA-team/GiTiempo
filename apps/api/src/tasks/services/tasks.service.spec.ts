@@ -85,7 +85,10 @@ function collectSqlParamValues(value: unknown): unknown[] {
 
 function createService(
   db: unknown,
-  projects: { requireVisibleProject?: ReturnType<typeof vi.fn> },
+  projects: {
+    requireVisibleProject?: ReturnType<typeof vi.fn>;
+    resolveProjectAccess?: ReturnType<typeof vi.fn>;
+  },
   overrides: {
     github?: Partial<{
       getRepositoryIssue: ReturnType<typeof vi.fn>;
@@ -109,7 +112,20 @@ function createService(
       findProjectRepoKey: vi.fn(),
       ...overrides.githubTasks,
     } as never,
-    projects as never,
+    {
+      ...projects,
+      resolveProjectAccess:
+        projects.resolveProjectAccess ??
+        vi.fn(async (...args: unknown[]) => ({
+          project: await (
+            projects.requireVisibleProject as
+              | ((...input: unknown[]) => Promise<typeof projectRow>)
+              | undefined
+          )?.(...args),
+          scope: 'project' as const,
+          canManageTasks: false,
+        })),
+    } as never,
   );
 }
 

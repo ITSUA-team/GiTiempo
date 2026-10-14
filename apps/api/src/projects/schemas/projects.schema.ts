@@ -12,6 +12,9 @@ import { getTableColumns, sql } from 'drizzle-orm';
 import type { ProjectVisibility } from '@gitiempo/shared';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 
+export const projectTrackingModes = ['managed', 'external-reference'] as const;
+export type ProjectTrackingMode = (typeof projectTrackingModes)[number];
+
 export const projects = pgTable(
   'projects',
   {
@@ -25,6 +28,10 @@ export const projects = pgTable(
     visibility: varchar('visibility', { length: 20 })
       .$type<ProjectVisibility>()
       .default('private')
+      .notNull(),
+    trackingMode: varchar('tracking_mode', { length: 32 })
+      .$type<ProjectTrackingMode>()
+      .default('managed')
       .notNull(),
     defaultBillableForTasks: boolean('default_task_billable')
       .default(true)
@@ -51,6 +58,10 @@ export const projects = pgTable(
     check(
       'projects_visibility_check',
       sql`${table.visibility} IN ('public', 'private')`,
+    ),
+    check(
+      'projects_tracking_mode_check',
+      sql`${table.trackingMode} IN ('managed', 'external-reference')`,
     ),
   ],
 );
