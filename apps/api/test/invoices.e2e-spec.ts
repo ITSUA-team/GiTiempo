@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { and, eq, gte, inArray, lt } from 'drizzle-orm';
+import type { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { DRIZZLE } from '../src/db/db.constants';
+import { DRIZZLE, PG_POOL } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import {
   invoices,
@@ -12,6 +13,7 @@ import {
   tasks,
   timeEntries,
   users,
+  workspaceSettings,
 } from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
@@ -1388,6 +1390,110 @@ describe('Invoices (e2e)', () => {
 
   // ── Delete ────────────────────────────────────────────────────────────────
 
+  it.each(['draft', 'sent'])(
+    'rejects a stale concurrent update to %s and keeps paid entries billed',
+    async (staleStatus) => {
+      const entryId = '00000000-0000-4000-8000-300000000001';
+      await db.insert(timeEntries).values({
+        id: entryId,
+        workspaceId,
+        taskId: probeTaskId,
+        userId: bobUserId,
+        source: 'manual',
+        startedAt: new Date('2027-06-28T10:00:00.000Z'),
+        endedAt: new Date('2027-06-28T11:00:00.000Z'),
+        durationSeconds: 3600,
+        isBillable: true,
+      });
+      const created = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          title: 'Concurrent status probe',
+          projectId: probeProjectId,
+          dateFrom: '2027-06-28',
+          dateTo: '2027-06-28',
+          hourlyRate: 100,
+        });
+      expect(created.status).toBe(201);
+      expect(created.body.timeEntryCount).toBe(1);
+
+      const pool = app.get<Pool>(PG_POOL);
+      const lock = await pool.connect();
+      let paidRequest: Promise<{ status: number }> | undefined;
+      let draftRequest: Promise<{ status: number }> | undefined;
+      try {
+        await lock.query('BEGIN');
+        await lock.query('SELECT id FROM invoices WHERE id = $1 FOR UPDATE', [
+          created.body.id,
+        ]);
+        const waitForBlockedUpdates = async (count: number) => {
+          await vi.waitFor(
+            async () => {
+              const { rows } = await pool.query<{ count: number }>(`
+              SELECT count(*)::int AS count FROM pg_stat_activity
+              WHERE datname = current_database()
+                AND wait_event_type = 'Lock'
+                AND query LIKE 'update "invoices"%'
+            `);
+              expect(rows[0]?.count).toBe(count);
+            },
+            { timeout: 5000, interval: 10 },
+          );
+        };
+
+        // Hold the row until both requests have read the same draft status.
+        paidRequest = request(app.getHttpServer())
+          .patch(`/invoices/${created.body.id}`)
+          .set('Authorization', bearer(adminToken))
+          .send({ status: 'paid' })
+          .then((response) => response);
+        await waitForBlockedUpdates(1);
+        draftRequest = request(app.getHttpServer())
+          .patch(`/invoices/${created.body.id}`)
+          .set('Authorization', bearer(adminToken))
+          .send({
+            status: staleStatus,
+            notes: 'Must not overwrite paid invoice',
+          })
+          .then((response) => response);
+        await waitForBlockedUpdates(2);
+        await lock.query('COMMIT');
+
+        const [paid, draft] = await Promise.all([paidRequest, draftRequest]);
+        expect(paid.status).toBe(200);
+        expect(draft.status).toBe(409);
+
+        const detail = await request(app.getHttpServer())
+          .get(`/invoices/${created.body.id}`)
+          .set('Authorization', bearer(adminToken));
+        expect(detail.status).toBe(200);
+        expect(detail.body.status).toBe('paid');
+        expect(detail.body.notes).toBeNull();
+
+        const deletion = await request(app.getHttpServer())
+          .delete(`/invoices/${created.body.id}`)
+          .set('Authorization', bearer(adminToken));
+        expect(deletion.status).toBe(409);
+        const [entry] = await db
+          .select({ invoiceId: timeEntries.invoiceId })
+          .from(timeEntries)
+          .where(eq(timeEntries.id, entryId));
+        expect(entry?.invoiceId).toBe(created.body.id);
+      } finally {
+        await lock.query('ROLLBACK');
+        lock.release();
+        await Promise.allSettled(
+          [paidRequest, draftRequest].filter(
+            (pending) => pending !== undefined,
+          ),
+        );
+        await db.delete(invoices).where(eq(invoices.id, created.body.id));
+        await db.delete(timeEntries).where(eq(timeEntries.id, entryId));
+      }
+    },
+  );
+
   it('returns 404 when deleting an unknown invoice', async () => {
     const res = await request(app.getHttpServer())
       .delete('/invoices/00000000-0000-4000-8000-999999999996')
@@ -1982,6 +2088,83 @@ describe('Invoices (e2e)', () => {
       .delete(`/invoices/${createRes.body.id}`)
       .set('Authorization', bearer(adminToken));
   });
+
+  it.each(['America/New_York', 'Asia/Tokyo'])(
+    'uses the workspace month boundary for stats in %s',
+    async (timeZone) => {
+      const [settings] = await db
+        .select({ timeZone: workspaceSettings.timeZone })
+        .from(workspaceSettings)
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+      const { admin } = await getSeededAdminWorkspace(db);
+      const pool = app.get<Pool>(PG_POOL);
+      const { rows } = await pool.query<{ month_start: Date }>(
+        "SELECT date_trunc('month', now() AT TIME ZONE $1) AT TIME ZONE $1 AS month_start",
+        [timeZone],
+      );
+      const monthStart = rows[0]!.month_start;
+      const ids: string[] = [];
+      try {
+        await db
+          .update(workspaceSettings)
+          .set({ timeZone })
+          .where(eq(workspaceSettings.workspaceId, workspaceId));
+        const before = await Promise.all(
+          [adminToken, pmToken].map((token) =>
+            request(app.getHttpServer())
+              .get('/invoices/stats')
+              .set('Authorization', bearer(token)),
+          ),
+        );
+        const fixtures = await db
+          .insert(invoices)
+          .values(
+            [
+              {
+                createdAt: new Date(monthStart.getTime() - 1),
+                totalAmount: 11,
+              },
+              { createdAt: monthStart, totalAmount: 23 },
+            ].map((fixture) => ({
+              ...fixture,
+              workspaceId,
+              projectId: PLATFORM_PROJECT_ID,
+              createdBy: admin.id,
+              title: 'Stats month boundary probe',
+              dateFrom: DATE_FROM,
+              dateTo: DATE_TO,
+              hourlyRate: 100,
+              currency: 'USD',
+            })),
+          )
+          .returning({ id: invoices.id });
+        ids.push(...fixtures.map((fixture) => fixture.id));
+
+        for (const [index, token] of [adminToken, pmToken].entries()) {
+          const after = await request(app.getHttpServer())
+            .get('/invoices/stats')
+            .set('Authorization', bearer(token));
+          expect(before[index]!.status).toBe(200);
+          expect(after.status).toBe(200);
+          expect(after.body.thisMonth.invoiceCount).toBe(
+            before[index]!.body.thisMonth.invoiceCount + 1,
+          );
+          expect(after.body.thisMonth.totalAmount).toBeCloseTo(
+            before[index]!.body.thisMonth.totalAmount + 23,
+            2,
+          );
+        }
+      } finally {
+        if (ids.length > 0) {
+          await db.delete(invoices).where(inArray(invoices.id, ids));
+        }
+        await db
+          .update(workspaceSettings)
+          .set({ timeZone: settings!.timeZone })
+          .where(eq(workspaceSettings.workspaceId, workspaceId));
+      }
+    },
+  );
 
   it('empty workspace stats return zero counts', async () => {
     await db.delete(invoices).where(eq(invoices.workspaceId, workspaceId));

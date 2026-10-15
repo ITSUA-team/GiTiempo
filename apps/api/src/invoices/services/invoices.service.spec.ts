@@ -280,25 +280,56 @@ function stageCreateDb(
   };
 }
 
-function stageUpdateDb(service: InvoicesService) {
-  const updateWhereSpy = vi.fn().mockResolvedValue(undefined);
+function stageUpdateDb(
+  service: InvoicesService,
+  options: {
+    initialRow?: unknown | null;
+    refreshedRow?: unknown | null;
+    updateResult?: Array<{ id: string }>;
+  } = {},
+) {
+  const initialRow =
+    options.initialRow === undefined ? sampleInvoiceRow : options.initialRow;
+  const refreshedRow =
+    options.refreshedRow === undefined
+      ? sampleInvoiceRow
+      : options.refreshedRow;
+  const updateReturningSpy = vi
+    .fn()
+    .mockResolvedValue(options.updateResult ?? [{ id: sampleInvoiceRow.id }]);
+  const updateWhereSpy = vi
+    .fn()
+    .mockReturnValue({ returning: updateReturningSpy });
   const updateSetSpy = vi.fn().mockReturnValue({ where: updateWhereSpy });
   const updateSpy = vi.fn().mockReturnValue({ set: updateSetSpy });
-  const selectSpy = vi
+  const txSelectSpy = vi
     .fn()
+    .mockImplementationOnce(() =>
+      makeSelectChain('limit', initialRow ? [initialRow] : []),
+    )
+    .mockImplementationOnce(() =>
+      makeSelectChain('limit', refreshedRow ? [refreshedRow] : []),
+    )
     .mockImplementationOnce(() => makeSelectChain('orderBy', []));
+  const tx = { select: txSelectSpy, update: updateSpy };
+  const transactionSpy = vi.fn(
+    async (handler: (transaction: typeof tx) => unknown) => handler(tx),
+  );
 
-  Object.defineProperty(service, 'findInvoiceOrThrow', {
-    value: vi.fn().mockResolvedValue(sampleInvoiceRow),
-  });
   Object.defineProperty(service, 'db', {
-    value: { update: updateSpy, select: selectSpy },
+    value: { transaction: transactionSpy },
   });
   Object.defineProperty(service, 'toInvoiceResponse', {
     value: vi.fn().mockReturnValue({ id: sampleInvoiceRow.id }),
   });
 
-  return { updateSpy, updateSetSpy, selectSpy };
+  return {
+    transactionSpy,
+    updateSpy,
+    updateSetSpy,
+    updateReturningSpy,
+    txSelectSpy,
+  };
 }
 
 describe('InvoicesService', () => {
@@ -1274,7 +1305,7 @@ describe('InvoicesService', () => {
 
   it('does not patch the row when the update body is empty', async () => {
     const { service } = createService('admin');
-    const { updateSpy, selectSpy } = stageUpdateDb(service);
+    const { updateSpy, transactionSpy, txSelectSpy } = stageUpdateDb(service);
 
     const result = await service.updateInvoice(
       adminUser,
@@ -1283,8 +1314,9 @@ describe('InvoicesService', () => {
     );
 
     expect(updateSpy).not.toHaveBeenCalled();
-    // The refreshed read still happens to echo the current state.
-    expect(selectSpy).toHaveBeenCalledTimes(1);
+    expect(transactionSpy).toHaveBeenCalledTimes(1);
+    // Initial detail, refreshed detail, and linked entries all use the tx.
+    expect(txSelectSpy).toHaveBeenCalledTimes(3);
     expect(result).toEqual({ id: sampleInvoiceRow.id });
   });
 
@@ -1316,16 +1348,52 @@ describe('InvoicesService', () => {
     });
   });
 
+  it('rejects a stale status update when another request changed the invoice', async () => {
+    const { service } = createService('admin');
+    const { transactionSpy, updateReturningSpy } = stageUpdateDb(service, {
+      updateResult: [],
+    });
+
+    const thrown = await service
+      .updateInvoice(adminUser, sampleInvoiceRow.id, { status: 'sent' })
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
+
+    expect(thrown).toBeInstanceOf(DomainError);
+    expect((thrown as DomainError).getResponse()).toMatchObject({
+      code: 'invoice_update_conflict',
+    });
+    expect((thrown as DomainError).getStatus()).toBe(409);
+    expect(transactionSpy).toHaveBeenCalledTimes(1);
+    expect(updateReturningSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails the transaction when the updated invoice cannot be refreshed', async () => {
+    const { service } = createService('admin');
+    const { transactionSpy, updateReturningSpy, txSelectSpy } = stageUpdateDb(
+      service,
+      { refreshedRow: null },
+    );
+
+    await expect(
+      service.updateInvoice(adminUser, sampleInvoiceRow.id, {
+        title: 'Renamed',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(transactionSpy).toHaveBeenCalledTimes(1);
+    expect(updateReturningSpy).toHaveBeenCalledTimes(1);
+    // Initial and refreshed detail reads run in the transaction; linked
+    // entries are not read after the refresh failure.
+    expect(txSelectSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('throws NotFound when the updated invoice does not exist', async () => {
     const { service } = createService('admin');
-    const updateSpy = vi.fn();
-    Object.defineProperty(service, 'findInvoiceOrThrow', {
-      value: vi.fn().mockImplementation(() => {
-        throw new NotFoundException('Invoice not found');
-      }),
-    });
-    Object.defineProperty(service, 'db', {
-      value: { update: updateSpy },
+    const { updateSpy, transactionSpy } = stageUpdateDb(service, {
+      initialRow: null,
     });
 
     await expect(
@@ -1335,20 +1403,17 @@ describe('InvoicesService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
 
     expect(updateSpy).not.toHaveBeenCalled();
+    expect(transactionSpy).toHaveBeenCalledTimes(1);
   });
 
   it('denies PM updates to workspace-wide invoices (null project)', async () => {
     const { service } = createService('pm');
-    const updateSpy = vi.fn();
-    Object.defineProperty(service, 'findInvoiceOrThrow', {
-      value: vi.fn().mockResolvedValue({
+    const { updateSpy } = stageUpdateDb(service, {
+      initialRow: {
         ...sampleInvoiceRow,
         projectId: null,
         projectName: null,
-      }),
-    });
-    Object.defineProperty(service, 'db', {
-      value: { update: updateSpy },
+      },
     });
 
     await expect(

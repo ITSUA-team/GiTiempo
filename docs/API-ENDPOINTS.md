@@ -264,6 +264,7 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 **GET /invoices/stats**
 
 - Returns aggregate invoice counts grouped by status (`draft`, `sent`, `paid`) and a summary of invoices created in the current calendar month, scoped to the caller's visibility.
+- The current month starts at midnight on its first day in the workspace's configured timezone, independently of the database session timezone.
 - Admins see all workspace invoices; PMs see only invoices for active public projects or private projects assigned to them. Workspace-wide invoices (null `projectId`) are excluded from PM counts.
 - Response: `{ byStatus: { draft: number, sent: number, paid: number }, thisMonth: { invoiceCount: number, projectCount: number, totalAmount: number, currency: string } }`
 - `thisMonth.totalAmount` sums all currencies without conversion; the workspace default currency is returned for display purposes. The UI should note that totals are approximate when multiple currencies are present.
@@ -271,6 +272,7 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 **PATCH /invoices/:id** body: `{ title?: string, status?: "draft" | "sent" | "paid", notes?: string | null }`
 
 - Updates only editable fields (`title`, `status`, `notes`). Snapshot fields (`hourlyRate`, `currency`, `discountPercent`, `totalHours`, `totalAmount`, `dateFrom`, `dateTo`) and the linked time-entry set are immutable after creation. Totals are never recomputed by an update.
+- Status can advance from `draft` to `sent` or `paid`, and from `sent` to `paid`; backward transitions return `409 Conflict`. An update also returns `409` if the status changed concurrently after it was read; none of that request's fields are applied, and the client should reload the invoice before retrying.
 
 **DELETE /invoices/:id** (Admin only)
 

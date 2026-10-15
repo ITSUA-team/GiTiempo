@@ -27,6 +27,7 @@ import type {
   InvoiceListQuery,
   InvoiceListResponse,
   InvoiceResponse,
+  InvoiceStatus,
   InvoiceStatsResponse,
   InvoiceTimeEntrySummary,
   UpdateInvoiceInput,
@@ -50,7 +51,7 @@ interface InvoiceDetailRow {
   workspaceId: string;
   projectId: string | null;
   title: string;
-  status: string;
+  status: InvoiceStatus;
   dateFrom: string;
   dateTo: string;
   hourlyRate: number;
@@ -345,7 +346,7 @@ export class InvoicesService {
 
     // This month: invoices created in the current calendar month,
     // interpreted in the workspace timezone (not the server's local tz).
-    const monthStartExpr = sql`date_trunc('month', now() AT TIME ZONE ${timeZone})::timestamptz`;
+    const monthStartExpr = sql`date_trunc('month', now() AT TIME ZONE ${timeZone}) AT TIME ZONE ${timeZone}`;
     const monthConditions = [
       ...baseConditions,
       gte(invoices.createdAt, monthStartExpr),
@@ -729,29 +730,51 @@ export class InvoicesService {
       ['admin', 'pm'],
     );
 
-    const invoice = await this.findInvoiceOrThrow(user.workspaceId, id);
+    return this.db.transaction(async (tx) => {
+      const invoice = await this.loadInvoiceDetail(tx, user.workspaceId, id);
+      if (!invoice) throw new NotFoundException('Invoice not found');
 
-    if (membership.role === 'pm') {
-      await this.requirePmInvoiceAccess(user.sub, invoice);
-    }
+      if (membership.role === 'pm') {
+        await this.requirePmInvoiceAccess(user.sub, invoice);
+      }
 
-    const updates: Partial<typeof invoices.$inferInsert> = {};
-    if (input.title !== undefined) updates.title = input.title;
-    if (input.status !== undefined) {
-      this.assertValidStatusTransition(invoice.status, input.status);
-      updates.status = input.status;
-    }
-    if (input.notes !== undefined) updates.notes = input.notes;
+      const updates: Partial<typeof invoices.$inferInsert> = {};
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.status !== undefined) {
+        this.assertValidStatusTransition(invoice.status, input.status);
+        updates.status = input.status;
+      }
+      if (input.notes !== undefined) updates.notes = input.notes;
 
-    if (Object.keys(updates).length > 0) {
-      updates.updatedAt = new Date();
-      await this.db.update(invoices).set(updates).where(eq(invoices.id, id));
-    }
+      if (Object.keys(updates).length > 0) {
+        updates.updatedAt = new Date();
+        const updated = await tx
+          .update(invoices)
+          .set(updates)
+          .where(
+            and(
+              eq(invoices.id, id),
+              eq(invoices.workspaceId, user.workspaceId),
+              eq(invoices.status, invoice.status),
+            ),
+          )
+          .returning({ id: invoices.id });
 
-    const refreshed = await this.findInvoiceOrThrow(user.workspaceId, id);
-    const entryRows = await this.loadLinkedEntries(this.db, id);
+        if (updated.length === 0) {
+          throw new DomainError(
+            'invoice_update_conflict',
+            'Invoice changed concurrently; retry the update',
+            409,
+          );
+        }
+      }
 
-    return this.toInvoiceResponse(refreshed, entryRows);
+      const refreshed = await this.loadInvoiceDetail(tx, user.workspaceId, id);
+      if (!refreshed) throw new NotFoundException('Invoice not found');
+
+      const entryRows = await this.loadLinkedEntries(tx, id);
+      return this.toInvoiceResponse(refreshed, entryRows);
+    });
   }
 
   // ── Delete ────────────────────────────────────────────────────────────
