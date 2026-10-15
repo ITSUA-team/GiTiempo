@@ -20,6 +20,7 @@ const AddProjectMockView = () => import('@/views/AddProjectView.vue');
 const DashboardView = () => import('@/views/DashboardView.vue');
 const ForbiddenView = () => import('@/views/ForbiddenView.vue');
 const GithubCallbackView = () => import('@/views/GithubCallbackView.vue');
+const InvoiceDetailView = () => import('@/views/InvoiceDetailView.vue');
 const InvoicesView = () => import('@/views/InvoicesView.vue');
 const MembersView = () => import('@/views/MembersView.vue');
 const NotFoundView = () => import('@/views/NotFoundView.vue');
@@ -46,6 +47,7 @@ const managementRoles = [
 export const adminRouteAllowedRoles = {
   [routeNames.addProject]: adminOnlyRoles,
   [routeNames.dashboard]: managementRoles,
+  [routeNames.invoiceDetail]: managementRoles,
   [routeNames.invoices]: managementRoles,
   [routeNames.members]: adminOnlyRoles,
   [routeNames.projects]: adminOnlyRoles,
@@ -97,6 +99,15 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: InvoicesView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.invoices],
+      pageName: 'Invoices',
+    },
+  },
+  {
+    path: 'invoices/:id',
+    name: routeNames.invoiceDetail,
+    component: InvoiceDetailView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.invoiceDetail],
       pageName: 'Invoices',
     },
   },

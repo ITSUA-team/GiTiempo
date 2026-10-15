@@ -1,4 +1,8 @@
-import type { TimeReportRequest } from '@gitiempo/shared';
+import type {
+  EligibleEntriesQuery,
+  InvoiceListQuery,
+  TimeReportRequest,
+} from '@gitiempo/shared';
 
 export interface AdminServerStateScope {
   role?: string | null;
@@ -45,6 +49,30 @@ export function normalizeTimeReportQuery(query: Partial<TimeReportRequest> = {})
     sortBy: query.sortBy ?? null,
     sortOrder: query.sortOrder ?? null,
     userId: query.userId ?? null,
+  };
+}
+
+export function normalizeInvoiceListQuery(
+  query: Partial<InvoiceListQuery> = {},
+) {
+  return {
+    dateFrom: query.dateFrom ?? null,
+    dateTo: query.dateTo ?? null,
+    limit: query.limit ?? null,
+    page: query.page ?? null,
+    projectId: query.projectId ?? null,
+    search: query.search ?? null,
+    status: query.status ?? null,
+  };
+}
+
+export function normalizeEligibleEntriesQuery(
+  query: Partial<EligibleEntriesQuery> = {},
+) {
+  return {
+    dateFrom: query.dateFrom ?? null,
+    dateTo: query.dateTo ?? null,
+    projectId: query.projectId ?? null,
   };
 }
 
@@ -105,7 +133,34 @@ export const adminMembersKeys = {
     [...adminMembersKeys.all(scope), 'list'] as const,
 };
 
+export const adminInvoicesKeys = {
+  all: (scope?: AdminServerStateScope) =>
+    ['admin-web', normalizeScope(scope), 'invoices'] as const,
+  list: (scope: AdminServerStateScope, query?: Partial<InvoiceListQuery>) =>
+    [
+      ...adminInvoicesKeys.all(scope),
+      'list',
+      normalizeInvoiceListQuery(query),
+    ] as const,
+  detail: (scope: AdminServerStateScope, invoiceId: string) =>
+    [...adminInvoicesKeys.all(scope), 'detail', invoiceId] as const,
+  stats: (scope: AdminServerStateScope) =>
+    [...adminInvoicesKeys.all(scope), 'stats'] as const,
+  eligibleEntries: (
+    scope: AdminServerStateScope,
+    query?: Partial<EligibleEntriesQuery>,
+  ) =>
+    [
+      ...adminInvoicesKeys.all(scope),
+      'eligible-entries',
+      normalizeEligibleEntriesQuery(query),
+    ] as const,
+};
+
 export const adminMutationInvalidationKeys = {
+  afterInvoiceMutation(scope: AdminServerStateScope): QueryKey[] {
+    return [adminInvoicesKeys.all(scope)];
+  },
   afterProjectMutation(scope: AdminServerStateScope): QueryKey[] {
     return [
       adminProjectsKeys.all(scope),

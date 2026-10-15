@@ -15,6 +15,7 @@ export const ADMIN_COUNTERPART_LABEL = 'User workspace';
 export const ADMIN_PAGE_NAMES_BY_ROUTE_NAME: Record<string, string> = {
   [routeNames.addProject]: 'New Project',
   [routeNames.dashboard]: 'Dashboard',
+  [routeNames.invoiceDetail]: 'Invoices',
   [routeNames.invoices]: 'Invoices',
   [routeNames.members]: 'Members',
   [routeNames.projects]: 'Projects',
@@ -24,7 +25,7 @@ export const ADMIN_PAGE_NAMES_BY_ROUTE_NAME: Record<string, string> = {
 
 export const ADMIN_SETTINGS_ICON = markRaw(Cog6ToothIcon);
 export const ADMIN_SETTINGS_LABEL = ADMIN_PAGE_NAMES_BY_ROUTE_NAME[routeNames.settings];
-const SHOW_INVOICES_NAV = false;
+const SHOW_INVOICES_NAV = true;
 
 export const ADMIN_BASE_NAV_ITEMS = [
   {
