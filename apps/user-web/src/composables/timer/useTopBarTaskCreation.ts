@@ -37,6 +37,13 @@ export function useTopBarTaskCreation({
       return;
     }
 
+    if (!picker.canCreateTask.value) {
+      picker.setCreateTaskError(
+        "You do not have permission to create tasks in this project.",
+      );
+      return;
+    }
+
     const parsed = picker.validateCreateTaskInput();
 
     if (!parsed) {

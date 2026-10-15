@@ -1128,6 +1128,7 @@ describe('TimeEntriesService installation authorization', () => {
       assertCurrent: vi.fn().mockResolvedValue(undefined),
     };
     const githubTasks = {
+      findExistingReferenceProject: vi.fn().mockResolvedValue(null),
       findExistingIssueProject: vi.fn().mockResolvedValue(project),
       listMappedBoardIds: vi.fn().mockResolvedValue(['board-1']),
       resolveExistingProjectForIssue: vi.fn().mockResolvedValue(project),
@@ -1182,6 +1183,18 @@ describe('TimeEntriesService installation authorization', () => {
     expect(f.values).toHaveBeenCalledWith(
       expect.objectContaining({ source: 'extension', isBillable: false }),
     );
+  });
+  it('rejects an external-reference mapping on the managed GitHub route before provider access', async () => {
+    const f = fixture();
+    f.githubTasks.findExistingReferenceProject.mockResolvedValue({
+      id: 'project-1',
+      trackingMode: 'external-reference',
+    });
+
+    await expect(
+      f.service.startTimerFromGitHub(user, input),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(f.installations.prepareIssue).not.toHaveBeenCalled();
   });
   it('locks membership before the installation policy and association', async () => {
     const f = fixture();

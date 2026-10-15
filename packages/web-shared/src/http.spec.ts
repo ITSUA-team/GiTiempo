@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { SessionContextChangedError } from "./auth/session-context-changed-error";
 import type { ApiError } from "./http";
 import { createAuthenticatedApiClient, requestJson } from "./http";
 
@@ -12,6 +13,54 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe("createAuthenticatedApiClient", () => {
+  it("does not retry or sign out a changed session after a stale refresh", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ message: "Unauthorized" }, 401));
+    const onRefreshFailed = vi.fn();
+    const changed = new SessionContextChangedError();
+    const client = createAuthenticatedApiClient({
+      fetchFn,
+      getToken: () => "old-access",
+      refreshAccessToken: vi.fn(async () => { throw changed; }),
+      onRefreshFailed,
+    });
+    await expect(client.request({ path: "/tasks", method: "POST", body: { title: "old user task" } })).rejects.toBe(changed);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(onRefreshFailed).not.toHaveBeenCalled();
+  });
+
+  it("does not refresh a late unauthorized response under a new account", async () => {
+    let token = "old-access";
+    let respond!: (response: Response) => void;
+    const fetchFn = vi.fn(() => new Promise<Response>((resolve) => { respond = resolve; }));
+    const refreshAccessToken = vi.fn();
+    const onRefreshFailed = vi.fn();
+    const client = createAuthenticatedApiClient({ fetchFn, getToken: () => token, refreshAccessToken, onRefreshFailed });
+    const rejected = expect(client.request({ path: "/tasks" })).rejects.toBeInstanceOf(SessionContextChangedError);
+    token = "new-account-access";
+    respond(jsonResponse({ message: "Unauthorized" }, 401));
+    await rejected;
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(refreshAccessToken).not.toHaveBeenCalled();
+    expect(onRefreshFailed).not.toHaveBeenCalled();
+  });
+
+  it("does not sign out a new account when the previous retry is rejected", async () => {
+    let token = "old-access";
+    let respond!: (response: Response) => void;
+    const fetchFn = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ message: "Unauthorized" }, 401))
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { respond = resolve; }));
+    const onRefreshFailed = vi.fn();
+    const client = createAuthenticatedApiClient({ fetchFn, getToken: () => token,
+      refreshAccessToken: vi.fn(async () => (token = "refreshed-access")), onRefreshFailed });
+    const rejected = expect(client.request({ path: "/tasks" })).rejects.toBeInstanceOf(SessionContextChangedError);
+    await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(2));
+    token = "new-account-access";
+    respond(jsonResponse({ message: "Unauthorized" }, 401));
+    await rejected;
+    expect(onRefreshFailed).not.toHaveBeenCalled();
+  });
+
   it("preserves the app session and does not retry a GitHub authorization failure", async () => {
     const body = {
       code: "github_authorization_required",
@@ -44,11 +93,12 @@ describe("createAuthenticatedApiClient", () => {
         code: "github_authorization_required",
         message: "Reconnect GitHub",
       }, 401));
-    const refreshAccessToken = vi.fn(async () => "fresh-app-token");
+    let token = "expired-app-token";
+    const refreshAccessToken = vi.fn(async () => (token = "fresh-app-token"));
     const onRefreshFailed = vi.fn();
     const client = createAuthenticatedApiClient({
       fetchFn,
-      getToken: () => "expired-app-token",
+      getToken: () => token,
       refreshAccessToken,
       onRefreshFailed,
     });
@@ -65,10 +115,11 @@ describe("createAuthenticatedApiClient", () => {
 
   it("still expires the app session when its refreshed token is rejected", async () => {
     const onRefreshFailed = vi.fn();
+    let token = "expired-app-token";
     const client = createAuthenticatedApiClient({
       fetchFn: vi.fn(async () => jsonResponse({ message: "Unauthorized" }, 401)),
-      getToken: () => "expired-app-token",
-      refreshAccessToken: vi.fn(async () => "rejected-app-token"),
+      getToken: () => token,
+      refreshAccessToken: vi.fn(async () => (token = "rejected-app-token")),
       onRefreshFailed,
     });
 
@@ -129,7 +180,10 @@ describe("createAuthenticatedApiClient", () => {
     const refreshPromise = new Promise<string>((resolve) => {
       refreshResolve = resolve;
     });
-    const refreshAccessToken = vi.fn(() => refreshPromise);
+    const refreshAccessToken = vi.fn(async () => {
+      token = await refreshPromise;
+      return token;
+    });
     const fetchFn = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ message: "Unauthorized" }, 401))
@@ -146,7 +200,6 @@ describe("createAuthenticatedApiClient", () => {
     const first = apiClient.requestJson({ path: "/one", responseSchema: schema });
     const second = apiClient.requestJson({ path: "/two", responseSchema: schema });
 
-    token = "fresh-token";
     refreshResolve("fresh-token");
 
     await expect(Promise.all([first, second])).resolves.toEqual([

@@ -25,6 +25,8 @@ vi.mock('@/services/admin-projects-client', () => ({
 }));
 
 const project: ProjectResponse = {
+  accessScope: 'project',
+  capabilities: { canManageTasks: true },
   color: null,
   createdAt: '2026-05-01T10:00:00.000Z',
   defaultBillableForTasks: true,
@@ -42,6 +44,8 @@ const project: ProjectResponse = {
   ],
   name: 'Project Orion',
   source: 'manual',
+  referenceProvenance: null,
+  trackingMode: 'managed',
   totalSeconds: 43200,
   updatedAt: '2026-05-01T10:00:00.000Z',
   visibility: 'public',

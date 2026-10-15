@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import type {
   ProjectResponse,
   WorkspaceMemberListResponse,
@@ -48,6 +48,14 @@ const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
   { label: 'Private', value: 'private' as const },
 ];
+const isExternalProject = computed(
+  () => props.project.trackingMode === 'external-reference',
+);
+const availableVisibilityOptions = computed(() =>
+  isExternalProject.value
+    ? visibilityOptions.filter((option) => option.value === 'private')
+    : visibilityOptions,
+);
 
 interface AutoCompleteCompleteEvent {
   query: string;
@@ -157,13 +165,18 @@ function handleSave({
             <Select
               input-id="edit-visibility"
               name="visibility"
-              :options="visibilityOptions"
+              :options="availableVisibilityOptions"
               option-label="label"
               option-value="value"
               :invalid="$form.visibility?.invalid"
+              :disabled="saving || isExternalProject"
               :pt="giTiempoSelectPt"
               fluid
             />
+            <small
+              v-if="isExternalProject"
+              class="text-text-muted text-xs"
+            >External projects are private.</small>
           </div>
 
           <div class="flex min-w-0 flex-col gap-1.5 sm:w-[200px] sm:shrink-0">

@@ -11,6 +11,8 @@ import TimeEntriesFilters from "./TimeEntriesFilters.vue";
 const AUTOCOMPLETE_SEARCH_DELAY_MS = 300;
 
 const demoClient: ProjectResponse = {
+  accessScope: "project",
+  capabilities: { canManageTasks: true },
   color: null,
   createdAt: "2026-04-20T12:00:00.000Z",
   defaultBillableForTasks: true,
@@ -20,6 +22,8 @@ const demoClient: ProjectResponse = {
   members: [],
   name: "Demo Client",
   source: "manual",
+  referenceProvenance: null,
+  trackingMode: "managed",
   totalSeconds: 43200,
   updatedAt: "2026-04-20T12:00:00.000Z",
   visibility: "public",

@@ -212,7 +212,8 @@ Groups tasks within a workspace. Projects are provider-neutral core records: a p
 - `projects_workspace_active_visibility_idx` on `(workspace_id, is_active, visibility)`
 
 **Notes:**
-- New projects are private by default.
+- New projects are private by default. Existing projects are backfilled as `managed`; external reference recording writes `external-reference` atomically with its first timer. A repository import does not convert that stored policy.
+- Own-time visibility is derived from entries and never persisted as assignments. Exact-task own-entry existence (running included) scopes tasks and aggregates. Last-entry removal hides work but retains shared records.
 - Local/manual projects have no external reference rows.
 - Provider-specific identifiers, URLs, and sync metadata live in `project_external_refs`.
 - API `source` values are derived from `project_external_refs`; provider-specific source columns do not belong in `projects`.
@@ -234,13 +235,15 @@ Links a core project to an external provider object, such as a GitHub repository
 | `external_key` | VARCHAR(500) | NOT NULL | Human-readable lookup key, e.g. `owner/repo` |
 | `external_url` | TEXT | nullable | Canonical provider URL |
 | `metadata` | JSONB | NOT NULL, default `'{}'` | Provider-specific fields not needed for core queries |
-| `synced_at` | TIMESTAMPTZ | nullable | Last successful sync from the provider |
+| `reference_provenance` | VARCHAR(32) | NOT NULL, default 'provider-verified' | `provider-verified` or `user-supplied` |
+| `synced_at` | TIMESTAMPTZ | nullable | Last successful provider sync; null for user-supplied references |
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 
 **Indexes:**
 - `project_external_refs_project_id_idx` on `project_id`
 - `project_external_refs_workspace_provider_key_unique` UNIQUE on `(workspace_id, provider, external_type, external_key)`
+- `project_external_refs_workspace_provider_repository_key_ci_unique` UNIQUE on `(workspace_id, provider, LOWER(external_key))` where provider is GitHub and external type is repository
 - `project_external_refs_workspace_provider_id_idx` on `(workspace_id, provider, external_type, external_id)` where `external_id` is not null
 
 **Notes:**
@@ -317,7 +320,8 @@ Links a core task to an external provider work item, such as a GitHub issue. Thi
 | `external_key` | VARCHAR(500) | NOT NULL | Human-readable lookup key, e.g. `owner/repo#123` |
 | `external_url` | TEXT | nullable | Canonical provider URL |
 | `metadata` | JSONB | NOT NULL, default `'{}'` | Provider-specific fields not needed for core queries |
-| `synced_at` | TIMESTAMPTZ | nullable | Last successful sync from the provider |
+| `reference_provenance` | VARCHAR(32) | NOT NULL, default 'provider-verified' | `provider-verified` or `user-supplied` |
+| `synced_at` | TIMESTAMPTZ | nullable | Last successful provider sync; null for user-supplied references |
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 
@@ -388,7 +392,9 @@ Billing record generated from time entries. MVP: data only, no document generati
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 
-**Indexes:** `invoices_workspace_id_idx` on `workspace_id`
+**Indexes:**
+- `invoices_workspace_id_idx` on `workspace_id`
+- `invoices_workspace_status_idx` on `(workspace_id, status)` — optimizes filtered list queries by workspace and status.
 
 **Note:** Invoice stores `hourly_rate`, `currency`, `total_hours`, and `total_amount` as snapshot values at creation time. Individual time entries are linked back to the invoice via `time_entries.invoice_id`. If time entries are edited after invoice creation, the invoice totals are **not** automatically recalculated — this is an explicit MVP limitation.
 
@@ -473,3 +479,9 @@ On first deployment, a seed migration creates:
 3. Invited users sign in via Firebase Auth → `users` record created → `workspace_members` record created with the assigned role.
 
 All subsequent users are added exclusively via the invite flow.
+
+## External-reference migration and deployment
+
+Migration `0022_external_reference_project_policy.sql` adds mode/provenance defaults and the case-insensitive GitHub repository identity constraint. Run `pnpm --filter @gitiempo/api github:repository-reference-preflight` read-only against the intended database first. Conflicts identify workspace/project/reference IDs; migration raises an error rather than merge or delete history. Resolve collisions deliberately before retrying. Writers acquire the same namespace lock and recheck authoritative mappings. Task reference uniqueness remains unchanged.
+
+Deploy the migration and access-safe API with compatible SPA consumers before distributing the reference-start extension. A rollback must retain mode enforcement, owned stop, and history. Do not downgrade to code that interprets external rows as ordinary full-access projects or drop the mode/provenance columns while they contain data. Use a compatible forward fix for rollback. Rename/transfer/conversion are deferred; no automatic mapping rebinding is performed.

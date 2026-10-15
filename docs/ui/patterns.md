@@ -221,7 +221,7 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - Use sequential PrimeVue `<AutoComplete dropdown forceSelection>` controls for project and task selection.
 - The selected project must be visible to the current user.
 - The selected task must belong to the selected visible project.
-- The `Task` select lists visible tasks first and appends `New task` as the last option.
+- The `Task` select lists visible tasks first and appends `New task` as the last option only when the selected active GiTiempo project has `capabilities.canManageTasks: true`. Otherwise omit the option, new-task input, and copy suggesting creation; block the underlying create action as well. Existing visible tasks remain selectable for tracking.
 - When `Task = New task`, the created task inherits the selected project's default billable value.
 - The dialog includes an optional `Description` field directly below `Task`; it is a time-entry note, not task metadata.
 - Use PrimeVue `<Textarea>` for the description field.

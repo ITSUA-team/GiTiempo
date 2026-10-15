@@ -1,0 +1,400 @@
+## MODIFIED Requirements
+
+### Requirement: Project Visibility Is Role And Assignment Scoped
+The system MUST enforce project visibility from workspace membership and separately evaluated project or own-time access. Every returned project MUST include isActive and accessScope. For external-reference projects, active members without separate project authority SHALL additionally receive own-time scope only while they have an own entry in the project. Running entries count. Only admin or explicit project grants authorize wider access. Full-project responses retain their assigned members list; own-time responses SHALL return members empty and omit peer identities. No scope SHALL include a memberCount scalar. Own-time empty members MUST NOT be presented as a zero team size.
+
+#### Scenario: Admin lists all projects
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is an admin member of the workspace
+- **WHEN** the requester lists projects
+- **THEN** the system returns active and inactive projects in that workspace
+- **AND** the result includes both public and private projects
+- **AND** each full-project response includes `members` from which the assigned-member count can be derived
+- **AND** each project includes `isActive`
+
+
+#### Scenario: Non-admin lists active public and assigned projects
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` or `member` in the workspace
+- **WHEN** the requester lists projects
+- **THEN** the system returns active public projects in that workspace
+- **AND** the system returns active private projects assigned to that requester
+- **AND** projects matching both public and assigned scope are returned once
+- **AND** each full-project response includes `members` from which the assigned-member count can be derived
+
+
+#### Scenario: Non-admin can read active public project
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` or `member` in the workspace
+- **AND** the project is active and public
+- **WHEN** the requester reads that project by id
+- **THEN** the system returns the project
+- **AND** the full-project response includes its assigned `members` list
+
+
+#### Scenario: Non-admin can read assigned private project
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` or `member` in the workspace
+- **AND** the requester is assigned to an active private project
+- **WHEN** the requester reads that project by id
+- **THEN** the system returns the project
+- **AND** the full-project response includes its assigned `members` list
+
+
+#### Scenario: Non-admin cannot read unassigned private project
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` or `member` in the workspace
+- **AND** the requester is not assigned to a private project
+- **WHEN** the requester reads that project by id
+- **THEN** the system responds with 404 Not Found
+
+
+#### Scenario: Non-admin cannot read inactive project
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` or `member` in the workspace
+- **AND** the project is inactive
+- **WHEN** the requester reads that project by id
+- **THEN** the system responds with 404 Not Found
+
+#### Scenario: Own-time project appears without assignment
+- **GIVEN** a member has own time on an external task but no separate project authorization
+- **WHEN** the member lists visible projects
+- **THEN** the external project is returned with own-time scope while projects containing no own entries remain hidden
+
+
+### Requirement: Project Summaries Are Scope Aware
+
+The system MUST expose project summary data using the requester's project visibility scope.
+ Own-time external project summaries SHALL include only authorized projects, own visible tasks, own completed durations and own activity. Peer counts, durations, member lists and timestamps MUST NOT be exposed through aggregates.
+
+#### Scenario: Admin reads management project summary
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is an admin member of the workspace
+- **WHEN** the requester calls `GET /projects/management-summary`
+- **THEN** `activeProjects` equals the number of active projects in the workspace
+- **AND** `privateProjects` equals the number of active private projects in the workspace
+- **AND** `publicProjects` equals the number of active public projects in the workspace
+
+
+#### Scenario: PM reads management project summary
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` member of the workspace
+- **WHEN** the requester calls `GET /projects/management-summary`
+- **THEN** the counts include active public projects and active assigned projects visible to that PM
+- **AND** projects matching both public and assigned scope are counted once
+- **AND** inactive projects are excluded
+
+
+#### Scenario: User reads project summary
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is an active workspace member
+- **WHEN** the requester calls `GET /projects/my-summary`
+- **THEN** `visibleProjects` equals the number of active projects visible to the requester
+- **AND** `trackedHoursWeek` equals the requester's own completed tracked hours in the current calendar week
+- **AND** `trackedHoursMonth` equals the requester's own completed tracked hours in the current calendar month
+
+#### Scenario: Personal project summary excludes hidden work
+- **GIVEN** a member has own time on an external task but no separate project authorization
+- **WHEN** the member requests their project summary
+- **THEN** visible-project counts and personal tracked totals include authorized own-time work without counting hidden projects or peer durations
+
+
+### Requirement: Single Project Detail Includes Header Summary Fields
+
+The system MUST return project detail summary fields from `GET /projects/:id` so the user Project page can render its header without per-row or per-section reconstruction calls.
+ An own-time external detail response SHALL include common project identity and own trackedSummary, with members empty and assignedMembersSummary null, without a memberCount scalar. It MUST NOT reconstruct peer information. Full-project summaries retain their existing shape.
+
+#### Scenario: Visible project detail returns editable description
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester can read a project through existing project visibility rules
+- **WHEN** the requester calls `GET /projects/:id`
+- **THEN** the response includes the project's `description`
+- **AND** `description` is either a string or `null`
+
+
+#### Scenario: Project detail returns provider summary
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester can read a project through existing project visibility rules
+- **WHEN** the requester calls `GET /projects/:id`
+- **THEN** the response includes a `providerSummary`
+- **AND** manual projects return `source: manual` with nullable provider detail fields set to `null`
+- **AND** GitHub-linked projects return `source: github` with display-safe external reference detail when available
+
+
+#### Scenario: Project detail returns tracked summary
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester can read a project through existing project visibility rules
+- **WHEN** the requester calls `GET /projects/:id`
+- **THEN** the response includes `trackedSummary.totalSeconds` from completed time entries linked through project tasks
+- **AND** the response includes `trackedSummary.billableSeconds` from completed billable time entries linked through project tasks
+- **AND** running entries with no duration do not increase either total
+
+
+#### Scenario: Project detail returns billable share
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** a readable project has completed tracked entries
+- **WHEN** the requester calls `GET /projects/:id`
+- **THEN** `trackedSummary.billableShare` equals billable seconds divided by total seconds
+- **AND** projects with zero completed tracked seconds return `billableShare: null`
+
+
+#### Scenario: Project detail returns last activity from tracked work
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** a readable project has completed tracked entries
+- **WHEN** the requester calls `GET /projects/:id`
+- **THEN** `trackedSummary.lastActivityAt` equals the latest `startedAt` among completed tracked entries for that project
+- **AND** projects with no completed tracked entries return `lastActivityAt: null`
+
+
+#### Scenario: Project detail returns assigned-member summary
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester can read a project through existing project visibility rules
+- **WHEN** the requester calls `GET /projects/:id`
+- **THEN** the response includes `assignedMembersSummary.count` equal to the number of assigned users
+- **AND** the response includes up to three assigned users in `assignedMembersSummary.previewMembers`
+- **AND** the response includes `assignedMembersSummary.remainingCount` for assigned users not present in the preview
+- **AND** the response does not introduce a dedicated PM owner field
+
+#### Scenario: Own-time detail redacts peer summaries
+- **GIVEN** a member has own time on an external task but no separate project authorization
+- **WHEN** the member reads the external project detail
+- **THEN** the response contains own trackedSummary, empty members and null assignedMembersSummary without a memberCount scalar or peer activity
+
+
+### Requirement: Project Updates Follow Role And Visibility Policy
+
+The system MUST restrict project updates by role, project visibility, and project active state.
+ Derived own-time visibility MUST NOT grant project update, assignment, billing, or PM management authority. External-reference projects SHALL stay private; mode conversion and changing external visibility to public are outside this release.
+
+#### Scenario: Admin updates any project
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is an admin member of the workspace
+- **WHEN** the requester updates an active or inactive project in that workspace
+- **THEN** the system applies the valid mutable project fields
+
+
+#### Scenario: PM updates visible active project metadata
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` member of the workspace
+- **AND** the requester can see an active project through public visibility or assignment
+- **WHEN** the requester updates that project's mutable metadata
+- **THEN** the system applies the valid mutable project fields except active state
+
+
+#### Scenario: PM cannot change project active state
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` member of the workspace
+- **AND** the requester can see an active project through public visibility or assignment
+- **WHEN** the requester attempts to change the project's active state
+- **THEN** the system responds with 403 Forbidden
+
+
+#### Scenario: PM cannot update unassigned private project
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` member of the workspace
+- **AND** the requester is not assigned to a private project
+- **WHEN** the requester attempts to update that project
+- **THEN** the system responds with 404 Not Found
+
+
+#### Scenario: PM cannot update inactive project
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` member of the workspace
+- **AND** the project is inactive
+- **WHEN** the requester attempts to update that project
+- **THEN** the system responds with 404 Not Found
+
+
+#### Scenario: Member cannot update project
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `member` with visibility to a project
+- **WHEN** the requester attempts to update that project
+- **THEN** the system responds with 403 Forbidden
+
+#### Scenario: Own-time participation cannot change a shared project
+- **GIVEN** a member has own time on an external task but no separate project authorization
+- **WHEN** the member attempts to update the project name, visibility, billing default or active state
+- **THEN** the server denies the mutation and leaves the project unchanged
+
+
+### Requirement: Project Time Entry Visibility Follows Project Visibility
+
+The system MUST use project visibility rules when exposing project-scoped time-entry lists.
+ Own-time external access SHALL return only the requester's entries. It MUST NOT grant read access to peers' entries even when a shared task is visible. Existing explicit full-project read rights remain independent.
+
+#### Scenario: Admin reads time entries for any workspace project
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is an admin member of the workspace
+- **WHEN** the requester lists time entries for a project in that workspace
+- **THEN** the system returns time entries for that project
+
+
+#### Scenario: Assigned non-admin reads active project time entries
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` or `member` assigned to an active private project
+- **WHEN** the requester lists time entries for that project
+- **THEN** the system returns time entries for that project
+
+
+#### Scenario: Non-admin reads active public project time entries
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` or `member` in the workspace
+- **AND** the project is active and public
+- **WHEN** the requester lists time entries for that project
+- **THEN** the system returns time entries for that project
+
+
+#### Scenario: Unassigned non-admin cannot read private project time entries
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester is a `pm` or `member` not assigned to a private project
+- **WHEN** the requester attempts to list time entries for that project
+- **THEN** the system responds with 404 Not Found
+
+
+#### Scenario: Project time entry visibility does not grant mutation rights
+- **GIVEN** the request is evaluated under the existing full-project access policy
+- **AND** the requester can view another user's time entry through project visibility
+- **WHEN** the requester attempts to update or delete that other user's entry
+- **THEN** the system still enforces own-entry mutation rules
+
+#### Scenario: Project time-entry listing stays personal
+- **GIVEN** a member has own time on an external task but no separate project authorization
+- **WHEN** the member lists time entries for the external project
+- **THEN** only their own entries and own pagination totals are returned, with no peer entries or peer aggregates
+
+
+### Requirement: A Timer Started From A GitHub Issue Reuses An Existing Project
+For installation-authorized managed targets, starting a timer from a GitHub issue MUST resolve an existing project in the current workspace and MUST NOT create a project or assignment. An existing issue-task mapping SHALL retain its owning project across direct issue pages and Projects panes. For an issue without a task mapping, the repository's project SHALL take precedence over a verified eligible board's project. Each resolution MUST enforce installation resource access and GiTiempo tracking authorization before materialization or protected response data.
+ External-reference targets SHALL follow shared identity resolution in external-github-tracking, including atomic creation when no mapping exists. A hidden mapping MUST NOT be treated as absent.
+
+#### Scenario: The repository's project is used when one exists
+- **GIVEN** the target follows managed installation-authorized tracking
+- **AND** an issue with no task mapping and a GiTiempo project tracking its repository
+- **WHEN** an authorized caller starts the timer with valid installation resource access
+- **THEN** that project is used and no project or assignment is created
+
+
+#### Scenario: The board's project is used when the repository has none
+- **GIVEN** the target follows managed installation-authorized tracking
+- **AND** no task or repository mapping and a uniquely resolved imported board containing the issue
+- **WHEN** the backend verifies the board relationship and caller's tracking access
+- **THEN** the board's existing project is used
+- **AND** no project is created for the repository
+
+
+#### Scenario: Nothing existing requires deliberate project setup
+- **GIVEN** the target follows managed installation-authorized tracking
+- **AND** neither the issue, repository, nor a verified eligible board maps to a workspace project
+- **WHEN** a timer is started from the issue
+- **THEN** the request returns a mapping-required error and creates no records
+- **AND** an administrator or project manager must establish the project through the existing deliberate setup/import flow
+
+
+#### Scenario: An already tracked issue keeps its project when a repository project appears
+- **GIVEN** the target follows managed installation-authorized tracking
+- **AND** an issue tracked in the project imported for its board and a repository project created afterwards
+- **WHEN** an authorized caller starts the same issue from its direct page or a Projects pane
+- **THEN** the timer uses the existing task and its owning project on both surfaces
+
+
+#### Scenario: A different repository project does not override issue ownership
+- **GIVEN** the target follows managed installation-authorized tracking
+- **AND** a canonical issue-task mapping names a different project than the repository mapping
+- **WHEN** a caller starts that issue without a board hint
+- **THEN** the existing task's project is authoritative and its access checks apply
+- **AND** an access denial cannot fall back to the repository project or create a duplicate task
+
+
+#### Scenario: Ambiguous or corrupt mappings fail safely
+- **GIVEN** the target follows managed installation-authorized tracking
+- **AND** no authoritative task/repository mapping and multiple eligible board mappings, or inconsistent duplicate issue ownership
+- **WHEN** the backend resolves a timer target
+- **THEN** it refuses the request without guessing, exposing protected project data, or writing records
+
+### Requirement: Admin And PM Can Import GitHub Projects As Projects
+
+An admin or PM SHALL be able to add an organization's GitHub Project as a GiTiempo project through a dedicated import request, and MUST be able to supply the same visibility and default-billable settings a directly created project takes. A project that is already imported MUST be reported without being modified, and one refused project MUST NOT abort the rest of the request.
+
+A GitHub project whose repository is already tracked by another **active** GiTiempo project MUST be refused without writing anything, and the refusal MUST name the project that tracks the repository. The relation MUST be detected the way GitHub treats identity, so letter casing cannot hide it. A disabled project MUST NOT block the import: because a project cannot be deleted, disabling one is how a workspace retires it, and the import MUST take over the repository from it rather than leave the repository pointing at a project no timer can use.
+
+The caller MUST supply only the GitHub project id and those local settings. The system MUST read the project's owner, title, number, and URL from GitHub using the caller's connected account, and MUST decide the organization policy from the owner GitHub reports rather than any value in the request.
+ These existing reassociation rules apply to managed mappings only. Imports MUST NOT steal an external-reference repository mapping, including an inactive one, or implicitly convert its policy. Repository reuse SHALL retain its project ID and permissions; conflicting board import SHALL fail safely.
+
+#### Scenario: Import stores the settings the caller chose
+- **GIVEN** any existing mapping affected by the legacy import behavior is managed
+- **AND** an admin importing a GitHub project with a visibility and a billable default
+- **WHEN** the request succeeds
+- **THEN** the created project carries both values
+
+
+#### Scenario: Omitted settings fall back to the stored defaults
+- **GIVEN** any existing mapping affected by the legacy import behavior is managed
+- **WHEN** a GitHub project is imported without a visibility or a billable default
+- **THEN** the created project takes the same defaults a project created without them would take
+
+
+#### Scenario: A visibility the workspace cannot store is refused
+- **GIVEN** any existing mapping affected by the legacy import behavior is managed
+- **WHEN** the request carries a visibility outside the supported values
+- **THEN** the request is refused before anything is written
+
+
+#### Scenario: Stored provenance comes from GitHub, not the request
+- **GIVEN** any existing mapping affected by the legacy import behavior is managed
+- **WHEN** a GitHub project is imported
+- **THEN** the project name, external URL, and stored owner, title, and number are the values GitHub reported for that project id
+- **AND** a request carrying any of those values is refused rather than having them ignored
+
+
+#### Scenario: An organization outside the policy is reported per project
+- **GIVEN** any existing mapping affected by the legacy import behavior is managed
+- **AND** a request holding one project whose GitHub owner is an approved organization and one whose owner is not
+- **WHEN** the request is processed
+- **THEN** the approved project is imported
+- **AND** the other is reported as failed, without being written
+- **AND** the failure does not abort the request
+
+
+#### Scenario: A project the caller cannot see is refused
+- **GIVEN** any existing mapping affected by the legacy import behavior is managed
+- **WHEN** the supplied project id resolves to nothing for the caller's connected GitHub account
+- **THEN** the project is reported as failed
+- **AND** no project, external reference, or organization decision is derived from the request
+
+
+#### Scenario: Importing twice does not modify the existing project
+- **GIVEN** any existing mapping affected by the legacy import behavior is managed
+- **AND** a GitHub project that has already been imported
+- **WHEN** it is imported again with different settings
+- **THEN** the response reports it as already imported
+- **AND** the existing project keeps the settings it had
+
+
+#### Scenario: A repository tracked by another project refuses the import
+- **GIVEN** any existing mapping affected by the legacy import behavior is managed
+- **AND** a GitHub project whose only repository is already tracked by a different GiTiempo project
+- **WHEN** it is imported
+- **THEN** the response reports it as refused, naming the project that tracks the repository
+- **AND** no project, external reference, or assignment is written
+- **AND** the refusal does not abort the rest of the request
+
+
+#### Scenario: Letter casing cannot hide the tracked repository
+- **GIVEN** any existing mapping affected by the legacy import behavior is managed
+- **AND** the tracking project's stored repository key differs from the board's repository only by letter case
+- **WHEN** the board is imported
+- **THEN** the relation is still detected and the import is refused the same way
+
+
+#### Scenario: A disabled project does not block the import
+- **GIVEN** any existing mapping affected by the legacy import behavior is managed
+- **AND** the only project tracking the board's repository is disabled
+- **WHEN** the board is imported
+- **THEN** the import succeeds
+- **AND** the repository is linked to the created project
+- **AND** the disabled project keeps its tasks, time entries, and assignments
+
+#### Scenario: External identity survives board import
+- **GIVEN** an external-reference project already holds a repository, even if inactive
+- **WHEN** a board import attempts to associate that repository with a different project
+- **THEN** the import returns a safe conflict without changing references, tasks, entries or policy

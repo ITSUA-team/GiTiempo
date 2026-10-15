@@ -1,16 +1,22 @@
+import { decodeAccessTokenEmail, decodeAccessTokenWorkspaceId } from "./token";
+
 import {
   currentTimeEntryResponseSchema,
+  workspaceResponseSchema,
+  type WorkspaceResponse,
   githubSessionRequestSchema,
   loginRequestSchema,
   logoutRequestSchema,
   refreshRequestSchema,
-  startTimerFromGitHubSchema,
+  startTimerFromGitHubReferenceSchema,
+  trackingCapabilityResponseSchema,
   conditionalStopTimerSchema,
   timeEntryResponseSchema,
   tokenPairResponseSchema,
   type CurrentTimeEntryResponse,
   type TimeEntryResponse,
   type ConditionalStopTimerInput,
+  type TrackingCapabilityResponse,
   type TokenPairResponse,
 } from "@gitiempo/shared";
 import type { ZodType } from "zod";
@@ -33,9 +39,15 @@ export interface ExtensionApiClient {
   ): Promise<TokenPairResponse>;
   exitSession(): Promise<void>;
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
+  getTrackingCapability(
+    pageContext: SupportedGitHubIssueContext,
+    expectedContext?: { workspaceId: string; email: string },
+  ): Promise<TrackingCapabilityResponse>;
+  getWorkspace(): Promise<WorkspaceResponse>;
   loginWithFirebaseToken(firebaseIdToken: string): Promise<TokenPairResponse>;
   startTimerFromGitHub(
     pageContext: SupportedGitHubIssueContext,
+    expectedContext?: { workspaceId: string; email: string },
   ): Promise<TimeEntryResponse>;
   stopTimer(input: ConditionalStopTimerInput): Promise<TimeEntryResponse>;
 }
@@ -51,8 +63,18 @@ const API_UNAVAILABLE_ERROR_MESSAGE =
   "GiTiempo API is temporarily unavailable. Please try again in a moment.";
 const API_UNREACHABLE_ERROR_MESSAGE =
   "Unable to reach GiTiempo API. Check your connection and try again.";
+const REQUEST_TIMEOUT_MS = 15_000;
 /** Nothing waits on a revoke, so it gets a short leash rather than none at all. */
 const REVOKE_TIMEOUT_MS = 5_000;
+
+function parseGitHubReferenceInput(pageContext: SupportedGitHubIssueContext) {
+  return startTimerFromGitHubReferenceSchema.parse({
+    githubRepo: pageContext.githubRepo,
+    issueNumber: pageContext.issueNumber,
+    issueTitle: pageContext.issueTitle,
+    issueUrl: pageContext.issueUrl,
+  });
+}
 
 function getDefaultResponseErrorMessage(status: number): string {
   if ([502, 503, 504].includes(status)) {
@@ -137,6 +159,7 @@ export function createExtensionApiClient({
           "Content-Type": "application/json",
         },
         method: "POST",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       }),
     );
     const responseBody = await parseJsonResponse(response);
@@ -242,6 +265,7 @@ export function createExtensionApiClient({
             "Content-Type": "application/json",
           },
           method: "POST",
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
         const body = await parseJsonResponse(response);
 
@@ -280,6 +304,7 @@ export function createExtensionApiClient({
     method?: string;
     path: string;
     responseSchema: Pick<ZodType<TResponse>, "parse">;
+    expectedContext?: { workspaceId: string; email: string };
   }): Promise<TResponse> {
     const session = await getStoredSession(storage);
 
@@ -287,8 +312,13 @@ export function createExtensionApiClient({
       throw new Error("Your session has expired. Please sign in again.");
     }
 
-    const makeRequest = async (accessToken: string): Promise<Response> =>
-      fetchWithHandledNetworkError(() =>
+    const makeRequest = async (accessToken: string): Promise<Response> => {
+      if (options.expectedContext &&
+          (decodeAccessTokenEmail(accessToken) !== options.expectedContext.email ||
+           decodeAccessTokenWorkspaceId(accessToken) !== options.expectedContext.workspaceId)) {
+        throw new Error("Your session or workspace changed. Refresh and review the destination before starting.");
+      }
+      return fetchWithHandledNetworkError(() =>
         fetchFn(getRequestUrl(config, options.path), {
           body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
           headers: {
@@ -298,8 +328,10 @@ export function createExtensionApiClient({
               : {}),
           },
           method: options.method ?? "GET",
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         }),
       );
+    };
 
     let response = await makeRequest(session.accessToken);
     let body = await parseJsonResponse(response);
@@ -334,15 +366,28 @@ export function createExtensionApiClient({
         responseSchema: currentTimeEntryResponseSchema,
       });
     },
-    loginWithFirebaseToken,
-    startTimerFromGitHub(pageContext) {
-      return requestWithAuth({
-        body: startTimerFromGitHubSchema.parse({
-          githubRepo: pageContext.githubRepo,
-          issueNumber: pageContext.issueNumber,
-        }),
+    getTrackingCapability(pageContext, expectedContext): Promise<TrackingCapabilityResponse> {
+      return requestWithAuth<TrackingCapabilityResponse>({
+        expectedContext,
+        body: parseGitHubReferenceInput(pageContext),
         method: "POST",
-        path: "/time-entries/timer/start-from-github",
+        path: "/time-entries/timer/capability",
+        responseSchema: trackingCapabilityResponseSchema as Pick<
+          ZodType<TrackingCapabilityResponse>,
+          "parse"
+        >,
+      });
+    },
+    getWorkspace() {
+      return requestWithAuth({ path: "/workspace", responseSchema: workspaceResponseSchema });
+    },
+    loginWithFirebaseToken,
+    startTimerFromGitHub(pageContext, expectedContext) {
+      return requestWithAuth({
+        expectedContext,
+        body: parseGitHubReferenceInput(pageContext),
+        method: "POST",
+        path: "/time-entries/timer/start-from-github-reference",
         responseSchema: timeEntryResponseSchema,
       });
     },

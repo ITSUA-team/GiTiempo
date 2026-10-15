@@ -180,7 +180,7 @@ test('publishes a static privacy policy with extension-specific data handling', 
   assert.match(privacyPage, /privacyControllerName/);
   assert.match(privacyPage, /privacyContactEmail/);
   assert.match(privacyPage, /chrome\.storage\.local/);
-  assert.match(privacyPage, /repository name and issue number/);
+  assert.match(privacyPage, /repository name, issue number, visible issue title, and canonical direct issue URL/);
   assert.match(privacyPage, /Limited Use requirements/);
   assert.match(privacyPage, /extension-local IndexedDB/);
   assert.match(privacyPage, /token-free status flag/);
@@ -194,7 +194,9 @@ test('publishes a static privacy policy with extension-specific data handling', 
   assert.match(privacyPage, /a technical administrator handles deletion manually/);
   assert.match(privacyPage, /These notifications do not contain users’ personal data/);
   assert.match(privacyPage, /all extension user data/);
-  assert.match(privacyPage, /subsequently retrieves issue information/);
+  assert.match(privacyPage, /For managed projects, GiTiempo verifies access and retrieves issue information/);
+  assert.match(privacyPage, /without retrieving it through the GitHub API or verifying your GitHub access/);
+  assert.match(privacyPage, /exact tasks containing your entries/);
   assert.match(privacyPage, /withdrawing consent does not delete information already received by Google/);
   assert.match(privacyPage, /does not collect analytics/);
   assert.doesNotMatch(privacyPage, /anonymous analytics/i);
