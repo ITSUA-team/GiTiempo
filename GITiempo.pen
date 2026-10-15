@@ -52254,9 +52254,9 @@
               ]
             },
             {
-              "id": "PYJ8T",
+              "id": "QCD6a",
               "type": "ref",
-              "ref": "vzO0K",
+              "ref": "w6xWc",
               "name": "extEmenu",
               "layoutPosition": "absolute",
               "x": 80,
@@ -52462,18 +52462,18 @@
               ]
             },
             {
-              "id": "MTRC1",
+              "id": "l0DBl",
               "type": "ref",
-              "ref": "vzO0K",
+              "ref": "w6xWc",
               "name": "extFmenu",
               "layoutPosition": "absolute",
               "x": 80,
               "y": 56,
               "descendants": {
-                "xn9Sz": {
+                "r4STcn": {
                   "enabled": false
                 },
-                "hQUvh": {
+                "viWRS": {
                   "enabled": false
                 }
               }
@@ -52670,178 +52670,6 @@
         },
         {
           "type": "frame",
-          "id": "vzO0K",
-          "x": 1264,
-          "y": 148,
-          "name": "Ext Account Menu",
-          "reusable": true,
-          "width": 220,
-          "fill": "$color-surface",
-          "cornerRadius": "$radius-md",
-          "stroke": "$color-divider",
-          "strokeWidth": 1,
-          "strokeAlignment": "inner",
-          "effect": {
-            "type": "shadow",
-            "shadowType": "outer",
-            "color": "#00000024",
-            "offset": {
-              "x": 0,
-              "y": 4
-            },
-            "blur": 12
-          },
-          "layout": "vertical",
-          "gap": 2,
-          "padding": 6,
-          "children": [
-            {
-              "type": "frame",
-              "id": "nX8cf",
-              "name": "identity",
-              "width": "fill_container",
-              "layout": "vertical",
-              "gap": 2,
-              "padding": [
-                8,
-                10
-              ],
-              "children": [
-                {
-                  "type": "text",
-                  "id": "xn9Sz",
-                  "name": "identityName",
-                  "fill": "$color-text-dark",
-                  "textGrowth": "fixed-width",
-                  "width": 188,
-                  "content": "Alexey Tsukanov",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "600"
-                },
-                {
-                  "type": "text",
-                  "id": "jdBjO",
-                  "name": "identityEmail",
-                  "fill": "$color-text-muted",
-                  "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "alexey@example.com",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "hQUvh",
-              "name": "timerNote",
-              "width": 208,
-              "fill": "$color-status-active-bg",
-              "cornerRadius": "$radius-sm",
-              "padding": [
-                8,
-                10
-              ],
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "P76YAV",
-                  "name": "timerNoteWarn",
-                  "fill": "$color-status-active-text",
-                  "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "Timer keeps running after sign out",
-                  "fontFamily": "Inter",
-                  "fontSize": 11,
-                  "fontWeight": "600"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "S9mGyB",
-              "name": "menuDivider",
-              "width": "fill_container",
-              "height": 1,
-              "fill": "$color-divider"
-            },
-            {
-              "type": "frame",
-              "id": "fGYlL",
-              "name": "itemProfile",
-              "width": "fill_container",
-              "cornerRadius": "$radius-sm",
-              "gap": 10,
-              "padding": [
-                9,
-                10
-              ],
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "icon",
-                  "id": "oktKF",
-                  "name": "itemProfileIcon",
-                  "width": 16,
-                  "height": 16,
-                  "icon": "user",
-                  "library": "lucide",
-                  "fill": "$color-text-muted"
-                },
-                {
-                  "type": "text",
-                  "id": "x9DgB",
-                  "name": "itemProfileText",
-                  "fill": "$color-text-dark",
-                  "content": "Open profile",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "f7CorD",
-              "name": "itemSignOut",
-              "width": "fill_container",
-              "cornerRadius": "$radius-sm",
-              "gap": 10,
-              "padding": [
-                9,
-                10
-              ],
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "icon",
-                  "id": "O6iFej",
-                  "name": "itemSignOutIcon",
-                  "width": 16,
-                  "height": 16,
-                  "icon": "log-out",
-                  "library": "lucide",
-                  "fill": "$color-destructive"
-                },
-                {
-                  "type": "text",
-                  "id": "nb4jQ",
-                  "name": "itemSignOutText",
-                  "fill": "$color-destructive",
-                  "content": "Sign out",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "frame",
           "id": "dpU0a",
           "x": 1584,
           "y": 148,
@@ -52956,6 +52784,247 @@
           "fontFamily": "Inter",
           "fontSize": 18,
           "fontWeight": "500"
+        },
+        {
+          "type": "frame",
+          "id": "w6xWc",
+          "x": 1264,
+          "y": 148,
+          "name": "Ext Account Menu",
+          "reusable": true,
+          "width": 220,
+          "fill": "$color-surface",
+          "cornerRadius": "$radius-md",
+          "stroke": "$color-divider",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000024",
+            "offset": {
+              "x": 0,
+              "y": 4
+            },
+            "blur": 12
+          },
+          "layout": "vertical",
+          "gap": 2,
+          "padding": 6,
+          "children": [
+            {
+              "type": "frame",
+              "id": "v9OzO",
+              "name": "identity",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                8,
+                10
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "r4STcn",
+                  "name": "identityName",
+                  "fill": "$color-text-dark",
+                  "textGrowth": "fixed-width",
+                  "width": 188,
+                  "content": "Alexey Tsukanov",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "NrSie",
+                  "name": "identityEmail",
+                  "fill": "$color-text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "alexey@example.com",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "viWRS",
+              "name": "timerNote",
+              "width": 208,
+              "fill": "$color-status-active-bg",
+              "cornerRadius": "$radius-sm",
+              "padding": [
+                8,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "S8PiW",
+                  "name": "timerNoteWarn",
+                  "fill": "$color-status-active-text",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Timer keeps running after sign out",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "pHw7Y",
+              "name": "menuDivider",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "$color-divider"
+            },
+            {
+              "type": "frame",
+              "id": "A9XLx",
+              "name": "Workspace selector",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "padding": [
+                8,
+                10,
+                10,
+                10
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rmnQb",
+                  "name": "Workspace label",
+                  "fill": "$color-text-muted",
+                  "content": "Workspace",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "eKwXu",
+                  "name": "Selected workspace control",
+                  "width": "fill_container",
+                  "height": 34,
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    10
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "u7P6n3",
+                      "name": "Selected workspace name",
+                      "fill": "$color-text-dark",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Acme workspace",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "ZGlMX",
+                      "name": "Workspace dropdown chevron",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "jdary",
+              "name": "itemProfile",
+              "width": "fill_container",
+              "cornerRadius": "$radius-sm",
+              "gap": 10,
+              "padding": [
+                9,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "An3CF",
+                  "name": "itemProfileIcon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "user",
+                  "library": "lucide",
+                  "fill": "$color-text-muted"
+                },
+                {
+                  "type": "text",
+                  "id": "r5pMy",
+                  "name": "itemProfileText",
+                  "fill": "$color-text-dark",
+                  "content": "Open profile",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "FGnoh",
+              "name": "itemSignOut",
+              "width": "fill_container",
+              "cornerRadius": "$radius-sm",
+              "gap": 10,
+              "padding": [
+                9,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "ixYN7",
+                  "name": "itemSignOutIcon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "log-out",
+                  "library": "lucide",
+                  "fill": "$color-destructive"
+                },
+                {
+                  "type": "text",
+                  "id": "P3WWF3",
+                  "name": "itemSignOutText",
+                  "fill": "$color-destructive",
+                  "content": "Sign out",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
