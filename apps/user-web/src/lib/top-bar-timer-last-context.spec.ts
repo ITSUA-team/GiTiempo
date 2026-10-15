@@ -69,6 +69,7 @@ function createCompletedEntry(
     durationSeconds: 3600,
     endedAt: '2026-04-21T10:00:00.000Z',
     githubIssue: null,
+    invoiceId: null,
     id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
     isBillable: true,
     project: { id: TEST_IDS.project, name: 'Project Orion' },

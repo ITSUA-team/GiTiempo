@@ -233,10 +233,61 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 | Method | Path            | Auth | Role     | Description                                |
 | ------ | --------------- | ---- | -------- | ------------------------------------------ |
 | GET    | `/invoices`     | JWT  | Admin/PM | List invoices (PM: assigned projects only) |
-| POST   | `/invoices`     | JWT  | Admin/PM | Create invoice from time report data       |
+| POST   | `/invoices`     | JWT  | Admin/PM | Create invoice from eligible time entries  |
+| GET    | `/invoices/eligible-entries` | JWT  | Admin/PM | Preview eligible time entries for a potential invoice |
+| GET    | `/invoices/stats`            | JWT  | Admin/PM | Get invoice stats (counts by status, this month summary) |
 | GET    | `/invoices/:id` | JWT  | Admin/PM | Get invoice details                        |
-| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, rates)      |
+| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, title)      |
 | DELETE | `/invoices/:id` | JWT  | Admin    | Delete invoice                             |
+
+**GET /invoices** query: `page?`, `limit?`, `projectId?`, `status?`, `dateFrom?`, `dateTo?`, `search?`
+
+- PMs see only invoices scoped to active public projects or private projects assigned to them. Workspace-wide invoices (no project scope) are admin-only.
+
+**POST /invoices** body: `{ title: string, dateFrom: string (YYYY-MM-DD), dateTo: string (YYYY-MM-DD), projectId?: string, hourlyRate?: number, currency?: string, discountPercent?: number (0–100, step 0.01, default 0), notes?: string | null }`
+
+- Creates an invoice from eligible time entries in the requested workspace, project, and date range.
+- **Eligibility:** only completed, billable time entries with a finalized duration that are not already linked to another invoice are selected. Running, non-billable, and already-invoiced entries are excluded.
+- **Atomicity:** entry selection, invoice insert, and `time_entries.invoice_id` association happen in a single transaction with `SELECT ... FOR UPDATE`, so concurrent requests cannot bill the same entry twice.
+- **Totals:** `totalHours = SUM(duration_seconds) / 3600`, `totalAmount = totalHours × hourlyRate × (1 − discountPercent / 100)`. Both are stored as snapshot values at creation time.
+- **Rate fallback:** when `hourlyRate` is omitted, the workspace `default_hourly_rate` is used. When `currency` is omitted, the workspace `currency` is used. If neither is configured and no rate is supplied, the request is rejected with `422`.
+- PMs must scope invoice creation to a project they can see (active public project or private project assigned to them); workspace-wide invoices (no `projectId`) are admin-only.
+
+**GET /invoices/eligible-entries** query: `dateFrom: string (YYYY-MM-DD), dateTo: string (YYYY-MM-DD), projectId?: string`
+
+- Returns the set of completed, billable, not-yet-invoiced time entries matching the date range and optional project scope, along with computed total hours — without creating an invoice or modifying any data.
+- PMs must scope the preview to a project they can see (active public project or private project assigned to them); a request without `projectId` from a PM is rejected with `403`.
+- `dateTo` must be later than or equal to `dateFrom`; reversed bounds are rejected with a validation error.
+- Response: `{ count: number, totalHours: number, entries: InvoiceTimeEntrySummary[], defaultHourlyRate: number | null, defaultCurrency: string | null }`
+- Each entry summary includes `id`, `taskId`, `userId`, `userName`, `taskName`, `startedAt`, `endedAt`, `durationSeconds`, `isBillable`, `description`.
+
+**GET /invoices/stats**
+
+- Returns aggregate invoice counts grouped by status (`draft`, `sent`, `paid`) and a summary of invoices created in the current calendar month, scoped to the caller's visibility.
+- The current month starts at midnight on its first day in the workspace's configured timezone, independently of the database session timezone.
+- Admins see all workspace invoices; PMs see only invoices for active public projects or private projects assigned to them. Workspace-wide invoices (null `projectId`) are excluded from PM counts.
+- Response: `{ byStatus: { draft: number, sent: number, paid: number }, thisMonth: { invoiceCount: number, projectCount: number, totalAmount: number, currency: string } }`
+- `thisMonth.totalAmount` sums all currencies without conversion; the workspace default currency is returned for display purposes. The UI should note that totals are approximate when multiple currencies are present.
+
+**PATCH /invoices/:id** body: `{ title?: string, status?: "draft" | "sent" | "paid", notes?: string | null }`
+
+- Updates only editable fields (`title`, `status`, `notes`). Snapshot fields (`hourlyRate`, `currency`, `discountPercent`, `totalHours`, `totalAmount`, `dateFrom`, `dateTo`) and the linked time-entry set are immutable after creation. Totals are never recomputed by an update.
+- Status can advance from `draft` to `sent` or `paid`, and from `sent` to `paid`; backward transitions return `409 Conflict`. An update also returns `409` if the status changed concurrently after it was read; none of that request's fields are applied, and the client should reload the invoice before retrying.
+
+**DELETE /invoices/:id** (Admin only)
+
+- Only `draft` invoices can be deleted. `sent` or `paid` invoices are locked (409 Conflict) to prevent re-billing of already invoiced time entries.
+- Deleting a draft invoice unlinks its time entries via `time_entries.invoice_id` `ON DELETE SET NULL`, making them eligible for a later invoice. Time entries themselves are not deleted.
+
+**Invoice list response** items include snapshot fields (`hourlyRate`, `currency`, `totalHours`, `totalAmount`, `discountPercent`), `status`, billing date range, optional `project` summary, and `timeEntryCount` (no `timeEntries` array in list items).
+
+**Invoice detail response** (`GET /invoices/:id`) includes all list fields plus the `timeEntries` array with linked entry summaries.
+
+**Eligible entries response** (`GET /invoices/eligible-entries`) returns `{ count, totalHours, entries, defaultHourlyRate, defaultCurrency }` where `entries` is an array of time-entry summaries with `userName` and `taskName` for display.
+
+**Invoice stats response** (`GET /invoices/stats`) returns `{ byStatus: { draft, sent, paid }, thisMonth: { invoiceCount, projectCount, totalAmount, currency } }`.
+
+**Time entry responses** include an `invoiceId` field (nullable) so clients can surface billed state.
 
 ---
 
@@ -306,14 +357,15 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 ## Common Query Parameters
 
-| Parameter   | Used in               | Description                            |
-| ----------- | --------------------- | -------------------------------------- |
-| `page`      | List endpoints        | Page number (1-based, default: 1)      |
-| `limit`     | List endpoints        | Items per page (default: 20, max: 100) |
-| `dateFrom`  | Time entries, reports | Filter start date (ISO 8601)           |
-| `dateTo`    | Time entries, reports | Filter end date (ISO 8601)             |
-| `projectId` | Time entries, reports | Filter by project                      |
-| `taskId`    | Time entries          | Filter by task                         |
+| Parameter   | Used in                         | Description                             |
+| ----------- | ------------------------------- | --------------------------------------- |
+| `page`      | List endpoints                  | Page number (1-based, default: 1)       |
+| `limit`     | List endpoints                  | Items per page (default: 20, max: 100)  |
+| `dateFrom`  | Time entries, reports, invoices | Filter start date (ISO 8601)            |
+| `dateTo`    | Time entries, reports, invoices | Filter end date (ISO 8601)              |
+| `projectId` | Time entries, reports, invoices | Filter by project                       |
+| `taskId`    | Time entries                    | Filter by task                          |
+| `search`    | Time entries, invoices          | Text search filter (task/invoice title) |
 
 ## Standard Error Response
 

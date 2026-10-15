@@ -89,6 +89,7 @@ interface TimeEntryResponseRow {
   description: string | null;
   isBillable: boolean;
   source: TimeEntrySource;
+  invoiceId: string | null;
   createdAt: Date;
   updatedAt: Date;
   projectName: string;
@@ -1052,6 +1053,7 @@ export class TimeEntriesService {
       description: timeEntries.description,
       isBillable: timeEntries.isBillable,
       source: timeEntries.source,
+      invoiceId: timeEntries.invoiceId,
       createdAt: timeEntries.createdAt,
       updatedAt: timeEntries.updatedAt,
       projectName: projectsTable.name,
@@ -1077,6 +1079,7 @@ export class TimeEntriesService {
       description: row.description,
       isBillable: row.isBillable,
       source: row.source,
+      invoiceId: row.invoiceId,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       project: {

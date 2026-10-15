@@ -150,6 +150,7 @@ function createRunningEntry(
     workspace,
     workspaceId,
     githubIssue,
+    invoiceId: null,
     ...entryOverrides,
   };
 }

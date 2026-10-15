@@ -47,6 +47,7 @@ export const timeEntryResponseSchema = z.object({
   description: z.string().nullable(),
   isBillable: z.boolean(),
   source: timeEntrySourceSchema,
+  invoiceId: z.uuid().nullable(),
   createdAt: dateTimeSchema,
   updatedAt: dateTimeSchema,
   project: timeEntryProjectSummarySchema,
