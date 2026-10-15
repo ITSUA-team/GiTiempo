@@ -61,6 +61,7 @@ const TEST_TASK_TITLE_PREFIXES = [
   'Delete Running ',
   'Delete Linked ',
   'Close Running ',
+  'Archive Running ',
   'Inactive Project Task ',
   'Visible Active ',
   'Visible Inactive ',
@@ -828,6 +829,88 @@ describe('Projects and tasks (e2e)', () => {
       .send({ isActive: true });
     expect(unarchiveRes.status).toBe(200);
     expect(unarchiveRes.body.isActive).toBe(true);
+  });
+
+  it('stops running timers on the project when an admin archives it', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: `Admin Archive ${randomUUID()}` });
+    expect(createRes.status).toBe(201);
+    const projectId = createRes.body.id as string;
+
+    const assignRes = await request(app.getHttpServer())
+      .post(`/projects/${projectId}/assignments`)
+      .set('Authorization', bearer(adminToken))
+      .send({ userId: bobUserId });
+    expect(assignRes.status).toBe(201);
+
+    const taskRes = await request(app.getHttpServer())
+      .post(`/projects/${projectId}/tasks`)
+      .set('Authorization', bearer(memberToken))
+      .send({ title: `Archive Running ${randomUUID()}` });
+    expect(taskRes.status).toBe(201);
+
+    const otherProjectRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: `Admin Archive ${randomUUID()}` });
+    expect(otherProjectRes.status).toBe(201);
+    const otherAssignRes = await request(app.getHttpServer())
+      .post(`/projects/${otherProjectRes.body.id}/assignments`)
+      .set('Authorization', bearer(adminToken))
+      .send({ userId: carolUserId });
+    expect(otherAssignRes.status).toBe(201);
+
+    const otherTaskRes = await request(app.getHttpServer())
+      .post(`/projects/${otherProjectRes.body.id}/tasks`)
+      .set('Authorization', bearer(otherMemberToken))
+      .send({ title: `Archive Running ${randomUUID()}` });
+    expect(otherTaskRes.status).toBe(201);
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: taskRes.body.id });
+    expect(started.status).toBe(201);
+    expect(started.body.endedAt).toBeNull();
+
+    const otherStarted = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(otherMemberToken))
+      .send({ taskId: otherTaskRes.body.id });
+    expect(otherStarted.status).toBe(201);
+
+    const archiveRes = await request(app.getHttpServer())
+      .patch(`/projects/${projectId}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ isActive: false });
+    expect(archiveRes.status).toBe(200);
+    expect(archiveRes.body.isActive).toBe(false);
+
+    const current = await request(app.getHttpServer())
+      .get('/time-entries/current')
+      .set('Authorization', bearer(memberToken));
+    expect(current.status).toBe(200);
+    expect(current.body.timeEntry).toBeNull();
+
+    const [entry] = await db
+      .select({
+        durationSeconds: timeEntries.durationSeconds,
+        endedAt: timeEntries.endedAt,
+      })
+      .from(timeEntries)
+      .where(eq(timeEntries.id, started.body.id))
+      .limit(1);
+    expect(entry?.endedAt).not.toBeNull();
+    expect(entry?.durationSeconds).toBeGreaterThan(0);
+
+    const otherCurrent = await request(app.getHttpServer())
+      .get('/time-entries/current')
+      .set('Authorization', bearer(otherMemberToken));
+    expect(otherCurrent.status).toBe(200);
+    expect(otherCurrent.body.timeEntry?.id).toBe(otherStarted.body.id);
+    expect(otherCurrent.body.timeEntry?.endedAt).toBeNull();
   });
 
   it('allows assigned members to create and update tasks but not mutate projects', async () => {

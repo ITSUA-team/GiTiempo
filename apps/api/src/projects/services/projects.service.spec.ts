@@ -450,10 +450,13 @@ describe('ProjectsService', () => {
       .mockResolvedValueOnce([unarchivedRow]);
     const where = vi.fn().mockReturnValue({ returning });
     const set = vi.fn().mockReturnValue({ where });
+    const timeEntriesUpdate = updateRowCount(1);
     const tx = {
       execute: vi.fn(),
       select: vi.fn().mockReturnValue(selectRows([])),
-      update: vi.fn().mockReturnValue({ set }),
+      update: vi.fn((table: unknown) =>
+        table === timeEntries ? timeEntriesUpdate.query : { set },
+      ),
     };
     const db = { transaction: vi.fn((callback) => callback(tx)) };
     const members = {
@@ -499,6 +502,10 @@ describe('ProjectsService', () => {
       2,
       expect.objectContaining({ isActive: true }),
     );
+    expect(tx.update).toHaveBeenCalledWith(timeEntries);
+    expect(timeEntriesUpdate.set).toHaveBeenCalledTimes(1);
+    expect(timeEntriesUpdate.from).toHaveBeenCalledWith(tasks);
+    expect(timeEntriesUpdate.where).toHaveBeenCalledTimes(1);
   });
 
   it('saves project billable defaults without backfilling downstream rows', async () => {
