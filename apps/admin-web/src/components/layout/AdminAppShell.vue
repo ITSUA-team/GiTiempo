@@ -71,6 +71,10 @@ const activeName = computed(() => {
     return routeNames.projects;
   }
 
+  if (name === routeNames.invoiceDetail) {
+    return routeNames.invoices;
+  }
+
   return name;
 });
 

@@ -30,8 +30,6 @@ import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const ROWS_PER_PAGE = 20;
-const EMPTY_INVOICES_DESCRIPTION =
-  'No invoices found. Create your first invoice to get started.';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -117,6 +115,17 @@ const loadErrorMessage = computed(() =>
   loadError.value ? getErrorMessage(loadError.value) : '',
 );
 
+const hasActiveFilters = computed(() => {
+  const f = filters.value;
+  return Boolean(f.search || f.projectId || f.status || f.dateFrom || f.dateTo);
+});
+
+const emptyStateDescription = computed(() =>
+  hasActiveFilters.value
+    ? 'No invoices match the current filters.'
+    : 'No invoices found. Create your first invoice to get started.',
+);
+
 const createDialogVisible = ref(false);
 
 const createMutation = useInvoiceCreate({
@@ -183,13 +192,12 @@ function handleCreateInvoice(): void {
   createDialogVisible.value = true;
 }
 
-// Success side effects (toast + refresh) belong to the view: the dialog closes
-// itself via update:visible, and an onSuccess hook on the mutation would fire
-// a second time alongside the `created` emit.
+// Success side effects (toast) belong to the view: the dialog closes itself
+// via update:visible, and the mutation's onSuccess hook already invalidates
+// the invoice query keys, so the list refetches without an explicit refetch.
 function handleCreateSuccess(): void {
   createDialogVisible.value = false;
   successToast('Invoice created');
-  void refetch();
 }
 </script>
 
@@ -227,7 +235,7 @@ function handleCreateSuccess(): void {
 
       <SurfaceCard padding-class="p-6">
         <InvoicesTable
-          :empty-description="EMPTY_INVOICES_DESCRIPTION"
+          :empty-description="emptyStateDescription"
           :filter-options="filterOptions"
           :filters="filters"
           :is-mobile-viewport="isMobileViewport"

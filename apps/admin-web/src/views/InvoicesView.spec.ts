@@ -516,6 +516,25 @@ describe('InvoicesView', () => {
     );
   });
 
+  it('shows the filtered empty-state copy when filters are active on an empty list', async () => {
+    stubInvoicesData(createLoadedInvoicesData([]));
+
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+
+    const table = wrapper.findComponent({ name: 'InvoicesTable' });
+    expect(table.props('rows')).toHaveLength(0);
+    expect(table.props('emptyDescription')).toBe(
+      'No invoices found. Create your first invoice to get started.',
+    );
+
+    await wrapper.get('[data-testid="invoices-search-intent"]').trigger('click');
+
+    expect(table.props('emptyDescription')).toBe(
+      'No invoices match the current filters.',
+    );
+  });
+
   it('renders only the PM-scoped invoices supplied by the data layer', async () => {
     const pmInvoice = createInvoiceItem({
       id: invoiceId,
@@ -618,7 +637,7 @@ describe('InvoicesView', () => {
     expect(dialog.props('visible')).toBe(true);
   });
 
-  it('closes the dialog, toasts success, and refreshes after a successful create', async () => {
+  it('closes the dialog and toasts success without an explicit refetch after a successful create', async () => {
     const wrapper = mountInvoicesView();
     await flushPromises();
 
@@ -633,7 +652,9 @@ describe('InvoicesView', () => {
     expect(dialog.props('visible')).toBe(false);
     expect(testMocks.successToast).toHaveBeenCalledWith('Invoice created');
     expect(testMocks.errorToast).not.toHaveBeenCalled();
-    expect(testMocks.refetch).toHaveBeenCalledTimes(1);
+    // The list refresh belongs to the mutation's onSuccess key invalidation,
+    // so the view must not trigger an additional refetch.
+    expect(testMocks.refetch).not.toHaveBeenCalled();
   });
 
   it('keeps the dialog open and toasts an error after a failed create', async () => {
