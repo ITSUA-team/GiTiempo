@@ -5,7 +5,7 @@ import Skeleton from 'primevue/skeleton';
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
 import ManagementMobileCardSkeleton from '@/components/loading/ManagementMobileCardSkeleton.vue';
 
-type ManagementPageSkeletonVariant = 'members' | 'projects' | 'reports';
+type ManagementPageSkeletonVariant = 'members' | 'projects' | 'reports' | 'invoices';
 
 const props = defineProps<{
   variant: ManagementPageSkeletonVariant;
@@ -23,6 +23,14 @@ const skeletonConfig = {
     statCount: 3,
     tableActionWidth: '16rem',
     tableHeaderWidths: ['140px', '220px', '120px', '120px', '150px'],
+  },
+  invoices: {
+    filterCount: 0,
+    statCount: 3,
+    // Search input (280px) + create button (38px) + gap between them.
+    tableActionWidth: '20rem',
+    // Project, Period, Hours, Amount, Status. The Title column is flex-1.
+    tableHeaderWidths: ['160px', '160px', '100px', '120px', '130px'],
   },
   reports: {
     filterCount: 0,
@@ -123,6 +131,18 @@ const skeletonConfig = {
           :key="`project-mobile-${index}`"
           :index="index"
           variant="projects"
+        />
+      </div>
+
+      <div
+        v-else-if="props.variant === 'invoices'"
+        class="flex flex-col gap-3 sm:hidden"
+      >
+        <ManagementMobileCardSkeleton
+          v-for="index in 4"
+          :key="`invoice-mobile-${index}`"
+          :index="index"
+          variant="invoices"
         />
       </div>
 

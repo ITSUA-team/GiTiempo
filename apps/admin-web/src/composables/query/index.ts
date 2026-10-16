@@ -181,7 +181,7 @@ interface UseWorkspaceGitHubInstallationsMutationOptions<
   client: Pick<WorkspaceGitHubInstallationsClient, Method>;
 }
 
-async function invalidateQueryKeys(
+export async function invalidateQueryKeys(
   queryClient: ReturnType<typeof useQueryClient>,
   keys: QueryKey[],
 ): Promise<void> {

@@ -3,8 +3,34 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createAppConfirm,
   createAppToast,
+  getErrorMessage,
   runWithFeedback,
 } from "./feedback";
+
+describe("getErrorMessage", () => {
+  it("returns the error message for regular errors", () => {
+    const error = new Error("Something failed");
+    expect(getErrorMessage(error)).toBe("Something failed");
+  });
+
+  it("returns a user-friendly message for ZodError instead of raw JSON", () => {
+    const zodError = new Error(
+      JSON.stringify([{ code: "too_small", path: ["currency"], message: "Too small" }]),
+    );
+    zodError.name = "ZodError";
+    expect(getErrorMessage(zodError)).toBe("Please check the form fields and try again.");
+  });
+
+  it("returns the fallback for non-Error values", () => {
+    expect(getErrorMessage("string error")).toBe("Something went wrong.");
+    expect(getErrorMessage(null)).toBe("Something went wrong.");
+    expect(getErrorMessage(undefined)).toBe("Something went wrong.");
+  });
+
+  it("returns a custom fallback when provided", () => {
+    expect(getErrorMessage(null, "Custom fallback")).toBe("Custom fallback");
+  });
+});
 
 describe("createAppToast", () => {
   it("shows success toasts with the shared default lifetime", () => {

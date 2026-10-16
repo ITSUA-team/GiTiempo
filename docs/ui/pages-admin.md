@@ -86,7 +86,7 @@
 ### Navigation
 
 - The `/invoices` route is admin-only. PMs access invoices via the list page but cannot delete.
-- Invoices nav item is hidden by default (`SHOW_INVOICES_NAV = false`). Enable when invoice UI ships.
+- Invoices nav item is visible for Admin and PM roles (`SHOW_INVOICES_NAV = true`).
 
 ## Members Page
 
