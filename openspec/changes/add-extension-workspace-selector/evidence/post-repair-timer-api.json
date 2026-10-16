@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-16",
+  "scope": "Real Nest HTTP endpoints against repaired local PostgreSQL using disposable test members/workspaces; not browser or Projects acceptance",
+  "runner": "apps/api/node_modules/vitest 4.1.4",
+  "command": "NODE_ENV=test node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run --config ./vitest.e2e.config.ts test/external-github-tracking.e2e-spec.ts",
+  "exitCode": 0,
+  "testFilesPassed": 1,
+  "testsPassed": 8,
+  "timerHttpStatuses": {
+    "/time-entries/timer/start-from-github-reference:201": 5,
+    "/time-entries/timer/stop:200": 5,
+    "/time-entries/timer/start-from-github-reference:404": 1
+  },
+  "assertions": "External task reuse, timer source and billable flag, both members start/stop, private own-time access, capability/authorization, no legacy fallback",
+  "discardedRunnerAttempt": {
+    "runner": "root vitest 3.2.4",
+    "result": "7 passed; 1 failed on project detail GET returning HTML. Timer Start/Stop succeeded. Correct package runner passed all 8."
+  },
+  "cleanup": {
+    "remainingSyntheticUsers": 0,
+    "remainingSyntheticWorkspaces": 0,
+    "reportedMemberRunningTimers": 0
+  }
+}

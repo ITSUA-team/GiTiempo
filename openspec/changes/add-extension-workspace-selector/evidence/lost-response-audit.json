@@ -1,0 +1,74 @@
+{
+  "scope": "final fixture uses truncated response body after real API headers; OPTIONS bypass injected modes",
+  "lostResponses": [
+    {
+      "event": {
+        "id": 96,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.573Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.597Z",
+        "outcome": "response-body-lost"
+      },
+      "nextSwitch": {
+        "id": 156,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:10.168Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:10.220Z",
+        "outcome": "forwarded"
+      },
+      "sameImmediateReplay": false
+    },
+    {
+      "event": {
+        "id": 419,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:22.525Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:22.544Z",
+        "outcome": "response-body-lost"
+      },
+      "nextSwitch": {
+        "id": 481,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:48.335Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:07:48.335Z",
+        "outcome": "injected-failure"
+      },
+      "sameImmediateReplay": false
+    },
+    {
+      "event": {
+        "id": 523,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:49.291Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:49.301Z",
+        "outcome": "response-body-lost"
+      },
+      "nextSwitch": {
+        "id": 573,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:52.646Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:52.659Z",
+        "outcome": "forwarded"
+      },
+      "sameImmediateReplay": false
+    }
+  ]
+}

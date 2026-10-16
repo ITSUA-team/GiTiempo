@@ -6,11 +6,13 @@ const backgroundApiMocks = vi.hoisted(() => ({
   exchangeGithubSession: vi.fn(),
   exitSession: vi.fn(),
   getCurrentTimer: vi.fn(),
+  getWorkspaceMemberships: vi.fn(),
   getTrackingCapability: vi.fn(),
   getWorkspace: vi.fn(),
   loginWithFirebaseToken: vi.fn(),
   startTimerFromGitHub: vi.fn(),
   stopTimer: vi.fn(),
+  switchWorkspace: vi.fn(),
 }));
 
 const sessionMocks = vi.hoisted(() => ({
@@ -830,5 +832,269 @@ describe('background snapshot broadcast', () => {
         }),
       ),
     );
+  });
+
+  it.each(['session read', 'initial snapshot'])(
+    'allows retry after a failed workspace-switch %s',
+    async (failurePoint) => {
+      const workspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000';
+      const targetWorkspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004';
+      let activeSession = {
+        accessToken: makeAccessToken({ email: 'alexey@example.com', workspaceId }),
+        refreshToken: 'refresh-token',
+      };
+      sessionMocks.getStoredSession.mockImplementation(async () => activeSession);
+      backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+      backgroundApiMocks.getWorkspaceMemberships.mockResolvedValue({ items: [] });
+      backgroundApiMocks.switchWorkspace.mockImplementation(async () => {
+        activeSession = {
+          accessToken: makeAccessToken({ email: 'alexey@example.com', workspaceId: targetWorkspaceId }),
+          refreshToken: 'target-refresh-token',
+        };
+        backgroundApiMocks.getWorkspace.mockResolvedValue({
+          id: targetWorkspaceId,
+          name: 'Workspace Beta',
+        });
+      });
+      if (failurePoint === 'session read') {
+        sessionMocks.getStoredSession.mockRejectedValueOnce(new Error('Storage unavailable'));
+      } else {
+        sessionMocks.getStoredSession
+          .mockResolvedValueOnce(activeSession)
+          .mockRejectedValueOnce(new Error('Storage unavailable'));
+      }
+
+      await import('./main');
+      const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]![0];
+      const failedResponse = vi.fn();
+      onMessage({ type: 'workspace/switch', workspaceId: targetWorkspaceId }, {}, failedResponse);
+
+      await vi.waitFor(() => expect(failedResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ ok: false, errorMessage: 'Storage unavailable' }),
+      ));
+      expect(backgroundApiMocks.switchWorkspace).not.toHaveBeenCalled();
+
+      const retryResponse = vi.fn();
+      onMessage({ type: 'workspace/switch', workspaceId: targetWorkspaceId }, {}, retryResponse);
+      await vi.waitFor(() => expect(retryResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ok: true,
+          snapshot: expect.objectContaining({ workspace: { id: targetWorkspaceId, name: 'Workspace Beta' } }),
+        }),
+      ));
+      expect(backgroundApiMocks.switchWorkspace).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('waits for an accepted timer mutation before switching and blocks later starts', async () => {
+    const workspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000';
+    const targetWorkspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004';
+    let activeSession = {
+      accessToken: makeAccessToken({ email: 'alexey@example.com', workspaceId }),
+      refreshToken: 'refresh-token',
+    };
+    sessionMocks.getStoredSession.mockImplementation(async () => activeSession);
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+    let finishStart: (() => void) | undefined;
+    backgroundApiMocks.startTimerFromGitHub.mockImplementation(
+      () => new Promise<void>((resolve) => {
+        finishStart = resolve;
+      }),
+    );
+    backgroundApiMocks.switchWorkspace.mockImplementation(async () => {
+      activeSession = {
+        accessToken: makeAccessToken({ email: 'alexey@example.com', workspaceId: targetWorkspaceId }),
+        refreshToken: 'target-refresh-token',
+      };
+      backgroundApiMocks.getWorkspace.mockResolvedValue({
+        id: targetWorkspaceId,
+        name: 'Workspace Beta',
+      });
+    });
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]![0];
+    const pageContext = {
+      kind: 'supported' as const,
+      surface: 'issue-page' as const,
+      githubRepo: 'octo/repo',
+      issueNumber: 184,
+      issueTitle: 'Issue',
+      issueUrl: 'https://github.com/octo/repo/issues/184',
+    };
+    const startResponse = vi.fn();
+    onMessage(
+      {
+        type: 'timer/start',
+        pageContext,
+        expectedUserEmail: 'alexey@example.com',
+        expectedWorkspaceId: workspaceId,
+      },
+      {},
+      startResponse,
+    );
+    await vi.waitFor(() => expect(backgroundApiMocks.startTimerFromGitHub).toHaveBeenCalledOnce());
+
+    const switchResponse = vi.fn();
+    onMessage(
+      { type: 'workspace/switch', workspaceId: targetWorkspaceId },
+      {},
+      switchResponse,
+    );
+    const blockedStartResponse = vi.fn();
+    onMessage(
+      {
+        type: 'timer/start',
+        pageContext,
+        expectedUserEmail: 'alexey@example.com',
+        expectedWorkspaceId: workspaceId,
+      },
+      {},
+      blockedStartResponse,
+    );
+
+    await vi.waitFor(() => expect(blockedStartResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        errorMessage: expect.stringContaining('Workspace switching is in progress'),
+      }),
+    ));
+    expect(backgroundApiMocks.switchWorkspace).not.toHaveBeenCalled();
+
+    finishStart?.();
+
+    await vi.waitFor(() => expect(backgroundApiMocks.switchWorkspace).toHaveBeenCalledWith(
+      targetWorkspaceId,
+    ));
+    await vi.waitFor(() => expect(switchResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: true,
+        snapshot: expect.objectContaining({
+          workspace: { id: targetWorkspaceId, name: 'Workspace Beta' },
+        }),
+      }),
+    ));
+  });
+
+  it('returns memberships only when explicitly requested', async () => {
+    sessionMocks.getStoredSession.mockResolvedValue({
+      accessToken: makeAccessToken({
+        email: 'alexey@example.com',
+        workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
+      }),
+      refreshToken: 'refresh-token',
+    });
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+    backgroundApiMocks.getWorkspaceMemberships.mockResolvedValue({
+      items: [{
+        isCurrent: true,
+        role: 'member',
+        workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
+        workspaceName: 'Workspace Alpha',
+      }],
+    });
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]![0];
+    const snapshotResponse = vi.fn();
+    onMessage({ type: 'runtime/get-snapshot' }, {}, snapshotResponse);
+
+    await vi.waitFor(() => expect(snapshotResponse).toHaveBeenCalledOnce());
+    expect(backgroundApiMocks.getWorkspaceMemberships).not.toHaveBeenCalled();
+
+    const membershipsResponse = vi.fn();
+    onMessage({ type: 'workspace/get-memberships' }, {}, membershipsResponse);
+
+    await vi.waitFor(() => expect(membershipsResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ ok: true, items: expect.arrayContaining([
+        expect.objectContaining({ workspaceName: 'Workspace Alpha' }),
+      ]) }),
+    ));
+  });
+
+  it('does not dispatch a queued switch after sign-out supersedes its session', async () => {
+    const workspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000';
+    sessionMocks.getStoredSession.mockResolvedValue({
+      accessToken: makeAccessToken({ email: 'alexey@example.com', workspaceId }),
+      refreshToken: 'refresh-token',
+    });
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+    let finishStart: (() => void) | undefined;
+    backgroundApiMocks.startTimerFromGitHub.mockImplementation(
+      () => new Promise<void>((resolve) => {
+        finishStart = resolve;
+      }),
+    );
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]![0];
+    const pageContext = {
+      kind: 'supported' as const,
+      surface: 'issue-page' as const,
+      githubRepo: 'octo/repo',
+      issueNumber: 184,
+      issueTitle: 'Issue',
+      issueUrl: 'https://github.com/octo/repo/issues/184',
+    };
+    onMessage(
+      {
+        type: 'timer/start',
+        pageContext,
+        expectedUserEmail: 'alexey@example.com',
+        expectedWorkspaceId: workspaceId,
+      },
+      {},
+      vi.fn(),
+    );
+    await vi.waitFor(() => expect(backgroundApiMocks.startTimerFromGitHub).toHaveBeenCalledOnce());
+
+    const switchResponse = vi.fn();
+    onMessage(
+      { type: 'workspace/switch', workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004' },
+      {},
+      switchResponse,
+    );
+    onMessage({ type: 'auth/sign-out' }, {}, vi.fn());
+    finishStart?.();
+
+    await vi.waitFor(() => expect(switchResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        errorMessage: expect.stringContaining('session or workspace changed'),
+      }),
+    ));
+    expect(backgroundApiMocks.switchWorkspace).not.toHaveBeenCalled();
+  });
+
+  it('rejects a membership list that no longer matches its final session snapshot', async () => {
+    sessionMocks.getStoredSession.mockResolvedValue({
+      accessToken: makeAccessToken({
+        email: 'alexey@example.com',
+        workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000',
+      }),
+      refreshToken: 'refresh-token',
+    });
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+    backgroundApiMocks.getWorkspaceMemberships.mockResolvedValue({
+      items: [{
+        isCurrent: true,
+        role: 'member',
+        workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004',
+        workspaceName: 'Workspace Beta',
+      }],
+    });
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]![0];
+    const response = vi.fn();
+    onMessage({ type: 'workspace/get-memberships' }, {}, response);
+
+    await vi.waitFor(() => expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        items: [],
+        errorMessage: expect.stringContaining('session or workspace changed'),
+      }),
+    ));
   });
 });

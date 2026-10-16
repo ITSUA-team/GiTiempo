@@ -6,7 +6,7 @@ The current timer is global to the user: both current-timer lookup and condition
 
 The approved design was inspected through Pencil: `GITiempo.pen`, section `WQ8lF` (Extension · Account and sign-out), reusable menu `w6xWc`, running popup `cvEiV`, and no-display-name popup `V6FKLq`. Both popup frames show Workspace immediately above Open profile without clipping. These frames cover the normal closed selector, not every error/loading state.
 
-`docs/ui/chrome-ext.md` and the canonical account-menu requirement still restrict the menu to two actions. This proposal explicitly replaces that restriction. The completed `external-github-extension-tracking` change remains historical context.
+At proposal time, `docs/ui/chrome-ext.md` and the canonical account-menu requirement restricted the menu to two actions. This change updates the UI documentation and supplies the delta-spec replacing that restriction; main-spec synchronization remains assigned to the user. The completed `external-github-extension-tracking` change remains historical context.
 
 ## Goals / Non-Goals
 
@@ -32,7 +32,7 @@ On success persist the complete token pair before publishing the new workspace, 
 
 Preserve identity, optional running-timer notice, divider, Workspace label/control, Open profile, then Sign out. Use the existing extension Tailwind/tokens approach and accessible native select semantics unless implementation evidence shows a documented need otherwise. Do not add Vue or PrimeVue.
 
-Design defaults for states not drawn in `.pen`: show the current workspace in a disabled selector for a single membership; show a disabled loading control while loading; show compact retry feedback if membership loading fails. This keeps the destination visible and the layout stable. With multiple memberships enable selection. During switching disable the selector and tracking mutations, keep sign-out available, and announce progress/errors accessibly. Keep the menu open during selection and timer ticks; close on Escape, outside interaction, Open profile, or Sign out. Preserve focus during rerenders and distinguish dismissing the select's options from dismissing the whole menu.
+Design defaults for states not drawn in `.pen`: show the current workspace in a disabled selector for a single membership; show a disabled loading control while loading; show compact retry feedback if membership loading fails. This keeps the destination visible and the layout stable. With multiple memberships enable selection. During switching disable the selector and tracking mutations, keep sign-out available, and announce progress/errors accessibly. Keep the menu open during selection and timer ticks; close on Escape, outside interaction, Open profile, or Sign out. Preserve focus during rerenders and distinguish dismissing the select's options from dismissing the whole menu. User-accepted platform exception (2026-10-16): after the first Escape closes native options, a browser host that intercepts the next Escape may close the entire extension popup. No workaround is required for that host behavior. When the event reaches the popup document, cancel its default action and dismiss only the account menu.
 
 ### 4. Reconcile all tracking surfaces and preserve the global timer
 

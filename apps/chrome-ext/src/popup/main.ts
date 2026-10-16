@@ -1,6 +1,6 @@
 /* global chrome */
 
-import "@/styles/extension.css";
+import "@/styles/popup.css";
 
 import { getExtensionConfig } from "@/lib/config";
 import type { PageContext } from "@/lib/github-context";
@@ -86,16 +86,25 @@ export function createPopupApp({
     isAccountMenuOpen: false,
     isLoading: true,
     isSubmitting: false,
+    isSwitchingWorkspace: false,
     pageContext: null,
     password: "",
     showEmailForm: false,
     snapshot: null,
+    workspaceMemberships: null,
+    workspaceMembershipsError: null,
+    workspaceSwitchError: null,
+    isWorkspaceMembershipsLoading: false,
   };
 
   let intervalHandle: ReturnType<typeof setInterval> | null = null;
+  let workspaceRequestSequence = 0;
   const unsubscribe = runtimeClient.onSnapshotUpdated((snapshot) => {
     state.snapshot = snapshot;
     render();
+
+    if (state.isAccountMenuOpen) return;
+
     void load();
   });
 
@@ -112,9 +121,14 @@ export function createPopupApp({
   // every render — once a second while a timer ticks — and would otherwise stack a
   // new listener per frame.
   function handleDocumentKeydown(event: KeyboardEvent): void {
-    if (event.key === "Escape") {
-      closeAccountMenu();
-    }
+    // The browser prevents the event when Escape only dismisses an expanded
+    // native select. A subsequent Escape remains available to dismiss this menu.
+    if (event.key !== "Escape" || event.defaultPrevented || !state.isAccountMenuOpen) return;
+
+    // Browser-action popups close by default on Escape. Once this menu owns the
+    // key, keep the popup open while dismissing only the account menu.
+    event.preventDefault();
+    closeAccountMenu();
   }
 
   function handleDocumentPointerDown(event: Event): void {
@@ -193,9 +207,20 @@ export function createPopupApp({
     root
       .querySelector('[data-action="toggle-account-menu"]')
       ?.addEventListener("click", () => {
-        state.isAccountMenuOpen = !state.isAccountMenuOpen;
+        const isOpening = !state.isAccountMenuOpen;
+        state.isAccountMenuOpen = isOpening;
         render();
+
+        if (isOpening) void loadWorkspaceMemberships();
       });
+    root
+      .querySelector<HTMLSelectElement>('[data-field="workspace-selector"]')
+      ?.addEventListener("change", (event) => {
+        void handleWorkspaceSelection((event.currentTarget as HTMLSelectElement).value);
+      });
+    root.querySelector('[data-action="retry-workspaces"]')?.addEventListener("click", () => {
+      void loadWorkspaceMemberships();
+    });
     root.querySelector('[data-action="open-profile"]')?.addEventListener("click", () => {
       closeAccountMenu();
     });
@@ -235,13 +260,118 @@ export function createPopupApp({
   }
 
   function render(): void {
+    const shouldRestoreWorkspaceFocus =
+      state.isAccountMenuOpen &&
+      document.activeElement?.getAttribute("data-field") === "workspace-selector";
+
     root.innerHTML = `
-      <div class="bg-surface-primary text-text-dark flex min-h-[480px] w-[320px] flex-col p-5">
+      <div class="bg-surface-primary text-text-dark flex h-[480px] min-h-[480px] w-[320px] flex-col p-5">
         ${renderPopupBody(state, now())}
       </div>
     `;
     syncTicker();
     bindEvents();
+
+    if (shouldRestoreWorkspaceFocus) {
+      root.querySelector<HTMLSelectElement>('[data-field="workspace-selector"]')?.focus();
+    }
+  }
+
+  async function loadWorkspaceMemberships(): Promise<void> {
+    if (!state.snapshot?.authenticated) return;
+
+    const requestSequence = ++workspaceRequestSequence;
+    state.isWorkspaceMembershipsLoading = true;
+    state.workspaceMembershipsError = null;
+    render();
+
+    try {
+      const result = await runtimeClient.getWorkspaceMemberships();
+
+      if (requestSequence !== workspaceRequestSequence) return;
+
+      state.snapshot = result.snapshot;
+      if (result.ok) {
+        state.workspaceMemberships = result.items;
+        await refreshWorkspaceSnapshot();
+      } else {
+        state.workspaceMemberships = null;
+        state.workspaceMembershipsError = result.errorMessage ?? "Unable to load workspaces.";
+      }
+    } catch (error) {
+      if (requestSequence !== workspaceRequestSequence) return;
+
+      state.workspaceMemberships = null;
+      state.workspaceMembershipsError =
+        error instanceof Error ? error.message : "Unable to load workspaces.";
+    } finally {
+      if (requestSequence === workspaceRequestSequence) {
+        state.isWorkspaceMembershipsLoading = false;
+        render();
+      }
+    }
+  }
+
+  async function handleWorkspaceSelection(workspaceId: string): Promise<void> {
+    const currentWorkspaceId = state.snapshot?.workspace?.id;
+
+    if (!workspaceId || workspaceId === currentWorkspaceId || state.isSwitchingWorkspace || state.snapshot?.workspaceSwitching) return;
+
+    const requestSequence = ++workspaceRequestSequence;
+    let shouldReloadMemberships = false;
+    state.isSwitchingWorkspace = true;
+    state.workspaceSwitchError = null;
+    render();
+
+    try {
+      const result = await runtimeClient.switchWorkspace(workspaceId);
+
+      if (requestSequence !== workspaceRequestSequence) return;
+
+      state.snapshot = result.snapshot;
+      if (result.ok) {
+        state.workspaceMemberships = state.workspaceMemberships?.map((membership) => ({
+          ...membership,
+          isCurrent: membership.workspaceId === result.snapshot.workspace?.id,
+        })) ?? null;
+        await refreshWorkspaceSnapshot();
+      } else {
+        state.workspaceSwitchError = result.errorMessage ?? "Unable to switch workspace.";
+        shouldReloadMemberships = true;
+      }
+    } catch (error) {
+      if (requestSequence !== workspaceRequestSequence) return;
+
+      state.workspaceSwitchError =
+        error instanceof Error ? error.message : "Unable to switch workspace.";
+      shouldReloadMemberships = true;
+    } finally {
+      if (requestSequence === workspaceRequestSequence) {
+        state.isSwitchingWorkspace = false;
+        render();
+        if (shouldReloadMemberships) {
+          void loadWorkspaceMemberships();
+        }
+      }
+    }
+  }
+
+  async function refreshWorkspaceSnapshot(): Promise<void> {
+    if (!state.snapshot) return;
+
+    // The switch result proves the token pair and workspace only. A page-bound
+    // capability from the previous workspace must never unlock Start while the
+    // target workspace is still being reconciled.
+    state.snapshot = { ...state.snapshot, trackingCapability: null };
+
+    try {
+      state.snapshot = await runtimeClient.getSnapshot(
+        state.pageContext?.kind === "supported" ? state.pageContext : undefined,
+      );
+    } catch (error) {
+      state.workspaceSwitchError =
+        error instanceof Error ? error.message : "Unable to refresh workspace state.";
+    }
   }
 
   async function load(): Promise<void> {
@@ -300,6 +430,7 @@ export function createPopupApp({
   }
 
   async function handleSignOut(): Promise<void> {
+    workspaceRequestSequence += 1;
     state.isSubmitting = true;
     state.errorMessage = null;
     render();
@@ -407,7 +538,7 @@ export function createPopupApp({
   }
 
   async function handleStartTimer(): Promise<void> {
-    if (state.isSubmitting || state.pageContext?.kind !== "supported") return;
+    if (state.isSubmitting || state.isSwitchingWorkspace || state.snapshot?.workspaceSwitching || state.pageContext?.kind !== "supported") return;
     const trackingCapability = getCurrentTrackingCapability(
       state.snapshot,
       state.pageContext,
@@ -443,7 +574,7 @@ export function createPopupApp({
   }
 
   async function handleStopTimer(): Promise<void> {
-    if (state.isSubmitting) return;
+    if (state.isSubmitting || state.isSwitchingWorkspace || state.snapshot?.workspaceSwitching) return;
     const expectedTimerId = state.snapshot?.currentTimer?.id;
 
     if (!expectedTimerId) {

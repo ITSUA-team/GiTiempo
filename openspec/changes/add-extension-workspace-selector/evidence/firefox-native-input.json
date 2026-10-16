@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-15",
+  "browser": "Firefox 158.0",
+  "scope": "isolated QA browser-action popup via privileged DevTools RDP; native sendNativeKeyEvent",
+  "verified": {
+    "focusedElement": "SELECT",
+    "arrowDownIsTrusted": true,
+    "selectOpenPseudoClass": true,
+    "openChromePanel": "ContentSelectDropdownPopup",
+    "nativeMouseOpensSelect": {
+      "pointerdownTrusted": true,
+      "clickTrusted": true,
+      "clientX": 190,
+      "clientY": 144,
+      "selectOpen": true
+    },
+    "nativeOutsideClickClosesAccountMenu": {
+      "pointerdownTrusted": true,
+      "clickTrusted": true,
+      "clientX": 20,
+      "clientY": 20,
+      "menuPresentAfter": false
+    }
+  },
+  "inconclusive": {
+    "subsequentArrowDownEnter": "Trusted content key events were observed, but native selection did not advance/commit through this injection path.",
+    "escape": "Popup closed without any Escape event in the content capture log; no claim about physical keyboard behavior.",
+    "expandedOptionsScreenshot": "Not captured."
+  },
+  "acceptance": "M04 remains partial. Native automation results do not establish an implementation failure.",
+  "methodDetail": "Native mouse BUTTON_UP was dispatched from BUTTON_DOWN completion callback, following Mozilla EventUtils. Back-to-back down/up had not delivered input."
+}

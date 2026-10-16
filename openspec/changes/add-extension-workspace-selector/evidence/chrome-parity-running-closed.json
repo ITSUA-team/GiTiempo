@@ -1,0 +1,39 @@
+{
+  "body": "GT\n\nGiTiempo\n\nAT\n\nAcme workspace\n\nRunning timer\n\n00:09:46\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo / ITSUA-team/GiTiempo\n\nStop Timer",
+  "font": "Inter, sans-serif",
+  "fonts": [
+    {
+      "family": "Inter",
+      "status": "loaded"
+    }
+  ],
+  "viewport": {
+    "width": 320,
+    "height": 480,
+    "scrollWidth": 320,
+    "scrollHeight": 480
+  },
+  "elements": [
+    {
+      "selector": "[data-testid=\"popup-logo\"]",
+      "x": 20,
+      "y": 20,
+      "width": 28,
+      "height": 28
+    },
+    {
+      "selector": "[data-testid=\"workspace-context\"]",
+      "x": 20,
+      "y": 68,
+      "width": 280,
+      "height": 16
+    },
+    {
+      "selector": "[data-action=\"stop-timer\"]",
+      "x": 20,
+      "y": 418,
+      "width": 280,
+      "height": 42
+    }
+  ]
+}

@@ -28,6 +28,13 @@ The popup header's user avatar SHALL open an account menu in every signed-in sta
 - **THEN** the menu closes without changing the session or a running timer
 - **AND** activating Open profile or Sign out closes the menu while performing its specified action
 
+#### Scenario: Browser host intercepts Escape after native options dismissal
+- **GIVEN** Escape has closed the native Workspace options
+- **WHEN** the browser host intercepts the next Escape before the popup document can handle it
+- **THEN** closing the entire extension popup is permitted
+- **AND** dismissal does not change the session or a running timer
+- **AND** when Escape reaches the document with the account menu open, the extension cancels default popup closure and dismisses only the menu
+
 #### Scenario: An open menu survives a timer tick
 - **GIVEN** a timer is running, so the popup re-renders on its own each second
 - **WHEN** the account menu is open across one of those re-renders
