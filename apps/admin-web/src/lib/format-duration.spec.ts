@@ -26,4 +26,15 @@ describe('formatDuration', () => {
   it('formats a full day without day conversion', () => {
     expect(formatDuration(86400)).toBe('24h 0m');
   });
+
+  it.each([
+    [0, '0h 0m'],
+    [59, '0h 0m'],
+    [60, '0h 1m'],
+    [90, '0h 1m'],
+    [3599, '0h 59m'],
+    [3601, '1h 0m'],
+  ])('formats %i seconds as %s', (seconds, expected) => {
+    expect(formatDuration(seconds)).toBe(expected);
+  });
 });

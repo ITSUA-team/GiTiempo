@@ -34,4 +34,15 @@ describe('formatCurrency', () => {
       expect(formatCurrency(123.45, currency).length).toBeGreaterThan(0);
     }
   });
+
+  it('throws RangeError for malformed currency codes', () => {
+    expect(() => formatCurrency(100, 'US')).toThrow(RangeError);
+    expect(() => formatCurrency(100, 'D')).toThrow(RangeError);
+    expect(() => formatCurrency(100, '')).toThrow(RangeError);
+  });
+
+  it('does not throw for well-formed but unknown 3-letter codes', () => {
+    expect(() => formatCurrency(100, 'XYZ')).not.toThrow();
+    expect(formatCurrency(100, 'XYZ').length).toBeGreaterThan(0);
+  });
 });
