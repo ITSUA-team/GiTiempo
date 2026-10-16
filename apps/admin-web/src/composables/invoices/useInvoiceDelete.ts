@@ -40,8 +40,8 @@ export function useInvoiceDelete({
     },
   });
 
-  // invoice_not_deletable conflicts are rethrown so the caller can reload the
-  // detail; the confirmation dialog stays with the view, not this composable.
+  // Conflicts are rethrown so the caller can swallow the already-reported error;
+  // conflict reload happens in onError, confirmation stays with the view.
   async function deleteInvoice(invoiceId: string): Promise<void> {
     try {
       await mutation.mutateAsync(invoiceId);

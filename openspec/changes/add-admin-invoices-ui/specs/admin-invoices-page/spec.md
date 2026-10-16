@@ -57,7 +57,7 @@ The invoices list page MUST display a searchable, filterable table of invoices w
 - **AND** the "Open Invoices" card shows draft + sent count with subtitle "N ready to send" (N = draft count)
 - **AND** the "Billed This Month" card shows the sum of `totalAmount` for invoices created this month with subtitle "N invoices · M projects"
 - **AND** the "Drafts" card shows the draft count with subtitle "Ready for review"
-- **AND** multi-currency totals are noted as approximate when multiple currencies are present
+- **AND** the "Billed This Month" total uses the single currency returned by the API `thisMonth` field (multi-currency approximation note is a future enhancement pending API support for per-currency breakdown)
 
 ### Requirement: Invoice Create Dialog
 
@@ -122,7 +122,7 @@ The invoice detail page MUST display the full invoice with status-dependent acti
 
 - **GIVEN** an admin or PM navigates to `/invoices/:id`
 - **WHEN** the invoice loads successfully
-- **THEN** the page shows a topbar breadcrumb "GiTiempo Admin / Invoices / {title}"
+- **AND** the page topbar shows "Invoices" as the page name (the invoice title is displayed in the page header below the topbar; a dynamic topbar breadcrumb with the invoice title is a future enhancement)
 - **AND** the page header shows a back button, the invoice title, and a status badge
 - **AND** a read-only summary card displays Project, Date range, Hourly rate, Currency, Discount, Total hours, Total amount, Created, Created by, and Last updated
 - **AND** an editable card shows Title (input) and Notes (textarea) with a `Save changes` button
@@ -186,7 +186,7 @@ The invoice detail page MUST support draft-only deletion with confirmation, rest
 
 - **GIVEN** an admin attempts to delete an invoice whose status is no longer `draft`
 - **WHEN** the API returns 409 with `invoice_not_deletable`
-- **THEN** the page shows an error toast with the API message
+- **THEN** the page shows an error toast with a user-friendly message about the delete conflict
 - **AND** the detail page refreshes to show the current invoice state
 
 ### Requirement: Status Transition Conflict Handling
@@ -205,7 +205,7 @@ The invoice detail page MUST handle optimistic concurrency and invalid transitio
 
 - **GIVEN** an admin or PM attempts a backward status transition
 - **WHEN** the API returns 409 with `invoice_invalid_status_transition`
-- **THEN** the page shows an error toast with the API message
+- **THEN** the page shows an error toast with a user-friendly message about the invalid transition
 - **AND** the detail page shows the current valid status
 
 ### Requirement: Invoice Navigation Visibility

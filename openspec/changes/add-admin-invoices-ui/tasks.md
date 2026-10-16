@@ -7,12 +7,12 @@
 
 ## 2. Composables
 
-- [x] 2.1 Create `composables/invoices/useInvoicesData.ts` (TanStack query for list + stats, debounced search/filter params). Verify: `useInvoicesData.spec.ts` covers loading, success, error, and filter-change behavior.
+- [x] 2.1 Create `composables/invoices/useInvoicesData.ts` (TanStack query for list + stats, search/filter params with TanStack Query deduplication). Verify: `useInvoicesData.spec.ts` covers loading, success, error, and filter-change behavior.
 - [x] 2.2 Create `composables/invoices/useInvoiceDetail.ts` (TanStack query for single invoice by ID). Verify: `useInvoiceDetail.spec.ts` covers load, error, and refetch.
 - [x] 2.3 Create `composables/invoices/useInvoiceCreate.ts` (mutation with cache invalidation + toast feedback). Verify: `useInvoiceCreate.spec.ts` covers success (toast + list invalidation + dialog close) and 422 domain errors (rate/currency/overflow).
 - [x] 2.4 Create `composables/invoices/useInvoiceUpdate.ts` (mutation for title/notes/status with 409 conflict handling — reload detail on conflict). Verify: `useInvoiceUpdate.spec.ts` covers success, `invoice_update_conflict`, and `invoice_invalid_status_transition`.
 - [x] 2.5 Create `composables/invoices/useInvoiceDelete.ts` (mutation with confirmation flow, 409 handling, navigate back on success). Verify: `useInvoiceDelete.spec.ts` covers admin success (toast + navigate back), PM absence, and `invoice_not_deletable` conflict.
-- [x] 2.6 Create `composables/invoices/useEligibleEntriesPreview.ts` (debounced query for eligible entries + workspace defaults). Verify: `useEligibleEntriesPreview.spec.ts` covers preview with entries, empty preview, and missing date bounds.
+- [x] 2.6 Create `composables/invoices/useEligibleEntriesPreview.ts` (gated query for eligible entries + workspace defaults; both date bounds required before request fires). Verify: `useEligibleEntriesPreview.spec.ts` covers preview with entries, empty preview, and missing date bounds.
 
 ## 3. Invoice List Page
 

@@ -41,7 +41,7 @@ Group new files under `apps/admin-web/src/` following the established layout:
 
 - `services/admin-invoices-client.ts` (+ `.spec.ts`) — typed client wrapping the 7 endpoints
 - `lib/query-keys.ts` — add `adminInvoicesKeys` factory + `afterInvoiceMutation` invalidation helper
-- `composables/invoices/` — `useInvoicesData`, `useInvoiceDetail`, `useInvoiceStats`, `useInvoiceCreate`, `useInvoiceUpdate`, `useInvoiceDelete`, `useEligibleEntriesPreview` (each with focused tests)
+- `composables/invoices/` — `useInvoicesData` (list + stats), `useInvoiceDetail`, `useInvoiceCreate`, `useInvoiceUpdate`, `useInvoiceDelete`, `useEligibleEntriesPreview` (each with focused tests)
 - `views/InvoicesView.vue` (+ `.spec.ts`) — list page (replace placeholder)
 - `views/InvoiceDetailView.vue` (+ `.spec.ts`) — detail page
 - `components/invoices/InvoicesTable.vue` — presentational table component
@@ -53,7 +53,7 @@ Group new files under `apps/admin-web/src/` following the established layout:
 
 ### 3. Invoice detail route
 
-Add `invoices/:id` as a protected child route under the admin shell, with `allowedRoles: managementRoles` (Admin+PM), lazy-loaded `InvoiceDetailView`, and `pageName: 'Invoices'` (the breadcrumb in the topbar shows the invoice title via route params or a detail fetch).
+Add `invoices/:id` as a protected child route under the admin shell, with `allowedRoles: managementRoles` (Admin+PM), lazy-loaded `InvoiceDetailView`, and `pageName: 'Invoices'` (the topbar shows 'Invoices' for both the list and detail routes; a dynamic breadcrumb with the invoice title is not implemented because the current WorkspaceHeader architecture only supports a static page name).
 
 **Rationale:** The `admin-routing` spec already lists `invoices` in the route inventory. Adding the detail sub-route is the minimal extension. The route reuses the existing shell and role guard infrastructure.
 
@@ -65,9 +65,9 @@ Map invoice statuses to PrimeVue Tag severity: `draft` → `warn`, `sent` → `d
 
 ### 5. Create dialog eligible-entries preview
 
-Fetch preview data via `GET /invoices/eligible-entries` when the user has entered both date range bounds (and projectId for PMs). Debounce the preview request to avoid spamming on rapid input changes. Pre-fill hourly rate and currency from `defaultHourlyRate` / `defaultCurrency` in the preview response. Show the expandable entries table with count, total hours, and computed amount.
+Fetch preview data via `GET /invoices/eligible-entries` when the user has entered both date range bounds (and projectId for PMs). The preview request is gated by query key nullability (both date bounds must be set) and TanStack Query's built-in deduplication; no explicit debounce timer is needed. Pre-fill hourly rate and currency from `defaultHourlyRate` / `defaultCurrency` in the preview response. Show the expandable entries table with count, total hours, and computed amount.
 
-**Rationale:** The docs specify live calculated fields from the preview endpoint. The preview is read-only and does not write. Debounce prevents excessive requests during date range editing.
+**Rationale:** The docs specify live calculated fields from the preview endpoint. The preview is read-only and does not write. Gating on both date bounds and TanStack Query deduplication avoid excessive requests during date range editing.
 
 ### 6. Error handling strategy
 
@@ -189,6 +189,6 @@ The approved `Admin Invoices` `.pen` frame (id `mL7wF`, 1280x1040) has been upda
 
 - **[Preview request timing]** Fetching eligible entries requires both date bounds. If the user enters dates one at a time, the preview won't fire until both are set. → Mitigation: disable preview until both bounds are present; show a hint in the expandable section.
 - **[PM project list for create dialog]** The create dialog needs the PM's assigned project list for the Project dropdown. The existing `admin-projects-client` lists projects, but PM-scoped visibility is enforced server-side. → Mitigation: reuse the existing project list endpoint; the backend already returns only visible projects for PMs.
-- **[Detail route breadcrumb]** The topbar breadcrumb shows the invoice title, but the route param is just `:id`. → Mitigation: fetch the invoice detail on mount and update the breadcrumb from the response; show "Loading…" or the invoice ID until the title is available.
+- **[Detail route breadcrumb]** The topbar shows a static 'Invoices' page name for the detail route rather than the invoice title. The current WorkspaceHeader component only accepts a single `pageName` string and has no mechanism for dynamic breadcrumb updates from child route views. A future enhancement could add a dynamic breadcrumb slot to the shell. The detail page header itself shows the invoice title and status badge, so the invoice identity is still visible to the user.
 - **[Stale eligible entries on create]** The preview is a read-only snapshot; entries could become ineligible between preview and create submission. → Mitigation: the backend's `FOR UPDATE` + `invoiceId IS NULL` check prevents double-billing. The create response returns the actual linked entries. If zero entries were linked (all became ineligible), show a toast indicating the invoice was created with no entries.
-- **[Stats multi-currency note]** The "Billed This Month" stat sums across currencies without conversion. → Mitigation: the spec says the UI should note totals are approximate when multiple currencies are present. Add a tooltip or subtitle note when the workspace has invoices in multiple currencies.
+- **[Stats multi-currency note]** The "Billed This Month" stat sums amounts in a single currency returned by the API. The `InvoiceStatsResponse` returns a single `currency` field for `thisMonth`, so the UI cannot detect or display a multi-currency approximation note. The spec's multi-currency scenario is documented as a future enhancement pending API support for per-currency breakdown.

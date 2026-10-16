@@ -47,8 +47,8 @@ export function useInvoiceUpdate({
     },
   });
 
-  // 409 domain errors (invoice_update_conflict, invoice_invalid_status_transition)
-  // are rethrown so the caller can inspect the error code and reload the detail.
+  // 409 domain errors are rethrown so the caller can swallow the already-reported
+  // error and preserve local form state; conflict reload happens in onError.
   async function updateInvoice(
     payload: UpdateInvoicePayload,
   ): Promise<InvoiceResponse> {
