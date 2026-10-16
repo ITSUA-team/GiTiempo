@@ -25,7 +25,6 @@ export const ADMIN_PAGE_NAMES_BY_ROUTE_NAME: Record<string, string> = {
 
 export const ADMIN_SETTINGS_ICON = markRaw(Cog6ToothIcon);
 export const ADMIN_SETTINGS_LABEL = ADMIN_PAGE_NAMES_BY_ROUTE_NAME[routeNames.settings];
-const SHOW_INVOICES_NAV = true;
 
 export const ADMIN_BASE_NAV_ITEMS = [
   {
@@ -38,15 +37,11 @@ export const ADMIN_BASE_NAV_ITEMS = [
     label: ADMIN_PAGE_NAMES_BY_ROUTE_NAME[routeNames.reports],
     name: routeNames.reports,
   },
-  ...(SHOW_INVOICES_NAV
-    ? [
-        {
-          icon: markRaw(DocumentTextIcon),
-          label: ADMIN_PAGE_NAMES_BY_ROUTE_NAME[routeNames.invoices],
-          name: routeNames.invoices,
-        },
-      ]
-    : []),
+  {
+    icon: markRaw(DocumentTextIcon),
+    label: ADMIN_PAGE_NAMES_BY_ROUTE_NAME[routeNames.invoices],
+    name: routeNames.invoices,
+  },
   {
     icon: markRaw(UsersIcon),
     label: ADMIN_PAGE_NAMES_BY_ROUTE_NAME[routeNames.members],

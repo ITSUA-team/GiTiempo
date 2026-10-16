@@ -115,10 +115,9 @@ export function createAdminInvoicesClient({
 				searchParams.set('search', parsed.search);
 			}
 			const search = searchParams.toString();
-			const queryString = search ? `?${search}` : '';
 
 			return apiClient.requestJson({
-				path: `/invoices${queryString}`,
+				path: `/invoices?${search}`,
 				responseSchema: invoiceListResponseSchema,
 			});
 		},
