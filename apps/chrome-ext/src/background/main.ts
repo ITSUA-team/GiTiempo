@@ -59,6 +59,7 @@ function deriveSnapshotUser(
 }
 
 let lastSnapshot: RuntimeSnapshot | null = null;
+let lastSnapshotGeneration: number | null = null;
 let workspaceSwitching = false;
 let pendingTimerMutation: Promise<void> = Promise.resolve();
 let sessionGeneration = 0;
@@ -68,6 +69,16 @@ const WORKSPACE_CHANGED_MESSAGE =
 
 function withWorkspaceSwitching(snapshot: RuntimeSnapshot): RuntimeSnapshot {
   return workspaceSwitching ? { ...snapshot, workspaceSwitching: true } : snapshot;
+}
+
+function clearLastSnapshot(): void {
+  lastSnapshot = null;
+  lastSnapshotGeneration = null;
+}
+
+function storeLastSnapshot(snapshot: RuntimeSnapshot): void {
+  lastSnapshot = snapshot;
+  lastSnapshotGeneration = sessionGeneration;
 }
 
 function getSessionIdentity(session: TokenPairResponse): {
@@ -89,7 +100,7 @@ async function loadSnapshot(
   ]);
 
   if (!session) {
-    lastSnapshot = null;
+    clearLastSnapshot();
     return withWorkspaceSwitching({
       authenticated: false,
       currentTimer: null,
@@ -113,7 +124,7 @@ async function loadSnapshot(
   ]);
   const nextSession = await getStoredSession();
   if (!nextSession) {
-    lastSnapshot = null;
+    clearLastSnapshot();
     return withWorkspaceSwitching({
       authenticated: false,
       currentTimer: null,
@@ -128,7 +139,7 @@ async function loadSnapshot(
     nextEmail !== email ||
     nextWorkspaceId !== workspaceId;
   if (sessionChanged) {
-    lastSnapshot = null;
+    clearLastSnapshot();
     return withWorkspaceSwitching({
       authenticated: true,
       currentTimer: null,
@@ -191,7 +202,7 @@ async function loadSnapshot(
     ...(pageContext ? { trackingCapability } : {}),
     user: deriveSnapshotUser(nextSession, currentTimer),
   });
-  lastSnapshot = snapshot;
+  storeLastSnapshot(snapshot);
   return snapshot;
 }
 
@@ -331,7 +342,7 @@ async function handleTimerMutation(
   return result;
 }
 
-async function handleWorkspaceSwitch(
+export async function handleWorkspaceSwitch(
   workspaceId: string,
 ): Promise<RuntimeMutationResult> {
   if (workspaceSwitching) {
@@ -384,25 +395,60 @@ async function handleWorkspaceSwitch(
     await apiClient.getWorkspaceMemberships().catch(() => undefined);
   }
 
-  let reconcilingSnapshot: RuntimeSnapshot;
+  let snapshot: RuntimeSnapshot;
+  let shouldBroadcastSnapshot = true;
   try {
     // Keep timer mutations blocked while the target timer and capability state
     // are fetched. Publishing an unlocked snapshot before this completes would
     // let an old control send a Start against an unreconciled destination.
-    reconcilingSnapshot = await loadSnapshot();
+    const reconcilingSnapshot = await loadSnapshot();
+    snapshot = {
+      ...reconcilingSnapshot,
+      workspaceSwitching: undefined,
+    };
+  } catch (error) {
+    // The rotation may have succeeded even though its final storage read did
+    // not. Do not expose a prior workspace, timer, or capability in that case.
+    // The stored session remains intact so a later snapshot refresh can recover.
+    ok = false;
+    errorMessage = error instanceof Error ? error.message : 'Unable to switch workspace.';
+    const sessionWasSuperseded = sessionGeneration !== initialGeneration;
+    const currentSnapshot =
+      sessionWasSuperseded && lastSnapshotGeneration === sessionGeneration
+        ? lastSnapshot
+        : null;
+    if (currentSnapshot) {
+      snapshot = {
+        ...currentSnapshot,
+        workspaceSwitching: undefined,
+      };
+    } else {
+      if (!sessionWasSuperseded) {
+        clearLastSnapshot();
+      }
+      shouldBroadcastSnapshot = !sessionWasSuperseded;
+      snapshot = {
+        authenticated: !sessionWasSuperseded,
+        currentTimer: null,
+        errorMessage,
+        providerCleanupPending: false,
+        trackingCapability: null,
+        user: null,
+        workspace: null,
+        workspaceSwitching: undefined,
+      };
+    }
   } finally {
     workspaceSwitching = false;
   }
-  const snapshot: RuntimeSnapshot = {
-    ...reconcilingSnapshot,
-    workspaceSwitching: undefined,
-  };
 
   if (ok && (!snapshot.authenticated || snapshot.workspace?.id !== workspaceId)) {
     ok = false;
     errorMessage = WORKSPACE_CHANGED_MESSAGE;
   }
-  await broadcastSnapshot(snapshot);
+  if (shouldBroadcastSnapshot) {
+    await broadcastSnapshot(snapshot);
+  }
 
   return {
     ...(errorMessage ? { errorMessage } : {}),

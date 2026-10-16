@@ -64,6 +64,7 @@ function createRuntimeClient(overrides?: {
   startTimer?: RuntimeClient["startTimer"];
   stopTimer?: RuntimeClient["stopTimer"];
   getWorkspaceMemberships?: RuntimeClient["getWorkspaceMemberships"];
+  onSnapshotUpdated?: RuntimeClient["onSnapshotUpdated"];
   switchWorkspace?: RuntimeClient["switchWorkspace"];
 }): RuntimeClient {
   return {
@@ -136,7 +137,7 @@ function createRuntimeClient(overrides?: {
           user: null,
         },
       })),
-    onSnapshotUpdated: vi.fn(() => () => undefined),
+    onSnapshotUpdated: overrides?.onSnapshotUpdated ?? vi.fn(() => () => undefined),
     openExtension: vi.fn(async () => undefined),
     startTimer:
       overrides?.startTimer ??
@@ -416,6 +417,7 @@ describe("popup app", () => {
         now?: () => number;
         pageContextResolver?: () => Promise<PageContext>;
         setIntervalFn?: typeof setInterval;
+        signInWithEmailPasswordFn?: Parameters<typeof createPopupApp>[0]["signInWithEmailPasswordFn"];
       },
     ) {
       const runtimeClient = createRuntimeClient({
@@ -535,6 +537,142 @@ describe("popup app", () => {
       expect(document.body.textContent).toContain("Workspace Beta");
     });
 
+    it("re-enables controls when the menu reopens during a workspace switch", async () => {
+      let completeSwitch!: (result: Awaited<ReturnType<RuntimeClient["switchWorkspace"]>>) => void;
+      const switchedSnapshot = signedInSnapshot({
+        trackingCapability: {
+          accessScope: "project",
+          canStartTracking: true,
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+          reason: null,
+        },
+        workspace: { id: "workspace-beta", name: "Workspace Beta" },
+      });
+      let latestSnapshot = signedInSnapshot({
+        trackingCapability: {
+          accessScope: "project",
+          canStartTracking: true,
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+          reason: null,
+        },
+      });
+      const switchWorkspace = vi.fn(
+        () => new Promise<Awaited<ReturnType<RuntimeClient["switchWorkspace"]>>>((resolve) => {
+          completeSwitch = resolve;
+        }),
+      );
+      await openMenu(
+        {
+          getSnapshot: vi.fn(async () => latestSnapshot),
+          getWorkspaceMemberships: vi.fn(async () => ({
+            items: workspaceMemberships(),
+            ok: true,
+            snapshot: latestSnapshot,
+          })),
+          switchWorkspace,
+        },
+        { pageContextResolver: async () => supportedContext() },
+      );
+      await settle();
+
+      const selector = document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')!;
+      selector.value = "workspace-beta";
+      selector.dispatchEvent(new Event("change", { bubbles: true }));
+      await settle();
+
+      document.querySelector<HTMLButtonElement>('[data-action="toggle-account-menu"]')!.click();
+      document.querySelector<HTMLButtonElement>('[data-action="toggle-account-menu"]')!.click();
+      await settle();
+
+      latestSnapshot = switchedSnapshot;
+      completeSwitch({ ok: true, snapshot: switchedSnapshot });
+
+      await vi.waitFor(() => {
+        expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')?.disabled).toBe(false);
+        expect(document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')?.disabled).toBe(false);
+      });
+    });
+
+    it("re-enables controls after signing out during a workspace switch and signing in again", async () => {
+      let completeSwitch!: (result: Awaited<ReturnType<RuntimeClient["switchWorkspace"]>>) => void;
+      const authenticatedSnapshot = signedInSnapshot({
+        trackingCapability: {
+          accessScope: "project",
+          canStartTracking: true,
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+          reason: null,
+        },
+      });
+      const signedOutSnapshot: RuntimeSnapshot = {
+        authenticated: false,
+        currentTimer: null,
+        errorMessage: null,
+        user: null,
+      };
+      const staleSwitchedSnapshot = signedInSnapshot({
+        workspace: { id: "workspace-beta", name: "Workspace Beta" },
+      });
+      let latestSnapshot = authenticatedSnapshot;
+      const switchWorkspace = vi.fn(
+        () => new Promise<Awaited<ReturnType<RuntimeClient["switchWorkspace"]>>>((resolve) => {
+          completeSwitch = resolve;
+        }),
+      );
+      const signOut = vi.fn(async () => {
+        latestSnapshot = signedOutSnapshot;
+        return { ok: true, snapshot: signedOutSnapshot };
+      });
+      const exchangeFirebaseToken = vi.fn(async () => {
+        latestSnapshot = authenticatedSnapshot;
+        return { ok: true, snapshot: authenticatedSnapshot };
+      });
+      await openMenu(
+        {
+          exchangeFirebaseToken,
+          getSnapshot: vi.fn(async () => latestSnapshot),
+          getWorkspaceMemberships: vi.fn(async () => ({
+            items: workspaceMemberships(),
+            ok: true,
+            snapshot: latestSnapshot,
+          })),
+          signOut,
+          switchWorkspace,
+        },
+        {
+          pageContextResolver: async () => supportedContext(),
+          signInWithEmailPasswordFn: vi.fn(async () => "firebase-id-token"),
+        },
+      );
+      await settle();
+
+      const selector = document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')!;
+      selector.value = "workspace-beta";
+      selector.dispatchEvent(new Event("change", { bubbles: true }));
+      await settle();
+
+      document.querySelector<HTMLButtonElement>('[data-action="sign-out"]')!.click();
+      await settle();
+
+      document.querySelector<HTMLButtonElement>('[data-action="toggle-email"]')!.click();
+      document
+        .querySelector<HTMLFormElement>('[data-form="email-sign-in"]')!
+        .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+      await vi.waitFor(() => {
+        expect(exchangeFirebaseToken).toHaveBeenCalledWith("firebase-id-token");
+        expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')?.disabled).toBe(false);
+      });
+
+      completeSwitch({ errorMessage: "Session changed", ok: false, snapshot: staleSwitchedSnapshot });
+      await settle();
+
+      expect(document.querySelector('[data-testid="workspace-context"]')?.textContent).toBe("Workspace Alpha");
+      expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')?.disabled).toBe(false);
+    });
+
     it("refreshes page-bound tracking capability after loading memberships", async () => {
       const contextualSnapshot = signedInSnapshot({
         trackingCapability: {
@@ -565,6 +703,146 @@ describe("popup app", () => {
 
       expect(runtimeClient.getSnapshot).toHaveBeenLastCalledWith(supportedContext());
       expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')?.disabled).toBe(false);
+    });
+
+    it("refreshes the page capability after a generic snapshot arrives while the menu is open", async () => {
+      const contextualSnapshot = signedInSnapshot({
+        trackingCapability: {
+          accessScope: "project",
+          canStartTracking: true,
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+          reason: null,
+        },
+      });
+      let publishSnapshot!: (snapshot: RuntimeSnapshot) => void;
+      const getSnapshot = vi.fn(async () => contextualSnapshot);
+      await openMenu(
+        {
+          getSnapshot,
+          onSnapshotUpdated: (listener) => {
+            publishSnapshot = listener;
+            return () => undefined;
+          },
+          snapshot: contextualSnapshot,
+        },
+        { pageContextResolver: async () => supportedContext() },
+      );
+      await settle();
+      expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')?.disabled).toBe(false);
+
+      getSnapshot.mockClear();
+      const selector = document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')!;
+      selector.focus();
+      publishSnapshot({ ...contextualSnapshot, trackingCapability: undefined });
+
+      await vi.waitFor(() => {
+        expect(getSnapshot).toHaveBeenCalledWith(supportedContext());
+        expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')?.disabled).toBe(false);
+      });
+      expect(document.querySelector('[data-testid="popup-account-menu"]')).not.toBeNull();
+      expect(document.activeElement?.getAttribute("data-field")).toBe("workspace-selector");
+    });
+
+    it("ignores a stale capability refresh after a later authenticated snapshot", async () => {
+      const workspaceAlphaSnapshot = signedInSnapshot({
+        trackingCapability: {
+          accessScope: "project",
+          canStartTracking: true,
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+          reason: null,
+        },
+      });
+      const workspaceBetaSnapshot = signedInSnapshot({
+        trackingCapability: {
+          accessScope: "project",
+          canStartTracking: true,
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+          reason: null,
+        },
+        user: { displayName: "Marta", email: "marta@example.com" },
+        workspace: { id: "workspace-beta", name: "Workspace Beta" },
+      });
+      const pendingRefreshes: Array<(snapshot: RuntimeSnapshot) => void> = [];
+      let deferRefreshes = false;
+      const getSnapshot = vi.fn(() => deferRefreshes
+        ? new Promise<RuntimeSnapshot>((resolve) => {
+            pendingRefreshes.push(resolve);
+          })
+        : Promise.resolve(workspaceAlphaSnapshot));
+      let publishSnapshot!: (snapshot: RuntimeSnapshot) => void;
+      await openMenu(
+        {
+          getSnapshot,
+          onSnapshotUpdated: (listener) => {
+            publishSnapshot = listener;
+            return () => undefined;
+          },
+          snapshot: workspaceAlphaSnapshot,
+        },
+        { pageContextResolver: async () => supportedContext() },
+      );
+
+      await settle();
+      deferRefreshes = true;
+      getSnapshot.mockClear();
+
+      publishSnapshot({ ...workspaceAlphaSnapshot, trackingCapability: undefined });
+      await vi.waitFor(() => expect(pendingRefreshes).toHaveLength(1));
+      publishSnapshot({ ...workspaceBetaSnapshot, trackingCapability: undefined });
+      await vi.waitFor(() => expect(pendingRefreshes).toHaveLength(2));
+
+      pendingRefreshes.shift()!(workspaceAlphaSnapshot);
+      await settle();
+      expect(document.querySelector('[data-testid="workspace-context"]')?.textContent).toBe("Workspace Beta");
+      expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')?.disabled).toBe(true);
+
+      pendingRefreshes.shift()!(workspaceBetaSnapshot);
+      await vi.waitFor(() => {
+        expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')?.disabled).toBe(false);
+      });
+    });
+
+    it("keeps tracking disabled and exposes Retry when a capability refresh fails", async () => {
+      const contextualSnapshot = signedInSnapshot({
+        trackingCapability: {
+          accessScope: "project",
+          canStartTracking: true,
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+          reason: null,
+        },
+      });
+      let publishSnapshot!: (snapshot: RuntimeSnapshot) => void;
+      const getSnapshot = vi.fn(async () => contextualSnapshot);
+      await openMenu(
+        {
+          getSnapshot,
+          onSnapshotUpdated: (listener) => {
+            publishSnapshot = listener;
+            return () => undefined;
+          },
+          snapshot: contextualSnapshot,
+        },
+        { pageContextResolver: async () => supportedContext() },
+      );
+      await settle();
+      getSnapshot.mockRejectedValueOnce(new Error("Capability refresh failed"));
+
+      publishSnapshot({ ...contextualSnapshot, trackingCapability: undefined });
+
+      await vi.waitFor(() => {
+        expect(document.body.textContent).toContain("Capability refresh failed");
+        expect(document.querySelector('[data-action="retry"]')).not.toBeNull();
+      });
+      expect(document.querySelector('[data-action="start-timer"]')).toBeNull();
+
+      document.querySelector<HTMLButtonElement>('[data-action="retry"]')!.click();
+      await vi.waitFor(() => {
+        expect(document.querySelector<HTMLButtonElement>('[data-action="start-timer"]')?.disabled).toBe(false);
+      });
     });
 
     it("re-enables workspace selection after a failed switch reloads memberships", async () => {

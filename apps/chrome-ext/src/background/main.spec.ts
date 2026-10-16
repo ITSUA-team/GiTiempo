@@ -886,6 +886,239 @@ describe('background snapshot broadcast', () => {
     },
   );
 
+  it(
+    'returns a failed workspace-switch result when final snapshot reconciliation cannot read storage',
+    async () => {
+      const workspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000';
+      const targetWorkspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004';
+      let activeSession = {
+        accessToken: makeAccessToken({ email: 'alexey@example.com', workspaceId }),
+        refreshToken: 'refresh-token',
+      };
+      sessionMocks.getStoredSession.mockImplementation(async () => activeSession);
+      backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+      backgroundApiMocks.switchWorkspace.mockImplementation(async () => {
+        activeSession = {
+          accessToken: makeAccessToken({
+            email: 'alexey@example.com',
+            workspaceId: targetWorkspaceId,
+          }),
+          refreshToken: 'target-refresh-token',
+        };
+        sessionMocks.getStoredSession.mockRejectedValueOnce(
+          new Error('Storage unavailable'),
+        );
+      });
+
+      const { handleWorkspaceSwitch } = await import('./main');
+
+      const outcome = await handleWorkspaceSwitch(targetWorkspaceId).then(
+        (value) => ({ value, error: undefined }),
+        (error: unknown) => ({ value: undefined, error }),
+      );
+
+      expect(backgroundApiMocks.switchWorkspace).toHaveBeenCalledWith(
+        targetWorkspaceId,
+      );
+      expect(outcome.error).toBeUndefined();
+      expect(outcome.value).toEqual(
+        expect.objectContaining({
+          errorMessage: 'Storage unavailable',
+          ok: false,
+          snapshot: expect.objectContaining({
+            authenticated: true,
+            currentTimer: null,
+            trackingCapability: null,
+            user: null,
+            workspace: null,
+            workspaceSwitching: undefined,
+          }),
+        }),
+      );
+    },
+  );
+
+  it('responds to a final workspace reconciliation storage failure and recovers on a later snapshot request', async () => {
+    const workspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000';
+    const targetWorkspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004';
+    let activeSession = {
+      accessToken: makeAccessToken({ email: 'alexey@example.com', workspaceId }),
+      refreshToken: 'refresh-token',
+    };
+    sessionMocks.getStoredSession.mockImplementation(async () => activeSession);
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+    backgroundApiMocks.switchWorkspace.mockImplementation(async () => {
+      activeSession = {
+        accessToken: makeAccessToken({
+          email: 'alexey@example.com',
+          workspaceId: targetWorkspaceId,
+        }),
+        refreshToken: 'target-refresh-token',
+      };
+      backgroundApiMocks.getWorkspace.mockResolvedValue({
+        id: targetWorkspaceId,
+        name: 'Workspace Beta',
+      });
+      sessionMocks.getStoredSession.mockRejectedValueOnce(
+        new Error('Storage unavailable'),
+      );
+    });
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]![0];
+    const failedResponse = vi.fn();
+    expect(
+      onMessage(
+        { type: 'workspace/switch', workspaceId: targetWorkspaceId },
+        {},
+        failedResponse,
+      ),
+    ).toBe(true);
+
+    await vi.waitFor(() => expect(failedResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorMessage: 'Storage unavailable',
+        ok: false,
+        snapshot: expect.objectContaining({
+          authenticated: true,
+          currentTimer: null,
+          trackingCapability: null,
+          user: null,
+          workspace: null,
+          workspaceSwitching: undefined,
+        }),
+      }),
+    ));
+    expect(chromeStub.runtime.sendMessage).toHaveBeenLastCalledWith({
+      type: 'runtime/snapshot-updated',
+      snapshot: expect.objectContaining({
+        authenticated: true,
+        trackingCapability: null,
+        workspace: null,
+        workspaceSwitching: undefined,
+      }),
+    });
+
+    const retryResponse = vi.fn();
+    onMessage({ type: 'runtime/get-snapshot' }, {}, retryResponse);
+
+    await vi.waitFor(() => expect(retryResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authenticated: true,
+        errorMessage: null,
+        workspace: { id: targetWorkspaceId, name: 'Workspace Beta' },
+      }),
+    ));
+  });
+
+  it('does not broadcast an old workspace-switch fallback over a newer auth snapshot', async () => {
+    const workspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000';
+    const targetWorkspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004';
+    const newWorkspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005';
+    let activeSession = {
+      accessToken: makeAccessToken({ email: 'alexey@example.com', workspaceId }),
+      refreshToken: 'refresh-token',
+    };
+    let rejectFinalRead: ((error: Error) => void) | undefined;
+    let finalReadStarted = false;
+    sessionMocks.getStoredSession.mockImplementation(async () => activeSession);
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+    backgroundApiMocks.switchWorkspace.mockImplementation(async () => {
+      activeSession = {
+        accessToken: makeAccessToken({
+          email: 'alexey@example.com',
+          workspaceId: targetWorkspaceId,
+        }),
+        refreshToken: 'target-refresh-token',
+      };
+      sessionMocks.getStoredSession.mockImplementationOnce(
+        () => new Promise((_, reject) => {
+          finalReadStarted = true;
+          rejectFinalRead = reject;
+        }),
+      );
+    });
+    backgroundApiMocks.loginWithFirebaseToken.mockImplementation(async () => {
+      activeSession = {
+        accessToken: makeAccessToken({
+          email: 'new@example.com',
+          workspaceId: newWorkspaceId,
+        }),
+        refreshToken: 'new-refresh-token',
+      };
+      backgroundApiMocks.getWorkspace.mockResolvedValue({
+        id: newWorkspaceId,
+        name: 'Workspace Gamma',
+      });
+    });
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]![0];
+    const switchResponse = vi.fn();
+    onMessage(
+      { type: 'workspace/switch', workspaceId: targetWorkspaceId },
+      {},
+      switchResponse,
+    );
+
+    await vi.waitFor(() => expect(finalReadStarted).toBe(true));
+
+    const authResponse = vi.fn();
+    onMessage(
+      { type: 'auth/exchange-firebase-token', firebaseIdToken: 'new-token' },
+      {},
+      authResponse,
+    );
+    await vi.waitFor(() => expect(authResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: true,
+        snapshot: expect.objectContaining({
+          user: { displayName: null, email: 'new@example.com' },
+          workspace: { id: newWorkspaceId, name: 'Workspace Gamma' },
+        }),
+      }),
+    ));
+
+    const broadcastCountBeforeOldFailure = chromeStub.runtime.sendMessage.mock.calls.length;
+    rejectFinalRead?.(new Error('Storage unavailable'));
+
+    await vi.waitFor(() => expect(switchResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorMessage: 'Storage unavailable',
+        ok: false,
+        snapshot: expect.objectContaining({
+          authenticated: true,
+          user: { displayName: null, email: 'new@example.com' },
+          workspace: { id: newWorkspaceId, name: 'Workspace Gamma' },
+          workspaceSwitching: undefined,
+        }),
+      }),
+    ));
+    expect(switchResponse.mock.calls[0]?.[0]?.snapshot.trackingCapability).toBeUndefined();
+    expect(chromeStub.runtime.sendMessage).toHaveBeenCalledTimes(
+      broadcastCountBeforeOldFailure + 1,
+    );
+    expect(chromeStub.runtime.sendMessage).toHaveBeenLastCalledWith({
+      type: 'runtime/snapshot-updated',
+      snapshot: expect.objectContaining({
+        user: { displayName: null, email: 'new@example.com' },
+        workspace: { id: newWorkspaceId, name: 'Workspace Gamma' },
+        workspaceSwitching: undefined,
+      }),
+    });
+
+    const currentSnapshotResponse = vi.fn();
+    onMessage({ type: 'runtime/get-snapshot' }, {}, currentSnapshotResponse);
+    await vi.waitFor(() => expect(currentSnapshotResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authenticated: true,
+        user: { displayName: null, email: 'new@example.com' },
+        workspace: { id: newWorkspaceId, name: 'Workspace Gamma' },
+      }),
+    ));
+    expect(currentSnapshotResponse.mock.calls[0]?.[0]?.workspaceSwitching).not.toBe(true);
+  });
+
   it('waits for an accepted timer mutation before switching and blocks later starts', async () => {
     const workspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000';
     const targetWorkspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004';

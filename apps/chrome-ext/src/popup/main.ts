@@ -98,15 +98,69 @@ export function createPopupApp({
   };
 
   let intervalHandle: ReturnType<typeof setInterval> | null = null;
-  let workspaceRequestSequence = 0;
+  let capabilityRefreshError: string | null = null;
+  let pageCapabilityRefreshSequence = 0;
+  let isDestroyed = false;
+  let workspaceMembershipRequestSequence = 0;
+  let workspaceSwitchRequestSequence = 0;
   const unsubscribe = runtimeClient.onSnapshotUpdated((snapshot) => {
+    pageCapabilityRefreshSequence += 1;
     state.snapshot = snapshot;
     render();
 
-    if (state.isAccountMenuOpen) return;
+    if (state.isAccountMenuOpen) {
+      void refreshPageTrackingCapability();
+      return;
+    }
 
     void load();
   });
+
+  function clearCapabilityRefreshError(): void {
+    if (state.errorMessage === capabilityRefreshError) {
+      state.errorMessage = null;
+    }
+    capabilityRefreshError = null;
+  }
+
+  function isCurrentPageCapabilityRefresh(
+    requestSequence: number,
+    userEmail: string | null,
+    workspaceId: string | null,
+  ): boolean {
+    return !isDestroyed &&
+      requestSequence === pageCapabilityRefreshSequence &&
+      state.snapshot?.authenticated === true &&
+      (state.snapshot.user?.email ?? null) === userEmail &&
+      (state.snapshot.workspace?.id ?? null) === workspaceId;
+  }
+
+  async function refreshPageTrackingCapability(): Promise<void> {
+    const requestSequence = ++pageCapabilityRefreshSequence;
+    const pageContext = state.pageContext;
+    const snapshot = state.snapshot;
+
+    if (!snapshot?.authenticated || pageContext?.kind !== "supported") return;
+
+    const userEmail = snapshot.user?.email ?? null;
+    const workspaceId = snapshot.workspace?.id ?? null;
+
+    try {
+      const refreshedSnapshot = await runtimeClient.getSnapshot(pageContext);
+      if (!isCurrentPageCapabilityRefresh(requestSequence, userEmail, workspaceId)) return;
+
+      state.snapshot = refreshedSnapshot;
+      clearCapabilityRefreshError();
+      render();
+    } catch (error) {
+      if (!isCurrentPageCapabilityRefresh(requestSequence, userEmail, workspaceId)) return;
+
+      capabilityRefreshError =
+        error instanceof Error ? error.message : "Unable to refresh workspace state.";
+      state.errorMessage = capabilityRefreshError;
+      render();
+    }
+  }
 
   function closeAccountMenu(): void {
     if (!state.isAccountMenuOpen) {
@@ -280,7 +334,8 @@ export function createPopupApp({
   async function loadWorkspaceMemberships(): Promise<void> {
     if (!state.snapshot?.authenticated) return;
 
-    const requestSequence = ++workspaceRequestSequence;
+    const requestSequence = ++workspaceMembershipRequestSequence;
+    const isCurrentRequest = () => requestSequence === workspaceMembershipRequestSequence;
     state.isWorkspaceMembershipsLoading = true;
     state.workspaceMembershipsError = null;
     render();
@@ -288,24 +343,24 @@ export function createPopupApp({
     try {
       const result = await runtimeClient.getWorkspaceMemberships();
 
-      if (requestSequence !== workspaceRequestSequence) return;
+      if (!isCurrentRequest()) return;
 
       state.snapshot = result.snapshot;
       if (result.ok) {
         state.workspaceMemberships = result.items;
-        await refreshWorkspaceSnapshot();
+        await refreshWorkspaceSnapshot(isCurrentRequest);
       } else {
         state.workspaceMemberships = null;
         state.workspaceMembershipsError = result.errorMessage ?? "Unable to load workspaces.";
       }
     } catch (error) {
-      if (requestSequence !== workspaceRequestSequence) return;
+      if (!isCurrentRequest()) return;
 
       state.workspaceMemberships = null;
       state.workspaceMembershipsError =
         error instanceof Error ? error.message : "Unable to load workspaces.";
     } finally {
-      if (requestSequence === workspaceRequestSequence) {
+      if (isCurrentRequest()) {
         state.isWorkspaceMembershipsLoading = false;
         render();
       }
@@ -317,7 +372,11 @@ export function createPopupApp({
 
     if (!workspaceId || workspaceId === currentWorkspaceId || state.isSwitchingWorkspace || state.snapshot?.workspaceSwitching) return;
 
-    const requestSequence = ++workspaceRequestSequence;
+    const requestSequence = ++workspaceSwitchRequestSequence;
+    const isCurrentRequest = () => requestSequence === workspaceSwitchRequestSequence;
+    workspaceMembershipRequestSequence += 1;
+    pageCapabilityRefreshSequence += 1;
+    state.isWorkspaceMembershipsLoading = false;
     let shouldReloadMemberships = false;
     state.isSwitchingWorkspace = true;
     state.workspaceSwitchError = null;
@@ -326,27 +385,29 @@ export function createPopupApp({
     try {
       const result = await runtimeClient.switchWorkspace(workspaceId);
 
-      if (requestSequence !== workspaceRequestSequence) return;
+      if (!isCurrentRequest()) return;
 
+      workspaceMembershipRequestSequence += 1;
+      state.isWorkspaceMembershipsLoading = false;
       state.snapshot = result.snapshot;
       if (result.ok) {
         state.workspaceMemberships = state.workspaceMemberships?.map((membership) => ({
           ...membership,
           isCurrent: membership.workspaceId === result.snapshot.workspace?.id,
         })) ?? null;
-        await refreshWorkspaceSnapshot();
+        await refreshWorkspaceSnapshot(isCurrentRequest);
       } else {
         state.workspaceSwitchError = result.errorMessage ?? "Unable to switch workspace.";
         shouldReloadMemberships = true;
       }
     } catch (error) {
-      if (requestSequence !== workspaceRequestSequence) return;
+      if (!isCurrentRequest()) return;
 
       state.workspaceSwitchError =
         error instanceof Error ? error.message : "Unable to switch workspace.";
       shouldReloadMemberships = true;
     } finally {
-      if (requestSequence === workspaceRequestSequence) {
+      if (isCurrentRequest()) {
         state.isSwitchingWorkspace = false;
         render();
         if (shouldReloadMemberships) {
@@ -356,8 +417,9 @@ export function createPopupApp({
     }
   }
 
-  async function refreshWorkspaceSnapshot(): Promise<void> {
-    if (!state.snapshot) return;
+  async function refreshWorkspaceSnapshot(isCurrentRequest: () => boolean): Promise<void> {
+    if (!state.snapshot || !isCurrentRequest()) return;
+    const capabilityRequestSequence = ++pageCapabilityRefreshSequence;
 
     // The switch result proves the token pair and workspace only. A page-bound
     // capability from the previous workspace must never unlock Start while the
@@ -365,16 +427,22 @@ export function createPopupApp({
     state.snapshot = { ...state.snapshot, trackingCapability: null };
 
     try {
-      state.snapshot = await runtimeClient.getSnapshot(
+      const snapshot = await runtimeClient.getSnapshot(
         state.pageContext?.kind === "supported" ? state.pageContext : undefined,
       );
+      if (isCurrentRequest() && capabilityRequestSequence === pageCapabilityRefreshSequence) {
+        state.snapshot = snapshot;
+      }
     } catch (error) {
-      state.workspaceSwitchError =
-        error instanceof Error ? error.message : "Unable to refresh workspace state.";
+      if (isCurrentRequest() && capabilityRequestSequence === pageCapabilityRefreshSequence) {
+        state.workspaceSwitchError =
+          error instanceof Error ? error.message : "Unable to refresh workspace state.";
+      }
     }
   }
 
   async function load(): Promise<void> {
+    pageCapabilityRefreshSequence += 1;
     state.isLoading = true;
     state.errorMessage = null;
     render();
@@ -430,7 +498,14 @@ export function createPopupApp({
   }
 
   async function handleSignOut(): Promise<void> {
-    workspaceRequestSequence += 1;
+    pageCapabilityRefreshSequence += 1;
+    workspaceMembershipRequestSequence += 1;
+    workspaceSwitchRequestSequence += 1;
+    state.isSwitchingWorkspace = false;
+    state.isWorkspaceMembershipsLoading = false;
+    state.workspaceMemberships = null;
+    state.workspaceMembershipsError = null;
+    state.workspaceSwitchError = null;
     state.isSubmitting = true;
     state.errorMessage = null;
     render();
@@ -601,6 +676,8 @@ export function createPopupApp({
 
   return {
     destroy() {
+      isDestroyed = true;
+      pageCapabilityRefreshSequence += 1;
       unsubscribe();
       document.removeEventListener("keydown", handleDocumentKeydown);
       document.removeEventListener("pointerdown", handleDocumentPointerDown);
