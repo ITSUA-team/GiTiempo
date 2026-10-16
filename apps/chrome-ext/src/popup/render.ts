@@ -28,6 +28,7 @@ export interface PopupState {
   snapshot: RuntimeSnapshot | null;
   workspaceMemberships: CurrentUserWorkspaceMembershipResponse[] | null;
   workspaceMembershipsError: string | null;
+  workspaceReconciliationError: string | null;
   workspaceSwitchError: string | null;
   isWorkspaceMembershipsLoading: boolean;
 }
@@ -104,7 +105,10 @@ function renderWorkspaceSelector(state: PopupState): string {
   const workspaceId = state.snapshot?.workspace?.id ?? "";
   const workspaceName = state.snapshot?.workspace?.name ?? "Checking workspace…";
   const isSwitching = state.isSwitchingWorkspace || state.snapshot?.workspaceSwitching === true;
-  const errorMessage = state.workspaceSwitchError ?? state.workspaceMembershipsError;
+  const errorMessage =
+    state.workspaceSwitchError ??
+    state.workspaceMembershipsError ??
+    state.workspaceReconciliationError;
   const statusMessage = isSwitching
     ? "Switching workspace…"
     : state.isWorkspaceMembershipsLoading
@@ -125,7 +129,7 @@ function renderWorkspaceSelector(state: PopupState): string {
       <label for="workspace-selector" class="text-text-muted text-xs font-medium leading-[15px]">Workspace</label>
       <select id="workspace-selector" data-field="workspace-selector" data-testid="workspace-selector" aria-describedby="workspace-selector-status" class="border-divider bg-surface-primary text-text-dark h-[34px] w-full cursor-pointer rounded-sm border truncate pl-2.5 pr-8 text-[13px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60" ${isUnavailable || isSingleMembership ? "disabled" : ""}>${options}</select>
       <div id="workspace-selector-status" data-testid="workspace-selector-status" class="${statusClass}" aria-live="polite">${statusMessage ? escapeHtml(statusMessage) : ""}</div>
-      ${state.workspaceMembershipsError ? `<button type="button" data-action="retry-workspaces" class="${popupTextActionClass} w-fit text-xs">Retry</button>` : ""}
+      ${state.workspaceMembershipsError || state.workspaceReconciliationError ? `<button type="button" data-action="retry-workspaces" class="${popupTextActionClass} w-fit text-xs">Retry</button>` : ""}
     </div>
   `;
 }

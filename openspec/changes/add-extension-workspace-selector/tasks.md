@@ -42,3 +42,13 @@ Execute the manual matrix in both supported browsers, Chrome and Firefox, record
 - [x] 6.4 Run manual cases M08–M12: loading/retry, network/auth/membership failure, rotation races, sign-out/new login, mutation ordering and post-switch capability denial. Record evidence and any blocked case explicitly.
 - [x] 6.5 Complete final parity/documentation/manual-QA review and resolve acceptance failures before marking the change implemented.
   - Final independent popup/design and runtime reviews passed on 2026-10-16 after fixing a cross-login refresh coalescing race and adding its regression. Root typecheck/lint/test, Chrome/Firefox builds, strict OpenSpec validation and evidence checks passed; see `qa.md`. All 21 tasks are complete. Synchronization and archiving remain assigned to the user.
+
+## 7. Accepted review follow-up
+
+- [x] 7.1 Separate popup reconciliation errors from switch failures, provide retry, and test successful recovery without hiding a rejected switch.
+- [x] 7.2 Test switch transport failures before and after a 401 refresh, session cleanup, and no replay with consumed credentials.
+- [x] 7.3 Test injected Start/Stop disabling and ignored clicks while workspace switching.
+- [x] 7.4 Test background switch rejection, concurrent re-entry, final-workspace mismatch, and the successful Start response before switching.
+- [x] 7.5 Test accessible workspace loading feedback and disabled selection.
+- [x] 7.6 Remove redundant membership-loading requests while retaining authentication recovery and final workspace reconciliation.
+- [x] 7.7 Complete independent diff review, extension/root checks, Chrome/Firefox builds, strict validation, and the scoped design parity review; record evidence in `qa.md`.

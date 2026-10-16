@@ -207,9 +207,8 @@ async function loadSnapshot(
 }
 
 async function loadWorkspaceMemberships(): Promise<RuntimeWorkspaceMembershipsResult> {
-  const snapshot = await loadSnapshot();
-
-  if (!snapshot.authenticated) {
+  if (!(await getStoredSession())) {
+    const snapshot = await loadSnapshot();
     return {
       errorMessage: 'Your session has expired. Please sign in again.',
       items: [],
@@ -391,8 +390,6 @@ export async function handleWorkspaceSwitch(
     ok = true;
   } catch (error) {
     errorMessage = error instanceof Error ? error.message : 'Unable to switch workspace.';
-    // A just-revoked membership should disappear from the next selector load.
-    await apiClient.getWorkspaceMemberships().catch(() => undefined);
   }
 
   let snapshot: RuntimeSnapshot;

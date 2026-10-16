@@ -864,6 +864,174 @@ describe("popup app", () => {
       expect(document.body.textContent).toContain("Unable to switch workspace.");
     });
 
+    it("clears a reconciliation error when the account menu is reopened and reconciliation succeeds", async () => {
+      const reconciliationError = "Unable to refresh workspace state.";
+      const recoveredSnapshot = signedInSnapshot({
+        workspace: { id: "workspace-beta", name: "Workspace Beta" },
+      });
+      const getSnapshot = vi
+        .fn()
+        .mockResolvedValueOnce(signedInSnapshot())
+        .mockRejectedValueOnce(new Error(reconciliationError))
+        .mockResolvedValue(recoveredSnapshot);
+      await openMenu({ getSnapshot });
+
+      await vi.waitFor(() => {
+        expect(document.body.textContent).toContain(reconciliationError);
+      });
+
+      document.querySelector<HTMLButtonElement>('[data-action="toggle-account-menu"]')!.click();
+      document.querySelector<HTMLButtonElement>('[data-action="toggle-account-menu"]')!.click();
+
+      await vi.waitFor(() => {
+        expect(getSnapshot).toHaveBeenCalledTimes(3);
+        expect(document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')?.disabled).toBe(false);
+        expect(document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')?.value).toBe("workspace-beta");
+        expect(document.body.textContent).not.toContain(reconciliationError);
+        expect(document.querySelector('[data-action="retry-workspaces"]')).toBeNull();
+      });
+    });
+
+    it("clears a reconciliation error when retrying workspace loading succeeds", async () => {
+      const reconciliationError = "Unable to refresh workspace state.";
+      const recoveredSnapshot = signedInSnapshot({
+        workspace: { id: "workspace-beta", name: "Workspace Beta" },
+      });
+      const getSnapshot = vi
+        .fn()
+        .mockResolvedValueOnce(signedInSnapshot())
+        .mockRejectedValueOnce(new Error(reconciliationError))
+        .mockResolvedValue(recoveredSnapshot);
+      await openMenu({ getSnapshot });
+
+      await vi.waitFor(() => {
+        expect(document.body.textContent).toContain(reconciliationError);
+        expect(document.querySelector('[data-action="retry-workspaces"]')).not.toBeNull();
+      });
+
+      document.querySelector<HTMLButtonElement>('[data-action="retry-workspaces"]')!.click();
+
+      await vi.waitFor(() => {
+        expect(getSnapshot).toHaveBeenCalledTimes(3);
+        expect(document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')?.disabled).toBe(false);
+        expect(document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')?.value).toBe("workspace-beta");
+        expect(document.body.textContent).not.toContain(reconciliationError);
+        expect(document.querySelector('[data-action="retry-workspaces"]')).toBeNull();
+      });
+    });
+
+    it("shows a later membership loading error over a reconciliation error", async () => {
+      const reconciliationError = "Unable to refresh workspace state.";
+      const membershipsError = "Unable to load workspaces.";
+      const getSnapshot = vi
+        .fn()
+        .mockResolvedValueOnce(signedInSnapshot())
+        .mockRejectedValueOnce(new Error(reconciliationError));
+      const getWorkspaceMemberships = vi
+        .fn()
+        .mockResolvedValueOnce({
+          items: workspaceMemberships(),
+          ok: true,
+          snapshot: signedInSnapshot(),
+        })
+        .mockResolvedValueOnce({
+          errorMessage: membershipsError,
+          items: [],
+          ok: false,
+          snapshot: signedInSnapshot(),
+        });
+      await openMenu({ getSnapshot, getWorkspaceMemberships });
+
+      await vi.waitFor(() => {
+        expect(document.body.textContent).toContain(reconciliationError);
+      });
+
+      document.querySelector<HTMLButtonElement>('[data-action="retry-workspaces"]')!.click();
+
+      await vi.waitFor(() => {
+        expect(document.body.textContent).toContain(membershipsError);
+        expect(document.body.textContent).not.toContain(reconciliationError);
+        expect(document.querySelector('[data-action="retry-workspaces"]')).not.toBeNull();
+      });
+    });
+
+    it("does not leak a reconciliation error after its snapshot signs out and the session is restored", async () => {
+      const reconciliationError = "Unable to refresh workspace state.";
+      const signedOutSnapshot: RuntimeSnapshot = {
+        authenticated: false,
+        currentTimer: null,
+        errorMessage: null,
+        user: null,
+      };
+      const getSnapshot = vi
+        .fn()
+        .mockResolvedValueOnce(signedInSnapshot())
+        .mockRejectedValueOnce(new Error(reconciliationError))
+        .mockResolvedValueOnce(signedOutSnapshot)
+        .mockResolvedValue(signedInSnapshot());
+      const { app } = await openMenu({ getSnapshot });
+
+      await vi.waitFor(() => {
+        expect(document.body.textContent).toContain(reconciliationError);
+      });
+
+      document.querySelector<HTMLButtonElement>('[data-action="retry-workspaces"]')!.click();
+
+      await vi.waitFor(() => {
+        expect(document.body.textContent).toContain("Continue with Google");
+      });
+
+      await app.load();
+      document.querySelector<HTMLButtonElement>('[data-action="toggle-account-menu"]')!.click();
+
+      await vi.waitFor(() => {
+        expect(getSnapshot).toHaveBeenCalledTimes(5);
+        expect(document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')?.value).toBe("workspace-alpha");
+        expect(document.body.textContent).not.toContain(reconciliationError);
+        expect(document.querySelector('[data-action="retry-workspaces"]')).toBeNull();
+      });
+    });
+
+    it("keeps a rejected workspace switch error after memberships reload successfully", async () => {
+      const switchError = "Unable to switch workspace.";
+      const switchWorkspace = vi.fn(async () => ({
+        errorMessage: switchError,
+        ok: false,
+        snapshot: signedInSnapshot(),
+      }));
+      const { runtimeClient } = await openMenu({ switchWorkspace });
+      await settle();
+
+      const selector = document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')!;
+      selector.value = "workspace-beta";
+      selector.dispatchEvent(new Event("change", { bubbles: true }));
+
+      await vi.waitFor(() => {
+        expect(document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')?.disabled).toBe(false);
+        expect(document.body.textContent).toContain(switchError);
+        expect(runtimeClient.getWorkspaceMemberships).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it("announces workspace loading and disables the selector", async () => {
+      let completeMemberships!: (result: Awaited<ReturnType<RuntimeClient["getWorkspaceMemberships"]>>) => void;
+      const getWorkspaceMemberships = vi.fn(
+        () => new Promise<Awaited<ReturnType<RuntimeClient["getWorkspaceMemberships"]>>>((resolve) => {
+          completeMemberships = resolve;
+        }),
+      );
+      await openMenu({ getWorkspaceMemberships });
+
+      const selector = document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')!;
+      const status = document.querySelector<HTMLElement>('[data-testid="workspace-selector-status"]')!;
+      expect(selector.disabled).toBe(true);
+      expect(status.textContent).toBe("Loading workspaces…");
+      expect(status.getAttribute("aria-live")).toBe("polite");
+
+      completeMemberships({ items: workspaceMemberships(), ok: true, snapshot: signedInSnapshot() });
+      await settle();
+    });
+
     it("shows retryable membership loading errors while leaving sign-out available", async () => {
       const getWorkspaceMemberships = vi.fn(async () => ({
         errorMessage: "Unable to reach GiTiempo.",

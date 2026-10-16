@@ -769,6 +769,55 @@ describe("createExtensionApiClient", () => {
     expect(data).toEqual({ [EXTENSION_SESSION_STORAGE_KEY]: switchedSession });
   });
 
+  it("clears the session when the initial workspace switch request cannot reach the API", async () => {
+    const session = sessionForWorkspace(WORKSPACE_A, "initial-refresh-token");
+    const fetchFn = vi.fn<typeof fetch>().mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const { data, storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: session,
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn,
+      storage,
+    });
+
+    await expect(client.switchWorkspace(WORKSPACE_B)).rejects.toThrow(
+      "Unable to reach GiTiempo API. Check your connection and try again.",
+    );
+    expect(data).toEqual({});
+    await expect(client.switchWorkspace(WORKSPACE_B)).rejects.toThrow(
+      "Your session has expired. Please sign in again.",
+    );
+    expect(fetchFn).toHaveBeenCalledOnce();
+  });
+
+  it("clears the refreshed session when the retry workspace switch request cannot reach the API", async () => {
+    const initialSession = sessionForWorkspace(WORKSPACE_A, "initial-refresh-token");
+    const refreshedSession = sessionForWorkspace(WORKSPACE_A, "refreshed-refresh-token");
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ message: "Unauthorized" }, { status: 401 }))
+      .mockResolvedValueOnce(jsonResponse(refreshedSession))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const { data, storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: initialSession,
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn,
+      storage,
+    });
+
+    await expect(client.switchWorkspace(WORKSPACE_B)).rejects.toThrow(
+      "Unable to reach GiTiempo API. Check your connection and try again.",
+    );
+    expect(data).toEqual({});
+    await expect(client.switchWorkspace(WORKSPACE_B)).rejects.toThrow(
+      "Your session has expired. Please sign in again.",
+    );
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+  });
+
   it("never restores a late switch after sign-out and revokes its returned pair", async () => {
     const session = sessionForWorkspace(WORKSPACE_A);
     const rotated = sessionForWorkspace(WORKSPACE_B, "rotated-refresh-token");

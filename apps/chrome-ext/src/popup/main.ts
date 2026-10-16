@@ -93,6 +93,7 @@ export function createPopupApp({
     snapshot: null,
     workspaceMemberships: null,
     workspaceMembershipsError: null,
+    workspaceReconciliationError: null,
     workspaceSwitchError: null,
     isWorkspaceMembershipsLoading: false,
   };
@@ -106,6 +107,10 @@ export function createPopupApp({
   const unsubscribe = runtimeClient.onSnapshotUpdated((snapshot) => {
     pageCapabilityRefreshSequence += 1;
     state.snapshot = snapshot;
+
+    if (!snapshot.authenticated) {
+      resetWorkspaceState();
+    }
     render();
 
     if (state.isAccountMenuOpen) {
@@ -121,6 +126,18 @@ export function createPopupApp({
       state.errorMessage = null;
     }
     capabilityRefreshError = null;
+  }
+
+  function resetWorkspaceState(): void {
+    workspaceMembershipRequestSequence += 1;
+    workspaceSwitchRequestSequence += 1;
+    state.isAccountMenuOpen = false;
+    state.isSwitchingWorkspace = false;
+    state.isWorkspaceMembershipsLoading = false;
+    state.workspaceMemberships = null;
+    state.workspaceMembershipsError = null;
+    state.workspaceReconciliationError = null;
+    state.workspaceSwitchError = null;
   }
 
   function isCurrentPageCapabilityRefresh(
@@ -346,6 +363,11 @@ export function createPopupApp({
       if (!isCurrentRequest()) return;
 
       state.snapshot = result.snapshot;
+      if (!state.snapshot.authenticated) {
+        resetWorkspaceState();
+        render();
+        return;
+      }
       if (result.ok) {
         state.workspaceMemberships = result.items;
         await refreshWorkspaceSnapshot(isCurrentRequest);
@@ -390,6 +412,11 @@ export function createPopupApp({
       workspaceMembershipRequestSequence += 1;
       state.isWorkspaceMembershipsLoading = false;
       state.snapshot = result.snapshot;
+      if (!state.snapshot.authenticated) {
+        resetWorkspaceState();
+        render();
+        return;
+      }
       if (result.ok) {
         state.workspaceMemberships = state.workspaceMemberships?.map((membership) => ({
           ...membership,
@@ -432,10 +459,16 @@ export function createPopupApp({
       );
       if (isCurrentRequest() && capabilityRequestSequence === pageCapabilityRefreshSequence) {
         state.snapshot = snapshot;
+        if (!snapshot.authenticated) {
+          resetWorkspaceState();
+          render();
+          return;
+        }
+        state.workspaceReconciliationError = null;
       }
     } catch (error) {
       if (isCurrentRequest() && capabilityRequestSequence === pageCapabilityRefreshSequence) {
-        state.workspaceSwitchError =
+        state.workspaceReconciliationError =
           error instanceof Error ? error.message : "Unable to refresh workspace state.";
       }
     }
@@ -453,6 +486,9 @@ export function createPopupApp({
       state.snapshot = await runtimeClient.getSnapshot(
         pageContext.kind === "supported" ? pageContext : undefined,
       );
+      if (!state.snapshot.authenticated) {
+        resetWorkspaceState();
+      }
     } catch (error) {
       state.snapshot = {
         authenticated: false,
@@ -461,6 +497,7 @@ export function createPopupApp({
         user: null,
       };
       state.pageContext = null;
+      resetWorkspaceState();
       state.errorMessage =
         error instanceof Error ? error.message : "Unable to load extension state.";
     } finally {
@@ -499,13 +536,7 @@ export function createPopupApp({
 
   async function handleSignOut(): Promise<void> {
     pageCapabilityRefreshSequence += 1;
-    workspaceMembershipRequestSequence += 1;
-    workspaceSwitchRequestSequence += 1;
-    state.isSwitchingWorkspace = false;
-    state.isWorkspaceMembershipsLoading = false;
-    state.workspaceMemberships = null;
-    state.workspaceMembershipsError = null;
-    state.workspaceSwitchError = null;
+    resetWorkspaceState();
     state.isSubmitting = true;
     state.errorMessage = null;
     render();
