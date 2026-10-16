@@ -16,6 +16,7 @@ import type {
   RuntimeMutationResult,
   RuntimeSnapshot,
   RuntimeTrackingCapability,
+  RuntimeWorkspaceMembershipsResult,
   SnapshotUser,
 } from '@/lib/runtime';
 import {
@@ -58,6 +59,37 @@ function deriveSnapshotUser(
 }
 
 let lastSnapshot: RuntimeSnapshot | null = null;
+let lastSnapshotGeneration: number | null = null;
+let workspaceSwitching = false;
+let pendingTimerMutation: Promise<void> = Promise.resolve();
+let sessionGeneration = 0;
+
+const WORKSPACE_CHANGED_MESSAGE =
+  'Your session or workspace changed. Refresh and review the destination before starting.';
+
+function withWorkspaceSwitching(snapshot: RuntimeSnapshot): RuntimeSnapshot {
+  return workspaceSwitching ? { ...snapshot, workspaceSwitching: true } : snapshot;
+}
+
+function clearLastSnapshot(): void {
+  lastSnapshot = null;
+  lastSnapshotGeneration = null;
+}
+
+function storeLastSnapshot(snapshot: RuntimeSnapshot): void {
+  lastSnapshot = snapshot;
+  lastSnapshotGeneration = sessionGeneration;
+}
+
+function getSessionIdentity(session: TokenPairResponse): {
+  email: string | null;
+  workspaceId: string | null;
+} {
+  return {
+    email: decodeAccessTokenEmail(session.accessToken),
+    workspaceId: decodeAccessTokenWorkspaceId(session.accessToken),
+  };
+}
 
 async function loadSnapshot(
   pageContext?: SupportedGitHubIssueContext,
@@ -68,14 +100,14 @@ async function loadSnapshot(
   ]);
 
   if (!session) {
-    lastSnapshot = null;
-    return {
+    clearLastSnapshot();
+    return withWorkspaceSwitching({
       authenticated: false,
       currentTimer: null,
       errorMessage: null,
       providerCleanupPending,
       user: null,
-    };
+    });
   }
 
   const email = decodeAccessTokenEmail(session.accessToken);
@@ -92,14 +124,14 @@ async function loadSnapshot(
   ]);
   const nextSession = await getStoredSession();
   if (!nextSession) {
-    lastSnapshot = null;
-    return {
+    clearLastSnapshot();
+    return withWorkspaceSwitching({
       authenticated: false,
       currentTimer: null,
       errorMessage: null,
       providerCleanupPending,
       user: null,
-    };
+    });
   }
   const nextEmail = decodeAccessTokenEmail(nextSession.accessToken);
   const nextWorkspaceId = decodeAccessTokenWorkspaceId(nextSession.accessToken);
@@ -107,16 +139,16 @@ async function loadSnapshot(
     nextEmail !== email ||
     nextWorkspaceId !== workspaceId;
   if (sessionChanged) {
-    lastSnapshot = null;
-    return {
+    clearLastSnapshot();
+    return withWorkspaceSwitching({
       authenticated: true,
       currentTimer: null,
       workspace: null,
       user: deriveSnapshotUser(nextSession, null),
       providerCleanupPending,
       errorMessage:
-        'Your session or workspace changed. Refresh and review the destination before starting.',
-    };
+        WORKSPACE_CHANGED_MESSAGE,
+    });
   }
   const sameUser = nextEmail !== null && lastSnapshot?.user?.email === nextEmail;
   const returnedTimer =
@@ -150,7 +182,7 @@ async function loadSnapshot(
         : capabilityResult.status === 'rejected'
           ? capabilityResult.reason
         : null;
-  const snapshot: RuntimeSnapshot = {
+  const snapshot: RuntimeSnapshot = withWorkspaceSwitching({
     authenticated: true,
     currentTimer,
     workspace:
@@ -160,7 +192,7 @@ async function loadSnapshot(
     errorMessage:
       !timerMatches ||
       (workspaceResult.status === 'fulfilled' && !workspaceMatches)
-        ? 'Your session or workspace changed. Refresh and review the destination before starting.'
+        ? WORKSPACE_CHANGED_MESSAGE
         : failure
           ? failure instanceof Error
             ? failure.message
@@ -169,9 +201,49 @@ async function loadSnapshot(
     providerCleanupPending,
     ...(pageContext ? { trackingCapability } : {}),
     user: deriveSnapshotUser(nextSession, currentTimer),
-  };
-  lastSnapshot = snapshot;
+  });
+  storeLastSnapshot(snapshot);
   return snapshot;
+}
+
+async function loadWorkspaceMemberships(): Promise<RuntimeWorkspaceMembershipsResult> {
+  if (!(await getStoredSession())) {
+    const snapshot = await loadSnapshot();
+    return {
+      errorMessage: 'Your session has expired. Please sign in again.',
+      items: [],
+      ok: false,
+      snapshot,
+    };
+  }
+
+  try {
+    const response = await apiClient.getWorkspaceMemberships();
+    const currentSnapshot = await loadSnapshot();
+    const currentMembership = response.items.find((item) => item.isCurrent);
+
+    if (
+      !currentSnapshot.authenticated ||
+      !currentSnapshot.workspace ||
+      currentMembership?.workspaceId !== currentSnapshot.workspace.id
+    ) {
+      return {
+        errorMessage: WORKSPACE_CHANGED_MESSAGE,
+        items: [],
+        ok: false,
+        snapshot: currentSnapshot,
+      };
+    }
+
+    return { items: response.items, ok: true, snapshot: currentSnapshot };
+  } catch (error) {
+    return {
+      errorMessage: error instanceof Error ? error.message : 'Unable to load workspaces.',
+      items: [],
+      ok: false,
+      snapshot: await loadSnapshot(),
+    };
+  }
 }
 
 export async function broadcastSnapshot(
@@ -239,6 +311,147 @@ async function handleMutation(
       snapshot,
     };
   }
+}
+
+async function handleTimerMutation(
+  run: () => Promise<unknown>,
+): Promise<RuntimeMutationResult> {
+  if (workspaceSwitching) {
+    const snapshot = await loadSnapshot();
+    return {
+      errorMessage: 'Workspace switching is in progress. Wait for the destination to refresh.',
+      ok: false,
+      snapshot,
+    };
+  }
+
+  const mutation = pendingTimerMutation.then(async () => {
+    if (workspaceSwitching) {
+      throw new Error('Workspace switching is in progress. Wait for the destination to refresh.');
+    }
+
+    await run();
+  });
+  const result = handleMutation(() => mutation);
+  pendingTimerMutation = result.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  return result;
+}
+
+export async function handleWorkspaceSwitch(
+  workspaceId: string,
+): Promise<RuntimeMutationResult> {
+  if (workspaceSwitching) {
+    const snapshot = await loadSnapshot();
+    return {
+      errorMessage: 'Workspace switching is already in progress.',
+      ok: false,
+      snapshot,
+    };
+  }
+
+  const initialGeneration = sessionGeneration;
+  workspaceSwitching = true;
+
+  let ok = false;
+  let errorMessage: string | undefined;
+
+  try {
+    const initialSession = await getStoredSession();
+    const initialIdentity = initialSession
+      ? getSessionIdentity(initialSession)
+      : null;
+    await broadcastSnapshot(await loadSnapshot());
+
+    await pendingTimerMutation;
+    const session = await getStoredSession();
+
+    if (
+      !session ||
+      !initialIdentity ||
+      sessionGeneration !== initialGeneration ||
+      getSessionIdentity(session).email !== initialIdentity.email ||
+      getSessionIdentity(session).workspaceId !== initialIdentity.workspaceId
+    ) {
+      throw new Error(WORKSPACE_CHANGED_MESSAGE);
+    }
+
+    if (decodeAccessTokenWorkspaceId(session.accessToken) !== workspaceId) {
+      await apiClient.switchWorkspace(workspaceId);
+    }
+
+    if (sessionGeneration !== initialGeneration) {
+      throw new Error(WORKSPACE_CHANGED_MESSAGE);
+    }
+
+    ok = true;
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : 'Unable to switch workspace.';
+  }
+
+  let snapshot: RuntimeSnapshot;
+  let shouldBroadcastSnapshot = true;
+  try {
+    // Keep timer mutations blocked while the target timer and capability state
+    // are fetched. Publishing an unlocked snapshot before this completes would
+    // let an old control send a Start against an unreconciled destination.
+    const reconcilingSnapshot = await loadSnapshot();
+    snapshot = {
+      ...reconcilingSnapshot,
+      workspaceSwitching: undefined,
+    };
+  } catch (error) {
+    // The rotation may have succeeded even though its final storage read did
+    // not. Do not expose a prior workspace, timer, or capability in that case.
+    // The stored session remains intact so a later snapshot refresh can recover.
+    ok = false;
+    errorMessage = error instanceof Error ? error.message : 'Unable to switch workspace.';
+    const sessionWasSuperseded = sessionGeneration !== initialGeneration;
+    const currentSnapshot =
+      sessionWasSuperseded && lastSnapshotGeneration === sessionGeneration
+        ? lastSnapshot
+        : null;
+    if (currentSnapshot) {
+      snapshot = {
+        ...currentSnapshot,
+        workspaceSwitching: undefined,
+      };
+    } else {
+      if (!sessionWasSuperseded) {
+        clearLastSnapshot();
+      }
+      shouldBroadcastSnapshot = !sessionWasSuperseded;
+      snapshot = {
+        authenticated: !sessionWasSuperseded,
+        currentTimer: null,
+        errorMessage,
+        providerCleanupPending: false,
+        trackingCapability: null,
+        user: null,
+        workspace: null,
+        workspaceSwitching: undefined,
+      };
+    }
+  } finally {
+    workspaceSwitching = false;
+  }
+
+  if (ok && (!snapshot.authenticated || snapshot.workspace?.id !== workspaceId)) {
+    ok = false;
+    errorMessage = WORKSPACE_CHANGED_MESSAGE;
+  }
+  if (shouldBroadcastSnapshot) {
+    await broadcastSnapshot(snapshot);
+  }
+
+  return {
+    ...(errorMessage ? { errorMessage } : {}),
+    ok,
+    snapshot,
+  };
 }
 
 async function handleAuthExchange(
@@ -404,10 +617,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   void (async () => {
     switch (request.type) {
       case 'auth/exchange-firebase-token': {
+        sessionGeneration += 1;
         sendResponse(await handleAuthExchange(request.firebaseIdToken));
         return;
       }
       case 'auth/exchange-github-session': {
+        sessionGeneration += 1;
         sendResponse(
           await handleMutation(() =>
             apiClient.exchangeGithubSession(request.code, request.verifier),
@@ -416,6 +631,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return;
       }
       case 'auth/sign-in-github': {
+        sessionGeneration += 1;
         sendResponse(
           await handleInteractiveSignIn(() =>
             handleMutation(async () => {
@@ -427,6 +643,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return;
       }
       case 'auth/sign-in-google': {
+        sessionGeneration += 1;
         sendResponse(
           await handleInteractiveSignIn(() =>
             handleMutation(async () => {
@@ -437,6 +654,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return;
       }
       case 'auth/sign-out': {
+        sessionGeneration += 1;
         // Through the mutation wrapper so the snapshot is rebuilt after the
         // session is gone and broadcast to the popup and any injected control,
         // rather than each surface being told separately.
@@ -458,9 +676,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse(await loadSnapshot(request.pageContext));
         return;
       }
+      case 'workspace/get-memberships': {
+        sendResponse(await loadWorkspaceMemberships());
+        return;
+      }
+      case 'workspace/switch': {
+        sendResponse(await handleWorkspaceSwitch(request.workspaceId));
+        return;
+      }
       case 'timer/start': {
         sendResponse(
-          await handleMutation(async () => {
+          await handleTimerMutation(async () => {
             const snapshot = await loadSnapshot(request.pageContext);
             if (
               !snapshot.authenticated ||
@@ -469,7 +695,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
               snapshot.user?.email !== request.expectedUserEmail
             ) {
               throw new Error(
-                'Your session or workspace changed. Refresh and review the destination before starting.',
+                WORKSPACE_CHANGED_MESSAGE,
               );
             }
             if (!snapshot.trackingCapability?.canStartTracking) {
@@ -488,7 +714,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       case 'timer/stop': {
         sendResponse(
-          await handleMutation(() =>
+          await handleTimerMutation(() =>
             apiClient.stopTimer({ expectedTimerId: request.expectedTimerId }),
           ),
         );

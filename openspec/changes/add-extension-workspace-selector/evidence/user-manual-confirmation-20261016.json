@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-16",
+  "source": "Direct user report in this chat",
+  "userStatement": "так, все працює. Другий Escape закриває попап, але це не критично",
+  "timerRetry": "User confirms extension works after local migration repair",
+  "escape": "First Escape closes native options; second closes entire popup, explicitly accepted as non-critical",
+  "browserAndVersion": "Not supplied in this report",
+  "scopeLimits": [
+    "Does not identify both browsers or their builds",
+    "Does not separately report Projects-pane Start/Stop",
+    "Does not supply native expanded-options screenshots or per-case keyboard results"
+  ],
+  "acceptance": "Reported timer failure resolved; host-popup Escape closure accepted without further workaround"
+}
