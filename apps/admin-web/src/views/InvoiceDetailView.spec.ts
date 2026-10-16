@@ -260,6 +260,7 @@ describe('InvoiceDetailView', () => {
     expect(wrapper.find('[data-testid="invoice-detail-header"]').exists()).toBe(
       false,
     );
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
 
     const backButton = wrapper
       .findAll('button')
@@ -288,6 +289,33 @@ describe('InvoiceDetailView', () => {
     expect(summary.text()).toContain('$1,000.00');
     expect(summary.text()).toContain('May 1, 2026');
     expect(summary.text()).toContain('Alex Admin');
+  });
+
+  it('renders instant timestamps in the local timezone', async () => {
+    const instantFixture = '2026-05-01T23:30:00.000Z';
+    const expectedLocalDate = new Intl.DateTimeFormat('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(instantFixture));
+
+    testMocks.getInvoice.mockResolvedValue(
+      createInvoice({
+        createdAt: instantFixture,
+        timeEntries: [createTimeEntrySummary({ startedAt: instantFixture })],
+        updatedAt: instantFixture,
+      }),
+    );
+
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="invoice-summary"]').text()).toContain(
+      expectedLocalDate,
+    );
+    expect(
+      wrapper.find('[data-testid="invoice-time-entries-table"]').text(),
+    ).toContain(expectedLocalDate);
   });
 
   it('renders workspace-wide fallbacks for projectless invoices', async () => {

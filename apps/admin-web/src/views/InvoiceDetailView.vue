@@ -7,6 +7,7 @@ import {
   SectionHeader,
   SurfaceCard,
 } from '@gitiempo/web-shared';
+import { ApiError } from '@gitiempo/web-shared/http';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Skeleton from 'primevue/skeleton';
@@ -20,6 +21,7 @@ import { useInvoiceDelete } from '@/composables/invoices/useInvoiceDelete';
 import { useInvoiceDetail } from '@/composables/invoices/useInvoiceDetail';
 import { useInvoiceUpdate } from '@/composables/invoices/useInvoiceUpdate';
 import { formatCurrency } from '@/lib/format-currency';
+import { formatDuration } from '@/lib/format-duration';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { routeNames } from '@/constants/routes';
 import { useAuthStore } from '@/stores/auth';
@@ -101,12 +103,8 @@ function isInvoiceConflictCode(code: string): code is InvoiceConflictCode {
 }
 
 function getInvoiceConflictCode(error: unknown): InvoiceConflictCode | null {
-  if (error && typeof error === 'object' && 'code' in error) {
-    const code = (error as { code?: unknown }).code;
-
-    if (typeof code === 'string' && isInvoiceConflictCode(code)) {
-      return code;
-    }
+  if (error instanceof ApiError && typeof error.code === 'string') {
+    return isInvoiceConflictCode(error.code) ? error.code : null;
   }
 
   return null;
@@ -117,6 +115,11 @@ function notifyInvoiceActionError(
   actionError: unknown,
   action: string,
 ): void {
+  // A 404 already renders the not-found view; a toast would duplicate the feedback.
+  if (actionError instanceof ApiError && actionError.status === 404) {
+    return;
+  }
+
   const code = getInvoiceConflictCode(actionError);
 
   if (code) {
@@ -181,20 +184,25 @@ function goBack(): void {
   router.push({ name: routeNames.invoices });
 }
 
-function formatDuration(durationSeconds: number): string {
-  const hours = Math.floor(durationSeconds / 3600);
-  const minutes = Math.floor((durationSeconds % 3600) / 60);
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+  year: 'numeric',
+});
 
-  return `${hours}h ${minutes}m`;
+const instantFormatter = new Intl.DateTimeFormat('en-US', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+
+function formatDate(dateKey: string): string {
+  return dateFormatter.format(new Date(`${dateKey}T00:00:00Z`));
 }
 
-function formatDate(dateInput: string): string {
-  return new Date(dateInput).toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
-    year: 'numeric',
-  });
+function formatInstant(dateInput: string): string {
+  return instantFormatter.format(new Date(dateInput));
 }
 </script>
 
@@ -342,7 +350,7 @@ function formatDate(dateInput: string): string {
           <div class="flex flex-col gap-1">
             <span class="text-text-muted text-sm">Created</span>
             <p class="font-medium">
-              {{ formatDate(invoice.createdAt) }}
+              {{ formatInstant(invoice.createdAt) }}
             </p>
           </div>
           <div class="flex flex-col gap-1">
@@ -354,7 +362,7 @@ function formatDate(dateInput: string): string {
           <div class="flex flex-col gap-1">
             <span class="text-text-muted text-sm">Last updated</span>
             <p class="font-medium">
-              {{ formatDate(invoice.updatedAt) }}
+              {{ formatInstant(invoice.updatedAt) }}
             </p>
           </div>
         </div>
@@ -450,7 +458,7 @@ function formatDate(dateInput: string): string {
                 class="border-divider border-b last:border-b-0"
               >
                 <td class="px-3 py-2">
-                  {{ formatDate(entry.startedAt) }}
+                  {{ formatInstant(entry.startedAt) }}
                 </td>
                 <td class="px-3 py-2">
                   {{ entry.userName ?? 'Unknown' }}
