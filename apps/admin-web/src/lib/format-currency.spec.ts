@@ -22,6 +22,10 @@ describe('formatCurrency', () => {
     expect(formatted).toBe('$9,999,999.99');
   });
 
+  it('formats zero-decimal currencies without fraction digits', () => {
+    expect(formatCurrency(12345, 'JPY')).toBe('¥12,345');
+  });
+
   it('does not throw for valid ISO 4217 currency codes', () => {
     const currencyCodes = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'SEK', 'PLN'];
 
