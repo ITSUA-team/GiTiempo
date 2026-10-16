@@ -118,15 +118,17 @@ describe('createAdminInvoicesClient', () => {
 
 		const result = await client.listInvoices();
 
-		expect(fetchFn).toHaveBeenCalledWith(
-			'https://api.example.test/invoices?page=1&limit=20',
-			expect.objectContaining({
-				headers: expect.objectContaining({
-					Authorization: 'Bearer access-token',
-				}),
-				method: 'GET',
+		const [url, requestOptions] = fetchFn.mock.calls.at(-1) ?? [];
+		const parsedUrl = new URL(url as string);
+		expect(parsedUrl.pathname).toBe('/invoices');
+		expect(parsedUrl.searchParams.get('page')).toBe('1');
+		expect(parsedUrl.searchParams.get('limit')).toBe('20');
+		expect(requestOptions).toMatchObject({
+			headers: expect.objectContaining({
+				Authorization: 'Bearer access-token',
 			}),
-		);
+			method: 'GET',
+		});
 		expect(result.meta).toEqual({ limit: 20, page: 1, total: 23, totalPages: 2 });
 		expect(result.items[0]?.title).toBe('Invoice 2026-04');
 	});
@@ -142,12 +144,19 @@ describe('createAdminInvoicesClient', () => {
 			status: 'draft',
 		});
 
-		expect(fetchFn).toHaveBeenCalledWith(
-			'https://api.example.test/invoices?page=1&limit=20&dateFrom=2026-04-01&dateTo=2026-04-30&projectId=22222222-2222-4222-8222-222222222222&status=draft&search=orion',
-			expect.objectContaining({
-				method: 'GET',
-			}),
-		);
+		const [url, requestOptions] = fetchFn.mock.calls.at(-1) ?? [];
+		const parsedUrl = new URL(url as string);
+		expect(parsedUrl.pathname).toBe('/invoices');
+		expect(parsedUrl.searchParams.get('page')).toBe('1');
+		expect(parsedUrl.searchParams.get('limit')).toBe('20');
+		expect(parsedUrl.searchParams.get('dateFrom')).toBe('2026-04-01');
+		expect(parsedUrl.searchParams.get('dateTo')).toBe('2026-04-30');
+		expect(parsedUrl.searchParams.get('projectId')).toBe(projectId);
+		expect(parsedUrl.searchParams.get('status')).toBe('draft');
+		expect(parsedUrl.searchParams.get('search')).toBe('orion');
+		expect(requestOptions).toMatchObject({
+			method: 'GET',
+		});
 	});
 
 	it('serializes eligible entry previews with project scope and date bounds', async () => {
@@ -166,20 +175,25 @@ describe('createAdminInvoicesClient', () => {
 			dateTo: '2026-04-30',
 		});
 
-		expect(fetchFn).toHaveBeenNthCalledWith(
-			1,
-			'https://api.example.test/invoices/eligible-entries?projectId=22222222-2222-4222-8222-222222222222&dateFrom=2026-04-01&dateTo=2026-04-30',
-			expect.objectContaining({
-				method: 'GET',
-			}),
-		);
-		expect(fetchFn).toHaveBeenNthCalledWith(
-			2,
-			'https://api.example.test/invoices/eligible-entries?dateFrom=2026-04-01&dateTo=2026-04-30',
-			expect.objectContaining({
-				method: 'GET',
-			}),
-		);
+		const [firstUrl, firstRequestOptions] = fetchFn.mock.calls[0] ?? [];
+		const firstParsedUrl = new URL(firstUrl as string);
+		expect(firstParsedUrl.pathname).toBe('/invoices/eligible-entries');
+		expect(firstParsedUrl.searchParams.get('projectId')).toBe(projectId);
+		expect(firstParsedUrl.searchParams.get('dateFrom')).toBe('2026-04-01');
+		expect(firstParsedUrl.searchParams.get('dateTo')).toBe('2026-04-30');
+		expect(firstRequestOptions).toMatchObject({
+			method: 'GET',
+		});
+
+		const [secondUrl, secondRequestOptions] = fetchFn.mock.calls[1] ?? [];
+		const secondParsedUrl = new URL(secondUrl as string);
+		expect(secondParsedUrl.pathname).toBe('/invoices/eligible-entries');
+		expect(secondParsedUrl.searchParams.get('projectId')).toBeNull();
+		expect(secondParsedUrl.searchParams.get('dateFrom')).toBe('2026-04-01');
+		expect(secondParsedUrl.searchParams.get('dateTo')).toBe('2026-04-30');
+		expect(secondRequestOptions).toMatchObject({
+			method: 'GET',
+		});
 		expect(result.count).toBe(1);
 		expect(result.totalHours).toBe(12.5);
 		expect(result.entries[0]?.durationSeconds).toBe(7200);
@@ -203,16 +217,16 @@ describe('createAdminInvoicesClient', () => {
 			title: 'Invoice 2026-04',
 		});
 
-		expect(fetchFn).toHaveBeenCalledWith(
-			'https://api.example.test/invoices',
-			expect.objectContaining({
-				headers: expect.objectContaining({
-					Authorization: 'Bearer access-token',
-					'Content-Type': 'application/json',
-				}),
-				method: 'POST',
+		const [url, requestOptions] = fetchFn.mock.calls.at(-1) ?? [];
+		const parsedUrl = new URL(url as string);
+		expect(parsedUrl.pathname).toBe('/invoices');
+		expect(requestOptions).toMatchObject({
+			headers: expect.objectContaining({
+				Authorization: 'Bearer access-token',
+				'Content-Type': 'application/json',
 			}),
-		);
+			method: 'POST',
+		});
 		expect(getRequestBody(fetchFn)).toEqual({
 			currency: 'EUR',
 			dateFrom: '2026-04-01',
@@ -237,16 +251,16 @@ describe('createAdminInvoicesClient', () => {
 			status: 'sent',
 		});
 
-		expect(fetchFn).toHaveBeenCalledWith(
-			`https://api.example.test/invoices/${invoiceId}`,
-			expect.objectContaining({
-				headers: expect.objectContaining({
-					Authorization: 'Bearer access-token',
-					'Content-Type': 'application/json',
-				}),
-				method: 'PATCH',
+		const [url, requestOptions] = fetchFn.mock.calls.at(-1) ?? [];
+		const parsedUrl = new URL(url as string);
+		expect(parsedUrl.pathname).toBe(`/invoices/${invoiceId}`);
+		expect(requestOptions).toMatchObject({
+			headers: expect.objectContaining({
+				Authorization: 'Bearer access-token',
+				'Content-Type': 'application/json',
 			}),
-		);
+			method: 'PATCH',
+		});
 		expect(getRequestBody(fetchFn)).toEqual({
 			notes: null,
 			status: 'sent',
@@ -259,15 +273,15 @@ describe('createAdminInvoicesClient', () => {
 
 		const result = await client.getInvoice(invoiceId);
 
-		expect(fetchFn).toHaveBeenCalledWith(
-			`https://api.example.test/invoices/${invoiceId}`,
-			expect.objectContaining({
-				headers: expect.objectContaining({
-					Authorization: 'Bearer access-token',
-				}),
-				method: 'GET',
+		const [url, requestOptions] = fetchFn.mock.calls.at(-1) ?? [];
+		const parsedUrl = new URL(url as string);
+		expect(parsedUrl.pathname).toBe(`/invoices/${invoiceId}`);
+		expect(requestOptions).toMatchObject({
+			headers: expect.objectContaining({
+				Authorization: 'Bearer access-token',
 			}),
-		);
+			method: 'GET',
+		});
 		expect(result.project?.name).toBe('Project Orion');
 		expect(result.timeEntryCount).toBe(1);
 		expect(result.timeEntries[0]?.userName).toBe('Alex Admin');
@@ -278,15 +292,15 @@ describe('createAdminInvoicesClient', () => {
 
 		const result = await client.getInvoiceStats();
 
-		expect(fetchFn).toHaveBeenCalledWith(
-			'https://api.example.test/invoices/stats',
-			expect.objectContaining({
-				headers: expect.objectContaining({
-					Authorization: 'Bearer access-token',
-				}),
-				method: 'GET',
+		const [url, requestOptions] = fetchFn.mock.calls.at(-1) ?? [];
+		const parsedUrl = new URL(url as string);
+		expect(parsedUrl.pathname).toBe('/invoices/stats');
+		expect(requestOptions).toMatchObject({
+			headers: expect.objectContaining({
+				Authorization: 'Bearer access-token',
 			}),
-		);
+			method: 'GET',
+		});
 		expect(result.byStatus).toEqual({ draft: 2, paid: 1, sent: 3 });
 		expect(result.thisMonth).toEqual({
 			currency: 'USD',
@@ -301,23 +315,30 @@ describe('createAdminInvoicesClient', () => {
 
 		await client.deleteInvoice(invoiceId);
 
-		expect(fetchFn).toHaveBeenCalledWith(
-			`https://api.example.test/invoices/${invoiceId}`,
-			expect.objectContaining({
-				headers: {
-					Authorization: 'Bearer access-token',
-				},
-				method: 'DELETE',
-			}),
-		);
-		const [, requestOptions] = fetchFn.mock.calls[0] ?? [];
+		const [url, requestOptions] = fetchFn.mock.calls.at(-1) ?? [];
+		const parsedUrl = new URL(url as string);
+		expect(parsedUrl.pathname).toBe(`/invoices/${invoiceId}`);
+		expect(requestOptions).toMatchObject({
+			headers: { Authorization: 'Bearer access-token' },
+			method: 'DELETE',
+		});
 		expect(requestOptions?.body).toBeUndefined();
 	});
 
 	it('rejects empty invoice updates before sending requests', async () => {
-		expect(() => {
-			void client.updateInvoice(invoiceId, {});
-		}).toThrow('At least one field must be provided');
+		await expect(async () => {
+			await client.updateInvoice(invoiceId, {});
+		}).rejects.toThrow('At least one field must be provided');
+		expect(fetchFn).not.toHaveBeenCalled();
+	});
+
+	it('rejects inverted date ranges before sending requests', async () => {
+		await expect(async () => {
+			await client.listInvoices({
+				dateFrom: '2026-04-30',
+				dateTo: '2026-04-01',
+			});
+		}).rejects.toThrow();
 		expect(fetchFn).not.toHaveBeenCalled();
 	});
 
@@ -326,25 +347,33 @@ describe('createAdminInvoicesClient', () => {
 			jsonResponse({ message: 'Admin or PM role required' }, 403),
 		);
 
-		await expect(client.listInvoices()).rejects.toThrow(
-			'Admin or PM role required',
-		);
+		await expect(client.listInvoices()).rejects.toMatchObject({
+			message: 'Admin or PM role required',
+			status: 403,
+			code: null,
+			body: { message: 'Admin or PM role required' },
+		});
 	});
 
 	it('surfaces API errors from invoice deletes', async () => {
 		fetchFn.mockResolvedValue(
-			jsonResponse({ message: 'Invoice not found' }, 404),
+			jsonResponse(
+				{ code: 'invoice_not_found', message: 'Invoice not found' },
+				404,
+			),
 		);
 
-		await expect(client.deleteInvoice(invoiceId)).rejects.toThrow(
-			'Invoice not found',
-		);
+		await expect(client.deleteInvoice(invoiceId)).rejects.toMatchObject({
+			code: 'invoice_not_found',
+			message: 'Invoice not found',
+			status: 404,
+		});
 
-		expect(fetchFn).toHaveBeenCalledWith(
-			`https://api.example.test/invoices/${invoiceId}`,
-			expect.objectContaining({
-				method: 'DELETE',
-			}),
-		);
+		const [url, requestOptions] = fetchFn.mock.calls.at(-1) ?? [];
+		const parsedUrl = new URL(url as string);
+		expect(parsedUrl.pathname).toBe(`/invoices/${invoiceId}`);
+		expect(requestOptions).toMatchObject({
+			method: 'DELETE',
+		});
 	});
 });
