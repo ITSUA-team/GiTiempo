@@ -132,7 +132,7 @@ function createInvoice(
     title: 'April 2026 — Backend',
     totalAmount: 1000,
     totalHours: 12.5,
-    updatedAt: '2026-05-01T10:00:00.000Z',
+    updatedAt: '2026-05-10T12:00:00.000Z',
     workspaceId,
     ...overrides,
   };
@@ -288,6 +288,7 @@ describe('InvoiceDetailView', () => {
     expect(summary.text()).toContain('12.5h');
     expect(summary.text()).toContain('$1,000.00');
     expect(summary.text()).toContain('May 1, 2026');
+    expect(summary.text()).toContain('May 10, 2026');
     expect(summary.text()).toContain('Alex Admin');
   });
 
@@ -388,6 +389,21 @@ describe('InvoiceDetailView', () => {
 
     expect(wrapper.find('[data-testid="invoice-mark-as-sent"]').exists()).toBe(
       true,
+    );
+    expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(false);
+  });
+
+  it('shows only Mark as paid for project managers on sent invoices', async () => {
+    testMocks.getInvoice.mockResolvedValue(createInvoice({ status: 'sent' }));
+
+    const wrapper = mountInvoiceDetailView('pm');
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="invoice-mark-as-paid"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="invoice-mark-as-sent"]').exists()).toBe(
+      false,
     );
     expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(false);
   });
@@ -533,6 +549,12 @@ describe('InvoiceDetailView', () => {
   });
 
   it('reports update conflicts, reloads the detail, and keeps the invoice rendered', async () => {
+    const reloadedInvoice = createInvoice({
+      title: 'April 2026 — Backend (revised)',
+    });
+    testMocks.getInvoice
+      .mockResolvedValueOnce(createInvoice())
+      .mockResolvedValueOnce(reloadedInvoice);
     testMocks.updateInvoice.mockRejectedValue(
       new ApiError(
         'Invoice was modified after it was loaded. Reload to see the latest version.',
@@ -557,6 +579,11 @@ describe('InvoiceDetailView', () => {
     expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
     expect(wrapper.find('[data-testid="invoice-detail-header"]').exists()).toBe(
       true,
+    );
+
+    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
+    expect(titleInput.attributes('value') ?? titleInput.element.value).toBe(
+      reloadedInvoice.title,
     );
   });
 

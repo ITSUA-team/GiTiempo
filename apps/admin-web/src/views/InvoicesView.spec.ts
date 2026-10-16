@@ -58,18 +58,6 @@ vi.mock('@gitiempo/web-shared', async (importOriginal) => {
   };
 });
 
-vi.mock('@/services/admin-invoices-client', () => ({
-  adminInvoicesClient: {
-    createInvoice: testMocks.createInvoice,
-    deleteInvoice: vi.fn(),
-    getInvoice: vi.fn(),
-    getInvoiceStats: vi.fn(),
-    listEligibleEntries: vi.fn(),
-    listInvoices: vi.fn(),
-    updateInvoice: vi.fn(),
-  },
-}));
-
 vi.mock('@/services/admin-projects-client', () => ({
   adminProjectsClient: {
     listProjects: vi.fn().mockResolvedValue([
@@ -247,16 +235,17 @@ function createLoadedInvoicesData(
 }
 
 function setMobileViewport(value: boolean): void {
-  expect(mobileViewportMock.ref).not.toBeNull();
-  mobileViewportMock.ref!.value = value;
+  if (!mobileViewportMock.ref) throw new Error('ref not set');
+
+  mobileViewportMock.ref.value = value;
 }
 
 function getCapturedQueryValue(): Partial<InvoiceListQuery> {
   const query = lastInvoicesDataOptions?.query;
 
-  expect(query).toBeDefined();
+  if (!query) throw new Error('query not defined');
 
-  return toValue(query!);
+  return toValue(query);
 }
 
 const ManagementPageSkeletonStub = {
@@ -304,6 +293,30 @@ const InvoicesTableStub = {
       <button
         data-testid="invoices-search-intent"
         @click="$emit('update:filters', { search: 'orion' })"
+      />
+      <button
+        data-testid="invoices-project-filter-intent"
+        @click="$emit('update:filters', { projectId: 'project-1' })"
+      />
+      <button
+        data-testid="invoices-project-clear-intent"
+        @click="$emit('update:filters', { projectId: null })"
+      />
+      <button
+        data-testid="invoices-status-filter-intent"
+        @click="$emit('update:filters', { status: 'paid' })"
+      />
+      <button
+        data-testid="invoices-status-clear-intent"
+        @click="$emit('update:filters', { status: null })"
+      />
+      <button
+        data-testid="invoices-date-filter-intent"
+        @click="$emit('update:filters', { dateFrom: '2026-04-01', dateTo: '2026-04-30' })"
+      />
+      <button
+        data-testid="invoices-date-clear-intent"
+        @click="$emit('update:filters', { dateFrom: null, dateTo: null })"
       />
       <button
         data-testid="invoices-page-2-intent"
@@ -501,6 +514,14 @@ describe('InvoicesView', () => {
     await errorCard.get('button').trigger('click');
 
     expect(testMocks.refetch).toHaveBeenCalledTimes(1);
+
+    stubInvoicesData(createLoadedInvoicesData());
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="invoices-load-error"]').exists(),
+    ).toBe(false);
+    expect(wrapper.find('[data-testid="invoices-table"]').exists()).toBe(true);
   });
 
   it('shows the empty state description when no invoices are returned', async () => {
@@ -566,19 +587,23 @@ describe('InvoicesView', () => {
 
     expect(statCards).toHaveLength(3);
 
-    expect(statCards[0]!.props('label')).toBe('Open Invoices');
-    expect(statCards[0]!.props('value')).toBe('3');
-    expect(statCards[0]!.props('description')).toBe('2 ready to send');
+    const openCard = statCards[0];
+    const billedCard = statCards[1];
+    const draftsCard = statCards[2];
 
-    expect(statCards[1]!.props('label')).toBe('Billed This Month');
-    expect(statCards[1]!.props('value')).toBe('$2,500.00');
-    expect(statCards[1]!.props('description')).toBe(
+    expect(openCard.props('label')).toBe('Open Invoices');
+    expect(openCard.props('value')).toBe('3');
+    expect(openCard.props('description')).toBe('2 ready to send');
+
+    expect(billedCard.props('label')).toBe('Billed This Month');
+    expect(billedCard.props('value')).toBe('$2,500.00');
+    expect(billedCard.props('description')).toBe(
       '2 invoices · 2 projects',
     );
 
-    expect(statCards[2]!.props('label')).toBe('Drafts');
-    expect(statCards[2]!.props('value')).toBe('2');
-    expect(statCards[2]!.props('description')).toBe('Ready for review');
+    expect(draftsCard.props('label')).toBe('Drafts');
+    expect(draftsCard.props('value')).toBe('2');
+    expect(draftsCard.props('description')).toBe('Ready for review');
   });
 
   it('resets pagination and forwards filter updates when filters change', async () => {
@@ -605,6 +630,101 @@ describe('InvoicesView', () => {
     });
     expect(getCapturedQueryValue().status).toBeUndefined();
     expect(getCapturedQueryValue().dateFrom).toBeUndefined();
+  });
+
+  it('resets pagination and forwards the project filter to the data query, then undefined on clear', async () => {
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+
+    const table = wrapper.findComponent({ name: 'InvoicesTable' });
+
+    await wrapper.get('[data-testid="invoices-page-2-intent"]').trigger('click');
+    expect(table.props('page')).toBe(2);
+
+    await wrapper
+      .get('[data-testid="invoices-project-filter-intent"]')
+      .trigger('click');
+
+    expect(table.props('page')).toBe(1);
+    expect(table.props('filters')).toMatchObject({ projectId: 'project-1' });
+    expect(getCapturedQueryValue()).toMatchObject({
+      page: 1,
+      projectId: 'project-1',
+    });
+
+    await wrapper
+      .get('[data-testid="invoices-project-clear-intent"]')
+      .trigger('click');
+
+    expect(table.props('page')).toBe(1);
+    expect(table.props('filters')).toMatchObject({ projectId: null });
+    expect(getCapturedQueryValue().projectId).toBeUndefined();
+  });
+
+  it('resets pagination and forwards the status filter to the data query, then undefined on clear', async () => {
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+
+    const table = wrapper.findComponent({ name: 'InvoicesTable' });
+
+    await wrapper.get('[data-testid="invoices-page-2-intent"]').trigger('click');
+    expect(table.props('page')).toBe(2);
+
+    await wrapper
+      .get('[data-testid="invoices-status-filter-intent"]')
+      .trigger('click');
+
+    expect(table.props('page')).toBe(1);
+    expect(table.props('filters')).toMatchObject({ status: 'paid' });
+    expect(getCapturedQueryValue()).toMatchObject({
+      page: 1,
+      status: 'paid',
+    });
+
+    await wrapper
+      .get('[data-testid="invoices-status-clear-intent"]')
+      .trigger('click');
+
+    expect(table.props('page')).toBe(1);
+    expect(table.props('filters')).toMatchObject({ status: null });
+    expect(getCapturedQueryValue().status).toBeUndefined();
+  });
+
+  it('resets pagination and forwards the date range filter to the data query, then undefined on clear', async () => {
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+
+    const table = wrapper.findComponent({ name: 'InvoicesTable' });
+
+    await wrapper.get('[data-testid="invoices-page-2-intent"]').trigger('click');
+    expect(table.props('page')).toBe(2);
+
+    await wrapper
+      .get('[data-testid="invoices-date-filter-intent"]')
+      .trigger('click');
+
+    expect(table.props('page')).toBe(1);
+    expect(table.props('filters')).toMatchObject({
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+    });
+    expect(getCapturedQueryValue()).toMatchObject({
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      page: 1,
+    });
+
+    await wrapper
+      .get('[data-testid="invoices-date-clear-intent"]')
+      .trigger('click');
+
+    expect(table.props('page')).toBe(1);
+    expect(table.props('filters')).toMatchObject({
+      dateFrom: null,
+      dateTo: null,
+    });
+    expect(getCapturedQueryValue().dateFrom).toBeUndefined();
+    expect(getCapturedQueryValue().dateTo).toBeUndefined();
   });
 
   it('navigates to the invoice detail route on row click', async () => {
