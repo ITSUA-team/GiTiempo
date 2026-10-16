@@ -406,6 +406,23 @@ describe('InvoiceCreateDialog', () => {
     expect(bodyText()).toContain('Select a project.');
   });
 
+  it('shows a validation error for invalid currency code', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({ isAdmin: true, createInvoice });
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+    await wrapper.getComponent('#invoice-create-currency').setValue('US');
+
+    await submitInvoice(wrapper);
+
+    expect(bodyText()).toContain('Currency must be a 3-letter code');
+    expect(createInvoice).not.toHaveBeenCalled();
+  });
+
   it('creates a project invoice when a PM selects a project', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const createInvoice = createCreateInvoiceSpy();

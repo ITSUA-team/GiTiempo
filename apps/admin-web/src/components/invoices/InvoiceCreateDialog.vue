@@ -172,10 +172,21 @@ const projectError = computed(
     validationTriggered.value && !props.isAdmin && !selectedProjectId.value,
 );
 
+const hasValidCurrency = computed(() => {
+  const entered = currency.value.trim();
+  if (!entered) return true; // empty is valid — uses workspace default
+  return /^[A-Za-z]{3}$/.test(entered);
+});
+
+const currencyError = computed(
+  () => validationTriggered.value && !hasValidCurrency.value,
+);
+
 const canSubmit = computed(
   () =>
     hasTitle.value &&
     hasDateRange.value &&
+    hasValidCurrency.value &&
     (props.isAdmin || Boolean(selectedProjectId.value)),
 );
 
@@ -382,9 +393,18 @@ async function handleCreate(): Promise<void> {
             :model-value="currency"
             maxlength="3"
             placeholder="Auto"
+            :invalid="currencyError"
             class="h-[38px] w-full"
             @update:model-value="handleCurrencyUpdate"
           />
+          <Message
+            v-if="currencyError"
+            severity="error"
+            size="small"
+            variant="simple"
+          >
+            Currency must be a 3-letter code (e.g., USD).
+          </Message>
         </div>
         <div class="flex w-[150px] shrink-0 flex-col gap-1">
           <label
