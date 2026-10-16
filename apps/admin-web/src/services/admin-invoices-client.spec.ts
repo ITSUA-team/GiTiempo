@@ -328,7 +328,24 @@ describe('createAdminInvoicesClient', () => {
 	it('rejects empty invoice updates before sending requests', async () => {
 		await expect(async () => {
 			await client.updateInvoice(invoiceId, {});
-		}).rejects.toThrow('At least one field must be provided');
+		}).rejects.toThrow(
+			'Invalid invoice update. Please check your input and try again.',
+		);
+		expect(fetchFn).not.toHaveBeenCalled();
+	});
+
+	it('converts ZodError to a user-friendly message for invalid create input', async () => {
+		await expect(async () => {
+			await client.createInvoice({
+				// 'US' is too short: the schema requires a 3-letter currency code.
+				currency: 'US',
+				dateFrom: '2026-01-01',
+				dateTo: '2026-01-31',
+				title: 'Test',
+			} as any);
+		}).rejects.toThrow(
+			'Invalid invoice data. Please check your input and try again.',
+		);
 		expect(fetchFn).not.toHaveBeenCalled();
 	});
 

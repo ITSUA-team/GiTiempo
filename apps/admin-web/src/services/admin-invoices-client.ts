@@ -20,6 +20,18 @@ import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
 import { getAuthenticatedAppApiClient } from '@/services/api-client';
 
+function parseWithFriendlyError<T>(parse: () => T, context: string): T {
+	try {
+		return parse();
+	} catch (error) {
+		if (error instanceof Error && error.name === 'ZodError') {
+			throw new Error(
+				`Invalid ${context}. Please check your input and try again.`,
+			);
+		}
+		throw error;
+	}
+}
 
 interface AdminInvoicesClientOptions {
 	apiClient: Pick<AuthenticatedApiClient, 'requestJson' | 'requestNoContent'>;
@@ -50,7 +62,10 @@ export function createAdminInvoicesClient({
 	return {
 		createInvoice(input) {
 			return apiClient.requestJson({
-				body: createInvoiceSchema.parse(input),
+				body: parseWithFriendlyError(
+					() => createInvoiceSchema.parse(input),
+					'invoice data',
+				),
 				method: 'POST',
 				path: '/invoices',
 				responseSchema: invoiceResponseSchema,
@@ -79,7 +94,10 @@ export function createAdminInvoicesClient({
 		},
 
 		listEligibleEntries(query) {
-			const parsed = eligibleEntriesQuerySchema.parse(query);
+			const parsed = parseWithFriendlyError(
+				() => eligibleEntriesQuerySchema.parse(query),
+				'preview parameters',
+			);
 			const searchParams = new URLSearchParams();
 			if (parsed.projectId) {
 				searchParams.set('projectId', parsed.projectId);
@@ -95,7 +113,10 @@ export function createAdminInvoicesClient({
 		},
 
 		listInvoices(query) {
-			const parsed = invoiceListQuerySchema.parse(query ?? {});
+			const parsed = parseWithFriendlyError(
+				() => invoiceListQuerySchema.parse(query ?? {}),
+				'filter parameters',
+			);
 			const searchParams = new URLSearchParams();
 			searchParams.set('page', String(parsed.page));
 			searchParams.set('limit', String(parsed.limit));
@@ -124,7 +145,10 @@ export function createAdminInvoicesClient({
 
 		updateInvoice(invoiceId, input) {
 			return apiClient.requestJson({
-				body: updateInvoiceSchema.parse(input),
+				body: parseWithFriendlyError(
+					() => updateInvoiceSchema.parse(input),
+					'invoice update',
+				),
 				method: 'PATCH',
 				path: `/invoices/${invoiceId}`,
 				responseSchema: invoiceResponseSchema,
