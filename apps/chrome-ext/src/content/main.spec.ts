@@ -43,6 +43,7 @@ function currentTimer(): RuntimeSnapshot["currentTimer"] {
     durationSeconds: null,
     endedAt: null,
     id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    invoiceId: null,
     isBillable: true,
     project: {
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
@@ -191,6 +192,17 @@ function createRuntimeClient(overrides?: {
           }
         : snapshot;
     }),
+    getWorkspaceMemberships: vi.fn(async () => ({
+      items: [],
+      ok: true,
+      snapshot: overrides?.snapshot ?? {
+        authenticated: true,
+        workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
+        currentTimer: null,
+        errorMessage: null,
+        user: { displayName: "Alexey", email: "alexey@example.com" },
+      },
+    })),
     onSnapshotUpdated: vi.fn(() => () => undefined),
     openExtension: vi.fn(async () => undefined),
     startTimer:
@@ -205,6 +217,16 @@ function createRuntimeClient(overrides?: {
         ok: true,
         snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
       })),
+    switchWorkspace: vi.fn(async () => ({
+      ok: true,
+      snapshot: overrides?.snapshot ?? {
+        authenticated: true,
+        workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
+        currentTimer: null,
+        errorMessage: null,
+        user: { displayName: "Alexey", email: "alexey@example.com" },
+      },
+    })),
   };
 }
 
@@ -330,6 +352,45 @@ describe("injected issue control", () => {
     expect(startTimer).toHaveBeenCalledWith(supportedContext(), "workspace-alpha", "alexey@example.com");
   });
 
+  it("disables and ignores Start while a workspace switch is in progress", async () => {
+    const startTimer = vi.fn(async () => ({
+      ok: true,
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
+    }));
+    const mounted = mountInjectedIssueControl(
+      document,
+      supportedContext(),
+      createRuntimeClient({
+        snapshot: {
+          authenticated: true,
+          workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
+          currentTimer: null,
+          errorMessage: null,
+          trackingCapability: {
+            accessScope: "project",
+            canStartTracking: true,
+            githubRepo: "octo/repo",
+            issueNumber: 184,
+            reason: null,
+          },
+          user: { displayName: "Alexey", email: "alexey@example.com" },
+          workspaceSwitching: true,
+        },
+        startTimer,
+      }),
+    )!;
+
+    await mounted.load();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+    const startButton = root.querySelector<HTMLButtonElement>('[data-action="start-timer"]')!;
+
+    expect(startButton.disabled).toBe(true);
+    startButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+    expect(startTimer).not.toHaveBeenCalled();
+  });
+
   it("keeps the matching Stop action when issue capability is unavailable", async () => {
     const context = supportedContext();
     const mounted = mountInjectedIssueControl(
@@ -402,6 +463,38 @@ describe("injected issue control", () => {
     expect(root.textContent).toContain("Stop Timer");
   });
 
+  it("disables and ignores Stop while a workspace switch is in progress", async () => {
+    const stopTimer = vi.fn(async () => ({
+      ok: true,
+      snapshot: { authenticated: true, workspace: { id: "workspace-alpha", name: "Workspace Alpha" }, currentTimer: null, errorMessage: null, user: { displayName: "Alexey", email: "alexey@example.com" } },
+    }));
+    const mounted = mountInjectedIssueControl(
+      document,
+      supportedContext(),
+      createRuntimeClient({
+        snapshot: {
+          authenticated: true,
+          workspace: { id: "workspace-alpha", name: "Workspace Alpha" },
+          currentTimer: currentIssueTimer(),
+          errorMessage: null,
+          user: { displayName: "Alexey", email: "alexey@example.com" },
+          workspaceSwitching: true,
+        },
+        stopTimer,
+      }),
+    )!;
+
+    await mounted.load();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+    const stopButton = root.querySelector<HTMLButtonElement>('[data-action="stop-timer"]')!;
+
+    expect(stopButton.disabled).toBe(true);
+    stopButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+    expect(stopTimer).not.toHaveBeenCalled();
+  });
+
   it("renders a running-elsewhere state without a stop action", async () => {
     const mounted = mountInjectedIssueControl(
       document,
@@ -424,6 +517,31 @@ describe("injected issue control", () => {
     expect(root.textContent).not.toContain("Stop Timer");
     expect(root.textContent).toContain("Open extension");
     expect(root.textContent).toContain("Project Orion");
+  });
+
+  it("distinguishes the running timer workspace from the selected tracking workspace", async () => {
+    const mounted = mountInjectedIssueControl(
+      document,
+      supportedContext(),
+      createRuntimeClient({
+        snapshot: {
+          authenticated: true,
+          workspace: { id: "workspace-beta", name: "Workspace Beta" },
+          currentTimer: otherIssueTimer(),
+          errorMessage: null,
+          user: { displayName: "Alexey", email: "alexey@example.com" },
+        },
+      }),
+    )!;
+
+    await mounted.load();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+
+    expect(root.querySelector('[data-testid="workspace-context"]')?.textContent)
+      .toContain("Timer workspace: Workspace Alpha");
+    expect(root.querySelector('[data-testid="workspace-context"]')?.textContent)
+      .toContain("Tracking workspace: Workspace Beta");
   });
 
   it("keeps an authoritative timer visible when workspace readiness fails", async () => {

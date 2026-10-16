@@ -1,0 +1,18 @@
+{
+  "case": "M04 menu focus/selection over real timer ticks",
+  "pass": true,
+  "focusInitiation": "DOM focus; this subcase does not establish Tab navigation",
+  "before": {
+    "focus": true,
+    "selected": "998d3597-6163-4135-9dc2-bb5afc20f190",
+    "body": "GT\n\nGiTiempo\n\nAT\n\nAlexey Tsukanov\n\nalexey@example.com\n\nTimer keeps running after sign out\n\nWorkspace\nOpen profile\nSign out\n\nAcme workspace\n\nRunning timer\n\n00:00:00\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo / ITSUA-team/GiTiempo\n\nStop Timer"
+  },
+  "after": {
+    "focus": true,
+    "sameNode": true,
+    "selected": "998d3597-6163-4135-9dc2-bb5afc20f190",
+    "menu": true,
+    "body": "GT\n\nGiTiempo\n\nAT\n\nAlexey Tsukanov\n\nalexey@example.com\n\nTimer keeps running after sign out\n\nWorkspace\nOpen profile\nSign out\n\nAcme workspace\n\nRunning timer\n\n00:00:02\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo / ITSUA-team/GiTiempo\n\nStop Timer"
+  },
+  "timerStopped": true
+}

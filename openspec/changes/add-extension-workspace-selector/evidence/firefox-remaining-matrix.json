@@ -1,0 +1,270 @@
+[
+  {
+    "case": "M08 delayed initial membership list",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nLoading workspaces…\nOpen profile\nSign out\n\nAcme workspace\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+      "authenticated": true,
+      "hasStart": true,
+      "hasStop": false,
+      "startDisabled": false,
+      "selected": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+      "selectedText": "Acme workspace",
+      "disabled": true,
+      "status": "Loading workspaces…",
+      "retry": false,
+      "profile": true,
+      "signout": true,
+      "options": [
+        "Acme workspace",
+        "QA workspace B"
+      ],
+      "focused": null,
+      "viewport": {
+        "width": 320,
+        "height": 480
+      }
+    }
+  },
+  {
+    "case": "M10 failure before API dispatch",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nGiTiempo API is temporarily unavailable. Please try again in a moment.\nOpen profile\nSign out\n\nAcme workspace\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+      "authenticated": true,
+      "hasStart": true,
+      "hasStop": false,
+      "startDisabled": false,
+      "selected": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+      "selectedText": "Acme workspace",
+      "disabled": false,
+      "status": "GiTiempo API is temporarily unavailable. Please try again in a moment.",
+      "retry": false,
+      "profile": true,
+      "signout": true,
+      "options": [
+        "Acme workspace",
+        "QA workspace B"
+      ],
+      "focused": null,
+      "viewport": {
+        "width": 320,
+        "height": 480
+      }
+    },
+    "events": [
+      {
+        "id": 28,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:05.578Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:06:05.578Z",
+        "outcome": "injected-failure"
+      }
+    ]
+  },
+  {
+    "case": "M10 recovery after pre-dispatch failure",
+    "pass": true
+  },
+  {
+    "case": "M10 lost response after API acceptance",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nSign in to continue\n\nConnect your workspace account to start tracking time.\n\nContinue with Google\nContinue with GitHub\nor\nSign in with email",
+      "authenticated": false,
+      "hasStart": false,
+      "hasStop": false,
+      "retry": false,
+      "profile": false,
+      "signout": false,
+      "options": [],
+      "focused": null,
+      "viewport": {
+        "width": 320,
+        "height": 480
+      }
+    }
+  },
+  {
+    "case": "M09 invalid current access and revoked refresh",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nSign in to continue\n\nConnect your workspace account to start tracking time.\n\nContinue with Google\nContinue with GitHub\nor\nSign in with email",
+      "authenticated": false,
+      "hasStart": false,
+      "hasStop": false,
+      "retry": false,
+      "profile": false,
+      "signout": false,
+      "options": [],
+      "focused": null,
+      "viewport": {
+        "width": 320,
+        "height": 480
+      }
+    }
+  },
+  {
+    "case": "M12 stale runtime Start rejected during switching before API dispatch",
+    "pass": true,
+    "error": "Workspace switching is in progress. Wait for the destination to refresh."
+  },
+  {
+    "case": "M12 accepted Start settles in A before switching B",
+    "pass": true,
+    "entry": {
+      "id": "0b67b078-264f-49cf-a8e6-dc94e2449c84",
+      "workspace_id": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+      "ended_at": null
+    },
+    "events": [
+      {
+        "id": 28,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:05.578Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:06:05.578Z",
+        "outcome": "injected-failure"
+      },
+      {
+        "id": 70,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.423Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.441Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 96,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.573Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.597Z",
+        "outcome": "response-body-lost"
+      },
+      {
+        "id": 129,
+        "method": "POST",
+        "path": "/time-entries/timer/start-from-github-reference",
+        "acceptedAt": "2026-10-15T13:06:08.264Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 201,
+        "completedAt": "2026-10-15T13:06:10.109Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 156,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:10.168Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:10.220Z",
+        "outcome": "forwarded"
+      }
+    ]
+  },
+  {
+    "case": "M12 accepted Stop settles before switching A",
+    "pass": true,
+    "events": [
+      {
+        "id": 28,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:05.578Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:06:05.578Z",
+        "outcome": "injected-failure"
+      },
+      {
+        "id": 70,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.423Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.441Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 96,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.573Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.597Z",
+        "outcome": "response-body-lost"
+      },
+      {
+        "id": 156,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:10.168Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:10.220Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 177,
+        "method": "POST",
+        "path": "/time-entries/timer/stop",
+        "acceptedAt": "2026-10-15T13:06:10.318Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:12.136Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 202,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:12.162Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:12.175Z",
+        "outcome": "forwarded"
+      }
+    ]
+  },
+  {
+    "case": "M12 real API denies inactive external-reference project in B",
+    "pass": true,
+    "scope": "real API canStartTracking=false for inactive project in target workspace; no outbound provider",
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nOpen profile\nSign out\n\nQA workspace B\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nTracking is not available for this issue.\n\nStart Timer\nRetry",
+      "authenticated": true,
+      "hasStart": true,
+      "hasStop": false,
+      "startDisabled": true,
+      "selected": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+      "selectedText": "QA workspace B",
+      "disabled": false,
+      "status": "",
+      "retry": false,
+      "profile": true,
+      "signout": true,
+      "options": [
+        "Acme workspace",
+        "QA workspace B"
+      ],
+      "focused": null,
+      "viewport": {
+        "width": 320,
+        "height": 480
+      }
+    }
+  }
+]

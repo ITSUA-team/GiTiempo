@@ -1,0 +1,37 @@
+[
+  {
+    "case": "M01-current-noop",
+    "pass": true
+  },
+  {
+    "case": "M09-revoked-target",
+    "text": "GiTiempo\n\nGitHub timer\n\nW\n\nworkspace-qa@example.test\n\nWorkspace\nAcme workspace\nForbidden\nOpen profile\nSign out\n\nAcme workspace\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+    "startEnabled": true
+  },
+  {
+    "case": "M08-pending",
+    "text": "GiTiempo\n\nGitHub timer\n\nW\n\nworkspace-qa@example.test\n\nWorkspace\nAcme workspace\nQA workspace B\nSwitching workspace…\nOpen profile\nSign out\n\nAcme workspace\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nUnable to confirm whether you can track this issue.\n\nStart Timer\nRetry",
+    "selectorDisabled": true,
+    "startDisabled": true,
+    "signOutEnabled": true
+  },
+  {
+    "case": "M08-recovered",
+    "text": "GiTiempo\n\nGitHub timer\n\nW\n\nworkspace-qa@example.test\n\nWorkspace\nAcme workspace\nQA workspace B\nOpen profile\nSign out\n\nQA workspace B\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+    "switchRequests": 14
+  },
+  {
+    "case": "M03-refresh",
+    "text": "GiTiempo\n\nGitHub timer\n\nW\n\nQA workspace B\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+    "refreshRequests": 4
+  },
+  {
+    "case": "M10-lost-response",
+    "text": "GiTiempo\n\nGitHub timer\n\nSign in to continue\n\nConnect your workspace account to start tracking time.\n\nContinue with Google\nContinue with GitHub\nor\nSign in with email"
+  },
+  {
+    "case": "M01-single",
+    "text": "GiTiempo\n\nGitHub timer\n\nS\n\nsingle-qa@example.test\n\nWorkspace\nAcme workspace\nOpen profile\nSign out\n\nAcme workspace\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+    "selectorDisabled": true
+  }
+]

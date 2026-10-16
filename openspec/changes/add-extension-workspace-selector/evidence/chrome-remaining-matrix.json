@@ -1,0 +1,650 @@
+[
+  {
+    "case": "M08 delayed initial membership list",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nAcme workspace\nQA workspace B\nLoading workspaces…\nOpen profile\nSign out\n\nAcme workspace\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+      "authenticated": true,
+      "hasStart": true,
+      "hasStop": false,
+      "startDisabled": false,
+      "selected": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+      "selectedText": "Acme workspace",
+      "disabled": true,
+      "status": "Loading workspaces…",
+      "retry": false,
+      "profile": true,
+      "signout": true,
+      "options": [
+        "Acme workspace",
+        "QA workspace B"
+      ],
+      "focused": null,
+      "viewport": {
+        "width": 320,
+        "height": 480
+      }
+    }
+  },
+  {
+    "case": "M10 failure before API dispatch",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nAcme workspace\nQA workspace B\nGiTiempo API is temporarily unavailable. Please try again in a moment.\nOpen profile\nSign out\n\nAcme workspace\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+      "authenticated": true,
+      "hasStart": true,
+      "hasStop": false,
+      "startDisabled": false,
+      "selected": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+      "selectedText": "Acme workspace",
+      "disabled": false,
+      "status": "GiTiempo API is temporarily unavailable. Please try again in a moment.",
+      "retry": false,
+      "profile": true,
+      "signout": true,
+      "options": [
+        "Acme workspace",
+        "QA workspace B"
+      ],
+      "focused": null,
+      "viewport": {
+        "width": 320,
+        "height": 480
+      }
+    },
+    "events": [
+      {
+        "id": 28,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:05.578Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:06:05.578Z",
+        "outcome": "injected-failure"
+      },
+      {
+        "id": 70,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.423Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.441Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 96,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.573Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.597Z",
+        "outcome": "response-body-lost"
+      },
+      {
+        "id": 156,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:10.168Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:10.220Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 202,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:12.162Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:12.175Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 238,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:12.425Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:12.441Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 305,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:13.081Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:13.091Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 331,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:13.235Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:13.247Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 374,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:21.518Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:07:21.518Z",
+        "outcome": "injected-failure"
+      },
+      {
+        "id": 402,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:22.409Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:22.430Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 419,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:22.525Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:22.544Z",
+        "outcome": "response-body-lost"
+      },
+      {
+        "id": 481,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:48.335Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:07:48.335Z",
+        "outcome": "injected-failure"
+      }
+    ]
+  },
+  {
+    "case": "M10 recovery after pre-dispatch failure",
+    "pass": true
+  },
+  {
+    "case": "M10 lost response after API acceptance",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nSign in to continue\n\nConnect your workspace account to start tracking time.\n\nContinue with Google\nContinue with GitHub\nor\nSign in with email",
+      "authenticated": false,
+      "hasStart": false,
+      "hasStop": false,
+      "retry": false,
+      "profile": false,
+      "signout": false,
+      "options": [],
+      "focused": null,
+      "viewport": {
+        "width": 320,
+        "height": 480
+      }
+    }
+  },
+  {
+    "case": "M09 invalid current access and revoked refresh",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nSign in to continue\n\nConnect your workspace account to start tracking time.\n\nContinue with Google\nContinue with GitHub\nor\nSign in with email",
+      "authenticated": false,
+      "hasStart": false,
+      "hasStop": false,
+      "retry": false,
+      "profile": false,
+      "signout": false,
+      "options": [],
+      "focused": null,
+      "viewport": {
+        "width": 320,
+        "height": 480
+      }
+    }
+  },
+  {
+    "case": "M12 stale runtime Start rejected during switching before API dispatch",
+    "pass": true,
+    "error": "Workspace switching is in progress. Wait for the destination to refresh."
+  },
+  {
+    "case": "M12 accepted Start settles in A before switching B",
+    "pass": true,
+    "entry": {
+      "id": "cabf0fb3-0ca6-428f-a467-bc5fede055b8",
+      "workspace_id": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+      "ended_at": null
+    },
+    "events": [
+      {
+        "id": 28,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:05.578Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:06:05.578Z",
+        "outcome": "injected-failure"
+      },
+      {
+        "id": 70,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.423Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.441Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 96,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.573Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.597Z",
+        "outcome": "response-body-lost"
+      },
+      {
+        "id": 129,
+        "method": "POST",
+        "path": "/time-entries/timer/start-from-github-reference",
+        "acceptedAt": "2026-10-15T13:06:08.264Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 201,
+        "completedAt": "2026-10-15T13:06:10.109Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 156,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:10.168Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:10.220Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 202,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:12.162Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:12.175Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 238,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:12.425Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:12.441Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 260,
+        "method": "POST",
+        "path": "/time-entries/timer/start-from-github-reference",
+        "acceptedAt": "2026-10-15T13:06:12.598Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 201,
+        "completedAt": "2026-10-15T13:06:12.628Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 305,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:13.081Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:13.091Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 331,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:13.235Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:13.247Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 374,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:21.518Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:07:21.518Z",
+        "outcome": "injected-failure"
+      },
+      {
+        "id": 402,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:22.409Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:22.430Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 419,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:22.525Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:22.544Z",
+        "outcome": "response-body-lost"
+      },
+      {
+        "id": 448,
+        "method": "POST",
+        "path": "/time-entries/timer/start-from-github-reference",
+        "acceptedAt": "2026-10-15T13:07:23.748Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 201,
+        "completedAt": "2026-10-15T13:07:25.568Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 481,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:48.335Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:07:48.335Z",
+        "outcome": "injected-failure"
+      },
+      {
+        "id": 512,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:49.176Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:49.186Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 523,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:49.291Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:49.301Z",
+        "outcome": "response-body-lost"
+      },
+      {
+        "id": 555,
+        "method": "POST",
+        "path": "/time-entries/timer/start-from-github-reference",
+        "acceptedAt": "2026-10-15T13:07:50.808Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 201,
+        "completedAt": "2026-10-15T13:07:52.625Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 573,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:52.646Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:52.659Z",
+        "outcome": "forwarded"
+      }
+    ]
+  },
+  {
+    "case": "M12 accepted Stop settles before switching A",
+    "pass": true,
+    "events": [
+      {
+        "id": 28,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:05.578Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:06:05.578Z",
+        "outcome": "injected-failure"
+      },
+      {
+        "id": 70,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.423Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.441Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 96,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:06.573Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:06.597Z",
+        "outcome": "response-body-lost"
+      },
+      {
+        "id": 156,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:10.168Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:10.220Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 177,
+        "method": "POST",
+        "path": "/time-entries/timer/stop",
+        "acceptedAt": "2026-10-15T13:06:10.318Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:12.136Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 202,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:12.162Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:12.175Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 238,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:12.425Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:12.441Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 275,
+        "method": "POST",
+        "path": "/time-entries/timer/stop",
+        "acceptedAt": "2026-10-15T13:06:12.732Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:12.744Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 305,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:13.081Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:13.091Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 331,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:06:13.235Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:06:13.247Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 374,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:21.518Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:07:21.518Z",
+        "outcome": "injected-failure"
+      },
+      {
+        "id": 402,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:22.409Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:22.430Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 419,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:22.525Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:22.544Z",
+        "outcome": "response-body-lost"
+      },
+      {
+        "id": 481,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:48.335Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 503,
+        "completedAt": "2026-10-15T13:07:48.335Z",
+        "outcome": "injected-failure"
+      },
+      {
+        "id": 512,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:49.176Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:49.186Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 523,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:49.291Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:49.301Z",
+        "outcome": "response-body-lost"
+      },
+      {
+        "id": 573,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:52.646Z",
+        "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:52.659Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 585,
+        "method": "POST",
+        "path": "/time-entries/timer/stop",
+        "acceptedAt": "2026-10-15T13:07:52.832Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:54.652Z",
+        "outcome": "forwarded"
+      },
+      {
+        "id": 601,
+        "method": "POST",
+        "path": "/auth/switch-workspace",
+        "acceptedAt": "2026-10-15T13:07:54.674Z",
+        "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "status": 200,
+        "completedAt": "2026-10-15T13:07:54.722Z",
+        "outcome": "forwarded"
+      }
+    ]
+  },
+  {
+    "case": "M12 real API denies inactive external-reference project in B",
+    "pass": true,
+    "scope": "real API canStartTracking=false for inactive project in target workspace; no outbound provider",
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nAcme workspace\nQA workspace B\nOpen profile\nSign out\n\nQA workspace B\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nTracking is not available for this issue.\n\nStart Timer\nRetry",
+      "authenticated": true,
+      "hasStart": true,
+      "hasStop": false,
+      "startDisabled": true,
+      "selected": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+      "selectedText": "QA workspace B",
+      "disabled": false,
+      "status": "",
+      "retry": false,
+      "profile": true,
+      "signout": true,
+      "options": [
+        "Acme workspace",
+        "QA workspace B"
+      ],
+      "focused": null,
+      "viewport": {
+        "width": 320,
+        "height": 480
+      }
+    }
+  }
+]

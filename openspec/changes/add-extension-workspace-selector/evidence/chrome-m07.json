@@ -1,0 +1,60 @@
+{
+  "case": "M07",
+  "browser": "isolated QA Chrome via DevTools",
+  "actualActionPopup": {
+    "viewport": {
+      "width": 320,
+      "height": 480
+    },
+    "profileAction": {
+      "clicked": true,
+      "href": "http://localhost:5185/profile",
+      "openedNewProfileTab": true,
+      "restoredWebWorkspace": {
+        "id": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+        "name": "QA workspace B",
+        "isCurrent": true
+      }
+    }
+  },
+  "spa": {
+    "origin": "http://localhost:5185",
+    "path": "/profile",
+    "initialWorkspace": {
+      "id": "998d3597-6163-4135-9dc2-bb5afc20f190",
+      "name": "Acme workspace",
+      "isCurrent": true
+    },
+    "afterWebSwitch": {
+      "id": "08fc3ed7-56a4-4270-9a30-5cbca117e17b",
+      "name": "QA workspace B",
+      "isCurrent": true
+    },
+    "afterExtensionSwitch": {
+      "id": "08fc3ed7-56a4-4270-9a30-5cbca117e17b",
+      "name": "QA workspace B",
+      "isCurrent": true
+    }
+  },
+  "extension": {
+    "initialWorkspace": {
+      "id": "08fc3ed7-56a4-4270-9a30-5cbca117e17b",
+      "name": "QA workspace B"
+    },
+    "afterWebSwitch": {
+      "id": "08fc3ed7-56a4-4270-9a30-5cbca117e17b",
+      "name": "QA workspace B"
+    },
+    "afterExtensionSwitch": {
+      "id": "998d3597-6163-4135-9dc2-bb5afc20f190",
+      "name": "Acme workspace"
+    }
+  },
+  "assertions": {
+    "webSwitchDidNotChangeExtensionSession": true,
+    "extensionSwitchDidNotChangeWebSession": true,
+    "profileActionConfiguredForSpaOrigin": true,
+    "profileActionRoute": "/profile"
+  },
+  "notes": "Workspace-session independence was exercised through the extension runtime and the SPA profile menu. The final profile-action assertion used the actual 320 x 480 browser-action popup: it opened a new SPA profile tab, which restored the web app's existing B session. No credentials are recorded."
+}

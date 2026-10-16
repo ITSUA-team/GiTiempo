@@ -12,7 +12,7 @@ Build-ready engineering constraints derived from [PROPOSAL.md](./PROPOSAL.md).
 │   ├── api/              ← NestJS backend
 │   ├── user-web/         ← Vue 3 SPA for all users (timer, time entries, profile)
 │   ├── admin-web/        ← Vue 3 SPA for admins + PMs (reports, invoices, management)
-│   └── chrome-ext/       ← Reserved placeholder for a future browser extension
+│   └── chrome-ext/       ← Manifest V3 browser extension (Chrome and Firefox)
 ├── packages/
 │   └── shared/           ← shared TypeScript types, constants, Zod schemas
 ├── turbo.json
@@ -236,6 +236,12 @@ The current web frontend baseline includes:
 - Detects issue from the current GitHub issue surface, including direct issue URLs (`org/repo/issues/123`) and supported GitHub Projects issue panes.
 - Authenticates via a popup login flow (Firebase Auth), stores JWT tokens in `chrome.storage`.
 - Sends JWT access token in `Authorization` header on all API requests.
+
+**Tracking workspace:** The signed-in avatar dropdown contains a labelled `Workspace` selector above `Open profile`. It loads the member's available workspaces from `GET /users/me/workspaces` and switches with `POST /auth/switch-workspace`, storing the returned access/refresh pair in extension storage. A single membership remains visible with selection disabled. The extension's choice is independent of user/admin web-app sessions and survives popup reopening, background restart and token refresh while the session remains valid. Selecting the current workspace does not rotate the session.
+
+Refresh and workspace switching serialize token rotations. Sign-out invalidates pending results; a late successful rotation is revoked best-effort without restoring storage or affecting a newer login. Switching blocks new timer mutations and invalidates old workspace preflight, then refreshes timer, destination and capabilities across the popup and injected controls before tracking resumes. Loading, denied membership and connection/authentication failures show retry or sign-in recovery without silently selecting another workspace.
+
+**Global running timer:** One running timer belongs to the user across all workspace sessions. Switching workspace preserves the running entry's original workspace and elapsed time, and Stop remains available from the new workspace. A second timer cannot start while it runs. After Stop, a new permitted timer belongs to the selected workspace.
 
 **Auto-create flow (lazy creation):**
 

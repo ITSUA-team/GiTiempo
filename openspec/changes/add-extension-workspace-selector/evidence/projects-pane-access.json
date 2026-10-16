@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-15",
+  "browser": "Codex in-app browser",
+  "projectUrl": "https://github.com/orgs/ITSUA-team/projects/7",
+  "paneUrl": "https://github.com/orgs/ITSUA-team/projects/7/views/1?filterQuery=455&pane=issue&itemId=272232489&issue=ITSUA-team%7CGiTiempo%7C455",
+  "issueHeading": "Allow choosing the tracking workspace in the Chrome extension",
+  "stickyHeaderExists": true,
+  "stickyHeaderId": "issue-viewer-sticky-header",
+  "stickyHeaderTag": "DIV",
+  "hasParent": true,
+  "canonicalIssueLink": "https://github.com/ITSUA-team/GiTiempo/issues/455",
+  "extensionHostPresent": false,
+  "trackingButtonsPresent": false,
+  "scope": "Authenticated real Projects pane access and mount-anchor compatibility only; no extension runtime or timer mutation in this browser.",
+  "m06Complete": false,
+  "nativeFirefoxAccess": "Computer Use permissions are not granted"
+}

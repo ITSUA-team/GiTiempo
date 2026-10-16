@@ -1,0 +1,98 @@
+{
+  "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nOpen profile\nSign out\n\nAcme workspace\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+  "font": "Inter, sans-serif",
+  "fonts": [
+    {
+      "family": "Inter",
+      "status": "loaded"
+    }
+  ],
+  "viewport": {
+    "width": 320,
+    "height": 480,
+    "scrollWidth": 320,
+    "scrollHeight": 480
+  },
+  "elements": [
+    {
+      "selector": "[data-testid=\"popup-logo\"]",
+      "x": 20,
+      "y": 20,
+      "width": 28,
+      "height": 28,
+      "fontSize": "11px",
+      "lineHeight": "16.5px",
+      "color": "rgb(93, 43, 133)",
+      "background": "rgb(232, 225, 245)"
+    },
+    {
+      "selector": "[data-testid=\"workspace-context\"]",
+      "x": 20,
+      "y": 68,
+      "width": 280,
+      "height": 16,
+      "fontSize": "12px",
+      "lineHeight": "16px",
+      "color": "rgb(102, 102, 102)",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "selector": "[data-testid=\"popup-account-menu\"]",
+      "x": 80,
+      "y": 56,
+      "width": 220,
+      "height": 193,
+      "fontSize": "16px",
+      "lineHeight": "24px",
+      "color": "rgb(26, 26, 26)",
+      "background": "rgb(255, 255, 255)"
+    },
+    {
+      "selector": "select",
+      "x": 96,
+      "y": 127,
+      "width": 188,
+      "height": 34,
+      "fontSize": "13px",
+      "lineHeight": "normal",
+      "color": "rgb(26, 26, 26)",
+      "background": "rgb(255, 255, 255)"
+    },
+    {
+      "selector": "[data-action=\"start-timer\"]",
+      "x": 20,
+      "y": 418,
+      "width": 280,
+      "height": 42,
+      "fontSize": "15px",
+      "lineHeight": "18px",
+      "color": "rgb(255, 255, 255)",
+      "background": "rgb(93, 43, 133)"
+    },
+    {
+      "selector": "[data-action=\"sign-out\"]",
+      "x": 86,
+      "y": 209,
+      "width": 208,
+      "height": 34,
+      "fontSize": "13px",
+      "lineHeight": "16px",
+      "color": "rgb(198, 40, 40)",
+      "background": "rgba(0, 0, 0, 0)"
+    }
+  ],
+  "selector": {
+    "disabled": false,
+    "options": [
+      "Acme workspace",
+      "QA workspace B"
+    ],
+    "selected": "Acme workspace"
+  },
+  "capture": {
+    "browsingContextID": 80,
+    "isBrowserTab": false,
+    "width": 320,
+    "height": 480
+  }
+}

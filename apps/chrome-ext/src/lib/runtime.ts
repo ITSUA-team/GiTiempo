@@ -1,6 +1,7 @@
 /* global chrome */
 
 import type {
+  CurrentUserWorkspaceMembershipResponse,
   CurrentTimeEntryResponse,
   GitHubTrackingErrorCode,
   TrackingCapabilityResponse,
@@ -24,6 +25,7 @@ export interface RuntimeSnapshot {
   user: SnapshotUser | null;
   workspace?: { id: string; name: string } | null;
   trackingCapability?: RuntimeTrackingCapability | null;
+  workspaceSwitching?: boolean;
 }
 
 export type RuntimeTrackingCapability = TrackingCapabilityResponse & {
@@ -53,6 +55,13 @@ export interface RuntimeActionResult {
 export type RuntimeAuthResult = RuntimeActionResult;
 export type RuntimeMutationResult = RuntimeActionResult;
 
+export interface RuntimeWorkspaceMembershipsResult {
+  errorMessage?: string;
+  items: CurrentUserWorkspaceMembershipResponse[];
+  ok: boolean;
+  snapshot: RuntimeSnapshot;
+}
+
 export interface RuntimeClient {
   exchangeFirebaseToken(firebaseIdToken: string): Promise<RuntimeAuthResult>;
   signInWithGithub(): Promise<RuntimeAuthResult>;
@@ -62,12 +71,14 @@ export interface RuntimeClient {
     verifier: string,
   ): Promise<RuntimeAuthResult>;
   getSnapshot(pageContext?: SupportedGitHubIssueContext): Promise<RuntimeSnapshot>;
+  getWorkspaceMemberships(): Promise<RuntimeWorkspaceMembershipsResult>;
   onSnapshotUpdated(listener: (snapshot: RuntimeSnapshot) => void): () => void;
   openExtension(): Promise<void>;
   retryProviderCleanup(): Promise<RuntimeAuthResult>;
   signOut(): Promise<RuntimeAuthResult>;
   startTimer(pageContext: SupportedGitHubIssueContext, expectedWorkspaceId?: string, expectedUserEmail?: string): Promise<RuntimeMutationResult>;
   stopTimer(expectedTimerId: string): Promise<RuntimeMutationResult>;
+  switchWorkspace(workspaceId: string): Promise<RuntimeMutationResult>;
 }
 
 
@@ -79,6 +90,8 @@ export type BackgroundMessage =
   | { type: "auth/sign-out" }
   | { type: "auth/retry-provider-cleanup" }
   | { type: "runtime/get-snapshot"; pageContext?: SupportedGitHubIssueContext }
+  | { type: "workspace/get-memberships" }
+  | { type: "workspace/switch"; workspaceId: string }
   | { type: "timer/start"; pageContext: SupportedGitHubIssueContext; expectedWorkspaceId?: string; expectedUserEmail?: string }
   | { type: "timer/stop"; expectedTimerId: string }
   | { type: "ui/open-extension" };
@@ -135,6 +148,11 @@ export function createRuntimeClient(): RuntimeClient {
     getSnapshot(pageContext) {
       return sendRuntimeMessage<RuntimeSnapshot>({ type: "runtime/get-snapshot", pageContext });
     },
+    getWorkspaceMemberships() {
+      return sendRuntimeMessage<RuntimeWorkspaceMembershipsResult>({
+        type: "workspace/get-memberships",
+      });
+    },
     onSnapshotUpdated(listener) {
       const runtimeListener = (message: unknown) => {
         const event = message as BackgroundEvent;
@@ -173,6 +191,12 @@ export function createRuntimeClient(): RuntimeClient {
       return sendRuntimeMessage<RuntimeMutationResult>({
         type: "timer/stop",
         expectedTimerId,
+      });
+    },
+    switchWorkspace(workspaceId) {
+      return sendRuntimeMessage<RuntimeMutationResult>({
+        type: "workspace/switch",
+        workspaceId,
       });
     },
   };
