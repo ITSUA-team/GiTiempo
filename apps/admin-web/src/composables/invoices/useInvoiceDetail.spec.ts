@@ -53,10 +53,10 @@ function createInvoice(overrides: Partial<InvoiceResponse> = {}): InvoiceRespons
     projectId,
     status: 'draft',
     timeEntries: [createTimeEntrySummary()],
-    timeEntryCount: 2,
+    timeEntryCount: 1,
     title: 'April 2026 — Backend',
-    totalAmount: 1000,
-    totalHours: 12.5,
+    totalAmount: 200,
+    totalHours: 2.5,
     updatedAt: '2026-05-01T10:00:00.000Z',
     workspaceId,
     ...overrides,
@@ -148,6 +148,48 @@ describe('useInvoiceDetail', () => {
     expect(getInvoice).not.toHaveBeenCalled();
     expect(data.invoice.value).toBeUndefined();
     expect(data.notFound.value).toBe(false);
+  });
+
+  it('fetches when enabled transitions from false to true', async () => {
+    const enabled = ref(false);
+    const getInvoice = vi.fn().mockResolvedValue(createInvoice());
+
+    const data = mountInvoiceDetail({ client: { getInvoice }, enabled });
+
+    await flushPromises();
+
+    expect(getInvoice).not.toHaveBeenCalled();
+
+    enabled.value = true;
+    await flushPromises();
+
+    expect(getInvoice).toHaveBeenCalledTimes(1);
+    expect(data.invoice.value).toEqual(createInvoice());
+  });
+
+  it('refetches when invoiceId changes', async () => {
+    const invoiceIdRef = ref(invoiceId);
+    const getInvoice = vi.fn().mockResolvedValue(createInvoice());
+
+    const data = mountInvoiceDetail({
+      client: { getInvoice },
+      invoiceId: invoiceIdRef,
+    });
+
+    await flushPromises();
+
+    expect(getInvoice).toHaveBeenCalledTimes(1);
+    expect(getInvoice).toHaveBeenCalledWith(invoiceId);
+
+    getInvoice.mockResolvedValueOnce(
+      createInvoice({ id: 'invoice-2', title: 'Second Invoice' }),
+    );
+    invoiceIdRef.value = 'invoice-2';
+    await flushPromises();
+
+    expect(getInvoice).toHaveBeenCalledTimes(2);
+    expect(getInvoice).toHaveBeenCalledWith('invoice-2');
+    expect(data.invoice.value?.id).toBe('invoice-2');
   });
 
   it('marks a 404 response as not found', async () => {

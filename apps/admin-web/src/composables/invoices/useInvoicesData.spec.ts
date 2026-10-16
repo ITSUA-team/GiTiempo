@@ -22,7 +22,12 @@ function createScope() {
 function createListResponse(items: InvoiceListResponse['items'] = []): InvoiceListResponse {
   return {
     items,
-    meta: { limit: 20, page: 1, total: 2, totalPages: 1 },
+    meta: {
+      limit: 20,
+      page: 1,
+      total: items.length,
+      totalPages: items.length > 0 ? 1 : 0,
+    },
   };
 }
 
@@ -146,6 +151,29 @@ describe('useInvoicesData', () => {
     expect(getInvoiceStats).not.toHaveBeenCalled();
     expect(data.initialLoaded.value).toBe(false);
     expect(data.loadError.value).toBeNull();
+  });
+
+  it('fetches when enabled transitions from false to true', async () => {
+    const enabled = ref(false);
+    const listInvoices = vi.fn().mockResolvedValue(createListResponse());
+    const getInvoiceStats = vi.fn().mockResolvedValue(createStatsResponse());
+
+    mountInvoicesData({
+      client: { getInvoiceStats, listInvoices },
+      enabled,
+      query: ref<Partial<InvoiceListQuery>>({}),
+    });
+
+    await flushPromises();
+
+    expect(listInvoices).not.toHaveBeenCalled();
+    expect(getInvoiceStats).not.toHaveBeenCalled();
+
+    enabled.value = true;
+    await flushPromises();
+
+    expect(listInvoices).toHaveBeenCalledTimes(1);
+    expect(getInvoiceStats).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces invoice list errors through loadError and onError', async () => {

@@ -196,4 +196,27 @@ describe('useInvoiceCreate', () => {
     expect(data.isCreating.value).toBe(false);
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
+
+  it('does not guard against concurrent calls', async () => {
+    // Documents current behavior: a second createInvoice call while the first
+    // is still pending issues a second POST. Double-click protection is the
+    // dialog's responsibility.
+    const createInvoiceMock = vi
+      .fn()
+      .mockResolvedValue(createInvoiceResponse());
+    const data = mountInvoiceCreate({
+      client: { createInvoice: createInvoiceMock },
+    });
+
+    await flushPromises();
+
+    const promise1 = data.createInvoice(createInput());
+    const promise2 = data.createInvoice(createInput());
+    await Promise.all([promise1, promise2]);
+    await flushPromises();
+
+    expect(createInvoiceMock).toHaveBeenCalledTimes(2);
+    expect(createInvoiceMock).toHaveBeenNthCalledWith(1, createInput());
+    expect(createInvoiceMock).toHaveBeenNthCalledWith(2, createInput());
+  });
 });

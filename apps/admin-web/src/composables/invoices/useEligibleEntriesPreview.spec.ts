@@ -236,4 +236,40 @@ describe('useEligibleEntriesPreview', () => {
     expect(data.isEmpty.value).toBe(false);
     expect(data.hasEntries.value).toBe(false);
   });
+
+  it('refetches when query bounds change', async () => {
+    const query = ref<EligibleEntriesQuery | null>({
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-15',
+    });
+    const listEligibleEntries = vi
+      .fn()
+      .mockResolvedValue(createEntriesResponse());
+
+    const data = mountEntriesPreview({ client: { listEligibleEntries }, query });
+
+    await flushPromises();
+
+    expect(listEligibleEntries).toHaveBeenCalledTimes(1);
+    expect(data.preview.value?.count).toBe(1);
+
+    listEligibleEntries.mockResolvedValueOnce(
+      createEntriesResponse({
+        count: 5,
+        entries: [
+          createTimeEntry({ id: '55555555-5555-4555-8555-555555555552' }),
+          createTimeEntry({ id: '55555555-5555-4555-8555-555555555553' }),
+          createTimeEntry({ id: '55555555-5555-4555-8555-555555555554' }),
+          createTimeEntry({ id: '55555555-5555-4555-8555-555555555556' }),
+          createTimeEntry({ id: '55555555-5555-4555-8555-555555555557' }),
+        ],
+        totalHours: 12.5,
+      }),
+    );
+    query.value = { dateFrom: '2026-04-16', dateTo: '2026-04-30' };
+    await flushPromises();
+
+    expect(listEligibleEntries).toHaveBeenCalledTimes(2);
+    expect(data.preview.value?.count).toBe(5);
+  });
 });
