@@ -46,10 +46,47 @@
 
 ## Invoices Page
 
-- Invoice page UI is deferred until an invoice API/contract exists.
-- Do not expose invoices in authenticated shell navigation, dashboard metrics/activity, or page/table content while the invoice UI is deferred.
-- The protected `/invoices` route may remain as a hidden route-inventory placeholder, but it must not render a temporary invoice table, search control, create action, modal dialog, or fabricated invoice data.
-- When invoice contracts ship, restore the approved invoices page requirements from the design: searchable invoice table, status tags, table-header `Create invoice` action, invoice edit/details dialog, and status-specific invoice actions inside the dialog.
+### List page (`/invoices`)
+
+- Searchable invoice table with columns: Title, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
+- Search filters by invoice title (API `search` param, case-insensitive ILIKE).
+- Filter row: Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
+- Pagination control below the table (API returns `meta.totalPages`).
+- Table header has a `Create invoice` action button (plus icon).
+- Clicking a row title navigates to the detail page (`/invoices/:id`).
+- Stats cards show invoice counts using only `draft`, `sent`, `paid` statuses. No "pending" status. Data from `GET /invoices/stats`.
+  - "Open Invoices" = draft + sent count. Subtitle: "N ready to send" (draft count).
+  - "Billed This Month" = sum of `totalAmount` for invoices created this month. Subtitle: "N invoices · M projects" (invoice count + distinct project count). Currency from workspace default. Totals are approximate if multiple currencies are present.
+  - "Drafts" = draft count. Subtitle: "Ready for review".
+- Currency formatting: use `Intl.NumberFormat` with the `currency` field from the API response (e.g., `new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })`). Do not hardcode currency symbols — the workspace may use any 3-letter ISO 4217 currency code.
+
+### Create dialog (modal)
+
+- Triggered from the list page `Create invoice` action button.
+- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From workspace settings" when empty, falls back to workspace default), Currency (optional — placeholder "Auto" when empty, falls back to workspace default), Discount (optional, default 0), Notes (optional).
+- Calculated fields: Total hours and Total amount update live from `GET /invoices/eligible-entries` preview.
+- Expandable preview section: shows eligible time entries (count, total hours, computed amount). Collapsed by default; expands to a scrollable table with Date, User, Duration, Description.
+- Empty state: if preview returns 0 entries, show a warning banner ("No billable entries found for this project and date range"). Create button stays enabled — the API allows empty invoices.
+- Actions: `Cancel` and `Create invoice` (POST). No Status field (always `draft` on creation). No Preview/Send/Delete buttons.
+
+### Detail page (`/invoices/:id`)
+
+- Full page route with topbar breadcrumb (GiTiempo Admin / Invoices / {title}).
+- Page header: Back button, invoice title, status badge, and status-dependent action buttons.
+- Status-dependent header actions:
+  - **Draft**: `Mark as sent` (PATCH status→sent, admin+PM) + `Delete` (DELETE, admin only, draft only — sent/paid return 409).
+  - **Sent**: `Mark as paid` (PATCH status→paid, admin+PM). No Delete button.
+  - **Paid**: no status actions (terminal state). No Delete button.
+- "Mark as sent" is a semantic status change only — no email is sent and no PDF is generated. Email delivery and PDF generation are deferred to a future milestone. The UI label makes the manual nature of the transition clear.
+- Delete requires a confirmation dialog: "Delete this invoice? Linked time entries will be unlinked and become available for future invoices."
+- Summary card (read-only): Project, Date range, Hourly rate, Currency, Discount, Total hours, Total amount, Created, Created by, Last updated. All snapshot fields are immutable after creation.
+- Editable card: Title (input), Notes (textarea), `Save changes` button (PATCH title + notes). No Status dropdown — status transitions happen only via header action buttons.
+- Time entries card: scrollable table of linked time entries (Date, User, Task, Duration, Description) with entry count and total hours in the header.
+
+### Navigation
+
+- The `/invoices` route is admin-only. PMs access invoices via the list page but cannot delete.
+- Invoices nav item is hidden by default (`SHOW_INVOICES_NAV = false`). Enable when invoice UI ships.
 
 ## Members Page
 
@@ -67,6 +104,7 @@
 
 - Initial page load uses a skeleton matching the stats header, stat cards, and projects table before rendering empty or request-error states.
 - Project list table includes project name, source, assigned members, total hours, and visibility. It does not keep a separate row-actions column.
+- Render external-reference projects in the existing table with a compact `External` tag; do not introduce an external-project management view. Administrators retain full workspace visibility, while external references remain private and cannot be made public or converted through project settings in this release.
 - Project list table is searchable with placeholder `Search projects` and uses column filters for project name, source, assigned members, total hours, and visibility.
 - An icon-only primary action sits in the projects table header next to the search control. Use tooltip/accessibility copy `New project`.
 - The project name is the edit entry point and opens the inline project settings section instead of using a row-level edit icon.

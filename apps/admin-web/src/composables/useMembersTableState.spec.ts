@@ -53,8 +53,16 @@ function createMembers(): WorkspaceMemberListResponse {
 }
 
 function createProjects(): ProjectListResponse {
+  const projectContractFields = {
+    accessScope: 'project' as const,
+    capabilities: { canManageTasks: true },
+    referenceProvenance: null,
+    trackingMode: 'managed' as const,
+  };
+
   return [
     {
+      ...projectContractFields,
       color: null,
       createdAt: '2026-05-01T10:00:00.000Z',
       defaultBillableForTasks: true,
@@ -85,6 +93,7 @@ function createProjects(): ProjectListResponse {
       workspaceId: 'workspace-1',
     },
     {
+      ...projectContractFields,
       color: null,
       createdAt: '2026-05-01T10:00:00.000Z',
       defaultBillableForTasks: true,
@@ -108,6 +117,7 @@ function createProjects(): ProjectListResponse {
       workspaceId: 'workspace-1',
     },
     {
+      ...projectContractFields,
       color: null,
       createdAt: '2026-05-01T10:00:00.000Z',
       defaultBillableForTasks: true,

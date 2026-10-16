@@ -66,6 +66,7 @@ export function useReportRowsData({
     const targetProjects = getVisibleReportProjectsForScope(
       visibleProjects,
       filters.projectId,
+      isAdminScope.value,
     );
     const nextRows: ReportTableRow[] = [];
 

@@ -30,6 +30,7 @@ import type {
 import type { AuthUser } from '../../auth/types/auth-user';
 import { startOfNextUtcMonth, startOfUtcMonth } from '../../common/time';
 import { DomainError } from '../../commons/errors/domain-error';
+import { escapeLikePattern } from '../../commons/utils/escape-like-pattern';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
@@ -609,10 +610,6 @@ function requireBillable(row: AggregateRow): TimeReportBillableGroup {
     );
   }
   return row.billable;
-}
-
-function escapeLikePattern(value: string): string {
-  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
 }
 
 function toNumber(value: number | string | null | undefined): number {

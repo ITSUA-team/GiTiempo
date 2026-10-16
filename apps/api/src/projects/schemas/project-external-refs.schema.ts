@@ -1,5 +1,6 @@
 import { getTableColumns, sql } from 'drizzle-orm';
 import {
+  check,
   index,
   jsonb,
   pgTable,
@@ -11,6 +12,12 @@ import {
 } from 'drizzle-orm/pg-core';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { projects } from './projects.schema';
+
+export const referenceProvenances = [
+  'provider-verified',
+  'user-supplied',
+] as const;
+export type ReferenceProvenance = (typeof referenceProvenances)[number];
 
 export const projectExternalRefs = pgTable(
   'project_external_refs',
@@ -27,6 +34,10 @@ export const projectExternalRefs = pgTable(
     externalId: varchar('external_id', { length: 255 }),
     externalKey: varchar('external_key', { length: 500 }).notNull(),
     externalUrl: text('external_url'),
+    referenceProvenance: varchar('reference_provenance', { length: 32 })
+      .$type<ReferenceProvenance>()
+      .default('provider-verified')
+      .notNull(),
     metadata: jsonb('metadata')
       .$type<Record<string, unknown>>()
       .default(sql`'{}'::jsonb`)
@@ -46,6 +57,17 @@ export const projectExternalRefs = pgTable(
       table.provider,
       table.externalType,
       table.externalKey,
+    ),
+    uniqueIndex(
+      'project_external_refs_workspace_provider_repository_key_ci_unique',
+    )
+      .on(table.workspaceId, table.provider, sql`lower(${table.externalKey})`)
+      .where(
+        sql`${table.provider} = 'github' AND ${table.externalType} = 'repository'`,
+      ),
+    check(
+      'project_external_refs_provenance_check',
+      sql`${table.referenceProvenance} IN ('provider-verified', 'user-supplied')`,
     ),
     index('project_external_refs_workspace_provider_id_idx')
       .on(

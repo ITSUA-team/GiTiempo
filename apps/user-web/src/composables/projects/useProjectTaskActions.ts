@@ -40,7 +40,18 @@ export function useProjectTaskActions({
     );
   }
 
+  function canManageProjectTasks(projectId: string | null): boolean {
+    return (
+      visibleProjects.value.find((project) => project.id === projectId)
+        ?.capabilities.canManageTasks === true
+    );
+  }
+
   function openTaskCreateDialog(projectId: string | null = null): void {
+    if (!canManageProjectTasks(projectId)) {
+      return;
+    }
+
     dialog.openCreateDialog(projectId, getProjectDefaultBillable(projectId));
   }
 
@@ -62,6 +73,15 @@ export function useProjectTaskActions({
     }
 
     const editingTask = dialog.editingTask.value;
+    const canManage =
+      validInput.mode === "edit"
+        ? editingTask?.capabilities.canManageTasks === true
+        : canManageProjectTasks(validInput.projectId);
+
+    if (!canManage) {
+      dialog.setDialogRequestError("You do not have permission to manage tasks in this project.");
+      return;
+    }
     const shouldPromptForBackfill =
       validInput.mode === "edit" &&
       editingTask !== null &&
@@ -94,6 +114,10 @@ export function useProjectTaskActions({
     task: TaskResponse,
     options: { closeDialogOnSuccess?: boolean } = {},
   ): void {
+    if (!task.capabilities.canManageTasks) {
+      return;
+    }
+
     appConfirm.confirmDestructive({
       accept: async () => {
         const wasDeleted = await mutations.deleteTask(task);

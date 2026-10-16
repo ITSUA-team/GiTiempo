@@ -1,0 +1,152 @@
+[
+  {
+    "case": "M01 current selection no-op",
+    "pass": true,
+    "switchPostCountBefore": 1,
+    "switchPostCountAfter": 1,
+    "path": "/auth/switch-workspace"
+  },
+  {
+    "case": "M05 switch running A to B",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nAT\n\nAlexey Tsukanov\n\nalexey@example.com\n\nTimer keeps running after sign out\n\nWorkspace\nOpen profile\nSign out\n\nAcme workspace\n\nRunning timer\n\n00:00:28\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo / ITSUA-team/GiTiempo\n\nStop Timer",
+      "selected": "78843824-93f5-4d53-869f-dbe69912b0af",
+      "disabled": false,
+      "stopDisabled": false,
+      "workspace": "Acme workspace"
+    },
+    "entry": {
+      "id": "c70f9b27-6513-4c39-8c1b-d9aaa4229fa1",
+      "workspace_id": "6dad9e26-5210-4ef1-97e3-d7384cdcece0",
+      "ended_at": null
+    }
+  },
+  {
+    "case": "M02/M05 Stop A then next Start in B",
+    "pass": true,
+    "entries": [
+      {
+        "id": "c70f9b27-6513-4c39-8c1b-d9aaa4229fa1",
+        "workspace_id": "6dad9e26-5210-4ef1-97e3-d7384cdcece0",
+        "ended_at": "2026-10-15T12:28:44.879Z"
+      },
+      {
+        "id": "50e5b765-d77f-4de9-af30-503593e41b42",
+        "workspace_id": "78843824-93f5-4d53-869f-dbe69912b0af",
+        "ended_at": null
+      }
+    ]
+  },
+  {
+    "case": "cleanup timers",
+    "pass": true
+  },
+  {
+    "case": "M08 failed membership list",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nGiTiempo API is temporarily unavailable. Please try again in a moment.\nRetry\nOpen profile\nSign out\n\nQA workspace B\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nUnable to confirm whether you can track this issue.\n\nStart Timer\nRetry",
+      "selected": "78843824-93f5-4d53-869f-dbe69912b0af",
+      "disabled": true,
+      "startDisabled": true,
+      "status": "GiTiempo API is temporarily unavailable. Please try again in a moment.",
+      "retry": true,
+      "profile": true,
+      "signout": true,
+      "options": [
+        "QA workspace B"
+      ]
+    }
+  },
+  {
+    "case": "M08 membership retry",
+    "pass": true
+  },
+  {
+    "case": "M08/M12 delayed accepted switch and duplicate input",
+    "pass": true,
+    "pending": {
+      "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nSwitching workspace…\nOpen profile\nSign out\n\nQA workspace B\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+      "selected": "78843824-93f5-4d53-869f-dbe69912b0af",
+      "disabled": true,
+      "startDisabled": true,
+      "status": "Switching workspace…",
+      "retry": false,
+      "profile": true,
+      "signout": true,
+      "options": [
+        "Acme workspace",
+        "QA workspace B"
+      ]
+    },
+    "switchPostDelta": 1
+  },
+  {
+    "case": "M03 popup close/reopen retains B",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nOpen profile\nSign out\n\nQA workspace B\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+      "selected": "78843824-93f5-4d53-869f-dbe69912b0af",
+      "disabled": false,
+      "startDisabled": false,
+      "status": "",
+      "options": [
+        "Acme workspace",
+        "QA workspace B"
+      ]
+    }
+  },
+  {
+    "case": "M09 revoked target",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nA\n\nalexey@example.com\n\nWorkspace\nForbidden\nOpen profile\nSign out\n\nAcme workspace\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+      "selected": "6dad9e26-5210-4ef1-97e3-d7384cdcece0",
+      "disabled": true,
+      "startDisabled": false,
+      "status": "Forbidden",
+      "options": [
+        "Acme workspace"
+      ]
+    }
+  },
+  {
+    "case": "M04 long name prepared",
+    "pass": true
+  },
+  {
+    "case": "M01 single membership disabled",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nS\n\nsingle-qa@example.test\n\nWorkspace\nOpen profile\nSign out\n\nAcme workspace\n\nCurrent task context\n\n#455 Allow choosing the tracking workspace in the Chrome extension\n\nITSUA-team/GiTiempo\n\nStart Timer",
+      "select": true,
+      "disabled": true,
+      "options": 1
+    }
+  },
+  {
+    "case": "M01 signed-out selector absent",
+    "pass": true,
+    "ui": {
+      "body": "GT\n\nGiTiempo\n\nSign in to continue\n\nConnect your workspace account to start tracking time.\n\nContinue with Google\nContinue with GitHub\nor\nSign in with email",
+      "select": false
+    }
+  },
+  {
+    "case": "final timer cleanup",
+    "pass": true,
+    "entries": [
+      {
+        "id": "c70f9b27-6513-4c39-8c1b-d9aaa4229fa1",
+        "workspace_id": "6dad9e26-5210-4ef1-97e3-d7384cdcece0",
+        "ended_at": "2026-10-15T12:28:44.879Z"
+      },
+      {
+        "id": "50e5b765-d77f-4de9-af30-503593e41b42",
+        "workspace_id": "78843824-93f5-4d53-869f-dbe69912b0af",
+        "ended_at": "2026-10-15T12:28:45.218Z"
+      }
+    ]
+  }
+]

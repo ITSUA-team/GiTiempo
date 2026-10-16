@@ -1,0 +1,50 @@
+[
+  {
+    "case": "M06 public Projects discovery",
+    "status": 200,
+    "links": []
+  },
+  {
+    "case": "M06 direct issue Start in B, cross-tab Stop and refresh",
+    "pass": true,
+    "entry": {
+      "id": "ae17caa7-c92c-44f8-bd47-a084abde261c",
+      "workspace_id": "08fc3ed7-56a4-4270-9a30-5cbca117e17b",
+      "ended_at": null
+    },
+    "otherTabRunning": {
+      "destination": "Timer workspace: QA workspace B · Tracking workspace: QA workspace B",
+      "text": "Timer workspace: QA workspace B · Tracking workspace: QA workspace B\n\nITSUA-team/GiTiempo · #455\n\nAllow choosing the tracking workspace in the Chrome extension\n\nRunning\n\n00:00:00\n\nStop Timer",
+      "actions": [
+        {
+          "action": "stop-timer",
+          "disabled": false
+        }
+      ]
+    }
+  },
+  {
+    "case": "M06 both direct issue tabs refresh to A",
+    "pass": true,
+    "first": {
+      "destination": "Tracking workspace: Acme workspace",
+      "text": "Tracking workspace: Acme workspace\n\nITSUA-team/GiTiempo · #455\n\nAllow choosing the tracking workspace in the Chrome extension\n\nStart tracking directly from this GitHub issue.\n\nStart Timer",
+      "actions": [
+        {
+          "action": "start-timer",
+          "disabled": false
+        }
+      ]
+    },
+    "second": {
+      "destination": "Tracking workspace: Acme workspace",
+      "text": "Tracking workspace: Acme workspace\n\nITSUA-team/GiTiempo · #455\n\nAllow choosing the tracking workspace in the Chrome extension\n\nStart tracking directly from this GitHub issue.\n\nStart Timer",
+      "actions": [
+        {
+          "action": "start-timer",
+          "disabled": false
+        }
+      ]
+    }
+  }
+]

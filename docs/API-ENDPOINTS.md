@@ -161,8 +161,10 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | PATCH  | `/time-entries/:id`                     | JWT  | Any  | Update own time entry (task, description, times, billable)                                         |
 | DELETE | `/time-entries/:id`                     | JWT  | Any  | Delete own time entry                                                                              |
 | GET    | `/time-entries/current`                 | JWT  | Any  | Get the authenticated user's currently running timer across workspaces, if any                      |
+| POST   | `/time-entries/timer/capability`        | JWT  | Any  | Read-only tracking preflight for canonical GitHub issue context; returns scope or a safe denial reason |
 | POST   | `/time-entries/timer/start`             | JWT  | Any  | Start timer against an existing task                                                               |
-| POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Start timer from GitHub issue — auto-creates project and task if needed (used by Chrome extension) |
+| POST   | `/time-entries/timer/start-from-github-reference` | JWT | Any | Start from strict browser issue context; managed delegation or atomic external reference recording |
+| POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Legacy managed GitHub start; requires verified workspace installation and existing authorized managed mapping |
 | POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop the authenticated user's running timer across workspaces; supports conditional identity checks |
 
 **GET /time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `projectId?`, `taskId?`, `search?`
@@ -186,10 +188,20 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 **POST /time-entries/timer/start** body: `{ taskId: string, description?: string | null }`
 **POST /time-entries/timer/start-from-github** body: `{ githubRepo: "org/repo", issueNumber: number, githubProjectId?: string }`
+**POST /time-entries/timer/start-from-github-reference** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string, issueUrl: "https://github.com/org/repo/issues/123" }`
+
+**POST /time-entries/timer/capability** accepts the same strict issue-context body and returns `{ canStartTracking: boolean, accessScope: "project" | "own-time" | null, reason: string | null }`. Allowed results have a null reason; denied results have a safe reason and null scope. The read-only preflight creates no projects, tasks, references, or entries and returns no protected mapping metadata. External reference tracking remains available to active workspace members without GitHub setup. Managed targets retain their authorization and installation checks. The extension refreshes this issue-bound capability before enabling Start; the start endpoint independently rechecks authorization at the write boundary.
+
+- This strict request rejects unknown fields, unsafe/non-positive numbers, missing/overlong/control-character titles and nonmatching URLs. It accepts canonical direct HTTPS `github.com` URLs only; no queries/fragments, board URLs, credentials, port, or caller-supplied authority. Session workspace and fresh active membership determine the destination.
+- Existing issue identity wins over repository identity. Managed mappings delegate to installation-backed authorization with no fallback after denial. Legacy `/start-from-github` rejects external mappings before provider access.
+- Missing/external mappings atomically create/reuse a private external project and exact issue task, preserving IDs/title/state/defaults/history. Context is user-supplied, no GitHub request or provider verification occurs, and no GitHub link, customer App approval, assignment or admin toggle is required. Failed/conflicting starts roll back materialization.
+- Project responses include `trackingMode`, nullable `referenceProvenance`, `accessScope: project | own-time`, and `capabilities.canManageTasks`; task responses include scope/capability. Own-time reads expose only exact tasks with owned entries and personal completed totals/activity, `members: []`, `assignedMembersSummary: null`, and no memberCount. Running entries grant visibility with zero completed duration. Management/report/export eligibility is separate.
+- Manual entry creation/moves and saved external starts require current exact-task access. Last own entry deletion/move removes derived visibility; a fresh reference start can restore it. Shared task/project/billing/assignment mutations are denied for own-time-only access.
+
 
 - `GET /time-entries/current` returns `{ timeEntry: TimeEntryResponse | null }`. It is user-global: it returns the caller's own running timer even when the entry belongs to a different workspace than the active JWT workspace claim.
 - `/time-entries/timer/start` requires `taskId` to reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`.
-- For a saved task linked to a GitHub issue, an ordinary member must be explicitly assigned to its GiTiempo project, including public projects. This applies whether their personal GitHub account is connected, disconnected, absent, or expired. Missing assignment to a public project returns `403` with code `project_assignment_required` and message `You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.` An invisible private target remains `404` without protected details.
+- For a saved managed task linked to a GitHub issue, an ordinary member must be explicitly assigned to its GiTiempo project, including public projects. This applies whether their personal GitHub account is connected, disconnected, absent, or expired. Missing assignment to a public project returns `403` with code `project_assignment_required` and message `You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.` An invisible private target remains `404` without protected details.
 - Assigned members can start saved GitHub tasks after personal disconnect. GitHub issue assignee status grants no GiTiempo project access. Administrators retain implicit project access; PMs retain visibility-based access. Eligible manual tasks, including those in GitHub-backed public projects, retain existing access rules. This start-specific rule does not change completed manual entries, historical edits, or running-task reassignment.
 - `/time-entries/timer/start` remains scoped to the active JWT workspace through task visibility. If the user already has any running timer in any workspace, it rejects with `409 Conflict` and leaves the existing running timer unchanged.
 - `/time-entries/timer/start-from-github` creates or reuses the local GitHub issue mapping, but an existing closed mapped task is rejected with `422 Unprocessable Entity` and no running entry is created.
@@ -203,7 +215,7 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 | Method | Path                         | Auth | Role | Description                                                                                                                                               |
 | ------ | ---------------------------- | ---- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/projects/:id/time-entries` | JWT  | Any  | List all time entries for a visible project, with optional task-title search. Private projects require assignment for non-admin users. Members remain read-only for other users' entries. |
+| GET    | `/projects/:id/time-entries` | JWT  | Any  | List entries within the resolved project scope, with optional task-title search. Own-time external access returns owned entries and totals only; explicit project access retains established team reads. |
 
 ---
 
@@ -221,10 +233,61 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 | Method | Path            | Auth | Role     | Description                                |
 | ------ | --------------- | ---- | -------- | ------------------------------------------ |
 | GET    | `/invoices`     | JWT  | Admin/PM | List invoices (PM: assigned projects only) |
-| POST   | `/invoices`     | JWT  | Admin/PM | Create invoice from time report data       |
+| POST   | `/invoices`     | JWT  | Admin/PM | Create invoice from eligible time entries  |
+| GET    | `/invoices/eligible-entries` | JWT  | Admin/PM | Preview eligible time entries for a potential invoice |
+| GET    | `/invoices/stats`            | JWT  | Admin/PM | Get invoice stats (counts by status, this month summary) |
 | GET    | `/invoices/:id` | JWT  | Admin/PM | Get invoice details                        |
-| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, rates)      |
+| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, title)      |
 | DELETE | `/invoices/:id` | JWT  | Admin    | Delete invoice                             |
+
+**GET /invoices** query: `page?`, `limit?`, `projectId?`, `status?`, `dateFrom?`, `dateTo?`, `search?`
+
+- PMs see only invoices scoped to active public projects or private projects assigned to them. Workspace-wide invoices (no project scope) are admin-only.
+
+**POST /invoices** body: `{ title: string, dateFrom: string (YYYY-MM-DD), dateTo: string (YYYY-MM-DD), projectId?: string, hourlyRate?: number, currency?: string, discountPercent?: number (0–100, step 0.01, default 0), notes?: string | null }`
+
+- Creates an invoice from eligible time entries in the requested workspace, project, and date range.
+- **Eligibility:** only completed, billable time entries with a finalized duration that are not already linked to another invoice are selected. Running, non-billable, and already-invoiced entries are excluded.
+- **Atomicity:** entry selection, invoice insert, and `time_entries.invoice_id` association happen in a single transaction with `SELECT ... FOR UPDATE`, so concurrent requests cannot bill the same entry twice.
+- **Totals:** `totalHours = SUM(duration_seconds) / 3600`, `totalAmount = totalHours × hourlyRate × (1 − discountPercent / 100)`. Both are stored as snapshot values at creation time.
+- **Rate fallback:** when `hourlyRate` is omitted, the workspace `default_hourly_rate` is used. When `currency` is omitted, the workspace `currency` is used. If neither is configured and no rate is supplied, the request is rejected with `422`.
+- PMs must scope invoice creation to a project they can see (active public project or private project assigned to them); workspace-wide invoices (no `projectId`) are admin-only.
+
+**GET /invoices/eligible-entries** query: `dateFrom: string (YYYY-MM-DD), dateTo: string (YYYY-MM-DD), projectId?: string`
+
+- Returns the set of completed, billable, not-yet-invoiced time entries matching the date range and optional project scope, along with computed total hours — without creating an invoice or modifying any data.
+- PMs must scope the preview to a project they can see (active public project or private project assigned to them); a request without `projectId` from a PM is rejected with `403`.
+- `dateTo` must be later than or equal to `dateFrom`; reversed bounds are rejected with a validation error.
+- Response: `{ count: number, totalHours: number, entries: InvoiceTimeEntrySummary[], defaultHourlyRate: number | null, defaultCurrency: string | null }`
+- Each entry summary includes `id`, `taskId`, `userId`, `userName`, `taskName`, `startedAt`, `endedAt`, `durationSeconds`, `isBillable`, `description`.
+
+**GET /invoices/stats**
+
+- Returns aggregate invoice counts grouped by status (`draft`, `sent`, `paid`) and a summary of invoices created in the current calendar month, scoped to the caller's visibility.
+- The current month starts at midnight on its first day in the workspace's configured timezone, independently of the database session timezone.
+- Admins see all workspace invoices; PMs see only invoices for active public projects or private projects assigned to them. Workspace-wide invoices (null `projectId`) are excluded from PM counts.
+- Response: `{ byStatus: { draft: number, sent: number, paid: number }, thisMonth: { invoiceCount: number, projectCount: number, totalAmount: number, currency: string } }`
+- `thisMonth.totalAmount` sums all currencies without conversion; the workspace default currency is returned for display purposes. The UI should note that totals are approximate when multiple currencies are present.
+
+**PATCH /invoices/:id** body: `{ title?: string, status?: "draft" | "sent" | "paid", notes?: string | null }`
+
+- Updates only editable fields (`title`, `status`, `notes`). Snapshot fields (`hourlyRate`, `currency`, `discountPercent`, `totalHours`, `totalAmount`, `dateFrom`, `dateTo`) and the linked time-entry set are immutable after creation. Totals are never recomputed by an update.
+- Status can advance from `draft` to `sent` or `paid`, and from `sent` to `paid`; backward transitions return `409 Conflict`. An update also returns `409` if the status changed concurrently after it was read; none of that request's fields are applied, and the client should reload the invoice before retrying.
+
+**DELETE /invoices/:id** (Admin only)
+
+- Only `draft` invoices can be deleted. `sent` or `paid` invoices are locked (409 Conflict) to prevent re-billing of already invoiced time entries.
+- Deleting a draft invoice unlinks its time entries via `time_entries.invoice_id` `ON DELETE SET NULL`, making them eligible for a later invoice. Time entries themselves are not deleted.
+
+**Invoice list response** items include snapshot fields (`hourlyRate`, `currency`, `totalHours`, `totalAmount`, `discountPercent`), `status`, billing date range, optional `project` summary, and `timeEntryCount` (no `timeEntries` array in list items).
+
+**Invoice detail response** (`GET /invoices/:id`) includes all list fields plus the `timeEntries` array with linked entry summaries.
+
+**Eligible entries response** (`GET /invoices/eligible-entries`) returns `{ count, totalHours, entries, defaultHourlyRate, defaultCurrency }` where `entries` is an array of time-entry summaries with `userName` and `taskName` for display.
+
+**Invoice stats response** (`GET /invoices/stats`) returns `{ byStatus: { draft, sent, paid }, thisMonth: { invoiceCount, projectCount, totalAmount, currency } }`.
+
+**Time entry responses** include an `invoiceId` field (nullable) so clients can surface billed state.
 
 ---
 
@@ -294,14 +357,15 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 ## Common Query Parameters
 
-| Parameter   | Used in               | Description                            |
-| ----------- | --------------------- | -------------------------------------- |
-| `page`      | List endpoints        | Page number (1-based, default: 1)      |
-| `limit`     | List endpoints        | Items per page (default: 20, max: 100) |
-| `dateFrom`  | Time entries, reports | Filter start date (ISO 8601)           |
-| `dateTo`    | Time entries, reports | Filter end date (ISO 8601)             |
-| `projectId` | Time entries, reports | Filter by project                      |
-| `taskId`    | Time entries          | Filter by task                         |
+| Parameter   | Used in                         | Description                             |
+| ----------- | ------------------------------- | --------------------------------------- |
+| `page`      | List endpoints                  | Page number (1-based, default: 1)       |
+| `limit`     | List endpoints                  | Items per page (default: 20, max: 100)  |
+| `dateFrom`  | Time entries, reports, invoices | Filter start date (ISO 8601)            |
+| `dateTo`    | Time entries, reports, invoices | Filter end date (ISO 8601)              |
+| `projectId` | Time entries, reports, invoices | Filter by project                       |
+| `taskId`    | Time entries                    | Filter by task                          |
+| `search`    | Time entries, invoices          | Text search filter (task/invoice title) |
 
 ## Standard Error Response
 

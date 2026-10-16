@@ -21,6 +21,8 @@ const TEST_IDS = {
 
 function createProject(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
   return {
+    accessScope: 'project',
+    capabilities: { canManageTasks: true },
     color: null,
     createdAt: '2026-04-20T12:00:00.000Z',
     defaultBillableForTasks: true,
@@ -30,6 +32,8 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
     members: [],
     name: 'Project Orion',
     source: 'manual',
+    referenceProvenance: null,
+    trackingMode: 'managed',
     totalSeconds: 43200,
     updatedAt: '2026-04-20T12:00:00.000Z',
     visibility: 'public',
@@ -40,6 +44,8 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
 
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
   return {
+    accessScope: 'project',
+    capabilities: { canManageTasks: true },
     createdAt: '2026-04-20T12:00:00.000Z',
     defaultBillableForTimeEntries: true,
     githubIssue: null,
@@ -63,6 +69,7 @@ function createCompletedEntry(
     durationSeconds: 3600,
     endedAt: '2026-04-21T10:00:00.000Z',
     githubIssue: null,
+    invoiceId: null,
     id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001',
     isBillable: true,
     project: { id: TEST_IDS.project, name: 'Project Orion' },

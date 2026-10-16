@@ -339,6 +339,14 @@ const columns: ManagementTableColumn[] = [
             <p class="text-text-muted text-[13px]">
               {{ row.sourceLabel }}
             </p>
+            <Tag
+              v-if="row.isExternal"
+              value="External"
+              :pt="{
+                root: 'mt-1 inline-flex items-center rounded-[6px] bg-divider px-2 py-1 text-[12px] font-semibold leading-none',
+                label: 'text-text-muted',
+              }"
+            />
           </div>
 
           <template v-if="row.isActive">
@@ -515,9 +523,19 @@ const columns: ManagementTableColumn[] = [
       :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
-        <span class="text-text-muted text-[13px] font-normal">{{
-          data.sourceLabel
-        }}</span>
+        <div class="flex items-center gap-2">
+          <span class="text-text-muted text-[13px] font-normal">{{
+            data.sourceLabel
+          }}</span>
+          <Tag
+            v-if="data.isExternal"
+            value="External"
+            :pt="{
+              root: 'inline-flex items-center rounded-[6px] bg-divider px-2 py-1 text-[12px] font-semibold leading-none',
+              label: 'text-text-muted',
+            }"
+          />
+        </div>
       </template>
     </Column>
 

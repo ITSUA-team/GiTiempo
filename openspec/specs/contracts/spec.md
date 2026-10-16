@@ -192,10 +192,11 @@ The shared contracts SHALL define stable shapes for invite creation, listing, re
 ### Requirement: Shared Project Contract
 
 The shared contracts SHALL define stable project request and response shapes for backend validation and future frontend clients.
+ Project responses SHALL explicitly identify accessScope as project or own-time and expose server-computed operation capabilities. Own-time responses SHALL scope durations/activity to the caller, return members as an empty list, keep memberCount absent in every scope, and MUST NOT serialize peer identities or unrestricted raw metadata. Full-project response values remain unchanged.
 
 #### Scenario: Project list response uses shared schema
-
-- **GIVEN** the backend returns project list data
+- **GIVEN** the response uses full-project access or the request uses existing project mutation contracts
+- **AND** the backend returns project list data
 - **WHEN** frontend or backend code consumes the response
 - **THEN** the payload matches the shared project list response contract
 - **AND** each project includes core provider-neutral project fields
@@ -203,73 +204,92 @@ The shared contracts SHALL define stable project request and response shapes for
 - **AND** each project excludes `totalHours`
 - **AND** each project excludes provider-specific external reference fields
 
-#### Scenario: Single-project detail response uses shared schema
 
-- **GIVEN** the backend returns single-project data from `GET /projects/:id`
+#### Scenario: Single-project detail response uses shared schema
+- **GIVEN** the response uses full-project access or the request uses existing project mutation contracts
+- **AND** the backend returns single-project data from `GET /projects/:id`
 - **WHEN** frontend or backend code consumes the response
 - **THEN** the payload matches the shared project detail response contract
 - **AND** the payload includes all shared project response fields
 - **AND** the payload includes `providerSummary`, `trackedSummary`, and `assignedMembersSummary`
 - **AND** the payload excludes raw provider metadata and provider-specific storage internals
 
-#### Scenario: Project create request uses shared schema
 
-- **GIVEN** a client constructs a project create request
+#### Scenario: Project create request uses shared schema
+- **GIVEN** the response uses full-project access or the request uses existing project mutation contracts
+- **AND** a client constructs a project create request
 - **WHEN** the request payload is validated against the shared project create schema
 - **THEN** the payload accepts valid creation fields including optional project visibility and optional nullable description
 - **AND** the payload rejects unknown additional fields
 
-#### Scenario: Project update request uses shared schema
 
-- **GIVEN** a client constructs a project update request
+#### Scenario: Project update request uses shared schema
+- **GIVEN** the response uses full-project access or the request uses existing project mutation contracts
+- **AND** a client constructs a project update request
 - **WHEN** the request payload is validated against the shared project update schema
 - **THEN** the payload requires at least one mutable project field
 - **AND** the payload accepts `description` as an editable nullable project field
 - **AND** the payload accepts `isActive` as the only supplied field for archive or unarchive requests
 - **AND** the payload rejects unknown additional fields
 
+#### Scenario: Own-time responses are explicit and redacted
+- **GIVEN** a response concerns an external project accessible only through own time
+- **WHEN** shared schemas validate the response
+- **THEN** scope and capabilities identify restricted access, own totals are used, assignedMembersSummary is null, members is empty, and memberCount is absent
+
 ### Requirement: Shared Project Summary Contract
 
 The shared contracts SHALL define stable response shapes for project summary endpoints and single-project detail summaries.
+ For own-time project detail, assignedMembersSummary SHALL be null and trackedSummary SHALL contain only own completed durations and own activity. Hidden assignment counts MUST NOT be represented as true zero counts. Full-project scopes retain the existing summary fields and values.
 
 #### Scenario: Management project summary response uses shared schema
-
-- **GIVEN** the backend returns management project summary data
+- **GIVEN** the response uses full-project access or the request uses existing project mutation contracts
+- **AND** the backend returns management project summary data
 - **WHEN** frontend or backend code consumes the response
 - **THEN** the payload matches the shared management project summary contract
 - **AND** includes `activeProjects`, `privateProjects`, and `publicProjects`
 
-#### Scenario: User project summary response uses shared schema
 
-- **GIVEN** the backend returns user project summary data
+#### Scenario: User project summary response uses shared schema
+- **GIVEN** the response uses full-project access or the request uses existing project mutation contracts
+- **AND** the backend returns user project summary data
 - **WHEN** frontend or backend code consumes the response
 - **THEN** the payload matches the shared user project summary contract
 - **AND** includes `visibleProjects`, `trackedHoursWeek`, and `trackedHoursMonth`
 
-#### Scenario: Project detail tracked summary uses shared schema
 
-- **GIVEN** the backend returns project detail data
+#### Scenario: Project detail tracked summary uses shared schema
+- **GIVEN** the response uses full-project access or the request uses existing project mutation contracts
+- **AND** the backend returns project detail data
 - **WHEN** frontend or backend code consumes the detail response
 - **THEN** `trackedSummary` includes `totalSeconds`, `billableSeconds`, `billableShare`, and `lastActivityAt`
 - **AND** `totalSeconds` and `billableSeconds` are non-negative integers
 - **AND** `billableShare` is either `null` or a number from 0 through 1
 - **AND** `lastActivityAt` is either `null` or an ISO datetime string
 
-#### Scenario: Project detail provider summary uses shared schema
 
-- **GIVEN** the backend returns project detail data
+#### Scenario: Project detail provider summary uses shared schema
+- **GIVEN** the response uses full-project access or the request uses existing project mutation contracts
+- **AND** the backend returns project detail data
 - **WHEN** frontend or backend code consumes the detail response
 - **THEN** `providerSummary` includes `source`, `externalType`, `externalKey`, and `externalUrl`
 - **AND** `source` matches the shared project source contract
 - **AND** provider detail fields are nullable strings
 
-#### Scenario: Project detail assigned-members summary uses shared schema
 
-- **GIVEN** the backend returns project detail data
+#### Scenario: Project detail assigned-members summary uses shared schema
+- **GIVEN** the response uses full-project access or the request uses existing project mutation contracts
+- **AND** the backend returns project detail data
 - **WHEN** frontend or backend code consumes the detail response
 - **THEN** `assignedMembersSummary` includes `count`, `previewMembers`, and `remainingCount`
 - **AND** `count` and `remainingCount` are non-negative integers
 - **AND** `previewMembers` uses the shared project member shape
+
+#### Scenario: Own-time responses are explicit and redacted
+- **GIVEN** a response concerns an external project accessible only through own time
+- **WHEN** shared schemas validate the response
+- **THEN** scope and capabilities identify restricted access, own totals are used, assignedMembersSummary is null, members is empty, and memberCount is absent
+
 
 ### Requirement: Shared Project Assignment Contract
 
@@ -331,7 +351,7 @@ The shared task response contract SHALL keep the standard task response shape wh
 - **THEN** the payload SHALL set `githubIssue` to `null`
 
 ### Requirement: Shared Time Entry Response Contract
-The shared contracts SHALL define stable time-entry response shapes for backend responses and frontend consumers.
+The shared time-entry response contract SHALL expose the invoice link of a time entry so clients can surface billed state without a separate request.
 
 #### Scenario: Time entry response uses shared schema
 - **GIVEN** the backend returns a time entry
@@ -350,6 +370,18 @@ The shared contracts SHALL define stable time-entry response shapes for backend 
 - **WHEN** frontend code consumes the response
 - **THEN** the payload matches a shared list response contract
 - **AND** includes pagination metadata
+
+#### Scenario: Billed time entry exposes its invoice link
+
+- **GIVEN** a time entry is linked to an invoice
+- **WHEN** the backend returns that time entry
+- **THEN** the response includes the invoice identifier as a UUID
+
+#### Scenario: Unbilled time entry exposes a null invoice link
+
+- **GIVEN** a time entry is not linked to any invoice
+- **WHEN** the backend returns that time entry
+- **THEN** the response includes a null invoice link
 
 ### Requirement: Shared Time Entry Request Validation
 The shared contracts SHALL define validation rules for manual entry creation, entry updates including optional task reassignment, timer actions including optional timer-start descriptions, Chrome Extension timer starts, and list filters including task-title search.
@@ -480,22 +512,32 @@ The shared contracts SHALL define stable response shapes for JSON time reports s
 
 ### Requirement: Shared GitHub Connection Status Contract
 
-The shared contracts SHALL define the exact response shape for GitHub connection status responses as a discriminated union. A disconnected response SHALL be `{ status: "disconnected", account: null }`. A connected response SHALL be `{ status: "connected", account: { githubUserId, login, avatarUrl, connectedAt, updatedAt } }`, where `githubUserId` and `login` are strings, `avatarUrl` is a nullable string, and `connectedAt` and `updatedAt` are ISO datetime strings.
+The shared contracts SHALL define a discriminated identity status with independent OAuth, capability and disconnect-eligibility fields. A disconnected identity SHALL have status disconnected and account null. A connected identity SHALL have status connected and safe account fields githubUserId, login, avatarUrl, connectedAt and updatedAt with the existing types. Both variants SHALL carry oauth, capabilities and disconnect fields. No variant SHALL expose tokens, encrypted values, PKCE material or secrets.
 
-#### Scenario: Disconnected status response
-- **GIVEN** the backend returns GitHub connection status for a disconnected user
-- **WHEN** frontend or backend code consumes the response
-- **THEN** the payload SHALL match the shared GitHub connection status contract
-- **AND** the payload SHALL be `{ status: "disconnected", account: null }`
-- **AND** the payload MUST NOT include access tokens, refresh tokens, PKCE verifier material, or token secrets
+#### Scenario: OAuth readiness is separate from App access
+- **GIVEN** the backend returns a connection status
+- **WHEN** shared schemas parse the payload
+- **THEN** oauth.status SHALL be one of not_authorized, authorized or reauthorization_required and oauth.missingScopes SHALL contain only known requested scope names
+- **AND** capabilities.organizationDiscovery and capabilities.personalData SHALL each be one of ready, authorization_required or permission_required
+- **AND** disconnect SHALL be one of allowed, alternative_signin_required or verification_unavailable
 
-#### Scenario: Connected status response
-- **GIVEN** the backend returns GitHub connection status for a connected user
-- **WHEN** frontend or backend code consumes the response
-- **THEN** the payload SHALL match the shared GitHub connection status contract
-- **AND** the payload SHALL include `status: "connected"`
-- **AND** the payload SHALL include `account.githubUserId`, `account.login`, `account.avatarUrl`, `account.connectedAt`, and `account.updatedAt`
-- **AND** the payload MUST NOT include access tokens, refresh tokens, PKCE verifier material, or token secrets
+#### Scenario: Disconnected payload has explicit capabilities
+- **GIVEN** no identity link exists
+- **WHEN** the backend returns status
+- **THEN** account SHALL be null and both capabilities SHALL require authorization
+- **AND** oauth SHALL be not_authorized and disconnect SHALL be allowed for idempotent cleanup
+
+#### Scenario: Connected payload does not grant installation access
+- **GIVEN** a personal identity is linked
+- **WHEN** a frontend consumes the connection contract
+- **THEN** safe account fields SHALL preserve string GitHub ID/login, nullable avatarUrl and ISO timestamps
+- **AND** the client MUST use capability fields for feature gates and separate workspace contracts for installation state
+
+#### Scenario: Actual scope normalization
+- **GIVEN** GitHub reports a broader granted scope that includes a requested read scope
+- **WHEN** the server derives missingScopes
+- **THEN** the included scope SHALL NOT be falsely listed as missing
+- **AND** the system MUST NOT request a broader scope solely to simplify normalization
 
 ### Requirement: Shared GitHub Auth URL Contract
 
@@ -755,7 +797,7 @@ The shared contracts SHALL define stable request and response shapes for workspa
 - **THEN** the payload is rejected as invalid
 
 ### Requirement: Workspace GitHub Organization Rejections Are Frontend-Safe
-The shared API contract SHALL expose stable, frontend-safe recovery payloads for add-organization failures that the admin Settings page can map to GitHub App access recovery cards.
+The shared API contract SHALL expose stable, frontend-safe recovery payloads for add-organization failures that the admin Settings page can map to OAuth organization-access recovery cards.
 
 #### Scenario: Add organization rejection exposes recovery payload
 - **GIVEN** the backend rejects an add allowed GitHub organization request for a recoverable GitHub connection or provider access reason
@@ -763,18 +805,24 @@ The shared API contract SHALL expose stable, frontend-safe recovery payloads for
 - **THEN** the payload matches the standard API error envelope with `statusCode`, `error`, `message`, optional `code`, optional `requestId`, and optional `details`
 - **AND** the payload includes a required `recovery` object
 - **AND** the `code` field includes a stable recovery reason category
-- **AND** the reason can represent missing GitHub connection, organization not visible, GitHub App blocked or needing approval, and retryable provider failure
+- **AND** the reason can represent missing GitHub connection, organization not visible, OAuth permission missing or organization OAuth access restricted, and retryable provider failure
 - **AND** the payload includes the rejected organization login when available
-- **AND** the payload includes ordered GitHub App access recovery steps with stable step identifiers and status values
-- **AND** the step identifiers can represent install GitHub App, approve or unblock organization access, reconnect GitHub account, and retry allow-list check
+- **AND** the payload includes ordered OAuth organization-access recovery steps with stable step identifiers and status values
+- **AND** the step identifiers can represent authorize OAuth, grant required OAuth permission, approve or unblock organization OAuth access, and retry allow-list check
 - **AND** the payload excludes GitHub token material and raw provider secrets
 
 #### Scenario: Recovery step statuses use shared schema
-- **GIVEN** frontend or backend code consumes a GitHub App access recovery step
+- **GIVEN** frontend or backend code consumes a OAuth organization-access recovery step
 - **WHEN** the payload is validated against the shared schema
 - **THEN** each step includes a stable id and status
 - **AND** unknown step ids or status values are rejected
 - **AND** the schema carries no UI copy, external URLs, token material, or raw provider response data
+
+#### Scenario: Installation recovery stays separate
+- **GIVEN** an organization addition fails due to OAuth membership or policy
+- **WHEN** the frontend renders recovery
+- **THEN** it MUST NOT present App installation as a prerequisite to saving the organization policy
+- **AND** separate installation setup failures SHALL retain their existing App-specific recovery contracts
 
 ### Requirement: Shared Installation Management Contracts Are Credential Free
 Shared contracts SHALL define strict workspace installation setup, completion, status, re-verification, and disconnect shapes. Safe status responses SHALL contain association ID, stable organization ID and display login, installation ID, verification timestamp, lifecycle status, and safe recovery reason. Requests MUST NOT accept a client assertion of verified status or contain the App private key or installation tokens. The workspace MUST come from the authenticated context and setup state.
@@ -834,3 +882,179 @@ Installation completion SHALL return HTTP 409 with `Reconnect GitHub, then retry
 - **WHEN** the client receives the failure
 - **THEN** it displays the corresponding safe setup message
 - **AND** no new timer-start domain code or personal-connection requirement for tracking members is introduced
+
+### Requirement: Shared GitHub Account Recovery Contracts
+
+The shared contracts SHALL expose stable safe recovery errors for identity conflicts, mismatched identities, missing OAuth authorization/permissions and blocked or unverifiable disconnect eligibility. Full Disconnect SHALL report local unlink separately from provider revocation confirmation. Provider errors MUST NOT disclose another user's identity or secret material.
+
+#### Scenario: Cross-user link conflict
+- **GIVEN** a GitHub ID is owned by another GiTiempo user
+- **WHEN** an authenticated link or sign-in ownership commit conflicts
+- **THEN** the response SHALL identify an account-link conflict without including the owner's email, name or workspace
+
+#### Scenario: Complete local unlink with revocation warning
+- **GIVEN** local removal succeeds but provider revocation cannot be confirmed
+- **WHEN** the API returns Disconnect result
+- **THEN** the response SHALL have disconnected true and providerRevocation unconfirmed
+- **AND** clients SHALL show the disconnected state plus safe warning, not retain a false connected state
+
+#### Scenario: Provider revocation confirmed or unnecessary
+- **GIVEN** local unlink completes
+- **WHEN** the API returns the result
+- **THEN** providerRevocation SHALL be confirmed when revocation succeeded or not_required when no revocable credentials remained
+
+#### Scenario: Eligibility blocks unlink
+- **GIVEN** another usable login method is absent or cannot be verified
+- **WHEN** Disconnect is rejected
+- **THEN** the response SHALL distinguish alternative_signin_required from verification_unavailable
+- **AND** the previous link and credentials SHALL remain intact
+
+### Requirement: Shared External Reference Start Contract
+Shared validation SHALL define a reference-start request containing repository key, positive safe integer issue number, bounded issue title and a canonical HTTPS github.com issue URL with matching repository and number. It MUST reject unknown authority fields such as workspace, user, mode or verified status. It MUST use existing time-entry response and stable safe error conventions; reference success MUST NOT imply provider verification.
+
+#### Scenario: Projects pane submits canonical issue identity
+- **GIVEN** the source page is a supported Projects pane
+- **WHEN** the extension constructs a reference request
+- **THEN** the canonical URL identifies the parsed repository issue rather than the board URL
+
+
+#### Scenario: Caller cannot inject authority
+- **GIVEN** a caller sends a workspace, user, tracking mode or verified flag in the body
+- **WHEN** the request is validated
+- **THEN** unknown fields are rejected and session/stored data remain authoritative
+
+### Requirement: Scoped Task And Extension Capabilities Are Explicit
+Shared responses SHALL expose whether a task is available through own-time or separate project scope and whether shared task management is authorized. Extension runtime context SHALL identify the current workspace without exposing credentials and MUST NOT gate reference starts on GitHub-link or administrator-enablement state.
+
+#### Scenario: Own-time task cannot advertise management
+- **GIVEN** a task is returned to an own-time reader
+- **WHEN** a client consumes capabilities
+- **THEN** shared mutation capabilities are false while an otherwise eligible own timer action remains available
+
+
+#### Scenario: Workspace destination is available before start
+- **GIVEN** an authenticated extension user has no timer
+- **WHEN** runtime state is loaded
+- **THEN** the current session workspace is available for display and no GitHub connection gate is required
+
+### Requirement: Shared Invoice Status Contract
+
+The shared contracts SHALL define an invoice status enum restricted to `draft`, `sent`, and `paid` for backend validation and frontend consumption.
+
+#### Scenario: Status value is validated
+
+- **GIVEN** a request or response carries an invoice status
+- **WHEN** the shared schema validates the value
+- **THEN** only `draft`, `sent`, or `paid` are accepted and any other value is rejected
+
+### Requirement: Shared Invoice Create Contract
+
+The shared contracts SHALL define a validated invoice create request body with a title, billing date range, optional project id, hourly rate, optional currency, optional discount percent, and optional notes, rejecting any property outside the contract.
+
+#### Scenario: Create request uses shared schema
+
+- **GIVEN** an admin or PM creates an invoice
+- **WHEN** the request body is validated
+- **THEN** the title, date range, and rate requirements are enforced
+- **AND** the discount percent is constrained to the 0–100 range with a step of 0.01
+
+#### Scenario: Unknown property is rejected
+
+- **GIVEN** a create request carries a property outside the contract
+- **WHEN** the shared schema validates the body
+- **THEN** the request is rejected
+
+### Requirement: Shared Invoice Update Contract
+
+The shared contracts SHALL define a validated invoice update request body for editable fields, rejecting any property outside the contract and any attempt to mutate snapshot totals directly.
+
+#### Scenario: Update request uses shared schema
+
+- **GIVEN** an admin or PM updates an invoice
+- **WHEN** the request body is validated
+- **THEN** only editable fields defined by the contract are accepted
+
+#### Scenario: Snapshot totals are not directly mutable
+
+- **GIVEN** an update request attempts to set `total_hours` or `total_amount`
+- **WHEN** the shared schema validates the body
+- **THEN** the request is rejected
+
+### Requirement: Shared Invoice List Query Contract
+
+The shared contracts SHALL define a validated invoice list query with pagination and optional filters by project, status, date range, and search text, rejecting any property outside the contract.
+
+#### Scenario: List query uses shared schema
+
+- **GIVEN** an admin or PM lists invoices
+- **WHEN** the query parameters are validated
+- **THEN** pagination (page, limit), project, status, date range, and search filters are enforced
+- **AND** the search text is constrained to a maximum of 200 characters
+
+#### Scenario: Unknown query property is rejected
+
+- **GIVEN** a list query carries a property outside the contract
+- **WHEN** the shared schema validates the query
+- **THEN** the request is rejected
+
+### Requirement: Shared Invoice Response Contract
+
+The shared contracts SHALL define stable invoice list and detail response shapes that include snapshot fields, status, billing date range, optional project summary, and the count of linked time entries. The detail response additionally includes the full array of linked time-entry summaries.
+
+#### Scenario: Invoice list response uses shared schema
+
+- **GIVEN** the backend returns a list of invoices
+- **WHEN** frontend code consumes the response
+- **THEN** the payload matches the shared invoice list response contract
+- **AND** includes pagination metadata
+- **AND** each item includes snapshot fields, status, billing date range, optional project summary, and `timeEntryCount`
+- **AND** list items do NOT include the `timeEntries` array
+
+#### Scenario: Invoice detail response uses shared schema
+
+- **GIVEN** the backend returns a single invoice
+- **WHEN** frontend code consumes the response
+- **THEN** the payload matches the shared invoice detail response contract
+- **AND** includes snapshot `hourlyRate`, `currency`, `totalHours`, and `totalAmount`
+- **AND** includes the linked time entries as an array of summaries
+
+### Requirement: Shared Eligible Entries Query Contract
+
+The shared contracts SHALL define a validated eligible-entries query with a required date range and optional project id, rejecting any property outside the contract and any reversed date bounds.
+
+#### Scenario: Eligible entries query uses shared schema
+
+- **GIVEN** an admin or PM previews eligible entries
+- **WHEN** the query parameters are validated
+- **THEN** `dateFrom` and `dateTo` are required and `projectId` is optional
+- **AND** `dateTo` earlier than `dateFrom` is rejected
+
+#### Scenario: Unknown query property is rejected
+
+- **GIVEN** an eligible-entries query carries a property outside the contract
+- **WHEN** the shared schema validates the query
+- **THEN** the request is rejected
+
+### Requirement: Shared Eligible Entries Response Contract
+
+The shared contracts SHALL define a stable eligible-entries response shape that includes a count, computed total hours, an array of time-entry summaries with user and task names, and the workspace default hourly rate and currency.
+
+#### Scenario: Eligible entries response uses shared schema
+
+- **GIVEN** the backend returns eligible time entries
+- **WHEN** frontend code consumes the response
+- **THEN** the payload matches the shared eligible-entries response contract
+- **AND** includes `count`, `totalHours`, `entries`, `defaultHourlyRate`, and `defaultCurrency`
+- **AND** each entry includes `userName` and `taskName` for display
+
+### Requirement: Shared Invoice Stats Response Contract
+
+The shared contracts SHALL define a stable invoice stats response shape that includes counts grouped by status and a summary of invoices created in the current calendar month.
+
+#### Scenario: Stats response uses shared schema
+
+- **GIVEN** the backend returns invoice stats
+- **WHEN** frontend code consumes the response
+- **THEN** the payload matches the shared invoice stats response contract
+- **AND** includes `byStatus` with `draft`, `sent`, and `paid` counts
+- **AND** includes `thisMonth` with `invoiceCount`, `projectCount`, `totalAmount`, and `currency`

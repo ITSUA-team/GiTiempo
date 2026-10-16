@@ -9,6 +9,8 @@ export * from "./contracts/tasks.js";
 export * from "./contracts/time-entries.js";
 export * from "./contracts/reports.js";
 export * from "./contracts/saved-reports.js";
+export * from "./contracts/common.js";
+export * from "./contracts/invoices.js";
 export * from "./contracts/github.js";
 export * from "./auth/access-token-claims.js";
 export * from "./auth/profile-initials.js";

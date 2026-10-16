@@ -1,8 +1,10 @@
 /* global chrome */
 
 import type {
+  CurrentUserWorkspaceMembershipResponse,
   CurrentTimeEntryResponse,
   GitHubTrackingErrorCode,
+  TrackingCapabilityResponse,
   TimeEntryResponse,
 } from "@gitiempo/shared";
 
@@ -21,6 +23,26 @@ export interface RuntimeSnapshot {
   /** Firebase cleanup failed after local GiTiempo cleanup; retry is available. */
   providerCleanupPending?: boolean;
   user: SnapshotUser | null;
+  workspace?: { id: string; name: string } | null;
+  trackingCapability?: RuntimeTrackingCapability | null;
+  workspaceSwitching?: boolean;
+}
+
+export type RuntimeTrackingCapability = TrackingCapabilityResponse & {
+  githubRepo: string;
+  issueNumber: number;
+};
+
+export function getCurrentTrackingCapability(
+  snapshot: RuntimeSnapshot | null,
+  pageContext: SupportedGitHubIssueContext,
+): RuntimeTrackingCapability | null {
+  const capability = snapshot?.trackingCapability ?? null;
+
+  return capability?.githubRepo.toLowerCase() === pageContext.githubRepo.toLowerCase()
+    && capability.issueNumber === pageContext.issueNumber
+    ? capability
+    : null;
 }
 
 export interface RuntimeActionResult {
@@ -33,6 +55,13 @@ export interface RuntimeActionResult {
 export type RuntimeAuthResult = RuntimeActionResult;
 export type RuntimeMutationResult = RuntimeActionResult;
 
+export interface RuntimeWorkspaceMembershipsResult {
+  errorMessage?: string;
+  items: CurrentUserWorkspaceMembershipResponse[];
+  ok: boolean;
+  snapshot: RuntimeSnapshot;
+}
+
 export interface RuntimeClient {
   exchangeFirebaseToken(firebaseIdToken: string): Promise<RuntimeAuthResult>;
   signInWithGithub(): Promise<RuntimeAuthResult>;
@@ -41,13 +70,15 @@ export interface RuntimeClient {
     code: string,
     verifier: string,
   ): Promise<RuntimeAuthResult>;
-  getSnapshot(): Promise<RuntimeSnapshot>;
+  getSnapshot(pageContext?: SupportedGitHubIssueContext): Promise<RuntimeSnapshot>;
+  getWorkspaceMemberships(): Promise<RuntimeWorkspaceMembershipsResult>;
   onSnapshotUpdated(listener: (snapshot: RuntimeSnapshot) => void): () => void;
   openExtension(): Promise<void>;
   retryProviderCleanup(): Promise<RuntimeAuthResult>;
   signOut(): Promise<RuntimeAuthResult>;
-  startTimer(pageContext: SupportedGitHubIssueContext): Promise<RuntimeMutationResult>;
+  startTimer(pageContext: SupportedGitHubIssueContext, expectedWorkspaceId?: string, expectedUserEmail?: string): Promise<RuntimeMutationResult>;
   stopTimer(expectedTimerId: string): Promise<RuntimeMutationResult>;
+  switchWorkspace(workspaceId: string): Promise<RuntimeMutationResult>;
 }
 
 
@@ -58,8 +89,10 @@ export type BackgroundMessage =
   | { type: "auth/sign-in-google" }
   | { type: "auth/sign-out" }
   | { type: "auth/retry-provider-cleanup" }
-  | { type: "runtime/get-snapshot" }
-  | { type: "timer/start"; pageContext: SupportedGitHubIssueContext }
+  | { type: "runtime/get-snapshot"; pageContext?: SupportedGitHubIssueContext }
+  | { type: "workspace/get-memberships" }
+  | { type: "workspace/switch"; workspaceId: string }
+  | { type: "timer/start"; pageContext: SupportedGitHubIssueContext; expectedWorkspaceId?: string; expectedUserEmail?: string }
   | { type: "timer/stop"; expectedTimerId: string }
   | { type: "ui/open-extension" };
 
@@ -112,8 +145,13 @@ export function createRuntimeClient(): RuntimeClient {
         type: "auth/sign-in-google",
       });
     },
-    getSnapshot() {
-      return sendRuntimeMessage<RuntimeSnapshot>({ type: "runtime/get-snapshot" });
+    getSnapshot(pageContext) {
+      return sendRuntimeMessage<RuntimeSnapshot>({ type: "runtime/get-snapshot", pageContext });
+    },
+    getWorkspaceMemberships() {
+      return sendRuntimeMessage<RuntimeWorkspaceMembershipsResult>({
+        type: "workspace/get-memberships",
+      });
     },
     onSnapshotUpdated(listener) {
       const runtimeListener = (message: unknown) => {
@@ -141,16 +179,24 @@ export function createRuntimeClient(): RuntimeClient {
         type: "auth/retry-provider-cleanup",
       });
     },
-    startTimer(pageContext) {
+    startTimer(pageContext, expectedWorkspaceId, expectedUserEmail) {
       return sendRuntimeMessage<RuntimeMutationResult>({
         type: "timer/start",
         pageContext,
+        expectedWorkspaceId,
+        expectedUserEmail,
       });
     },
     stopTimer(expectedTimerId) {
       return sendRuntimeMessage<RuntimeMutationResult>({
         type: "timer/stop",
         expectedTimerId,
+      });
+    },
+    switchWorkspace(workspaceId) {
+      return sendRuntimeMessage<RuntimeMutationResult>({
+        type: "workspace/switch",
+        workspaceId,
       });
     },
   };

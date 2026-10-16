@@ -32,6 +32,8 @@ function getRequestBody(fetchFn: ReturnType<typeof vi.fn<typeof fetch>>): unknow
 }
 
 const projectResponse = {
+	accessScope: 'project',
+	capabilities: { canManageTasks: true },
 	color: null,
 	createdAt: '2026-05-01T10:00:00.000Z',
 	defaultBillableForTasks: false,
@@ -41,6 +43,8 @@ const projectResponse = {
 	members: [],
 	name: 'Project Orion',
 	source: 'manual',
+	referenceProvenance: null,
+	trackingMode: 'managed',
 	totalSeconds: 3600,
 	updatedAt: '2026-05-01T10:00:00.000Z',
 	visibility: 'private',
@@ -48,6 +52,8 @@ const projectResponse = {
 };
 
 const taskResponse = {
+	accessScope: 'project',
+	capabilities: { canManageTasks: true },
 	createdAt: '2026-05-01T10:00:00.000Z',
 	defaultBillableForTimeEntries: false,
 	githubIssue: null,

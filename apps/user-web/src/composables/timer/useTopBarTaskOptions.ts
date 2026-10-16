@@ -5,7 +5,7 @@ import { ref, type ComputedRef } from "vue";
 
 import {
   appendUnsyncedProjectGitHubIssueOptions,
-  createProjectGitHubIssuePageFetcher,
+  fetchCachedProjectGitHubIssuePage,
   type ProjectGitHubIssuePageFetcher,
 } from "@/lib/project-github-issues";
 import {
@@ -62,18 +62,16 @@ export function useTopBarTaskOptions({
   }
 
   function getTaskOptionsQueryKey(projectId: string): QueryKey {
-    return timerKeys.projectTaskOptions(scope.value, projectId);
+    const project = picker.projects.value.find((project) => project.id === projectId);
+    return timerKeys.projectTaskOptions(scope.value, projectId, project?.accessScope);
   }
 
   const fetchProjectGitHubIssuePage: ProjectGitHubIssuePageFetcher = (page) =>
-    queryClient.fetchQuery({
-      queryKey: timerGithubKeys.repositoryIssuePage(
-        scope.value,
-        page.projectId,
-        page.pageToken ?? null,
-      ),
-      queryFn: () => createProjectGitHubIssuePageFetcher(client)(page),
-      staleTime: TIMER_OPTIONS_STALE_TIME,
+    fetchCachedProjectGitHubIssuePage({
+      client,
+      page,
+      queryClient,
+      scope: scope.value,
     });
 
   function getCachedTaskOptions(projectId: string): TopBarTaskOption[] | undefined {
@@ -113,7 +111,10 @@ export function useTopBarTaskOptions({
       for (const project of projects) {
         const previousProject = previousProjectsById.get(project.id);
 
-        if (previousProject && previousProject.source !== project.source) {
+        if (previousProject && (
+          previousProject.source !== project.source ||
+          previousProject.accessScope !== project.accessScope
+        )) {
           queryClient.removeQueries({
             queryKey: getTaskOptionsQueryKey(project.id),
           });
@@ -182,6 +183,8 @@ export function useTopBarTaskOptions({
       }
 
       const options: TopBarTaskOption[] = result.issues.map((issue) => ({
+        accessScope: "project",
+        capabilities: { canManageTasks: true },
         createdAt: issue.updatedAt,
         defaultBillableForTimeEntries: true,
         githubIssue: issue.githubIssue,
@@ -225,9 +228,10 @@ export function useTopBarTaskOptions({
     picker.setTasksError(null);
 
     try {
-      const hasProjectMetadata = picker.projects.value.some(
+      const project = picker.projects.value.find(
         (project) => project.id === projectId,
       );
+      const hasProjectMetadata = project !== undefined;
       const cachedTaskOptions = isQueryDataCurrent(
         getTaskOptionsQueryKey(projectId),
       )
@@ -241,7 +245,7 @@ export function useTopBarTaskOptions({
       }
 
       const localTaskQueryOptions = {
-        queryKey: userProjectsKeys.projectTasks(scope.value, projectId),
+        queryKey: userProjectsKeys.projectTasks(scope.value, projectId, project?.accessScope),
         queryFn: () => client.listProjectTasks(projectId),
       };
       const localTasks = isQueryDataCurrent(localTaskQueryOptions.queryKey)
@@ -303,6 +307,8 @@ export function useTopBarTaskOptions({
         }
 
         return {
+          accessScope: project.accessScope,
+          capabilities: project.capabilities,
           createdAt: issue.updatedAt,
           defaultBillableForTimeEntries: project.defaultBillableForTasks,
           githubIssue: issue.githubIssue,

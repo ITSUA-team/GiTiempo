@@ -18,6 +18,7 @@ import { useReportsData } from './useReportsData';
 const workspaceId = '44444444-4444-4444-8444-444444444444';
 const projectOrionId = '11111111-1111-4111-8111-111111111111';
 const projectBillingId = '11111111-1111-4111-8111-111111111112';
+const projectInactiveId = '11111111-1111-4111-8111-111111111113';
 const alexId = '33333333-3333-4333-8333-333333333333';
 const ninaId = '33333333-3333-4333-8333-333333333334';
 const zoeId = '33333333-3333-4333-8333-333333333335';
@@ -29,6 +30,8 @@ function createProject(
   overrides: Partial<ProjectResponse> = {},
 ): ProjectResponse {
   return {
+    accessScope: 'project',
+    capabilities: { canManageTasks: true },
     color: null,
     createdAt: '2026-05-01T10:00:00.000Z',
     description: null,
@@ -37,6 +40,8 @@ function createProject(
     members,
     name,
     source: 'manual',
+    referenceProvenance: null,
+    trackingMode: 'managed',
     totalSeconds: 3600,
     updatedAt: '2026-05-01T10:00:00.000Z',
     visibility: 'public',
@@ -391,6 +396,51 @@ describe('useReportsData', () => {
     );
     expect(reportsClient.getTimeReport).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: projectBillingId }),
+    );
+  });
+
+  it('includes inactive projects in an admin report but keeps them out of PM scope', async () => {
+    const scopedProjects: ProjectListResponse = [
+      ...projects,
+      createProject(projectInactiveId, 'Archived engagement', [], {
+        isActive: false,
+      }),
+    ];
+
+    async function requestedProjectIds(role: 'admin' | 'pm') {
+      const enabled = ref(true);
+      const listProjects = vi.fn().mockResolvedValue(scopedProjects);
+      const reportsClient = createReportsClientMocks();
+      let reports!: ReturnType<typeof useReportsData>;
+
+      mountWithQuery(
+        defineComponent({
+          setup() {
+            reports = useReportsData({
+              enabled,
+              membersClient: createMembersClientMocks(),
+              projectsClient: { listProjects },
+              reportsClient,
+              scope: createScope(role),
+            });
+            return () => null;
+          },
+        }),
+      );
+
+      await flushPromises();
+      expect(reports.loadError.value).toBeNull();
+
+      return reportsClient.getTimeReport.mock.calls.map(
+        ([query]) => query.projectId,
+      );
+    }
+
+    await expect(requestedProjectIds('admin')).resolves.toEqual(
+      expect.arrayContaining([projectOrionId, projectBillingId, projectInactiveId]),
+    );
+    await expect(requestedProjectIds('pm')).resolves.toEqual(
+      expect.not.arrayContaining([projectInactiveId]),
     );
   });
 

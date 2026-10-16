@@ -30,6 +30,7 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import { CreateManualTimeEntryDto } from '../dto/create-manual-time-entry.dto';
 import { CurrentTimeEntryResponseDto } from '../dto/current-time-entry-response.dto';
 import { StartTimerFromGitHubDto } from '../dto/start-timer-from-github.dto';
+import { StartTimerFromGitHubReferenceDto } from '../dto/start-timer-from-github-reference.dto';
 import { StartTimerDto } from '../dto/start-timer.dto';
 import { StopTimerDto } from '../dto/stop-timer.dto';
 import { TimeEntryListQueryDto } from '../dto/time-entry-list-query.dto';
@@ -38,6 +39,7 @@ import { TimeEntryResponseDto } from '../dto/time-entry-response.dto';
 import { UpdateTimeEntryDto } from '../dto/update-time-entry.dto';
 import { TimeEntriesService } from '../services/time-entries.service';
 import { GitHubTrackingErrorResponseDto } from '../dto/github-tracking-error-response.dto';
+import { TrackingCapabilityResponseDto } from '../dto/tracking-capability-response.dto';
 
 @ApiTags('time-entries')
 @ApiBearerAuth()
@@ -137,6 +139,41 @@ export class TimeEntriesController {
     @Body() body: StartTimerFromGitHubDto,
   ): Promise<TimeEntryResponseDto> {
     return this.timeEntries.startTimerFromGitHub(user, body);
+  }
+
+  @Post('time-entries/timer/start-from-github-reference')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Start timer from an external GitHub issue reference',
+    description:
+      'Records validated browser issue context without GitHub API access for external-reference projects. Existing managed projects use the installation-verified route.',
+  })
+  @ApiCreatedResponse({ type: TimeEntryResponseDto })
+  @ApiConflictResponse({ description: 'Timer already running' })
+  @ApiNotFoundResponse({ description: 'Project or task not available' })
+  @ApiUnprocessableEntityResponse({ description: 'Project or task inactive' })
+  @ZodSerializerDto(TimeEntryResponseDto)
+  startTimerFromGitHubReference(
+    @CurrentUser() user: AuthUser,
+    @Body() body: StartTimerFromGitHubReferenceDto,
+  ): Promise<TimeEntryResponseDto> {
+    return this.timeEntries.startTimerFromGitHubReference(user, body);
+  }
+
+  @Post('time-entries/timer/capability')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get tracking capability for an external GitHub issue reference',
+    description:
+      'Checks the current workspace authorization without creating or changing a project, task, reference, or time entry.',
+  })
+  @ApiOkResponse({ type: TrackingCapabilityResponseDto })
+  @ZodSerializerDto(TrackingCapabilityResponseDto)
+  getTrackingCapability(
+    @CurrentUser() user: AuthUser,
+    @Body() body: StartTimerFromGitHubReferenceDto,
+  ): Promise<TrackingCapabilityResponseDto> {
+    return this.timeEntries.getTrackingCapability(user, body);
   }
 
   @Post('time-entries/timer/stop')

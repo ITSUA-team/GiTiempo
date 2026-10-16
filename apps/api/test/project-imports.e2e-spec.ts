@@ -346,24 +346,32 @@ describe('Project imports (e2e)', () => {
     });
   });
 
-  it('resolves the timer repository to the active holder, not the older archived one', async () => {
+  it('enforces one case-insensitive repository holder and resolves its canonical mapping', async () => {
     const suffix = randomUUID().slice(0, 8);
     const repository = `${ORGANIZATION}/Timer-${suffix}`;
+
+    const activeId = await seedProject(
+      `${ORGANIZATION}/timer-active-${suffix}`,
+      true,
+    );
+    await seedRepositoryRef(activeId, repository, new Date('2024-01-01'));
 
     const archivedId = await seedProject(
       `${ORGANIZATION}/timer-archived-${suffix}`,
       false,
     );
-    const activeId = await seedProject(
-      `${ORGANIZATION}/timer-active-${suffix}`,
-      true,
-    );
-    await seedRepositoryRef(
-      archivedId,
-      repository.toLowerCase(),
-      new Date('2020-01-01'),
-    );
-    await seedRepositoryRef(activeId, repository, new Date('2024-01-01'));
+    await expect(
+      seedRepositoryRef(
+        archivedId,
+        repository.toLowerCase(),
+        new Date('2020-01-01'),
+      ),
+    ).rejects.toMatchObject({
+      cause: {
+        constraint:
+          'project_external_refs_workspace_provider_repository_key_ci_uniq',
+      },
+    });
 
     const materialization = app.get(GithubTaskMaterializationService, {
       strict: false,

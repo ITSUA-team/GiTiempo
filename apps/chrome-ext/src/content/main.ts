@@ -9,7 +9,12 @@ import {
   type PageContext,
   type SupportedGitHubIssueContext,
 } from "@/lib/github-context";
-import { createRuntimeClient, type RuntimeClient, type RuntimeSnapshot } from "@/lib/runtime";
+import {
+  createRuntimeClient,
+  getCurrentTrackingCapability,
+  type RuntimeClient,
+  type RuntimeSnapshot,
+} from "@/lib/runtime";
 import { formatElapsedTime } from "@/lib/time";
 
 interface InjectedAppOptions {
@@ -26,6 +31,7 @@ interface InjectedAppOptions {
 interface InjectedState {
   actionErrorMessage: string | null;
   isLoading: boolean;
+  isSubmitting: boolean;
   snapshot: RuntimeSnapshot | null;
   theme: "dark" | "light";
 }
@@ -65,6 +71,17 @@ function resolveGitHubColorMode(
   return matchMediaFn?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function renderInjectedIssueHeading(
+  pageContext: SupportedGitHubIssueContext,
+  headlineTextClass: string,
+  mutedTextClass: string,
+  indentation: string,
+): string {
+  return `
+${indentation}<p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
+${indentation}<p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>`;
+}
+
 function renderInjectedBody(
   pageContext: SupportedGitHubIssueContext,
   state: InjectedState,
@@ -75,25 +92,28 @@ function renderInjectedBody(
 
   if (state.isLoading || state.snapshot === null) {
     return `
-      <div>
-        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "        ")}
       </div>
       <p class="m-0 text-sm ${mutedTextClass}">Checking your GiTiempo timer state.</p>
     `;
   }
 
   const currentTimer = state.snapshot.currentTimer;
+  const trackingCapability = getCurrentTrackingCapability(
+    state.snapshot,
+    pageContext,
+  );
   const isCurrentIssueTimer = currentTimer
-    ? currentTimer.githubIssue?.githubRepo === pageContext.githubRepo
+    ? currentTimer.githubIssue?.githubRepo.toLowerCase() === pageContext.githubRepo.toLowerCase()
       && currentTimer.githubIssue.issueNumber === pageContext.issueNumber
     : false;
 
-  if ((state.actionErrorMessage || state.snapshot.errorMessage) && !isCurrentIssueTimer) {
+  // A workspace refresh can fail independently of the current-timer request.
+  // Do not replace an authoritative timer from another issue with a generic
+  // readiness error: that timer remains the only actionable state on this page.
+  if ((state.actionErrorMessage || state.snapshot.errorMessage) && !currentTimer) {
     return `
-      <div>
-        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "        ")}
       </div>
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to update timer state.")}</p>
@@ -104,9 +124,7 @@ function renderInjectedBody(
 
   if (!state.snapshot.authenticated) {
     return `
-      <div>
-        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "        ")}
       </div>
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-sm ${mutedTextClass}">Sign in to GiTiempo to start tracking this issue.</p>
@@ -118,9 +136,7 @@ function renderInjectedBody(
   if (currentTimer && isCurrentIssueTimer) {
     return `
       <div class="flex items-start justify-between gap-3">
-        <div>
-          <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-          <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+        <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "          ")}
         </div>
         <span class="bg-status-active-bg text-status-active-text rounded-sm px-2 py-1 text-xs font-semibold">Running</span>
       </div>
@@ -131,36 +147,49 @@ function renderInjectedBody(
             ? `<p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to start timer.")}</p>`
             : ""}
         </div>
-        <button type="button" data-action="stop-timer" class="bg-destructive text-text-inverse ${injectedActionButtonClass}">Stop Timer</button>
+        <button type="button" data-action="stop-timer" ${state.isSubmitting || state.snapshot.workspaceSwitching ? "disabled" : ""} class="bg-destructive text-text-inverse ${injectedActionButtonClass}">Stop Timer</button>
       </div>
     `;
   }
 
   if (currentTimer) {
     return `
-      <div>
-        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "        ")}
       </div>
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-1">
           <p class="m-0 text-sm font-semibold ${headlineTextClass}">Timer running elsewhere</p>
           <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(currentTimer.task.title)} · ${escapeHtml(currentTimer.project.name)}</p>
           <p class="m-0 text-xs ${mutedTextClass}">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
+          ${(state.actionErrorMessage || state.snapshot.errorMessage)
+            ? `<div class="flex items-center gap-3"><p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to update timer state.")}</p><button type="button" data-action="retry" class="${injectedTextActionClass}">Retry</button></div>`
+            : ""}
         </div>
         <button type="button" data-action="open-extension" class="bg-brand text-text-inverse ${injectedActionButtonClass}">Open extension</button>
       </div>
     `;
   }
 
+  if (!trackingCapability || !trackingCapability.canStartTracking) {
+    const message = trackingCapability?.reason ??
+      "Unable to confirm whether you can track this issue.";
+
+    return `
+      <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "        ")}
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(message)}</p>
+        <button type="button" data-action="retry" class="${injectedTextActionClass}">Retry</button>
+      </div>
+    `;
+  }
+
   return `
-    <div>
-      <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-      <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+    <div>${renderInjectedIssueHeading(pageContext, headlineTextClass, mutedTextClass, "      ")}
     </div>
     <div class="flex items-center justify-between gap-3">
       <p class="m-0 text-sm ${mutedTextClass}">Start tracking directly from this GitHub issue.</p>
-      <button type="button" data-action="start-timer" class="bg-brand text-text-inverse ${injectedActionButtonClass}">Start Timer</button>
+      <button type="button" data-action="start-timer" ${state.isSubmitting || state.snapshot.workspaceSwitching || !state.snapshot.workspace ? "disabled" : ""} class="bg-brand text-text-inverse disabled:opacity-60 ${injectedActionButtonClass}">Start Timer</button>
     </div>
   `;
 }
@@ -199,6 +228,7 @@ export function createInjectedIssueApp({
   const state: InjectedState = {
     actionErrorMessage: null,
     isLoading: true,
+    isSubmitting: false,
     snapshot: null,
     theme: "light",
   };
@@ -208,6 +238,7 @@ export function createInjectedIssueApp({
   const unsubscribe = runtimeClient.onSnapshotUpdated((snapshot) => {
     state.snapshot = snapshot;
     render();
+    void load();
   });
 
   function syncTheme(): void {
@@ -268,9 +299,15 @@ export function createInjectedIssueApp({
 
   function render(): void {
     syncTheme();
+    const runningTimerWorkspace = state.snapshot?.currentTimer?.workspace?.name;
+    const trackingWorkspace = state.snapshot?.workspace?.name ?? "Checking workspace…";
+    const workspaceContext = runningTimerWorkspace
+      ? `Timer workspace: ${runningTimerWorkspace} · Tracking workspace: ${trackingWorkspace}`
+      : `Tracking workspace: ${trackingWorkspace}`;
     root.innerHTML = `
       <div class="${renderInjectedContainerClass(pageContext)}">
         <section class="${renderInjectedSectionClass(pageContext)}">
+          ${state.snapshot?.authenticated ? `<p data-testid="workspace-context" class="m-0 text-xs ${state.theme === "dark" ? "text-text-inverse-muted" : "text-text-muted"}">${escapeHtml(workspaceContext)}</p>` : ""}
           ${renderInjectedBody(pageContext, state, now())}
         </section>
       </div>
@@ -285,7 +322,7 @@ export function createInjectedIssueApp({
     render();
 
     try {
-      state.snapshot = await runtimeClient.getSnapshot();
+      state.snapshot = await runtimeClient.getSnapshot(pageContext);
     } catch (error) {
       state.snapshot = {
         authenticated: false,
@@ -302,22 +339,44 @@ export function createInjectedIssueApp({
   }
 
   async function handleStartTimer(): Promise<void> {
-    try {
-      const result = await runtimeClient.startTimer(pageContext);
-
-      state.snapshot = result.snapshot;
-      state.actionErrorMessage = result.ok
-        ? null
-        : result.errorMessage ?? "Unable to start timer.";
-    } catch (error) {
-      state.actionErrorMessage =
-        error instanceof Error ? error.message : "Unable to start timer.";
+    if (state.isSubmitting || state.snapshot?.workspaceSwitching) return;
+    const trackingCapability = getCurrentTrackingCapability(
+      state.snapshot,
+      pageContext,
+    );
+    if (!trackingCapability?.canStartTracking) {
+      state.actionErrorMessage = state.snapshot?.trackingCapability?.reason ??
+        "Unable to confirm whether you can track this issue. Refresh and try again.";
+      render();
+      return;
     }
-
+    const expectedWorkspaceId = state.snapshot?.workspace?.id;
+    const expectedUserEmail = state.snapshot?.user?.email;
+    if (!expectedWorkspaceId || !expectedUserEmail) {
+      state.actionErrorMessage = "Workspace context is unavailable. Refresh before starting.";
+      render();
+      return;
+    }
+    state.isSubmitting = true;
     render();
+    try {
+      const context = resolveGitHubIssueContext(ownerDocument, ownerDocument.defaultView?.location.href ?? pageContext.issueUrl);
+      if (context.kind !== "supported" || context.githubRepo.toLowerCase() !== pageContext.githubRepo.toLowerCase() || context.issueNumber !== pageContext.issueNumber) {
+        throw new Error("Issue context changed. Refresh before starting.");
+      }
+      const result = await runtimeClient.startTimer(context, expectedWorkspaceId, expectedUserEmail);
+      state.snapshot = result.snapshot;
+      state.actionErrorMessage = result.ok ? null : result.errorMessage ?? "Unable to start timer.";
+    } catch (error) {
+      state.actionErrorMessage = error instanceof Error ? error.message : "Unable to start timer.";
+    } finally {
+      state.isSubmitting = false;
+      render();
+    }
   }
 
   async function handleStopTimer(): Promise<void> {
+    if (state.isSubmitting || state.snapshot?.workspaceSwitching) return;
     const expectedTimerId = state.snapshot?.currentTimer?.id;
 
     if (!expectedTimerId) {
@@ -326,6 +385,8 @@ export function createInjectedIssueApp({
       return;
     }
 
+    state.isSubmitting = true;
+    render();
     try {
       const result = await runtimeClient.stopTimer(expectedTimerId);
 
@@ -336,9 +397,10 @@ export function createInjectedIssueApp({
     } catch (error) {
       state.actionErrorMessage =
         error instanceof Error ? error.message : "Unable to stop timer.";
+    } finally {
+      state.isSubmitting = false;
+      render();
     }
-
-    render();
   }
 
   return {
@@ -411,6 +473,7 @@ export function bootstrapInjectedIssueControl(
 ): { destroy(): void } {
   let mountedApp: { destroy(): void; load(): Promise<void> } | null = null;
   let currentUrl = "";
+  let currentTitle = "";
 
   function isMountedAtExpectedTarget(
     pageContext: SupportedGitHubIssueContext,
@@ -445,11 +508,12 @@ export function bootstrapInjectedIssueControl(
       return;
     }
 
-    if (nextUrl === currentUrl && mountedApp && isMountedAtExpectedTarget(pageContext)) {
+    if (nextUrl === currentUrl && pageContext.issueTitle === currentTitle && mountedApp && isMountedAtExpectedTarget(pageContext)) {
       return;
     }
 
     currentUrl = nextUrl;
+    currentTitle = pageContext.issueTitle;
     mountedApp?.destroy();
     mountedApp = null;
 
@@ -465,7 +529,13 @@ export function bootstrapInjectedIssueControl(
   });
 
   syncToLocation();
-  observer.observe(doc.documentElement, { childList: true, subtree: true });
+  observer.observe(doc.documentElement, {
+    attributeFilter: ["href"],
+    attributes: true,
+    characterData: true,
+    childList: true,
+    subtree: true,
+  });
   win.addEventListener("popstate", syncToLocation);
   win.addEventListener("hashchange", syncToLocation);
 

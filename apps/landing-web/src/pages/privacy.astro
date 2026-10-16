@@ -6,7 +6,7 @@ import { getPublicConfig } from '../lib/public-config.mjs';
 const config = getPublicConfig(import.meta.env);
 const title = 'Privacy Policy — GITiempo';
 const description = 'How GITiempo handles personal data in the service and Chrome extension.';
-const lastUpdated = '22 September 2026';
+const lastUpdated = '13 October 2026';
 ---
 
 <BaseLayout {title} {description}>
@@ -44,11 +44,14 @@ const lastUpdated = '22 September 2026';
             <li>Workspace, project, task, and time-entry information, including the timers you manually start and stop. Records are available to authorized workspace members according to their roles and project access.</li>
             <li>GiTiempo access and refresh tokens in the extension’s <code>chrome.storage.local</code>. Google and email/password sign-in also use Firebase Authentication, which stores authentication state in extension-local IndexedDB. Your email and password are submitted to Firebase for email/password sign-in; GiTiempo receives a Firebase identity token to establish its own session.</li>
             <li>A local, token-free status flag when Firebase sign-out needs to be retried. This flag survives reopening the extension and is removed after provider cleanup succeeds.</li>
-            <li>When you start a timer from a supported GitHub issue page, the repository name and issue number sent to GITiempo to create or start the linked time entry.</li>
+            <li>When you start a timer from a supported GitHub issue page, the repository name, issue number, visible issue title, and canonical direct issue URL sent to GITiempo to create or start the linked time entry.</li>
             <li>Service access and diagnostic logs used to investigate errors and protect the service. Error messages may include information related to the account or operation involved.</li>
           </ul>
           <p class="mt-3">
-            The extension may read the issue title and page address locally to recognise a supported GitHub surface and show its control. It does not send the issue title or full page address in the timer-start request. GiTiempo subsequently retrieves issue information, including its title, from GitHub to create the linked task. This integration does not monitor your general browsing history or passively record your activity.
+            The extension reads the current issue context to recognise a supported GitHub surface and show its control. When you choose to start a timer, it sends the repository name, issue number, issue title, and canonical direct issue URL. Query parameters, fragments, and the Projects board URL are not sent. For managed projects, GiTiempo verifies access and retrieves issue information through the workspace GitHub App installation. For external-reference projects, it records the context you supply without retrieving it through the GitHub API or verifying your GitHub access. This integration does not monitor your general browsing history or passively record your activity.
+          </p>
+          <p class="mt-4">
+            A workspace can reuse the same external project and issue task for multiple members. Tracking alone lets you see your own time and the projects and exact tasks containing your entries, including a running entry. It does not expose other members’ time or tasks. Workspace administrators and people with separately granted project access can see records according to their permissions. Removing or moving your last entry removes the access derived from it; shared records and separate project access may remain.
           </p>
         </section>
 
@@ -68,7 +71,7 @@ const lastUpdated = '22 September 2026';
             <li><strong>Hetzner Online</strong> (Germany, European Union) — primary hosting for the GITiempo API and database.</li>
             <li><strong>Cloudflare</strong> (global edge network) — content delivery and DNS for the GITiempo web applications.</li>
             <li><strong>Firebase / Google</strong> — Google and email/password authentication. Firebase processes authentication identifiers and the credentials you submit for email/password sign-in.</li>
-            <li><strong>GitHub</strong> — if you choose GitHub sign-in, GitHub provides identity information through the GiTiempo authentication service. GitHub also supplies repository and issue information for linked tasks.</li>
+            <li><strong>GitHub</strong> — if you choose GitHub sign-in, GitHub provides identity information through the GiTiempo authentication service. GitHub also supplies repository and issue information for managed tasks and separately authorized browsing or imports. External-reference timer starts do not request this information from GitHub. GitHub account linking is optional and separate from signing in to GiTiempo.</li>
             <li><strong>Backblaze</strong> (European Union) — encrypted backup storage for the GITiempo database.</li>
             <li><strong>Google</strong> (Gmail) — transactional email delivery for account invitations and service notifications.</li>
           </ul>
