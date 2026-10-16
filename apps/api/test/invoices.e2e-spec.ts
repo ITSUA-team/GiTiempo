@@ -1591,11 +1591,13 @@ describe('Invoices (e2e)', () => {
         .set('Authorization', bearer(adminToken)),
     ]);
 
-    // DELETE won → 204, and PATCH observes the invoice as gone (the
-    // update's re-read 404s). PATCH won → 200, and DELETE was rejected
-    // with 409 because the row was no longer 'draft'.
+    // DELETE won → 204. PATCH may return 404 (its initial read found the
+    // invoice already gone) or 409 (it read the draft, but the optimistic
+    // UPDATE matched 0 rows because DELETE removed the row in between).
+    // PATCH won → 200, and DELETE was rejected with 409 because the row
+    // was no longer 'draft'.
     if (deleteRes.status === 204) {
-      expect(patchRes.status).toBe(404);
+      expect([404, 409]).toContain(patchRes.status);
     } else {
       expect(patchRes.status).toBe(200);
       expect(deleteRes.status).toBe(409);
