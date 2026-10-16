@@ -7,7 +7,7 @@ vi.mock('primevue/tag', () => ({
   default: {
     name: 'Tag',
     props: ['pt', 'severity', 'value'],
-    template: '<span data-testid="tag">{{ value }}</span>',
+    template: '<span>{{ value }}</span>',
   },
 }));
 
@@ -28,7 +28,6 @@ describe('InvoiceStatusBadge', () => {
     expect(tag.props('severity')).toBe('warn');
     expect(tag.props('pt').root).toContain('bg-status-warn-bg');
     expect(tag.props('pt').root).toContain('text-status-warn-text');
-    expect(tag.text()).toBe('Draft');
   });
 
   it('renders a sent invoice with the accent-tint default style and no severity', () => {

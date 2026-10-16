@@ -200,10 +200,15 @@ describe('InvoicesTable', () => {
     expect(wrapper.text()).toContain('480h');
     expect(wrapper.text()).toContain('Workspace-wide');
 
-    const amountSpan = wrapper
-      .findAll('span')
-      .find((span) => span.text() === '$12,800.00');
-    expect(amountSpan?.classes()).toContain('text-right');
+    // The Amount column cells are the 120px body tds of the shared table;
+    // each holds exactly one right-aligned formatted span.
+    const amountCells = wrapper.findAll('td[style*="120px"]');
+    expect(amountCells.map((cell) => cell.text())).toEqual([
+      '$12,800.00',
+      '€8,500.00',
+      '$5,240.00',
+    ]);
+    expect(amountCells[0]!.find('span').classes()).toContain('text-right');
   });
 
   it('renders a status badge for every row in row order', () => {
@@ -264,6 +269,34 @@ describe('InvoicesTable', () => {
 
     await statusFilter.vm.$emit('update:modelValue', 'paid');
     expect(wrapper.emitted('update:filters')).toEqual([[{ status: 'paid' }]]);
+  });
+
+  it('emits a cleared status filter update from the filter row select', async () => {
+    const wrapper = mountInvoicesTable();
+    const statusFilter = getFilterSelect(wrapper, 'value');
+
+    await statusFilter.vm.$emit('update:modelValue', null);
+    expect(wrapper.emitted('update:filters')).toEqual([[{ status: null }]]);
+  });
+
+  it('emits project filter updates from the mobile filter row select', async () => {
+    const wrapper = mountInvoicesTable({ isMobileViewport: true });
+    const projectFilter = wrapper
+      .findAllComponents(Select)
+      .find(
+        (select) =>
+          select.attributes('data-testid') ===
+          'invoices-table-project-filter',
+      );
+
+    if (!projectFilter) {
+      throw new Error('No mobile project filter select rendered');
+    }
+
+    await projectFilter.vm.$emit('update:modelValue', 'project-2');
+    expect(wrapper.emitted('update:filters')).toEqual([
+      [{ projectId: 'project-2' }],
+    ]);
   });
 
   it('emits date range filter updates from the period picker only for complete ranges', async () => {

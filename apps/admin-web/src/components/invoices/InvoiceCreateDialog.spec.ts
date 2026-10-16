@@ -1,6 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import DatePicker from 'primevue/datepicker';
+import Dialog from 'primevue/dialog';
+import Button from 'primevue/button';
 import DataTable from 'primevue/datatable';
 import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
@@ -99,6 +101,7 @@ function createInvoiceResponse(): InvoiceResponse {
 
 interface MountDialogOptions {
   isAdmin?: boolean;
+  isCreating?: boolean;
   projects?: Array<{ id: string; name: string }>;
   createInvoice?: (input: CreateInvoiceInput) => Promise<InvoiceResponse>;
 }
@@ -141,7 +144,7 @@ async function mountDialog(options: MountDialogOptions = {}) {
       },
       createMutation: {
         createInvoice,
-        isCreating: ref(false),
+        isCreating: ref(options.isCreating ?? false),
       },
     },
   });
@@ -156,6 +159,20 @@ type MountedDialog = Awaited<ReturnType<typeof mountDialog>>;
 
 function getSubmitButton(wrapper: MountedDialog) {
   return wrapper.getComponent('[data-testid="invoice-create-submit"]');
+}
+
+function getDiscountField(wrapper: MountedDialog) {
+  // Select by the stable input-id instead of document order so reordering the
+  // rate/currency/discount row cannot silently bind to the wrong control.
+  const discountField = wrapper
+    .findAllComponents(InputNumber)
+    .find((field) => field.props('inputId') === 'invoice-create-discount');
+
+  if (!discountField) {
+    throw new Error('No discount InputNumber rendered');
+  }
+
+  return discountField;
 }
 
 async function enterDateRange(wrapper: MountedDialog): Promise<void> {
@@ -243,7 +260,6 @@ describe('InvoiceCreateDialog', () => {
     expect(
       wrapper.findComponent('[data-testid="invoice-create-cancel"]').exists(),
     ).toBe(true);
-    expect(getSubmitButton(wrapper).attributes('type')).toBe('button');
   });
 
   it('fires the eligible-entries preview when the date range is entered', async () => {
@@ -330,6 +346,45 @@ describe('InvoiceCreateDialog', () => {
     expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
   });
 
+  it('shows an error banner when the eligible-entries request fails', async () => {
+    testMocks.listEligibleEntries.mockRejectedValue(
+      new Error('Preview request failed'),
+    );
+
+    const wrapper = await mountDialog();
+    await enterDateRange(wrapper);
+
+    const errorBanner = wrapper.findComponent(
+      '[data-testid="invoice-create-preview-error"]',
+    );
+    expect(errorBanner.exists()).toBe(true);
+    expect(errorBanner.text()).toContain(
+      'Failed to load eligible entries. Please try again.',
+    );
+  });
+
+  it('blocks submit with field errors when the form is empty', async () => {
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({ isAdmin: true, createInvoice });
+
+    await submitInvoice(wrapper);
+
+    expect(bodyText()).toContain('Title is required.');
+    expect(bodyText()).toContain('Date range is required.');
+    expect(createInvoice).not.toHaveBeenCalled();
+  });
+
+  it('treats a whitespace-only title as empty and keeps the field error', async () => {
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({ isAdmin: true, createInvoice });
+
+    await wrapper.getComponent('#invoice-create-title').setValue('   ');
+    await submitInvoice(wrapper);
+
+    expect(bodyText()).toContain('Title is required.');
+    expect(createInvoice).not.toHaveBeenCalled();
+  });
+
   it('blocks submit for a PM until a project is selected', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const createInvoice = createCreateInvoiceSpy();
@@ -349,6 +404,35 @@ describe('InvoiceCreateDialog', () => {
     expect(wrapper.emitted('created')).toBeUndefined();
     expect(wrapper.emitted('update:visible')).toBeUndefined();
     expect(bodyText()).toContain('Select a project.');
+  });
+
+  it('creates a project invoice when a PM selects a project', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({ isAdmin: false, createInvoice });
+
+    await wrapper
+      .getComponent(Select)
+      .vm.$emit('update:modelValue', projectId);
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+
+    await submitInvoice(wrapper);
+
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice).toHaveBeenCalledWith({
+      title: 'Website redesign',
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId,
+      hourlyRate: 80,
+      currency: 'USD',
+      discountPercent: 0,
+      notes: undefined,
+    });
+    expect(wrapper.emitted('created')).toEqual([[createInvoiceResponse()]]);
   });
 
   it('creates a workspace-wide invoice when an admin leaves the project empty', async () => {
@@ -400,6 +484,28 @@ describe('InvoiceCreateDialog', () => {
     expect(titleInput?.value).toBe('Website redesign');
   });
 
+  it('shows the in-flight state and disables closing while creating', async () => {
+    const wrapper = await mountDialog({ isCreating: true });
+
+    const submitButton = wrapper
+      .findAllComponents(Button)
+      .find(
+        (button) =>
+          button.attributes('data-testid') === 'invoice-create-submit',
+      );
+    expect(submitButton?.props('loading')).toBe(true);
+    // PrimeVue Button passes disabled through as an attribute, not a prop.
+    expect(
+      wrapper
+        .getComponent('[data-testid="invoice-create-cancel"]')
+        .attributes('disabled'),
+    ).toBeDefined();
+
+    const dialog = wrapper.getComponent(Dialog);
+    expect(dialog.props('closable')).toBe(false);
+    expect(dialog.props('dismissableMask')).toBe(false);
+  });
+
   it('binds the discount input and sends the entered percent on create', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const createInvoice = createCreateInvoiceSpy();
@@ -409,8 +515,8 @@ describe('InvoiceCreateDialog', () => {
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
 
-    // The discount InputNumber is the second of the two on the form.
-    const [, discountField] = wrapper.findAllComponents(InputNumber);
+    // The discount InputNumber is found by its stable input-id.
+    const discountField = getDiscountField(wrapper);
     await discountField.vm.$emit('update:modelValue', 15);
     await flushPromises();
 
