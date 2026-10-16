@@ -1,0 +1,57 @@
+{
+  "case": "M07 Firefox independent real SPA and extension sessions plus profile navigation",
+  "pass": true,
+  "scope": "real SPA plus extension runtime through bridge; Open profile used native mouse in actual action popup and opened a new browser tab",
+  "origin": "http://localhost:5185",
+  "extensionB": {
+    "authenticated": true,
+    "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+    "email": "alexey@example.com"
+  },
+  "webA": {
+    "url": "http://localhost:5185/profile",
+    "menu": true,
+    "current": [
+      "profile-menu-workspace-ee5c5f3d-73e9-4e43-a934-641bd9191985",
+      "profile-menu-workspace-status"
+    ],
+    "body": "Skip to main content\n\nGiTiempo\n\n/\n\nProfile\n\nITSUA-team/GiTiempo\nAllow choosing the tracking workspace in the Chrome extension\nAT\nAcme workspace\nMember\nCurrent\nQA workspace B\nAdmin\nAdmin workspace\nProfile\nSign out\nDashboard\nTime Entries\nProjects\nAT\n\nAlexey Tsukanov\n\nWorkspace member\n\nDisplay name\nEmail\nCancel\nSave changes\nGitHub Connection\n\nConnect your GitHub identity to discover organizations. Authorize private GitHub data separately when needed.\n\nDisconnected\n\nConnect GitHub to discover organizations. Authorize private GitHub data separately when needed.\n\nRefresh status\nConnect GitHub"
+  },
+  "webB": {
+    "url": "http://localhost:5185/profile",
+    "menu": true,
+    "current": [
+      "profile-menu-workspace-fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+      "profile-menu-workspace-status"
+    ],
+    "body": "Skip to main content\n\nGiTiempo\n\n/\n\nProfile\n\nITSUA-team/GiTiempo\nAllow choosing the tracking workspace in the Chrome extension\nAT\nAcme workspace\nMember\nQA workspace B\nAdmin\nCurrent\nAdmin workspace\nProfile\nSign out\nDashboard\nTime Entries\nProjects\nAT\n\nAlexey Tsukanov\n\nWorkspace member\n\nDisplay name\nEmail\nCancel\nSave changes\nGitHub Connection\n\nConnect your GitHub identity to discover organizations. Authorize private GitHub data separately when needed.\n\nDisconnected\n\nConnect GitHub to discover organizations. Authorize private GitHub data separately when needed.\n\nRefresh status\nConnect GitHub"
+  },
+  "extensionAfterWeb": {
+    "authenticated": true,
+    "workspaceId": "fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+    "email": "alexey@example.com"
+  },
+  "extensionA": {
+    "authenticated": true,
+    "workspaceId": "ee5c5f3d-73e9-4e43-a934-641bd9191985",
+    "email": "alexey@example.com"
+  },
+  "webAfterExtension": {
+    "url": "http://localhost:5185/profile",
+    "menu": true,
+    "current": [
+      "profile-menu-workspace-fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+      "profile-menu-workspace-status"
+    ],
+    "body": "Skip to main content\n\nGiTiempo\n\n/\n\nProfile\n\nITSUA-team/GiTiempo\nAllow choosing the tracking workspace in the Chrome extension\nAT\nAcme workspace\nMember\nQA workspace B\nAdmin\nCurrent\nAdmin workspace\nProfile\nSign out\nDashboard\nTime Entries\nProjects\nAT\n\nAlexey Tsukanov\n\nWorkspace member\n\nDisplay name\nEmail\nCancel\nSave changes\nGitHub Connection\n\nConnect your GitHub identity to discover organizations. Authorize private GitHub data separately when needed.\n\nDisconnected\n\nConnect GitHub to discover organizations. Authorize private GitHub data separately when needed.\n\nRefresh status\nConnect GitHub"
+  },
+  "opened": {
+    "url": "http://localhost:5185/profile",
+    "loaded": true,
+    "body": "Skip to main content\n\nGiTiempo\n\n/\n\nProfile\n\nITSUA-team/GiTiempo\nAllow choosing the tracking workspace in the Chrome extension\nAT\nAcme workspace\nMember\nQA workspace B\nAdmin\nCurrent\nAdmin workspace\nProfile\nSign out\nDashboard\nTime Entries\nProjects\nAT\n\nAlexey Tsukanov\n\nWorkspace member\n\nDisplay name\nEmail\nCancel\nSave changes\nGitHub Connection\n\nConnect your GitHub identity to discover organizations. Authorize private GitHub data separately when needed.\n\nDisconnected\n\nConnect GitHub to discover organi",
+    "current": [
+      "profile-menu-workspace-fb7c1f35-e8f5-423d-b522-4cc4eedcf03b",
+      "profile-menu-workspace-status"
+    ]
+  }
+}

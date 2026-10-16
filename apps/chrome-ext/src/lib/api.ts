@@ -2,18 +2,21 @@ import { decodeAccessTokenEmail, decodeAccessTokenWorkspaceId } from "./token";
 
 import {
   currentTimeEntryResponseSchema,
+  currentUserWorkspaceMembershipListResponseSchema,
   workspaceResponseSchema,
   type WorkspaceResponse,
   githubSessionRequestSchema,
   loginRequestSchema,
   logoutRequestSchema,
   refreshRequestSchema,
+  switchWorkspaceRequestSchema,
   startTimerFromGitHubReferenceSchema,
   trackingCapabilityResponseSchema,
   conditionalStopTimerSchema,
   timeEntryResponseSchema,
   tokenPairResponseSchema,
   type CurrentTimeEntryResponse,
+  type CurrentUserWorkspaceMembershipListResponse,
   type TimeEntryResponse,
   type ConditionalStopTimerInput,
   type TrackingCapabilityResponse,
@@ -39,6 +42,7 @@ export interface ExtensionApiClient {
   ): Promise<TokenPairResponse>;
   exitSession(): Promise<void>;
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
+  getWorkspaceMemberships(): Promise<CurrentUserWorkspaceMembershipListResponse>;
   getTrackingCapability(
     pageContext: SupportedGitHubIssueContext,
     expectedContext?: { workspaceId: string; email: string },
@@ -50,6 +54,7 @@ export interface ExtensionApiClient {
     expectedContext?: { workspaceId: string; email: string },
   ): Promise<TimeEntryResponse>;
   stopTimer(input: ConditionalStopTimerInput): Promise<TimeEntryResponse>;
+  switchWorkspace(workspaceId: string): Promise<TokenPairResponse>;
 }
 
 interface ExtensionApiClientOptions {
@@ -66,6 +71,9 @@ const API_UNREACHABLE_ERROR_MESSAGE =
 const REQUEST_TIMEOUT_MS = 15_000;
 /** Nothing waits on a revoke, so it gets a short leash rather than none at all. */
 const REVOKE_TIMEOUT_MS = 5_000;
+const SESSION_EXPIRED_MESSAGE = "Your session has expired. Please sign in again.";
+const SESSION_CHANGED_MESSAGE =
+  "Your session or workspace changed. Refresh and review the destination before starting.";
 
 function parseGitHubReferenceInput(pageContext: SupportedGitHubIssueContext) {
   return startTimerFromGitHubReferenceSchema.parse({
@@ -140,18 +148,135 @@ export function createExtensionApiClient({
   fetchFn = globalThis.fetch.bind(globalThis),
   storage,
 }: ExtensionApiClientOptions): ExtensionApiClient {
-  let refreshPromise: Promise<TokenPairResponse | null> | null = null;
+  let refreshRequest: {
+    epoch: number;
+    promise: Promise<TokenPairResponse | null>;
+    refreshToken: string;
+  } | null = null;
+  let rotationQueue: Promise<void> = Promise.resolve();
+  let storageMutationQueue: Promise<void> = Promise.resolve();
   /**
-   * Bumped by every deliberate sign-out. A refresh captures it before leaving and
-   * refuses to store its result if it changed while the request was in flight.
+   * A new login, sign-out, or workspace switch supersedes work begun in the
+   * previous authenticated context.
    */
   let sessionEpoch = 0;
+
+  function enqueueRotation<T>(operation: () => Promise<T>): Promise<T> {
+    const pending = rotationQueue.then(operation, operation);
+    rotationQueue = pending.then(
+      () => undefined,
+      () => undefined,
+    );
+
+    return pending;
+  }
+
+  function enqueueStorageMutation<T>(operation: () => Promise<T>): Promise<T> {
+    const pending = storageMutationQueue.then(operation, operation);
+    storageMutationQueue = pending.then(
+      () => undefined,
+      () => undefined,
+    );
+
+    return pending;
+  }
+
+  async function storeNewSessionIfCurrent(
+    session: TokenPairResponse,
+    epoch: number,
+  ): Promise<boolean> {
+    return enqueueStorageMutation(async () => {
+      if (epoch !== sessionEpoch) {
+        return false;
+      }
+
+      await setStoredSession(session, storage);
+      if (epoch === sessionEpoch) {
+        return true;
+      }
+
+      await clearStoredSession(storage);
+      return false;
+    });
+  }
+
+  async function replaceSessionIfCurrent(
+    previousSession: TokenPairResponse,
+    nextSession: TokenPairResponse,
+    epoch: number,
+    advanceEpoch = false,
+  ): Promise<TokenPairResponse | null> {
+    return enqueueStorageMutation(async () => {
+      if (epoch !== sessionEpoch) {
+        return null;
+      }
+
+      const currentSession = await getStoredSession(storage);
+      if (currentSession?.refreshToken !== previousSession.refreshToken) {
+        return currentSession;
+      }
+
+      await setStoredSession(nextSession, storage);
+      if (epoch !== sessionEpoch) {
+        await clearStoredSession(storage);
+        return null;
+      }
+
+      if (advanceEpoch) {
+        sessionEpoch += 1;
+      }
+
+      return nextSession;
+    });
+  }
+
+  async function clearSessionIfCurrent(
+    session: TokenPairResponse,
+    epoch: number,
+  ): Promise<void> {
+    await enqueueStorageMutation(async () => {
+      if (epoch !== sessionEpoch) {
+        return;
+      }
+
+      const currentSession = await getStoredSession(storage);
+      if (
+        epoch === sessionEpoch &&
+        currentSession?.refreshToken === session.refreshToken
+      ) {
+        await clearStoredSession(storage);
+      }
+    });
+  }
+
+  async function discardSupersededSession(
+    session: TokenPairResponse,
+    epoch: number,
+  ): Promise<boolean> {
+    if (epoch === sessionEpoch) {
+      return false;
+    }
+
+    await enqueueStorageMutation(async () => {
+      const currentSession = await getStoredSession(storage);
+      if (
+        epoch !== sessionEpoch &&
+        currentSession?.refreshToken === session.refreshToken
+      ) {
+        await clearStoredSession(storage);
+      }
+    });
+
+    await revokeSession(session);
+    return true;
+  }
 
   /** Posts an unauthenticated credential and stores the session it mints. */
   async function establishSession(
     path: string,
     body: unknown,
   ): Promise<TokenPairResponse> {
+    const epoch = ++sessionEpoch;
     const response = await fetchWithHandledNetworkError(() =>
       fetchFn(getRequestUrl(config, path), {
         body: JSON.stringify(body),
@@ -170,7 +295,15 @@ export function createExtensionApiClient({
 
     const tokenPair = tokenPairResponseSchema.parse(responseBody);
 
-    await setStoredSession(tokenPair, storage);
+    if (epoch !== sessionEpoch) {
+      await discardSupersededSession(tokenPair, epoch);
+      throw new Error(SESSION_CHANGED_MESSAGE);
+    }
+
+    if (!(await storeNewSessionIfCurrent(tokenPair, epoch))) {
+      await revokeSession(tokenPair);
+      throw new Error(SESSION_CHANGED_MESSAGE);
+    }
 
     return tokenPair;
   }
@@ -236,67 +369,200 @@ export function createExtensionApiClient({
    * no response worth parsing anyway.
    */
   async function exitSession(): Promise<void> {
-    const session = await getStoredSession(storage);
-
-    // Invalidate any refresh already in flight before clearing, so it cannot
-    // store its result afterwards and undo this.
+    // Invalidate pending authentication work before waiting on storage. A login
+    // begun after this point belongs to a newer context and must not be cleared
+    // by this sign-out's delayed read.
     sessionEpoch += 1;
-    await clearStoredSession(storage);
+    const session = await enqueueStorageMutation(async () => {
+      const currentSession = await getStoredSession(storage);
+      // A newer login can change the epoch while this read is in flight, but
+      // its storage write is behind this queued sign-out. Clear the pair we
+      // read before that write gets a chance to persist, otherwise a failed
+      // login could leave the explicitly signed-out credentials usable.
+      if (currentSession) {
+        await clearStoredSession(storage);
+      }
+      return currentSession;
+    });
 
     if (session) {
       await revokeSession(session);
     }
   }
 
-  async function refreshSession(
-    refreshToken: string,
+  async function refreshCurrentSession(
+    session: TokenPairResponse,
+    requestEpoch: number,
   ): Promise<TokenPairResponse | null> {
-    if (refreshPromise) {
-      return refreshPromise;
+    try {
+      const response = await fetchFn(getRequestUrl(config, "/auth/refresh"), {
+        body: JSON.stringify(
+          refreshRequestSchema.parse({ refreshToken: session.refreshToken }),
+        ),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      const body = await parseJsonResponse(response);
+
+      if (!response.ok) {
+        await clearSessionIfCurrent(session, requestEpoch);
+        return null;
+      }
+
+      const tokenPair = tokenPairResponseSchema.parse(body);
+
+      const acceptedSession = await replaceSessionIfCurrent(
+        session,
+        tokenPair,
+        requestEpoch,
+      );
+      if (acceptedSession !== tokenPair) {
+        await revokeSession(tokenPair);
+        return requestEpoch === sessionEpoch ? acceptedSession : null;
+      }
+
+      return tokenPair;
+    } catch {
+      await clearSessionIfCurrent(session, requestEpoch);
+      return null;
+    }
+  }
+
+  function refreshSession(
+    refreshToken: string,
+    requestEpoch: number,
+  ): Promise<TokenPairResponse | null> {
+    if (
+      refreshRequest?.epoch === requestEpoch &&
+      refreshRequest.refreshToken === refreshToken
+    ) {
+      return refreshRequest.promise;
     }
 
-    const epoch = sessionEpoch;
-
-    refreshPromise = (async () => {
-      try {
-        const response = await fetchFn(getRequestUrl(config, "/auth/refresh"), {
-          body: JSON.stringify(refreshRequestSchema.parse({ refreshToken })),
-          headers: {
-            "Content-Type": "application/json",
-          },
-          method: "POST",
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
-        const body = await parseJsonResponse(response);
-
-        if (!response.ok) {
-          await clearStoredSession(storage);
-          return null;
-        }
-
-        const tokenPair = tokenPairResponseSchema.parse(body);
-
-        if (epoch !== sessionEpoch) {
-          // A sign-out landed while this was in flight. Storing the pair would
-          // resurrect the session: the backend rotates on refresh, so the logout
-          // revoked the row this request had already replaced, leaving the new one
-          // valid. Revoke the rotation instead of keeping it.
-          await revokeSession(tokenPair);
-          return null;
-        }
-
-        await setStoredSession(tokenPair, storage);
-
-        return tokenPair;
-      } catch {
-        await clearStoredSession(storage);
+    const pending = enqueueRotation(async () => {
+      if (requestEpoch !== sessionEpoch) {
         return null;
-      } finally {
-        refreshPromise = null;
       }
-    })();
 
-    return refreshPromise;
+      const session = await getStoredSession(storage);
+      if (!session) {
+        return null;
+      }
+
+      if (session.refreshToken !== refreshToken) {
+        return session;
+      }
+
+      return refreshCurrentSession(session, requestEpoch);
+    });
+    const request = { epoch: requestEpoch, promise: pending, refreshToken };
+    refreshRequest = request;
+    void pending.then(
+      () => {
+        if (refreshRequest === request) refreshRequest = null;
+      },
+      () => {
+        if (refreshRequest === request) refreshRequest = null;
+      },
+    );
+
+    return pending;
+  }
+
+  async function switchWorkspace(workspaceId: string): Promise<TokenPairResponse> {
+    const requestEpoch = sessionEpoch;
+
+    return enqueueRotation(async () => {
+      if (requestEpoch !== sessionEpoch) {
+        throw new Error(SESSION_CHANGED_MESSAGE);
+      }
+
+      let session = await getStoredSession(storage);
+      if (!session) {
+        throw new Error(SESSION_EXPIRED_MESSAGE);
+      }
+
+      if (decodeAccessTokenWorkspaceId(session.accessToken) === workspaceId) {
+        return session;
+      }
+
+      const requestSwitch = (activeSession: TokenPairResponse) =>
+        fetchWithHandledNetworkError(() =>
+          fetchFn(getRequestUrl(config, "/auth/switch-workspace"), {
+            body: JSON.stringify(
+              switchWorkspaceRequestSchema.parse({
+                refreshToken: activeSession.refreshToken,
+                workspaceId,
+              }),
+            ),
+            headers: {
+              Authorization: `Bearer ${activeSession.accessToken}`,
+              "Content-Type": "application/json",
+            },
+            method: "POST",
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+          }),
+        );
+
+      let response: Response;
+      try {
+        response = await requestSwitch(session);
+      } catch (error) {
+        await clearSessionIfCurrent(session, requestEpoch);
+        throw error;
+      }
+
+      let body = await parseJsonResponse(response);
+      if (response.status === 401) {
+        const refreshedSession = await refreshCurrentSession(session, requestEpoch);
+        if (!refreshedSession) {
+          throw new Error(SESSION_EXPIRED_MESSAGE);
+        }
+
+        session = refreshedSession;
+        try {
+          response = await requestSwitch(session);
+        } catch (error) {
+          await clearSessionIfCurrent(session, requestEpoch);
+          throw error;
+        }
+        body = await parseJsonResponse(response);
+      }
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          await clearSessionIfCurrent(session, requestEpoch);
+        }
+        throw new ExtensionApiError(
+          getResponseErrorMessage(response.status, body),
+          getResponseErrorCode(body),
+        );
+      }
+
+      let tokenPair: TokenPairResponse;
+      try {
+        tokenPair = tokenPairResponseSchema.parse(body);
+      } catch (error) {
+        await clearSessionIfCurrent(session, requestEpoch);
+        throw error;
+      }
+
+      const acceptedSession = await replaceSessionIfCurrent(
+        session,
+        tokenPair,
+        requestEpoch,
+        true,
+      );
+      if (acceptedSession !== tokenPair) {
+        await revokeSession(tokenPair);
+        throw new Error(SESSION_CHANGED_MESSAGE);
+      }
+
+      return tokenPair;
+    });
   }
 
   async function requestWithAuth<TResponse>(options: {
@@ -306,17 +572,21 @@ export function createExtensionApiClient({
     responseSchema: Pick<ZodType<TResponse>, "parse">;
     expectedContext?: { workspaceId: string; email: string };
   }): Promise<TResponse> {
+    const requestEpoch = sessionEpoch;
     const session = await getStoredSession(storage);
 
     if (!session) {
-      throw new Error("Your session has expired. Please sign in again.");
+      throw new Error(SESSION_EXPIRED_MESSAGE);
     }
 
     const makeRequest = async (accessToken: string): Promise<Response> => {
+      if (requestEpoch !== sessionEpoch) {
+        throw new Error(SESSION_CHANGED_MESSAGE);
+      }
       if (options.expectedContext &&
           (decodeAccessTokenEmail(accessToken) !== options.expectedContext.email ||
            decodeAccessTokenWorkspaceId(accessToken) !== options.expectedContext.workspaceId)) {
-        throw new Error("Your session or workspace changed. Refresh and review the destination before starting.");
+        throw new Error(SESSION_CHANGED_MESSAGE);
       }
       return fetchWithHandledNetworkError(() =>
         fetchFn(getRequestUrl(config, options.path), {
@@ -337,10 +607,10 @@ export function createExtensionApiClient({
     let body = await parseJsonResponse(response);
 
     if (response.status === 401) {
-      const refreshedSession = await refreshSession(session.refreshToken);
+      const refreshedSession = await refreshSession(session.refreshToken, requestEpoch);
 
       if (!refreshedSession) {
-        throw new Error("Your session has expired. Please sign in again.");
+        throw new Error(SESSION_EXPIRED_MESSAGE);
       }
 
       response = await makeRequest(refreshedSession.accessToken);
@@ -354,6 +624,10 @@ export function createExtensionApiClient({
       );
     }
 
+    if (requestEpoch !== sessionEpoch) {
+      throw new Error(SESSION_CHANGED_MESSAGE);
+    }
+
     return options.responseSchema.parse(body);
   }
 
@@ -364,6 +638,12 @@ export function createExtensionApiClient({
       return requestWithAuth({
         path: "/time-entries/current",
         responseSchema: currentTimeEntryResponseSchema,
+      });
+    },
+    getWorkspaceMemberships() {
+      return requestWithAuth({
+        path: "/users/me/workspaces",
+        responseSchema: currentUserWorkspaceMembershipListResponseSchema,
       });
     },
     getTrackingCapability(pageContext, expectedContext): Promise<TrackingCapabilityResponse> {
@@ -399,5 +679,6 @@ export function createExtensionApiClient({
         responseSchema: timeEntryResponseSchema,
       });
     },
+    switchWorkspace,
   };
 }

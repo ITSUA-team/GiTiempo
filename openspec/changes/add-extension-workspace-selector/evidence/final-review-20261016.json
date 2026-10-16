@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-16",
+  "change": "add-extension-workspace-selector",
+  "result": "PASS",
+  "progress": {
+    "complete": 21,
+    "total": 21
+  },
+  "manualAcceptance": "Direct user confirmation of tasks 6.2 and 6.3; see final-manual-acceptance-20261016.json",
+  "independentReviews": {
+    "popupDesign": "PASS; source, saved approved-frame comparison, accessibility/focus/Escape, font license",
+    "runtime": "APPROVED after scoped refresh isolation fix and corrected regression"
+  },
+  "resolvedFindings": [
+    {
+      "severity": "medium",
+      "finding": "A new login could share a superseded session pending refresh and incorrectly report session expiry on its first 401.",
+      "fix": "Coalesce refresh only for matching epoch and refresh token; keep queued rotations and identity-guard cleanup.",
+      "regression": "Deferred A refresh, B login, B 401, then B own refresh succeeds and persists B pair."
+    },
+    {
+      "severity": "low",
+      "finding": "QA report font-license link had one too many parent-directory segments.",
+      "fix": "Corrected relative link and verified local document links."
+    }
+  ],
+  "verification": {
+    "rootTypecheck": "PASS 11 tasks; changed extension fresh",
+    "rootLint": "PASS 11 tasks; existing unrelated warnings, no errors",
+    "rootTest": "PASS 11 tasks and 5 CI-target tests; changed extension fresh",
+    "extensionTests": "12 files / 222 tests PASS",
+    "productionBuilds": "Chrome and Firefox PASS after production fix",
+    "openSpecStrict": "PASS",
+    "whitespace": "PASS",
+    "evidenceJsonFiles": 33,
+    "localEvidenceLinks": "PASS",
+    "qaOriginsInBuild": "Absent"
+  },
+  "limitations": [
+    "Latest manual acceptance is user-reported; exact browser/build and new screenshots not supplied.",
+    "Second Escape host popup closure is accepted as non-critical.",
+    "Online manifest schema validation and codebase-memory indexing are unavailable."
+  ],
+  "scope": "Only extension API refresh coordination/regression and change documentation/evidence were updated during this final review. No backend/database changes.",
+  "syncAndArchive": "Reserved for the user; not performed",
+  "commit": "Not created"
+}

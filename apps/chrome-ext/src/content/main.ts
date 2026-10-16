@@ -147,7 +147,7 @@ function renderInjectedBody(
             ? `<p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to start timer.")}</p>`
             : ""}
         </div>
-        <button type="button" data-action="stop-timer" ${state.isSubmitting ? "disabled" : ""} class="bg-destructive text-text-inverse ${injectedActionButtonClass}">Stop Timer</button>
+        <button type="button" data-action="stop-timer" ${state.isSubmitting || state.snapshot.workspaceSwitching ? "disabled" : ""} class="bg-destructive text-text-inverse ${injectedActionButtonClass}">Stop Timer</button>
       </div>
     `;
   }
@@ -189,7 +189,7 @@ function renderInjectedBody(
     </div>
     <div class="flex items-center justify-between gap-3">
       <p class="m-0 text-sm ${mutedTextClass}">Start tracking directly from this GitHub issue.</p>
-      <button type="button" data-action="start-timer" ${state.isSubmitting || !state.snapshot.workspace ? "disabled" : ""} class="bg-brand text-text-inverse disabled:opacity-60 ${injectedActionButtonClass}">Start Timer</button>
+      <button type="button" data-action="start-timer" ${state.isSubmitting || state.snapshot.workspaceSwitching || !state.snapshot.workspace ? "disabled" : ""} class="bg-brand text-text-inverse disabled:opacity-60 ${injectedActionButtonClass}">Start Timer</button>
     </div>
   `;
 }
@@ -299,10 +299,15 @@ export function createInjectedIssueApp({
 
   function render(): void {
     syncTheme();
+    const runningTimerWorkspace = state.snapshot?.currentTimer?.workspace?.name;
+    const trackingWorkspace = state.snapshot?.workspace?.name ?? "Checking workspace…";
+    const workspaceContext = runningTimerWorkspace
+      ? `Timer workspace: ${runningTimerWorkspace} · Tracking workspace: ${trackingWorkspace}`
+      : `Tracking workspace: ${trackingWorkspace}`;
     root.innerHTML = `
       <div class="${renderInjectedContainerClass(pageContext)}">
         <section class="${renderInjectedSectionClass(pageContext)}">
-          ${state.snapshot?.authenticated ? `<p data-testid="workspace-context" class="m-0 text-xs ${state.theme === "dark" ? "text-text-inverse-muted" : "text-text-muted"}">${escapeHtml(state.snapshot.workspace?.name ?? "Checking workspace…")}</p>` : ""}
+          ${state.snapshot?.authenticated ? `<p data-testid="workspace-context" class="m-0 text-xs ${state.theme === "dark" ? "text-text-inverse-muted" : "text-text-muted"}">${escapeHtml(workspaceContext)}</p>` : ""}
           ${renderInjectedBody(pageContext, state, now())}
         </section>
       </div>
@@ -334,7 +339,7 @@ export function createInjectedIssueApp({
   }
 
   async function handleStartTimer(): Promise<void> {
-    if (state.isSubmitting) return;
+    if (state.isSubmitting || state.snapshot?.workspaceSwitching) return;
     const trackingCapability = getCurrentTrackingCapability(
       state.snapshot,
       pageContext,
@@ -371,7 +376,7 @@ export function createInjectedIssueApp({
   }
 
   async function handleStopTimer(): Promise<void> {
-    if (state.isSubmitting) return;
+    if (state.isSubmitting || state.snapshot?.workspaceSwitching) return;
     const expectedTimerId = state.snapshot?.currentTimer?.id;
 
     if (!expectedTimerId) {
