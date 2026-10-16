@@ -12,7 +12,7 @@ Build-ready engineering constraints derived from [PROPOSAL.md](./PROPOSAL.md).
 │   ├── api/              ← NestJS backend
 │   ├── user-web/         ← Vue 3 SPA for all users (timer, time entries, profile)
 │   ├── admin-web/        ← Vue 3 SPA for admins + PMs (reports, invoices, management)
-│   └── chrome-ext/       ← Reserved placeholder for a future browser extension
+│   └── chrome-ext/       ← Manifest V3 browser extension (Chrome and Firefox)
 ├── packages/
 │   └── shared/           ← shared TypeScript types, constants, Zod schemas
 ├── turbo.json
@@ -112,6 +112,8 @@ Full Disconnect verifies an enabled Firebase account with password or Google sig
 - The backend maintains a local cache. Stale data is refreshed on the next request.
 - No background jobs or webhooks for sync in MVP — the user's action triggers the refresh.
 
+**External reference tracking:** A reference start from the browser extension is a separate, default-on path. It accepts bounded issue context from the page and makes no GitHub provider call. It persists `projects.tracking_mode` as `managed` or `external-reference`, and reference provenance as `provider-verified` or `user-supplied`; existing projects default to `managed`. A new external project is private, has no fake synchronization time, and is reused by case-insensitive GitHub repository and issue identity within its workspace. A later import may reuse that identity but must not change its tracking mode, provenance, title, synchronization data, or access policy. Repository rename/transfer rebinding and mode conversion are deferred.
+
 **Workspace organization policy:**
 
 - Workspace admins can maintain a workspace-level allow-list of GitHub organization logins from the admin app.
@@ -134,6 +136,8 @@ Three roles: `admin`, `pm`, `member`.
 **PM management endpoints** require `role IN ('admin', 'pm')`; PMs are limited to assigned projects.
 **Member project endpoints** require any authenticated user with project visibility.
 **Project assignment endpoints** are admin-only; assignment targets may be `pm` or `member` users. Assignments remain valid if a user changes between `pm` and `member`.
+
+External-reference access adds a read-only `own-time` scope. Without separate project access, an active member can read an external project only while they have an entry in it, can read only a task with their own entry, and sees only their time and aggregates. This scope grants no task/project mutation, reports, exports, assignment administration, or peer data. Full `project` scope preserves existing administrator, public-project, and explicit-assignment capabilities.
 
 ### 2.5 API Design Principles
 
@@ -232,6 +236,12 @@ The current web frontend baseline includes:
 - Detects issue from the current GitHub issue surface, including direct issue URLs (`org/repo/issues/123`) and supported GitHub Projects issue panes.
 - Authenticates via a popup login flow (Firebase Auth), stores JWT tokens in `chrome.storage`.
 - Sends JWT access token in `Authorization` header on all API requests.
+
+**Tracking workspace:** The signed-in avatar dropdown contains a labelled `Workspace` selector above `Open profile`. It loads the member's available workspaces from `GET /users/me/workspaces` and switches with `POST /auth/switch-workspace`, storing the returned access/refresh pair in extension storage. A single membership remains visible with selection disabled. The extension's choice is independent of user/admin web-app sessions and survives popup reopening, background restart and token refresh while the session remains valid. Selecting the current workspace does not rotate the session.
+
+Refresh and workspace switching serialize token rotations. Sign-out invalidates pending results; a late successful rotation is revoked best-effort without restoring storage or affecting a newer login. Switching blocks new timer mutations and invalidates old workspace preflight, then refreshes timer, destination and capabilities across the popup and injected controls before tracking resumes. Loading, denied membership and connection/authentication failures show retry or sign-in recovery without silently selecting another workspace.
+
+**Global running timer:** One running timer belongs to the user across all workspace sessions. Switching workspace preserves the running entry's original workspace and elapsed time, and Stop remains available from the new workspace. A second timer cannot start while it runs. After Stop, a new permitted timer belongs to the selected workspace.
 
 **Auto-create flow (lazy creation):**
 

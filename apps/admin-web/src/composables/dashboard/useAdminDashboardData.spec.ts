@@ -60,6 +60,8 @@ function createProject(
   updatedAt: string,
 ): ProjectResponse {
   return {
+    accessScope: 'project',
+    capabilities: { canManageTasks: true },
     color: null,
     createdAt: '2026-05-01T10:00:00.000Z',
     defaultBillableForTasks: true,
@@ -69,6 +71,8 @@ function createProject(
     members: [],
     name,
     source: 'manual',
+    referenceProvenance: null,
+    trackingMode: 'managed',
     totalSeconds: 43200,
     updatedAt,
     visibility: 'public',

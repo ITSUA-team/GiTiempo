@@ -6,7 +6,18 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, eq, gte, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  exists,
+  gte,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import type {
   BackfillProjectBillableDefaultInput,
   CreateProjectAssignmentInput,
@@ -47,8 +58,15 @@ import {
 } from '../project-name-policy';
 
 export type ProjectRow = typeof projects.$inferSelect;
+export type ProjectAccessScope = 'project' | 'own-time';
+export interface ProjectAccess {
+  project: ProjectRow;
+  scope: ProjectAccessScope;
+  canManageTasks: boolean;
+}
 type ProjectResponseRow = ProjectRow & {
   source: ProjectSource;
+  referenceProvenance: 'provider-verified' | 'user-supplied' | null;
   totalSeconds: number | string | null;
   members?: unknown;
 };
@@ -75,7 +93,7 @@ export class ProjectsService {
         .select(this.projectResponseSelection())
         .from(projects)
         .where(eq(projects.workspaceId, user.workspaceId));
-      return rows.map((row) => this.toProjectResponse(row));
+      return rows.map((row) => this.toProjectResponse(row, undefined, true));
     }
 
     const rows = await this.db
@@ -99,7 +117,46 @@ export class ProjectsService {
         ),
       );
 
-    return rows.map((row) => this.toProjectResponse(row));
+    const fullProjectIds = new Set(rows.map((row) => row.id));
+    const ownRows = await this.db
+      .select(this.projectResponseSelection())
+      .from(projects)
+      .where(
+        and(
+          eq(projects.workspaceId, user.workspaceId),
+          eq(projects.trackingMode, 'external-reference'),
+          eq(projects.isActive, true),
+          exists(
+            this.db
+              .select({ id: timeEntries.id })
+              .from(timeEntries)
+              .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+              .where(
+                and(
+                  eq(timeEntries.workspaceId, user.workspaceId),
+                  eq(timeEntries.userId, user.sub),
+                  eq(tasks.projectId, projects.id),
+                ),
+              ),
+          ),
+        ),
+      );
+
+    const scopedOwnRows = await Promise.all(
+      ownRows
+        .filter((row) => !fullProjectIds.has(row.id))
+        .map(async (row) =>
+          this.toOwnTimeProjectResponse(
+            row,
+            await this.getTrackedSummary(user.workspaceId, row.id, user.sub),
+          ),
+        ),
+    );
+
+    return [
+      ...rows.map((row) => this.toProjectResponse(row, undefined, true)),
+      ...scopedOwnRows,
+    ];
   }
 
   async getManagementSummary(
@@ -153,7 +210,9 @@ export class ProjectsService {
       eq(projects.isActive, true),
     ];
     if (membership.role !== 'admin') {
-      visibleConditions.push(this.visibleNonAdminProjectCondition(user.sub));
+      visibleConditions.push(
+        this.summaryVisibleNonAdminProjectCondition(user.sub),
+      );
     }
 
     const [visibleRow] = await this.db
@@ -245,14 +304,15 @@ export class ProjectsService {
         'Failed to fetch created project',
       );
     }
-    return this.toProjectResponse(response);
+    return this.toProjectResponse(response, undefined, true);
   }
 
   async getProject(
     user: AuthUser,
     projectId: string,
   ): Promise<ProjectDetailResponse> {
-    const project = await this.requireVisibleProject(user, projectId);
+    const access = await this.resolveProjectAccess(user, projectId);
+    const { project } = access;
     const row = await this.findProjectResponseInWorkspace(
       user.workspaceId,
       project.id,
@@ -260,11 +320,23 @@ export class ProjectsService {
     if (!row) throw new NotFoundException('Project not found');
     const [providerSummary, trackedSummary] = await Promise.all([
       this.getProviderSummary(user.workspaceId, project.id, row.source),
-      this.getTrackedSummary(user.workspaceId, project.id),
+      this.getTrackedSummary(
+        user.workspaceId,
+        project.id,
+        access.scope === 'own-time' ? user.sub : null,
+      ),
     ]);
+    if (access.scope === 'own-time') {
+      return {
+        ...this.toOwnTimeProjectResponse(row, trackedSummary),
+        providerSummary,
+        trackedSummary,
+        assignedMembersSummary: null,
+      };
+    }
     const members = this.parseProjectMembers(row.members);
     return {
-      ...this.toProjectResponse(row, members),
+      ...this.toProjectResponse(row, members, access.canManageTasks),
       providerSummary,
       trackedSummary,
       assignedMembersSummary: this.toAssignedMembersSummary(members),
@@ -303,6 +375,14 @@ export class ProjectsService {
       if (role === 'pm' && input.isActive !== undefined) {
         throw new ForbiddenException(
           'Only admins can change project active state',
+        );
+      }
+      if (
+        project.trackingMode === 'external-reference' &&
+        input.visibility === 'public'
+      ) {
+        throw new UnprocessableEntityException(
+          'External reference projects must remain private',
         );
       }
 
@@ -356,6 +436,15 @@ export class ProjectsService {
         .returning();
 
       if (!updated) throw new NotFoundException('Project not found');
+
+      if (input.isActive === false && project.isActive) {
+        await this.stopRunningEntriesForProject(
+          tx,
+          user.workspaceId,
+          project.id,
+          updated.updatedAt,
+        );
+      }
       return updated;
     });
 
@@ -364,7 +453,7 @@ export class ProjectsService {
       row.id,
     );
     if (!response) throw new NotFoundException('Project not found');
-    return this.toProjectResponse(response);
+    return this.toProjectResponse(response, undefined, true);
   }
 
   async backfillBillableDefault(
@@ -595,6 +684,71 @@ export class ProjectsService {
     return row.project;
   }
 
+  /**
+   * Resolves a read scope without reusing it for mutations. An external
+   * project can be visible through the caller's own time entries, but that
+   * derived visibility never grants shared project operations.
+   */
+  async resolveProjectAccess(
+    user: AuthUser,
+    projectId: string,
+    db: Pick<DrizzleDB, 'select'> = this.db,
+  ): Promise<ProjectAccess> {
+    const membership = await this.members.requireActiveMembership(
+      user.sub,
+      user.workspaceId,
+    );
+    const project = await this.requireProjectInWorkspace(
+      user.workspaceId,
+      projectId,
+      db,
+    );
+    if (membership.role === 'admin') {
+      return { project, scope: 'project', canManageTasks: true };
+    }
+
+    if (!project.isActive) throw new NotFoundException('Project not found');
+
+    const [assignment] = await db
+      .select({ id: projectAssignments.id })
+      .from(projectAssignments)
+      .where(
+        and(
+          eq(projectAssignments.workspaceId, user.workspaceId),
+          eq(projectAssignments.projectId, project.id),
+          eq(projectAssignments.userId, user.sub),
+        ),
+      )
+      .limit(1);
+    if (project.visibility === 'public' || assignment) {
+      return {
+        project,
+        scope: 'project',
+        // These users already have the established task-management routes for
+        // a project they can see. Keep the capability aligned with that API.
+        canManageTasks: true,
+      };
+    }
+
+    if (project.trackingMode !== 'external-reference') {
+      throw new NotFoundException('Project not found');
+    }
+    const [ownEntry] = await db
+      .select({ id: timeEntries.id })
+      .from(timeEntries)
+      .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+      .where(
+        and(
+          eq(timeEntries.workspaceId, user.workspaceId),
+          eq(timeEntries.userId, user.sub),
+          eq(tasks.projectId, project.id),
+        ),
+      )
+      .limit(1);
+    if (!ownEntry) throw new NotFoundException('Project not found');
+    return { project, scope: 'own-time', canManageTasks: false };
+  }
+
   private async requireProjectForUpdate(
     user: AuthUser,
     projectId: string,
@@ -701,6 +855,40 @@ export class ProjectsService {
     return result.rowCount ?? 0;
   }
 
+  private async stopRunningEntriesForProject(
+    db: UpdateCountExecutor,
+    workspaceId: string,
+    projectId: string,
+    archivedAt: Date,
+  ): Promise<void> {
+    const endedAt = sql<Date>`CASE
+      WHEN ${archivedAt}::timestamptz > ${timeEntries.startedAt}
+        THEN ${archivedAt}::timestamptz
+      ELSE ${timeEntries.startedAt} + interval '1 second'
+    END`;
+
+    await db
+      .update(timeEntries)
+      .set({
+        durationSeconds: sql<number>`GREATEST(
+          1,
+          FLOOR(EXTRACT(EPOCH FROM (${endedAt} - ${timeEntries.startedAt})))::integer
+        )`,
+        endedAt,
+        updatedAt: endedAt,
+      })
+      .from(tasks)
+      .where(
+        and(
+          eq(timeEntries.workspaceId, workspaceId),
+          eq(timeEntries.taskId, tasks.id),
+          eq(tasks.workspaceId, workspaceId),
+          eq(tasks.projectId, projectId),
+          isNull(timeEntries.endedAt),
+        ),
+      );
+  }
+
   private visibleNonAdminProjectCondition(userId: string): SQL {
     const condition = or(
       eq(projects.visibility, 'public'),
@@ -715,6 +903,35 @@ export class ProjectsService {
     return condition;
   }
 
+  private summaryVisibleNonAdminProjectCondition(userId: string): SQL {
+    const condition = or(
+      this.visibleNonAdminProjectCondition(userId),
+      and(
+        eq(projects.trackingMode, 'external-reference'),
+        exists(
+          this.db
+            .select({ id: timeEntries.id })
+            .from(timeEntries)
+            .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+            .where(
+              and(
+                eq(timeEntries.workspaceId, projects.workspaceId),
+                eq(timeEntries.userId, userId),
+                eq(tasks.projectId, projects.id),
+              ),
+            ),
+        ),
+      ),
+    );
+    if (!condition) {
+      throw DomainError.internal(
+        'project_summary_visibility_scope_missing',
+        'Failed to build project summary visibility scope',
+      );
+    }
+    return condition;
+  }
+
   private projectResponseSelection() {
     return {
       id: projects.id,
@@ -724,12 +941,21 @@ export class ProjectsService {
       color: projects.color,
       visibility: projects.visibility,
       defaultBillableForTasks: projects.defaultBillableForTasks,
+      trackingMode: projects.trackingMode,
       source: sql<ProjectSource>`CASE WHEN EXISTS (
         SELECT 1
         FROM "project_external_refs"
         WHERE "project_external_refs"."project_id" = "projects"."id"
           AND "project_external_refs"."provider" = 'github'
       ) THEN 'github' ELSE 'manual' END`,
+      referenceProvenance: sql<'provider-verified' | 'user-supplied' | null>`(
+        SELECT "reference_provenance"
+        FROM "project_external_refs"
+        WHERE "project_external_refs"."project_id" = "projects"."id"
+          AND "project_external_refs"."provider" = 'github'
+        ORDER BY CASE WHEN "project_external_refs"."external_type" = 'repository' THEN 0 ELSE 1 END
+        LIMIT 1
+      )`,
       totalSeconds: sql<number>`COALESCE((
         SELECT SUM("time_entries"."duration_seconds")
         FROM "time_entries"
@@ -762,6 +988,7 @@ export class ProjectsService {
   private toProjectResponse(
     row: ProjectResponseRow,
     members = this.parseProjectMembers(row.members),
+    canManageTasks = false,
   ): ProjectResponse {
     return {
       id: row.id,
@@ -772,12 +999,29 @@ export class ProjectsService {
       visibility: row.visibility,
       defaultBillableForTasks: row.defaultBillableForTasks,
       source: row.source,
+      referenceProvenance: row.referenceProvenance,
+      trackingMode: row.trackingMode,
+      accessScope: 'project',
+      capabilities: { canManageTasks },
       totalSeconds: Math.trunc(toNumber(row.totalSeconds)),
       members,
       isActive: row.isActive,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
+  }
+
+  private toOwnTimeProjectResponse(
+    row: ProjectResponseRow,
+    trackedSummary: ProjectTrackedSummary,
+  ): ProjectResponse {
+    return {
+      ...this.toProjectResponse(row, []),
+      totalSeconds: trackedSummary.totalSeconds,
+      members: [],
+      accessScope: 'own-time',
+      capabilities: { canManageTasks: false },
+    } as ProjectResponse;
   }
 
   private async getProviderSummary(
@@ -826,6 +1070,7 @@ export class ProjectsService {
   private async getTrackedSummary(
     workspaceId: string,
     projectId: string,
+    userId: string | null = null,
   ): Promise<ProjectTrackedSummary> {
     const [row] = await this.db
       .select({
@@ -843,6 +1088,7 @@ export class ProjectsService {
           eq(tasks.workspaceId, workspaceId),
           eq(tasks.projectId, projectId),
           isNotNull(timeEntries.durationSeconds),
+          ...(userId === null ? [] : [eq(timeEntries.userId, userId)]),
         ),
       );
 

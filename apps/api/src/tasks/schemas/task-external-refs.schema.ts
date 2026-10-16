@@ -1,5 +1,6 @@
 import { getTableColumns, sql } from 'drizzle-orm';
 import {
+  check,
   index,
   jsonb,
   pgTable,
@@ -12,6 +13,7 @@ import {
 import { projects } from '../../projects/schemas/projects.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { tasks } from './tasks.schema';
+import type { ReferenceProvenance } from '../../projects/schemas/project-external-refs.schema';
 
 export const taskExternalRefs = pgTable(
   'task_external_refs',
@@ -31,6 +33,10 @@ export const taskExternalRefs = pgTable(
     externalId: varchar('external_id', { length: 255 }),
     externalKey: varchar('external_key', { length: 500 }).notNull(),
     externalUrl: text('external_url'),
+    referenceProvenance: varchar('reference_provenance', { length: 32 })
+      .$type<ReferenceProvenance>()
+      .default('provider-verified')
+      .notNull(),
     metadata: jsonb('metadata')
       .$type<Record<string, unknown>>()
       .default(sql`'{}'::jsonb`)
@@ -55,6 +61,10 @@ export const taskExternalRefs = pgTable(
       table.provider,
       table.externalType,
       sql`lower(${table.externalKey})`,
+    ),
+    check(
+      'task_external_refs_provenance_check',
+      sql`${table.referenceProvenance} IN ('provider-verified', 'user-supplied')`,
     ),
     index('task_external_refs_workspace_provider_id_idx')
       .on(

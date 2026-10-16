@@ -1,0 +1,22 @@
+[
+  {
+    "case": "M03 Firefox background page restart",
+    "pass": true,
+    "beforeTimeOrigin": 1792068321809,
+    "afterTimeOrigin": 1792068336554,
+    "workspace": {
+      "id": "08fc3ed7-56a4-4270-9a30-5cbca117e17b",
+      "name": "QA workspace B"
+    }
+  },
+  {
+    "case": "M03 invalid-access recovery refresh retains B",
+    "pass": true,
+    "workspace": {
+      "id": "08fc3ed7-56a4-4270-9a30-5cbca117e17b",
+      "name": "QA workspace B"
+    },
+    "refreshPostDelta": 1,
+    "requiresRetry": true
+  }
+]

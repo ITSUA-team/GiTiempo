@@ -1,0 +1,1331 @@
+[
+  {
+    "case": "M11 refresh and switch serialize through the accepted refresh pair",
+    "pass": true,
+    "refreshResult": {
+      "authenticated": true,
+      "errorMessage": null,
+      "userEmail": "alexey@example.com",
+      "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed",
+      "workspaceName": "Acme workspace",
+      "workspaceSwitching": true
+    },
+    "switchResult": {
+      "errorMessage": null,
+      "ok": true,
+      "snapshot": {
+        "authenticated": true,
+        "errorMessage": null,
+        "userEmail": "alexey@example.com",
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b",
+        "workspaceName": "QA workspace B",
+        "workspaceSwitching": false
+      }
+    },
+    "finalSnapshot": {
+      "authenticated": true,
+      "errorMessage": null,
+      "userEmail": "alexey@example.com",
+      "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b",
+      "workspaceName": "QA workspace B",
+      "workspaceSwitching": false
+    },
+    "events": [
+      {
+        "acceptedAt": "2026-10-15T13:05:22.073Z",
+        "completedAt": "2026-10-15T13:05:22.076Z",
+        "id": 537,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 401,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:22.073Z",
+        "completedAt": "2026-10-15T13:05:22.076Z",
+        "id": 538,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 401,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:22.078Z",
+        "completedAt": "2026-10-15T13:05:23.504Z",
+        "id": 539,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/auth/refresh",
+        "status": 200,
+        "workspaceId": null
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:22.129Z",
+        "completedAt": "2026-10-15T13:05:22.132Z",
+        "id": 540,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 401,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:22.130Z",
+        "completedAt": "2026-10-15T13:05:22.132Z",
+        "id": 541,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 401,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.507Z",
+        "completedAt": "2026-10-15T13:05:23.512Z",
+        "id": 542,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.507Z",
+        "completedAt": "2026-10-15T13:05:23.512Z",
+        "id": 543,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.507Z",
+        "completedAt": "2026-10-15T13:05:23.514Z",
+        "id": 544,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.509Z",
+        "completedAt": "2026-10-15T13:05:23.534Z",
+        "id": 545,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.543Z",
+        "completedAt": "2026-10-15T13:05:23.551Z",
+        "id": 546,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.543Z",
+        "completedAt": "2026-10-15T13:05:23.548Z",
+        "id": 547,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.543Z",
+        "completedAt": "2026-10-15T13:05:23.573Z",
+        "id": 548,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.545Z",
+        "completedAt": "2026-10-15T13:05:23.574Z",
+        "id": 549,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.548Z",
+        "completedAt": "2026-10-15T13:05:23.559Z",
+        "id": 550,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.550Z",
+        "completedAt": "2026-10-15T13:05:23.555Z",
+        "id": 551,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.550Z",
+        "completedAt": "2026-10-15T13:05:23.607Z",
+        "id": 552,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.553Z",
+        "completedAt": "2026-10-15T13:05:23.578Z",
+        "id": 553,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/auth/switch-workspace",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.556Z",
+        "completedAt": "2026-10-15T13:05:23.607Z",
+        "id": 554,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.559Z",
+        "completedAt": "2026-10-15T13:05:23.563Z",
+        "id": 555,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.565Z",
+        "completedAt": "2026-10-15T13:05:23.571Z",
+        "id": 556,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.581Z",
+        "completedAt": "2026-10-15T13:05:23.585Z",
+        "id": 557,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 200,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.608Z",
+        "completedAt": "2026-10-15T13:05:23.610Z",
+        "id": 558,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.610Z",
+        "completedAt": "2026-10-15T13:05:23.613Z",
+        "id": 559,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.613Z",
+        "completedAt": "2026-10-15T13:05:23.615Z",
+        "id": 560,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.620Z",
+        "completedAt": "2026-10-15T13:05:23.624Z",
+        "id": 561,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.620Z",
+        "completedAt": "2026-10-15T13:05:23.624Z",
+        "id": 562,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.620Z",
+        "completedAt": "2026-10-15T13:05:23.628Z",
+        "id": 563,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.621Z",
+        "completedAt": "2026-10-15T13:05:23.627Z",
+        "id": 564,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.622Z",
+        "completedAt": "2026-10-15T13:05:23.627Z",
+        "id": 565,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.622Z",
+        "completedAt": "2026-10-15T13:05:23.635Z",
+        "id": 566,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.624Z",
+        "completedAt": "2026-10-15T13:05:23.628Z",
+        "id": 567,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.625Z",
+        "completedAt": "2026-10-15T13:05:23.628Z",
+        "id": 568,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.628Z",
+        "completedAt": "2026-10-15T13:05:23.635Z",
+        "id": 569,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.628Z",
+        "completedAt": "2026-10-15T13:05:23.635Z",
+        "id": 570,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.636Z",
+        "completedAt": "2026-10-15T13:05:23.638Z",
+        "id": 571,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:23.636Z",
+        "completedAt": "2026-10-15T13:05:23.639Z",
+        "id": 572,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      }
+    ]
+  },
+  {
+    "case": "M11 sign-out supersedes an accepted delayed switch and revokes its late pair",
+    "pass": true,
+    "signOutResult": {
+      "errorMessage": null,
+      "ok": true,
+      "snapshot": {
+        "authenticated": false,
+        "errorMessage": null,
+        "userEmail": null,
+        "workspaceId": null,
+        "workspaceName": null,
+        "workspaceSwitching": true
+      }
+    },
+    "delayedSwitchResult": {
+      "errorMessage": "Your session or workspace changed. Refresh and review the destination before starting.",
+      "ok": false,
+      "snapshot": {
+        "authenticated": false,
+        "errorMessage": null,
+        "userEmail": null,
+        "workspaceId": null,
+        "workspaceName": null,
+        "workspaceSwitching": false
+      }
+    },
+    "finalSnapshot": {
+      "authenticated": false,
+      "errorMessage": null,
+      "userEmail": null,
+      "workspaceId": null,
+      "workspaceName": null,
+      "workspaceSwitching": true
+    },
+    "events": [
+      {
+        "acceptedAt": "2026-10-15T13:05:24.182Z",
+        "completedAt": "2026-10-15T13:05:24.185Z",
+        "id": 580,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.183Z",
+        "completedAt": "2026-10-15T13:05:24.185Z",
+        "id": 581,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.190Z",
+        "completedAt": "2026-10-15T13:05:24.195Z",
+        "id": 582,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.191Z",
+        "completedAt": "2026-10-15T13:05:24.195Z",
+        "id": 583,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.191Z",
+        "completedAt": "2026-10-15T13:05:24.200Z",
+        "id": 584,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.192Z",
+        "completedAt": "2026-10-15T13:05:24.198Z",
+        "id": 585,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.193Z",
+        "completedAt": "2026-10-15T13:05:24.198Z",
+        "id": 586,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.193Z",
+        "completedAt": "2026-10-15T13:05:24.199Z",
+        "id": 587,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.195Z",
+        "completedAt": "2026-10-15T13:05:25.617Z",
+        "id": 588,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/auth/switch-workspace",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.196Z",
+        "completedAt": "2026-10-15T13:05:24.202Z",
+        "id": 589,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.198Z",
+        "completedAt": "2026-10-15T13:05:24.202Z",
+        "id": 590,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.202Z",
+        "completedAt": "2026-10-15T13:05:24.205Z",
+        "id": 591,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.202Z",
+        "completedAt": "2026-10-15T13:05:24.205Z",
+        "id": 592,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.206Z",
+        "completedAt": "2026-10-15T13:05:24.208Z",
+        "id": 593,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.206Z",
+        "completedAt": "2026-10-15T13:05:24.208Z",
+        "id": 594,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:24.247Z",
+        "completedAt": "2026-10-15T13:05:24.259Z",
+        "id": 595,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/auth/logout",
+        "status": 204,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:25.618Z",
+        "completedAt": "2026-10-15T13:05:25.624Z",
+        "id": 596,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/auth/logout",
+        "status": 204,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      }
+    ]
+  },
+  {
+    "case": "M11 failed late-pair revocation cannot restore a signed-out session",
+    "pass": true,
+    "signOutResult": {
+      "errorMessage": null,
+      "ok": true,
+      "snapshot": {
+        "authenticated": false,
+        "errorMessage": null,
+        "userEmail": null,
+        "workspaceId": null,
+        "workspaceName": null,
+        "workspaceSwitching": true
+      }
+    },
+    "delayedSwitchResult": {
+      "errorMessage": "Your session or workspace changed. Refresh and review the destination before starting.",
+      "ok": false,
+      "snapshot": {
+        "authenticated": false,
+        "errorMessage": null,
+        "userEmail": null,
+        "workspaceId": null,
+        "workspaceName": null,
+        "workspaceSwitching": false
+      }
+    },
+    "finalSnapshot": {
+      "authenticated": false,
+      "errorMessage": null,
+      "userEmail": null,
+      "workspaceId": null,
+      "workspaceName": null,
+      "workspaceSwitching": false
+    },
+    "events": [
+      {
+        "acceptedAt": "2026-10-15T13:05:26.180Z",
+        "completedAt": "2026-10-15T13:05:26.184Z",
+        "id": 602,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.180Z",
+        "completedAt": "2026-10-15T13:05:26.184Z",
+        "id": 603,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.189Z",
+        "completedAt": "2026-10-15T13:05:26.195Z",
+        "id": 604,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.189Z",
+        "completedAt": "2026-10-15T13:05:26.195Z",
+        "id": 605,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.189Z",
+        "completedAt": "2026-10-15T13:05:26.203Z",
+        "id": 606,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.191Z",
+        "completedAt": "2026-10-15T13:05:26.203Z",
+        "id": 607,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.192Z",
+        "completedAt": "2026-10-15T13:05:26.203Z",
+        "id": 608,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.192Z",
+        "completedAt": "2026-10-15T13:05:26.203Z",
+        "id": 609,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.195Z",
+        "completedAt": "2026-10-15T13:05:27.610Z",
+        "id": 610,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/auth/switch-workspace",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.196Z",
+        "completedAt": "2026-10-15T13:05:26.199Z",
+        "id": 611,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.200Z",
+        "completedAt": "2026-10-15T13:05:26.203Z",
+        "id": 612,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.203Z",
+        "completedAt": "2026-10-15T13:05:26.206Z",
+        "id": 613,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.204Z",
+        "completedAt": "2026-10-15T13:05:26.206Z",
+        "id": 614,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.206Z",
+        "completedAt": "2026-10-15T13:05:26.209Z",
+        "id": 615,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.206Z",
+        "completedAt": "2026-10-15T13:05:26.209Z",
+        "id": 616,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:26.241Z",
+        "completedAt": "2026-10-15T13:05:26.246Z",
+        "id": 617,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/auth/logout",
+        "status": 204,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:27.612Z",
+        "completedAt": "2026-10-15T13:05:27.612Z",
+        "id": 618,
+        "method": "POST",
+        "outcome": "injected-failure",
+        "path": "/auth/logout",
+        "status": 503,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      }
+    ]
+  },
+  {
+    "case": "M11 newer login survives a late switch response and its cleanup",
+    "pass": true,
+    "newLoginResult": {
+      "errorMessage": null,
+      "ok": true,
+      "snapshot": {
+        "authenticated": true,
+        "errorMessage": null,
+        "userEmail": "single-qa@example.test",
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed",
+        "workspaceName": "Acme workspace",
+        "workspaceSwitching": true
+      }
+    },
+    "delayedSwitchResult": {
+      "errorMessage": "Your session or workspace changed. Refresh and review the destination before starting.",
+      "ok": false,
+      "snapshot": {
+        "authenticated": true,
+        "errorMessage": null,
+        "userEmail": "single-qa@example.test",
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed",
+        "workspaceName": "Acme workspace",
+        "workspaceSwitching": false
+      }
+    },
+    "finalSnapshot": {
+      "authenticated": true,
+      "errorMessage": null,
+      "userEmail": "single-qa@example.test",
+      "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed",
+      "workspaceName": "Acme workspace",
+      "workspaceSwitching": false
+    },
+    "newLoginRevoked": false,
+    "events": [
+      {
+        "acceptedAt": "2026-10-15T13:05:28.225Z",
+        "completedAt": "2026-10-15T13:05:28.228Z",
+        "id": 624,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.225Z",
+        "completedAt": "2026-10-15T13:05:28.228Z",
+        "id": 625,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.235Z",
+        "completedAt": "2026-10-15T13:05:28.239Z",
+        "id": 626,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.235Z",
+        "completedAt": "2026-10-15T13:05:28.239Z",
+        "id": 627,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.235Z",
+        "completedAt": "2026-10-15T13:05:28.242Z",
+        "id": 628,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.236Z",
+        "completedAt": "2026-10-15T13:05:28.242Z",
+        "id": 629,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.237Z",
+        "completedAt": "2026-10-15T13:05:28.242Z",
+        "id": 630,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.237Z",
+        "completedAt": "2026-10-15T13:05:28.243Z",
+        "id": 631,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.239Z",
+        "completedAt": "2026-10-15T13:05:29.658Z",
+        "id": 632,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/auth/switch-workspace",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.239Z",
+        "completedAt": "2026-10-15T13:05:28.241Z",
+        "id": 633,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.242Z",
+        "completedAt": "2026-10-15T13:05:28.243Z",
+        "id": 634,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.243Z",
+        "completedAt": "2026-10-15T13:05:28.244Z",
+        "id": 635,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.244Z",
+        "completedAt": "2026-10-15T13:05:28.245Z",
+        "id": 636,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.245Z",
+        "completedAt": "2026-10-15T13:05:28.246Z",
+        "id": 637,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.245Z",
+        "completedAt": "2026-10-15T13:05:28.247Z",
+        "id": 638,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.310Z",
+        "completedAt": "2026-10-15T13:05:28.321Z",
+        "id": 639,
+        "method": "POST",
+        "outcome": "fixture-login-single",
+        "path": "/auth/login",
+        "status": 200,
+        "workspaceId": null
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.325Z",
+        "completedAt": "2026-10-15T13:05:28.328Z",
+        "id": 640,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.325Z",
+        "completedAt": "2026-10-15T13:05:28.328Z",
+        "id": 641,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.334Z",
+        "completedAt": "2026-10-15T13:05:28.338Z",
+        "id": 642,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.335Z",
+        "completedAt": "2026-10-15T13:05:28.338Z",
+        "id": 643,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.335Z",
+        "completedAt": "2026-10-15T13:05:28.340Z",
+        "id": 644,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.336Z",
+        "completedAt": "2026-10-15T13:05:28.340Z",
+        "id": 645,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.336Z",
+        "completedAt": "2026-10-15T13:05:28.341Z",
+        "id": 646,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.338Z",
+        "completedAt": "2026-10-15T13:05:28.343Z",
+        "id": 647,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.339Z",
+        "completedAt": "2026-10-15T13:05:28.340Z",
+        "id": 648,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.341Z",
+        "completedAt": "2026-10-15T13:05:28.343Z",
+        "id": 649,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.341Z",
+        "completedAt": "2026-10-15T13:05:28.343Z",
+        "id": 650,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.343Z",
+        "completedAt": "2026-10-15T13:05:28.345Z",
+        "id": 651,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.344Z",
+        "completedAt": "2026-10-15T13:05:28.346Z",
+        "id": 652,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:28.345Z",
+        "completedAt": "2026-10-15T13:05:28.347Z",
+        "id": 653,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.661Z",
+        "completedAt": "2026-10-15T13:05:29.693Z",
+        "id": 654,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/auth/logout",
+        "status": 204,
+        "workspaceId": "500b9546-9689-4cf6-af7b-8ce93b968f5b"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.725Z",
+        "completedAt": "2026-10-15T13:05:29.732Z",
+        "id": 655,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/users/me/workspaces",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.734Z",
+        "completedAt": "2026-10-15T13:05:29.751Z",
+        "id": 656,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.734Z",
+        "completedAt": "2026-10-15T13:05:29.752Z",
+        "id": 657,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.763Z",
+        "completedAt": "2026-10-15T13:05:29.772Z",
+        "id": 658,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.763Z",
+        "completedAt": "2026-10-15T13:05:29.772Z",
+        "id": 659,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.763Z",
+        "completedAt": "2026-10-15T13:05:29.776Z",
+        "id": 660,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.765Z",
+        "completedAt": "2026-10-15T13:05:29.779Z",
+        "id": 661,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.765Z",
+        "completedAt": "2026-10-15T13:05:29.775Z",
+        "id": 662,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.769Z",
+        "completedAt": "2026-10-15T13:05:29.777Z",
+        "id": 663,
+        "method": "POST",
+        "outcome": "forwarded",
+        "path": "/time-entries/timer/capability",
+        "status": 200,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.772Z",
+        "completedAt": "2026-10-15T13:05:29.775Z",
+        "id": 664,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.773Z",
+        "completedAt": "2026-10-15T13:05:29.779Z",
+        "id": 665,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.776Z",
+        "completedAt": "2026-10-15T13:05:29.779Z",
+        "id": 666,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.780Z",
+        "completedAt": "2026-10-15T13:05:29.782Z",
+        "id": 667,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.780Z",
+        "completedAt": "2026-10-15T13:05:29.784Z",
+        "id": 668,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.782Z",
+        "completedAt": "2026-10-15T13:05:29.786Z",
+        "id": 669,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.835Z",
+        "completedAt": "2026-10-15T13:05:29.838Z",
+        "id": 670,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/time-entries/current",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      },
+      {
+        "acceptedAt": "2026-10-15T13:05:29.836Z",
+        "completedAt": "2026-10-15T13:05:29.838Z",
+        "id": 671,
+        "method": "GET",
+        "outcome": "forwarded",
+        "path": "/workspace",
+        "status": 304,
+        "workspaceId": "79396890-e3cd-4a4d-9956-5789d4a20fed"
+      }
+    ]
+  }
+]

@@ -8,6 +8,8 @@ import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
 import { mockMatchMedia } from "@/test/mockMatchMedia";
 
 const projectOrion = {
+  accessScope: "project",
+  capabilities: { canManageTasks: true },
   color: null,
   createdAt: "2026-04-20T12:00:00.000Z",
   defaultBillableForTasks: true,
@@ -17,6 +19,8 @@ const projectOrion = {
   members: [],
   name: "Project Orion",
   source: "manual",
+  referenceProvenance: null,
+  trackingMode: "managed",
   totalSeconds: 43200,
   updatedAt: "2026-04-20T12:00:00.000Z",
   visibility: "public",
@@ -30,6 +34,8 @@ const internalOpsProject = {
 } satisfies ProjectResponse;
 
 const reportsTask = {
+  accessScope: "project",
+  capabilities: { canManageTasks: true },
   createdAt: "2026-04-20T12:00:00.000Z",
   defaultBillableForTimeEntries: true,
   githubIssue: null,
@@ -423,6 +429,43 @@ describe("TopBarTimerTaskDialog", () => {
     expect(taskSuggestions.map((task) => task.title)).toEqual([
       "Improve reports filters",
     ]);
+  });
+
+  it.each([false, true])("hides task creation without permission (mobile: %s)", async (isMobile) => {
+    mockMatchMedia(isMobile);
+    const wrapper = mountDialog({
+      projectOptions: [{
+        ...projectOrion,
+        accessScope: "own-time",
+        capabilities: { canManageTasks: false },
+      }],
+    });
+    const taskAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1]!;
+
+    expect(taskAutoComplete.props("suggestions")).toEqual([reportsTask]);
+    await taskAutoComplete.vm.$emit("complete", { query: "" });
+    await nextTick();
+    expect(taskAutoComplete.props("suggestions")).toEqual([reportsTask]);
+    expect(wrapper.text()).not.toContain("New task");
+    expect(findButtonByLabel(wrapper, "Start timer")?.attributes("disabled")).toBeUndefined();
+
+    await wrapper.setProps({ selectedTaskId: null, taskOptions: [] });
+    expect(wrapper.text()).not.toContain("New task");
+    expect(findButtonByLabel(wrapper, "Start timer")?.attributes("disabled")).toBeDefined();
+    wrapper.unmount();
+  });
+
+  it("removes a selected New task when project creation permission is revoked", async () => {
+    const wrapper = mountDialog({ selectedTaskId: TOP_BAR_TIMER_NEW_TASK_ID });
+
+    expect(wrapper.text()).toContain("New task title");
+    await wrapper.setProps({
+      projectOptions: [{ ...projectOrion, capabilities: { canManageTasks: false } }],
+    });
+
+    expect(wrapper.text()).not.toContain("New task");
+    expect(findButtonByLabel(wrapper, "Start timer")?.attributes("disabled")).toBeDefined();
+    wrapper.unmount();
   });
 
   it("explains an empty GitHub project instead of offering New task", () => {

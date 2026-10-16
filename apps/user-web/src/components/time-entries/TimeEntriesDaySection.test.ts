@@ -54,6 +54,7 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
       name: 'Workspace Alpha',
     },
     githubIssue: null,
+    invoiceId: null,
     ...overrides,
   };
 }

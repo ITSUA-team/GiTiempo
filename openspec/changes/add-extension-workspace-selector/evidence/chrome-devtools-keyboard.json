@@ -1,0 +1,340 @@
+{
+  "date": "2026-10-15",
+  "browser": "Chrome for Testing 152.0.7977.54",
+  "input": "Chrome DevTools Protocol Input",
+  "scope": "Actual browser-action popup, isolated profile and real local API",
+  "records": [
+    {
+      "case": "Actual action popup menu",
+      "pass": true,
+      "state": {
+        "menu": true,
+        "selected": "7b14533e-f7f4-4830-8095-c201d30619da",
+        "selectedText": "Acme workspace",
+        "disabled": false,
+        "options": [
+          {
+            "value": "7b14533e-f7f4-4830-8095-c201d30619da",
+            "text": "Acme workspace"
+          },
+          {
+            "value": "87df0eb5-eb24-45f5-a93d-011a958ec786",
+            "text": "QA workspace B"
+          }
+        ],
+        "open": false,
+        "focused": "BODY",
+        "events": [],
+        "viewport": {
+          "width": 320,
+          "height": 480
+        }
+      }
+    },
+    {
+      "case": "Harness focuses preceding avatar before Tab",
+      "setup": true,
+      "state": {
+        "menu": true,
+        "selected": "7b14533e-f7f4-4830-8095-c201d30619da",
+        "selectedText": "Acme workspace",
+        "disabled": false,
+        "options": [
+          {
+            "value": "7b14533e-f7f4-4830-8095-c201d30619da",
+            "text": "Acme workspace"
+          },
+          {
+            "value": "87df0eb5-eb24-45f5-a93d-011a958ec786",
+            "text": "QA workspace B"
+          }
+        ],
+        "open": false,
+        "focused": "toggle-account-menu",
+        "events": [],
+        "viewport": {
+          "width": 320,
+          "height": 480
+        }
+      }
+    },
+    {
+      "case": "Tab reaches workspace selector",
+      "pass": true,
+      "state": {
+        "menu": true,
+        "selected": "7b14533e-f7f4-4830-8095-c201d30619da",
+        "selectedText": "Acme workspace",
+        "disabled": false,
+        "options": [
+          {
+            "value": "7b14533e-f7f4-4830-8095-c201d30619da",
+            "text": "Acme workspace"
+          },
+          {
+            "value": "87df0eb5-eb24-45f5-a93d-011a958ec786",
+            "text": "QA workspace B"
+          }
+        ],
+        "open": false,
+        "focused": "workspace-selector",
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false,
+            "field": null
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false,
+            "field": "workspace-selector"
+          }
+        ],
+        "viewport": {
+          "width": 320,
+          "height": 480
+        }
+      }
+    },
+    {
+      "case": "Platform opener probe: Space",
+      "state": {
+        "menu": true,
+        "selected": "7b14533e-f7f4-4830-8095-c201d30619da",
+        "selectedText": "Acme workspace",
+        "disabled": false,
+        "options": [
+          {
+            "value": "7b14533e-f7f4-4830-8095-c201d30619da",
+            "text": "Acme workspace"
+          },
+          {
+            "value": "87df0eb5-eb24-45f5-a93d-011a958ec786",
+            "text": "QA workspace B"
+          }
+        ],
+        "open": false,
+        "focused": "workspace-selector",
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false,
+            "field": null
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false,
+            "field": "workspace-selector"
+          },
+          {
+            "type": "keydown",
+            "key": " ",
+            "trusted": true,
+            "prevented": false,
+            "field": "workspace-selector"
+          },
+          {
+            "type": "keyup",
+            "key": " ",
+            "trusted": true,
+            "prevented": false,
+            "field": "workspace-selector"
+          }
+        ],
+        "viewport": {
+          "width": 320,
+          "height": 480
+        }
+      },
+      "opened": false,
+      "productFailure": false
+    },
+    {
+      "case": "Alt+Down native open fallback",
+      "state": {
+        "menu": true,
+        "selected": "7b14533e-f7f4-4830-8095-c201d30619da",
+        "selectedText": "Acme workspace",
+        "disabled": false,
+        "options": [
+          {
+            "value": "7b14533e-f7f4-4830-8095-c201d30619da",
+            "text": "Acme workspace"
+          },
+          {
+            "value": "87df0eb5-eb24-45f5-a93d-011a958ec786",
+            "text": "QA workspace B"
+          }
+        ],
+        "open": true,
+        "focused": "workspace-selector",
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false,
+            "field": null
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false,
+            "field": "workspace-selector"
+          },
+          {
+            "type": "keydown",
+            "key": " ",
+            "trusted": true,
+            "prevented": false,
+            "field": "workspace-selector"
+          },
+          {
+            "type": "keyup",
+            "key": " ",
+            "trusted": true,
+            "prevented": false,
+            "field": "workspace-selector"
+          },
+          {
+            "type": "keydown",
+            "key": "ArrowDown",
+            "trusted": true,
+            "prevented": false,
+            "field": "workspace-selector"
+          },
+          {
+            "type": "keyup",
+            "key": "ArrowDown",
+            "trusted": true,
+            "prevented": false,
+            "field": "workspace-selector"
+          }
+        ],
+        "viewport": {
+          "width": 320,
+          "height": 480
+        }
+      }
+    },
+    {
+      "case": "Native options input could not be completed through DevTools",
+      "error": "ArrowDown and Enter reached popup document but native options remained open without a committed change",
+      "incomplete": true,
+      "productFailure": false
+    },
+    {
+      "case": "Fresh popup; harness focuses selector for remaining logical checks",
+      "setup": true,
+      "state": {
+        "menu": true,
+        "open": false,
+        "focused": "workspace-selector",
+        "events": []
+      }
+    },
+    {
+      "case": "Tab reaches Open profile",
+      "pass": true,
+      "state": {
+        "menu": true,
+        "open": false,
+        "focused": "open-profile",
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true
+          }
+        ]
+      }
+    },
+    {
+      "case": "Tab reaches Sign out",
+      "pass": true,
+      "state": {
+        "menu": true,
+        "open": false,
+        "focused": "sign-out",
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true
+          },
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true
+          }
+        ]
+      }
+    },
+    {
+      "case": "Escape closes menu with native options already closed",
+      "pass": true,
+      "state": {
+        "menu": false,
+        "focused": "BODY",
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true
+          },
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true
+          },
+          {
+            "type": "keydown",
+            "key": "Escape",
+            "trusted": true
+          },
+          {
+            "type": "keyup",
+            "key": "Escape",
+            "trusted": true
+          }
+        ]
+      },
+      "nativeOptionsEscapeVerified": false
+    }
+  ],
+  "nativeOptionsVisualVerified": false
+}

@@ -70,11 +70,12 @@ export function useTimeEntryTaskLookupState({
   function updateTaskSuggestions(
     query: string,
     options = dialogTaskOptions.value,
+    canCreateTask = true,
   ): void {
     dialogTaskSuggestions.value = buildTaskLookupSuggestions(
       query,
       options,
-      dialogProjectId.value,
+      canCreateTask ? dialogProjectId.value : null,
     );
   }
 

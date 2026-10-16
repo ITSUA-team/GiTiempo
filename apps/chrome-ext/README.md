@@ -1,6 +1,6 @@
 # GiTiempo Browser Extension
 
-Manifest V3 extension for starting and stopping GiTiempo timers from direct GitHub issue pages and GitHub Projects issue panes. Pull requests are not supported. One source tree, two builds: `dist/chrome` and `dist/firefox`.
+Manifest V3 extension for starting and stopping GiTiempo timers from direct GitHub issue pages and GitHub Projects issue panes. It registers across GitHub so GitHub's in-page navigation from an issue list or board can mount the control without a browser reload; it renders only after validating a supported issue context. Pull requests are not supported. One source tree, two builds: `dist/chrome` and `dist/firefox`.
 
 ## Commands
 
@@ -19,6 +19,8 @@ Google sign-in requires `VITE_EXTENSION_GOOGLE_CLIENT_ID`, which the runtime rea
 `VITE_EXTENSION_USER_SPA_URL` does double duty: it is the sign-in destination, and its origin is the app home the popup header opens. That assumes the User SPA is served from the root of the origin; hosting it under a subpath would mean configuring the two destinations separately.
 
 ## Load Unpacked — Chrome
+
+For the local API on port 3000, use `pnpm --filter chrome-ext build:chrome --mode dev` with `.env.dev.local`. The API origin is embedded in the bundle and manifest; after rebuilding, reload the extension in `chrome://extensions` and refresh any open GitHub issue tabs. Temporary QA origins must not be left in the development build.
 
 1. Run `pnpm --filter chrome-ext build`.
 2. Open `chrome://extensions`.
@@ -78,8 +80,16 @@ Register the first with Google and set the second as the Firefox backend variabl
 
 ## Data collection
 
-`browser_specific_settings.gecko.data_collection_permissions` declares `websiteActivity`, required for addons.mozilla.org submissions since 3 November 2025. The extension sends the repository and issue number of the page being viewed to the GiTiempo API, which is website activity leaving the device; declaring `none` would have been untrue.
+`browser_specific_settings.gecko.data_collection_permissions` declares `websiteActivity`, required for addons.mozilla.org submissions since 3 November 2025. The extension sends the repository, issue number, visible issue title, and canonical direct issue URL to the GiTiempo API on an explicit Start action, which is website activity leaving the device; declaring `none` would have been untrue.
 
 ## Chrome Web Store release checklist
 
 Before packaging or submitting a Chrome Web Store release, use the [privacy and release checklist](../../docs/chrome-web-store-privacy.md). It records the package-specific data inventory, permission and host justifications, policy URL, artifact inspection, CWS declaration status, and publisher facts that cannot be inferred from source code.
+
+## External GitHub reference tracking
+
+Sign in to GiTiempo and review the workspace destination shown in the popup/control. Start uses the current issue-specific DOM title and a canonical direct issue URL, including from a Projects pane. It never uses the board/tab title. Only one Start is available; errors reconcile the current timer without trying another tracking route.
+
+New external projects are private and recording is default-on without a linked GitHub account, App installation, customer organization approval or enablement toggle. Recording grants visibility only to your own time and exact tasks with your entries. Existing managed mappings keep installation/project checks and denials never fall back to external recording. One timer remains global across workspaces and Stop uses its owned current ID.
+
+Version `0.1.1` is the external-reference candidate. Build success is not distribution approval: new policy publication verification and Chrome/Firefox runtime QA, including a permitted private customer issue, remain release prerequisites. Repository rename/transfer and mode conversion are deferred.

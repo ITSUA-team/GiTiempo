@@ -1,7 +1,7 @@
-import type { TaskResponse } from "@gitiempo/shared";
+import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/vue-query";
-import { computed, watch, type ComputedRef } from "vue";
+import { computed, nextTick, watch, type ComputedRef } from "vue";
 
 import { userProjectsKeys, type UserServerStateScope } from "@/lib/query-keys";
 import { sortProjectTasks } from "@/lib/projects-page-helpers";
@@ -32,16 +32,23 @@ export function useProjectsData({
     queryKey: computed(() => userProjectsKeys.visibleProjects(scope.value)),
     enabled,
     queryFn: () => client.listVisibleProjects(),
+    refetchOnWindowFocus: true,
   });
   const visibleProjects = computed(() =>
     (projectsQuery.data.value ?? []).filter((project) => project.isActive),
   );
+  const projectAccessScopes = new Map<string, ProjectResponse["accessScope"]>();
   const taskQueries = useQueries({
     queries: computed(() =>
       visibleProjects.value.map((project) => ({
-        queryKey: userProjectsKeys.projectTasks(scope.value, project.id),
+        queryKey: userProjectsKeys.projectTasks(
+          scope.value,
+          project.id,
+          project.accessScope,
+        ),
         enabled: enabled.value,
         queryFn: () => client.listProjectTasks(project.id),
+        refetchOnWindowFocus: false,
         select: (tasks: TaskResponse[]): ProjectTasksSelection => ({
           projectId: project.id,
           tasks,
@@ -49,6 +56,28 @@ export function useProjectsData({
       })),
     ),
   });
+  let hasCompletedInitialProjectsFetch = false;
+
+  async function refreshVisibleProjectTasks(): Promise<void> {
+    await nextTick();
+    await Promise.all(taskQueries.value.map((taskQuery) => taskQuery.refetch()));
+  }
+
+  watch(
+    () => projectsQuery.isFetching.value,
+    (isFetching, wasFetching) => {
+      if (isFetching || !wasFetching) {
+        return;
+      }
+
+      if (!hasCompletedInitialProjectsFetch) {
+        hasCompletedInitialProjectsFetch = true;
+        return;
+      }
+
+      void refreshVisibleProjectTasks();
+    },
+  );
   const tasksByProjectId = computed(() => {
     const nextTasksByProjectId: Record<string, TaskResponse[]> = {};
 
@@ -102,27 +131,60 @@ export function useProjectsData({
   }
 
   function updateCachedProjectTasks(
-    projectId: string,
+    task: TaskResponse,
     updateTasks: (tasks: TaskResponse[]) => TaskResponse[],
   ): void {
     queryClient.setQueryData<TaskResponse[]>(
-      userProjectsKeys.projectTasks(scope.value, projectId),
+      userProjectsKeys.projectTasks(
+        scope.value,
+        task.projectId,
+        task.accessScope,
+      ),
       (currentTasks) => (currentTasks ? updateTasks(currentTasks) : currentTasks),
     );
   }
 
   function upsertTask(task: TaskResponse): void {
-    updateCachedProjectTasks(task.projectId, (tasks) => [
+    updateCachedProjectTasks(task, (tasks) => [
       ...tasks.filter((currentTask) => currentTask.id !== task.id),
       task,
     ]);
   }
 
   function removeTask(task: TaskResponse): void {
-    updateCachedProjectTasks(task.projectId, (tasks) =>
+    updateCachedProjectTasks(task, (tasks) =>
       tasks.filter((currentTask) => currentTask.id !== task.id),
     );
   }
+
+  watch(visibleProjects, (projects) => {
+    const nextAccessScopes = new Map(
+      projects.map((project) => [project.id, project.accessScope]),
+    );
+
+    for (const [projectId, previousAccessScope] of projectAccessScopes) {
+      const nextAccessScope = nextAccessScopes.get(projectId);
+
+      if (nextAccessScope !== previousAccessScope) {
+        queryClient.removeQueries({
+          queryKey: userProjectsKeys.projectTasks(
+            scope.value,
+            projectId,
+            previousAccessScope,
+          ),
+        });
+      }
+    }
+
+    projectAccessScopes.clear();
+    nextAccessScopes.forEach((accessScope, projectId) => {
+      projectAccessScopes.set(projectId, accessScope);
+    });
+  });
+
+  watch(scope, () => {
+    projectAccessScopes.clear();
+  });
 
   watch(projectsQuery.error, (error) => {
     if (error) {

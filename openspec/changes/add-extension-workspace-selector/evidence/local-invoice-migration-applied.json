@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-16",
+  "mode": "apply",
+  "localOnly": true,
+  "reportedWorkspaceMatches": true,
+  "migration": "0022_tricky_black_panther",
+  "sha256": "30022518362f4485be244009f69069de0761de5603717a310fdc325d52d56139",
+  "missingMigrationTimestamps": [
+    1781260341414,
+    1791796554260
+  ],
+  "untouchedHistoryGaps": [
+    "0010_register_lookup_uniqueness"
+  ],
+  "scope": "Apply only 0022; do not rewrite older history or run other migrations",
+  "before": {
+    "invoices_absent": true,
+    "invoice_column_absent": true
+  },
+  "after": {
+    "invoices_present": true,
+    "invoice_column_present": true,
+    "invoice_fk_present": true,
+    "invoice_index_present": true
+  },
+  "committed": true
+}

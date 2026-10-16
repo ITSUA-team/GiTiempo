@@ -1,0 +1,277 @@
+{
+  "date": "2026-10-15",
+  "browser": "Firefox 158.0",
+  "input": "Privileged Firefox DevTools RDP evaluation of nsITextInputProcessor",
+  "scope": "Logical input in isolated actual browser-action popup; native OS options acceptance remains manual",
+  "records": [
+    {
+      "case": "Begin logical-input transaction",
+      "result": true,
+      "initial": {
+        "menu": true,
+        "focused": "toggle-account-menu",
+        "value": "7b14533e-f7f4-4830-8095-c201d30619da",
+        "open": false,
+        "events": []
+      }
+    },
+    {
+      "case": "Logical Tab reaches workspace selector",
+      "pass": true,
+      "state": {
+        "menu": true,
+        "focused": "workspace-selector",
+        "value": "7b14533e-f7f4-4830-8095-c201d30619da",
+        "open": false,
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          }
+        ]
+      }
+    },
+    {
+      "case": "Logical ArrowDown",
+      "state": {
+        "menu": true,
+        "focused": "workspace-selector",
+        "value": "7b14533e-f7f4-4830-8095-c201d30619da",
+        "open": true,
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keydown",
+            "key": "ArrowDown",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "ArrowDown",
+            "trusted": true,
+            "prevented": false
+          }
+        ]
+      }
+    },
+    {
+      "case": "Logical Enter",
+      "selectionChanged": false,
+      "state": {
+        "menu": true,
+        "focused": "workspace-selector",
+        "value": "7b14533e-f7f4-4830-8095-c201d30619da",
+        "open": true,
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keydown",
+            "key": "ArrowDown",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "ArrowDown",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keydown",
+            "key": "Enter",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Enter",
+            "trusted": true,
+            "prevented": false
+          }
+        ]
+      }
+    },
+    {
+      "case": "Native options remain open",
+      "manualRequired": true
+    },
+    {
+      "case": "Harness closes native options before remaining logical checks",
+      "state": {
+        "before": "open",
+        "closedByHarness": true
+      }
+    },
+    {
+      "case": "Logical Tab reaches Open profile",
+      "pass": true,
+      "state": {
+        "menu": true,
+        "focused": "open-profile",
+        "open": false,
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keydown",
+            "key": "ArrowDown",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "ArrowDown",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keydown",
+            "key": "Enter",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Enter",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          }
+        ]
+      }
+    },
+    {
+      "case": "Logical Tab reaches Sign out",
+      "pass": true,
+      "state": {
+        "menu": true,
+        "focused": "sign-out",
+        "open": false,
+        "events": [
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keydown",
+            "key": "ArrowDown",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "ArrowDown",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keydown",
+            "key": "Enter",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Enter",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keydown",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          },
+          {
+            "type": "keyup",
+            "key": "Tab",
+            "trusted": true,
+            "prevented": false
+          }
+        ]
+      }
+    },
+    {
+      "case": "Logical Escape closes menu with options already closed",
+      "pass": true,
+      "state": {
+        "menu": false,
+        "focused": "BODY",
+        "events": []
+      },
+      "nativeOptionsEscapeVerified": false
+    }
+  ]
+}

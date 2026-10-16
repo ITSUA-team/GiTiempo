@@ -69,6 +69,7 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
     },
     workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401",
     githubIssue,
+    invoiceId: null,
     ...entryOverrides,
   };
 }

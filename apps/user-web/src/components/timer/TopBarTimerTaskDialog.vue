@@ -111,6 +111,12 @@ const dialogDescription = computed(() => {
     return "Stop the running timer before starting or changing tasks in this workspace.";
   }
 
+  if (!canCreateTask.value) {
+    return props.primaryActionLabel === "Stop"
+      ? "Move the running timer to a different task."
+      : "Choose a visible project and task before starting the timer.";
+  }
+
   return props.primaryActionLabel === "Stop"
     ? "Move the running timer to a different task, or pick New task in the selected project."
     : "Choose a visible project and task, or pick New task before starting the timer.";
@@ -119,10 +125,16 @@ const primaryButtonLabel = computed(() =>
   props.primaryActionLabel === "Stop" ? "Stop timer" : "Start timer",
 );
 const newTaskOption = createInlineNewTaskOption();
+const canCreateTask = computed(() =>
+  props.selectedGitHubProjectId === null && props.projectOptions.some(
+    (project) => project.id === props.selectedProjectId &&
+      project.isActive && project.capabilities.canManageTasks,
+  ),
+);
 const taskPickerOptions = computed<TaskPickerOption[]>(() =>
-  isGitHubProjectSelected.value
-    ? [...props.taskOptions]
-    : [...props.taskOptions, newTaskOption],
+  canCreateTask.value
+    ? [...props.taskOptions, newTaskOption]
+    : [...props.taskOptions],
 );
 const mobileProjectModel = shallowRef<ProjectAutoCompleteValue>(null);
 const mobileTaskModel = shallowRef<TaskAutoCompleteValue>(null);
@@ -143,7 +155,7 @@ const isGitHubProjectSelected = computed(
 );
 const taskSuggestions = shallowRef<TaskPickerOption[]>([]);
 const isNewTaskSelected = computed(
-  () => isInlineNewTaskId(props.selectedTaskId),
+  () => canCreateTask.value && isInlineNewTaskId(props.selectedTaskId),
 );
 const hasSelectedProjectOption = computed(() =>
   isProjectOption(mobileProjectModel.value),
@@ -216,7 +228,7 @@ function findTaskOption(taskId: string | null): TaskPickerOption | null {
   }
 
   if (isInlineNewTaskId(taskId)) {
-    return newTaskOption;
+    return canCreateTask.value ? newTaskOption : null;
   }
 
   return props.taskOptions.find((task) => task.id === taskId) ?? null;
@@ -317,9 +329,9 @@ function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
     (task) => task.title,
   );
 
-  taskSuggestions.value = isGitHubProjectSelected.value
-    ? matches
-    : [...matches, newTaskOption];
+  taskSuggestions.value = canCreateTask.value
+    ? [...matches, newTaskOption]
+    : matches;
 }
 
 watch(
@@ -517,7 +529,13 @@ watch(
             />
           </div>
           <small class="text-text-muted text-xs">
-            Visible tasks are listed first. New task is the last option. New time entries inherit the selected task billable default.
+            <template v-if="canCreateTask">
+              Visible tasks are listed first. New task is the last option.
+            </template>
+            <template v-else>
+              Visible tasks are listed.
+            </template>
+            New time entries inherit the selected task billable default.
           </small>
 
           <div
@@ -590,7 +608,9 @@ watch(
             {{
               isGitHubProjectSelected
                 ? 'Add an issue to it on GitHub, or choose a different project.'
-                : 'Pick New task to create one, or choose a different project.'
+                : canCreateTask
+                  ? 'Pick New task to create one, or choose a different project.'
+                  : 'Choose a different project with an available task.'
             }}
           </p>
         </div>
