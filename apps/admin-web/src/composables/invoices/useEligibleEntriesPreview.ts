@@ -23,7 +23,7 @@ export function useEligibleEntriesPreview({
   scope,
 }: UseEligibleEntriesPreviewOptions) {
   // The preview only exists once both date bounds are chosen; a null query
-  // keeps the request parked until the caller (dialog debounce) settles one.
+  // keeps the request parked until the caller settles both bounds.
   const settledQuery = computed(() => {
     const requestedQuery = toValue(query);
     return toValue(enabled) && requestedQuery ? requestedQuery : null;
@@ -55,6 +55,7 @@ export function useEligibleEntriesPreview({
         entriesQuery.data.value !== undefined &&
         entriesQuery.data.value.count === 0,
     ),
+    isError: computed(() => entriesQuery.isError.value),
     isLoading: computed(() => entriesQuery.isLoading.value),
     preview: computed(() => entriesQuery.data.value),
   };

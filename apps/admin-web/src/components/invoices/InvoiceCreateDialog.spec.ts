@@ -399,4 +399,57 @@ describe('InvoiceCreateDialog', () => {
     );
     expect(titleInput?.value).toBe('Website redesign');
   });
+
+  it('binds the discount input and sends the entered percent on create', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({ isAdmin: true, createInvoice });
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+
+    // The discount InputNumber is the second of the two on the form.
+    const [, discountField] = wrapper.findAllComponents(InputNumber);
+    await discountField.vm.$emit('update:modelValue', 15);
+    await flushPromises();
+
+    await enterDateRange(wrapper);
+
+    // The live estimate applies the discount: 2.5h at 80 − 15%.
+    expect(bodyText()).toContain('$170.00');
+
+    await submitInvoice(wrapper);
+
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice).toHaveBeenCalledWith({
+      title: 'Website redesign',
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: undefined,
+      hourlyRate: 80,
+      currency: 'USD',
+      discountPercent: 15,
+      notes: undefined,
+    });
+  });
+
+  it('falls back to the preview default currency while the code is partial', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+
+    const wrapper = await mountDialog();
+    await enterDateRange(wrapper);
+    expect(bodyText()).toContain('$200.00');
+
+    await wrapper.getComponent('#invoice-create-currency').setValue('US');
+    await flushPromises();
+
+    expect(
+      document.querySelector<HTMLInputElement>('#invoice-create-currency')
+        ?.value,
+    ).toBe('US');
+    // 'US' is not yet a renderable ISO code; the estimate keeps the preview's
+    // USD default instead of crashing Intl.NumberFormat.
+    expect(bodyText()).toContain('$200.00');
+  });
 });

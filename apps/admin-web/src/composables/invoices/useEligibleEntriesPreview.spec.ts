@@ -212,4 +212,28 @@ describe('useEligibleEntriesPreview', () => {
     expect(data.isEmpty.value).toBe(false);
     expect(data.hasEntries.value).toBe(false);
   });
+
+  it('exposes an error state when the preview request fails', async () => {
+    const query = ref<EligibleEntriesQuery | null>({
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+    });
+    const listEligibleEntries = vi
+      .fn()
+      .mockRejectedValue(new Error('Preview request failed'));
+
+    const data = mountEntriesPreview({
+      client: { listEligibleEntries },
+      query,
+    });
+
+    await flushPromises();
+
+    expect(listEligibleEntries).toHaveBeenCalledTimes(1);
+    expect(data.isError.value).toBe(true);
+    // An error is not an empty preview; the dialog must be able to tell them
+    // apart.
+    expect(data.isEmpty.value).toBe(false);
+    expect(data.hasEntries.value).toBe(false);
+  });
 });

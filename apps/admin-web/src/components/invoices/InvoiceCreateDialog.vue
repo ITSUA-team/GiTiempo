@@ -27,6 +27,7 @@ import Textarea from 'primevue/textarea';
 
 import { useEligibleEntriesPreview } from '@/composables/invoices/useEligibleEntriesPreview';
 import { formatCurrency } from '@/lib/format-currency';
+import { formatDuration } from '@/lib/format-duration';
 import type { AdminServerStateScope } from '@/lib/query-keys';
 
 /**
@@ -85,6 +86,7 @@ const {
   preview,
   isLoading: previewLoading,
   isEmpty: previewEmpty,
+  isError: previewError,
   hasEntries,
 } = useEligibleEntriesPreview({
   enabled: computed(() => props.visible),
@@ -177,9 +179,11 @@ const canSubmit = computed(
     (props.isAdmin || Boolean(selectedProjectId.value)),
 );
 
+// Intl.NumberFormat throws RangeError on codes shorter than 3 letters, so
+// partial input falls back to the workspace default until the code completes.
 const previewCurrencyCode = computed<string | null>(() => {
   const entered = currency.value.trim().toUpperCase();
-  if (entered) return entered;
+  if (/^[A-Z]{3}$/.test(entered)) return entered;
   return preview.value?.defaultCurrency ?? null;
 });
 
@@ -209,12 +213,6 @@ const previewSummary = computed<string | null>(() => {
   return parts.join(' · ');
 });
 
-function formatEntryDuration(durationSeconds: number): string {
-  const hours = Math.floor(durationSeconds / 3600);
-  const minutes = Math.floor((durationSeconds % 3600) / 60);
-  return `${hours}h ${minutes}m`;
-}
-
 function handleRateUpdate(value: number | null): void {
   hourlyRate.value = value ?? null;
   rateTouched.value = true;
@@ -223,6 +221,10 @@ function handleRateUpdate(value: number | null): void {
 function handleCurrencyUpdate(value: string | undefined): void {
   currency.value = value?.toUpperCase() ?? '';
   currencyTouched.value = true;
+}
+
+function handleDiscountUpdate(value: number | null): void {
+  discountPercent.value = value ?? 0;
 }
 
 function handleCancel(): void {
@@ -243,14 +245,14 @@ async function handleCreate(): Promise<void> {
 
   try {
     const invoice = await props.createMutation.createInvoice({
-      title: title.value,
+      title: title.value.trim(),
       dateFrom: getLocalDateKey(startDate),
       dateTo: getLocalDateKey(endDate),
       projectId: selectedProjectId.value || undefined,
-      hourlyRate: hourlyRate.value || undefined,
+      hourlyRate: hourlyRate.value ?? undefined,
       currency: currency.value.trim().toUpperCase() || undefined,
       discountPercent: discountPercent.value ?? 0,
-      notes: notes.value || undefined,
+      notes: notes.value.trim() || undefined,
     });
     emit('created', invoice);
     emit('update:visible', false);
@@ -398,6 +400,7 @@ async function handleCreate(): Promise<void> {
             :model-value="discountPercent"
             input-class="h-[38px] w-full"
             class="w-full"
+            @update:model-value="handleDiscountUpdate"
           />
         </div>
       </div>
@@ -443,7 +446,15 @@ async function handleCreate(): Promise<void> {
         <div class="border-divider h-px w-full" />
 
         <Message
-          v-if="previewEmpty"
+          v-if="previewError"
+          severity="error"
+          variant="simple"
+          data-testid="invoice-create-preview-error"
+        >
+          Failed to load eligible entries. Please try again.
+        </Message>
+        <Message
+          v-else-if="previewEmpty"
           severity="warn"
           variant="simple"
           data-testid="invoice-create-preview-empty"
@@ -506,7 +517,7 @@ async function handleCreate(): Promise<void> {
               body-style="text-align: right"
             >
               <template #body="{ data }">
-                {{ formatEntryDuration(data.durationSeconds) }}
+                {{ formatDuration(data.durationSeconds) }}
               </template>
             </Column>
             <Column
