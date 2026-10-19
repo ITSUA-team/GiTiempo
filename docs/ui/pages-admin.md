@@ -49,7 +49,7 @@
 ### List page (`/invoices`)
 
 - Searchable invoice table with columns: Title, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
-- Search filters by invoice title (API `search` param, case-insensitive ILIKE).
+- Search filters by invoice title (API `search` param, case-insensitive ILIKE). The search input is capped at 200 characters to match the API contract; the filter row stays interactive so the user can always clear filters even when a load error replaces the table.
 - Filter row: Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
 - Pagination control below the table (API returns `meta.totalPages`).
 - Table header has a `Create invoice` action button (plus icon).

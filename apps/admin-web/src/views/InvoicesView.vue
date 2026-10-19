@@ -8,6 +8,7 @@ import {
   SurfaceCard,
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
+import Button from 'primevue/button';
 
 import InvoicesTable from '@/components/invoices/InvoicesTable.vue';
 import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
@@ -180,6 +181,17 @@ function handleUpdateFilters(update: InvoicesTableFilterUpdate): void {
   currentPage.value = 1;
 }
 
+function clearFilters(): void {
+  filters.value = {
+    dateFrom: null,
+    dateTo: null,
+    projectId: null,
+    search: '',
+    status: null,
+  };
+  currentPage.value = 1;
+}
+
 function handleUpdatePage(page: number): void {
   currentPage.value = page;
 }
@@ -211,13 +223,29 @@ function handleCreateSuccess(): void {
       variant="invoices"
     />
 
-    <RequestErrorCard
+    <div
       v-else-if="loadError"
-      title="Failed to load invoices"
-      :message="loadErrorMessage"
-      data-testid="invoices-load-error"
-      @retry="fetchAll"
-    />
+      class="flex flex-col gap-4"
+    >
+      <RequestErrorCard
+        title="Failed to load invoices"
+        :message="loadErrorMessage"
+        data-testid="invoices-load-error"
+        @retry="fetchAll"
+      />
+      <div
+        v-if="hasActiveFilters"
+        class="flex justify-center"
+      >
+        <Button
+          label="Clear filters"
+          severity="secondary"
+          variant="text"
+          data-testid="invoices-clear-filters"
+          @click="clearFilters"
+        />
+      </div>
+    </div>
 
     <template v-else>
       <div

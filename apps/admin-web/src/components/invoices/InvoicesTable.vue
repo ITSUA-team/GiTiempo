@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { PlusIcon } from '@heroicons/vue/24/outline';
 import type { InvoiceStatus } from '@gitiempo/shared';
+import { MAX_SEARCH_LENGTH } from '@gitiempo/shared';
 import {
   EmptyStateBlock,
   EntryActionButton,
@@ -196,6 +197,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
               aria-label="Search invoices"
               class="h-[38px] w-full rounded-[6px] text-[14px]"
               data-testid="invoices-table-search"
+              :maxlength="MAX_SEARCH_LENGTH"
               placeholder="Search invoices"
               @update:model-value="updateSearchFilter"
             />

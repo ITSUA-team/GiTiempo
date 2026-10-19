@@ -248,6 +248,13 @@ describe('InvoicesTable', () => {
     ]);
   });
 
+  it('caps the search input at the contract maximum length', () => {
+    const wrapper = mountInvoicesTable();
+    const search = wrapper.get('input[aria-label="Search invoices"]');
+
+    expect(search.attributes('maxlength')).toBe('200');
+  });
+
   it('emits project filter updates from the filter row select', async () => {
     const wrapper = mountInvoicesTable();
     const projectFilter = getFilterSelect(wrapper, 'id');

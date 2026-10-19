@@ -524,6 +524,59 @@ describe('InvoicesView', () => {
     expect(wrapper.find('[data-testid="invoices-table"]').exists()).toBe(true);
   });
 
+  it('shows a clear-filters action on the error card when filters are active', async () => {
+    stubInvoicesData(createLoadedInvoicesData());
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="invoices-clear-filters"]').exists(),
+    ).toBe(false);
+
+    await wrapper
+      .get('[data-testid="invoices-search-intent"]')
+      .trigger('click');
+
+    stubInvoicesData({
+      initialLoaded: false,
+      invoices: undefined,
+      loadError: new ApiError('Search query too long', { status: 400 }),
+      stats: undefined,
+    });
+    await flushPromises();
+
+    const clearButton = wrapper.get('[data-testid="invoices-clear-filters"]');
+    expect(clearButton.text()).toBe('Clear filters');
+
+    await clearButton.trigger('click');
+
+    stubInvoicesData(createLoadedInvoicesData());
+    await flushPromises();
+
+    const table = wrapper.findComponent({ name: 'InvoicesTable' });
+    expect(table.props('filters').search).toBe('');
+    expect(table.props('filters').projectId).toBeNull();
+    expect(table.props('filters').status).toBeNull();
+    expect(table.props('filters').dateFrom).toBeNull();
+    expect(table.props('filters').dateTo).toBeNull();
+    expect(table.props('page')).toBe(1);
+  });
+
+  it('does not show a clear-filters action on the error card when no filters are active', async () => {
+    stubInvoicesData({
+      initialLoaded: false,
+      invoices: undefined,
+      loadError: new ApiError('Server error', { status: 500 }),
+      stats: undefined,
+    });
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="invoices-clear-filters"]').exists(),
+    ).toBe(false);
+  });
+
   it('shows the empty state description when no invoices are returned', async () => {
     stubInvoicesData(createLoadedInvoicesData([]));
 
