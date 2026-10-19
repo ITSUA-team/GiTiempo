@@ -311,15 +311,82 @@ describe('InvoicesTable', () => {
       [{ dateFrom: '2026-04-01', dateTo: '2026-04-21' }],
     ]);
 
-    // Mid-selection and cleared values never send half-completed bounds.
+    // Mid-selection never sends a filter update — the partial range stays
+    // local until the user completes or clears it.
     await periodFilter.vm.$emit('update:modelValue', [
       new Date('2026-04-01T00:00:00'),
       null,
     ]);
+    expect(wrapper.emitted('update:filters')).toHaveLength(1);
+
     await periodFilter.vm.$emit('update:modelValue', null);
     expect(wrapper.emitted('update:filters')?.at(-1)).toEqual([
       { dateFrom: null, dateTo: null },
     ]);
+  });
+
+  it('keeps the partial date selection in the picker without emitting a filter update', async () => {
+    const wrapper = mountInvoicesTable();
+    const periodFilter = wrapper.getComponent(DatePicker);
+
+    await periodFilter.vm.$emit('update:modelValue', [
+      new Date('2026-04-01T00:00:00'),
+      null,
+    ]);
+
+    expect(wrapper.emitted('update:filters')).toBeUndefined();
+
+    const modelValue = periodFilter.props('modelValue') as
+      | Array<Date | null>
+      | null;
+    expect(modelValue?.[0]).toEqual(new Date('2026-04-01T00:00:00'));
+    expect(modelValue?.[1]).toBeNull();
+  });
+
+  it('completes the range in two clicks without losing the first selected date', async () => {
+    const wrapper = mountInvoicesTable();
+    const periodFilter = wrapper.getComponent(DatePicker);
+
+    await periodFilter.vm.$emit('update:modelValue', [
+      new Date('2026-04-01T00:00:00'),
+      null,
+    ]);
+    expect(wrapper.emitted('update:filters')).toBeUndefined();
+
+    await periodFilter.vm.$emit('update:modelValue', [
+      new Date('2026-04-01T00:00:00'),
+      new Date('2026-04-21T00:00:00'),
+    ]);
+    expect(wrapper.emitted('update:filters')).toEqual([
+      [{ dateFrom: '2026-04-01', dateTo: '2026-04-21' }],
+    ]);
+  });
+
+  it('syncs the local picker state when the parent filter is reset externally', async () => {
+    const wrapper = mountInvoicesTable({
+      filters: {
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-21',
+        projectId: null,
+        search: '',
+        status: null,
+      },
+    });
+
+    let modelValue = wrapper.getComponent(DatePicker).props('modelValue') as
+      | Array<Date | null>
+      | null;
+    expect(modelValue?.[0]).toEqual(new Date('2026-04-01T00:00:00'));
+    expect(modelValue?.[1]).toEqual(new Date('2026-04-21T00:00:00'));
+
+    await wrapper.setProps({
+      filters: { ...defaultFilters },
+    });
+
+    modelValue = wrapper.getComponent(DatePicker).props('modelValue') as
+      | Array<Date | null>
+      | null;
+    expect(modelValue).toBeNull();
   });
 
   it('emits create-invoice from the header action', async () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { PlusIcon } from '@heroicons/vue/24/outline';
 import type { InvoiceStatus } from '@gitiempo/shared';
 import {
@@ -82,8 +82,24 @@ const columns: ManagementTableColumn[] = [
   { key: 'status', label: 'Status', width: 130 },
 ];
 
-const datePickerRange = computed(() =>
+// Local mirror of the period picker value. PrimeVue DatePicker with
+// selectionMode="range" emits [start, null] after the first click; keeping that
+// partial selection local prevents the parent filter from clearing (which
+// would reset the picker via the computed model-value and lose the start).
+// The filter is emitted only once the range is complete or explicitly cleared.
+const localDateRange = ref<InvoicesDatePickerRangeValue>(
   toInvoicesDatePickerRange(props.filters.dateFrom, props.filters.dateTo),
+);
+
+// Sync from the parent when the filter changes externally (e.g., a reset).
+// A partial local selection has no corresponding filter yet, so the parent's
+// dateFrom/dateTo are still null — this watcher only fires on actual external
+// changes, not on partial selections we kept local.
+watch(
+  () => [props.filters.dateFrom, props.filters.dateTo] as const,
+  ([dateFrom, dateTo]) => {
+    localDateRange.value = toInvoicesDatePickerRange(dateFrom, dateTo);
+  },
 );
 
 const paginatorProps = computed(() => ({
@@ -118,9 +134,29 @@ function updateStatusFilter(value: InvoiceStatus | null | undefined): void {
   updateFilters({ status: value ?? null });
 }
 
+function isPartialDateRange(
+  value: Date | InvoicesDatePickerRangeValue | undefined,
+): boolean {
+  if (value === null || value === undefined || value instanceof Date) {
+    return false;
+  }
+  const [start, end] = value;
+  return Boolean(start) && !end;
+}
+
 function updatePeriodFilter(
   value: Date | InvoicesDatePickerRangeValue | undefined,
 ): void {
+  // Always mirror the picker value locally so partial selections survive.
+  localDateRange.value =
+    value === null || value === undefined || value instanceof Date
+      ? null
+      : value;
+
+  // A partial [start, null] selection stays local until the user picks the
+  // end date; only complete ranges and explicit clears propagate to the filter.
+  if (isPartialDateRange(value)) return;
+
   updateFilters(fromInvoicesDatePickerRange(value));
 }
 
@@ -207,7 +243,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
         >Period</label>
         <DatePicker
           input-id="mobile-invoice-period-filter"
-          :model-value="datePickerRange"
+          :model-value="localDateRange"
           aria-label="Filter invoices by period"
           class="w-full"
           date-format="M d"
@@ -340,7 +376,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
 
           <div class="w-[160px] pr-3">
             <DatePicker
-              :model-value="datePickerRange"
+              :model-value="localDateRange"
               aria-label="Filter invoices by period"
               class="w-full"
               date-format="M d"
