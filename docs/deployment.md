@@ -162,7 +162,6 @@ API deploy workflows must support `workflow_dispatch` with:
 | Input | Values | Purpose |
 |---|---|---|
 | `environment` | `staging`, `production` | Choose VPS, secrets, and compose project |
-| `run_migrations` | `true`, `false` | Default `true`; skip only for emergency rollback or no-schema releases |
 | `run_seed` | `true`, `false` | Default `false`; run only for explicit bootstrap or seed refresh |
 | `ref` | branch, tag, or SHA | Optional source revision |
 | `image_tag` | API image tag or digest | Optional prebuilt image; must resolve to this repository's `ghcr.io/<owner>/<repo>/api` image |
@@ -193,8 +192,8 @@ The API deploy workflow must follow this order:
 8. Connect to the VPS over SSH.
 9. Update environment and Compose files if needed.
 10. Perform temporary GHCR login on the VPS and pull the selected image.
-11. Run migrations explicitly.
-   If a committed migration intentionally invalidates persisted sessions because legacy rows cannot be upgraded safely, treat that forced logout as planned release behavior and communicate it before rollout.
+11. Run migrations explicitly and unconditionally before API rollout.
+   The deploy workflow always invokes the one-shot `migrate` Compose service; there is no opt-out input. If a committed migration intentionally invalidates persisted sessions because legacy rows cannot be upgraded safely, treat that forced logout as planned release behavior and communicate it before rollout. For an emergency image rollback against a database schema that the target image cannot migrate, deploy the previous image manually out-of-band rather than disabling migrations through the workflow.
 12. Run the idempotent seed script only when `run_seed=true`.
 13. Recreate the API service with Docker Compose.
 14. Check `GET /commons/health/ready` through the public API URL.

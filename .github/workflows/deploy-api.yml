@@ -11,14 +11,6 @@ on:
         options:
           - staging
           - production
-      run_migrations:
-        description: Run the one-shot migration service before API rollout.
-        required: true
-        default: "true"
-        type: choice
-        options:
-          - "true"
-          - "false"
       run_seed:
         description: Run the idempotent seed script after migrations.
         required: true
@@ -73,7 +65,6 @@ jobs:
       CI: true
       TURBO_TELEMETRY_DISABLED: 1
       DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref == 'refs/heads/production' && 'production' || 'staging') }}
-      RUN_MIGRATIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.run_migrations || 'true' }}
       RUN_SEED: ${{ github.event_name == 'workflow_dispatch' && inputs.run_seed || 'false' }}
       PREBUILT_IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.image_tag || '' }}
       PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
@@ -287,10 +278,8 @@ jobs:
           ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
             "cd $remote_api_deploy_path && API_IMAGE=$remote_deploy_image docker compose up -d postgres"
 
-          if [ "$RUN_MIGRATIONS" = "true" ]; then
-            ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
-              "cd $remote_api_deploy_path && API_IMAGE=$remote_deploy_image docker compose run --rm migrate"
-          fi
+          ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
+            "cd $remote_api_deploy_path && API_IMAGE=$remote_deploy_image docker compose run --rm migrate"
 
           if [ "$RUN_SEED" = "true" ]; then
             ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
