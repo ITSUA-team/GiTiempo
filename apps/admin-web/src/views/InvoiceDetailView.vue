@@ -18,7 +18,7 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useInvoiceDelete } from '@/composables/invoices/useInvoiceDelete';
-import { useInvoiceDetail } from '@/composables/invoices/useInvoiceDetail';
+import { useInvoiceDetail, LOAD_ACTION } from '@/composables/invoices/useInvoiceDetail';
 import { useInvoiceUpdate } from '@/composables/invoices/useInvoiceUpdate';
 import { formatCurrency } from '@/lib/format-currency';
 import { formatDuration } from '@/lib/format-duration';
@@ -156,8 +156,17 @@ function notifyInvoiceActionError(
   actionError: unknown,
   action: string,
 ): void {
-  // A 404 already renders the not-found view; a toast would duplicate the feedback.
   if (actionError instanceof ApiError && actionError.status === 404) {
+    // A load 404 renders the not-found view directly; no toast needed.
+    // A mutation 404 means the invoice was deleted by someone else — show
+    // the server message and refetch so the not-found view renders from
+    // the fresh GET instead of leaving a stale detail on screen.
+    if (action === LOAD_ACTION) return;
+    errorToast(message, {
+      error: actionError,
+      logContext: { action, feature: 'invoices' },
+    });
+    void refetch();
     return;
   }
 

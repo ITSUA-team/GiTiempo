@@ -19,7 +19,7 @@ interface UseInvoiceDetailOptions {
   scope: MaybeRefOrGetter<AdminServerStateScope>;
 }
 
-const LOAD_ACTION = 'load-invoice';
+export const LOAD_ACTION = 'load-invoice';
 
 export function useInvoiceDetail({
   client = adminInvoicesClient,

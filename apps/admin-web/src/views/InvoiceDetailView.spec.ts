@@ -847,6 +847,123 @@ describe('InvoiceDetailView', () => {
     );
   });
 
+  it('reports a 404 from a status update, reloads, and renders the not-found state', async () => {
+    testMocks.getInvoice
+      .mockResolvedValueOnce(createInvoice())
+      .mockRejectedValueOnce(
+        new ApiError('Invoice not found', {
+          code: 'invoice_not_found',
+          status: 404,
+        }),
+      );
+    testMocks.updateInvoice.mockRejectedValue(
+      new ApiError('Invoice not found', {
+        code: 'invoice_not_found',
+        status: 404,
+      }),
+    );
+
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Invoice not found',
+      expect.objectContaining({
+        logContext: { action: 'update-invoice', feature: 'invoices' },
+      }),
+    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-testid="invoice-not-found"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="invoice-detail-header"]').exists()).toBe(
+      false,
+    );
+  });
+
+  it('reports a 404 from a save-edits update, reloads, and renders the not-found state', async () => {
+    testMocks.getInvoice
+      .mockResolvedValueOnce(createInvoice())
+      .mockRejectedValueOnce(
+        new ApiError('Invoice not found', {
+          code: 'invoice_not_found',
+          status: 404,
+        }),
+      );
+    testMocks.updateInvoice.mockRejectedValue(
+      new ApiError('Invoice not found', {
+        code: 'invoice_not_found',
+        status: 404,
+      }),
+    );
+
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    await wrapper.find('[data-testid="invoice-save"]').trigger('click');
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Invoice not found',
+      expect.objectContaining({
+        logContext: { action: 'update-invoice', feature: 'invoices' },
+      }),
+    );
+    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-testid="invoice-not-found"]').exists()).toBe(
+      true,
+    );
+  });
+
+  it('reports a 404 from a confirmed delete, reloads, and renders the not-found state', async () => {
+    testMocks.getInvoice
+      .mockResolvedValueOnce(createInvoice())
+      .mockRejectedValueOnce(
+        new ApiError('Invoice not found', {
+          code: 'invoice_not_found',
+          status: 404,
+        }),
+      );
+    testMocks.deleteInvoice.mockRejectedValue(
+      new ApiError('Invoice not found', {
+        code: 'invoice_not_found',
+        status: 404,
+      }),
+    );
+
+    const wrapper = mountInvoiceDetailView('admin');
+    await flushPromises();
+
+    await wrapper.find('[data-testid="invoice-delete"]').trigger('click');
+    await flushPromises();
+
+    getConfirmAccept()();
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Invoice not found',
+      expect.objectContaining({
+        logContext: { action: 'delete-invoice', feature: 'invoices' },
+      }),
+    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
+    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-testid="invoice-not-found"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="invoice-detail-header"]').exists()).toBe(
+      false,
+    );
+  });
+
   it('navigates back to the invoices list from the header back action', async () => {
     const wrapper = mountInvoiceDetailView();
     await flushPromises();
