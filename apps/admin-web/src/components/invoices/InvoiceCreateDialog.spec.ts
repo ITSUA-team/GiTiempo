@@ -575,4 +575,106 @@ describe('InvoiceCreateDialog', () => {
     // USD default instead of crashing Intl.NumberFormat.
     expect(bodyText()).toContain('$200.00');
   });
+
+  it('syncs rate and currency defaults from a fresh preview response after cache returns stale values', async () => {
+    // First call seeds the cache with the old workspace defaults; the
+    // background refetch after reopening the same date range returns the
+    // updated workspace defaults.
+    testMocks.listEligibleEntries
+      .mockResolvedValueOnce(
+        createEntriesResponse({
+          defaultCurrency: 'USD',
+          defaultHourlyRate: 80,
+        }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({
+          defaultCurrency: 'EUR',
+          defaultHourlyRate: 100,
+        }),
+      );
+
+    const wrapper = await mountDialog({ isAdmin: true });
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(1);
+    expect(
+      document.querySelector<HTMLInputElement>('#invoice-create-hourly-rate')
+        ?.value,
+    ).toBe('80');
+    expect(
+      document.querySelector<HTMLInputElement>('#invoice-create-currency')
+        ?.value,
+    ).toBe('USD');
+
+    // Close and reopen the dialog with the same date range. The query key is
+    // unchanged, so vue-query serves the cached response first and refetches.
+    await wrapper.setProps({ visible: false });
+    await flushPromises();
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    await enterDateRange(wrapper);
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(2);
+    expect(
+      document.querySelector<HTMLInputElement>('#invoice-create-hourly-rate')
+        ?.value,
+    ).toBe('100');
+    expect(
+      document.querySelector<HTMLInputElement>('#invoice-create-currency')
+        ?.value,
+    ).toBe('EUR');
+  });
+
+  it('keeps user-entered rate and currency when the preview refetches with new defaults', async () => {
+    testMocks.listEligibleEntries
+      .mockResolvedValueOnce(
+        createEntriesResponse({
+          defaultCurrency: 'USD',
+          defaultHourlyRate: 80,
+        }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({
+          defaultCurrency: 'EUR',
+          defaultHourlyRate: 100,
+        }),
+      );
+
+    const wrapper = await mountDialog({ isAdmin: true });
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    // User explicitly overrides both defaults.
+    const rateField = wrapper
+      .findAllComponents(InputNumber)
+      .find((field) => field.props('inputId') === 'invoice-create-hourly-rate');
+    await rateField?.vm.$emit('update:modelValue', 120);
+    await wrapper
+      .getComponent('#invoice-create-currency')
+      .setValue('GBP');
+    await flushPromises();
+
+    // Trigger a fresh preview response (different date range → new query key).
+    await wrapper
+      .findComponent(DatePicker)
+      .vm.$emit('update:modelValue', [
+        new Date(2026, 4, 1),
+        new Date(2026, 4, 31),
+      ]);
+    await flushPromises();
+    await flushPromises();
+
+    expect(
+      document.querySelector<HTMLInputElement>('#invoice-create-hourly-rate')
+        ?.value,
+    ).toBe('120');
+    expect(
+      document.querySelector<HTMLInputElement>('#invoice-create-currency')
+        ?.value,
+    ).toBe('GBP');
+  });
 });

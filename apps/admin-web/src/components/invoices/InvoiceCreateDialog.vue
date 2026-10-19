@@ -113,24 +113,19 @@ watch(
   },
 );
 
-// Pre-fill rate/currency from the workspace defaults until the user edits
-// those fields; after a manual change the entered values win.
+// Sync rate/currency defaults from every fresh preview response until
+// the user edits those fields; after a manual change the entered values win.
+// Relying on the touched flags (instead of also checking the field is empty)
+// keeps the dialog in sync when workspace settings change between opens even
+// if vue-query serves a cached preview response first.
 watch(
   [preview, () => props.visible],
   ([data, visible]) => {
     if (!visible || !data) return;
-    if (
-      !rateTouched.value &&
-      hourlyRate.value === null &&
-      data.defaultHourlyRate !== null
-    ) {
+    if (!rateTouched.value && data.defaultHourlyRate !== null) {
       hourlyRate.value = data.defaultHourlyRate;
     }
-    if (
-      !currencyTouched.value &&
-      currency.value === '' &&
-      data.defaultCurrency !== null
-    ) {
+    if (!currencyTouched.value && data.defaultCurrency !== null) {
       currency.value = data.defaultCurrency;
     }
   },
