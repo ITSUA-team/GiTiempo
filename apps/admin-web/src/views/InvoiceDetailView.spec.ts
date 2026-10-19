@@ -548,6 +548,147 @@ describe('InvoiceDetailView', () => {
     expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
   });
 
+  it('preserves unsaved title and notes edits when Mark as sent is clicked', async () => {
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    await wrapper
+      .find<HTMLInputElement>('#invoice-title')
+      .setValue('April 2026 — Backend (final)');
+    await wrapper
+      .find<HTMLInputElement>('#invoice-notes')
+      .setValue('Approved by finance');
+    await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
+      status: 'sent',
+    });
+    expect(testMocks.successToast).toHaveBeenCalledWith('Invoice updated');
+    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
+
+    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
+    const notesInput = wrapper.find<HTMLInputElement>('#invoice-notes');
+    expect(titleInput.element.value).toBe('April 2026 — Backend (final)');
+    expect(notesInput.element.value).toBe('Approved by finance');
+  });
+
+  it('preserves unsaved title and notes edits when Mark as paid is clicked', async () => {
+    testMocks.getInvoice.mockResolvedValue(createInvoice({ status: 'sent' }));
+
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    await wrapper
+      .find<HTMLInputElement>('#invoice-title')
+      .setValue('April 2026 — Backend (final)');
+    await wrapper
+      .find<HTMLInputElement>('#invoice-notes')
+      .setValue('Approved by finance');
+    await wrapper.find('[data-testid="invoice-mark-as-paid"]').trigger('click');
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
+      status: 'paid',
+    });
+
+    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
+    const notesInput = wrapper.find<HTMLInputElement>('#invoice-notes');
+    expect(titleInput.element.value).toBe('April 2026 — Backend (final)');
+    expect(notesInput.element.value).toBe('Approved by finance');
+  });
+
+  it('preserves unsaved edits when a status update conflicts and reloads the detail', async () => {
+    const reloadedInvoice = createInvoice({
+      notes: 'Server-side note after conflict',
+      title: 'April 2026 — Backend (revised)',
+    });
+    testMocks.getInvoice
+      .mockResolvedValueOnce(createInvoice())
+      .mockResolvedValueOnce(reloadedInvoice);
+    testMocks.updateInvoice.mockRejectedValue(
+      new ApiError(
+        'Invoice was modified after it was loaded. Reload to see the latest version.',
+        { code: 'invoice_update_conflict', status: 409 },
+      ),
+    );
+
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    await wrapper
+      .find<HTMLInputElement>('#invoice-title')
+      .setValue('April 2026 — Backend (final)');
+    await wrapper
+      .find<HTMLInputElement>('#invoice-notes')
+      .setValue('Approved by finance');
+    await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'This invoice was modified by another user. Please review and try again',
+      expect.objectContaining({
+        logContext: { action: 'update-invoice', feature: 'invoices' },
+      }),
+    );
+    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
+
+    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
+    const notesInput = wrapper.find<HTMLInputElement>('#invoice-notes');
+    expect(titleInput.element.value).toBe('April 2026 — Backend (final)');
+    expect(notesInput.element.value).toBe('Approved by finance');
+  });
+
+  it('clears the dirty state after Save changes succeeds so later status updates sync from the server', async () => {
+    const savedInvoice = createInvoice({
+      notes: 'Approved by finance',
+      title: 'April 2026 — Backend (final)',
+    });
+    const revisedInvoice = createInvoice({
+      notes: 'Revised by finance after save',
+      title: 'April 2026 — Backend (revised)',
+    });
+    testMocks.getInvoice
+      .mockResolvedValueOnce(createInvoice())
+      .mockResolvedValueOnce(savedInvoice)
+      .mockResolvedValueOnce(revisedInvoice);
+
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    await wrapper
+      .find<HTMLInputElement>('#invoice-title')
+      .setValue('April 2026 — Backend (final)');
+    await wrapper
+      .find<HTMLInputElement>('#invoice-notes')
+      .setValue('Approved by finance');
+    await wrapper.find('[data-testid="invoice-save"]').trigger('click');
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.updateInvoice).toHaveBeenNthCalledWith(1, invoiceId, {
+      notes: 'Approved by finance',
+      title: 'April 2026 — Backend (final)',
+    });
+    expect(testMocks.successToast).toHaveBeenCalledWith('Invoice updated');
+
+    await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.updateInvoice).toHaveBeenNthCalledWith(2, invoiceId, {
+      status: 'sent',
+    });
+
+    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
+    const notesInput = wrapper.find<HTMLInputElement>('#invoice-notes');
+    expect(titleInput.element.value).toBe(revisedInvoice.title);
+    expect(notesInput.element.value).toBe(revisedInvoice.notes);
+  });
+
   it('reports update conflicts, reloads the detail, and keeps the invoice rendered', async () => {
     const reloadedInvoice = createInvoice({
       title: 'April 2026 — Backend (revised)',

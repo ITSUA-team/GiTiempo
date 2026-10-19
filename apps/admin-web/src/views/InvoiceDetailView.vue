@@ -71,7 +71,16 @@ const {
 
 const updateMutation = useInvoiceUpdate({
   onError: notifyInvoiceActionError,
-  onSuccess: () => successToast('Invoice updated'),
+  onSuccess: () => {
+    successToast('Invoice updated');
+    // Only clearing the dirty flags when the in-flight update actually saved
+    // title/notes keeps unsaved edits intact across status-only updates.
+    if (pendingUpdateIncludesEdits) {
+      titleDirty.value = false;
+      notesDirty.value = false;
+      pendingUpdateIncludesEdits = false;
+    }
+  },
   scope,
 });
 
@@ -86,16 +95,48 @@ const deleteMutation = useInvoiceDelete({
 
 const editNotes = ref('');
 const editTitle = ref('');
+const titleDirty = ref(false);
+const notesDirty = ref(false);
+
+// `let` is sufficient: one component instance owns this setup scope, and the
+// flag is only read/written synchronously around the invoice watcher and the
+// update mutation lifecycle.
+let syncingFromServer = false;
+let pendingUpdateIncludesEdits = false;
 
 watch(
   invoice,
   (currentInvoice) => {
-    if (currentInvoice) {
-      editNotes.value = currentInvoice.notes ?? '';
+    if (!currentInvoice) return;
+    syncingFromServer = true;
+    if (!titleDirty.value) {
       editTitle.value = currentInvoice.title;
     }
+    if (!notesDirty.value) {
+      editNotes.value = currentInvoice.notes ?? '';
+    }
+    syncingFromServer = false;
   },
   { immediate: true },
+);
+
+// Sync watchers fire synchronously when the edit refs change, so the
+// `syncingFromServer` guard reliably distinguishes server-driven syncs from
+// user input and avoids marking the fields dirty during a server refresh.
+watch(
+  editTitle,
+  () => {
+    if (!syncingFromServer) titleDirty.value = true;
+  },
+  { flush: 'sync' },
+);
+
+watch(
+  editNotes,
+  () => {
+    if (!syncingFromServer) notesDirty.value = true;
+  },
+  { flush: 'sync' },
 );
 
 function isInvoiceConflictCode(code: string): code is InvoiceConflictCode {
@@ -143,14 +184,17 @@ function swallowReportedError(): void {
 }
 
 function markAsSent(): void {
+  pendingUpdateIncludesEdits = false;
   runUpdate({ status: 'sent' });
 }
 
 function markAsPaid(): void {
+  pendingUpdateIncludesEdits = false;
   runUpdate({ status: 'paid' });
 }
 
 function saveEdits(): void {
+  pendingUpdateIncludesEdits = true;
   runUpdate({
     notes: editNotes.value || null,
     title: editTitle.value,
