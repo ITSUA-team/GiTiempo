@@ -11,6 +11,7 @@ import type {
   InvoiceListResponse,
   InvoiceResponse,
   InvoiceStatsResponse,
+  ProjectResponse,
 } from '@gitiempo/shared';
 import type * as WebShared from '@gitiempo/web-shared';
 import { getErrorMessage } from '@gitiempo/web-shared';
@@ -20,6 +21,7 @@ import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import { routeNames } from '@/constants/routes';
 import { createTestQueryPlugin } from '@/test/query-client';
 import { useAuthStore } from '@/stores/auth';
+import { adminProjectsClient } from '@/services/admin-projects-client';
 
 import InvoicesView from './InvoicesView.vue';
 
@@ -131,6 +133,28 @@ function createProfile(role: WorkspaceRoleFixture) {
     id: userId,
     role,
     updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+}
+
+function createProjectFixture(): ProjectResponse {
+  return {
+    accessScope: 'project',
+    capabilities: { canManageTasks: true },
+    color: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    defaultBillableForTasks: true,
+    description: null,
+    id: projectId,
+    isActive: true,
+    members: [],
+    name: 'Project Orion',
+    source: 'manual',
+    referenceProvenance: null,
+    trackingMode: 'managed',
+    totalSeconds: 3600,
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    visibility: 'public',
+    workspaceId,
   };
 }
 
@@ -520,6 +544,69 @@ describe('InvoicesView', () => {
 
     expect(
       wrapper.find('[data-testid="invoices-load-error"]').exists(),
+    ).toBe(false);
+    expect(wrapper.find('[data-testid="invoices-table"]').exists()).toBe(true);
+  });
+
+  it('shows a separate projects error card with retry when the projects request fails', async () => {
+    const projectsError = new ApiError('Projects service unavailable', {
+      status: 502,
+    });
+    vi.mocked(adminProjectsClient.listProjects).mockRejectedValueOnce(
+      projectsError,
+    );
+
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+
+    const errorCard = wrapper.get('[data-testid="invoices-projects-error"]');
+    expect(errorCard.text()).toContain('Failed to load projects');
+    expect(errorCard.text()).toContain('Projects service unavailable');
+    expect(wrapper.find('[data-testid="invoices-table"]').exists()).toBe(true);
+    expect(testMocks.errorToast).toHaveBeenCalledTimes(1);
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Projects service unavailable',
+      {
+        error: projectsError,
+        logContext: { action: 'load-projects', feature: 'invoices' },
+      },
+    );
+  });
+
+  it('does not show a projects error card when the projects request succeeds', async () => {
+    stubInvoicesData(createLoadedInvoicesData());
+
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="invoices-projects-error"]').exists(),
+    ).toBe(false);
+    expect(wrapper.find('[data-testid="invoices-table"]').exists()).toBe(true);
+  });
+
+  it('retries the projects request when the projects error retry button is clicked', async () => {
+    vi.mocked(adminProjectsClient.listProjects)
+      .mockRejectedValueOnce(
+        new ApiError('Projects unavailable', { status: 502 }),
+      )
+      .mockResolvedValueOnce([createProjectFixture()]);
+
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="invoices-projects-error"]').exists(),
+    ).toBe(true);
+
+    await wrapper
+      .get('[data-testid="invoices-projects-error"]')
+      .get('button')
+      .trigger('click');
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="invoices-projects-error"]').exists(),
     ).toBe(false);
     expect(wrapper.find('[data-testid="invoices-table"]').exists()).toBe(true);
   });

@@ -112,6 +112,24 @@ const projectsQuery = useAdminProjectsQuery({
   scope,
 });
 
+const projectsError = computed(() => projectsQuery.error.value);
+
+const projectsErrorMessage = computed(() =>
+  projectsError.value ? getErrorMessage(projectsError.value) : '',
+);
+
+watch(
+  () => projectsQuery.error.value,
+  (error) => {
+    if (error) {
+      errorToast(getErrorMessage(error), {
+        error,
+        logContext: { action: 'load-projects', feature: 'invoices' },
+      });
+    }
+  },
+);
+
 const loadErrorMessage = computed(() =>
   loadError.value ? getErrorMessage(loadError.value) : '',
 );
@@ -170,6 +188,10 @@ const statsCards = computed(() => {
 
 async function fetchAll(): Promise<void> {
   await refetch();
+}
+
+async function refetchProjects(): Promise<void> {
+  await projectsQuery.refetch({ throwOnError: false });
 }
 
 function handleUpdateFilters(update: InvoicesTableFilterUpdate): void {
@@ -260,6 +282,14 @@ function handleCreateSuccess(): void {
           :value="card.value"
         />
       </div>
+
+      <RequestErrorCard
+        v-if="projectsError"
+        title="Failed to load projects"
+        :message="projectsErrorMessage"
+        data-testid="invoices-projects-error"
+        @retry="refetchProjects"
+      />
 
       <SurfaceCard padding-class="p-6">
         <InvoicesTable
