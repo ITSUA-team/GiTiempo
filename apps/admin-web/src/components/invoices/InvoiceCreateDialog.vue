@@ -12,7 +12,7 @@ import {
 } from '@gitiempo/web-shared/time';
 import {
   giTiempoDatePickerPt,
-  giTiempoSelectPt,
+  giTiempoFieldWidthSelectPt,
 } from '@gitiempo/web-config/theme';
 import { ChevronRightIcon } from '@heroicons/vue/24/outline';
 import Button from 'primevue/button';
@@ -275,7 +275,7 @@ async function handleCreate(): Promise<void> {
     modal
     :closable="!isCreating"
     :dismissable-mask="!isCreating"
-    :style="{ width: '480px' }"
+    :pt="{ root: 'w-[min(480px,calc(100vw-2rem))]' }"
     :visible="visible"
     @update:visible="handleVisibleChange"
   >
@@ -318,7 +318,7 @@ async function handleCreate(): Promise<void> {
           show-clear
           :invalid="projectError"
           class="w-full"
-          :pt="giTiempoSelectPt"
+          :pt="giTiempoFieldWidthSelectPt"
         />
         <Message
           v-if="projectError"
@@ -330,7 +330,10 @@ async function handleCreate(): Promise<void> {
         </Message>
       </div>
 
-      <div class="flex gap-3">
+      <div
+        data-testid="invoice-create-row-dates"
+        class="flex flex-col gap-4 sm:flex-row sm:gap-3"
+      >
         <div class="flex min-w-0 flex-1 flex-col gap-1">
           <label
             for="invoice-create-date-range"
@@ -358,7 +361,7 @@ async function handleCreate(): Promise<void> {
             Date range is required.
           </Message>
         </div>
-        <div class="flex w-[150px] shrink-0 flex-col gap-1">
+        <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
           <label
             for="invoice-create-hourly-rate"
             class="text-text-dark text-[13px] font-medium"
@@ -377,8 +380,11 @@ async function handleCreate(): Promise<void> {
         </div>
       </div>
 
-      <div class="flex gap-3">
-        <div class="flex w-[150px] shrink-0 flex-col gap-1">
+      <div
+        data-testid="invoice-create-row-pricing"
+        class="flex flex-col gap-4 sm:flex-row sm:gap-3"
+      >
+        <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
           <label
             for="invoice-create-currency"
             class="text-text-dark text-[13px] font-medium"
@@ -401,7 +407,7 @@ async function handleCreate(): Promise<void> {
             Currency must be a 3-letter code (e.g., USD).
           </Message>
         </div>
-        <div class="flex w-[150px] shrink-0 flex-col gap-1">
+        <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
           <label
             for="invoice-create-discount"
             class="text-text-dark text-[13px] font-medium"

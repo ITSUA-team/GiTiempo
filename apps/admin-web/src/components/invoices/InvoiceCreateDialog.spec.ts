@@ -14,7 +14,10 @@ import type {
   InvoiceResponse,
   InvoiceTimeEntrySummary,
 } from '@gitiempo/shared';
-import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
+import {
+  giTiempoAnchorWidthOverlayClass,
+  giTiempoPrimeVueOptions,
+} from '@gitiempo/web-config/theme';
 import { ApiError } from '@gitiempo/web-shared/http';
 import { ref } from 'vue';
 
@@ -260,6 +263,62 @@ describe('InvoiceCreateDialog', () => {
     expect(
       wrapper.findComponent('[data-testid="invoice-create-cancel"]').exists(),
     ).toBe(true);
+  });
+
+  it('keeps the dialog and paired field rows responsive on narrow viewports', async () => {
+    // jsdom cannot evaluate media queries; this test pins the responsive
+    // classes per docs/ui/patterns.md instead of rendered layout.
+    const wrapper = await mountDialog();
+
+    expect(wrapper.findComponent(Select).props('pt')).toMatchObject({
+      overlay: { class: giTiempoAnchorWidthOverlayClass },
+    });
+
+    const dialogRoot = document.querySelector('.p-dialog');
+    expect(
+      dialogRoot?.classList.contains('w-[min(480px,calc(100vw-2rem))]'),
+    ).toBe(true);
+
+    const rowFor = (rowTestId: string) => {
+      const row = document.querySelector(`[data-testid="${rowTestId}"]`);
+
+      if (!row) {
+        throw new Error(`No paired field row rendered for ${rowTestId}`);
+      }
+
+      return row;
+    };
+    const columnFor = (inputId: string) => {
+      const column = document
+        .querySelector(`label[for="${inputId}"]`)
+        ?.parentElement;
+
+      if (!column) {
+        throw new Error(`No paired field column rendered for ${inputId}`);
+      }
+
+      return column;
+    };
+
+    for (const rowTestId of [
+      'invoice-create-row-dates',
+      'invoice-create-row-pricing',
+    ]) {
+      const row = rowFor(rowTestId);
+      expect(row.classList.contains('flex-col')).toBe(true);
+      expect(row.classList.contains('sm:flex-row')).toBe(true);
+      expect(row.classList.contains('sm:gap-3')).toBe(true);
+    }
+
+    for (const inputId of [
+      'invoice-create-hourly-rate',
+      'invoice-create-currency',
+      'invoice-create-discount',
+    ]) {
+      const column = columnFor(inputId);
+      expect(column.classList.contains('w-full')).toBe(true);
+      expect(column.classList.contains('sm:w-[150px]')).toBe(true);
+    }
   });
 
   it('fires the eligible-entries preview when the date range is entered', async () => {
