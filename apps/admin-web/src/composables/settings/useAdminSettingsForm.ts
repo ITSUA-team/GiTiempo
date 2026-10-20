@@ -2,7 +2,7 @@ import { computed, reactive, shallowRef } from 'vue';
 
 import {
   DEFAULT_SETTINGS_CURRENCY,
-  SETTINGS_CURRENCY_OPTIONS,
+  getSettingsCurrencyOptions,
 } from '@/lib/currencies';
 import {
   getRuntimeDefaultTimeZone,
@@ -60,18 +60,9 @@ export function useAdminSettingsForm() {
       form.timeZone !== current.timeZone
     );
   });
-  const currencyOptions = computed(() => {
-    const existingOption = SETTINGS_CURRENCY_OPTIONS.some(
-      (option) => option.value === form.currency,
-    );
-
-    return existingOption
-      ? SETTINGS_CURRENCY_OPTIONS
-      : [
-          { label: form.currency, value: form.currency },
-          ...SETTINGS_CURRENCY_OPTIONS,
-        ];
-  });
+  const currencyOptions = computed(() =>
+    getSettingsCurrencyOptions(form.currency),
+  );
   const timeZoneOptions = computed(() =>
     getSettingsTimeZoneOptions([persisted.value?.timeZone, form.timeZone]),
   );

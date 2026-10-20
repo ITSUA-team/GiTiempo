@@ -47494,16 +47494,27 @@
                                         0,
                                         12
                                       ],
+                                      "justifyContent": "space_between",
                                       "alignItems": "center",
                                       "children": [
                                         {
                                           "type": "text",
                                           "id": "Y9IRO",
-                                          "fill": "$color-text-muted",
-                                          "content": "Auto",
+                                          "fill": "$color-text-dark",
+                                          "content": "USD",
                                           "fontFamily": "Inter",
                                           "fontSize": 14,
-                                          "fontWeight": "normal"
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "invcur1",
+                                          "name": "InvoiceCurrencyKind",
+                                          "fill": "#5D2B85",
+                                          "content": "Select",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "500"
                                         }
                                       ]
                                     }

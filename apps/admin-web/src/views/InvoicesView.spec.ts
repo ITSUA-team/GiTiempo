@@ -22,6 +22,7 @@ import { routeNames } from '@/constants/routes';
 import { createTestQueryPlugin } from '@/test/query-client';
 import { useAuthStore } from '@/stores/auth';
 import { adminProjectsClient } from '@/services/admin-projects-client';
+import type { WorkspaceSettingsResponse } from '@gitiempo/shared';
 
 import InvoicesView from './InvoicesView.vue';
 
@@ -32,11 +33,18 @@ const mobileViewportMock = vi.hoisted(() => ({
 const testMocks = vi.hoisted(() => ({
   createInvoice: vi.fn(),
   errorToast: vi.fn(),
+  getWorkspaceSettings: vi.fn(),
   refetch: vi.fn(),
   routerPush: vi.fn(),
   successToast: vi.fn(),
   useInvoicesData: vi.fn(),
   useInvoiceCreate: vi.fn(),
+}));
+
+vi.mock('@/services/admin-settings-client', () => ({
+  getAdminSettingsClient: () => ({
+    getWorkspaceSettings: testMocks.getWorkspaceSettings,
+  }),
 }));
 
 vi.mock('vue-router', async (importOriginal) => {
@@ -133,6 +141,21 @@ function createProfile(role: WorkspaceRoleFixture) {
     id: userId,
     role,
     updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+}
+
+function createWorkspaceSettingsFixture(
+  overrides: Partial<WorkspaceSettingsResponse> = {},
+): WorkspaceSettingsResponse {
+  return {
+    createdAt: '2026-01-01T00:00:00.000Z',
+    currency: 'EUR',
+    defaultHourlyRate: null,
+    id: '77777777-7777-4777-8777-777777777777',
+    timeZone: 'UTC',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    workspaceId,
+    ...overrides,
   };
 }
 
@@ -364,6 +387,7 @@ const InvoiceCreateDialogStub = defineComponent({
     projects: { type: Array, required: true },
     scope: { type: Object, required: true },
     visible: { type: Boolean, required: true },
+    workspaceCurrency: { type: String, default: null },
   },
   emits: ['created', 'update:visible'],
   methods: {
@@ -385,7 +409,10 @@ const InvoiceCreateDialogStub = defineComponent({
     },
   },
   template: `
-    <div data-testid="invoice-create-dialog">
+    <div
+      data-testid="invoice-create-dialog"
+      :data-workspace-currency="workspaceCurrency"
+    >
       visible={{ visible }}
       <button
         data-testid="invoice-create-submit"
@@ -421,11 +448,16 @@ describe('InvoicesView', () => {
   beforeEach(() => {
     testMocks.createInvoice.mockReset();
     testMocks.errorToast.mockReset();
+    testMocks.getWorkspaceSettings.mockReset();
     testMocks.refetch.mockReset();
     testMocks.routerPush.mockReset();
     testMocks.successToast.mockReset();
     testMocks.useInvoicesData.mockReset();
     testMocks.useInvoiceCreate.mockReset();
+
+    testMocks.getWorkspaceSettings.mockResolvedValue(
+      createWorkspaceSettingsFixture(),
+    );
 
     invoicesDataRefs = {
       initialLoaded: ref(false),
@@ -583,6 +615,46 @@ describe('InvoicesView', () => {
       wrapper.find('[data-testid="invoices-projects-error"]').exists(),
     ).toBe(false);
     expect(wrapper.find('[data-testid="invoices-table"]').exists()).toBe(true);
+  });
+
+  it('passes the workspace settings currency to the create dialog', async () => {
+    testMocks.getWorkspaceSettings.mockResolvedValue(
+      createWorkspaceSettingsFixture({ currency: 'EUR' }),
+    );
+
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="invoices-create-intent"]').trigger('click');
+    await flushPromises();
+
+    expect(
+      wrapper
+        .get('[data-testid="invoice-create-dialog"]')
+        .attributes('data-workspace-currency'),
+    ).toBe('EUR');
+  });
+
+  it('toasts an error when the workspace settings request fails', async () => {
+    const settingsError = new ApiError('Settings service unavailable', {
+      status: 503,
+    });
+    testMocks.getWorkspaceSettings.mockRejectedValueOnce(settingsError);
+
+    mountInvoicesView();
+    await flushPromises();
+
+    expect(testMocks.errorToast).toHaveBeenCalledTimes(1);
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Settings service unavailable',
+      {
+        error: settingsError,
+        logContext: {
+          action: 'load-workspace-settings',
+          feature: 'invoices',
+        },
+      },
+    );
   });
 
   it('retries the projects request when the projects error retry button is clicked', async () => {

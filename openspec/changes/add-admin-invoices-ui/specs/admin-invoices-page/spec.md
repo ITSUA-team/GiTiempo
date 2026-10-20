@@ -67,7 +67,7 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 
 - **GIVEN** an authenticated admin opens the create dialog
 - **WHEN** the dialog renders
-- **THEN** it shows fields: Title (required), Project (optional), Date range (required), Hourly rate (optional, placeholder "From workspace settings"), Currency (optional, placeholder "Auto"), Discount (optional, default 0), and Notes (optional)
+- **THEN** it shows fields: Title (required), Project (optional), Date range (required), Hourly rate (optional, placeholder "From workspace settings"), Currency (optional, PrimeVue `<Select>` with the same currency options as Settings → Currency, placeholder "Auto"), Discount (optional, default 0), and Notes (optional)
 - **AND** the admin may leave Project empty to create a workspace-wide invoice
 - **AND** no Status field is shown — the invoice is always created as `draft`
 
@@ -84,7 +84,16 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 - **WHEN** the preview loads from `GET /invoices/eligible-entries`
 - **THEN** the dialog shows total hours and computed total amount from the preview response
 - **AND** an expandable section shows eligible time entries (Date, User, Duration, Description) in a scrollable table
-- **AND** the Hourly rate field is pre-filled with `defaultHourlyRate` and Currency with `defaultCurrency` from the preview response when available
+- **AND** the Hourly rate field is pre-filled with `defaultHourlyRate` from the preview response when available
+- **AND** Currency is pre-selected with the workspace settings currency as soon as the dialog opens, and the preview `defaultCurrency` fills it only while the workspace settings currency is not yet loaded
+
+#### Scenario: Currency dropdown mirrors workspace settings
+
+- **GIVEN** the user opens the create dialog while the workspace settings currency is known
+- **WHEN** the dialog renders
+- **THEN** the Currency dropdown lists the same currency options as Settings → Currency (plus the persisted workspace currency first when it is outside the standard option list)
+- **AND** the workspace settings currency is already selected before any preview request
+- **AND** after the user selects a currency, neither the workspace currency nor preview defaults re-select it automatically
 
 #### Scenario: Empty preview warning
 

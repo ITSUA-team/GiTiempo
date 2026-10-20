@@ -26,6 +26,7 @@ import Select from 'primevue/select';
 import Textarea from 'primevue/textarea';
 
 import { useEligibleEntriesPreview } from '@/composables/invoices/useEligibleEntriesPreview';
+import { getSettingsCurrencyOptions } from '@/lib/currencies';
 import { formatCurrency } from '@/lib/format-currency';
 import { formatDuration } from '@/lib/format-duration';
 import type { AdminServerStateScope } from '@/lib/query-keys';
@@ -47,6 +48,8 @@ const props = defineProps<{
   /** Admin may submit without a project (workspace-wide); PM must select one. */
   isAdmin: boolean;
   projects: Array<{ id: string; name: string }>;
+  /** Currency selected in workspace Settings; pre-selected on dialog open. */
+  workspaceCurrency: string | null;
   scope: AdminServerStateScope;
   createMutation: InvoiceCreateMutation;
 }>();
@@ -113,6 +116,19 @@ watch(
   },
 );
 
+// Pre-select the workspace Settings currency as soon as the dialog opens, and
+// keep following it while the settings load late or change while open — until
+// the user edits the field. It stays authoritative: the preview sync below
+// fills the currency only while no workspace currency is known yet.
+watch(
+  [() => props.workspaceCurrency, () => props.visible],
+  ([workspaceCurrency, visible]) => {
+    if (!visible || currencyTouched.value || !workspaceCurrency) return;
+    currency.value = workspaceCurrency;
+  },
+  { immediate: true },
+);
+
 // Sync rate/currency defaults from every fresh preview response until
 // the user edits those fields; after a manual change the entered values win.
 // Relying on the touched flags (instead of also checking the field is empty)
@@ -125,7 +141,14 @@ watch(
     if (!rateTouched.value && data.defaultHourlyRate !== null) {
       hourlyRate.value = data.defaultHourlyRate;
     }
-    if (!currencyTouched.value && data.defaultCurrency !== null) {
+    // The workspace settings currency always wins over the preview value; the
+    // preview default is only the fallback for when the settings query failed
+    // and the workspace currency is unknown.
+    if (
+      !currencyTouched.value &&
+      !props.workspaceCurrency &&
+      data.defaultCurrency !== null
+    ) {
       currency.value = data.defaultCurrency;
     }
   },
@@ -150,6 +173,10 @@ const projectOptions = computed(() => {
   return options;
 });
 
+const currencyOptions = computed(() =>
+  getSettingsCurrencyOptions(props.workspaceCurrency),
+);
+
 const hasTitle = computed(() => title.value.trim().length > 0);
 const hasDateRange = computed(() => {
   const dates = dateRange.value;
@@ -167,26 +194,13 @@ const projectError = computed(
     validationTriggered.value && !props.isAdmin && !selectedProjectId.value,
 );
 
-const hasValidCurrency = computed(() => {
-  const entered = currency.value.trim();
-  if (!entered) return true; // empty is valid — uses workspace default
-  return /^[A-Za-z]{3}$/.test(entered);
-});
-
-const currencyError = computed(
-  () => validationTriggered.value && !hasValidCurrency.value,
-);
-
 const canSubmit = computed(
   () =>
     hasTitle.value &&
     hasDateRange.value &&
-    hasValidCurrency.value &&
     (props.isAdmin || Boolean(selectedProjectId.value)),
 );
 
-// Intl.NumberFormat throws RangeError on codes shorter than 3 letters, so
-// partial input falls back to the workspace default until the code completes.
 const previewCurrencyCode = computed<string | null>(() => {
   const entered = currency.value.trim().toUpperCase();
   if (/^[A-Z]{3}$/.test(entered)) return entered;
@@ -225,7 +239,7 @@ function handleRateUpdate(value: number | null): void {
 }
 
 function handleCurrencyUpdate(value: string | undefined): void {
-  currency.value = value?.toUpperCase() ?? '';
+  currency.value = value ?? '';
   currencyTouched.value = true;
 }
 
@@ -389,23 +403,18 @@ async function handleCreate(): Promise<void> {
             for="invoice-create-currency"
             class="text-text-dark text-[13px] font-medium"
           >Currency</label>
-          <InputText
-            id="invoice-create-currency"
+          <Select
+            input-id="invoice-create-currency"
             :model-value="currency"
-            maxlength="3"
+            :options="currencyOptions"
+            option-label="label"
+            option-value="value"
             placeholder="Auto"
-            :invalid="currencyError"
-            class="h-[38px] w-full"
+            show-clear
+            class="w-full"
+            :pt="giTiempoFieldWidthSelectPt"
             @update:model-value="handleCurrencyUpdate"
           />
-          <Message
-            v-if="currencyError"
-            severity="error"
-            size="small"
-            variant="simple"
-          >
-            Currency must be a 3-letter code (e.g., USD).
-          </Message>
         </div>
         <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
           <label

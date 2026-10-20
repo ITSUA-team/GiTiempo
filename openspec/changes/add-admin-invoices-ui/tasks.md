@@ -26,6 +26,7 @@
 
 - [x] 4.1 Create `components/invoices/InvoiceCreateDialog.vue` with fields (Title, Project, Date range, Hourly rate, Currency, Discount, Notes), live eligible-entries preview section, empty-preview warning banner, and Cancel/Create actions. PM project-required enforcement, admin workspace-wide option. Verify: `InvoiceCreateDialog.spec.ts` covers field rendering, preview loading, empty preview warning, PM project requirement, admin empty-project option, successful creation emit, and 422 domain error display.
 - [x] 4.2 Wire `InvoiceCreateDialog` into `InvoicesView.vue` with `v-model:visible` and create mutation from `useInvoiceCreate`. Verify: integration test in `InvoicesView.spec.ts` covers dialog open from header action, create success (dialog closes + list refreshes + toast), and create failure (dialog stays open + error toast).
+- [x] 4.3 Replace the create-dialog free-text Currency input with a PrimeVue `<Select>` seeded from the Settings currency options (`getSettingsCurrencyOptions` in `lib/currencies.ts`, reused by `useAdminSettingsForm`) and pre-select the workspace settings currency on open via `useWorkspaceSettingsQuery` in `InvoicesView.vue`. Verify: `InvoiceCreateDialog.spec.ts` covers dropdown option content, workspace-currency prefill before any preview request, settings-authoritative sync over preview defaults, non-standard persisted currency selection, and selected-currency submission; `InvoicesView.spec.ts` covers the workspace-currency pass-through and the settings-load error toast.
 
 ## 5. Invoice Detail Page
 

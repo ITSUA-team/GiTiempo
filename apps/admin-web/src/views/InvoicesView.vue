@@ -14,8 +14,9 @@ import InvoicesTable from '@/components/invoices/InvoicesTable.vue';
 import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import { useAdminProjectsQuery } from '@/composables/query';
+import { useAdminProjectsQuery, useWorkspaceSettingsQuery } from '@/composables/query';
 import { adminProjectsClient } from '@/services/admin-projects-client';
+import { getAdminSettingsClient } from '@/services/admin-settings-client';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useInvoiceCreate } from '@/composables/invoices/useInvoiceCreate';
 import { useInvoicesData } from '@/composables/invoices/useInvoicesData';
@@ -125,6 +126,28 @@ watch(
       errorToast(getErrorMessage(error), {
         error,
         logContext: { action: 'load-projects', feature: 'invoices' },
+      });
+    }
+  },
+);
+
+const workspaceSettingsQuery = useWorkspaceSettingsQuery({
+  client: getAdminSettingsClient(),
+  enabled: computed(() => Boolean(accessToken.value)),
+  scope,
+});
+
+const workspaceCurrency = computed(
+  () => workspaceSettingsQuery.data.value?.currency ?? null,
+);
+
+watch(
+  () => workspaceSettingsQuery.error.value,
+  (error) => {
+    if (error) {
+      errorToast(getErrorMessage(error), {
+        error,
+        logContext: { action: 'load-workspace-settings', feature: 'invoices' },
       });
     }
   },
@@ -316,6 +339,7 @@ function handleCreateSuccess(): void {
       :is-admin="isAdmin"
       :projects="filterOptions.projects"
       :scope="scope"
+      :workspace-currency="workspaceCurrency"
       @created="handleCreateSuccess"
     />
   </div>

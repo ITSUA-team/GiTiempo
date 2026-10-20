@@ -7,7 +7,7 @@ import DataTable from 'primevue/datatable';
 import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
 import Textarea from 'primevue/textarea';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type {
   CreateInvoiceInput,
   EligibleEntriesResponse,
@@ -107,11 +107,12 @@ interface MountDialogOptions {
   isCreating?: boolean;
   projects?: Array<{ id: string; name: string }>;
   createInvoice?: (input: CreateInvoiceInput) => Promise<InvoiceResponse>;
+  workspaceCurrency?: string | null;
 }
 
 function createCreateInvoiceSpy(
   outcome: 'success' | 'domain-error' = 'success',
-): (input: CreateInvoiceInput) => Promise<InvoiceResponse> {
+): Mock<(input: CreateInvoiceInput) => Promise<InvoiceResponse>> {
   return vi.fn((input: CreateInvoiceInput): Promise<InvoiceResponse> =>
     outcome === 'success'
       ? Promise.resolve(createInvoiceResponse())
@@ -140,6 +141,7 @@ async function mountDialog(options: MountDialogOptions = {}) {
       visible: false,
       isAdmin,
       projects: options.projects ?? PROJECT_OPTIONS,
+      workspaceCurrency: options.workspaceCurrency ?? null,
       scope: {
         role: isAdmin ? 'admin' : 'pm',
         userId: 'user-1',
@@ -162,6 +164,34 @@ type MountedDialog = Awaited<ReturnType<typeof mountDialog>>;
 
 function getSubmitButton(wrapper: MountedDialog) {
   return wrapper.getComponent('[data-testid="invoice-create-submit"]');
+}
+
+function getSelectByInputId(wrapper: MountedDialog, inputId: string) {
+  // Both selects expose a stable input-id; match by prop instead of document
+  // order so reordering the form cannot silently bind to the wrong control.
+  const select = wrapper
+    .findAllComponents(Select)
+    .find((field) => field.props('inputId') === inputId);
+
+  if (!select) {
+    throw new Error(`No Select rendered for ${inputId}`);
+  }
+
+  return select;
+}
+
+// PrimeVue renders a non-editable Select's value and placeholder inside the
+// label span that carries the input-id.
+function getCurrencyLabelElement(): HTMLElement {
+  const element = document.querySelector<HTMLElement>(
+    '#invoice-create-currency',
+  );
+
+  if (!element) {
+    throw new Error('No currency Select label rendered');
+  }
+
+  return element;
 }
 
 function getDiscountField(wrapper: MountedDialog) {
@@ -236,7 +266,7 @@ describe('InvoiceCreateDialog', () => {
     ]) {
       expect(bodyText()).toContain(label);
     }
-    expect(wrapper.findComponent(Select).exists()).toBe(true);
+    expect(wrapper.findAllComponents(Select)).toHaveLength(2);
     expect(wrapper.findComponent(DatePicker).exists()).toBe(true);
     expect(wrapper.findAllComponents(InputNumber)).toHaveLength(2);
     expect(wrapper.findComponent(Textarea).exists()).toBe(true);
@@ -249,14 +279,24 @@ describe('InvoiceCreateDialog', () => {
       document.querySelector<HTMLInputElement>('#invoice-create-hourly-rate')
         ?.placeholder,
     ).toBe('From workspace settings');
-    expect(
-      document.querySelector<HTMLInputElement>('#invoice-create-currency')
-        ?.placeholder,
-    ).toBe('Auto');
+    expect(getCurrencyLabelElement().textContent).toBe('Auto');
     expect(
       document.querySelector<HTMLTextAreaElement>('#invoice-create-notes')
         ?.placeholder,
     ).toBe('Add notes...');
+
+    // Without a workspace currency the dropdown lists the Settings currency
+    // options only, and the Auto placeholder keeps the workspace-default
+    // fallback visible.
+    expect(
+      getSelectByInputId(wrapper, 'invoice-create-currency').props('options'),
+    ).toEqual([
+      { label: 'USD', value: 'USD' },
+      { label: 'EUR', value: 'EUR' },
+      { label: 'GBP', value: 'GBP' },
+      { label: 'CAD', value: 'CAD' },
+      { label: 'AUD', value: 'AUD' },
+    ]);
 
     expect(bodyText()).toContain('Cancel');
     expect(bodyText()).toContain('Create invoice');
@@ -270,9 +310,14 @@ describe('InvoiceCreateDialog', () => {
     // classes per docs/ui/patterns.md instead of rendered layout.
     const wrapper = await mountDialog();
 
-    expect(wrapper.findComponent(Select).props('pt')).toMatchObject({
-      overlay: { class: giTiempoAnchorWidthOverlayClass },
-    });
+    for (const inputId of [
+      'invoice-create-project',
+      'invoice-create-currency',
+    ]) {
+      expect(getSelectByInputId(wrapper, inputId).props('pt')).toMatchObject({
+        overlay: { class: giTiempoAnchorWidthOverlayClass },
+      });
+    }
 
     const dialogRoot = document.querySelector('.p-dialog');
     expect(
@@ -354,10 +399,9 @@ describe('InvoiceCreateDialog', () => {
       '#invoice-create-hourly-rate',
     );
     expect(rateInput?.value).toBe('80');
-    const currencyInput = document.querySelector<HTMLInputElement>(
-      '#invoice-create-currency',
-    );
-    expect(currencyInput?.value).toBe('USD');
+    // The preview default fills the currency select when no workspace currency
+    // prop is available yet (settings query failure fallback).
+    expect(getCurrencyLabelElement().textContent).toBe('USD');
 
     // The entries table stays collapsed until the header row is toggled.
     expect(wrapper.findComponent(DataTable).exists()).toBe(false);
@@ -465,21 +509,135 @@ describe('InvoiceCreateDialog', () => {
     expect(bodyText()).toContain('Select a project.');
   });
 
-  it('shows a validation error for invalid currency code', async () => {
+  it('submits the currency selected from the workspace settings dropdown', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const createInvoice = createCreateInvoiceSpy();
-    const wrapper = await mountDialog({ isAdmin: true, createInvoice });
+    const wrapper = await mountDialog({
+      isAdmin: true,
+      createInvoice,
+      workspaceCurrency: 'EUR',
+    });
 
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
     await enterDateRange(wrapper);
-    await wrapper.getComponent('#invoice-create-currency').setValue('US');
+
+    const currencySelect = getSelectByInputId(wrapper, 'invoice-create-currency');
+
+    // Selecting an option is the only way to change the currency, so the
+    // previous free-text validation error can no longer occur.
+    await currencySelect.vm.$emit('update:modelValue', 'GBP');
+    await flushPromises();
+    expect(getCurrencyLabelElement().textContent).toBe('GBP');
+
+    // The clear affordance returns the field to the workspace-default state
+    // and keeps it there even though the workspace currency prop is known.
+    await currencySelect.vm.$emit('update:modelValue', undefined);
+    await flushPromises();
+    expect(getCurrencyLabelElement().textContent).toBe('Auto');
+
+    await currencySelect.vm.$emit('update:modelValue', 'GBP');
+    await flushPromises();
 
     await submitInvoice(wrapper);
 
-    expect(bodyText()).toContain('Currency must be a 3-letter code');
-    expect(createInvoice).not.toHaveBeenCalled();
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ currency: 'GBP' }),
+    );
+  });
+
+  it('submits without a currency when the field is cleared to the workspace default', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({
+      isAdmin: true,
+      createInvoice,
+      workspaceCurrency: 'EUR',
+    });
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+    expect(getCurrencyLabelElement().textContent).toBe('EUR');
+
+    await getSelectByInputId(wrapper, 'invoice-create-currency').vm.$emit(
+      'update:modelValue',
+      undefined,
+    );
+    await flushPromises();
+    expect(getCurrencyLabelElement().textContent).toBe('Auto');
+
+    await submitInvoice(wrapper);
+
+    // Clearing submits the workspace-default signal (undefined); an empty
+    // string would fail the 3-letter currency contract on the API boundary.
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice.mock.calls[0]?.[0]?.currency).toBeUndefined();
+  });
+
+  it('pre-selects the workspace settings currency when the dialog opens', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({
+      createInvoice,
+      workspaceCurrency: 'EUR',
+    });
+
+    // The prefill happens at open, before any date range triggers a preview.
+    expect(testMocks.listEligibleEntries).not.toHaveBeenCalled();
+    expect(getCurrencyLabelElement().textContent).toBe('EUR');
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+    await submitInvoice(wrapper);
+
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ currency: 'EUR' }),
+    );
+  });
+
+  it('fills a late-arriving workspace currency while untouched and stops after a user edit', async () => {
+    const wrapper = await mountDialog();
+
+    // Workspace settings are still in flight when the dialog opens.
+    expect(getCurrencyLabelElement().textContent).toBe('Auto');
+
+    await wrapper.setProps({ workspaceCurrency: 'EUR' });
+    await flushPromises();
+    expect(getCurrencyLabelElement().textContent).toBe('EUR');
+
+    await getSelectByInputId(wrapper, 'invoice-create-currency').vm.$emit(
+      'update:modelValue',
+      'GBP',
+    );
+    await flushPromises();
+
+    // A later settings change must not re-select the field after a user edit.
+    await wrapper.setProps({ workspaceCurrency: 'CAD' });
+    await flushPromises();
+    expect(getCurrencyLabelElement().textContent).toBe('GBP');
+  });
+
+  it('keeps a non-standard workspace currency selectable in the dropdown', async () => {
+    const wrapper = await mountDialog({ workspaceCurrency: 'CHF' });
+
+    expect(getCurrencyLabelElement().textContent).toBe('CHF');
+    expect(
+      getSelectByInputId(wrapper, 'invoice-create-currency').props('options'),
+    ).toEqual([
+      { label: 'CHF', value: 'CHF' },
+      { label: 'USD', value: 'USD' },
+      { label: 'EUR', value: 'EUR' },
+      { label: 'GBP', value: 'GBP' },
+      { label: 'CAD', value: 'CAD' },
+      { label: 'AUD', value: 'AUD' },
+    ]);
   });
 
   it('creates a project invoice when a PM selects a project', async () => {
@@ -487,9 +645,10 @@ describe('InvoiceCreateDialog', () => {
     const createInvoice = createCreateInvoiceSpy();
     const wrapper = await mountDialog({ isAdmin: false, createInvoice });
 
-    await wrapper
-      .getComponent(Select)
-      .vm.$emit('update:modelValue', projectId);
+    await getSelectByInputId(wrapper, 'invoice-create-project').vm.$emit(
+      'update:modelValue',
+      projectId,
+    );
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
@@ -616,22 +775,19 @@ describe('InvoiceCreateDialog', () => {
     });
   });
 
-  it('falls back to the preview default currency while the code is partial', async () => {
+  it('shows the estimate from the preview default currency', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
 
     const wrapper = await mountDialog();
+
+    // Before a date range exists there is no preview and no selected currency.
+    expect(getCurrencyLabelElement().textContent).toBe('Auto');
+
     await enterDateRange(wrapper);
-    expect(bodyText()).toContain('$200.00');
 
-    await wrapper.getComponent('#invoice-create-currency').setValue('US');
-    await flushPromises();
-
-    expect(
-      document.querySelector<HTMLInputElement>('#invoice-create-currency')
-        ?.value,
-    ).toBe('US');
-    // 'US' is not yet a renderable ISO code; the estimate keeps the preview's
-    // USD default instead of crashing Intl.NumberFormat.
+    // The dropdown follows the preview's workspace default, so the estimate
+    // renders the preview currency instead of an unselected empty value.
+    expect(getCurrencyLabelElement().textContent).toBe('USD');
     expect(bodyText()).toContain('$200.00');
   });
 
@@ -662,10 +818,7 @@ describe('InvoiceCreateDialog', () => {
       document.querySelector<HTMLInputElement>('#invoice-create-hourly-rate')
         ?.value,
     ).toBe('80');
-    expect(
-      document.querySelector<HTMLInputElement>('#invoice-create-currency')
-        ?.value,
-    ).toBe('USD');
+    expect(getCurrencyLabelElement().textContent).toBe('USD');
 
     // Close and reopen the dialog with the same date range. The query key is
     // unchanged, so vue-query serves the cached response first and refetches.
@@ -682,10 +835,7 @@ describe('InvoiceCreateDialog', () => {
       document.querySelector<HTMLInputElement>('#invoice-create-hourly-rate')
         ?.value,
     ).toBe('100');
-    expect(
-      document.querySelector<HTMLInputElement>('#invoice-create-currency')
-        ?.value,
-    ).toBe('EUR');
+    expect(getCurrencyLabelElement().textContent).toBe('EUR');
   });
 
   it('keeps user-entered rate and currency when the preview refetches with new defaults', async () => {
@@ -712,9 +862,10 @@ describe('InvoiceCreateDialog', () => {
       .findAllComponents(InputNumber)
       .find((field) => field.props('inputId') === 'invoice-create-hourly-rate');
     await rateField?.vm.$emit('update:modelValue', 120);
-    await wrapper
-      .getComponent('#invoice-create-currency')
-      .setValue('GBP');
+    await getSelectByInputId(wrapper, 'invoice-create-currency').vm.$emit(
+      'update:modelValue',
+      'GBP',
+    );
     await flushPromises();
 
     // Trigger a fresh preview response (different date range → new query key).
@@ -731,9 +882,6 @@ describe('InvoiceCreateDialog', () => {
       document.querySelector<HTMLInputElement>('#invoice-create-hourly-rate')
         ?.value,
     ).toBe('120');
-    expect(
-      document.querySelector<HTMLInputElement>('#invoice-create-currency')
-        ?.value,
-    ).toBe('GBP');
+    expect(getCurrencyLabelElement().textContent).toBe('GBP');
   });
 });

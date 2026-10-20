@@ -65,7 +65,9 @@ Map invoice statuses to PrimeVue Tag severity: `draft` → `warn`, `sent` → `d
 
 ### 5. Create dialog eligible-entries preview
 
-Fetch preview data via `GET /invoices/eligible-entries` when the user has entered both date range bounds (and projectId for PMs). The preview request is gated by query key nullability (both date bounds must be set) and TanStack Query's built-in deduplication; no explicit debounce timer is needed. Pre-fill hourly rate and currency from `defaultHourlyRate` / `defaultCurrency` in the preview response. Show the expandable entries table with count, total hours, and computed amount.
+Fetch preview data via `GET /invoices/eligible-entries` when the user has entered both date range bounds (and projectId for PMs). The preview request is gated by query key nullability (both date bounds must be set) and TanStack Query's built-in deduplication; no explicit debounce timer is needed. Pre-fill the hourly rate from `defaultHourlyRate` in the preview response. Show the expandable entries table with count, total hours, and computed amount.
+
+Currency is a PrimeVue `<Select>` seeded from the same options as Settings → Currency (`getSettingsCurrencyOptions` in `lib/currencies.ts`, including a non-standard persisted workspace currency). `InvoicesView.vue` loads the workspace settings through the shared `adminSettingsKeys.workspaceSettings` vue-query cache (same key as the Settings page) and passes the persisted currency into the dialog, which pre-selects it on open — before any preview request. The preview `defaultCurrency` fills the select only while the workspace settings currency is unavailable (for example the settings request failed); both syncs stop once the user edits the field, and free-text currency validation is no longer needed because dropdown options are always valid 3-letter codes.
 
 **Rationale:** The docs specify live calculated fields from the preview endpoint. The preview is read-only and does not write. Gating on both date bounds and TanStack Query deduplication avoid excessive requests during date range editing.
 
@@ -160,9 +162,10 @@ The approved `Admin Invoices` `.pen` frame (id `mL7wF`, 1280x1040) has been upda
 
 ### Create dialog contents
 
-- **.pen dialog:** Fields - Project (AutoComplete), Date range, Hourly rate, Discount, Total amount (calculated, read-only). Actions - Preview invoice, Send invoice, Delete invoice, Save changes.
+- **.pen dialog:** Fields - Project (AutoComplete), Date range, Hourly rate, Currency, Discount, Total amount (calculated, read-only). Actions - Preview invoice, Send invoice, Delete invoice, Save changes.
 - **Docs:** Fields - Title (required), Project (optional), Date range (required), Hourly rate, Currency, Discount, Notes. Expandable eligible-entries preview section. Actions - Cancel + Create invoice only. No Status field.
 - **Resolution:** Implement docs create dialog. The `.pen` dialog is a reference frame for an edit dialog concept; docs moved status transitions and delete to the detail page header. The `.pen` dialog predates the create-vs-edit separation.
+- **Currency update:** The `.pen` dialog's Currency cell was re-aligned to depict the PrimeVue `<Select>` with the workspace settings currency pre-selected (`"USD"` value + `InvoiceCurrencyKind: Select` tag, mirroring the Settings screen currency dropdown), matching the shipped selector behavior described in this design.
 
 ### Dialog input height
 
