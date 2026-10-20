@@ -306,7 +306,7 @@ function formatInstant(dateInput: string): string {
         class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         data-testid="invoice-detail-header"
       >
-        <div class="flex items-center gap-3">
+        <div class="flex min-w-0 items-center gap-3">
           <Button
             icon="pi pi-arrow-left"
             variant="text"
@@ -315,12 +315,12 @@ function formatInstant(dateInput: string): string {
             data-testid="invoice-back-button"
             @click="goBack"
           />
-          <h1 class="text-text-dark text-lg font-semibold">
+          <h1 class="text-text-dark min-w-0 truncate text-lg font-semibold">
             {{ invoice.title }}
           </h1>
           <InvoiceStatusBadge :status="invoice.status" />
         </div>
-        <div class="flex gap-2">
+        <div class="flex shrink-0 gap-2" data-testid="invoice-status-actions">
           <Button
             v-if="invoice.status === 'draft'"
             label="Mark as sent"

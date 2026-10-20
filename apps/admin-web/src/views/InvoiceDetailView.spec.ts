@@ -438,6 +438,43 @@ describe('InvoiceDetailView', () => {
     expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(false);
   });
 
+  it('keeps the header title truncated and status actions visible for long unbreakable titles', async () => {
+    const longTitle = 'InvoiceApril2026'.repeat(15).slice(0, 223);
+    testMocks.getInvoice.mockResolvedValue(
+      createInvoice({ title: longTitle }),
+    );
+
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    const header = wrapper.find('[data-testid="invoice-detail-header"]');
+
+    expect(header.exists()).toBe(true);
+    expect(
+      header.find('[data-testid="invoice-status-badge"]').exists(),
+    ).toBe(true);
+
+    const titleHeading = header.get('h1');
+    expect(titleHeading.classes()).toEqual(
+      expect.arrayContaining(['min-w-0', 'truncate']),
+    );
+    expect(titleHeading.text()).toBe(longTitle);
+
+    const titleGroup = titleHeading.element.parentElement;
+    expect(titleGroup?.classList.contains('min-w-0')).toBe(true);
+
+    const actionsGroup = header.get('[data-testid="invoice-status-actions"]');
+    expect(actionsGroup.classes()).toEqual(
+      expect.arrayContaining(['shrink-0']),
+    );
+    expect(
+      actionsGroup.find('[data-testid="invoice-mark-as-sent"]').exists(),
+    ).toBe(true);
+    expect(
+      actionsGroup.find('[data-testid="invoice-delete"]').exists(),
+    ).toBe(true);
+  });
+
   it('prefills the edit fields from the loaded invoice', async () => {
     testMocks.getInvoice.mockResolvedValue(
       createInvoice({

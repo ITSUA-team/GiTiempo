@@ -32,6 +32,7 @@
 - [x] 5.1 Create `views/InvoiceDetailView.vue` with topbar breadcrumb, page header (back button, title, status badge, status-dependent actions), read-only summary card, editable title/notes card with Save, and linked time-entries card. Verify: `InvoiceDetailView.spec.ts` covers draft/sent/paid action visibility, admin vs PM action visibility, summary card rendering, editable save success/failure, and 404 not-found state.
 - [x] 5.2 Wire status actions (`Mark as sent`, `Mark as paid`) to `useInvoiceUpdate` with toast feedback and detail reload. Verify: `InvoiceDetailView.spec.ts` covers successful status transition, `invoice_update_conflict` (reload + toast), and `invoice_invalid_status_transition` (toast + current status shown).
 - [x] 5.3 Wire `Delete` action with confirmation dialog (doc copy: "Delete this invoice? Linked time entries will be unlinked and become available for future invoices.") to `useInvoiceDelete`. Verify: `InvoiceDetailView.spec.ts` covers admin delete confirmation → success (navigate back + toast), admin delete → `invoice_not_deletable` conflict (reload + toast), and PM delete action absence.
+- [x] 5.4 Keep the detail page header intact for long unbreakable invoice titles: `min-w-0` on the title group, `truncate` on the title, and `shrink-0` on the status actions group. Verify: `InvoiceDetailView.spec.ts` covers a 223-character unbreakable title — the header renders with the full title text in the DOM and the draft status actions present (admin + draft).
 
 ## 6. Router and Navigation
 
