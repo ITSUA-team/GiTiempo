@@ -3,10 +3,12 @@ import { z } from "zod";
 export const dateSchema = z.iso.date();
 export const dateTimeSchema = z.iso.datetime();
 
+export const MAX_SEARCH_LENGTH = 200;
+
 export const optionalSearchSchema = z
   .string()
   .trim()
-  .max(200)
+  .max(MAX_SEARCH_LENGTH)
   .transform((value) => (value === "" ? undefined : value))
   .optional();
 

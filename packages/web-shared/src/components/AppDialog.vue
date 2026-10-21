@@ -6,8 +6,13 @@ defineOptions({ inheritAttrs: false });
 
 // One padding scheme for every dialog. A consumer :pt can still override
 // individual sections (root width, scrollable content), but padding no longer
-// has to be re-declared per dialog.
+// has to be re-declared per dialog. The .p-dialog theme rule has no max-width,
+// so a fixed inline width (e.g. width: 480px) would overflow viewports under
+// 512px; the root cap bounds the effective width. A consumer that passes its
+// own pt.root replaces this default entirely (spread semantics) and must
+// include its own cap.
 const appDialogDefaultPt = {
+  root: "max-w-[calc(100vw-2rem)]",
   header: "px-6 pt-6 pb-0",
   content: "px-6 pb-6 pt-4",
   footer: "px-6 pb-6 pt-0",

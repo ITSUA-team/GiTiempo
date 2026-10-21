@@ -3,6 +3,7 @@ export const routeNames = {
   dashboard: 'admin-dashboard',
   forbidden: 'admin-forbidden',
   githubCallback: 'admin-github-callback',
+  invoiceDetail: 'admin-invoice-detail',
   invoices: 'admin-invoices',
   login: 'admin-login',
   members: 'admin-members',

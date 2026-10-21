@@ -76,7 +76,13 @@ export function getErrorMessage(
   error: unknown,
   fallback = "Something went wrong.",
 ): string {
-  return error instanceof Error ? error.message : fallback;
+  if (error instanceof Error) {
+    if (error.name === "ZodError") {
+      return "Please check the form fields and try again.";
+    }
+    return error.message;
+  }
+  return fallback;
 }
 
 export function createAppToast(

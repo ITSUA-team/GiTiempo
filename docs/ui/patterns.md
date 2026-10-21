@@ -10,13 +10,15 @@ Use PrimeVue `<Dialog>`.
 - Backdrop opacity is overridden in the preset.
 - Dialog panel uses `bg-surface-primary rounded-lg shadow-modal`.
 - Common widths: 480px for forms, larger for content-heavy dialogs.
+- The dialog panel must never exceed the viewport: build the width as `min(Npx, calc(100vw - 2rem))` — either as a pt root class (`w-[min(480px,calc(100vw-2rem))]`) or as an inline style (`:style="{ width: 'min(480px, calc(100vw - 2rem))' }"`). The shared `AppDialog` adds a default `max-w-[calc(100vw-2rem)]` cap on the panel root; a consumer that defines its own `pt.root` replaces that default, so self-capped dialogs stay safe either way.
+- Paired field rows inside dialogs stack vertically below 640px: container `flex flex-col gap-4 sm:flex-row sm:gap-3`, fixed-width columns `w-full sm:w-[Npx] sm:shrink-0`.
 - Footer uses `flex justify-end gap-2` and contains the primary action only for non-destructive form dialogs unless the dialog owns contextual entity actions that should not stay in a table row.
 - Non-destructive form dialogs rely on the built-in top-right close control for dismissal instead of a footer `Cancel` button.
 - Destructive dialogs use `severity="danger"` for the main action.
 - `dismissableMask` stays enabled only for non-destructive dialogs.
 
 ```vue
-<Dialog v-model:visible="showDialog" modal header="Invoice" :style="{ width: '480px' }">
+<Dialog v-model:visible="showDialog" modal header="Invoice" :style="{ width: 'min(480px, calc(100vw - 2rem))' }">
   <template #default><!-- form content --></template>
   <template #footer>
     <Button label="Save" @click="handleSave" />

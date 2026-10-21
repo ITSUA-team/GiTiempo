@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Skeleton from 'primevue/skeleton';
 
-type ManagementPageSkeletonVariant = 'members' | 'projects' | 'reports';
+type ManagementPageSkeletonVariant = 'members' | 'projects' | 'reports' | 'invoices';
 type ManagementSkeletonVariant = ManagementPageSkeletonVariant | 'pendingInvites';
 
 defineProps<{
@@ -117,6 +117,51 @@ defineProps<{
           width="3.5rem"
           height="0.8rem"
           border-radius="4px"
+        />
+      </div>
+    </template>
+
+    <template v-else-if="variant === 'invoices'">
+      <div class="flex flex-1 items-center">
+        <Skeleton
+          width="60%"
+          height="0.875rem"
+          border-radius="4px"
+        />
+      </div>
+      <div class="w-[160px]">
+        <Skeleton
+          width="70%"
+          height="0.8rem"
+          border-radius="4px"
+        />
+      </div>
+      <div class="w-[160px]">
+        <Skeleton
+          width="55%"
+          height="0.8rem"
+          border-radius="4px"
+        />
+      </div>
+      <div class="w-[100px]">
+        <Skeleton
+          width="40%"
+          height="0.8rem"
+          border-radius="4px"
+        />
+      </div>
+      <div class="w-[120px]">
+        <Skeleton
+          width="55%"
+          height="0.8rem"
+          border-radius="4px"
+        />
+      </div>
+      <div class="w-[130px]">
+        <Skeleton
+          width="3.5rem"
+          height="1.4rem"
+          border-radius="6px"
         />
       </div>
     </template>

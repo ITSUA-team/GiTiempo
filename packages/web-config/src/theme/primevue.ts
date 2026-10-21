@@ -32,8 +32,13 @@ export const giTiempoDropdownControlRootClass =
 export const giTiempoSelfAppendedDropdownControlRootClass =
   `${giTiempoDropdownControlBaseClass} flex w-full items-center rounded-[6px]`;
 
+// PrimeVue's label is the block ellipsis element; overriding its display
+// (flex) kills text-overflow. min-w-0 lets it shrink inside the flex root,
+// which provides vertical centering via items-center. `truncate` bundles the
+// ellipsis utilities because the theme file is not a Tailwind scan root, so
+// each label utility must already exist in a scanned source.
 export const giTiempoDropdownControlLabelClass =
-  "flex h-full items-center px-3 py-0 font-sans text-[14px] font-medium text-text-dark";
+  "min-w-0 truncate px-3 py-0 font-sans text-[14px] font-medium text-text-dark";
 
 export const giTiempoDropdownControlTriggerClass =
   "h-[38px] w-9 shrink-0 rounded-none rounded-r-[6px] border-0 bg-transparent p-0 text-text-muted shadow-none ring-0 hover:border-transparent hover:bg-transparent hover:text-text-dark focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none active:border-transparent active:bg-transparent";

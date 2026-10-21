@@ -49,8 +49,9 @@
 ### List page (`/invoices`)
 
 - Searchable invoice table with columns: Title, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
-- Search filters by invoice title (API `search` param, case-insensitive ILIKE).
+- Search filters by invoice title (API `search` param, case-insensitive ILIKE). The search input is capped at 200 characters to match the API contract; the filter row stays interactive so the user can always clear filters even when a load error replaces the table.
 - Filter row: Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
+- If the projects request fails, a separate inline error card with Retry is shown between the stats cards and the table. The invoice list stays usable for non-project filtering; the project dropdown shows no options until the retry succeeds. For PMs this explains why invoice creation is blocked (a project is required).
 - Pagination control below the table (API returns `meta.totalPages`).
 - Table header has a `Create invoice` action button (plus icon).
 - Clicking a row title navigates to the detail page (`/invoices/:id`).
@@ -63,7 +64,7 @@
 ### Create dialog (modal)
 
 - Triggered from the list page `Create invoice` action button.
-- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From workspace settings" when empty, falls back to workspace default), Currency (optional — placeholder "Auto" when empty, falls back to workspace default), Discount (optional, default 0), Notes (optional).
+- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From workspace settings" when empty, falls back to workspace default), Currency (optional — PrimeVue `<Select>` with the same currency options as Settings → Currency, pre-selected with the workspace settings currency as soon as the dialog opens; placeholder "Auto" while unknown, falls back to workspace default on submit), Discount (optional, default 0), Notes (optional).
 - Calculated fields: Total hours and Total amount update live from `GET /invoices/eligible-entries` preview.
 - Expandable preview section: shows eligible time entries (count, total hours, computed amount). Collapsed by default; expands to a scrollable table with Date, User, Duration, Description.
 - Empty state: if preview returns 0 entries, show a warning banner ("No billable entries found for this project and date range"). Create button stays enabled — the API allows empty invoices.
@@ -86,7 +87,7 @@
 ### Navigation
 
 - The `/invoices` route is admin-only. PMs access invoices via the list page but cannot delete.
-- Invoices nav item is hidden by default (`SHOW_INVOICES_NAV = false`). Enable when invoice UI ships.
+- Invoices nav item is visible for Admin and PM roles (`SHOW_INVOICES_NAV = true`).
 
 ## Members Page
 

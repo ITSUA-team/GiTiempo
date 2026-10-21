@@ -74,7 +74,7 @@ Read this file first. Load only the linked section files needed for the task.
 - `components.md`: Design tokens, component conventions, shared component-level rules.
 - `layout.md`: App shell, sidebar navigation, breakpoints, top-bar breadcrumb pattern.
 - `pages-user.md`: Dashboard, timer, time entries, projects, profile.
-- `pages-admin.md`: Dashboard, reports, deferred invoices, members, projects, settings.
+- `pages-admin.md`: Dashboard, reports, invoices, members, projects, settings.
 - `pages-landing.md`: Astro app boundary, ports and origins, approved section/CTA behavior, responsive frames, SEO, accessibility, and landing verification.
 - `chrome-ext.md`: Popup dimensions, injected page control states, and extension UI constraints.
 - `patterns.md`: Dialogs, toasts, confirms, date pickers, selectors, duration format.
