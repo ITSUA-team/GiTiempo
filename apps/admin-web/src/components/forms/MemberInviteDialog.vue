@@ -85,7 +85,7 @@ function handleVisibleChange(nextVisible: boolean): void {
     header="Invite Member"
     :closable="!submitting"
     :dismissable-mask="!submitting"
-    :style="{ width: '480px' }"
+    :pt="{ root: 'w-[min(480px,calc(100vw-2rem))]' }"
     :visible="visible"
     @update:visible="handleVisibleChange"
   >

@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   adminDashboardKeys,
+  adminInvoicesKeys,
   adminMutationInvalidationKeys,
   adminProjectsKeys,
   adminSettingsKeys,
+  normalizeEligibleEntriesQuery,
+  normalizeInvoiceListQuery,
   normalizeTimeReportQuery,
   reportsKeys,
   type AdminServerStateScope,
@@ -104,6 +107,98 @@ describe('admin-web query keys', () => {
     ]);
     expect(adminMutationInvalidationKeys.afterSettingsSave(scope)).toEqual([
       adminSettingsKeys.all(scope),
+    ]);
+  });
+
+  it('normalizes invoice list and eligible-entries queries', () => {
+    expect(
+      normalizeInvoiceListQuery({
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+        limit: 50,
+        page: 2,
+        projectId: 'project-1',
+        search: 'april',
+        status: 'draft',
+      }),
+    ).toEqual({
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      limit: 50,
+      page: 2,
+      projectId: 'project-1',
+      search: 'april',
+      status: 'draft',
+    });
+    expect(
+      normalizeEligibleEntriesQuery({
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+        projectId: 'project-1',
+      }),
+    ).toEqual({
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: 'project-1',
+    });
+    expect(normalizeEligibleEntriesQuery()).toEqual({
+      dateFrom: null,
+      dateTo: null,
+      projectId: null,
+    });
+  });
+
+  it('provides invoice keys with normalized queries and ids', () => {
+    const scopedKeys = [
+      'admin-web',
+      { role: 'admin', userId: 'user-1', workspaceId: 'workspace-1' },
+      'invoices',
+    ];
+
+    expect(adminInvoicesKeys.all(scope)).toEqual(scopedKeys);
+    expect(
+      adminInvoicesKeys.list(scope, { page: 2, status: 'sent' }),
+    ).toEqual([
+      ...scopedKeys,
+      'list',
+      {
+        dateFrom: null,
+        dateTo: null,
+        limit: null,
+        page: 2,
+        projectId: null,
+        search: null,
+        status: 'sent',
+      },
+    ]);
+    expect(adminInvoicesKeys.detail(scope, 'invoice-1')).toEqual([
+      ...scopedKeys,
+      'detail',
+      'invoice-1',
+    ]);
+    expect(adminInvoicesKeys.stats(scope)).toEqual([
+      ...scopedKeys,
+      'stats',
+    ]);
+    expect(
+      adminInvoicesKeys.eligibleEntries(scope, {
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+      }),
+    ).toEqual([
+      ...scopedKeys,
+      'eligible-entries',
+      {
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+        projectId: null,
+      },
+    ]);
+  });
+
+  it('invalidates invoice queries after invoice mutations', () => {
+    expect(adminMutationInvalidationKeys.afterInvoiceMutation(scope)).toEqual([
+      adminInvoicesKeys.all(scope),
     ]);
   });
 });

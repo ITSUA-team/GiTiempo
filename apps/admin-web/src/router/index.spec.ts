@@ -143,6 +143,7 @@ describe("admin router", () => {
     expect(router.hasRoute(routeNames.login)).toBe(true);
     expect(router.hasRoute(routeNames.dashboard)).toBe(true);
     expect(router.hasRoute(routeNames.reports)).toBe(true);
+    expect(router.hasRoute(routeNames.invoiceDetail)).toBe(true);
     expect(router.hasRoute(routeNames.invoices)).toBe(true);
     expect(router.hasRoute(routeNames.members)).toBe(true);
     expect(router.hasRoute(routeNames.addProject)).toBe(true);
@@ -173,6 +174,11 @@ describe("admin router", () => {
         allowedRoles: [WorkspaceRoles.Admin, WorkspaceRoles.PM],
         path: "/invoices",
         name: routeNames.invoices,
+      },
+      {
+        allowedRoles: [WorkspaceRoles.Admin, WorkspaceRoles.PM],
+        path: "/invoices/inv-1",
+        name: routeNames.invoiceDetail,
       },
       {
         allowedRoles: [WorkspaceRoles.Admin],

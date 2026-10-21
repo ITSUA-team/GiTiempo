@@ -14,13 +14,9 @@ import AutoComplete from 'primevue/autocomplete';
 import Select from 'primevue/select';
 
 import type { AdminSettingsFieldErrors } from '@/composables/settings/admin-settings-form';
+import type { CurrencyOption } from '@/lib/currencies';
 import type { SettingsTimeZoneOption } from '@/lib/time-zones';
 import SettingsCard from './SettingsCard.vue';
-
-interface CurrencyOption {
-	label: string;
-	value: string;
-}
 
 interface FutureSettingsField {
 	id: string;
