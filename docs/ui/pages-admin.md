@@ -64,7 +64,7 @@
 ### Create dialog (modal)
 
 - Triggered from the list page `Create invoice` action button.
-- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From workspace settings" when empty, falls back to workspace default), Currency (optional — PrimeVue `<Select>` with the same currency options as Settings → Currency, pre-selected with the workspace settings currency as soon as the dialog opens; placeholder "Auto" while unknown, falls back to workspace default on submit), Discount (optional, default 0), Notes (optional).
+- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From settings" when empty, falls back to workspace default), Currency (optional — PrimeVue `<Select>` with the same currency options as Settings → Currency, pre-selected with the workspace settings currency as soon as the dialog opens; placeholder "Auto" while unknown, falls back to workspace default on submit), Discount (optional, default 0), Notes (optional).
 - Calculated fields: Total hours and Total amount update live from `GET /invoices/eligible-entries` preview.
 - Expandable preview section: shows eligible time entries (count, total hours, computed amount). Collapsed by default; expands to a scrollable table with Date, User, Duration, Description.
 - Empty state: if preview returns 0 entries, show a warning banner ("No billable entries found for this project and date range"). Create button stays enabled — the API allows empty invoices.

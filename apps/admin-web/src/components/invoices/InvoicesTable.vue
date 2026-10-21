@@ -14,6 +14,7 @@ import {
 import {
   giTiempoDatePickerPt,
   giTiempoFieldWidthSelectPt,
+  giTiempoSelectPt,
 } from '@gitiempo/web-config/theme';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
@@ -76,11 +77,11 @@ const emit = defineEmits<{
 
 const columns: ManagementTableColumn[] = [
   { key: 'title', label: 'Title', width: 'fill' },
-  { key: 'project', label: 'Project', width: 160 },
-  { key: 'period', label: 'Period', width: 160 },
+  { key: 'project', label: 'Project', width: 200 },
+  { key: 'period', label: 'Period', width: 200 },
   { key: 'hours', label: 'Hours', width: 100 },
   { align: 'end', key: 'amount', label: 'Amount', width: 120 },
-  { key: 'status', label: 'Status', width: 130 },
+  { key: 'status', label: 'Status', width: 160 },
 ];
 
 // Local mirror of the period picker value. PrimeVue DatePicker with
@@ -169,6 +170,19 @@ function getProjectName(row: InvoicesTableRow): string {
   return row.project?.name ?? 'Workspace-wide';
 }
 
+const selectedProjectName = computed(() => {
+  const projectId = props.filters.projectId;
+  if (!projectId) return undefined;
+  return props.filterOptions.projects.find((p) => p.id === projectId)
+    ?.name;
+});
+
+const selectedPeriodLabel = computed(() => {
+  const { dateFrom, dateTo } = props.filters;
+  if (!dateFrom || !dateTo) return undefined;
+  return formatInvoicePeriod(dateFrom, dateTo);
+});
+
 function getMobileMetadataItems(row: InvoicesTableRow): Array<{
   label: string;
   value: string;
@@ -230,9 +244,10 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
         option-value="id"
         placeholder="All projects"
         show-clear
-        :pt="giTiempoFieldWidthSelectPt"
+        :pt="giTiempoSelectPt"
         aria-label="Filter invoices by project"
         data-testid="invoices-table-project-filter"
+        :title="selectedProjectName"
         @update:model-value="updateProjectFilter"
       />
     </div>
@@ -257,6 +272,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
           selection-mode="range"
           show-clear
           show-icon
+          :title="selectedPeriodLabel"
           @update:model-value="updatePeriodFilter"
         />
       </div>
@@ -361,7 +377,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
         >
           <div class="min-w-0 flex-1 px-3" />
 
-          <div class="w-[160px] pr-3">
+          <div class="w-[200px] pr-3">
             <Select
               :model-value="filters.projectId"
               :options="filterOptions.projects"
@@ -369,14 +385,15 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
               option-value="id"
               placeholder="All projects"
               show-clear
-              :pt="giTiempoFieldWidthSelectPt"
+              :pt="giTiempoSelectPt"
               aria-label="Filter invoices by project"
               data-testid="invoices-table-project-filter"
+              :title="selectedProjectName"
               @update:model-value="updateProjectFilter"
             />
           </div>
 
-          <div class="w-[160px] pr-3">
+          <div class="w-[200px] pr-3">
             <DatePicker
               :model-value="localDateRange"
               aria-label="Filter invoices by period"
@@ -390,6 +407,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
               selection-mode="range"
               show-clear
               show-icon
+              :title="selectedPeriodLabel"
               @update:model-value="updatePeriodFilter"
             />
           </div>
@@ -398,7 +416,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
 
           <div class="w-[120px] pr-3" />
 
-          <div class="w-[130px] pr-3">
+          <div class="w-[160px] pr-3">
             <Select
               :model-value="filters.status"
               :options="filterOptions.statuses"
@@ -431,22 +449,28 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
       </Column>
 
       <Column
-        style="width: 160px"
+        style="width: 200px"
         :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{
+          <span
+            class="text-text-muted block truncate text-[13px] font-normal"
+            :title="getProjectName(data)"
+          >{{
             getProjectName(data)
           }}</span>
         </template>
       </Column>
 
       <Column
-        style="width: 160px"
+        style="width: 200px"
         :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{
+          <span
+            class="text-text-muted block truncate text-[13px] font-normal"
+            :title="formatInvoicePeriod(data.dateFrom, data.dateTo)"
+          >{{
             formatInvoicePeriod(data.dateFrom, data.dateTo)
           }}</span>
         </template>
@@ -475,7 +499,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
       </Column>
 
       <Column
-        style="width: 130px"
+        style="width: 160px"
         :pt="adminTableColumnPt"
       >
         <template #body="{ data }">

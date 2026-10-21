@@ -278,7 +278,7 @@ describe('InvoiceCreateDialog', () => {
     expect(
       document.querySelector<HTMLInputElement>('#invoice-create-hourly-rate')
         ?.placeholder,
-    ).toBe('From workspace settings');
+    ).toBe('From settings');
     expect(getCurrencyLabelElement().textContent).toBe('Auto');
     expect(
       document.querySelector<HTMLTextAreaElement>('#invoice-create-notes')
