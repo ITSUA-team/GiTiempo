@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md for motivation. The invoice backend (`apps/api/src/invoices/`) and admin UI (`apps/admin-web/src/`) are complete from the `add-admin-invoices-ui` change. The current invoice totals computation sums raw time-entry durations and rounds only at the aggregate centihour level (`secondsToCentihours` at `invoices.service.ts` L896–898, `computeInvoiceTotals` at L914–938). No rounding-step column exists on `projects`, `invoices`, or `workspace_settings`. Project billing settings currently consist of `defaultBillableForTasks` on the `projects` table, edited through `ProjectEditForm.vue` (inline row expansion) with the shared form schema in `packages/web-shared/src/validation/project-forms.ts`. The invoice create dialog (`InvoiceCreateDialog.vue`) pre-fills rate and currency from the `eligibleEntriesResponseSchema` response using a touched-flag pattern.
+See proposal.md for motivation. The invoice backend (`apps/api/src/invoices/`) and admin UI (`apps/admin-web/src/`) are complete from the `add-admin-invoices-ui` change. The current invoice totals computation sums raw time-entry durations and rounds only at the aggregate centihour level (`secondsToCentihours` at `invoices.service.ts` L896–898, `computeInvoiceTotals` at L914–938). No rounding-step column exists on `workspace_settings`, `projects`, or `invoices`. Project billing settings currently consist of `defaultBillableForTasks` on the `projects` table, edited through `ProjectEditForm.vue` (inline row expansion) with the shared form schema in `packages/web-shared/src/validation/project-forms.ts`. The invoice create dialog (`InvoiceCreateDialog.vue`) pre-fills rate and currency from the `eligibleEntriesResponseSchema` response using a touched-flag pattern. Workspace settings (`workspace_settings` table) currently store `currency`, `defaultHourlyRate`, and `timeZone`, edited through the admin Settings page.
 
 The `admin-invoices-page` capability is being introduced by `add-admin-invoices-ui` (not yet archived). This change adds complementary requirements to the same capability.
 
@@ -10,15 +10,17 @@ The `admin-invoices-page` capability is being introduced by `add-admin-invoices-
 
 **Goals:**
 
-- Add a per-project `timeRoundingStepMinutes` billing setting editable in the admin project settings form.
-- Add a per-invoice `roundingStepMinutes` snapshot, auto-populated from the project at creation, overridable in the create dialog.
-- Apply per-entry ceiling rounding (up to the nearest step multiple in seconds) before summing, without modifying original time-entry records.
-- Surface the rounding step in the eligible-entries preview so the dialog pre-fills and live-updates correctly.
-- Display the snapshot rounding step on the invoice detail page.
+- Add a workspace-level `timeRoundingStepMinutes` setting (default 1, always active) editable in admin Settings.
+- Add a per-project `timeRoundingStepMinutes` that inherits from the workspace when null, overridable per-project in the admin project settings form and Add Project form.
+- Add a per-invoice `roundingStepMinutes` snapshot (always non-null), auto-populated from the effective project step at creation, overridable in the create dialog.
+- Apply per-entry ceiling rounding (up to the nearest step multiple in seconds) before summing, without modifying original time-entry records. Rounding is always active — minimum step is 1 minute.
+- Surface the effective rounding step in the eligible-entries preview so the dialog pre-fills and live-updates correctly, including dynamic update when the project selection changes.
+- Update .pen design frames for the project settings, Add Project, and admin Settings surfaces.
 
 **Non-Goals:**
 
-- No workspace-level default rounding step (the setting is project-scoped only; workspace-wide invoices default to no rounding).
+- No "no rounding" option — rounding is always active with a minimum step of 1 minute.
+- No display of the rounding step value on the invoice detail page — only the rounded `totalHours` result is visible to users.
 - No rounding step values outside 1–60 minutes.
 - No changes to the centihour-to-hours precision (`numeric(10,2)` totalHours) — per-entry rounding produces rounded seconds which feed into the existing `secondsToCentihours` → `computeInvoiceTotals` pipeline.
 - No changes to invoice update, delete, or status-transition behavior beyond the snapshot immutability declaration.
@@ -27,75 +29,94 @@ The `admin-invoices-page` capability is being introduced by `add-admin-invoices-
 
 ## Decisions
 
-### 1. Rounding step stored as nullable integer minutes, not seconds
+### 1. Three-level rounding step hierarchy: workspace → project → invoice
 
-Store `time_rounding_step_minutes` on `projects` and `rounding_step_minutes` on `invoices` as nullable `integer` columns. The value represents minutes (1–60) or null (no rounding). The backend converts to seconds (`step * 60`) for the per-entry rounding computation.
+The rounding step follows a three-level inheritance chain:
 
-**Rationale:** The user-facing concept is "minutes" ("крок округлення часу у хвилинах"). Storing minutes keeps the DB column and API contract intuitive. The seconds conversion is an internal computation detail. Nullable (rather than 0) clearly distinguishes "no rounding configured" from "round to 0 minutes" (which would be invalid).
+1. **Workspace settings** (`workspace_settings.timeRoundingStepMinutes`): NOT NULL, default 1. The workspace-wide default. Edited in admin Settings.
+2. **Project** (`projects.timeRoundingStepMinutes`): NULLABLE. When null, the project inherits the workspace value. When set (1–60), the project uses its own value. The effective project step = `project.timeRoundingStepMinutes ?? workspaceSettings.timeRoundingStepMinutes`.
+3. **Invoice** (`invoices.roundingStepMinutes`): NOT NULL, always a positive integer. Snapshot at creation time, resolved from: request body → effective project step → workspace setting. Immutable after creation.
 
-**Alternative:** Store seconds — rejected because it leaks the internal unit into the contract and UI.
+**Rationale:** The user wants workspace-level defaults that projects can inherit, with per-project and per-invoice overrides. This three-level chain is the minimal model that supports all three override points. Projects default to null (inherit) so changing the workspace default automatically propagates to all projects that haven't been explicitly overridden. The invoice snapshot is always non-null because rounding is always active.
 
-### 2. Per-entry rounding computed in the service layer, not in SQL
+**Alternative:** Store the workspace value on each project at creation time (snapshot) — rejected because changing the workspace default would not propagate to existing projects, defeating the purpose of a workspace-level default.
 
-In `InvoicesService.createInvoice` and `previewEligibleEntries`, after selecting eligible entries, compute `roundedSeconds` per entry in TypeScript: `Math.ceil(entry.durationSeconds / (stepSeconds)) * stepSeconds` when `step` is non-null, else `entry.durationSeconds`. Sum the rounded values and pass the total to the existing `computeInvoiceTotals`.
+### 2. Rounding step stored as integer minutes, always 1–60
 
-**Rationale:** The eligibility query already selects entries with `FOR UPDATE` and returns them to the service layer for linking. The per-entry rounding is a pure arithmetic transform on the already-fetched durations. Moving it to SQL would require a more complex query without benefit, and the existing `secondsToCentihours` conversion already happens in TypeScript.
+All three columns store integer minutes (1–60). The backend converts to seconds (`step * 60`) for the per-entry rounding computation. The workspace and invoice columns are NOT NULL (always active); the project column is nullable (null = inherit).
 
-**Alternative:** SQL `ceil(duration / step) * step` — rejected to keep the rounding logic co-located with the existing TypeScript computation.
+**Rationale:** The user-facing concept is "minutes" ("крок округлення часу у хвилинах"). Storing minutes keeps the DB column and API contract intuitive. The seconds conversion is an internal computation detail. Rounding is always active — there is no "no rounding" state — so the workspace and invoice columns are NOT NULL with a default of 1.
 
-### 3. Invoice rounding step is a snapshot, immutable after creation
+### 3. Per-entry rounding computed in the service layer, not in SQL
 
-The `roundingStepMinutes` field follows the same snapshot convention as `hourlyRate`, `currency`, `totalHours`, and `totalAmount`. It is set at creation time and never updated. The `updateInvoiceSchema` already rejects unknown fields (`.strict()`), so `roundingStepMinutes` is automatically excluded from update requests.
+In `InvoicesService.createInvoice` and `previewEligibleEntries`, after selecting eligible entries, compute `roundedSeconds` per entry in TypeScript: `Math.ceil(entry.durationSeconds / (stepSeconds)) * stepSeconds`. Sum the rounded values and pass the total to the existing `computeInvoiceTotals`. Since the step is always at least 1, every entry is always rounded (1-minute step means rounding up to the nearest 60 seconds).
 
-**Rationale:** Changing the rounding step after creation would require recomputing totals, which the existing spec explicitly forbids ("Update does not recompute totals"). Keeping it immutable preserves the snapshot integrity and the audit trail.
+**Rationale:** The eligibility query already selects entries with `FOR UPDATE` and returns them to the service layer for linking. The per-entry rounding is a pure arithmetic transform on the already-fetched durations. Moving it to SQL would require a more complex query without benefit.
 
-### 4. Preview endpoint accepts optional `roundingStepMinutes` query param
+### 4. Invoice snapshot is always non-null, immutable after creation
 
-The `GET /invoices/eligible-entries` endpoint gains an optional `roundingStepMinutes` query parameter. When omitted, the preview uses the scoped project's `timeRoundingStepMinutes` (if non-null) and returns it as `defaultRoundingStepMinutes`. When supplied, the preview applies that step and still returns the project's default in `defaultRoundingStepMinutes`.
+The `roundingStepMinutes` field follows the same snapshot convention as `hourlyRate`, `currency`, `totalHours`, and `totalAmount`. It is set at creation time (always a positive integer) and never updated. The `updateInvoiceSchema` already rejects unknown fields (`.strict()`), so `roundingStepMinutes` is automatically excluded from update requests.
 
-**Rationale:** The create dialog needs to (a) pre-fill from the project default, and (b) live-update the preview when the user overrides the step. A single query parameter supports both flows. The `defaultRoundingStepMinutes` in the response enables the touched-flag pre-fill pattern (same as rate/currency).
+**Rationale:** Changing the rounding step after creation would require recomputing totals, which the existing spec explicitly forbids. Since rounding is always active, the snapshot is never null.
 
-### 5. Create dialog uses the existing touched-flag pattern for pre-fill
+### 5. Preview endpoint returns always-non-null `defaultRoundingStepMinutes`
 
-Add a `roundingStepMinutes` ref and a `roundingStepTouched` flag to `InvoiceCreateDialog.vue`, mirroring the existing `rateTouched` / `currencyTouched` pattern. The preview sync watcher pre-fills `roundingStepMinutes` from `preview.defaultRoundingStepMinutes` only while `!roundingStepTouched`. The preview query includes `roundingStepMinutes` when the user has set a value, triggering a re-fetch when the step changes.
+The `GET /invoices/eligible-entries` endpoint gains an optional `roundingStepMinutes` query parameter. When omitted, the preview uses the scoped project's effective rounding step (project value or workspace default) and returns it as `defaultRoundingStepMinutes`. For workspace-wide previews (no project), it returns the workspace's `timeRoundingStepMinutes`. When supplied, the preview applies that step and still returns the effective default in `defaultRoundingStepMinutes`.
 
-**Rationale:** This is the established pattern in the dialog (L119–156). Reusing it ensures user edits are never overwritten by fresh preview responses and keeps the implementation consistent.
+**Rationale:** The create dialog needs to (a) pre-fill from the project/workspace default, and (b) live-update the preview when the user overrides the step. Since rounding is always active, the default is never null.
 
-### 6. Project settings form: rounding step as a Select with presets
+### 6. Create dialog dynamically updates rounding step when project changes
 
-Add a `Time rounding step (minutes)` PrimeVue `<Select>` to `ProjectEditForm.vue` with options: No rounding (null), 1, 5, 10, 15, 30, 60. The shared form schema `projectEditFormSchema` gains an optional nullable integer field. The save flow in `useProjectEditActions.ts` passes `timeRoundingStepMinutes` into the `updateProject` payload alongside `defaultBillableForTasks` and `visibility`.
+When the user selects or changes the project in the create dialog, the preview request is re-triggered (it already re-fetches on project change). The preview response includes `defaultRoundingStepMinutes` (the new project's effective step), and the dialog pre-fills the rounding step field with this value — unless the user has manually touched the field (`roundingStepTouched` flag), in which case the user's value is preserved.
 
-**Rationale:** A fixed preset list covers all practical billing increments and prevents invalid free-text entry. The Select control is consistent with the existing `Visibility` Select in the same form. The docs (`pages-admin.md` L113) describe the project settings row as a single line — the new control is added to that line.
+**Rationale:** The user wants the rounding step to "inherit from the project" dynamically. Since the dialog already re-fetches the preview when the project changes, the `defaultRoundingStepMinutes` in the new response naturally provides the new project's effective step. The touched-flag pattern (same as rate/currency) ensures user overrides are respected.
 
-**Alternative:** InputNumber with min/max validation — rejected because a preset Select is simpler and covers the practical range without validation edge cases.
+### 7. Project settings Select: "Inherit from workspace" as first option
 
-### 7. Add Project form also includes the rounding step
+The project settings form and Add Project form show a PrimeVue `<Select>` with "Inherit from workspace (N min)" as the first option (where N is the current workspace default), followed by explicit values 1, 5, 10, 15, 30, 60. Selecting "Inherit" stores `null` on the project. Selecting an explicit value stores that integer.
 
-The Add Project page (`/projects/new`) gains the same `Time rounding step (minutes)` Select, defaulting to No rounding (null). The `createProjectSchema` already accepts the new optional field.
+**Rationale:** The user wants projects to inherit from the workspace by default. The "Inherit from workspace (N min)" label makes the inheritance explicit and shows the current effective value, so the user understands what will happen without checking the workspace settings separately.
 
-**Rationale:** Consistent with the `Default billable for new tasks` precedent — both project creation and project settings expose the same billing metadata.
+### 8. Admin Settings page: workspace rounding step Select
 
-### 8. Invoice detail page displays the snapshot rounding step
+The admin Settings page gains a `Time rounding step (minutes)` PrimeVue `<Select>` in the workspace settings card, near the Default hourly rate / Currency row. Options: 1, 5, 10, 15, 30, 60. Default 1. Saved through `PATCH /workspace/settings`.
 
-Add a read-only "Rounding step" field to the invoice detail summary in `InvoiceDetailView.vue`, showing the snapshot value (e.g. "5 min" or "None"). This is display-only, sourced from the invoice response's `roundingStepMinutes`.
+**Rationale:** The workspace settings card already has editable billing-related fields (rate, currency, time zone). The rounding step is a billing setting that belongs there. A Select with presets is simpler and more consistent than a free-text input.
 
-**Rationale:** The detail page already displays snapshot rate, currency, totals, and discount. The rounding step is part of the same snapshot and should be visible for audit purposes.
+### 9. Invoice detail does NOT display the rounding step
+
+The invoice detail page shows `totalHours` (the rounded result) but does NOT show the `roundingStepMinutes` value. The rounding step is an internal computation parameter, not user-facing invoice metadata.
+
+**Rationale:** The user explicitly requested that only the result (rounded time) be visible, not the rounding parameter. This keeps the invoice detail focused on billing outcomes.
+
+### 10. .pen design: three frames updated with responsive-aware controls
+
+Three .pen frames are updated:
+- **Admin Projects inline settings** (`UD9Ym`): `roundingStepWrap` Select added to the `settingsRow` after the billable default, before the archive button. Shows "Inherit from workspace (1 min)" as default.
+- **Add Project form** (`uIbaa`): `projectDialogField` for "Time rounding step" added after the billable field, following the existing form field pattern.
+- **Admin Settings form** (`XtiC1`): `roundingStepField` added to the `workspaceSection` after the rate field, matching the existing field styling.
+
+No mobile variants exist for these frames in the current .pen. The controls follow the existing desktop patterns and will be implemented responsively in code using the established admin-web responsive patterns (PrimeVue Select adapts to mobile automatically).
+
+**Rationale:** The .pen frames are the parity checklist for implementation. Adding the controls now ensures the implementation has an approved visual reference. The controls match existing styling patterns for consistency.
 
 ## Risks / Trade-offs
 
-- **Centihour precision loss for small steps:** With a 5-minute step, one 5-min entry = 300 sec → `secondsToCentihours(300)` = `Math.round(8.33)` = 8 centihours = 0.08h, not 0.0833h. This is the existing 2-decimal `totalHours` precision limitation, not introduced by this change. → Mitigation: document in the spec that the centihour conversion is unchanged; a future change could increase `totalHours` precision if needed.
-- **Dual creation of `admin-invoices-page` capability:** Both `add-admin-invoices-ui` and this change introduce `admin-invoices-page` as a new capability with `ADDED Requirements`. → Mitigation: when archiving, archive `add-admin-invoices-ui` first so the main spec exists; then this change's `ADDED Requirements` merge into the existing spec. Requirement names do not overlap.
-- **Migration on existing invoices:** Existing invoice rows receive `rounding_step_minutes: null`, meaning their totals are unchanged (raw-sum behavior). → No risk to existing data.
+- **Centihour precision loss for small steps:** With a 1-minute step, one 60s entry = 60 sec → `secondsToCentihours(60)` = `Math.round(1.67)` = 2 centihours = 0.02h. The true value is 0.0167h. This is the existing 2-decimal `totalHours` precision limitation, not introduced by this change. → Mitigation: document in the spec that the centihour conversion is unchanged; a future change could increase `totalHours` precision if needed.
+- **Settings row width in project settings:** The inline settings row already contains members autocomplete, visibility, billable, archive, cancel, save. Adding the rounding step Select makes the row tight at 1100px. → Mitigation: the members autocomplete is `fill_container` and will shrink; if it becomes too tight, the implementation can move action buttons to a second row or shorten the "Inherit from workspace" label.
+- **Workspace default change propagation:** Changing the workspace default affects all projects with null `timeRoundingStepMinutes`. This is intentional (inheritance) but could surprise users who expect project settings to be frozen. → Mitigation: the "Inherit from workspace (N min)" label in the project Select makes the dynamic relationship explicit.
+- **Dual creation of `admin-invoices-page` capability:** Both `add-admin-invoices-ui` and this change introduce `admin-invoices-page` as a new capability. → Mitigation: when archiving, archive `add-admin-invoices-ui` first so the main spec exists; then this change's `ADDED Requirements` merge into the existing spec. Requirement names do not overlap.
+- **Migration on existing data:** Existing `workspace_settings` rows receive `time_rounding_step_minutes: 1`; existing `projects` rows receive `time_rounding_step_minutes: null` (inherit); existing `invoices` rows receive `rounding_step_minutes: 1`. Invoice totals are not recomputed (snapshot values remain as originally captured). → No risk to existing invoice data; existing projects will start inheriting the workspace default of 1 minute.
 
 ## Migration Plan
 
-1. **Drizzle migration:** Add `time_rounding_step_minutes` (nullable integer, CHECK 1–60 or null) to `projects`; add `rounding_step_minutes` (nullable integer, CHECK 1–60 or null) to `invoices`. Both default to null for existing rows.
-2. **Shared contracts:** Extend Zod schemas in `packages/shared/src/contracts/invoices.ts` and `projects.ts`.
-3. **Backend service:** Update `InvoicesService.createInvoice` and `previewEligibleEntries` with per-entry rounding logic; update `projects.service.ts` create/update to pass through the new field.
+1. **Drizzle migration:** Add `time_rounding_step_minutes` (NOT NULL integer, default 1, CHECK 1–60) to `workspace_settings`; add `time_rounding_step_minutes` (nullable integer, CHECK 1–60 or null) to `projects` with backfill null; add `rounding_step_minutes` (NOT NULL integer, default 1, CHECK 1–60) to `invoices` with backfill 1.
+2. **Shared contracts:** Extend Zod schemas in `packages/shared/src/contracts/invoices.ts`, `projects.ts`, and workspace settings contracts.
+3. **Backend service:** Update `InvoicesService.createInvoice` and `previewEligibleEntries` with per-entry rounding logic and effective step resolution; update `projects.service.ts` and `workspace-settings.service.ts` create/update to pass through the new field.
 4. **OpenAPI export:** Re-run `pnpm openapi:export` to regenerate the spec with the new fields.
-5. **Frontend forms:** Update `ProjectEditForm.vue`, the Add Project form, `InvoiceCreateDialog.vue`, and `InvoiceDetailView.vue`.
-6. **Rollback:** The migration is additive (nullable columns). Rolling back drops the columns; no data loss in existing rows since the columns are nullable and defaulted.
+5. **Frontend forms:** Update admin Settings page, `ProjectEditForm.vue`, Add Project form, `InvoiceCreateDialog.vue`.
+6. **Rollback:** The migration is additive (nullable or defaulted columns). Rolling back drops the columns; no data loss in existing rows since the columns are nullable or defaulted.
 
 ## Open Questions
 
-None. All material decisions are resolved. The 1–60 minute range, nullable-for-no-rounding semantics, and project-scoped default (no workspace-level default) are recorded as assumptions in the proposal.
+None. All material decisions are resolved. The 1–60 minute range, always-active rounding (no "no rounding"), workspace-level default with project inheritance, and non-display of the rounding step on invoice detail are all settled.

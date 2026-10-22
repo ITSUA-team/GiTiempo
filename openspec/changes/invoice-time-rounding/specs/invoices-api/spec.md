@@ -4,7 +4,7 @@
 
 ### Requirement: Invoice Can Be Created From Eligible Time Entries
 
-The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `pm` users that creates an invoice from a validated body containing a title, billing date range, optional project scope, hourly rate, optional discount, optional notes, and an optional `roundingStepMinutes`. When `roundingStepMinutes` is supplied it MUST be a positive integer between 1 and 60; when omitted and the invoice is scoped to a project with a configured `timeRoundingStepMinutes`, the backend MUST use the project's value as the snapshot rounding step; when omitted and no project default is available (or the project default is null), the snapshot rounding step MUST be null, meaning no per-entry rounding is applied.
+The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `pm` users that creates an invoice from a validated body containing a title, billing date range, optional project scope, hourly rate, optional discount, optional notes, and an optional `roundingStepMinutes` (positive integer between 1 and 60). Rounding is always active — there is no no-rounding option — so the invoice's `roundingStepMinutes` snapshot MUST always be a positive integer between 1 and 60 and MUST never be null. When `roundingStepMinutes` is supplied, the backend MUST use that value as the snapshot. When it is omitted, the backend MUST resolve the snapshot from the scoped project's effective rounding step — the project's own `timeRoundingStepMinutes` when set, otherwise the workspace's `timeRoundingStepMinutes` — and for workspace-wide invoices from the workspace's `timeRoundingStepMinutes`.
 
 #### Scenario: Admin creates an invoice across a project and date range
 
@@ -59,31 +59,33 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 - **WHEN** the shared schema validates the body
 - **THEN** the request is rejected
 
-#### Scenario: Rounding step defaults from project when omitted
+#### Scenario: Rounding step defaults from the project's effective step when omitted
 
 - **GIVEN** the create body omits `roundingStepMinutes`
 - **AND** the invoice is scoped to a project whose `timeRoundingStepMinutes` is set to 5
 - **WHEN** the backend creates the invoice
 - **THEN** the stored `roundingStepMinutes` snapshot is 5
 
-#### Scenario: Rounding step defaults to null when project has none
+#### Scenario: Rounding step defaults from the workspace setting when the project inherits
 
 - **GIVEN** the create body omits `roundingStepMinutes`
 - **AND** the invoice is scoped to a project whose `timeRoundingStepMinutes` is null
+- **AND** the workspace's `timeRoundingStepMinutes` is 15
 - **WHEN** the backend creates the invoice
-- **THEN** the stored `roundingStepMinutes` snapshot is null
+- **THEN** the stored `roundingStepMinutes` snapshot is 15
 
-#### Scenario: Rounding step defaults to null for workspace-wide invoices
+#### Scenario: Rounding step defaults from the workspace setting for workspace-wide invoices
 
 - **GIVEN** the create body omits `roundingStepMinutes`
 - **AND** the create body has no `projectId`
+- **AND** the workspace's `timeRoundingStepMinutes` is 10
 - **WHEN** the backend creates the invoice
-- **THEN** the stored `roundingStepMinutes` snapshot is null
+- **THEN** the stored `roundingStepMinutes` snapshot is 10
 
-#### Scenario: Explicit rounding step overrides project default
+#### Scenario: Explicit rounding step overrides the project default
 
 - **GIVEN** the create body carries `roundingStepMinutes: 15`
-- **AND** the invoice is scoped to a project whose `timeRoundingStepMinutes` is 5
+- **AND** the invoice is scoped to a project whose effective rounding step is 5
 - **WHEN** the backend creates the invoice
 - **THEN** the stored `roundingStepMinutes` snapshot is 15
 - **AND** the project's `timeRoundingStepMinutes` is not changed
@@ -96,7 +98,7 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 
 ### Requirement: Invoice Totals Use Snapshot Values
 
-The backend MUST compute invoice totals as the sum of tracked hours of selected entries multiplied by the invoice hourly rate, less the optional percentage discount, and MUST store `hourly_rate`, `currency`, `total_hours`, `total_amount`, and `rounding_step_minutes` as snapshot values at creation time. When `rounding_step_minutes` is a positive integer, the backend MUST round each eligible time entry's duration up to the nearest multiple of the step (in seconds) before summing; when `rounding_step_minutes` is null, the backend MUST sum raw entry durations as before. Original time-entry records MUST NOT be modified by the rounding computation.
+The backend MUST compute invoice totals as the sum of tracked hours of selected entries multiplied by the invoice hourly rate, less the optional percentage discount, and MUST store `hourly_rate`, `currency`, `total_hours`, `total_amount`, and `rounding_step_minutes` as snapshot values at creation time. Because the snapshot rounding step is always a positive integer between 1 and 60, the backend MUST always apply per-entry ceiling rounding: each eligible time entry's duration is rounded up to the nearest multiple of the step (in seconds) before the rounded durations are summed. Per-entry rounding is always active — there is no raw-sum mode — and with the minimum step of 1 minute each entry is still rounded up to whole minutes. Original time-entry records MUST NOT be modified by the rounding computation.
 
 #### Scenario: Totals reflect the creation snapshot
 
@@ -142,13 +144,13 @@ The backend MUST compute invoice totals as the sum of tracked hours of selected 
 - **WHEN** the backend applies per-entry rounding
 - **THEN** that entry's rounded duration remains 300 seconds
 
-#### Scenario: Null rounding step preserves raw-sum behavior
+#### Scenario: Minimum step still rounds each entry up to whole minutes
 
-- **GIVEN** an invoice is created with `roundingStepMinutes: null`
+- **GIVEN** an invoice is created with `roundingStepMinutes: 1`
 - **AND** two eligible time entries have durations of 60 seconds and 90 seconds
 - **WHEN** the backend computes the total tracked seconds
-- **THEN** the summed total is 150 seconds
-- **AND** no per-entry rounding is applied
+- **THEN** the 60-second entry remains 60 seconds and the 90-second entry is rounded up to 120 seconds
+- **AND** the summed total is 180 seconds (3 minutes)
 
 #### Scenario: Computed total exceeding the storage limit is rejected
 
@@ -159,12 +161,12 @@ The backend MUST compute invoice totals as the sum of tracked hours of selected 
 
 ### Requirement: Invoice Details Can Be Read
 
-The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and `pm` users that returns a single invoice with its snapshot fields (including `roundingStepMinutes`), status, and the set of linked time entries.
+The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and `pm` users that returns a single invoice with its snapshot fields (including the non-null `roundingStepMinutes` snapshot), status, and the set of linked time entries.
 
 #### Scenario: Admin reads any workspace invoice
 
 - **WHEN** an admin requests `GET /invoices/:id` for an invoice in their workspace
-- **THEN** the backend returns the invoice detail including snapshot totals, `roundingStepMinutes`, and linked entries
+- **THEN** the backend returns the invoice detail including snapshot totals, the non-null `roundingStepMinutes` snapshot, and linked entries
 
 #### Scenario: PM cannot read an unassigned private-project invoice
 
@@ -183,7 +185,7 @@ The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and
 
 ### Requirement: Invoice Can Be Updated
 
-The backend MUST expose a protected `PATCH /invoices/:id` endpoint for `admin` and `pm` users that updates editable fields — status, notes, and other fields allowed by the shared update contract — without recalculating snapshot totals, changing the `roundingStepMinutes` snapshot, or changing the linked time-entry set.
+The backend MUST expose a protected `PATCH /invoices/:id` endpoint for `admin` and `pm` users that updates editable fields — status, notes, and other fields allowed by the shared update contract — without recalculating snapshot totals, changing the non-null `roundingStepMinutes` snapshot, or changing the linked time-entry set. The `roundingStepMinutes` snapshot is immutable after creation and cannot be changed by an update.
 
 The `sent` status is a semantic marker: the backend does not send an email, generate a PDF, or notify external systems when an invoice transitions to `sent`. Email delivery and PDF generation are deferred to a future milestone. The UI labels this action "Mark as sent" to make the manual nature of the transition clear.
 
@@ -223,6 +225,13 @@ The allowed forward transitions are: `draft → sent`, `draft → paid`, and `se
 - **WHEN** an update request changes a non-total field
 - **THEN** the stored `total_hours`, `total_amount`, and `roundingStepMinutes` remain as originally captured
 
+#### Scenario: Rounding step snapshot is not mutable via update
+
+- **GIVEN** an invoice exists with a `roundingStepMinutes` snapshot of 5
+- **WHEN** an update request carries `roundingStepMinutes: 15`
+- **THEN** the backend rejects the request
+- **AND** the stored `roundingStepMinutes` snapshot remains 5
+
 #### Scenario: PM updates only assigned-project invoices
 
 - **WHEN** a PM submits an update for an invoice whose project is a private project the PM is not assigned to
@@ -235,7 +244,7 @@ The allowed forward transitions are: `draft → sent`, `draft → paid`, and `se
 
 ### Requirement: Eligible Time Entries Can Be Previewed Before Invoice Creation
 
-The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint for `admin` and `pm` users that returns the set of completed, billable, not-yet-invoiced time entries matching a given date range and optional project scope, along with the computed total hours — without creating an invoice or modifying any data. The endpoint MUST accept an optional `roundingStepMinutes` query parameter; when supplied, the computed total hours MUST reflect per-entry ceiling rounding using that step. When `roundingStepMinutes` is omitted, the endpoint MUST return the scoped project's `timeRoundingStepMinutes` as `defaultRoundingStepMinutes` so the UI can pre-fill the field, and the total hours MUST use that project default if it is non-null. The response MUST include `defaultRoundingStepMinutes` (nullable) alongside the existing `defaultHourlyRate` and `defaultCurrency`.
+The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint for `admin` and `pm` users that returns the set of completed, billable, not-yet-invoiced time entries matching a given date range and optional project scope, along with the computed total hours — without creating an invoice or modifying any data. Rounding is always active: the endpoint MUST accept an optional `roundingStepMinutes` query parameter (positive integer between 1 and 60); when supplied, the computed total hours MUST reflect per-entry ceiling rounding using that step. When `roundingStepMinutes` is omitted, the total hours MUST reflect per-entry ceiling rounding with the effective default step: for project-scoped previews the project's `timeRoundingStepMinutes` when set, otherwise the workspace's `timeRoundingStepMinutes`; for workspace-wide previews the workspace's `timeRoundingStepMinutes`. The response MUST always include a non-null `defaultRoundingStepMinutes` — the effective default step — alongside the existing `defaultHourlyRate` and `defaultCurrency`.
 
 #### Scenario: Admin previews eligible entries across a date range
 
@@ -269,6 +278,7 @@ The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint fo
 
 - **WHEN** no time entries match the eligibility rules for the requested scope
 - **THEN** the backend returns `{ count: 0, totalHours: 0, entries: [] }`
+- **AND** the response still includes a non-null `defaultRoundingStepMinutes`
 
 #### Scenario: Preview does not modify data
 
@@ -283,23 +293,32 @@ The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint fo
 - **WHEN** a request carries `dateTo` earlier than `dateFrom`
 - **THEN** the backend rejects with a validation error
 
-#### Scenario: Preview returns project default rounding step
+#### Scenario: Preview returns the project's effective rounding step
 
 - **GIVEN** the preview is scoped to a project with `timeRoundingStepMinutes` set to 10
 - **WHEN** the request omits `roundingStepMinutes`
 - **THEN** the response includes `defaultRoundingStepMinutes: 10`
 - **AND** the `totalHours` reflect per-entry rounding with a 10-minute step
 
+#### Scenario: Preview returns the workspace default when the project inherits
+
+- **GIVEN** the preview is scoped to a project whose `timeRoundingStepMinutes` is null
+- **AND** the workspace's `timeRoundingStepMinutes` is 5
+- **WHEN** the request omits `roundingStepMinutes`
+- **THEN** the response includes `defaultRoundingStepMinutes: 5`
+- **AND** the `totalHours` reflect per-entry rounding with a 5-minute step
+
+#### Scenario: Preview returns the workspace step for workspace-wide previews
+
+- **GIVEN** an admin requests a workspace-wide preview without a `projectId`
+- **AND** the workspace's `timeRoundingStepMinutes` is 10
+- **WHEN** the request omits `roundingStepMinutes`
+- **THEN** the response includes `defaultRoundingStepMinutes: 10`
+- **AND** the `totalHours` reflect per-entry rounding with a 10-minute step
+
 #### Scenario: Preview applies explicit rounding step override
 
-- **GIVEN** the preview is scoped to a project with `timeRoundingStepMinutes` set to 10
+- **GIVEN** the preview is scoped to a project with an effective rounding step of 10
 - **WHEN** the request carries `roundingStepMinutes=15`
 - **THEN** the `totalHours` reflect per-entry rounding with a 15-minute step
 - **AND** the response still includes `defaultRoundingStepMinutes: 10`
-
-#### Scenario: Preview without project returns null default rounding step
-
-- **GIVEN** an admin requests a workspace-wide preview without a `projectId`
-- **WHEN** the request omits `roundingStepMinutes`
-- **THEN** the response includes `defaultRoundingStepMinutes: null`
-- **AND** the `totalHours` are computed without per-entry rounding
