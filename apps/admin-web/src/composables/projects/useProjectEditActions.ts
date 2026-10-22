@@ -74,6 +74,7 @@ export function useProjectEditActions({
     try {
       savedProject = await client.updateProject(project.id, {
         defaultBillableForTasks: input.defaultBillableForTasks,
+        timeRoundingStepMinutes: input.timeRoundingStepMinutes,
         visibility: input.visibility,
       });
 

@@ -61,16 +61,27 @@ const emit = defineEmits<{
 
 const WORKSPACE_WIDE_PROJECT_VALUE = '';
 
+const ROUNDING_STEP_OPTIONS = [
+  { label: '1 min', value: 1 },
+  { label: '5 min', value: 5 },
+  { label: '10 min', value: 10 },
+  { label: '15 min', value: 15 },
+  { label: '30 min', value: 30 },
+  { label: '60 min', value: 60 },
+];
+
 const title = ref('');
 const selectedProjectId = ref<string | null>(null);
 const dateRange = ref<Date[] | null>(null);
 const hourlyRate = ref<number | null>(null);
 const currency = ref('');
 const discountPercent = ref<number | null>(0);
+const roundingStepMinutes = ref<number>(1);
 const notes = ref('');
 
 const rateTouched = ref(false);
 const currencyTouched = ref(false);
+const roundingStepTouched = ref(false);
 const validationTriggered = ref(false);
 const previewExpanded = ref(false);
 
@@ -82,6 +93,9 @@ const previewQuery = computed<EligibleEntriesQuery | null>(() => {
     dateFrom: getLocalDateKey(dates[0]),
     dateTo: getLocalDateKey(dates[1]),
     projectId: selectedProjectId.value || undefined,
+    ...(roundingStepTouched.value
+      ? { roundingStepMinutes: roundingStepMinutes.value }
+      : {}),
   };
 });
 
@@ -108,9 +122,11 @@ watch(
     hourlyRate.value = null;
     currency.value = '';
     discountPercent.value = 0;
+    roundingStepMinutes.value = 1;
     notes.value = '';
     rateTouched.value = false;
     currencyTouched.value = false;
+    roundingStepTouched.value = false;
     validationTriggered.value = false;
     previewExpanded.value = false;
   },
@@ -129,11 +145,11 @@ watch(
   { immediate: true },
 );
 
-// Sync rate/currency defaults from every fresh preview response until
-// the user edits those fields; after a manual change the entered values win.
-// Relying on the touched flags (instead of also checking the field is empty)
-// keeps the dialog in sync when workspace settings change between opens even
-// if vue-query serves a cached preview response first.
+// Sync rate/currency/rounding defaults from every fresh preview response
+// until the user edits those fields; after a manual change the entered
+// values win. Relying on the touched flags (instead of also checking the
+// field is empty) keeps the dialog in sync when workspace settings change
+// between opens even if vue-query serves a cached preview response first.
 watch(
   [preview, () => props.visible],
   ([data, visible]) => {
@@ -150,6 +166,9 @@ watch(
       data.defaultCurrency !== null
     ) {
       currency.value = data.defaultCurrency;
+    }
+    if (!roundingStepTouched.value) {
+      roundingStepMinutes.value = data.defaultRoundingStepMinutes;
     }
   },
   { immediate: true },
@@ -247,6 +266,11 @@ function handleDiscountUpdate(value: number | null): void {
   discountPercent.value = value ?? 0;
 }
 
+function handleRoundingStepUpdate(value: number | undefined): void {
+  roundingStepMinutes.value = value ?? 1;
+  roundingStepTouched.value = true;
+}
+
 function handleCancel(): void {
   emit('update:visible', false);
 }
@@ -273,6 +297,7 @@ async function handleCreate(): Promise<void> {
       currency: currency.value.trim().toUpperCase() || undefined,
       discountPercent: discountPercent.value ?? 0,
       notes: notes.value.trim() || undefined,
+      roundingStepMinutes: roundingStepMinutes.value,
     });
     emit('created', invoice);
     emit('update:visible', false);
@@ -431,6 +456,28 @@ async function handleCreate(): Promise<void> {
             input-class="h-[38px] w-full"
             class="w-full"
             @update:model-value="handleDiscountUpdate"
+          />
+        </div>
+      </div>
+
+      <div
+        data-testid="invoice-create-row-rounding"
+        class="flex flex-col gap-4 sm:flex-row sm:gap-3"
+      >
+        <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
+          <label
+            for="invoice-create-rounding-step"
+            class="text-text-dark text-[13px] font-medium"
+          >Rounding step</label>
+          <Select
+            input-id="invoice-create-rounding-step"
+            :model-value="roundingStepMinutes"
+            :options="ROUNDING_STEP_OPTIONS"
+            option-label="label"
+            option-value="value"
+            class="w-full"
+            :pt="giTiempoFieldWidthSelectPt"
+            @update:model-value="handleRoundingStepUpdate"
           />
         </div>
       </div>

@@ -2,7 +2,9 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import Select from 'primevue/select';
+import { createTestQueryPlugin } from '@/test/query-client';
 import type * as VueRouter from 'vue-router';
+import type { WorkspaceSettingsResponse } from '@gitiempo/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuthStore } from '@/stores/auth';
@@ -11,6 +13,7 @@ const testMocks = vi.hoisted(() => ({
   assignMember: vi.fn(),
   createProject: vi.fn(),
   errorToast: vi.fn(),
+  getWorkspaceSettings: vi.fn(),
   importGitHubProjects: vi.fn(),
   listMembers: vi.fn(),
   routerPush: vi.fn(),
@@ -25,6 +28,12 @@ vi.mock('vue-router', async (importOriginal) => {
     useRouter: () => ({ push: testMocks.routerPush }),
   };
 });
+
+vi.mock('@/services/admin-settings-client', () => ({
+  getAdminSettingsClient: () => ({
+    getWorkspaceSettings: testMocks.getWorkspaceSettings,
+  }),
+}));
 
 vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
@@ -58,6 +67,22 @@ window.matchMedia ??= ((query: string) => ({
   removeListener: () => {},
 })) as unknown as typeof window.matchMedia;
 
+function createWorkspaceSettingsFixture(
+  overrides: Partial<WorkspaceSettingsResponse> = {},
+): WorkspaceSettingsResponse {
+  return {
+    createdAt: '2026-01-01T00:00:00.000Z',
+    currency: 'USD',
+    defaultHourlyRate: null,
+    id: '77777777-7777-4777-8777-777777777777',
+    timeRoundingStepMinutes: 5,
+    timeZone: 'UTC',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    workspaceId: 'workspace-1',
+    ...overrides,
+  };
+}
+
 function mountWithRealForm() {
   const pinia = createPinia();
   setActivePinia(pinia);
@@ -66,7 +91,7 @@ function mountWithRealForm() {
   return mount(AddProjectView, {
     attachTo: document.body,
     global: {
-      plugins: [pinia, [PrimeVue, {}]],
+      plugins: [pinia, [PrimeVue, {}], createTestQueryPlugin()],
       stubs: {
         GitHubProjectFields: {
           props: ['availability', 'disabled', 'modelValue', 'scanning'],
@@ -111,6 +136,9 @@ describe('AddProjectView with the real PrimeVue form', () => {
     vi.clearAllMocks();
     testMocks.listMembers.mockResolvedValue([]);
     testMocks.createProject.mockResolvedValue({ id: 'project-1' });
+    testMocks.getWorkspaceSettings.mockResolvedValue(
+      createWorkspaceSettingsFixture(),
+    );
   });
 
   it('creates the project the visible name says', async () => {
@@ -123,6 +151,7 @@ describe('AddProjectView with the real PrimeVue form', () => {
     expect(testMocks.createProject).toHaveBeenCalledWith({
       defaultBillableForTasks: true,
       name: 'Customer Portal',
+      timeRoundingStepMinutes: null,
       visibility: 'private',
     });
   });
@@ -163,6 +192,7 @@ describe('AddProjectView with the real PrimeVue form', () => {
     expect(testMocks.createProject).toHaveBeenCalledWith({
       defaultBillableForTasks: true,
       name: 'Second Try',
+      timeRoundingStepMinutes: null,
       visibility: 'private',
     });
   });
@@ -186,5 +216,27 @@ describe('AddProjectView with the real PrimeVue form', () => {
 
     expect(manager.props('showClear')).toBe(true);
     expect(manager.props('placeholder')).toBe('Unassigned');
+  });
+
+  it('renders the time rounding step with inherit from the workspace default', async () => {
+    const wrapper = mountWithRealForm();
+    await flushPromises();
+
+    const rounding = wrapper.findAllComponents(Select).find(
+      (select) => select.props('name') === 'timeRoundingStepMinutes',
+    )!;
+
+    expect(rounding.props('options')).toEqual([
+      { label: 'Inherit from workspace (5 min)', value: null },
+      { label: '1 min', value: 1 },
+      { label: '5 min', value: 5 },
+      { label: '10 min', value: 10 },
+      { label: '15 min', value: 15 },
+      { label: '30 min', value: 30 },
+      { label: '60 min', value: 60 },
+    ]);
+    expect(wrapper.text()).toContain(
+      'New time entries are rounded to this step. Inherit follows the workspace default (5 min).',
+    );
   });
 });

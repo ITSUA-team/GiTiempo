@@ -1,16 +1,19 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import type * as VueRouter from 'vue-router';
+import type { WorkspaceSettingsResponse } from '@gitiempo/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '@gitiempo/web-shared/http';
 import { useAuthStore } from '@/stores/auth';
 import { toBoardOption } from '@/components/projects/github-project-import';
+import { createTestQueryPlugin } from '@/test/query-client';
 
 const testMocks = vi.hoisted(() => ({
   assignMember: vi.fn(),
   createProject: vi.fn(),
   errorToast: vi.fn(),
+  getWorkspaceSettings: vi.fn(),
   importGitHubProjects: vi.fn(),
   listMembers: vi.fn(),
   routerPush: vi.fn(),
@@ -25,6 +28,12 @@ vi.mock('vue-router', async (importOriginal) => {
     useRouter: () => ({ push: testMocks.routerPush }),
   };
 });
+
+vi.mock('@/services/admin-settings-client', () => ({
+  getAdminSettingsClient: () => ({
+    getWorkspaceSettings: testMocks.getWorkspaceSettings,
+  }),
+}));
 
 vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
@@ -59,11 +68,28 @@ const projectResponse = {
   members: [],
   name: 'Customer Portal',
   source: 'manual',
+  timeRoundingStepMinutes: null,
   totalSeconds: 0,
   updatedAt: '2026-05-01T10:00:00.000Z',
   visibility: 'private',
   workspaceId: 'workspace-1',
 };
+
+function createWorkspaceSettingsFixture(
+  overrides: Partial<WorkspaceSettingsResponse> = {},
+): WorkspaceSettingsResponse {
+  return {
+    createdAt: '2026-01-01T00:00:00.000Z',
+    currency: 'USD',
+    defaultHourlyRate: null,
+    id: '77777777-7777-4777-8777-777777777777',
+    timeRoundingStepMinutes: 5,
+    timeZone: 'UTC',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    workspaceId: 'workspace-1',
+    ...overrides,
+  };
+}
 
 const board = {
   id: 'PVT_Krvn',
@@ -121,7 +147,7 @@ function mountAddProjectView() {
 
   return mount(AddProjectView, {
     global: {
-      plugins: [pinia],
+      plugins: [pinia, createTestQueryPlugin()],
       stubs: {
         Button: {
           props: ['disabled', 'label', 'loading', 'type', 'variant'],
@@ -207,10 +233,15 @@ describe('AddProjectView', () => {
     testMocks.assignMember.mockReset();
     testMocks.createProject.mockReset();
     testMocks.errorToast.mockReset();
+    testMocks.getWorkspaceSettings.mockReset();
     testMocks.importGitHubProjects.mockReset();
     testMocks.listMembers.mockReset();
     testMocks.routerPush.mockReset();
     testMocks.successToast.mockReset();
+
+    testMocks.getWorkspaceSettings.mockResolvedValue(
+      createWorkspaceSettingsFixture(),
+    );
 
     selectedOption = toBoardOption(board, summary, new Map(), new Map());
     formValues = {
@@ -265,6 +296,7 @@ describe('AddProjectView', () => {
     expect(testMocks.createProject).toHaveBeenCalledWith({
       defaultBillableForTasks: false,
       name: 'Customer Portal',
+      timeRoundingStepMinutes: null,
       visibility: 'private',
     });
     expect(testMocks.assignMember).toHaveBeenCalledWith('project-1', 'pm-user');
@@ -287,6 +319,7 @@ describe('AddProjectView', () => {
     expect(wrapper.find('#project-manager').exists()).toBe(true);
     expect(wrapper.find('#visibility').exists()).toBe(true);
     expect(wrapper.find('input[name="defaultBillableForTasks"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="project-rounding-step"]').exists()).toBe(true);
   });
 
   it('derives the project name from the chosen GitHub project', async () => {
@@ -510,5 +543,42 @@ describe('AddProjectView', () => {
 
     expect(wrapper.get('[data-testid="github-import-derived-name"]').text()).toBe('—');
     expect(wrapper.find('[data-testid="github-import-details"]').exists()).toBe(false);
+  });
+
+  it('offers inherit-from-workspace first and defaults to inherit', async () => {
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+
+    const firstRoundingOption = wrapper
+      .get('[data-testid="project-rounding-step"]')
+      .findAll('option')[0];
+
+    expect(firstRoundingOption?.text()).toBe('Inherit from workspace (5 min)');
+    expect(wrapper.text()).toContain(
+      'New time entries are rounded to this step. Inherit follows the workspace default (5 min).',
+    );
+  });
+
+  it('sends a chosen rounding step instead of inherit for manual projects', async () => {
+    formValues = {
+      defaultBillableForTasks: false,
+      managerUserId: 'pm-user',
+      name: 'Customer Portal',
+      timeRoundingStepMinutes: 10,
+      visibility: 'private',
+    };
+
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="submit-project-form"]').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.createProject).toHaveBeenCalledWith({
+      defaultBillableForTasks: false,
+      name: 'Customer Portal',
+      timeRoundingStepMinutes: 10,
+      visibility: 'private',
+    });
   });
 });

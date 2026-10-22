@@ -169,6 +169,13 @@
       "when": 1791878400000,
       "tag": "0023_external_reference_project_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792690926498,
+      "tag": "0024_natural_human_robot",
+      "breakpoints": true
     }
   ]
 }

@@ -48,6 +48,11 @@ const TEST_PROJECT_NAME_PREFIXES = [
   'Billable Defaults ',
   'Billable Auth ',
   'Billable Private ',
+  'Rounding Create ',
+  'Rounding Inherit ',
+  'Rounding Update ',
+  'Rounding Clear ',
+  'Rounding Invalid ',
 ] as const;
 
 const TEST_TASK_TITLE_PREFIXES = [
@@ -484,6 +489,107 @@ describe('Projects and tasks (e2e)', () => {
       true,
       true,
     ]);
+  });
+
+  it('stores an explicit time rounding step on create', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        name: `Rounding Create ${randomUUID()}`,
+        timeRoundingStepMinutes: 5,
+      });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.timeRoundingStepMinutes).toBe(5);
+
+    const getRes = await request(app.getHttpServer())
+      .get(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken));
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.timeRoundingStepMinutes).toBe(5);
+  });
+
+  it('creates projects without a time rounding step as inherit (null)', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: `Rounding Inherit ${randomUUID()}` });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.timeRoundingStepMinutes).toBeNull();
+
+    const getRes = await request(app.getHttpServer())
+      .get(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken));
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.timeRoundingStepMinutes).toBeNull();
+  });
+
+  it('updates project time rounding step from one value to another', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        name: `Rounding Update ${randomUUID()}`,
+        timeRoundingStepMinutes: 5,
+      });
+    expect(createRes.status).toBe(201);
+
+    const updateRes = await request(app.getHttpServer())
+      .patch(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ timeRoundingStepMinutes: 15 });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.timeRoundingStepMinutes).toBe(15);
+
+    const getRes = await request(app.getHttpServer())
+      .get(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken));
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.timeRoundingStepMinutes).toBe(15);
+  });
+
+  it('clears project time rounding step back to inherit (null)', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        name: `Rounding Clear ${randomUUID()}`,
+        timeRoundingStepMinutes: 5,
+      });
+    expect(createRes.status).toBe(201);
+
+    const clearRes = await request(app.getHttpServer())
+      .patch(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ timeRoundingStepMinutes: null });
+    expect(clearRes.status).toBe(200);
+    expect(clearRes.body.timeRoundingStepMinutes).toBeNull();
+
+    const getRes = await request(app.getHttpServer())
+      .get(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken));
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.timeRoundingStepMinutes).toBeNull();
+  });
+
+  it('rejects invalid project time rounding steps', async () => {
+    const zeroRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        name: `Rounding Invalid ${randomUUID()}`,
+        timeRoundingStepMinutes: 0,
+      });
+    expect(zeroRes.status).toBe(400);
+
+    const tooLargeRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        name: `Rounding Invalid ${randomUUID()}`,
+        timeRoundingStepMinutes: 61,
+      });
+    expect(tooLargeRes.status).toBe(400);
   });
 
   it('rejects project billable backfills without project update permission', async () => {

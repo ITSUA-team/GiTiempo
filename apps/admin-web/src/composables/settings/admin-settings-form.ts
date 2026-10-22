@@ -12,6 +12,7 @@ export interface AdminSettingsFormValues {
 	defaultHourlyRate: number | null;
 	currency: string;
 	timeZone: string;
+	timeRoundingStepMinutes: number;
 }
 
 export type AdminSettingsFieldErrors = Partial<
@@ -30,6 +31,7 @@ export function toAdminSettingsFormValues(
 	return {
 		currency: settings.currency,
 		defaultHourlyRate: settings.defaultHourlyRate,
+		timeRoundingStepMinutes: settings.timeRoundingStepMinutes,
 		timeZone: settings.timeZone,
 		workspaceName: workspace.name,
 	};
@@ -42,6 +44,7 @@ export function validateAdminSettingsForm(
 	const workspaceName = form.workspaceName.trim();
 	const currency = form.currency.trim().toUpperCase();
 	const defaultHourlyRate = form.defaultHourlyRate;
+	const timeRoundingStepMinutes = form.timeRoundingStepMinutes;
 	const timeZone = form.timeZone.trim();
 
 	if (!workspaceName) {
@@ -60,6 +63,7 @@ export function validateAdminSettingsForm(
 	const settingsResult = updateWorkspaceSettingsSchema.safeParse({
 		currency,
 		defaultHourlyRate,
+		timeRoundingStepMinutes,
 		timeZone,
 	});
 	if (!settingsResult.success) {
@@ -68,6 +72,7 @@ export function validateAdminSettingsForm(
 			if (
 				field === 'currency' ||
 				field === 'defaultHourlyRate' ||
+				field === 'timeRoundingStepMinutes' ||
 				field === 'timeZone'
 			) {
 				errors[field] ??= issue.message;
@@ -84,6 +89,7 @@ export function validateAdminSettingsForm(
 		values: {
 			currency,
 			defaultHourlyRate,
+			timeRoundingStepMinutes,
 			timeZone,
 			workspaceName,
 		},
@@ -110,6 +116,9 @@ export function getWorkspaceSettingsUpdatePayload(
 	}
 	if (values.defaultHourlyRate !== persisted.defaultHourlyRate) {
 		payload.defaultHourlyRate = values.defaultHourlyRate;
+	}
+	if (values.timeRoundingStepMinutes !== persisted.timeRoundingStepMinutes) {
+		payload.timeRoundingStepMinutes = values.timeRoundingStepMinutes;
 	}
 	if (values.timeZone !== persisted.timeZone) {
 		payload.timeZone = values.timeZone;

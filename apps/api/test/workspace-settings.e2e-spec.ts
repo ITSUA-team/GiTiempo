@@ -386,6 +386,27 @@ describe('Workspace settings (e2e)', () => {
       expect(row?.timeZone).toBe('Europe/Kyiv');
     });
 
+    it('updates timeRoundingStepMinutes', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ timeRoundingStepMinutes: 5 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.timeRoundingStepMinutes).toBe(5);
+
+      const verify = await request(app.getHttpServer())
+        .get('/workspace/settings')
+        .set('Authorization', bearer(adminToken));
+      expect(verify.body.timeRoundingStepMinutes).toBe(5);
+
+      const [row] = await db
+        .select()
+        .from(workspaceSettings)
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+      expect(row?.timeRoundingStepMinutes).toBe(5);
+    });
+
     it('returns 400 for empty body', async () => {
       const res = await request(app.getHttpServer())
         .patch('/workspace/settings')
@@ -409,6 +430,24 @@ describe('Workspace settings (e2e)', () => {
         .patch('/workspace/settings')
         .set('Authorization', bearer(adminToken))
         .send({ timeZone: 'Not/AZone' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for timeRoundingStepMinutes below minimum', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ timeRoundingStepMinutes: 0 });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for timeRoundingStepMinutes above maximum', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ timeRoundingStepMinutes: 61 });
 
       expect(res.status).toBe(400);
     });

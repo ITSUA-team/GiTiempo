@@ -126,6 +126,7 @@ function createInvoice(
     notes: null,
     project: { id: projectId, name: 'Project Orion' },
     projectId,
+    roundingStepMinutes: 1,
     status: 'draft',
     timeEntries: [createTimeEntrySummary()],
     timeEntryCount: 2,

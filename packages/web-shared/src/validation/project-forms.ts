@@ -17,6 +17,7 @@ export type ImportProjectFormInput = z.infer<typeof importProjectFormSchema>;
 
 export const projectEditFormSchema = z.object({
   defaultBillableForTasks: z.boolean(),
+  timeRoundingStepMinutes: z.number().int().min(1).max(60).nullable().optional(),
   managerUserId: z.string().nullable().optional(),
   visibility: z.enum(["public", "private"]),
   memberIds: z.array(z.string()),

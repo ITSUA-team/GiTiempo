@@ -34,6 +34,10 @@ const defaultHourlyRate = defineModel<number | null>('defaultHourlyRate', {
 	required: true,
 });
 const currency = defineModel<string>('currency', { required: true });
+const timeRoundingStepMinutes = defineModel<number>(
+	'timeRoundingStepMinutes',
+	{ required: true },
+);
 const timeZone = defineModel<string>('timeZone', { required: true });
 
 const props = defineProps<{
@@ -47,6 +51,14 @@ const props = defineProps<{
 
 const selectCurrencyOptions = computed(() => [...props.currencyOptions]);
 const selectTimeZoneOptions = computed(() => [...props.timeZoneOptions]);
+const roundingStepOptions = [
+	{ label: '1 min', value: 1 },
+	{ label: '5 min', value: 5 },
+	{ label: '10 min', value: 10 },
+	{ label: '15 min', value: 15 },
+	{ label: '30 min', value: 30 },
+	{ label: '60 min', value: 60 },
+];
 const workspaceForm = ref<FormInstance | null>(null);
 const timeZoneSuggestions = ref<SettingsTimeZoneOption[]>([]);
 const selectedTimeZoneOption = computed(
@@ -211,6 +223,33 @@ function submitWorkspaceForm(): void {
                   {{ fieldErrors.currency }}
                 </Message>
               </div>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <label
+                for="settings-time-rounding-step-minutes"
+                class="text-text-dark text-[13px] font-medium"
+              >
+                Time rounding step (minutes)
+              </label>
+              <Select
+                v-model="timeRoundingStepMinutes"
+                input-id="settings-time-rounding-step-minutes"
+                name="timeRoundingStepMinutes"
+                :options="roundingStepOptions"
+                option-label="label"
+                option-value="value"
+                :invalid="!!fieldErrors.timeRoundingStepMinutes"
+                :pt="giTiempoSelectPt"
+              />
+              <Message
+                v-if="fieldErrors.timeRoundingStepMinutes"
+                severity="error"
+                size="small"
+                variant="simple"
+              >
+                {{ fieldErrors.timeRoundingStepMinutes }}
+              </Message>
             </div>
 
             <div class="flex flex-col gap-1.5">

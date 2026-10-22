@@ -23,6 +23,7 @@ const baseProject = {
   source: 'manual',
   trackingMode: 'managed',
   referenceProvenance: null,
+  timeRoundingStepMinutes: null,
   accessScope: 'project',
   capabilities: { canManageTasks: true },
   totalSeconds: 43200,

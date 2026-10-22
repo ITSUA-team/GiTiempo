@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
   BillableDefaultBackfillDialog,
+  getErrorMessage,
   StatCard,
   SurfaceCard,
   useIsMobileViewport,
@@ -19,8 +20,11 @@ import { useAdminProjectsData } from '@/composables/projects/useAdminProjectsDat
 import { useProjectArchiveActions } from '@/composables/projects/useProjectArchiveActions';
 import { useProjectBillableBackfillFlow } from '@/composables/projects/useProjectBillableBackfillFlow';
 import { useProjectEditActions } from '@/composables/projects/useProjectEditActions';
+import { useWorkspaceSettingsQuery } from '@/composables/query';
 import { useProjectsTableState } from '@/composables/useProjectsTableState';
 import { routeNames } from '@/router';
+import { getAdminSettingsClient } from '@/services/admin-settings-client';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
@@ -30,6 +34,7 @@ const { errorToast, successToast } = useToasts();
 const isMobileViewport = useIsMobileViewport();
 
 const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getAdminServerStateScope(accessToken.value));
 
 function notifyProjectsError(
   message: string,
@@ -55,6 +60,31 @@ const {
   accessToken,
   onError: notifyProjectsError,
 });
+
+const workspaceSettingsQuery = useWorkspaceSettingsQuery({
+  client: getAdminSettingsClient(),
+  enabled: computed(() => Boolean(accessToken.value)),
+  scope,
+});
+
+const workspaceRoundingStepMinutes = computed(
+  () => workspaceSettingsQuery.data.value?.timeRoundingStepMinutes ?? 1,
+);
+
+watch(
+  () => workspaceSettingsQuery.error.value,
+  (error) => {
+    if (error) {
+      errorToast(getErrorMessage(error), {
+        error,
+        logContext: {
+          action: 'load-workspace-settings',
+          feature: 'projects',
+        },
+      });
+    }
+  },
+);
 
 const {
   collapseRow: collapseProjectRow,
@@ -177,6 +207,7 @@ onMounted(fetchAll);
               :project="row.project"
               :all-members="members"
               :saving="savingProjectEditId === row.id"
+              :workspace-rounding-step-minutes="workspaceRoundingStepMinutes"
               @archive="handleArchive(row.project)"
               @save="handleProjectEditSubmitted(row.project, $event)"
               @unarchive="handleUnarchive(row.project)"

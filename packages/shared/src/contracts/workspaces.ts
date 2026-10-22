@@ -62,6 +62,7 @@ export const workspaceSettingsResponseSchema = z.object({
   currency: z.string().length(3),
   defaultHourlyRate: z.number().nonnegative().nullable(),
   timeZone: timeZoneSchema,
+  timeRoundingStepMinutes: z.number().int().min(1).max(60),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
@@ -178,13 +179,15 @@ export const updateWorkspaceSettingsSchema = z
       .optional(),
     defaultHourlyRate: z.number().nonnegative().nullable().optional(),
     timeZone: timeZoneSchema.optional(),
+    timeRoundingStepMinutes: z.number().int().min(1).max(60).optional(),
   })
   .strict()
   .refine(
     (data) =>
       data.currency !== undefined ||
       data.defaultHourlyRate !== undefined ||
-      data.timeZone !== undefined,
+      data.timeZone !== undefined ||
+      data.timeRoundingStepMinutes !== undefined,
     {
       message: 'At least one field must be provided',
       path: [],

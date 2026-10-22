@@ -29,6 +29,7 @@ const validInvoiceResponse = {
   createdBy: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
   createdByName: "Alex T.",
   timeEntryCount: 1,
+  roundingStepMinutes: 1,
   timeEntries: [
     {
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9020",
@@ -793,6 +794,7 @@ describe("eligibleEntriesResponseSchema", () => {
       totalHours: 2.5,
       entries: [validEntry],
       defaultHourlyRate: 120,
+      defaultRoundingStepMinutes: 1,
       defaultCurrency: "USD",
     });
     expect(result.count).toBe(1);
@@ -806,6 +808,7 @@ describe("eligibleEntriesResponseSchema", () => {
       totalHours: 0,
       entries: [],
       defaultHourlyRate: null,
+      defaultRoundingStepMinutes: 1,
       defaultCurrency: null,
     });
     expect(result.count).toBe(0);

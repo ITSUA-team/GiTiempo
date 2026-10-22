@@ -46,6 +46,7 @@ function createEntriesResponse(
     count: 1,
     defaultCurrency: 'USD',
     defaultHourlyRate: 80,
+    defaultRoundingStepMinutes: 1,
     entries: [createTimeEntry()],
     totalHours: 2.5,
     ...overrides,

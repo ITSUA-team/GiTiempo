@@ -12,6 +12,7 @@ import { zodResolver } from '@primevue/forms/resolvers/zod';
 import { giTiempoSelectPt } from '@gitiempo/web-config/theme';
 import {
   createProjectFormSchema,
+  getErrorMessage,
   importProjectFormSchema,
   LabeledCheckbox,
   type CreateProjectFormInput,
@@ -22,10 +23,13 @@ import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Select from 'primevue/select';
 
+import { useWorkspaceSettingsQuery } from '@/composables/query';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { routeNames } from '@/router';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
+import { getAdminSettingsClient } from '@/services/admin-settings-client';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 import GitHubProjectFields from '@/components/projects/GitHubProjectFields.vue';
 import {
@@ -45,6 +49,34 @@ type FormState = Record<string, FormFieldState>;
 const router = useRouter();
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
+
+const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getAdminServerStateScope(accessToken.value));
+
+const workspaceSettingsQuery = useWorkspaceSettingsQuery({
+  client: getAdminSettingsClient(),
+  enabled: computed(() => Boolean(accessToken.value)),
+  scope,
+});
+
+const workspaceRoundingStepMinutes = computed(
+  () => workspaceSettingsQuery.data.value?.timeRoundingStepMinutes ?? 1,
+);
+
+watch(
+  () => workspaceSettingsQuery.error.value,
+  (error) => {
+    if (error) {
+      errorToast(getErrorMessage(error), {
+        error,
+        logContext: {
+          action: 'load-workspace-settings',
+          feature: 'projects',
+        },
+      });
+    }
+  },
+);
 
 const members = ref<WorkspaceMemberListResponse>([]);
 const membersLoading = ref(false);
@@ -75,6 +107,19 @@ const visibilityOptions = [
   { label: 'Private', value: 'private' as const },
 ];
 
+const roundingStepOptions = computed<{ label: string; value: number | null }[]>(
+  () => [
+    {
+      label: `Inherit from workspace (${workspaceRoundingStepMinutes.value} min)`,
+      value: null,
+    },
+    ...[1, 5, 10, 15, 30, 60].map((stepMinutes) => ({
+      label: `${stepMinutes} min`,
+      value: stepMinutes,
+    })),
+  ],
+);
+
 const resolver = computed(() =>
   zodResolver(
     sourceMode.value === 'github'
@@ -86,6 +131,7 @@ const resolver = computed(() =>
 const initialValues: CreateProjectFormInput = {
   defaultBillableForTasks: true,
   name: '',
+  timeRoundingStepMinutes: null,
   visibility: 'private',
   managerUserId: null,
 };
@@ -273,6 +319,7 @@ async function handleSubmit({
           await adminProjectsClient.createProject({
             defaultBillableForTasks: formValues.defaultBillableForTasks,
             name: trimmedName,
+            timeRoundingStepMinutes: formValues.timeRoundingStepMinutes,
             visibility: formValues.visibility,
           })
         ).id;
@@ -506,6 +553,32 @@ onMounted(loadMembers);
               />
               <small class="text-text-muted text-xs">
                 New tasks in this project inherit this value unless changed later.
+              </small>
+            </div>
+
+            <div
+              class="flex flex-col gap-1.5"
+              data-testid="project-rounding-step-field"
+            >
+              <label
+                for="project-rounding-step"
+                class="text-text-dark text-[13px] font-medium"
+              >
+                Time rounding step
+              </label>
+              <Select
+                id="project-rounding-step"
+                name="timeRoundingStepMinutes"
+                data-testid="project-rounding-step"
+                :options="roundingStepOptions"
+                option-label="label"
+                option-value="value"
+                :disabled="isSubmitting"
+                :pt="giTiempoSelectPt"
+              />
+              <small class="text-text-muted text-xs">
+                New time entries are rounded to this step. Inherit follows the workspace
+                default ({{ workspaceRoundingStepMinutes }} min).
               </small>
             </div>
 

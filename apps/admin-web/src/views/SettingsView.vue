@@ -254,6 +254,7 @@ watch(
         v-model:workspace-name="form.workspaceName"
         v-model:default-hourly-rate="form.defaultHourlyRate"
         v-model:currency="form.currency"
+        v-model:time-rounding-step-minutes="form.timeRoundingStepMinutes"
         v-model:time-zone="form.timeZone"
         :can-save="canSave"
         :currency-options="currencyOptions"

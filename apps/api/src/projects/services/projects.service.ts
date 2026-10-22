@@ -272,6 +272,7 @@ export class ProjectsService {
       color: input.color ?? null,
       visibility: input.visibility ?? 'private',
       defaultBillableForTasks: input.defaultBillableForTasks ?? true,
+      timeRoundingStepMinutes: input.timeRoundingStepMinutes ?? null,
     };
 
     const row = await this.db.transaction(async (tx) => {
@@ -423,6 +424,9 @@ export class ProjectsService {
             : {}),
           ...(input.defaultBillableForTasks !== undefined
             ? { defaultBillableForTasks: input.defaultBillableForTasks }
+            : {}),
+          ...(input.timeRoundingStepMinutes !== undefined
+            ? { timeRoundingStepMinutes: input.timeRoundingStepMinutes }
             : {}),
           ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
           updatedAt: new Date(),
@@ -941,6 +945,7 @@ export class ProjectsService {
       color: projects.color,
       visibility: projects.visibility,
       defaultBillableForTasks: projects.defaultBillableForTasks,
+      timeRoundingStepMinutes: projects.timeRoundingStepMinutes,
       trackingMode: projects.trackingMode,
       source: sql<ProjectSource>`CASE WHEN EXISTS (
         SELECT 1
@@ -998,6 +1003,7 @@ export class ProjectsService {
       color: row.color,
       visibility: row.visibility,
       defaultBillableForTasks: row.defaultBillableForTasks,
+      timeRoundingStepMinutes: row.timeRoundingStepMinutes ?? null,
       source: row.source,
       referenceProvenance: row.referenceProvenance,
       trackingMode: row.trackingMode,

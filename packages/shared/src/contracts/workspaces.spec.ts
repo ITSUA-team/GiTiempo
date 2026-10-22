@@ -18,6 +18,7 @@ const settingsResponse = {
   workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002',
   currency: 'USD',
   defaultHourlyRate: 100,
+  timeRoundingStepMinutes: 1,
   timeZone: 'UTC',
   createdAt: '2026-05-01T00:00:00.000Z',
   updatedAt: '2026-05-01T00:00:00.000Z',

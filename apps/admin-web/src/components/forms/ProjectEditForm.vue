@@ -26,6 +26,7 @@ const props = defineProps<{
   project: ProjectResponse;
   allMembers: WorkspaceMemberListResponse;
   saving?: boolean;
+  workspaceRoundingStepMinutes: number;
 }>();
 
 const emit = defineEmits<{
@@ -48,6 +49,18 @@ const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
   { label: 'Private', value: 'private' as const },
 ];
+const roundingStepOptions = computed<{ label: string; value: number | null }[]>(
+  () => [
+    {
+      label: `Inherit from workspace (${props.workspaceRoundingStepMinutes} min)`,
+      value: null,
+    },
+    ...[1, 5, 10, 15, 30, 60].map((stepMinutes) => ({
+      label: `${stepMinutes} min`,
+      value: stepMinutes,
+    })),
+  ],
+);
 const isExternalProject = computed(
   () => props.project.trackingMode === 'external-reference',
 );
@@ -75,6 +88,7 @@ function handleMemberComplete(event: AutoCompleteCompleteEvent): void {
 
 const initialValues: ProjectEditFormInput = {
   defaultBillableForTasks: props.project.defaultBillableForTasks,
+  timeRoundingStepMinutes: props.project.timeRoundingStepMinutes ?? null,
   managerUserId:
     props.project.members.find((m) => m.role === WorkspaceRoles.PM)?.userId ??
     null,
@@ -189,6 +203,24 @@ function handleSave({
               name="defaultBillableForTasks"
               root-class="border-divider bg-surface-primary flex h-[42px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
               :disabled="saving"
+            />
+          </div>
+
+          <div class="flex min-w-0 flex-col gap-1.5 sm:w-[250px] sm:shrink-0">
+            <label
+              for="edit-rounding-step"
+              class="text-text-dark font-sans text-[13px] leading-none font-medium"
+            >Time rounding step</label>
+            <Select
+              input-id="edit-rounding-step"
+              name="timeRoundingStepMinutes"
+              :options="roundingStepOptions"
+              option-label="label"
+              option-value="value"
+              :invalid="$form.timeRoundingStepMinutes?.invalid"
+              :disabled="saving"
+              :pt="giTiempoSelectPt"
+              fluid
             />
           </div>
         </div>

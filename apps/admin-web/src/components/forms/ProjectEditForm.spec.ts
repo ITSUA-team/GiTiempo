@@ -5,6 +5,7 @@ import type {
   ProjectResponse,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
+import type { ProjectEditFormInput } from '@gitiempo/web-shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ProjectEditForm from './ProjectEditForm.vue';
@@ -30,6 +31,7 @@ const project: ProjectResponse = {
   color: null,
   createdAt: '2026-05-01T10:00:00.000Z',
   defaultBillableForTasks: true,
+  timeRoundingStepMinutes: null,
   description: null,
   id: 'project-1',
   isActive: true,
@@ -91,6 +93,8 @@ const members: WorkspaceMemberListResponse = [
   },
 ];
 
+let submitOptions: Record<string, unknown> = {};
+
 const stubs = {
   AutoComplete: {
     name: 'AutoComplete',
@@ -127,8 +131,20 @@ const stubs = {
     template: '<section><h2>{{ title }}</h2><slot /></section>',
   },
   Form: {
+    name: 'Form',
+    props: ['initialValues'],
+    computed: {
+      values(): Record<string, unknown> {
+        const self = this as unknown as {
+          initialValues?: Record<string, unknown>;
+        };
+
+        return { ...(self.initialValues ?? {}), ...submitOptions };
+      },
+    },
     template:
-      '<form><slot :defaultBillableForTasks="{ invalid: false }" :managerUserId="{ invalid: false }" :memberIds="{ invalid: false }" :visibility="{ invalid: false }" /></form>',
+      '<form><slot :defaultBillableForTasks="{ invalid: false }" :managerUserId="{ invalid: false }" :memberIds="{ invalid: false }" :timeRoundingStepMinutes="{ invalid: false }" :visibility="{ invalid: false }" />' +
+      '<button type="button" data-testid="project-edit-form-submit" @click="$emit(\'submit\', { valid: true, values })" /></form>',
   },
   Checkbox: {
     props: ['inputId', 'name'],
@@ -157,13 +173,30 @@ const stubs = {
 describe('ProjectEditForm', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    submitOptions = {};
   });
 
-  it('keeps project settings controls at the same edit-form height', async () => {
-    const wrapper = mount(ProjectEditForm, {
-      props: { allMembers: members, project },
+  function mountProjectEditForm(
+    options: {
+      project?: Partial<ProjectResponse>;
+      saving?: boolean;
+      workspaceRoundingStepMinutes?: number;
+    } = {},
+  ) {
+    return mount(ProjectEditForm, {
+      props: {
+        allMembers: members,
+        project: { ...project, ...options.project },
+        saving: options.saving,
+        workspaceRoundingStepMinutes:
+          options.workspaceRoundingStepMinutes ?? 5,
+      },
       global: { plugins: [createPinia()], stubs },
     });
+  }
+
+  it('keeps project settings controls at the same edit-form height', async () => {
+    const wrapper = mountProjectEditForm();
 
     // The members field gets the full panel width like Member settings; only
     // visibility and the billable default share a row.
@@ -182,6 +215,7 @@ describe('ProjectEditForm', () => {
     expect(wrapper.get('label[for="edit-members"]').text()).toBe('Select members');
     expect(wrapper.get('label[for="edit-project-manager"]').text()).toBe('Project manager');
     expect(wrapper.get('label[for="edit-visibility"]').text()).toBe('Visibility');
+    expect(wrapper.get('label[for="edit-rounding-step"]').text()).toBe('Time rounding step');
     expect(wrapper.text()).toContain('New task billable default');
     const billableInput = wrapper.find('input[name="defaultBillableForTasks"]');
     const billableControl = wrapper.get('label[for="edit-default-billable-for-tasks"]');
@@ -243,6 +277,34 @@ describe('ProjectEditForm', () => {
     expect(managerInput.props('options')).toEqual([
       { label: 'Pat PM', value: 'user-2' },
     ]);
+    const roundingSelect = allSelects.find(
+      (c) => c.props('inputId') === 'edit-rounding-step',
+    )!;
+
+    expect(roundingSelect.props('name')).toBe('timeRoundingStepMinutes');
+    expect(roundingSelect.props('invalid')).toBe(false);
+    expect(roundingSelect.props('optionLabel')).toBe('label');
+    expect(roundingSelect.props('optionValue')).toBe('value');
+    expect(roundingSelect.props('options')).toEqual([
+      { label: 'Inherit from workspace (5 min)', value: null },
+      { label: '1 min', value: 1 },
+      { label: '5 min', value: 5 },
+      { label: '10 min', value: 10 },
+      { label: '15 min', value: 15 },
+      { label: '30 min', value: 30 },
+      { label: '60 min', value: 60 },
+    ]);
+    const roundingField = wrapper.get('label[for="edit-rounding-step"]').element;
+
+    expect(
+      (billableControl.element.compareDocumentPosition(roundingField) &
+        Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+    ).toBe(true);
+    expect(
+      (roundingField.compareDocumentPosition(
+        wrapper.get('[data-testid="project-edit-form-actions"]').element,
+      ) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+    ).toBe(true);
     expect(wrapper.text()).toContain('Pat PM');
     expect(wrapper.text()).toContain('member@example.com');
     expect(wrapper.text()).not.toContain('Alex Admin');
@@ -270,10 +332,7 @@ describe('ProjectEditForm', () => {
   });
 
   it('emits the status-specific action from the inline project settings panel', async () => {
-    const wrapper = mount(ProjectEditForm, {
-      props: { allMembers: members, project },
-      global: { plugins: [createPinia()], stubs },
-    });
+    const wrapper = mountProjectEditForm();
 
     await wrapper.get('button').trigger('click');
 
@@ -281,9 +340,8 @@ describe('ProjectEditForm', () => {
   });
 
   it('uses unarchive copy for archived projects', async () => {
-    const wrapper = mount(ProjectEditForm, {
-      props: { allMembers: members, project: { ...project, isActive: false } },
-      global: { plugins: [createPinia()], stubs },
+    const wrapper = mountProjectEditForm({
+      project: { ...project, isActive: false },
     });
 
     await wrapper.get('button').trigger('click');
@@ -293,18 +351,82 @@ describe('ProjectEditForm', () => {
   });
 
   it('disables project status actions while the inline save is pending', () => {
-    const activeWrapper = mount(ProjectEditForm, {
-      props: { allMembers: members, project, saving: true },
-      global: { plugins: [createPinia()], stubs },
-    });
-    const archivedWrapper = mount(ProjectEditForm, {
-      props: { allMembers: members, project: { ...project, isActive: false }, saving: true },
-      global: { plugins: [createPinia()], stubs },
+    const activeWrapper = mountProjectEditForm({ saving: true });
+    const archivedWrapper = mountProjectEditForm({
+      project: { ...project, isActive: false },
+      saving: true,
     });
 
+    const savingRoundingSelect = activeWrapper
+      .findAllComponents({ name: 'Select' })
+      .find((c) => c.props('inputId') === 'edit-rounding-step')!;
+
+    expect(savingRoundingSelect.props('disabled')).toBe(true);
     expect(activeWrapper.get('button').text()).toBe('Archive project');
     expect(activeWrapper.get('button').attributes('disabled')).toBeDefined();
     expect(archivedWrapper.get('button').text()).toBe('Unarchive project');
     expect(archivedWrapper.get('button').attributes('disabled')).toBeDefined();
+  });
+
+  it('initializes the rounding step to inherit when the project has no own step', () => {
+    const wrapper = mountProjectEditForm();
+
+    expect(wrapper.getComponent({ name: 'Form' }).props('initialValues')).toMatchObject({
+      timeRoundingStepMinutes: null,
+    });
+  });
+
+  it('initializes the rounding step from the project value', () => {
+    const wrapper = mountProjectEditForm({ project: { timeRoundingStepMinutes: 15 } });
+
+    expect(wrapper.getComponent({ name: 'Form' }).props('initialValues')).toMatchObject({
+      timeRoundingStepMinutes: 15,
+    });
+  });
+
+  it('saves the selected rounding step value', async () => {
+    const wrapper = mountProjectEditForm();
+    submitOptions = { timeRoundingStepMinutes: 10 };
+
+    await wrapper.get('[data-testid="project-edit-form-submit"]').trigger('click');
+
+    expect(wrapper.emitted('save')?.[0]).toEqual([
+      {
+        defaultBillableForTasks: true,
+        timeRoundingStepMinutes: 10,
+        managerUserId: 'user-2',
+        visibility: 'public',
+        memberIds: ['user-2'],
+      },
+    ]);
+  });
+
+  it('saves null when the rounding step is cleared back to inherit', async () => {
+    const wrapper = mountProjectEditForm({ project: { timeRoundingStepMinutes: 15 } });
+    submitOptions = { timeRoundingStepMinutes: null };
+
+    await wrapper.get('[data-testid="project-edit-form-submit"]').trigger('click');
+
+    expect(wrapper.emitted('save')?.[0]).toEqual([
+      {
+        defaultBillableForTasks: true,
+        timeRoundingStepMinutes: null,
+        managerUserId: 'user-2',
+        visibility: 'public',
+        memberIds: ['user-2'],
+      },
+    ]);
+  });
+
+  it('saves the initialized rounding step unchanged when it was not touched', async () => {
+    const wrapper = mountProjectEditForm({ project: { timeRoundingStepMinutes: 30 } });
+
+    await wrapper.get('[data-testid="project-edit-form-submit"]').trigger('click');
+
+    const savePayload = wrapper.emitted('save')?.[0]?.[0] as
+      | ProjectEditFormInput
+      | undefined;
+
+    expect(savePayload).toMatchObject({ timeRoundingStepMinutes: 30 });
   });
 });
