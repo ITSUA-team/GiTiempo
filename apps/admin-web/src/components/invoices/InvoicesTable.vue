@@ -229,9 +229,9 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
 
   <div
     v-if="isMobileViewport"
-    class="mb-4 grid gap-3"
+    class="mb-4 grid grid-cols-1 gap-3"
   >
-    <div class="flex flex-col gap-1.5">
+    <div class="flex min-w-0 flex-col gap-1.5">
       <label
         for="mobile-invoice-project-filter"
         class="text-text-muted text-[12px] font-medium"
@@ -253,7 +253,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
     </div>
 
     <div class="grid grid-cols-2 gap-3">
-      <div class="flex flex-col gap-1.5">
+      <div class="flex min-w-0 flex-col gap-1.5">
         <label
           for="mobile-invoice-period-filter"
           class="text-text-muted text-[12px] font-medium"
@@ -277,7 +277,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
         />
       </div>
 
-      <div class="flex flex-col gap-1.5">
+      <div class="flex min-w-0 flex-col gap-1.5">
         <label
           for="mobile-invoice-status-filter"
           class="text-text-muted text-[12px] font-medium"

@@ -20,4 +20,10 @@ describe("deriveProfileInitials", () => {
     expect(deriveProfileInitials("", "GT")).toBe("GT");
     expect(deriveProfileInitials("   ", "NA")).toBe("NA");
   });
+
+  it("skips non-letter characters at the start of a word", () => {
+    expect(deriveProfileInitials("Admin (User)", "GT")).toBe("AU");
+    expect(deriveProfileInitials("(Admin)", "GT")).toBe("A");
+    expect(deriveProfileInitials("123 456", "GT")).toBe("GT");
+  });
 });
