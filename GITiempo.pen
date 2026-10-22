@@ -46334,7 +46334,7 @@
                                   "type": "frame",
                                   "id": "l4AG1",
                                   "name": "h2",
-                                  "width": 160,
+                                  "width": 200,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46357,7 +46357,7 @@
                                   "type": "frame",
                                   "id": "upd001",
                                   "name": "h3",
-                                  "width": 160,
+                                  "width": 200,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46426,7 +46426,7 @@
                                   "type": "frame",
                                   "id": "UCUq2",
                                   "name": "h6",
-                                  "width": 130,
+                                  "width": 160,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46489,7 +46489,7 @@
                                   "type": "frame",
                                   "id": "v5ZQAp",
                                   "name": "projectFilter",
-                                  "width": 160,
+                                  "width": 200,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46513,7 +46513,7 @@
                                   "type": "frame",
                                   "id": "upd005",
                                   "name": "dateRangeFilter",
-                                  "width": 160,
+                                  "width": 200,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46573,7 +46573,7 @@
                                   "type": "frame",
                                   "id": "xYt46",
                                   "name": "statusFilter",
-                                  "width": 130,
+                                  "width": 160,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46629,7 +46629,7 @@
                                   "type": "frame",
                                   "id": "UWxJE",
                                   "name": "r1c2",
-                                  "width": 160,
+                                  "width": 200,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46652,7 +46652,7 @@
                                   "type": "frame",
                                   "id": "upd008",
                                   "name": "r1c3",
-                                  "width": 160,
+                                  "width": 200,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46721,7 +46721,7 @@
                                   "type": "frame",
                                   "id": "dbhof",
                                   "name": "r1c6",
-                                  "width": 130,
+                                  "width": 160,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46795,7 +46795,7 @@
                                   "type": "frame",
                                   "id": "V68PZ",
                                   "name": "r2c2",
-                                  "width": 160,
+                                  "width": 200,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46818,7 +46818,7 @@
                                   "type": "frame",
                                   "id": "upd012",
                                   "name": "r2c3",
-                                  "width": 160,
+                                  "width": 200,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46887,7 +46887,7 @@
                                   "type": "frame",
                                   "id": "jE4Ze",
                                   "name": "r2c6",
-                                  "width": 130,
+                                  "width": 160,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46961,7 +46961,7 @@
                                   "type": "frame",
                                   "id": "y7W7B",
                                   "name": "r3c2",
-                                  "width": 160,
+                                  "width": 200,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -46984,7 +46984,7 @@
                                   "type": "frame",
                                   "id": "upd016",
                                   "name": "r3c3",
-                                  "width": 160,
+                                  "width": 200,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -47053,7 +47053,7 @@
                                   "type": "frame",
                                   "id": "TQW6b",
                                   "name": "r3c6",
-                                  "width": 130,
+                                  "width": 160,
                                   "height": "fill_container",
                                   "padding": [
                                     0,

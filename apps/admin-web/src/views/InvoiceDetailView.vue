@@ -320,7 +320,10 @@ function formatInstant(dateInput: string): string {
           </h1>
           <InvoiceStatusBadge :status="invoice.status" />
         </div>
-        <div class="flex shrink-0 gap-2" data-testid="invoice-status-actions">
+        <div
+          class="flex shrink-0 gap-2"
+          data-testid="invoice-status-actions"
+        >
           <Button
             v-if="invoice.status === 'draft'"
             label="Mark as sent"
