@@ -382,7 +382,7 @@ async function handleCreate(): Promise<void> {
           >Hourly rate</label>
           <InputNumber
             input-id="invoice-create-hourly-rate"
-            placeholder="From workspace settings"
+            placeholder="From settings"
             :max="99999999.99"
             :max-fraction-digits="2"
             :min="0"
