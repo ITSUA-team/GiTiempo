@@ -72,10 +72,26 @@
 - [ ] 11.1 Display the snapshot `roundingStepMinutes` in the invoice detail summary in `InvoiceDetailView.vue` (e.g. "Rounding step: 5 min" or "Rounding step: None"). Verify: detail page shows the snapshot value, not the project's current setting.
 - [ ] 11.2 Add or update component tests for the detail view confirming the rounding step display. Verify: `pnpm test --filter admin-web` passes for the detail test.
 
-## 12. Integration Verification
+## 12. Manual Testing
 
-- [ ] 12.1 Run `pnpm typecheck` across the monorepo and confirm no new errors. Verify: command exits 0.
-- [ ] 12.2 Run `pnpm lint` across the monorepo and confirm no new errors. Verify: command exits 0.
-- [ ] 12.3 Run `pnpm test` across the monorepo and confirm all tests pass. Verify: command exits 0.
-- [ ] 12.4 Run `pnpm test:e2e` and confirm invoice creation and project settings e2e tests pass with the new rounding fields. Verify: command exits 0 or only pre-existing failures remain.
-- [ ] 12.5 Run `openspec validate --strict` for this change and confirm it passes. Verify: command exits 0.
+- [ ] 12.1 Open Admin Panel → Projects, expand a project's inline settings row, change `Time rounding step` to 5, save, and reload the page. Verify: the Select shows 5 after reload.
+- [ ] 12.2 Open the same project's settings, change `Time rounding step` back to No rounding, save, and reload. Verify: the Select shows No rounding after reload.
+- [ ] 12.3 Open the Add Project page, set `Time rounding step` to 10, and create a project. Verify: the project list shows the new project with `timeRoundingStepMinutes: 10` in the settings row on expand.
+- [ ] 12.4 Create a project with `Time rounding step: 5` and add several short completed billable time entries (e.g. two entries of 1 min each). Open the invoice create dialog, select the project and date range, and wait for the preview. Verify: the `Rounding step` field auto-fills with 5 and the previewed total hours show 10 min (0.17h), not 2 min.
+- [ ] 12.5 In the same create dialog, change `Rounding step` from 5 to 15. Verify: the preview re-fetches and the total hours update to reflect 15-min rounding per entry (e.g. two 1-min entries → 30 min).
+- [ ] 12.6 In the same create dialog, change `Rounding step` to No rounding. Verify: the preview re-fetches and the total hours revert to the raw sum (e.g. two 1-min entries → 2 min).
+- [ ] 12.7 Create the invoice with `Rounding step: 5`. Open the invoice detail page. Verify: the detail summary shows "Rounding step: 5 min" and the totals match the rounded preview.
+- [ ] 12.8 After creating the invoice, go back to the project settings and change `Time rounding step` to 15. Reopen the invoice detail page. Verify: the invoice still shows "Rounding step: 5 min" (snapshot unchanged).
+- [ ] 12.9 Create a workspace-wide invoice (no project) via the create dialog. Verify: the `Rounding step` field defaults to No rounding and the total hours are the raw sum.
+- [ ] 12.10 Attempt to create a project with `Time rounding step` set to 0 or 61 via API (e.g. Bruno). Verify: the request is rejected with a validation error.
+- [ ] 12.11 Attempt to create an invoice with `roundingStepMinutes: 0` via API. Verify: the request is rejected with a validation error.
+- [ ] 12.12 Attempt to update an existing invoice's `roundingStepMinutes` via `PATCH /invoices/:id`. Verify: the request is rejected (snapshot field is not mutable).
+- [ ] 12.13 Verify original time entries are not modified: after creating an invoice with rounding step 5, check the time entries linked to that invoice via the API or DB. Verify: their `durationSeconds` values remain the original raw values, not the rounded ones.
+
+## 13. Integration Verification
+
+- [ ] 13.1 Run `pnpm typecheck` across the monorepo and confirm no new errors. Verify: command exits 0.
+- [ ] 13.2 Run `pnpm lint` across the monorepo and confirm no new errors. Verify: command exits 0.
+- [ ] 13.3 Run `pnpm test` across the monorepo and confirm all tests pass. Verify: command exits 0.
+- [ ] 13.4 Run `pnpm test:e2e` and confirm invoice creation and project settings e2e tests pass with the new rounding fields. Verify: command exits 0 or only pre-existing failures remain.
+- [ ] 13.5 Run `openspec validate --strict` for this change and confirm it passes. Verify: command exits 0.
