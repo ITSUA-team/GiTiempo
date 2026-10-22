@@ -15,11 +15,11 @@ defineProps<{
     <div
       v-for="item in items"
       :key="item.label"
-      class="flex flex-col gap-1"
+      class="flex min-w-0 flex-col gap-1"
       :class="item.fullWidth ? 'col-span-2' : undefined"
     >
       <span class="text-text-muted text-xs">{{ item.label }}</span>
-      <span class="text-text-dark text-[13px] font-semibold">
+      <span class="text-text-dark text-[13px] font-semibold break-words">
         {{ item.value }}
       </span>
     </div>

@@ -11,7 +11,10 @@ export function deriveProfileInitials(source: string, fallback: string): string 
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
+      .map((part) => {
+        const match = part.match(/\p{L}/u);
+        return match ? match[0].toUpperCase() : "";
+      })
       .join("") || fallback
   );
 }
