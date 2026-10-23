@@ -291,6 +291,9 @@ describe('InvoiceDetailView', () => {
     expect(summary.text()).toContain('May 1, 2026');
     expect(summary.text()).toContain('May 10, 2026');
     expect(summary.text()).toContain('Alex Admin');
+    // The rounding step only parameterizes the computation; the detail page
+    // must not surface it even though the response carries the snapshot value.
+    expect(wrapper.text()).not.toContain('Rounding step');
   });
 
   it('renders instant timestamps in the local timezone', async () => {

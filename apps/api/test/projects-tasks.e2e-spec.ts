@@ -582,6 +582,15 @@ describe('Projects and tasks (e2e)', () => {
       });
     expect(zeroRes.status).toBe(400);
 
+    const nonIntegerRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        name: `Rounding Invalid ${randomUUID()}`,
+        timeRoundingStepMinutes: 2.5,
+      });
+    expect(nonIntegerRes.status).toBe(400);
+
     const tooLargeRes = await request(app.getHttpServer())
       .post('/projects')
       .set('Authorization', bearer(adminToken))
@@ -590,6 +599,25 @@ describe('Projects and tasks (e2e)', () => {
         timeRoundingStepMinutes: 61,
       });
     expect(tooLargeRes.status).toBe(400);
+  });
+
+  it('rejects invalid project time rounding steps on update', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        name: `Rounding Update Invalid ${randomUUID()}`,
+        timeRoundingStepMinutes: 5,
+      });
+    expect(createRes.status).toBe(201);
+
+    for (const step of [0, 61]) {
+      const res = await request(app.getHttpServer())
+        .patch(`/projects/${createRes.body.id}`)
+        .set('Authorization', bearer(adminToken))
+        .send({ timeRoundingStepMinutes: step });
+      expect(res.status).toBe(400);
+    }
   });
 
   it('rejects project billable backfills without project update permission', async () => {

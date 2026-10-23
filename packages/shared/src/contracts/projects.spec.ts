@@ -88,6 +88,29 @@ describe('projectListResponseSchema', () => {
       expect.objectContaining({ path: ['members'] }),
     );
   });
+
+  it.each([0, 61, 5.5])(
+    'rejects invalid timeRoundingStepMinutes values on project response',
+    (step) => {
+      const result = projectResponseSchema.safeParse({
+        ...baseProject,
+        timeRoundingStepMinutes: step,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+    },
+  );
+
+  it('requires timeRoundingStepMinutes key on project response', () => {
+    const result = projectResponseSchema.safeParse({
+      ...baseProject,
+      timeRoundingStepMinutes: undefined,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
 });
 
 describe('createProjectSchema', () => {

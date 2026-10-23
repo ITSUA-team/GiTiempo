@@ -623,9 +623,12 @@ describe('InvoicesView', () => {
     expect(wrapper.find('[data-testid="invoices-table"]').exists()).toBe(true);
   });
 
-  it('passes the workspace settings currency to the create dialog', async () => {
+  it('passes the workspace settings currency and rounding step to the create dialog', async () => {
     testMocks.getWorkspaceSettings.mockResolvedValue(
-      createWorkspaceSettingsFixture({ currency: 'EUR' }),
+      createWorkspaceSettingsFixture({
+        currency: 'EUR',
+        timeRoundingStepMinutes: 30,
+      }),
     );
 
     const wrapper = mountInvoicesView();
@@ -634,11 +637,12 @@ describe('InvoicesView', () => {
     await wrapper.get('[data-testid="invoices-create-intent"]').trigger('click');
     await flushPromises();
 
+    const createDialog = wrapper.get('[data-testid="invoice-create-dialog"]');
+
+    expect(createDialog.attributes('data-workspace-currency')).toBe('EUR');
     expect(
-      wrapper
-        .get('[data-testid="invoice-create-dialog"]')
-        .attributes('data-workspace-currency'),
-    ).toBe('EUR');
+      createDialog.attributes('data-workspace-rounding-step-minutes'),
+    ).toBe('30');
   });
 
   it('toasts an error when the workspace settings request fails', async () => {

@@ -38,6 +38,9 @@ const ROUNDING_ENTRY_7 = '00000000-0000-4000-8000-400000000007';
 const ROUNDING_ENTRY_8 = '00000000-0000-4000-8000-400000000008';
 const ROUNDING_ENTRY_9 = '00000000-0000-4000-8000-400000000009';
 const ROUNDING_ENTRY_10 = '00000000-0000-4000-8000-400000000010';
+const ROUNDING_ENTRY_11 = '00000000-0000-4000-8000-400000000011';
+const ROUNDING_ENTRY_12 = '00000000-0000-4000-8000-400000000012';
+const ROUNDING_ENTRY_13 = '00000000-0000-4000-8000-400000000013';
 
 // Fixed UUIDs for fixture time entries so we can reference them across tests.
 const ENTRY_BOB_1 = '00000000-0000-4000-8000-100000000001';
@@ -2579,8 +2582,63 @@ describe('Invoices (e2e)', () => {
     }
   });
 
+  it('snapshots the explicit project step for PM-created invoices', async () => {
+    const invoiceIds: string[] = [];
+    try {
+      await db
+        .update(projects)
+        .set({ timeRoundingStepMinutes: 15 })
+        .where(eq(projects.id, roundingProjectId));
+      await db.insert(timeEntries).values({
+        id: ROUNDING_ENTRY_13,
+        workspaceId,
+        taskId: roundingTaskId,
+        userId: bobUserId,
+        source: 'manual',
+        startedAt: new Date('2099-11-06T10:00:00.000Z'),
+        endedAt: new Date('2099-11-06T10:01:00.000Z'),
+        durationSeconds: 60,
+        isBillable: true,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(pmToken))
+        .send({
+          title: 'PM Project Step Invoice',
+          dateFrom: '2099-11-01',
+          dateTo: '2099-11-30',
+          projectId: roundingProjectId,
+          hourlyRate: 60,
+        });
+      expect(res.status).toBe(201);
+      invoiceIds.push(res.body.id);
+
+      // 60s rounds up to the project's explicit 15-minute step → 900s → 0.25h,
+      // not the workspace default.
+      expect(res.body.roundingStepMinutes).toBe(15);
+      expect(res.body.totalHours).toBe(0.25);
+      expect(res.body.totalAmount).toBe(15); // 0.25h * 60
+
+      const [row] = await db
+        .select({ roundingStepMinutes: invoices.roundingStepMinutes })
+        .from(invoices)
+        .where(eq(invoices.id, res.body.id));
+      expect(row?.roundingStepMinutes).toBe(15);
+    } finally {
+      if (invoiceIds.length > 0) {
+        await db.delete(invoices).where(inArray(invoices.id, invoiceIds));
+      }
+      await db.delete(timeEntries).where(eq(timeEntries.id, ROUNDING_ENTRY_13));
+      await db
+        .update(projects)
+        .set({ timeRoundingStepMinutes: 5 })
+        .where(eq(projects.id, roundingProjectId));
+    }
+  });
+
   it('rejects out-of-range roundingStepMinutes in create', async () => {
-    for (const step of [0, 61]) {
+    for (const step of [0, null, 2.5, 61]) {
       const res = await request(app.getHttpServer())
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
@@ -2658,6 +2716,89 @@ describe('Invoices (e2e)', () => {
     expect(ids).toContain(ROUNDING_ENTRY_9);
 
     await db.delete(timeEntries).where(eq(timeEntries.id, ROUNDING_ENTRY_9));
+  });
+
+  it('preview inherits the workspace step for a null-step project', async () => {
+    const originalStep = await readWorkspaceRoundingStep();
+    await db
+      .update(workspaceSettings)
+      .set({ timeRoundingStepMinutes: 15 })
+      .where(eq(workspaceSettings.workspaceId, workspaceId));
+    try {
+      await db.insert(timeEntries).values({
+        id: ROUNDING_ENTRY_11,
+        workspaceId,
+        taskId: inheritTaskId,
+        userId: bobUserId,
+        source: 'manual',
+        startedAt: new Date('2099-11-07T10:00:00.000Z'),
+        endedAt: new Date('2099-11-07T10:01:00.000Z'),
+        durationSeconds: 60,
+        isBillable: true,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/invoices/eligible-entries')
+        .set('Authorization', bearer(adminToken))
+        .query({
+          dateFrom: '2099-11-01',
+          dateTo: '2099-11-30',
+          projectId: inheritProjectId,
+        });
+
+      expect(res.status).toBe(200);
+      // 60s rounds up to the inherited 15-minute step → 900s → 0.25h.
+      expect(res.body.defaultRoundingStepMinutes).toBe(15);
+      expect(res.body.totalHours).toBe(0.25);
+      const ids = res.body.entries.map((entry: { id: string }) => entry.id);
+      expect(ids).toContain(ROUNDING_ENTRY_11);
+    } finally {
+      await db.delete(timeEntries).where(eq(timeEntries.id, ROUNDING_ENTRY_11));
+      await db
+        .update(workspaceSettings)
+        .set({ timeRoundingStepMinutes: originalStep ?? 1 })
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+    }
+  });
+
+  it('preview reports the workspace step for workspace-wide previews', async () => {
+    const originalStep = await readWorkspaceRoundingStep();
+    await db
+      .update(workspaceSettings)
+      .set({ timeRoundingStepMinutes: 10 })
+      .where(eq(workspaceSettings.workspaceId, workspaceId));
+    try {
+      await db.insert(timeEntries).values({
+        id: ROUNDING_ENTRY_12,
+        workspaceId,
+        taskId: roundingTaskId,
+        userId: bobUserId,
+        source: 'manual',
+        startedAt: new Date('2099-12-07T10:00:00.000Z'),
+        endedAt: new Date('2099-12-07T10:01:00.000Z'),
+        durationSeconds: 60,
+        isBillable: true,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/invoices/eligible-entries')
+        .set('Authorization', bearer(adminToken))
+        .query({ dateFrom: '2099-12-01', dateTo: '2099-12-31' });
+
+      expect(res.status).toBe(200);
+      // 60s rounds up to the workspace 10-minute step → 600s → 0.17h. The
+      // entry's project step (5) does not leak into a workspace-wide preview.
+      expect(res.body.defaultRoundingStepMinutes).toBe(10);
+      expect(res.body.totalHours).toBe(0.17);
+      const ids = res.body.entries.map((entry: { id: string }) => entry.id);
+      expect(ids).toContain(ROUNDING_ENTRY_12);
+    } finally {
+      await db.delete(timeEntries).where(eq(timeEntries.id, ROUNDING_ENTRY_12));
+      await db
+        .update(workspaceSettings)
+        .set({ timeRoundingStepMinutes: originalStep ?? 1 })
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+    }
   });
 
   it('rejects update attempts that mutate the rounding step snapshot', async () => {

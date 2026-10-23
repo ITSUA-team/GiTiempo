@@ -376,6 +376,25 @@ describe('ProjectEditForm', () => {
     });
   });
 
+  it('reflects the current workspace rounding step in the inherit option label', async () => {
+    const wrapper = mountProjectEditForm({ workspaceRoundingStepMinutes: 5 });
+    const roundingSelect = wrapper
+      .findAllComponents({ name: 'Select' })
+      .find((c) => c.props('inputId') === 'edit-rounding-step')!;
+
+    expect(roundingSelect.props('options')[0]).toEqual({
+      label: 'Inherit from workspace (5 min)',
+      value: null,
+    });
+
+    await wrapper.setProps({ workspaceRoundingStepMinutes: 15 });
+
+    expect(roundingSelect.props('options')[0]).toEqual({
+      label: 'Inherit from workspace (15 min)',
+      value: null,
+    });
+  });
+
   it('initializes the rounding step from the project value', () => {
     const wrapper = mountProjectEditForm({ project: { timeRoundingStepMinutes: 15 } });
 

@@ -1071,6 +1071,70 @@ describe('InvoiceCreateDialog', () => {
     expect(getRoundingStepLabelElement().textContent).toBe('15 min');
   });
 
+  it('keeps the user-entered rounding step when the selected project changes', async () => {
+    testMocks.listEligibleEntries
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 15 }),
+      );
+
+    const wrapper = await mountDialog({ isAdmin: true });
+
+    await getSelectByInputId(wrapper, 'invoice-create-project').vm.$emit(
+      'update:modelValue',
+      billingProjectId,
+    );
+    await flushPromises();
+
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('5 min');
+    expect(testMocks.listEligibleEntries).toHaveBeenNthCalledWith(1, {
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: billingProjectId,
+    });
+
+    await getSelectByInputId(wrapper, 'invoice-create-rounding-step').vm.$emit(
+      'update:modelValue',
+      30,
+    );
+    await flushPromises();
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('30 min');
+    expect(testMocks.listEligibleEntries).toHaveBeenNthCalledWith(2, {
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: billingProjectId,
+      roundingStepMinutes: 30,
+    });
+
+    // The touched flag must block both the immediate project watcher (Orion
+    // is configured with 15) and the fresh preview default (15), so the
+    // user's 30 survives the project switch.
+    await getSelectByInputId(wrapper, 'invoice-create-project').vm.$emit(
+      'update:modelValue',
+      projectId,
+    );
+    await flushPromises();
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('30 min');
+    expect(testMocks.listEligibleEntries).toHaveBeenNthCalledWith(3, {
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId,
+      roundingStepMinutes: 30,
+    });
+  });
+
   it('refetches the preview with the user-selected rounding step', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(
       createEntriesResponse({ defaultRoundingStepMinutes: 5 }),

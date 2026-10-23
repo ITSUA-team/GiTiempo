@@ -451,6 +451,15 @@ describe('Workspace settings (e2e)', () => {
 
       expect(res.status).toBe(400);
     });
+
+    it('returns 400 for non-integer timeRoundingStepMinutes', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ timeRoundingStepMinutes: 2.5 });
+
+      expect(res.status).toBe(400);
+    });
   });
 
   describe('PATCH /workspace', () => {

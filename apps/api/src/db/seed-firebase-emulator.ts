@@ -7,11 +7,36 @@ admin.initializeApp({
 const auth = admin.auth();
 
 const SEED_USERS = [
-  { uid: 'admin-uid', email: 'admin@example.com', password: 'password123', displayName: 'Admin (seed)' },
-  { uid: 'seed-user-1', email: 'alice@gitiempo.dev', password: 'password123', displayName: 'Alice (seed)' },
-  { uid: 'seed-user-2', email: 'bob@gitiempo.dev', password: 'password123', displayName: 'Bob (seed)' },
-  { uid: 'seed-user-3', email: 'carol@gitiempo.dev', password: 'password123', displayName: 'Carol (seed)' },
-  { uid: '5EU7Psf9HfeBoyq9qb91fHhj5jg2', email: 'gitiempo@itsua.com', password: 'password123', displayName: 'Admin gitempo' },
+  {
+    uid: 'admin-uid',
+    email: 'admin@example.com',
+    password: 'password123',
+    displayName: 'Admin (seed)',
+  },
+  {
+    uid: 'seed-user-1',
+    email: 'alice@gitiempo.dev',
+    password: 'password123',
+    displayName: 'Alice (seed)',
+  },
+  {
+    uid: 'seed-user-2',
+    email: 'bob@gitiempo.dev',
+    password: 'password123',
+    displayName: 'Bob (seed)',
+  },
+  {
+    uid: 'seed-user-3',
+    email: 'carol@gitiempo.dev',
+    password: 'password123',
+    displayName: 'Carol (seed)',
+  },
+  {
+    uid: '5EU7Psf9HfeBoyq9qb91fHhj5jg2',
+    email: 'gitiempo@itsua.com',
+    password: 'password123',
+    displayName: 'Admin gitempo',
+  },
 ];
 
 async function main() {
@@ -45,7 +70,9 @@ async function main() {
           displayName: user.displayName,
           emailVerified: true,
         });
-        console.log(`Replaced: ${user.email} (uid: ${user.uid}, was ${existing.uid})`);
+        console.log(
+          `Replaced: ${user.email} (uid: ${user.uid}, was ${existing.uid})`,
+        );
       } else {
         throw err;
       }

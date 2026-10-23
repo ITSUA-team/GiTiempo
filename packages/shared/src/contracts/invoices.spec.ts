@@ -175,6 +175,36 @@ describe("invoiceResponseSchema", () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["currency"]);
   });
+
+  it("rejects null roundingStepMinutes", () => {
+    const result = invoiceResponseSchema.safeParse({
+      ...validInvoiceResponse,
+      roundingStepMinutes: null,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("rejects roundingStepMinutes of 0", () => {
+    const result = invoiceResponseSchema.safeParse({
+      ...validInvoiceResponse,
+      roundingStepMinutes: 0,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("rejects roundingStepMinutes of 61", () => {
+    const result = invoiceResponseSchema.safeParse({
+      ...validInvoiceResponse,
+      roundingStepMinutes: 61,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
 });
 
 describe("invoiceListResponseSchema", () => {
@@ -872,6 +902,44 @@ describe("eligibleEntriesQuerySchema", () => {
       dateTo: "2026-04-21",
       roundingStepMinutes: 61,
     });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("accepts roundingStepMinutes boundary values 1 and 60", () => {
+    const min = eligibleEntriesQuerySchema.parse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: 1,
+    });
+    const max = eligibleEntriesQuerySchema.parse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: 60,
+    });
+
+    expect(min.roundingStepMinutes).toBe(1);
+    expect(max.roundingStepMinutes).toBe(60);
+  });
+
+  it("rejects a non-integer string roundingStepMinutes", () => {
+    const result = eligibleEntriesQuerySchema.safeParse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: "2.5",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("rejects a non-numeric string roundingStepMinutes", () => {
+    const result = eligibleEntriesQuerySchema.safeParse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: "abc",
+    });
+
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
   });
