@@ -49,17 +49,12 @@ const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
   { label: 'Private', value: 'private' as const },
 ];
-const roundingStepOptions = computed<{ label: string; value: number | null }[]>(
-  () => [
-    {
-      label: `Inherit from workspace (${props.workspaceRoundingStepMinutes} min)`,
-      value: null,
-    },
-    ...[1, 5, 10, 15, 30, 60].map((stepMinutes) => ({
+const roundingStepOptions = computed<{ label: string; value: number }[]>(
+  () =>
+    [1, 5, 10, 15, 30, 60].map((stepMinutes) => ({
       label: `${stepMinutes} min`,
       value: stepMinutes,
     })),
-  ],
 );
 const isExternalProject = computed(
   () => props.project.trackingMode === 'external-reference',
@@ -88,7 +83,8 @@ function handleMemberComplete(event: AutoCompleteCompleteEvent): void {
 
 const initialValues: ProjectEditFormInput = {
   defaultBillableForTasks: props.project.defaultBillableForTasks,
-  timeRoundingStepMinutes: props.project.timeRoundingStepMinutes ?? null,
+  timeRoundingStepMinutes:
+    props.project.timeRoundingStepMinutes ?? props.workspaceRoundingStepMinutes,
   managerUserId:
     props.project.members.find((m) => m.role === WorkspaceRoles.PM)?.userId ??
     null,

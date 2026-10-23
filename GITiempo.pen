@@ -47599,7 +47599,7 @@
                                   "type": "frame",
                                   "id": "zshp0",
                                   "name": "f3a",
-                                  "width": 150,
+                                  "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
@@ -47656,7 +47656,7 @@
                                   "type": "frame",
                                   "id": "upd035",
                                   "name": "f3b",
-                                  "width": 150,
+                                  "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
@@ -47700,27 +47700,27 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "9to6Y",
-                                  "name": "f3b",
+                                  "id": "rndInv1",
+                                  "name": "roundingStepField",
                                   "width": "fill_container",
                                   "layout": "vertical",
-                                  "gap": 4,
+                                  "gap": 6,
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "cyDuX",
+                                      "id": "rndInvL1",
                                       "fill": "$color-text-dark",
-                                      "content": "Total amount (calculated)",
+                                      "content": "Rounding step",
                                       "fontFamily": "Inter",
                                       "fontSize": 13,
                                       "fontWeight": "500"
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "HTEJN",
+                                      "id": "rndInvS1",
                                       "width": "fill_container",
-                                      "height": 34,
-                                      "fill": "$color-app-bg",
+                                      "height": 38,
+                                      "fill": "$color-surface",
                                       "cornerRadius": "$radius-sm",
                                       "stroke": "$color-divider",
                                       "strokeWidth": 1,
@@ -47729,16 +47729,26 @@
                                         0,
                                         12
                                       ],
+                                      "justifyContent": "space_between",
                                       "alignItems": "center",
                                       "children": [
                                         {
                                           "type": "text",
-                                          "id": "Kcbr2",
+                                          "id": "rndInvV1",
                                           "fill": "$color-text-dark",
-                                          "content": "$12,800",
+                                          "content": "1 min",
                                           "fontFamily": "Inter",
                                           "fontSize": 14,
-                                          "fontWeight": "700"
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "icon",
+                                          "id": "rndInvC1",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "chevron-down",
+                                          "library": "lucide",
+                                          "fill": "$color-text-muted"
                                         }
                                       ]
                                     }

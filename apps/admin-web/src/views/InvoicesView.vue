@@ -141,6 +141,10 @@ const workspaceCurrency = computed(
   () => workspaceSettingsQuery.data.value?.currency ?? null,
 );
 
+const workspaceRoundingStepMinutes = computed(
+  () => workspaceSettingsQuery.data.value?.timeRoundingStepMinutes ?? null,
+);
+
 watch(
   () => workspaceSettingsQuery.error.value,
   (error) => {
@@ -182,6 +186,14 @@ const filterOptions = computed<InvoicesTableFilterOptions>(() => ({
   })),
   statuses: INVOICE_STATUS_OPTIONS,
 }));
+
+const dialogProjects = computed(() =>
+  (projectsQuery.data.value ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    timeRoundingStepMinutes: p.timeRoundingStepMinutes,
+  })),
+);
 
 const statsCards = computed(() => {
   const statsData = stats.value;
@@ -337,9 +349,10 @@ function handleCreateSuccess(): void {
       v-model:visible="createDialogVisible"
       :create-mutation="createMutation"
       :is-admin="isAdmin"
-      :projects="filterOptions.projects"
+      :projects="dialogProjects"
       :scope="scope"
       :workspace-currency="workspaceCurrency"
+      :workspace-rounding-step-minutes="workspaceRoundingStepMinutes"
       @created="handleCreateSuccess"
     />
   </div>

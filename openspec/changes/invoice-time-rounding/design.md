@@ -15,7 +15,7 @@ The `admin-invoices-page` capability is being introduced by `add-admin-invoices-
 - Add a per-invoice `roundingStepMinutes` snapshot (always non-null), auto-populated from the effective project step at creation, overridable in the create dialog.
 - Apply per-entry ceiling rounding (up to the nearest step multiple in seconds) before summing, without modifying original time-entry records. Rounding is always active — minimum step is 1 minute.
 - Surface the effective rounding step in the eligible-entries preview so the dialog pre-fills and live-updates correctly, including dynamic update when the project selection changes.
-- Update .pen design frames for the project settings, Add Project, and admin Settings surfaces.
+- Update .pen design frames for the project settings, Add Project, admin Settings, and Create Invoice dialog surfaces.
 
 **Non-Goals:**
 
@@ -71,6 +71,8 @@ When the user selects or changes the project in the create dialog, the preview r
 
 **Rationale:** The user wants the rounding step to "inherit from the project" dynamically. Since the dialog already re-fetches the preview when the project changes, the `defaultRoundingStepMinutes` in the new response naturally provides the new project's effective step. The touched-flag pattern (same as rate/currency) ensures user overrides are respected.
 
+In addition to the preview-based update, the dialog now updates the rounding step field **immediately** when the project selection changes, using the project's own `timeRoundingStepMinutes` value passed via the `projects` prop — without waiting for the preview response. When the project's value is null (inherit), the dialog falls back to `workspaceRoundingStepMinutes` (passed as a new prop from workspace settings). The preview sync watcher still runs afterwards and reconciles any discrepancy. This requires the dialog to receive `timeRoundingStepMinutes` per project and a `workspaceRoundingStepMinutes` value as new props from the parent view (`InvoicesView.vue`).
+
 ### 7. Project settings Select: "Inherit from workspace" as first option
 
 The project settings form and Add Project form show a PrimeVue `<Select>` with "Inherit from workspace (N min)" as the first option (where N is the current workspace default), followed by explicit values 1, 5, 10, 15, 30, 60. Selecting "Inherit" stores `null` on the project. Selecting an explicit value stores that integer.
@@ -89,12 +91,13 @@ The invoice detail page shows `totalHours` (the rounded result) but does NOT sho
 
 **Rationale:** The user explicitly requested that only the result (rounded time) be visible, not the rounding parameter. This keeps the invoice detail focused on billing outcomes.
 
-### 10. .pen design: three frames updated with responsive-aware controls
+### 10. .pen design: four frames updated with responsive-aware controls
 
-Three .pen frames are updated:
+Four .pen frames are updated:
 - **Admin Projects inline settings** (`UD9Ym`): `roundingStepWrap` Select added to the `settingsRow` after the billable default, before the archive button. Shows "Inherit from workspace (1 min)" as default.
 - **Add Project form** (`uIbaa`): `projectDialogField` for "Time rounding step" added after the billable field, following the existing form field pattern.
 - **Admin Settings form** (`XtiC1`): `roundingStepField` added to the `workspaceSection` after the rate field, matching the existing field styling.
+- **Create Invoice dialog** (`field3` row in the invoice create frame): the "Total amount (calculated)" display field is replaced with a "Rounding step" Select (label "Rounding step", value "1 min", chevron-down icon). All three fields in the row (Currency, Discount, Rounding step) change from fixed width 150 to `fill_container` for equal distribution on desktop, matching the `sm:flex-1` implementation.
 
 No mobile variants exist for these frames in the current .pen. The controls follow the existing desktop patterns and will be implemented responsively in code using the established admin-web responsive patterns (PrimeVue Select adapts to mobile automatically).
 

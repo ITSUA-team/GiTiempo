@@ -107,17 +107,12 @@ const visibilityOptions = [
   { label: 'Private', value: 'private' as const },
 ];
 
-const roundingStepOptions = computed<{ label: string; value: number | null }[]>(
-  () => [
-    {
-      label: `Inherit from workspace (${workspaceRoundingStepMinutes.value} min)`,
-      value: null,
-    },
-    ...[1, 5, 10, 15, 30, 60].map((stepMinutes) => ({
+const roundingStepOptions = computed<{ label: string; value: number }[]>(
+  () =>
+    [1, 5, 10, 15, 30, 60].map((stepMinutes) => ({
       label: `${stepMinutes} min`,
       value: stepMinutes,
     })),
-  ],
 );
 
 const resolver = computed(() =>
@@ -131,7 +126,7 @@ const resolver = computed(() =>
 const initialValues: CreateProjectFormInput = {
   defaultBillableForTasks: true,
   name: '',
-  timeRoundingStepMinutes: null,
+  timeRoundingStepMinutes: workspaceRoundingStepMinutes.value,
   visibility: 'private',
   managerUserId: null,
 };
@@ -577,8 +572,8 @@ onMounted(loadMembers);
                 :pt="giTiempoSelectPt"
               />
               <small class="text-text-muted text-xs">
-                New time entries are rounded to this step. Inherit follows the workspace
-                default ({{ workspaceRoundingStepMinutes }} min).
+                New time entries are rounded to this step. Defaults to the workspace
+                setting ({{ workspaceRoundingStepMinutes }} min).
               </small>
             </div>
 

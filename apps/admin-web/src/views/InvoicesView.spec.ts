@@ -392,6 +392,7 @@ const InvoiceCreateDialogStub = defineComponent({
     scope: { type: Object, required: true },
     visible: { type: Boolean, required: true },
     workspaceCurrency: { type: String, default: null },
+    workspaceRoundingStepMinutes: { type: Number, default: null },
   },
   emits: ['created', 'update:visible'],
   methods: {
@@ -416,6 +417,7 @@ const InvoiceCreateDialogStub = defineComponent({
     <div
       data-testid="invoice-create-dialog"
       :data-workspace-currency="workspaceCurrency"
+      :data-workspace-rounding-step-minutes="workspaceRoundingStepMinutes"
     >
       visible={{ visible }}
       <button

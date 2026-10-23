@@ -47,9 +47,15 @@ const props = defineProps<{
   visible: boolean;
   /** Admin may submit without a project (workspace-wide); PM must select one. */
   isAdmin: boolean;
-  projects: Array<{ id: string; name: string }>;
+  projects: Array<{
+    id: string;
+    name: string;
+    timeRoundingStepMinutes: number | null;
+  }>;
   /** Currency selected in workspace Settings; pre-selected on dialog open. */
   workspaceCurrency: string | null;
+  /** Rounding step from workspace Settings; resolves project "inherit" values. */
+  workspaceRoundingStepMinutes: number | null;
   scope: AdminServerStateScope;
   createMutation: InvoiceCreateMutation;
 }>();
@@ -173,6 +179,30 @@ watch(
   },
   { immediate: true },
 );
+
+// When a project is selected, immediately update the rounding step from the
+// project's configured value (or the workspace default when the project
+// inherits) so the field reflects the selection without waiting for the
+// preview response. The preview sync above still reconciles afterwards.
+watch(selectedProjectId, (newProjectId) => {
+  if (roundingStepTouched.value) return;
+
+  if (!newProjectId || newProjectId === WORKSPACE_WIDE_PROJECT_VALUE) {
+    if (props.workspaceRoundingStepMinutes !== null) {
+      roundingStepMinutes.value = props.workspaceRoundingStepMinutes;
+    }
+    return;
+  }
+
+  const project = props.projects.find((p) => p.id === newProjectId);
+  if (!project) return;
+
+  if (project.timeRoundingStepMinutes !== null) {
+    roundingStepMinutes.value = project.timeRoundingStepMinutes;
+  } else if (props.workspaceRoundingStepMinutes !== null) {
+    roundingStepMinutes.value = props.workspaceRoundingStepMinutes;
+  }
+});
 
 const isCreating = computed(() => props.createMutation.isCreating.value);
 
@@ -423,7 +453,7 @@ async function handleCreate(): Promise<void> {
         data-testid="invoice-create-row-pricing"
         class="flex flex-col gap-4 sm:flex-row sm:gap-3"
       >
-        <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
+        <div class="flex w-full flex-col gap-1 sm:flex-1">
           <label
             for="invoice-create-currency"
             class="text-text-dark text-[13px] font-medium"
@@ -441,7 +471,7 @@ async function handleCreate(): Promise<void> {
             @update:model-value="handleCurrencyUpdate"
           />
         </div>
-        <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
+        <div class="flex w-full flex-col gap-1 sm:flex-1">
           <label
             for="invoice-create-discount"
             class="text-text-dark text-[13px] font-medium"
@@ -458,13 +488,7 @@ async function handleCreate(): Promise<void> {
             @update:model-value="handleDiscountUpdate"
           />
         </div>
-      </div>
-
-      <div
-        data-testid="invoice-create-row-rounding"
-        class="flex flex-col gap-4 sm:flex-row sm:gap-3"
-      >
-        <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
+        <div class="flex w-full flex-col gap-1 sm:flex-1">
           <label
             for="invoice-create-rounding-step"
             class="text-text-dark text-[13px] font-medium"

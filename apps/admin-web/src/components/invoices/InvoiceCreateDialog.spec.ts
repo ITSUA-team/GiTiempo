@@ -42,8 +42,12 @@ const userId = '33333333-3333-4333-8333-333333333333';
 const invoiceId = '55555555-5555-4555-8555-555555555555';
 
 const PROJECT_OPTIONS = [
-  { id: projectId, name: 'Project Orion' },
-  { id: billingProjectId, name: 'Billing API' },
+  { id: projectId, name: 'Project Orion', timeRoundingStepMinutes: 15 },
+  {
+    id: billingProjectId,
+    name: 'Billing API',
+    timeRoundingStepMinutes: 5,
+  },
 ];
 
 function createTimeEntry(
@@ -107,9 +111,14 @@ function createInvoiceResponse(): InvoiceResponse {
 interface MountDialogOptions {
   isAdmin?: boolean;
   isCreating?: boolean;
-  projects?: Array<{ id: string; name: string }>;
+  projects?: Array<{
+    id: string;
+    name: string;
+    timeRoundingStepMinutes: number | null;
+  }>;
   createInvoice?: (input: CreateInvoiceInput) => Promise<InvoiceResponse>;
   workspaceCurrency?: string | null;
+  workspaceRoundingStepMinutes?: number | null;
 }
 
 function createCreateInvoiceSpy(
@@ -144,6 +153,8 @@ async function mountDialog(options: MountDialogOptions = {}) {
       isAdmin,
       projects: options.projects ?? PROJECT_OPTIONS,
       workspaceCurrency: options.workspaceCurrency ?? null,
+      workspaceRoundingStepMinutes:
+        options.workspaceRoundingStepMinutes ?? null,
       scope: {
         role: isAdmin ? 'admin' : 'pm',
         userId: 'user-1',
@@ -382,7 +393,6 @@ describe('InvoiceCreateDialog', () => {
     for (const rowTestId of [
       'invoice-create-row-dates',
       'invoice-create-row-pricing',
-      'invoice-create-row-rounding',
     ]) {
       const row = rowFor(rowTestId);
       expect(row.classList.contains('flex-col')).toBe(true);
@@ -390,15 +400,18 @@ describe('InvoiceCreateDialog', () => {
       expect(row.classList.contains('sm:gap-3')).toBe(true);
     }
 
+    const hourlyRateColumn = columnFor('invoice-create-hourly-rate');
+    expect(hourlyRateColumn.classList.contains('w-full')).toBe(true);
+    expect(hourlyRateColumn.classList.contains('sm:w-[150px]')).toBe(true);
+
     for (const inputId of [
-      'invoice-create-hourly-rate',
       'invoice-create-currency',
       'invoice-create-discount',
       'invoice-create-rounding-step',
     ]) {
       const column = columnFor(inputId);
       expect(column.classList.contains('w-full')).toBe(true);
-      expect(column.classList.contains('sm:w-[150px]')).toBe(true);
+      expect(column.classList.contains('sm:flex-1')).toBe(true);
     }
   });
 
@@ -969,6 +982,46 @@ describe('InvoiceCreateDialog', () => {
       dateTo: '2026-04-30',
       projectId,
     });
+  });
+
+  it('updates the rounding step immediately from the selected project before the preview fires', async () => {
+    const wrapper = await mountDialog({
+      isAdmin: true,
+      workspaceRoundingStepMinutes: 1,
+    });
+
+    // No dates entered yet, so no preview has fired. The field rests on the
+    // initial 1-minute default.
+    expect(getRoundingStepLabelElement().textContent).toBe('1 min');
+
+    // Selecting a project with a configured rounding step updates the field
+    // instantly from the project data, without waiting for a preview response.
+    await getSelectByInputId(wrapper, 'invoice-create-project').vm.$emit(
+      'update:modelValue',
+      projectId,
+    );
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('15 min');
+    expect(testMocks.listEligibleEntries).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the workspace rounding step when the selected project inherits', async () => {
+    const wrapper = await mountDialog({
+      isAdmin: true,
+      projects: [
+        { id: projectId, name: 'Project Orion', timeRoundingStepMinutes: null },
+      ],
+      workspaceRoundingStepMinutes: 10,
+    });
+
+    await getSelectByInputId(wrapper, 'invoice-create-project').vm.$emit(
+      'update:modelValue',
+      projectId,
+    );
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('10 min');
   });
 
   it('keeps the user-entered rounding step when the preview refetches', async () => {

@@ -8,7 +8,7 @@ Define the admin SPA invoice management surface behavior — list, search, filte
 
 ### Requirement: Invoice Create Dialog Includes Time Rounding Step
 
-The invoice create dialog MUST include a time rounding step field — a PrimeVue `<Select>` with presets 1, 5, 10, 15, 30, 60 and no no-rounding option — that is pre-filled from the effective rounding step returned by the eligible-entries preview response, updates dynamically when the selected project changes, and is overridable per-invoice without changing the project's `timeRoundingStepMinutes` setting.
+The invoice create dialog MUST include a time rounding step field — a PrimeVue `<Select>` with presets 1, 5, 10, 15, 30, 60 and no no-rounding option — that is pre-filled from the effective rounding step returned by the eligible-entries preview response, updates dynamically when the selected project changes — both immediately from the project's own `timeRoundingStepMinutes` value (or the workspace default when the project inherits) and via the eligible-entries preview response, and is overridable per-invoice without changing the project's `timeRoundingStepMinutes` setting.
 
 #### Scenario: Rounding step field is pre-filled from preview
 
@@ -25,6 +25,15 @@ The invoice create dialog MUST include a time rounding step field — a PrimeVue
 - **WHEN** the user selects a different project whose preview response returns `defaultRoundingStepMinutes: 15`
 - **THEN** the rounding step field updates to 15
 - **AND** the previewed total hours reflect per-entry rounding with a 15-minute step
+
+#### Scenario: Rounding step field updates immediately from the selected project before the preview fires
+
+- **GIVEN** the user has not yet entered a date range (so no preview request has been made)
+- **AND** the user has not manually edited the rounding step field
+- **WHEN** the user selects a project whose `timeRoundingStepMinutes` is 15
+- **THEN** the rounding step field immediately updates to 15
+- **AND** no eligible-entries preview request is required for the update
+- **AND** when the selected project has `timeRoundingStepMinutes` null (inherit), the field falls back to the workspace's `timeRoundingStepMinutes`
 
 #### Scenario: Rounding step field uses the workspace default for workspace-wide invoices
 

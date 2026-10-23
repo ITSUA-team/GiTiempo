@@ -286,7 +286,6 @@ describe('ProjectEditForm', () => {
     expect(roundingSelect.props('optionLabel')).toBe('label');
     expect(roundingSelect.props('optionValue')).toBe('value');
     expect(roundingSelect.props('options')).toEqual([
-      { label: 'Inherit from workspace (5 min)', value: null },
       { label: '1 min', value: 1 },
       { label: '5 min', value: 5 },
       { label: '10 min', value: 10 },
@@ -368,11 +367,11 @@ describe('ProjectEditForm', () => {
     expect(archivedWrapper.get('button').attributes('disabled')).toBeDefined();
   });
 
-  it('initializes the rounding step to inherit when the project has no own step', () => {
+  it('initializes the rounding step to the workspace value when the project has no own step', () => {
     const wrapper = mountProjectEditForm();
 
     expect(wrapper.getComponent({ name: 'Form' }).props('initialValues')).toMatchObject({
-      timeRoundingStepMinutes: null,
+      timeRoundingStepMinutes: 5,
     });
   });
 
@@ -394,23 +393,6 @@ describe('ProjectEditForm', () => {
       {
         defaultBillableForTasks: true,
         timeRoundingStepMinutes: 10,
-        managerUserId: 'user-2',
-        visibility: 'public',
-        memberIds: ['user-2'],
-      },
-    ]);
-  });
-
-  it('saves null when the rounding step is cleared back to inherit', async () => {
-    const wrapper = mountProjectEditForm({ project: { timeRoundingStepMinutes: 15 } });
-    submitOptions = { timeRoundingStepMinutes: null };
-
-    await wrapper.get('[data-testid="project-edit-form-submit"]').trigger('click');
-
-    expect(wrapper.emitted('save')?.[0]).toEqual([
-      {
-        defaultBillableForTasks: true,
-        timeRoundingStepMinutes: null,
         managerUserId: 'user-2',
         visibility: 'public',
         memberIds: ['user-2'],
