@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
   BillableDefaultBackfillDialog,
-  getErrorMessage,
   StatCard,
   SurfaceCard,
   useIsMobileViewport,
@@ -16,14 +15,13 @@ import ProjectsTable from '@/components/ProjectsTable.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
+import { useWorkspaceRoundingSettings } from '@/composables/useWorkspaceRoundingSettings';
 import { useAdminProjectsData } from '@/composables/projects/useAdminProjectsData';
 import { useProjectArchiveActions } from '@/composables/projects/useProjectArchiveActions';
 import { useProjectBillableBackfillFlow } from '@/composables/projects/useProjectBillableBackfillFlow';
 import { useProjectEditActions } from '@/composables/projects/useProjectEditActions';
-import { useWorkspaceSettingsQuery } from '@/composables/query';
 import { useProjectsTableState } from '@/composables/useProjectsTableState';
 import { routeNames } from '@/router';
-import { getAdminSettingsClient } from '@/services/admin-settings-client';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
@@ -61,30 +59,12 @@ const {
   onError: notifyProjectsError,
 });
 
-const workspaceSettingsQuery = useWorkspaceSettingsQuery({
-  client: getAdminSettingsClient(),
+const { workspaceRoundingStepMinutes } = useWorkspaceRoundingSettings({
   enabled: computed(() => Boolean(accessToken.value)),
+  fallback: 1,
+  feature: 'projects',
   scope,
 });
-
-const workspaceRoundingStepMinutes = computed(
-  () => workspaceSettingsQuery.data.value?.timeRoundingStepMinutes ?? 1,
-);
-
-watch(
-  () => workspaceSettingsQuery.error.value,
-  (error) => {
-    if (error) {
-      errorToast(getErrorMessage(error), {
-        error,
-        logContext: {
-          action: 'load-workspace-settings',
-          feature: 'projects',
-        },
-      });
-    }
-  },
-);
 
 const {
   collapseRow: collapseProjectRow,

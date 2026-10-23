@@ -1003,7 +1003,7 @@ export class ProjectsService {
       color: row.color,
       visibility: row.visibility,
       defaultBillableForTasks: row.defaultBillableForTasks,
-      timeRoundingStepMinutes: row.timeRoundingStepMinutes ?? null,
+      timeRoundingStepMinutes: row.timeRoundingStepMinutes,
       source: row.source,
       referenceProvenance: row.referenceProvenance,
       trackingMode: row.trackingMode,

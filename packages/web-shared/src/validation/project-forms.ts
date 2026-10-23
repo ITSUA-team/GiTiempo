@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { createProjectSchema } from "@gitiempo/shared";
+import {
+  createProjectSchema,
+  roundingStepMinutesSchema,
+} from "@gitiempo/shared";
 
 // Re-export for use in forms — name field gets a user-friendly message
 export const createProjectFormSchema = createProjectSchema.extend({
@@ -17,7 +20,7 @@ export type ImportProjectFormInput = z.infer<typeof importProjectFormSchema>;
 
 export const projectEditFormSchema = z.object({
   defaultBillableForTasks: z.boolean(),
-  timeRoundingStepMinutes: z.number().int().min(1).max(60).nullable().optional(),
+  timeRoundingStepMinutes: roundingStepMinutesSchema.nullable().optional(),
   managerUserId: z.string().nullable().optional(),
   visibility: z.enum(["public", "private"]),
   memberIds: z.array(z.string()),

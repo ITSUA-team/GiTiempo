@@ -30,6 +30,7 @@ import { getSettingsCurrencyOptions } from '@/lib/currencies';
 import { formatCurrency } from '@/lib/format-currency';
 import { formatDuration } from '@/lib/format-duration';
 import type { AdminServerStateScope } from '@/lib/query-keys';
+import { getRoundingStepOptions } from '@/lib/rounding-step-options';
 
 /**
  * Presentational create-invoice dialog for the admin invoices list page.
@@ -67,14 +68,7 @@ const emit = defineEmits<{
 
 const WORKSPACE_WIDE_PROJECT_VALUE = '';
 
-const ROUNDING_STEP_OPTIONS = [
-  { label: '1 min', value: 1 },
-  { label: '5 min', value: 5 },
-  { label: '10 min', value: 10 },
-  { label: '15 min', value: 15 },
-  { label: '30 min', value: 30 },
-  { label: '60 min', value: 60 },
-];
+const ROUNDING_STEP_OPTIONS = getRoundingStepOptions();
 
 const title = ref('');
 const selectedProjectId = ref<string | null>(null);

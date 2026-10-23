@@ -15,6 +15,7 @@ import Select from 'primevue/select';
 
 import type { AdminSettingsFieldErrors } from '@/composables/settings/admin-settings-form';
 import type { CurrencyOption } from '@/lib/currencies';
+import { getRoundingStepOptions } from '@/lib/rounding-step-options';
 import type { SettingsTimeZoneOption } from '@/lib/time-zones';
 import SettingsCard from './SettingsCard.vue';
 
@@ -51,14 +52,7 @@ const props = defineProps<{
 
 const selectCurrencyOptions = computed(() => [...props.currencyOptions]);
 const selectTimeZoneOptions = computed(() => [...props.timeZoneOptions]);
-const roundingStepOptions = [
-	{ label: '1 min', value: 1 },
-	{ label: '5 min', value: 5 },
-	{ label: '10 min', value: 10 },
-	{ label: '15 min', value: 15 },
-	{ label: '30 min', value: 30 },
-	{ label: '60 min', value: 60 },
-];
+const roundingStepOptions = getRoundingStepOptions();
 const workspaceForm = ref<FormInstance | null>(null);
 const timeZoneSuggestions = ref<SettingsTimeZoneOption[]>([]);
 const selectedTimeZoneOption = computed(

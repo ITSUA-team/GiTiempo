@@ -306,7 +306,7 @@ describe('AddProjectView', () => {
     expect(testMocks.routerPush).toHaveBeenCalledWith({ name: 'admin-projects' });
   });
 
-  it('keeps the shared settings fields in both source modes', async () => {
+  it('keeps the shared settings fields in both source modes and hides the rounding step for GitHub imports', async () => {
     const wrapper = mountAddProjectView();
     await flushPromises();
 
@@ -319,7 +319,9 @@ describe('AddProjectView', () => {
     expect(wrapper.find('#project-manager').exists()).toBe(true);
     expect(wrapper.find('#visibility').exists()).toBe(true);
     expect(wrapper.find('input[name="defaultBillableForTasks"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="project-rounding-step"]').exists()).toBe(true);
+    // The GitHub import contract carries no rounding step, so the control is
+    // hidden in import mode instead of accepting a value that gets dropped.
+    expect(wrapper.find('[data-testid="project-rounding-step"]').exists()).toBe(false);
   });
 
   it('derives the project name from the chosen GitHub project', async () => {

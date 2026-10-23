@@ -60,6 +60,15 @@ export function validateAdminSettingsForm(
 		errors.defaultHourlyRate = 'Default hourly rate cannot be negative.';
 	}
 
+	if (
+		!Number.isInteger(timeRoundingStepMinutes) ||
+		timeRoundingStepMinutes < 1 ||
+		timeRoundingStepMinutes > 60
+	) {
+		errors.timeRoundingStepMinutes =
+			'Time rounding step must be a whole number between 1 and 60.';
+	}
+
 	const settingsResult = updateWorkspaceSettingsSchema.safeParse({
 		currency,
 		defaultHourlyRate,

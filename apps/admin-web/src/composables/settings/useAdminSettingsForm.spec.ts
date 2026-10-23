@@ -76,7 +76,7 @@ describe('useAdminSettingsForm', () => {
       'Default hourly rate cannot be negative.',
     );
     expect(settingsForm.fieldErrors.timeRoundingStepMinutes).toBe(
-      'Too small: expected number to be >=1',
+      'Time rounding step must be a whole number between 1 and 60.',
     );
     expect(settingsForm.fieldErrors.timeZone).toBe('Invalid time zone');
   });

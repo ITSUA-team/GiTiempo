@@ -22,6 +22,12 @@ import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 
+import type { RoundingStepOption } from '@/lib/rounding-step-options';
+import {
+  getInheritRoundingStepOption,
+  getRoundingStepOptions,
+} from '@/lib/rounding-step-options';
+
 const props = defineProps<{
   project: ProjectResponse;
   allMembers: WorkspaceMemberListResponse;
@@ -49,13 +55,10 @@ const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
   { label: 'Private', value: 'private' as const },
 ];
-const roundingStepOptions = computed<{ label: string; value: number }[]>(
-  () =>
-    [1, 5, 10, 15, 30, 60].map((stepMinutes) => ({
-      label: `${stepMinutes} min`,
-      value: stepMinutes,
-    })),
-);
+const roundingStepOptions = computed<RoundingStepOption[]>(() => [
+  getInheritRoundingStepOption(props.workspaceRoundingStepMinutes),
+  ...getRoundingStepOptions(),
+]);
 const isExternalProject = computed(
   () => props.project.trackingMode === 'external-reference',
 );
@@ -83,8 +86,7 @@ function handleMemberComplete(event: AutoCompleteCompleteEvent): void {
 
 const initialValues: ProjectEditFormInput = {
   defaultBillableForTasks: props.project.defaultBillableForTasks,
-  timeRoundingStepMinutes:
-    props.project.timeRoundingStepMinutes ?? props.workspaceRoundingStepMinutes,
+  timeRoundingStepMinutes: props.project.timeRoundingStepMinutes,
   managerUserId:
     props.project.members.find((m) => m.role === WorkspaceRoles.PM)?.userId ??
     null,

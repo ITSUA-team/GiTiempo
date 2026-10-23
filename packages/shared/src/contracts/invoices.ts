@@ -5,6 +5,7 @@ import {
   dateTimeSchema,
   optionalSearchSchema,
   paginatedListMetaSchema,
+  roundingStepMinutesSchema,
 } from "./common.js";
 
 export const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
@@ -42,7 +43,7 @@ export const invoiceResponseSchema = z.object({
   discountPercent: z.number().min(0).max(100).multipleOf(0.01),
   totalHours: z.number().nonnegative().max(99999999.99).multipleOf(0.01),
   totalAmount: z.number().nonnegative().max(9999999999.99).multipleOf(0.01),
-  roundingStepMinutes: z.number().int().min(1).max(60),
+  roundingStepMinutes: roundingStepMinutesSchema,
   notes: z.string().nullable(),
   createdBy: z.uuid(),
   createdByName: z.string().nullable(),
@@ -119,7 +120,7 @@ export const createInvoiceSchema = z
       .optional(),
     discountPercent: z.number().min(0).max(100).multipleOf(0.01).default(0),
     notes: z.string().max(5000).nullable().optional(),
-    roundingStepMinutes: z.number().int().min(1).max(60).optional(),
+    roundingStepMinutes: roundingStepMinutesSchema.optional(),
   })
   .strict()
   .refine(isValidInvoiceDateRange, {
@@ -171,7 +172,7 @@ export const eligibleEntriesResponseSchema = z.object({
   entries: z.array(invoiceTimeEntrySummarySchema),
   defaultHourlyRate: z.number().nonnegative().nullable(),
   defaultCurrency: z.string().length(3).regex(/^[A-Za-z]{3}$/).nullable(),
-  defaultRoundingStepMinutes: z.number().int().min(1).max(60),
+  defaultRoundingStepMinutes: roundingStepMinutesSchema,
 });
 
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;

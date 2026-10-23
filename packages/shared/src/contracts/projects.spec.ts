@@ -198,6 +198,24 @@ describe('updateProjectSchema', () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
   });
+
+  it('rejects timeRoundingStepMinutes over 60 on update', () => {
+    const result = updateProjectSchema.safeParse({
+      timeRoundingStepMinutes: 61,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
+
+  it('rejects a non-integer timeRoundingStepMinutes on update', () => {
+    const result = updateProjectSchema.safeParse({
+      timeRoundingStepMinutes: 5.5,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
 });
 
 describe('backfillProjectBillableDefaultSchema', () => {

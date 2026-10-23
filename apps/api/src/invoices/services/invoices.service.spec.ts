@@ -105,16 +105,16 @@ type PrivateMethod<TArgs extends unknown[], TResult> = (
   ...args: TArgs
 ) => TResult;
 
-/** Accesses a private service helper for behavior-focused unit assertions. */
+/** Accesses a private class helper (instance or static) for unit assertions. */
 function priv<TArgs extends unknown[], TResult>(
-  service: InvoicesService,
+  owner: InvoicesService | typeof InvoicesService,
   name: string,
 ): PrivateMethod<TArgs, TResult> {
-  const candidate = (service as unknown as Record<string, unknown>)[name];
+  const candidate = (owner as unknown as Record<string, unknown>)[name];
   if (typeof candidate !== 'function') {
     throw new Error(`Private helper "${name}" not found on InvoicesService`);
   }
-  return (candidate as PrivateMethod<TArgs, TResult>).bind(service);
+  return (candidate as PrivateMethod<TArgs, TResult>).bind(owner);
 }
 
 /**
@@ -585,6 +585,29 @@ describe('InvoicesService', () => {
     expect(compute(360000036, 1000.01, 0)).toEqual({
       totalHours: 100000.01,
       totalAmount: 100001010,
+    });
+  });
+
+  describe('roundEntrySeconds', () => {
+    const round = priv<[number, number], number>(
+      InvoicesService,
+      'roundEntrySeconds',
+    );
+
+    it('rounds 60s up to 300s with a 5-minute step', () => {
+      expect(round(60, 5)).toBe(300);
+    });
+
+    it('keeps 300s at 300s with a 5-minute step', () => {
+      expect(round(300, 5)).toBe(300);
+    });
+
+    it('rounds 90s up to 300s with a 5-minute step', () => {
+      expect(round(90, 5)).toBe(300);
+    });
+
+    it('keeps 60s at 60s with a 1-minute step', () => {
+      expect(round(60, 1)).toBe(60);
     });
   });
 

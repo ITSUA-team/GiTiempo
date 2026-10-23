@@ -18,3 +18,5 @@ export const paginatedListMetaSchema = z.object({
   total: z.number().int().min(0),
   totalPages: z.number().int().min(0),
 });
+
+export const roundingStepMinutesSchema = z.number().int().min(1).max(60);
