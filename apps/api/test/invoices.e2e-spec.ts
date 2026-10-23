@@ -36,6 +36,8 @@ const ROUNDING_ENTRY_5 = '00000000-0000-4000-8000-400000000005';
 const ROUNDING_ENTRY_6 = '00000000-0000-4000-8000-400000000006';
 const ROUNDING_ENTRY_7 = '00000000-0000-4000-8000-400000000007';
 const ROUNDING_ENTRY_8 = '00000000-0000-4000-8000-400000000008';
+const ROUNDING_ENTRY_9 = '00000000-0000-4000-8000-400000000009';
+const ROUNDING_ENTRY_10 = '00000000-0000-4000-8000-400000000010';
 
 // Fixed UUIDs for fixture time entries so we can reference them across tests.
 const ENTRY_BOB_1 = '00000000-0000-4000-8000-100000000001';
@@ -262,6 +264,8 @@ describe('Invoices (e2e)', () => {
           ROUNDING_ENTRY_6,
           ROUNDING_ENTRY_7,
           ROUNDING_ENTRY_8,
+          ROUNDING_ENTRY_9,
+          ROUNDING_ENTRY_10,
         ]),
       );
     // Delete any invoices created in this workspace during the test.
@@ -2620,5 +2624,90 @@ describe('Invoices (e2e)', () => {
     expect(ids).toContain(ROUNDING_ENTRY_8);
 
     await db.delete(timeEntries).where(eq(timeEntries.id, ROUNDING_ENTRY_8));
+  });
+
+  it('preview applies an explicit rounding step override while reporting the project default', async () => {
+    await db.insert(timeEntries).values({
+      id: ROUNDING_ENTRY_9,
+      workspaceId,
+      taskId: roundingTaskId,
+      userId: bobUserId,
+      source: 'manual',
+      startedAt: new Date('2099-12-04T10:00:00.000Z'),
+      endedAt: new Date('2099-12-04T10:01:00.000Z'),
+      durationSeconds: 90,
+      isBillable: true,
+    });
+
+    const res = await request(app.getHttpServer())
+      .get('/invoices/eligible-entries')
+      .set('Authorization', bearer(adminToken))
+      .query({
+        dateFrom: '2099-12-01',
+        dateTo: '2099-12-31',
+        projectId: roundingProjectId,
+        roundingStepMinutes: 15,
+      });
+
+    expect(res.status).toBe(200);
+    // Override applies 15-min rounding: 90s → 900s → 0.25h.
+    expect(res.body.totalHours).toBe(0.25);
+    // defaultRoundingStepMinutes reports the project's effective step (5), not the override.
+    expect(res.body.defaultRoundingStepMinutes).toBe(5);
+    const ids = res.body.entries.map((entry: { id: string }) => entry.id);
+    expect(ids).toContain(ROUNDING_ENTRY_9);
+
+    await db.delete(timeEntries).where(eq(timeEntries.id, ROUNDING_ENTRY_9));
+  });
+
+  it('rejects update attempts that mutate the rounding step snapshot', async () => {
+    const invoiceIds: string[] = [];
+    try {
+      await db.insert(timeEntries).values({
+        id: ROUNDING_ENTRY_10,
+        workspaceId,
+        taskId: roundingTaskId,
+        userId: bobUserId,
+        source: 'manual',
+        startedAt: new Date('2099-12-03T10:00:00.000Z'),
+        endedAt: new Date('2099-12-03T10:01:00.000Z'),
+        durationSeconds: 60,
+        isBillable: true,
+      });
+
+      const createRes = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          title: 'Rounding Snapshot Immutability Invoice',
+          dateFrom: '2099-12-01',
+          dateTo: '2099-12-31',
+          projectId: roundingProjectId,
+          hourlyRate: 100,
+          roundingStepMinutes: 5,
+        });
+
+      expect(createRes.status).toBe(201);
+      invoiceIds.push(createRes.body.id);
+
+      const res = await request(app.getHttpServer())
+        .patch(`/invoices/${createRes.body.id}`)
+        .set('Authorization', bearer(adminToken))
+        .send({ roundingStepMinutes: 15 });
+
+      expect(res.status).toBe(400);
+
+      // The rejected patch leaves the snapshot step untouched.
+      const detail = await request(app.getHttpServer())
+        .get(`/invoices/${createRes.body.id}`)
+        .set('Authorization', bearer(adminToken));
+      expect(detail.status).toBe(200);
+      expect(detail.body.roundingStepMinutes).toBe(5);
+    } finally {
+      if (invoiceIds.length > 0) {
+        await db.delete(invoices).where(inArray(invoices.id, invoiceIds));
+      }
+      await db.delete(timeEntries).where(eq(timeEntries.id, ROUNDING_ENTRY_10));
+    }
   });
 });
