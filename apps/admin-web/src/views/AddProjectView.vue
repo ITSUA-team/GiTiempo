@@ -32,6 +32,7 @@ import type { RoundingStepOption } from '@/lib/rounding-step-options';
 import {
   getInheritRoundingStepOption,
   getRoundingStepOptions,
+  toApiRoundingStepMinutes,
 } from '@/lib/rounding-step-options';
 import { useAuthStore } from '@/stores/auth';
 import GitHubProjectFields from '@/components/projects/GitHubProjectFields.vue';
@@ -108,7 +109,7 @@ const resolver = computed(() =>
 const initialValues: CreateProjectFormInput = {
   defaultBillableForTasks: true,
   name: '',
-  timeRoundingStepMinutes: null,
+  timeRoundingStepMinutes: 0,
   visibility: 'private',
   managerUserId: null,
 };
@@ -296,7 +297,7 @@ async function handleSubmit({
           await adminProjectsClient.createProject({
             defaultBillableForTasks: formValues.defaultBillableForTasks,
             name: trimmedName,
-            timeRoundingStepMinutes: formValues.timeRoundingStepMinutes,
+            timeRoundingStepMinutes: toApiRoundingStepMinutes(formValues.timeRoundingStepMinutes),
             visibility: formValues.visibility,
           })
         ).id;

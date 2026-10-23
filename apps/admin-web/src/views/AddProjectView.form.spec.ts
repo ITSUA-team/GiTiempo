@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import Select from 'primevue/select';
+import { INHERIT_ROUNDING_STEP_SENTINEL } from '@/lib/rounding-step-options';
 import { createTestQueryPlugin } from '@/test/query-client';
 import type * as VueRouter from 'vue-router';
 import type { WorkspaceSettingsResponse } from '@gitiempo/shared';
@@ -227,7 +228,7 @@ describe('AddProjectView with the real PrimeVue form', () => {
     )!;
 
     expect(rounding.props('options')).toEqual([
-      { label: 'Inherit from workspace (5 min)', value: null },
+      { label: 'Inherit from workspace (5 min)', value: INHERIT_ROUNDING_STEP_SENTINEL },
       { label: '1 min', value: 1 },
       { label: '5 min', value: 5 },
       { label: '10 min', value: 10 },

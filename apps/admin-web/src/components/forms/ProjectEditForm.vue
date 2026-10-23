@@ -26,6 +26,8 @@ import type { RoundingStepOption } from '@/lib/rounding-step-options';
 import {
   getInheritRoundingStepOption,
   getRoundingStepOptions,
+  toApiRoundingStepMinutes,
+  toFormRoundingStepMinutes,
 } from '@/lib/rounding-step-options';
 
 const props = defineProps<{
@@ -86,7 +88,7 @@ function handleMemberComplete(event: AutoCompleteCompleteEvent): void {
 
 const initialValues: ProjectEditFormInput = {
   defaultBillableForTasks: props.project.defaultBillableForTasks,
-  timeRoundingStepMinutes: props.project.timeRoundingStepMinutes,
+  timeRoundingStepMinutes: toFormRoundingStepMinutes(props.project.timeRoundingStepMinutes),
   managerUserId:
     props.project.members.find((m) => m.role === WorkspaceRoles.PM)?.userId ??
     null,
@@ -107,7 +109,11 @@ function handleSave({
     return;
   }
 
-  emit('save', values as ProjectEditFormInput);
+  const formInput = values as ProjectEditFormInput;
+  emit('save', {
+    ...formInput,
+    timeRoundingStepMinutes: toApiRoundingStepMinutes(formInput.timeRoundingStepMinutes),
+  });
 }
 </script>
 

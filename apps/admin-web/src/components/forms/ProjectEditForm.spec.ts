@@ -8,6 +8,8 @@ import type {
 import type { ProjectEditFormInput } from '@gitiempo/web-shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { INHERIT_ROUNDING_STEP_SENTINEL } from '@/lib/rounding-step-options';
+
 import ProjectEditForm from './ProjectEditForm.vue';
 
 vi.mock('@/composables/feedback/useToasts', () => ({
@@ -286,7 +288,7 @@ describe('ProjectEditForm', () => {
     expect(roundingSelect.props('optionLabel')).toBe('label');
     expect(roundingSelect.props('optionValue')).toBe('value');
     expect(roundingSelect.props('options')).toEqual([
-      { label: 'Inherit from workspace (5 min)', value: null },
+      { label: 'Inherit from workspace (5 min)', value: INHERIT_ROUNDING_STEP_SENTINEL },
       { label: '1 min', value: 1 },
       { label: '5 min', value: 5 },
       { label: '10 min', value: 10 },
@@ -368,12 +370,22 @@ describe('ProjectEditForm', () => {
     expect(archivedWrapper.get('button').attributes('disabled')).toBeDefined();
   });
 
-  it('keeps the rounding step unset to select inherit when the project has no own step', () => {
+  it('keeps the rounding step unset to select inherit when the project has no own step', async () => {
     const wrapper = mountProjectEditForm();
 
     expect(wrapper.getComponent({ name: 'Form' }).props('initialValues')).toMatchObject({
-      timeRoundingStepMinutes: null,
+      timeRoundingStepMinutes: INHERIT_ROUNDING_STEP_SENTINEL,
     });
+
+    // Submitting untouched sends the sentinel through toApiRoundingStepMinutes,
+    // which converts it back to null at the API boundary.
+    await wrapper.get('[data-testid="project-edit-form-submit"]').trigger('click');
+
+    const savePayload = wrapper.emitted('save')?.[0]?.[0] as
+      | ProjectEditFormInput
+      | undefined;
+
+    expect(savePayload).toMatchObject({ timeRoundingStepMinutes: null });
   });
 
   it('reflects the current workspace rounding step in the inherit option label', async () => {
@@ -384,14 +396,14 @@ describe('ProjectEditForm', () => {
 
     expect(roundingSelect.props('options')[0]).toEqual({
       label: 'Inherit from workspace (5 min)',
-      value: null,
+      value: INHERIT_ROUNDING_STEP_SENTINEL,
     });
 
     await wrapper.setProps({ workspaceRoundingStepMinutes: 15 });
 
     expect(roundingSelect.props('options')[0]).toEqual({
       label: 'Inherit from workspace (15 min)',
-      value: null,
+      value: INHERIT_ROUNDING_STEP_SENTINEL,
     });
   });
 
@@ -422,7 +434,7 @@ describe('ProjectEditForm', () => {
 
   it('saves null when the inherit option is selected', async () => {
     const wrapper = mountProjectEditForm();
-    submitOptions = { timeRoundingStepMinutes: null };
+    submitOptions = { timeRoundingStepMinutes: INHERIT_ROUNDING_STEP_SENTINEL };
 
     await wrapper.get('[data-testid="project-edit-form-submit"]').trigger('click');
 

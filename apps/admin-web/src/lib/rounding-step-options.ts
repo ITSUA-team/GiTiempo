@@ -1,6 +1,6 @@
 export interface RoundingStepOption {
   label: string;
-  value: number | null;
+  value: number;
 }
 
 /** Must stay aligned with `roundingStepMinutesSchema` (1–60, integer). */
@@ -15,11 +15,30 @@ export function getRoundingStepOptions(): RoundingStepOption[] {
   }));
 }
 
+/**
+ * Sentinel value PrimeVue Select can match as a selected option.
+ * `null` does not render as a selected option in PrimeVue Select,
+ * so the form uses 0 internally and converts to null at the submit boundary.
+ */
+export const INHERIT_ROUNDING_STEP_SENTINEL = 0;
+
 export function getInheritRoundingStepOption(
   workspaceRoundingStepMinutes: number,
 ): RoundingStepOption {
   return {
     label: `Inherit from workspace (${workspaceRoundingStepMinutes} min)`,
-    value: null,
+    value: INHERIT_ROUNDING_STEP_SENTINEL,
   };
+}
+
+export function toFormRoundingStepMinutes(
+  value: number | null | undefined,
+): number {
+  return value ?? INHERIT_ROUNDING_STEP_SENTINEL;
+}
+
+export function toApiRoundingStepMinutes(
+  value: number | null | undefined,
+): number | null {
+  return value === INHERIT_ROUNDING_STEP_SENTINEL ? null : (value ?? null);
 }
