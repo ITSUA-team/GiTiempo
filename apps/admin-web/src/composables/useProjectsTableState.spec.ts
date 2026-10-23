@@ -53,6 +53,7 @@ function createProjects(): ProjectListResponse {
     accessScope: 'project' as const,
     capabilities: { canManageTasks: true },
     referenceProvenance: null,
+    timeRoundingStepMinutes: null,
     trackingMode: 'managed' as const,
   };
 

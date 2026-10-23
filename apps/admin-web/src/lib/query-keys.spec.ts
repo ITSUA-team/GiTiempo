@@ -135,16 +135,19 @@ describe('admin-web query keys', () => {
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
         projectId: 'project-1',
+        roundingStepMinutes: 15,
       }),
     ).toEqual({
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
       projectId: 'project-1',
+      roundingStepMinutes: 15,
     });
     expect(normalizeEligibleEntriesQuery()).toEqual({
       dateFrom: null,
       dateTo: null,
       projectId: null,
+      roundingStepMinutes: null,
     });
   });
 
@@ -184,6 +187,7 @@ describe('admin-web query keys', () => {
       adminInvoicesKeys.eligibleEntries(scope, {
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
+        roundingStepMinutes: 5,
       }),
     ).toEqual([
       ...scopedKeys,
@@ -192,6 +196,7 @@ describe('admin-web query keys', () => {
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
         projectId: null,
+        roundingStepMinutes: 5,
       },
     ]);
   });

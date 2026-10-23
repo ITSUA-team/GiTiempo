@@ -104,6 +104,12 @@ export function createAdminInvoicesClient({
 			}
 			searchParams.set('dateFrom', parsed.dateFrom);
 			searchParams.set('dateTo', parsed.dateTo);
+			if (parsed.roundingStepMinutes) {
+				searchParams.set(
+					'roundingStepMinutes',
+					String(parsed.roundingStepMinutes),
+				);
+			}
 			const search = searchParams.toString();
 
 			return apiClient.requestJson({

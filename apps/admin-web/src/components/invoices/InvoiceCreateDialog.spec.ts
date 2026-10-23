@@ -42,8 +42,12 @@ const userId = '33333333-3333-4333-8333-333333333333';
 const invoiceId = '55555555-5555-4555-8555-555555555555';
 
 const PROJECT_OPTIONS = [
-  { id: projectId, name: 'Project Orion' },
-  { id: billingProjectId, name: 'Billing API' },
+  { id: projectId, name: 'Project Orion', timeRoundingStepMinutes: 15 },
+  {
+    id: billingProjectId,
+    name: 'Billing API',
+    timeRoundingStepMinutes: 5,
+  },
 ];
 
 function createTimeEntry(
@@ -71,6 +75,7 @@ function createEntriesResponse(
     count: 1,
     defaultCurrency: 'USD',
     defaultHourlyRate: 80,
+    defaultRoundingStepMinutes: 15,
     entries: [createTimeEntry()],
     totalHours: 2.5,
     ...overrides,
@@ -91,6 +96,7 @@ function createInvoiceResponse(): InvoiceResponse {
     discountPercent: 0,
     totalHours: 2.5,
     totalAmount: 200,
+    roundingStepMinutes: 15,
     notes: null,
     createdBy: userId,
     createdByName: 'Alex Admin',
@@ -105,9 +111,14 @@ function createInvoiceResponse(): InvoiceResponse {
 interface MountDialogOptions {
   isAdmin?: boolean;
   isCreating?: boolean;
-  projects?: Array<{ id: string; name: string }>;
+  projects?: Array<{
+    id: string;
+    name: string;
+    timeRoundingStepMinutes: number | null;
+  }>;
   createInvoice?: (input: CreateInvoiceInput) => Promise<InvoiceResponse>;
   workspaceCurrency?: string | null;
+  workspaceRoundingStepMinutes?: number | null;
 }
 
 function createCreateInvoiceSpy(
@@ -142,6 +153,8 @@ async function mountDialog(options: MountDialogOptions = {}) {
       isAdmin,
       projects: options.projects ?? PROJECT_OPTIONS,
       workspaceCurrency: options.workspaceCurrency ?? null,
+      workspaceRoundingStepMinutes:
+        options.workspaceRoundingStepMinutes ?? null,
       scope: {
         role: isAdmin ? 'admin' : 'pm',
         userId: 'user-1',
@@ -189,6 +202,20 @@ function getCurrencyLabelElement(): HTMLElement {
 
   if (!element) {
     throw new Error('No currency Select label rendered');
+  }
+
+  return element;
+}
+
+// PrimeVue renders a non-editable Select's value and placeholder inside the
+// label span that carries the input-id.
+function getRoundingStepLabelElement(): HTMLElement {
+  const element = document.querySelector<HTMLElement>(
+    '#invoice-create-rounding-step',
+  );
+
+  if (!element) {
+    throw new Error('No rounding step Select label rendered');
   }
 
   return element;
@@ -252,7 +279,7 @@ describe('InvoiceCreateDialog', () => {
     );
   });
 
-  it('renders all seven form fields and the create actions when opened', async () => {
+  it('renders all eight form fields and the create actions when opened', async () => {
     const wrapper = await mountDialog();
 
     for (const label of [
@@ -262,11 +289,12 @@ describe('InvoiceCreateDialog', () => {
       'Hourly rate',
       'Currency',
       'Discount',
+      'Rounding step',
       'Notes',
     ]) {
       expect(bodyText()).toContain(label);
     }
-    expect(wrapper.findAllComponents(Select)).toHaveLength(2);
+    expect(wrapper.findAllComponents(Select)).toHaveLength(3);
     expect(wrapper.findComponent(DatePicker).exists()).toBe(true);
     expect(wrapper.findAllComponents(InputNumber)).toHaveLength(2);
     expect(wrapper.findComponent(Textarea).exists()).toBe(true);
@@ -280,6 +308,9 @@ describe('InvoiceCreateDialog', () => {
         ?.placeholder,
     ).toBe('From settings');
     expect(getCurrencyLabelElement().textContent).toBe('Auto');
+    // Rounding is always active, so the field starts on the 1-minute step
+    // rather than a placeholder.
+    expect(getRoundingStepLabelElement().textContent).toBe('1 min');
     expect(
       document.querySelector<HTMLTextAreaElement>('#invoice-create-notes')
         ?.placeholder,
@@ -298,6 +329,19 @@ describe('InvoiceCreateDialog', () => {
       { label: 'AUD', value: 'AUD' },
     ]);
 
+    expect(
+      getSelectByInputId(wrapper, 'invoice-create-rounding-step').props(
+        'options',
+      ),
+    ).toEqual([
+      { label: '1 min', value: 1 },
+      { label: '5 min', value: 5 },
+      { label: '10 min', value: 10 },
+      { label: '15 min', value: 15 },
+      { label: '30 min', value: 30 },
+      { label: '60 min', value: 60 },
+    ]);
+
     expect(bodyText()).toContain('Cancel');
     expect(bodyText()).toContain('Create invoice');
     expect(
@@ -313,6 +357,7 @@ describe('InvoiceCreateDialog', () => {
     for (const inputId of [
       'invoice-create-project',
       'invoice-create-currency',
+      'invoice-create-rounding-step',
     ]) {
       expect(getSelectByInputId(wrapper, inputId).props('pt')).toMatchObject({
         overlay: { class: giTiempoAnchorWidthOverlayClass },
@@ -355,14 +400,18 @@ describe('InvoiceCreateDialog', () => {
       expect(row.classList.contains('sm:gap-3')).toBe(true);
     }
 
+    const hourlyRateColumn = columnFor('invoice-create-hourly-rate');
+    expect(hourlyRateColumn.classList.contains('w-full')).toBe(true);
+    expect(hourlyRateColumn.classList.contains('sm:w-[150px]')).toBe(true);
+
     for (const inputId of [
-      'invoice-create-hourly-rate',
       'invoice-create-currency',
       'invoice-create-discount',
+      'invoice-create-rounding-step',
     ]) {
       const column = columnFor(inputId);
       expect(column.classList.contains('w-full')).toBe(true);
-      expect(column.classList.contains('sm:w-[150px]')).toBe(true);
+      expect(column.classList.contains('sm:flex-1')).toBe(true);
     }
   });
 
@@ -666,6 +715,7 @@ describe('InvoiceCreateDialog', () => {
       currency: 'USD',
       discountPercent: 0,
       notes: undefined,
+      roundingStepMinutes: 15,
     });
     expect(wrapper.emitted('created')).toEqual([[createInvoiceResponse()]]);
   });
@@ -692,6 +742,7 @@ describe('InvoiceCreateDialog', () => {
       currency: 'USD',
       discountPercent: 0,
       notes: undefined,
+      roundingStepMinutes: 15,
     });
     expect(wrapper.emitted('created')).toEqual([[createInvoiceResponse()]]);
     expect(wrapper.emitted('update:visible')).toEqual([[false]]);
@@ -772,6 +823,7 @@ describe('InvoiceCreateDialog', () => {
       currency: 'USD',
       discountPercent: 15,
       notes: undefined,
+      roundingStepMinutes: 15,
     });
   });
 
@@ -883,5 +935,306 @@ describe('InvoiceCreateDialog', () => {
         ?.value,
     ).toBe('120');
     expect(getCurrencyLabelElement().textContent).toBe('GBP');
+  });
+
+  it('pre-fills the rounding step from the preview default', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(
+      createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+    );
+    const wrapper = await mountDialog();
+
+    // No preview yet, so the field rests on the always-active 1-minute step.
+    expect(getRoundingStepLabelElement().textContent).toBe('1 min');
+
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('5 min');
+  });
+
+  it('updates the rounding step when the selected project changes', async () => {
+    testMocks.listEligibleEntries
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 15 }),
+      );
+
+    const wrapper = await mountDialog({ isAdmin: true });
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('5 min');
+
+    await getSelectByInputId(wrapper, 'invoice-create-project').vm.$emit(
+      'update:modelValue',
+      projectId,
+    );
+    await flushPromises();
+    await flushPromises();
+
+    // The fresh preview carries the new project's effective step and the
+    // field follows it because the user has not edited the field.
+    expect(getRoundingStepLabelElement().textContent).toBe('15 min');
+    expect(testMocks.listEligibleEntries).toHaveBeenNthCalledWith(2, {
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId,
+    });
+  });
+
+  it('updates the rounding step immediately from the selected project before the preview fires', async () => {
+    const wrapper = await mountDialog({
+      isAdmin: true,
+      workspaceRoundingStepMinutes: 1,
+    });
+
+    // No dates entered yet, so no preview has fired. The field rests on the
+    // initial 1-minute default.
+    expect(getRoundingStepLabelElement().textContent).toBe('1 min');
+
+    // Selecting a project with a configured rounding step updates the field
+    // instantly from the project data, without waiting for a preview response.
+    await getSelectByInputId(wrapper, 'invoice-create-project').vm.$emit(
+      'update:modelValue',
+      projectId,
+    );
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('15 min');
+    expect(testMocks.listEligibleEntries).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the workspace rounding step when the selected project inherits', async () => {
+    const wrapper = await mountDialog({
+      isAdmin: true,
+      projects: [
+        { id: projectId, name: 'Project Orion', timeRoundingStepMinutes: null },
+      ],
+      workspaceRoundingStepMinutes: 10,
+    });
+
+    await getSelectByInputId(wrapper, 'invoice-create-project').vm.$emit(
+      'update:modelValue',
+      projectId,
+    );
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('10 min');
+  });
+
+  it('keeps the user-entered rounding step when the preview refetches', async () => {
+    testMocks.listEligibleEntries
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+      );
+
+    const wrapper = await mountDialog({ isAdmin: true });
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('5 min');
+
+    await getSelectByInputId(wrapper, 'invoice-create-rounding-step').vm.$emit(
+      'update:modelValue',
+      15,
+    );
+    await flushPromises();
+    await flushPromises();
+
+    // The override refetch returns the same effective default (5), but the
+    // touched field must keep the user's value.
+    expect(getRoundingStepLabelElement().textContent).toBe('15 min');
+    expect(testMocks.listEligibleEntries).toHaveBeenNthCalledWith(2, {
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: undefined,
+      roundingStepMinutes: 15,
+    });
+
+    // A later preview refetch brings the default back again; the user value
+    // still wins.
+    await wrapper.findComponent(DatePicker).vm.$emit('update:modelValue', [
+      new Date(2026, 4, 1),
+      new Date(2026, 4, 31),
+    ]);
+    await flushPromises();
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('15 min');
+  });
+
+  it('keeps the user-entered rounding step when the selected project changes', async () => {
+    testMocks.listEligibleEntries
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 15 }),
+      );
+
+    const wrapper = await mountDialog({ isAdmin: true });
+
+    await getSelectByInputId(wrapper, 'invoice-create-project').vm.$emit(
+      'update:modelValue',
+      billingProjectId,
+    );
+    await flushPromises();
+
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('5 min');
+    expect(testMocks.listEligibleEntries).toHaveBeenNthCalledWith(1, {
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: billingProjectId,
+    });
+
+    await getSelectByInputId(wrapper, 'invoice-create-rounding-step').vm.$emit(
+      'update:modelValue',
+      30,
+    );
+    await flushPromises();
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('30 min');
+    expect(testMocks.listEligibleEntries).toHaveBeenNthCalledWith(2, {
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: billingProjectId,
+      roundingStepMinutes: 30,
+    });
+
+    // The touched flag must block both the immediate project watcher (Orion
+    // is configured with 15) and the fresh preview default (15), so the
+    // user's 30 survives the project switch.
+    await getSelectByInputId(wrapper, 'invoice-create-project').vm.$emit(
+      'update:modelValue',
+      projectId,
+    );
+    await flushPromises();
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('30 min');
+    expect(testMocks.listEligibleEntries).toHaveBeenNthCalledWith(3, {
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId,
+      roundingStepMinutes: 30,
+    });
+  });
+
+  it('refetches the preview with the user-selected rounding step', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(
+      createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+    );
+    const wrapper = await mountDialog({ isAdmin: true });
+    await enterDateRange(wrapper);
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(1);
+    expect(testMocks.listEligibleEntries).toHaveBeenNthCalledWith(1, {
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: undefined,
+    });
+
+    await getSelectByInputId(wrapper, 'invoice-create-rounding-step').vm.$emit(
+      'update:modelValue',
+      30,
+    );
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(2);
+    expect(testMocks.listEligibleEntries).toHaveBeenNthCalledWith(2, {
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: undefined,
+      roundingStepMinutes: 30,
+    });
+  });
+
+  it('sends the selected rounding step in the create request', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(
+      createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+    );
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({ isAdmin: true, createInvoice });
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+
+    await getSelectByInputId(wrapper, 'invoice-create-rounding-step').vm.$emit(
+      'update:modelValue',
+      30,
+    );
+    await flushPromises();
+    await flushPromises();
+
+    await submitInvoice(wrapper);
+
+    expect(createInvoice).toHaveBeenCalledWith({
+      title: 'Website redesign',
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: undefined,
+      hourlyRate: 80,
+      currency: 'USD',
+      discountPercent: 0,
+      notes: undefined,
+      roundingStepMinutes: 30,
+    });
+  });
+
+  it('resets the rounding step and follows the preview default after reopening', async () => {
+    testMocks.listEligibleEntries
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({ defaultRoundingStepMinutes: 10 }),
+      );
+
+    const wrapper = await mountDialog({ isAdmin: true });
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    await getSelectByInputId(wrapper, 'invoice-create-rounding-step').vm.$emit(
+      'update:modelValue',
+      15,
+    );
+    await flushPromises();
+    await flushPromises();
+    expect(getRoundingStepLabelElement().textContent).toBe('15 min');
+
+    // Closing resets the override and the touched flag; reopening refetches
+    // the same range and the fresh default wins again.
+    await wrapper.setProps({ visible: false });
+    await flushPromises();
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    await enterDateRange(wrapper);
+    await flushPromises();
+    await flushPromises();
+
+    expect(getRoundingStepLabelElement().textContent).toBe('10 min');
   });
 });

@@ -73,6 +73,7 @@ export function normalizeEligibleEntriesQuery(
     dateFrom: query.dateFrom ?? null,
     dateTo: query.dateTo ?? null,
     projectId: query.projectId ?? null,
+    roundingStepMinutes: query.roundingStepMinutes ?? null,
   };
 }
 

@@ -32,6 +32,7 @@ function createInvoiceResponse(overrides: Partial<InvoiceResponse> = {}): Invoic
     notes: null,
     project: { id: projectId, name: 'Project Orion' },
     projectId,
+    roundingStepMinutes: 1,
     status: 'draft',
     timeEntries: [],
     timeEntryCount: 0,
