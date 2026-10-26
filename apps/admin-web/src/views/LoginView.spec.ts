@@ -65,6 +65,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "admin@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -265,6 +268,33 @@ describe("LoginView", () => {
     expect(wrapper.find('[data-testid="sign-in-error-help"]').exists()).toBe(
       false,
     );
+  });
+
+  it("renders the Forgot? link to the admin recovery route without submitting", async () => {
+    const runtime = createRuntimeMock({
+      requestPasswordReset: vi.fn(),
+      signInWithEmailPassword: vi.fn(),
+    });
+    setAuthRuntimeForTesting(runtime);
+    const { router, wrapper } = await mountLoginView(
+      "/login?redirect=%2Freports",
+    );
+
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("admin@example.com");
+    await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
+
+    const routeReady = waitForRoute(
+      router,
+      () =>
+        router.currentRoute.value.name === routeNames.forgotPassword &&
+        router.currentRoute.value.fullPath === "/auth/forgot-password",
+    );
+    await wrapper.get('[data-testid="sign-in-forgot-password"]').trigger("click");
+    await routeReady;
+
+    expect(router.currentRoute.value.name).toBe(routeNames.forgotPassword);
+    expect(router.currentRoute.value.fullPath).toBe("/auth/forgot-password");
+    expect(runtime.signInWithEmailPassword).not.toHaveBeenCalled();
   });
 
   it("preserves the visible user workspace link", async () => {

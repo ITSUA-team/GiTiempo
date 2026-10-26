@@ -153,6 +153,8 @@
 - Use the approved `Login Page` `.pen` screen as the desktop parity source.
 - The left brand panel keeps the existing product value copy and workspace-management summary cards.
 - The main panel title is `Sign in` with email/password fields ordered `Email`, then `Password`.
+- The password field label row carries the `Forgot?` password-recovery link on its right edge (brand color via the brand token (`text-brand`), 13px, weight 600), above the password input. The shared `AuthSignInForm` renders it through its optional `forgotPasswordTo` prop. The `.pen` places the link inline with the password input row; the PrimeVue `Password` component structure renders it in the label row instead. This is a documented PrimeVue-only deviation (see `.pen` parity task 9.5).
+- Clicking the `Forgot?` link navigates to `/auth/forgot-password` without submitting the login form, without clearing the entered email state, and without changing login submission behavior. The recovery page it opens is documented below.
 - The primary action is `Sign in`.
 - `Continue with Google` remains a secondary sign-in action below the primary action.
 - `Continue with GitHub` is offered as a secondary sign-in action when GitHub sign-in is enabled for the environment (`VITE_GITHUB_SIGNIN_ENABLED`). It is **backend-driven**: the button leaves the SPA and navigates to the API (`/auth/github/start`), which runs the GitHub OAuth flow and redirects back to the `/auth/github/callback` route with a one-time code that is exchanged for a session. It authenticates existing members by their verified GitHub email and is independent of the GitHub App integration.
@@ -244,6 +246,47 @@ The approved `.pen` auth screens (user login, admin login, and both register scr
 - Firebase reset errors stay inline in the panel. Required mapped cases: invalid/expired action code, weak password, mismatched confirmation, too many requests, and network failure.
 - While reset confirmation is in progress, keep the panel shape stable, show loading on `Save password`, and prevent duplicate submissions.
 - Query-driven password setup flows must test missing `oobCode`, invalid/expired code, valid code render, weak password, confirm-password mismatch, successful password save, invite-token preservation from `continueUrl`, success redirect to invite accept, and fallback login action when no invite token is available.
+
+## Password Recovery Request Page
+
+- `/auth/forgot-password` renders as a standalone unauthenticated route-level page outside the authenticated app shell. It is reached from the `Forgot?` link on the login screen.
+- The route is guest-only: an authenticated user navigating to it is redirected away, mirroring the `/login` guest-only behavior.
+- The page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
+- The layout reuses the shared auth visual language through `StandaloneSplitPage` + `AuthIntroPanel`, as on the Login pages; the Invite Password Setup page reuses `StandaloneSplitPage` via its own `InviteOnboardingShell` shell.
+- The main panel renders the shared `AuthForgotPasswordForm`: an email `InputText` validated with the shared `emailOnlySchema`, and a gradient primary action `Send reset link`.
+- Submitting a valid email calls Firebase `sendPasswordResetEmail` through the shared auth runtime with the continue URL pointing at `/auth/reset-password` and `handleCodeInApp: true`. The page never calls a GiTiempo backend API to send the reset email.
+- Firebase Console setup: the domain serving the `/auth/reset-password` continue URL must be allowlisted in Firebase Console -> Auth -> Authorized domains, or Firebase rejects the action-code email.
+- On success the panel switches to an in-panel success confirmation and a success toast is shown through the shared `createAppToast` helper (auto-dismisses per the shared toast rules). The confirmation copy is identical for known and unknown emails so the page never reveals whether an account exists.
+- On a Firebase request failure show an inline error `Message` plus an error toast (manual dismiss) via `createAppToast` with `logContext: { action: "send-password-reset", feature: "forgot-password" }`, and keep the form available for retry.
+- On a client-side validation error (empty or malformed email) show the inline field `Message` only, with no toast, matching the project rule that pure client-side validation stays inline.
+- Required mapped Firebase failure cases for the send step: `auth/too-many-requests`, `auth/network-request-failed`, and a generic fallback message for any other Firebase or client error.
+- On narrow viewports (below the `lg` breakpoint (1024px)) the page follows the `Register New Workflow Mobile` collapse pattern (verified at 390×844): the brand panel collapses into a full-width top header and the form stacks into a single full-width column. See the parity fallback note below.
+
+## Reset Password Landing Page
+
+- `/auth/reset-password` renders as a standalone route-level page outside the authenticated app shell. It consumes Firebase action-code links with `mode=resetPassword&oobCode=...` query parameters.
+- The route uses `allowAuthenticatedGuestFlow`, like the invite password-setup route, so a signed-in user landing from a reset email can still consume the action code.
+- The page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
+- The layout reuses the shared auth visual language through `StandaloneSplitPage` + `AuthIntroPanel`.
+- Initial state: keep the panel shape stable while validating the action code on mount and show copy `Checking reset link...`.
+- Valid-code state: show the verified Firebase email as a soft-accent notice above the password form (`Reset link verified for {email}`).
+- The main panel renders the shared `AuthResetPasswordForm`: `New password` and `Confirm password` PrimeVue `<Password>` fields with `:feedback="false"` and `toggle-mask`, validated with the shared `newPasswordSchema` (minimum 8 characters and the confirmation must match), and a gradient primary action `Update password`.
+- The page validates the action code with `verifyPasswordResetCode` before rendering the password form, then confirms the new password with `confirmPasswordReset`, both through the Firebase client SDK. Raw passwords are NEVER sent to any GiTiempo API.
+- On success show a success toast through the shared `createAppToast` helper and redirect to `/login`. There is no in-panel success state — a deliberate deviation from the Invite Password Setup precedent (which keeps the user in-panel) because the reset flow ends by returning the user to sign-in.
+- With missing query parameters (no `mode`/`oobCode`, or `mode !== "resetPassword"`) switch to an invalid-link panel state with a `Back to password recovery` button (PrimeVue `Button`) back to `/auth/forgot-password`. No toast, matching the invite password-setup precedent for missing parameters.
+- When the action code is expired, already used, or invalid at `verifyPasswordResetCode`, switch to the same invalid-link panel state AND show an error toast (manual dismiss) with `logContext: { action: "verify-password-reset-link", feature: "reset-password" }`.
+- On a Firebase confirm failure (for example a Firebase-reported weak password or a network failure) show an inline error `Message` plus an error toast (manual dismiss) with `logContext: { action: "confirm-password-reset", feature: "reset-password" }`, and keep the form available for retry.
+- Required mapped Firebase failure cases for the confirm step: `auth/expired-action-code` and `auth/invalid-action-code` (fresh-link prompt), `auth/weak-password` (choose a stronger password), `auth/too-many-requests` (wait and retry), `auth/network-request-failed` (check the connection), and a generic fallback message for any other failure.
+- On a client-side validation error (too-short or mismatched password) show the inline field `Message` only, with no toast.
+- On narrow viewports (below the `lg` breakpoint (1024px)) the page follows the same `Register New Workflow Mobile` collapse pattern (verified at 390×844): brand panel -> top header, single-column full-width form.
+
+### Password Recovery `.pen` Parity Fallback
+
+- The `.pen` does not yet contain dedicated Password Recovery or Reset Password screens (tracked in the `add-password-recovery` design Open Questions). Both pages use the approved auth visual language (`StandaloneSplitPage` + `AuthIntroPanel`) as the parity fallback until dedicated screens exist; adding those screens, including mobile 390×844 variants, is tracked as a follow-up.
+- The `.pen` Login screens already contain the `Forgot?` link treatment (brand color, 13px, weight 600), so that approved treatment is the parity source for the link on both login screens.
+- PrimeVue-only deviation: the `.pen` places the link inline with the password input row; the PrimeVue `Password` component structure renders it in the label row instead (right edge, above the input). This is a documented PrimeVue-only deviation (see `.pen` parity task 9.5).
+- The missing `.pen` mobile variant for the Login screens is pre-existing tech debt and out of scope for this change.
+- The recovery/reset pages still collapse with the `Register New Workflow Mobile` pattern below the `lg` breakpoint (1024px), and the `Forgot?` link must remain visible and correctly placed there: right edge of the password label row, with no overflow and no disappearance.
 
 ## Cross-App Navigation
 

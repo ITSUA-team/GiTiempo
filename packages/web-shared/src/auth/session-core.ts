@@ -298,6 +298,21 @@ export function createAuthSessionCore({
     });
   }
 
+  function requestPasswordReset(email: string): Promise<void> {
+    return getAuthRuntime().requestPasswordReset(email);
+  }
+
+  function verifyPasswordResetCode(oobCode: string): Promise<string> {
+    return getAuthRuntime().verifyPasswordResetCode(oobCode);
+  }
+
+  function confirmPasswordReset(
+    oobCode: string,
+    newPassword: string,
+  ): Promise<void> {
+    return getAuthRuntime().confirmPasswordReset(oobCode, newPassword);
+  }
+
   async function logoutApiSession(
     currentAccessToken: string,
     refreshToken: string,
@@ -352,6 +367,7 @@ export function createAuthSessionCore({
     accessToken,
     bootstrapComplete,
     bootstrapSession,
+    confirmPasswordReset,
     establishSessionFromTokenPair,
     isAuthenticated,
     isBootstrapping,
@@ -362,7 +378,9 @@ export function createAuthSessionCore({
     logout,
     profile,
     refreshAccessToken,
+    requestPasswordReset,
     switchWorkspace,
+    verifyPasswordResetCode,
   };
 
   return {

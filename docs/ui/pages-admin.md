@@ -159,6 +159,19 @@
 - Use a structured PrimeVue Skeleton first-load state that mirrors the implemented header, card, field rows, and action row.
 - Keep failed initial requests distinct from empty/default settings: show a request-error surface with retry and toast feedback instead of rendering default form values.
 
+## Login Page
+
+- `/login` is a standalone unauthenticated route-level page outside the authenticated admin shell. It follows the approved admin `Login Page` `.pen` screen and the shared auth visual language documented in `pages-user.md` under the Login Page Approved Visual Treatment.
+- The sign-in form is the shared `AuthSignInForm`.
+- The password field label row carries the same `Forgot?` password-recovery link as user-web: brand color via the brand token (`text-brand`), Inter 13px, weight 600, on the right edge of the label row, above the password input. The shared `AuthSignInForm` renders it through its optional `forgotPasswordTo` prop. The `.pen` places the link inline with the password input row; the PrimeVue `Password` component structure renders it in the label row instead. This is a documented PrimeVue-only deviation (see `.pen` parity task 9.5).
+- Clicking the `Forgot?` link navigates to the admin-web `/auth/forgot-password` route without submitting the login form or clearing entered email state.
+
+## Password Recovery / Reset Password
+
+- `/auth/forgot-password` and `/auth/reset-password` exist in admin-web with the same standalone placement, route guards (guest-only request route, `allowAuthenticatedGuestFlow` reset route), fields, gradient actions, and Firebase action-code behavior as the user-web Password Recovery Request Page and Reset Password Landing Page.
+- Both pages render the shared `AuthForgotPasswordForm` and `AuthResetPasswordForm` forms and follow the same notification conventions: `createAppToast` for toasts, inline `Message` for client-side validation, `logContext: { action, feature }` on Firebase-failure error toasts, and a success toast with redirect to the admin-web `/login` route after the password update.
+- The full sections in `pages-user.md` cover the shared details: the checking state (`Checking reset link...`), the verified-email notice, success and invalid-link panel states, mapped Firebase error codes, the no-enumeration success copy, the Firebase Console continue-URL allowlisting step, the `.pen` parity fallback (including the `Forgot?` label-row placement deviation), and the narrow-viewport collapse. Admin-web implements the same behavior with its own routes, intro content, and redirect targets.
+
 ## Cross-App Navigation
 
 - The admin SPA should expose authenticated workspace switching when the current user belongs to more than one workspace.

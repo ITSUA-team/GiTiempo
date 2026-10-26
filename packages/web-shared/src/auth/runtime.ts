@@ -1,8 +1,11 @@
 import {
   GoogleAuthProvider,
+  confirmPasswordReset as firebaseConfirmPasswordReset,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  verifyPasswordResetCode as firebaseVerifyPasswordResetCode,
   type Auth,
 } from "firebase/auth";
 
@@ -22,6 +25,9 @@ export interface AuthRuntime {
   signInWithEmailPassword(email: string, password: string): Promise<string>;
   signInWithGoogle(): Promise<string>;
   signOutIdentityProvider(): Promise<void>;
+  requestPasswordReset(email: string): Promise<void>;
+  verifyPasswordResetCode(oobCode: string): Promise<string>;
+  confirmPasswordReset(oobCode: string, newPassword: string): Promise<void>;
   updateCurrentUser: CurrentUserClient["updateCurrentUser"];
 }
 
@@ -69,6 +75,31 @@ export function createDefaultAuthRuntime({
     await signOut(getFirebaseAuth());
   }
 
+  function getResetPasswordContinueUrl(): string {
+    const origin =
+      typeof window === "undefined" ? "http://localhost" : window.location.origin;
+
+    return `${origin}/auth/reset-password`;
+  }
+
+  async function requestPasswordReset(email: string): Promise<void> {
+    await sendPasswordResetEmail(getFirebaseAuth(), email, {
+      url: getResetPasswordContinueUrl(),
+      handleCodeInApp: true,
+    });
+  }
+
+  async function verifyPasswordResetCode(oobCode: string): Promise<string> {
+    return firebaseVerifyPasswordResetCode(getFirebaseAuth(), oobCode);
+  }
+
+  async function confirmPasswordReset(
+    oobCode: string,
+    newPassword: string,
+  ): Promise<void> {
+    await firebaseConfirmPasswordReset(getFirebaseAuth(), oobCode, newPassword);
+  }
+
   return {
     getCurrentUser: currentUserClient.getCurrentUser,
     listCurrentUserWorkspaces: currentUserClient.listCurrentUserWorkspaces,
@@ -81,6 +112,9 @@ export function createDefaultAuthRuntime({
     signInWithEmailPassword,
     signInWithGoogle,
     signOutIdentityProvider,
+    requestPasswordReset,
+    verifyPasswordResetCode,
+    confirmPasswordReset,
     updateCurrentUser: currentUserClient.updateCurrentUser,
   };
 }
