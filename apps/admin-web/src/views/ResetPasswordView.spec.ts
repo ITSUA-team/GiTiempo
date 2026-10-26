@@ -2,6 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
+import ToastService from "primevue/toastservice";
 import { createMemoryHistory } from "vue-router";
 import type {
   CurrentUserWorkspaceMembershipListResponse,
@@ -17,17 +18,14 @@ import {
   setAuthRuntimeForTesting,
   type AuthRuntime,
 } from "@/services/auth-runtime";
-import ResetPasswordView from "./ResetPasswordView.vue";
 
-const toastMocks = vi.hoisted(() => ({
-  errorToast: vi.fn(),
-  infoToast: vi.fn(),
-  successToast: vi.fn(),
+const toastAdd = vi.fn();
+
+vi.mock("primevue/usetoast", () => ({
+  useToast: () => ({ add: toastAdd }),
 }));
 
-vi.mock("@/composables/feedback/useToasts", () => ({
-  useToasts: () => toastMocks,
-}));
+const consoleErrorSpy = vi.fn();
 
 function createFirebaseError(code: string, message = code): Error & { code: string } {
   return Object.assign(new Error(message), { code });
@@ -98,14 +96,8 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
 }
 
 function expectNoToastArgContainsPassword(submittedPassword: string): void {
-  const recordedArgs = [
-    ...toastMocks.successToast.mock.calls,
-    ...toastMocks.errorToast.mock.calls,
-  ];
-
-  for (const call of recordedArgs) {
-    expect(JSON.stringify(call)).not.toContain(submittedPassword);
-  }
+  expect(JSON.stringify(toastAdd.mock.calls)).not.toContain(submittedPassword);
+  expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain(submittedPassword);
 }
 
 async function mountResetPasswordView(initialPath = createDefaultPath()) {
@@ -117,10 +109,11 @@ async function mountResetPasswordView(initialPath = createDefaultPath()) {
   });
   await router.push(initialPath);
   await router.isReady();
+  const ResetPasswordView = (await import("./ResetPasswordView.vue")).default;
 
   const wrapper = mount(ResetPasswordView, {
     global: {
-      plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+      plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
     },
   });
 
@@ -133,11 +126,12 @@ describe("ResetPasswordView", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
+    toastAdd.mockReset();
     clearRefreshToken();
     resetAuthRuntimeForTesting();
-    toastMocks.errorToast.mockReset();
-    toastMocks.infoToast.mockReset();
-    toastMocks.successToast.mockReset();
+    consoleErrorSpy.mockReset();
+    consoleErrorSpy.mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(consoleErrorSpy);
     globalThis.fetch = vi.fn();
   });
 
@@ -156,8 +150,8 @@ describe("ResetPasswordView", () => {
     expect(runtime.verifyPasswordResetCode).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="reset-password-view"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="reset-password-invalid-panel"]').exists()).toBe(true);
-    expect(toastMocks.errorToast).not.toHaveBeenCalled();
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
+    expect(toastAdd).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
   });
 
   it("renders the invalid panel when the mode is not resetPassword", async () => {
@@ -171,7 +165,7 @@ describe("ResetPasswordView", () => {
 
     expect(runtime.verifyPasswordResetCode).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="reset-password-invalid-panel"]').exists()).toBe(true);
-    expect(toastMocks.errorToast).not.toHaveBeenCalled();
+    expect(toastAdd).not.toHaveBeenCalled();
   });
 
   it("renders the invalid panel and shows the verify error toast when the action code is rejected", async () => {
@@ -186,16 +180,21 @@ describe("ResetPasswordView", () => {
     expect(runtime.verifyPasswordResetCode).toHaveBeenCalledOnce();
     expect(wrapper.find('[data-testid="reset-password-invalid-panel"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="reset-password-submit"]').exists()).toBe(false);
-    expect(toastMocks.errorToast).toHaveBeenCalledWith(
-      "This password reset link is invalid, expired, or already used. Request a new one to continue.",
+    expect(toastAdd).toHaveBeenCalledTimes(1);
+    expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
-        logContext: {
-          action: "verify-password-reset-link",
-          feature: "reset-password",
-        },
+        detail: "This password reset link is invalid, expired, or already used. Request a new one to continue.",
+        severity: "error",
+        summary: "Error",
       }),
     );
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith("Error", {
+      context: {
+        action: "verify-password-reset-link",
+        feature: "reset-password",
+      },
+      error: expect.any(Error),
+    });
   });
 
   it("returns to the recovery request page from the invalid panel", async () => {
@@ -245,8 +244,7 @@ describe("ResetPasswordView", () => {
 
     expect(runtime.confirmPasswordReset).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain("Password must be at least 8 characters.");
-    expect(toastMocks.errorToast).not.toHaveBeenCalled();
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
+    expect(toastAdd).not.toHaveBeenCalled();
   });
 
   it("keeps mismatched-confirmation validation inline without any toast or runtime confirm call", async () => {
@@ -263,8 +261,7 @@ describe("ResetPasswordView", () => {
 
     expect(runtime.confirmPasswordReset).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain("Passwords do not match.");
-    expect(toastMocks.errorToast).not.toHaveBeenCalled();
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
+    expect(toastAdd).not.toHaveBeenCalled();
   });
 
   it("shows the inline failure and confirm error toast when the runtime rejects the update", async () => {
@@ -286,19 +283,36 @@ describe("ResetPasswordView", () => {
     expect(wrapper.get('[data-testid="reset-password-error"]').text()).toContain(
       "Choose a stronger password and try again.",
     );
-    expect(toastMocks.errorToast).toHaveBeenCalledWith(
-      expect.stringContaining("Choose a stronger password"),
+    expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
-        logContext: { action: "confirm-password-reset", feature: "reset-password" },
+        detail: expect.stringContaining("Choose a stronger password"),
+        severity: "error",
+        summary: "Error",
       }),
     );
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith("Error", {
+      context: { action: "confirm-password-reset", feature: "reset-password" },
+      error: expect.any(Error),
+    });
+    expect(toastAdd).toHaveBeenCalledTimes(1);
     expect(globalThis.fetch).not.toHaveBeenCalled();
     // The form stays available for retry and the route stays on the reset page.
     expect(wrapper.find('[data-testid="reset-password-submit"]').exists()).toBe(true);
     expect(router.currentRoute.value.name).toBe(routeNames.resetPassword);
     expectNoToastArgContainsPassword(submittedPassword);
     expect(wrapper.text()).not.toContain(submittedPassword);
+
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.forgotPassword,
+    );
+    await wrapper
+      .get('[data-testid="reset-password-back-to-forgot"]')
+      .trigger("click");
+    await routeReady;
+
+    expect(router.currentRoute.value.name).toBe(routeNames.forgotPassword);
+    expect(router.currentRoute.value.fullPath).toBe("/auth/forgot-password");
   });
 
   it("shows the success toast and redirects to admin login without leaking the password", async () => {
@@ -325,13 +339,19 @@ describe("ResetPasswordView", () => {
     );
     // The whole flow talks only to Firebase; no GiTiempo API is touched.
     expect(globalThis.fetch).not.toHaveBeenCalled();
-    expect(toastMocks.successToast).toHaveBeenCalledOnce();
-    expect(toastMocks.successToast).toHaveBeenCalledWith(
-      expect.stringContaining("Password updated"),
+    expect(toastAdd).toHaveBeenCalledTimes(1);
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: expect.stringContaining("Password updated"),
+        severity: "success",
+        summary: "Success",
+      }),
     );
+    expect(console.error).not.toHaveBeenCalled();
     expect(router.currentRoute.value.name).toBe(routeNames.login);
     expect(router.currentRoute.value.fullPath).toBe("/login");
     expectNoToastArgContainsPassword(submittedPassword);
+    expect(wrapper.text()).not.toContain(submittedPassword);
   });
 
   it("rejects an invalid action code on confirm with the shared neutral copy inline and as the error toast", async () => {
@@ -352,15 +372,21 @@ describe("ResetPasswordView", () => {
     expect(wrapper.get('[data-testid="reset-password-error"]').text()).toContain(
       "This password reset link is invalid, expired, or already used. Request a new one to continue.",
     );
-    expect(toastMocks.errorToast).toHaveBeenCalledWith(
-      "This password reset link is invalid, expired, or already used. Request a new one to continue.",
+    expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
-        logContext: { action: "confirm-password-reset", feature: "reset-password" },
+        detail: "This password reset link is invalid, expired, or already used. Request a new one to continue.",
+        severity: "error",
+        summary: "Error",
       }),
     );
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith("Error", {
+      context: { action: "confirm-password-reset", feature: "reset-password" },
+      error: expect.any(Error),
+    });
+    expect(toastAdd).toHaveBeenCalledTimes(1);
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expectNoToastArgContainsPassword(submittedPassword);
+    expect(wrapper.text()).not.toContain(submittedPassword);
   });
 
   it("keeps a client-side form error inline with the neutral copy and no toast or API call", async () => {
@@ -381,8 +407,7 @@ describe("ResetPasswordView", () => {
       "Please check the form fields and try again.",
     );
     expect(runtime.confirmPasswordReset).not.toHaveBeenCalled();
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
-    expect(toastMocks.errorToast).not.toHaveBeenCalled();
+    expect(toastAdd).not.toHaveBeenCalled();
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });

@@ -283,6 +283,10 @@ describe("LoginView", () => {
     await wrapper.get('[data-testid="sign-in-email"]').setValue("admin@example.com");
     await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
 
+    const forgotLink = wrapper.get('[data-testid="sign-in-forgot-password"]');
+    expect(forgotLink.text()).toContain("Forgot?");
+    expect(forgotLink.attributes("href")).toBe("/auth/forgot-password");
+
     const routeReady = waitForRoute(
       router,
       () =>

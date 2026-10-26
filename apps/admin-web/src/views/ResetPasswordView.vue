@@ -199,6 +199,14 @@ async function handleUpdatePassword(newPassword: string): Promise<void> {
               @submitted="handleUpdatePassword"
               @error="handleClientValidationError"
             />
+
+            <Button
+              v-if="inlineErrorMessage"
+              label="Back to forgot password"
+              class="h-11 w-full"
+              data-testid="reset-password-back-to-forgot"
+              @click="goToForgotPassword"
+            />
           </section>
 
           <section

@@ -174,6 +174,9 @@ describe("ResetPasswordView", () => {
 
     expect(verifyPasswordResetCode).toHaveBeenCalledWith("valid-code");
     expect(wrapper.get('[data-testid="reset-password-email-display"]').text()).toContain(
+      "Reset link verified for",
+    );
+    expect(wrapper.get('[data-testid="reset-password-email-display"]').text()).toContain(
       "user@example.com",
     );
     expect(wrapper.find('[data-testid="reset-password-form"]').exists()).toBe(true);
@@ -202,6 +205,7 @@ describe("ResetPasswordView", () => {
         summary: "Password reset link is not usable",
       }),
     );
+    expect(toastAdd.mock.calls[0][0]).not.toHaveProperty("life");
     expect(console.error).toHaveBeenCalledWith("Password reset link is not usable", {
       context: { action: "verify-password-reset-link", feature: "reset-password" },
       error: expect.any(Error),
@@ -276,7 +280,7 @@ describe("ResetPasswordView", () => {
     setAuthRuntimeForTesting(
       createRuntimeMock({ verifyPasswordResetCode, confirmPasswordReset }),
     );
-    const { wrapper } = await mountResetPasswordView();
+    const { router, wrapper } = await mountResetPasswordView();
 
     await wrapper.get('[data-testid="reset-password-password"]').setValue(submittedPassword);
     await wrapper.get('[data-testid="reset-password-confirm"]').setValue(submittedPassword);
@@ -306,6 +310,17 @@ describe("ResetPasswordView", () => {
     expect(wrapper.text()).not.toContain(submittedPassword);
     expect(JSON.stringify(toastAdd.mock.calls)).not.toContain(submittedPassword);
     expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain(submittedPassword);
+    expect(wrapper.find('[data-testid="reset-password-back-to-forgot"]').exists()).toBe(true);
+
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.forgotPassword,
+    );
+    await wrapper.get('[data-testid="reset-password-back-to-forgot"]').trigger("click");
+    await routeReady;
+    await flushPromises();
+
+    expect(router.currentRoute.value.fullPath).toBe("/auth/forgot-password");
   });
 
   it("never leaks the submitted password in toasts or inline messages after a failed confirm", async () => {

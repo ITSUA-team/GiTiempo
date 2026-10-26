@@ -1,6 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
-import { beforeAll, describe, expect, it } from "vitest";
+import Password from "primevue/password";
+import { describe, expect, it } from "vitest";
 
 import AuthResetPasswordForm from "./AuthResetPasswordForm.vue";
 
@@ -13,17 +14,7 @@ function mountForm(props?: Partial<InstanceType<typeof AuthResetPasswordForm>["$
   });
 }
 
-const NARROW_VIEWPORT_WIDTH = 390;
-
 describe("AuthResetPasswordForm", () => {
-  beforeAll(() => {
-    // Matches the `.pen` Register New Workflow Mobile frame width so the
-    // full-width invariants below are evaluated at the narrowest supported
-    // viewport.
-    globalThis.innerWidth = NARROW_VIEWPORT_WIDTH;
-    globalThis.dispatchEvent(new Event("resize"));
-  });
-
   it("shows inline validation and blocks submit for a short password", async () => {
     const wrapper = mountForm();
 
@@ -109,6 +100,12 @@ describe("AuthResetPasswordForm", () => {
   it("keeps password inputs masked with no strength meter", () => {
     const wrapper = mountForm();
 
+    expect(
+      wrapper
+        .findAllComponents(Password)
+        .every((password) => password.props("toggleMask")),
+    ).toBe(true);
+
     for (const input of wrapper.findAll("input[type='password']")) {
       expect(input.element.getAttribute("type")).toBe("password");
     }
@@ -116,7 +113,7 @@ describe("AuthResetPasswordForm", () => {
     expect(wrapper.find(".p-password-meter").exists()).toBe(false);
   });
 
-  describe("mobile (390px) layout invariants", () => {
+  describe("renders fluid full-width inputs", () => {
     it("keeps the card, fields, and action full-width without horizontal overflow", () => {
       const wrapper = mountForm();
 

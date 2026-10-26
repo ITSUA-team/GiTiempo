@@ -2,6 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
+import ToastService from "primevue/toastservice";
 import { createMemoryHistory } from "vue-router";
 import type {
   CurrentUserWorkspaceMembershipListResponse,
@@ -17,16 +18,11 @@ import {
   setAuthRuntimeForTesting,
   type AuthRuntime,
 } from "@/services/auth-runtime";
-import ForgotPasswordView from "./ForgotPasswordView.vue";
 
-const toastMocks = vi.hoisted(() => ({
-  errorToast: vi.fn(),
-  infoToast: vi.fn(),
-  successToast: vi.fn(),
-}));
+const toastAdd = vi.fn();
 
-vi.mock("@/composables/feedback/useToasts", () => ({
-  useToasts: () => toastMocks,
+vi.mock("primevue/usetoast", () => ({
+  useToast: () => ({ add: toastAdd }),
 }));
 
 function createFirebaseError(code: string, message = code): Error & { code: string } {
@@ -107,12 +103,13 @@ async function mountForgotPasswordView(
   });
   await router.push(initialPath);
   await router.isReady();
+  const ForgotPasswordView = (await import("./ForgotPasswordView.vue")).default;
 
   return {
     router,
     wrapper: mount(ForgotPasswordView, {
       global: {
-        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
       },
     }),
   };
@@ -124,10 +121,9 @@ describe("ForgotPasswordView", () => {
   beforeEach(() => {
     clearRefreshToken();
     resetAuthRuntimeForTesting();
-    toastMocks.errorToast.mockReset();
-    toastMocks.infoToast.mockReset();
-    toastMocks.successToast.mockReset();
+    toastAdd.mockReset();
     vi.stubEnv("VITE_USER_APP_URL", "https://user.example.test/login");
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     globalThis.fetch = vi.fn();
   });
 
@@ -148,8 +144,7 @@ describe("ForgotPasswordView", () => {
 
     expect(wrapper.text()).toContain("Enter a valid email address.");
     expect(runtime.requestPasswordReset).not.toHaveBeenCalled();
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
-    expect(toastMocks.errorToast).not.toHaveBeenCalled();
+    expect(toastAdd).not.toHaveBeenCalled();
   });
 
   it("sends the reset request, swaps to the success panel, and returns to admin login", async () => {
@@ -163,10 +158,17 @@ describe("ForgotPasswordView", () => {
 
     expect(runtime.requestPasswordReset).toHaveBeenCalledOnce();
     expect(runtime.requestPasswordReset).toHaveBeenCalledWith("admin@example.com");
-    expect(toastMocks.successToast).toHaveBeenCalledOnce();
-    expect(toastMocks.successToast).toHaveBeenCalledWith(successToastDetail);
-    expect(toastMocks.errorToast).not.toHaveBeenCalled();
+    expect(toastAdd).toHaveBeenCalledTimes(1);
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: successToastDetail,
+        severity: "success",
+        summary: "Success",
+      }),
+    );
+    expect(console.error).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="forgot-password-success-panel"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="forgot-password-form"]').exists()).toBe(false);
 
     // The whole flow talks only to Firebase; no GiTiempo API is touched.
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -192,14 +194,21 @@ describe("ForgotPasswordView", () => {
     await flushPromises();
 
     expect(runtime.requestPasswordReset).toHaveBeenCalledWith("unknown@example.com");
-    expect(toastMocks.successToast).toHaveBeenCalledOnce();
-    expect(toastMocks.successToast).toHaveBeenCalledWith(successToastDetail);
+    expect(toastAdd).toHaveBeenCalledTimes(1);
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: successToastDetail,
+        severity: "success",
+        summary: "Success",
+      }),
+    );
 
     const panelText = wrapper
       .get('[data-testid="forgot-password-success-panel"]')
       .text()
       .toLowerCase();
-    const toastText = JSON.stringify(toastMocks.successToast.mock.calls).toLowerCase();
+    const toastCall = toastAdd.mock.calls[0]?.[0] as Record<string, string>;
+    const toastText = `${toastCall.summary} ${toastCall.detail}`.toLowerCase();
 
     expect(panelText).toContain("check your email");
     expect(panelText).toContain("if an account exists for the address you entered");
@@ -230,13 +239,18 @@ describe("ForgotPasswordView", () => {
     expect(wrapper.get('[data-testid="forgot-password-error"]').text()).toContain(
       "Network error. Check your connection and try again.",
     );
-    expect(toastMocks.errorToast).toHaveBeenCalledWith(
-      expect.stringContaining("Network error"),
+    expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
-        logContext: { action: "send-password-reset", feature: "forgot-password" },
+        detail: expect.stringContaining("Network error"),
+        severity: "error",
+        summary: "Error",
       }),
     );
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith("Error", {
+      context: { action: "send-password-reset", feature: "forgot-password" },
+      error: expect.any(Error),
+    });
+    expect(toastAdd).toHaveBeenCalledTimes(1);
     expect(wrapper.find('[data-testid="forgot-password-success-panel"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="forgot-password-submit"]').exists()).toBe(true);
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -266,8 +280,20 @@ describe("ForgotPasswordView", () => {
     expect(inlineError.text()).not.toContain("user-not-found");
     expect(inlineError.text()).not.toContain("Firebase: Error");
     expect(wrapper.text()).not.toContain("unknown@example.com");
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "Could not send the reset email. Try again in a moment.",
+        severity: "error",
+        summary: "Error",
+      }),
+    );
+    expect(console.error).toHaveBeenCalledWith("Error", {
+      context: { action: "send-password-reset", feature: "forgot-password" },
+      error: expect.any(Error),
+    });
+    expect(toastAdd).toHaveBeenCalledTimes(1);
     expect(wrapper.find('[data-testid="forgot-password-submit"]').exists()).toBe(true);
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
   it("keeps a client-side form error inline with the neutral copy and no toast or API call", async () => {
@@ -283,8 +309,7 @@ describe("ForgotPasswordView", () => {
       "Please check the form fields and try again.",
     );
     expect(runtime.requestPasswordReset).not.toHaveBeenCalled();
-    expect(toastMocks.successToast).not.toHaveBeenCalled();
-    expect(toastMocks.errorToast).not.toHaveBeenCalled();
+    expect(toastAdd).not.toHaveBeenCalled();
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });

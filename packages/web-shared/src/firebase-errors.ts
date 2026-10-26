@@ -16,6 +16,7 @@ export function getFirebaseErrorCode(error: unknown): string | null {
 export function getFirebaseAuthErrorMessage(
   error: unknown,
   fallback: string,
+  flow?: "reset" | "invite-setup",
 ): string {
   switch (getFirebaseErrorCode(error)) {
     case "auth/user-not-found":
@@ -29,7 +30,9 @@ export function getFirebaseAuthErrorMessage(
       return "Network error. Check your connection and try again.";
     case "auth/expired-action-code":
     case "auth/invalid-action-code":
-      return "This password reset link is invalid, expired, or already used. Request a new one to continue.";
+      return flow === "invite-setup"
+        ? "This password setup link is invalid, expired, or already used. Go back to your invite and ask an admin for a fresh link if needed."
+        : "This password reset link is invalid, expired, or already used. Request a new one to continue.";
     case "auth/weak-password":
       return "Choose a stronger password and try again.";
     case "auth/operation-not-allowed":

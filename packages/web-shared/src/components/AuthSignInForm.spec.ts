@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createMemoryHistory, createRouter } from "vue-router";
 
 import AuthSignInForm from "./AuthSignInForm.vue";
@@ -259,12 +259,7 @@ describe("AuthSignInForm", () => {
     ).toBe("alex@example.com");
   });
 
-  describe("mobile (390px) Forgot? visibility", () => {
-    beforeAll(() => {
-      globalThis.innerWidth = 390;
-      globalThis.dispatchEvent(new Event("resize"));
-    });
-
+  describe("renders mobile-friendly class hooks", () => {
     it("keeps the Forgot? link visible and unwrapped in the password row", async () => {
       const { wrapper } = await mountFormWithRouter({
         forgotPasswordTo: { name: "forgot-password" },

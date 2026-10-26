@@ -357,11 +357,11 @@ describe("InvitePasswordSetupView", () => {
     await submitPasswordForm(wrapper);
 
     expect(wrapper.get('[data-testid="invite-password-setup-error"]').text()).toContain(
-      "This password reset link is invalid, expired, or already used. Request a new one to continue.",
+      "This password setup link is invalid, expired, or already used. Go back to your invite and ask an admin for a fresh link if needed.",
     );
     expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
-        detail: "This password reset link is invalid, expired, or already used. Request a new one to continue.",
+        detail: "This password setup link is invalid, expired, or already used. Go back to your invite and ask an admin for a fresh link if needed.",
         severity: "error",
         summary: "Could not save password",
       }),

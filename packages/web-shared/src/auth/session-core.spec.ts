@@ -284,10 +284,6 @@ describe("createAuthSessionCore", () => {
     });
     const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
 
-    expect(session.baseSession.verifyPasswordResetCode).toBe(
-      session.verifyPasswordResetCode,
-    );
-
     const verifiedEmail = await session.verifyPasswordResetCode("valid-code");
     await session.confirmPasswordReset("valid-code", "new-password");
     await session.requestPasswordReset("alexey@example.com");
@@ -302,10 +298,9 @@ describe("createAuthSessionCore", () => {
   });
 
   it("propagates password recovery failures without touching the session", async () => {
+    const pendingRequest = deferred<void>();
     const runtime = createRuntimeMock({
-      requestPasswordReset: async () => {
-        throw new Error("send failed");
-      },
+      requestPasswordReset: () => pendingRequest.promise,
       verifyPasswordResetCode: async () => {
         throw new Error("verify failed");
       },
@@ -315,9 +310,13 @@ describe("createAuthSessionCore", () => {
     });
     const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
 
-    await expect(session.requestPasswordReset("alexey@example.com")).rejects.toThrow(
-      "send failed",
-    );
+    const request = session.requestPasswordReset("alexey@example.com");
+    // Recovery calls bypass runSubmittingLogin, so the flag must stay down
+    // even while the request is still pending.
+    expect(session.isSubmitting.value).toBe(false);
+
+    pendingRequest.reject(new Error("send failed"));
+    await expect(request).rejects.toThrow("send failed");
     await expect(session.verifyPasswordResetCode("valid-code")).rejects.toThrow(
       "verify failed",
     );

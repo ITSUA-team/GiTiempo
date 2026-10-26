@@ -26,6 +26,8 @@ export interface AuthRuntime {
   signInWithGoogle(): Promise<string>;
   signOutIdentityProvider(): Promise<void>;
   requestPasswordReset(email: string): Promise<void>;
+  // Deliberately granular (no combined resetPasswordWithActionCode): verify
+  // returns the email at mount, confirm applies the update on submit.
   verifyPasswordResetCode(oobCode: string): Promise<string>;
   confirmPasswordReset(oobCode: string, newPassword: string): Promise<void>;
   updateCurrentUser: CurrentUserClient["updateCurrentUser"];

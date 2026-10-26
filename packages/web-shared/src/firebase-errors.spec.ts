@@ -100,6 +100,33 @@ describe("getFirebaseAuthErrorMessage", () => {
     );
   });
 
+  it("returns invite-setup copy for expired and invalid action codes", () => {
+    const expired = new FirebaseError("auth/expired-action-code", "expired");
+    const invalid = new FirebaseError("auth/invalid-action-code", "invalid");
+
+    expect(getFirebaseAuthErrorMessage(expired, fallback, "invite-setup")).toBe(
+      "This password setup link is invalid, expired, or already used. Go back to your invite and ask an admin for a fresh link if needed.",
+    );
+    expect(getFirebaseAuthErrorMessage(invalid, fallback, "invite-setup")).toBe(
+      "This password setup link is invalid, expired, or already used. Go back to your invite and ask an admin for a fresh link if needed.",
+    );
+  });
+
+  it("locks the default recovery copy for the reset flow and leaves other codes flow-agnostic", () => {
+    const expired = new FirebaseError("auth/expired-action-code", "expired");
+    const weak = new FirebaseError("auth/weak-password", "weak");
+
+    expect(getFirebaseAuthErrorMessage(expired, fallback)).toBe(
+      "This password reset link is invalid, expired, or already used. Request a new one to continue.",
+    );
+    expect(getFirebaseAuthErrorMessage(expired, fallback, "reset")).toBe(
+      "This password reset link is invalid, expired, or already used. Request a new one to continue.",
+    );
+    expect(getFirebaseAuthErrorMessage(weak, fallback, "invite-setup")).toBe(
+      "Choose a stronger password and try again.",
+    );
+  });
+
   it("returns neutral copy for weak-password", () => {
     const error = new FirebaseError("auth/weak-password", "weak");
 

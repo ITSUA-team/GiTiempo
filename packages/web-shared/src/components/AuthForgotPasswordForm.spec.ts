@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import AuthForgotPasswordForm from "./AuthForgotPasswordForm.vue";
 
@@ -13,17 +13,7 @@ function mountForm(props?: Partial<InstanceType<typeof AuthForgotPasswordForm>["
   });
 }
 
-const NARROW_VIEWPORT_WIDTH = 390;
-
 describe("AuthForgotPasswordForm", () => {
-  beforeAll(() => {
-    // Matches the `.pen` Register New Workflow Mobile frame width so the
-    // full-width invariants below are evaluated at the narrowest supported
-    // viewport.
-    globalThis.innerWidth = NARROW_VIEWPORT_WIDTH;
-    globalThis.dispatchEvent(new Event("resize"));
-  });
-
   it("shows inline validation errors and blocks submit for an invalid email", async () => {
     const wrapper = mountForm();
 
@@ -92,8 +82,8 @@ describe("AuthForgotPasswordForm", () => {
     ).toBeDefined();
   });
 
-  describe("mobile (390px) layout invariants", () => {
-    it("renders full-width without overflow sources at the narrow viewport", () => {
+  describe("renders fluid full-width inputs", () => {
+    it("renders full-width without overflow sources", () => {
       const wrapper = mountForm();
 
       const card = wrapper.get('[data-testid="forgot-password-form"]');

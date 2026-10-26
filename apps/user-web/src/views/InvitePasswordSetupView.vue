@@ -214,7 +214,11 @@ async function handleSavePassword(): Promise<void> {
       "Return to your invite to sign in and accept access.",
     );
   } catch (error) {
-    inlineErrorMessage.value = getFirebaseAuthErrorMessage(error, "Could not save your password.");
+    inlineErrorMessage.value = getFirebaseAuthErrorMessage(
+      error,
+      "Could not save your password.",
+      "invite-setup",
+    );
     appToast.showErrorToast({
       detail: inlineErrorMessage.value,
       error,
