@@ -4,7 +4,7 @@
 
 ### Requirement: Local User Upsert On First Login
 
-The backend MUST ensure that successful login maps the verified identity to a local user record. Eligible social sign-in SHALL create that record when needed; returning login SHALL reuse it. Unsupported sign-in without membership MUST NOT create a local user.
+The backend MUST ensure that successful login maps the verified identity to a local user record. Eligible social sign-in SHALL create that record when needed; returning login SHALL reuse it. Authenticated recovery of an original manual-registration reservation SHALL complete its local record under the registration contract. Other unsupported sign-in without membership MUST NOT create a local user.
 
 #### Scenario: First login creates local user
 
@@ -59,7 +59,7 @@ The backend MUST ensure that successful login maps the verified identity to a lo
 - **THEN** the avatar is refreshed, filled, or preserved by the same ownership rules used on login
 
 ### Requirement: Membership-Gated Login
-The backend MUST issue application sessions only for an active workspace membership. Verified Google or GitHub sign-in with zero memberships SHALL first create a personal workspace and admin membership. Existing-workspace access remains invite-based. Other login providers without membership MUST be rejected, and refresh MUST NOT provision membership.
+The backend MUST issue application sessions only for an active workspace membership. Verified Google or GitHub sign-in with zero memberships SHALL first create a personal workspace and admin membership. A backend-verified Firebase authentication proving the exact UID of a retained manual-registration reservation MAY complete that original foundation under its registration contract. Existing-workspace access remains invite-based. Other login providers without membership MUST be rejected, and refresh MUST NOT provision membership.
 
 #### Scenario: Login succeeds for user with active membership
 - **GIVEN** a verified identity maps to a local user with an active workspace membership
@@ -77,9 +77,16 @@ The backend MUST issue application sessions only for an active workspace members
 #### Scenario: Login is rejected without active membership
 - **GIVEN** a verified identity does not map to an active workspace membership
 - **AND** its verified sign-in method is not an eligible Google or GitHub login
+- **AND** it does not prove the exact UID of a retained manual-registration reservation
 - **WHEN** the user attempts to log in
 - **THEN** the backend rejects the request as unauthorized (401)
 - **AND** no local user, workspace, membership, or session is created
+
+#### Scenario: Exact-UID pending registration recovery is a narrow exception
+- **GIVEN** a backend-verified Firebase authentication proves control of the exact UID in a retained manual-registration reservation
+- **WHEN** the identity has no active workspace membership
+- **THEN** the backend may complete only that reservation's original foundation under the shared locks
+- **AND** this exception does not require an email-verified claim, authorize ordinary password self-provisioning, or permit recovery by matching email alone
 
 #### Scenario: Refresh is rejected when the issued workspace membership is gone
 - **GIVEN** a client presents a valid refresh token issued for a specific active workspace membership
@@ -97,7 +104,7 @@ The backend MUST issue application sessions only for an active workspace members
 ## ADDED Requirements
 
 ### Requirement: Verified Social Email Identifies One Account
-Google and GitHub with the same normalized verified email SHALL resolve to one account and its memberships. Additional verified Firebase subjects MAY bind to it while its canonical UID remains stable. Subjects owned by another user or conflicting email/provider owners MUST fail without merging or duplicate onboarding. Unverified email MUST NOT establish account equivalence.
+Google and GitHub with the same normalized verified email SHALL resolve to one account only when the incoming identity and the existing account both prove ownership of that email. Additional verified Firebase subjects MAY bind while the canonical UID stays stable. Conflicting owners MUST fail without merging or duplicate onboarding. Unverified email cannot establish account equivalence.
 
 #### Scenario: Google account later signs in through GitHub
 - **GIVEN** Google sign-in established an account with a verified email
@@ -112,7 +119,7 @@ Google and GitHub with the same normalized verified email SHALL resolve to one a
 - **AND** it does not create a second local user or workspace
 
 #### Scenario: Same verified email returns an unbound Firebase subject
-- **GIVEN** a local account already owns the verified email and a canonical Firebase UID
+- **GIVEN** a local account has durable evidence that its canonical identity or a proven social binding owns the verified email and has a canonical Firebase UID
 - **WHEN** verified Google authentication returns a different Firebase UID not owned by another local user
 - **THEN** it binds that subject to the existing local account and reuses its memberships
 - **AND** subsequent sign-in by that subject resolves the same owner even after a provider email change
@@ -128,8 +135,20 @@ Google and GitHub with the same normalized verified email SHALL resolve to one a
 - **WHEN** it matches another account's email
 - **THEN** that match does not authorize cross-provider linking or new social provisioning
 
+#### Scenario: Verified social email cannot adopt an unverified password account
+- **GIVEN** an existing email/password account stores an email but lacks evidence that it owns that normalized verified email
+- **WHEN** Google or GitHub proves that same email for the incoming identity
+- **THEN** the backend returns safe identity-proof recovery without issuing a session
+- **AND** it does not bind a subject, merge accounts, transfer ownership, or create a workspace for the pre-existing account
+
+#### Scenario: Existing proof is never inferred from local data
+- **GIVEN** an existing account has only a matching local email value, pending invitation, or application creation reservation
+- **WHEN** a verified social identity presents that normalized email
+- **THEN** those records do not establish existing-account ownership
+- **AND** the backend does not backfill verification evidence from them
+
 #### Scenario: Both providers create the same verified account concurrently
-- **GIVEN** neither provider has an existing local account for the same verified email
+- **GIVEN** neither provider has an existing local account with conflicting or unproven ownership for the same verified email
 - **WHEN** Google and GitHub sign-in race
 - **THEN** compatible attempts converge on one canonical account and workspace
 - **AND** an incompatible Firebase binding is rejected without a duplicate account or workspace

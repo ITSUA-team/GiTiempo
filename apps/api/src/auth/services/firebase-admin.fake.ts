@@ -9,34 +9,120 @@ import {
   DecodedFirebaseToken,
   FirebaseAdminAuthError,
   FirebaseAdminService,
+  FirebaseUserIdentity,
   InvitedFirebaseUser,
   RegisteredFirebaseUser,
 } from './firebase-admin.interface';
 
-/** Test-only Firebase adapter for deterministic `test:<uid>:<email>[:<name>]` tokens. */
+/**
+ * Test-only Firebase adapter. Tokens use `test:<uid>:<email>[:<name>[:<picture>]]`
+ * with optional trailing `:provider=<provider>` and `:verified=false` controls.
+ */
 @Injectable()
 export class FakeFirebaseAdminService implements FirebaseAdminService {
   private readonly invitedUsers = new Map<string, InvitedFirebaseUser>();
+  private readonly invitedUserEmailsByUid = new Map<string, string>();
   private readonly registeredUsers = new Map<string, RegisteredFirebaseUser>();
   private readonly registeredUserEmailsByUid = new Map<string, string>();
   private readonly alternativeProvidersByUid = new Map<string, Set<string>>();
+  private readonly usersByUid = new Map<string, FirebaseUserIdentity>();
+  private readonly deletedUserUids = new Set<string>();
 
   async verifyIdToken(idToken: string): Promise<DecodedFirebaseToken> {
     if (typeof idToken !== 'string' || !idToken.startsWith('test:')) {
       throw new UnauthorizedException('Unauthorized');
     }
-    const [, uid, email, name, ...pictureParts] = idToken.split(':');
+    const parts = idToken.split(':');
+    let signInProvider = 'password';
+    let emailVerified = true;
+    while (parts.length > 3) {
+      const trailing = parts.at(-1)!;
+      if (trailing.startsWith('provider=')) {
+        signInProvider = trailing.slice('provider='.length);
+        parts.pop();
+        continue;
+      }
+      if (trailing === 'verified=false') {
+        emailVerified = false;
+        parts.pop();
+        continue;
+      }
+      break;
+    }
+    const [, uid, email, name, ...pictureParts] = parts;
     if (!uid || !email) {
       throw new UnauthorizedException('Unauthorized');
     }
     const picture = pictureParts.join(':');
+    const normalizedEmail = normalizeEmail(email);
+    const existing = this.usersByUid.get(uid);
+    if (!existing && !this.deletedUserUids.has(uid)) {
+      this.usersByUid.set(uid, {
+        uid,
+        email: normalizedEmail,
+        emailVerified,
+        disabled: false,
+      });
+    }
     return {
       uid,
       email,
       ...(name ? { name } : {}),
       ...(picture ? { picture } : {}),
-      email_verified: true,
+      email_verified: emailVerified,
+      signInProvider,
     };
+  }
+
+  async assertActiveUserByUid(uid: string, email: string): Promise<void> {
+    const user = await this.getUserByUid(uid);
+    if (!user || user.disabled || user.email !== normalizeEmail(email)) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+  }
+
+  async getUserByUid(uid: string): Promise<FirebaseUserIdentity | null> {
+    const user = this.usersByUid.get(uid);
+    return user ? { ...user } : null;
+  }
+
+  async createUnclaimedUser(input: {
+    uid: string;
+    email: string;
+  }): Promise<InvitedFirebaseUser> {
+    const normalizedEmail = normalizeEmail(input.email);
+    const existingEmailForUid = this.invitedUserEmailsByUid.get(input.uid);
+    if (existingEmailForUid && existingEmailForUid !== normalizedEmail) {
+      throw new FirebaseAdminAuthError(
+        'auth/uid-already-exists',
+        'Duplicate uid',
+      );
+    }
+    const existing = this.invitedUsers.get(normalizedEmail);
+    if (existing) {
+      if (existing.uid !== input.uid) {
+        throw new FirebaseAdminAuthError(
+          'auth/email-already-exists',
+          'Duplicate email',
+        );
+      }
+      return { ...existing, isExistingUser: true };
+    }
+    const user = {
+      uid: input.uid,
+      email: normalizedEmail,
+      isExistingUser: false,
+    } satisfies InvitedFirebaseUser;
+    this.invitedUsers.set(normalizedEmail, user);
+    this.invitedUserEmailsByUid.set(input.uid, normalizedEmail);
+    this.deletedUserUids.delete(input.uid);
+    this.usersByUid.set(input.uid, {
+      uid: input.uid,
+      email: normalizedEmail,
+      emailVerified: false,
+      disabled: false,
+    });
+    return user;
   }
 
   async getOrCreateInvitedUserByEmail(
@@ -54,10 +140,19 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
       isExistingUser: false,
     } satisfies InvitedFirebaseUser;
     this.invitedUsers.set(normalizedEmail, createdUser);
+    this.invitedUserEmailsByUid.set(createdUser.uid, normalizedEmail);
+    this.deletedUserUids.delete(createdUser.uid);
+    this.usersByUid.set(createdUser.uid, {
+      uid: createdUser.uid,
+      email: normalizedEmail,
+      emailVerified: false,
+      disabled: false,
+    });
     return createdUser;
   }
 
   async createEmailPasswordUser(input: {
+    uid?: string;
     email: string;
     password: string;
     displayName: string;
@@ -81,16 +176,26 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
       );
     }
 
-    const createdUser = {
-      uid: `fake-firebase-user-${createHash('sha256')
+    const uid =
+      input.uid ??
+      `fake-firebase-user-${createHash('sha256')
         .update(normalizedEmail)
         .digest('hex')
-        .slice(0, 16)}`,
+        .slice(0, 16)}`;
+    const createdUser = {
+      uid,
       email: normalizedEmail,
       displayName: input.displayName,
     } satisfies RegisteredFirebaseUser;
     this.registeredUsers.set(normalizedEmail, createdUser);
     this.registeredUserEmailsByUid.set(createdUser.uid, normalizedEmail);
+    this.deletedUserUids.delete(createdUser.uid);
+    this.usersByUid.set(createdUser.uid, {
+      uid: createdUser.uid,
+      email: normalizedEmail,
+      emailVerified: false,
+      disabled: false,
+    });
 
     return createdUser;
   }
@@ -104,6 +209,8 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
     }
 
     this.registeredUserEmailsByUid.delete(uid);
+    this.usersByUid.delete(uid);
+    this.deletedUserUids.add(uid);
     this.alternativeProvidersByUid.delete(uid);
     this.registeredUsers.delete(email);
   }
@@ -122,6 +229,13 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
     providers: readonly string[],
   ): void {
     this.alternativeProvidersByUid.set(firebaseUid, new Set(providers));
+  }
+
+  /** Test helper for simulating Firebase account suspension. */
+  setUserDisabled(uid: string, disabled: boolean): void {
+    const user = this.usersByUid.get(uid);
+    if (!user) return;
+    this.usersByUid.set(uid, { ...user, disabled });
   }
 
   async generatePasswordSetupLink(

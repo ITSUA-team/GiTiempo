@@ -42,12 +42,12 @@ The backend MUST provide a login-scoped GitHub OAuth flow — a start, a callbac
 
 ### Requirement: GitHub Sign-In Authenticates Existing Members By Verified Email
 
-The backend MUST resolve a linked GitHub ID to its owner before considering email. Unlinked identities SHALL use verified-email matching and reuse the resolved Firebase UID. Eligible zero-membership accounts SHALL receive automatic workspace provisioning after initiator verification. The JWT contract MUST remain unchanged, and another GitHub identity MUST NOT replace an existing link.
+The backend MUST resolve a linked GitHub ID to its owner before considering email. An unlinked identity may use verified-email matching only when the existing account also has durable proof of ownership of that normalized verified email; a local email value, invitation, or reservation alone is insufficient. Eligible zero-membership accounts SHALL receive automatic workspace provisioning after initiator verification. The JWT contract MUST remain unchanged, and another GitHub identity MUST NOT replace an existing link.
 
 #### Scenario: Non-primary verified email signs in
 
 - **GIVEN** the authorizing GitHub identity is not already linked
-- **WHEN** a verified email on the GitHub account matches an existing member with an active membership
+- **WHEN** a verified email on the GitHub account matches an existing member with active membership and that account's durable verified-email proof
 - **THEN** the backend issues the normal session for that member, reusing their existing Firebase UID
 - **AND** it does so whether or not that email is the account's primary address
 
@@ -61,7 +61,7 @@ The backend MUST resolve a linked GitHub ID to its owner before considering emai
 #### Scenario: No verified email matches a member
 
 - **GIVEN** the authorizing GitHub identity is not already linked
-- **WHEN** no verified email on the GitHub account matches an existing member with an active membership
+- **WHEN** no verified email on the GitHub account safely matches an existing member with active membership
 - **THEN** the callback resolves a safe zero-membership existing account or new-account candidate
 - **AND** it issues a handoff for automatic provisioning if identity resolution succeeds
 - **AND** no durable local account or workspace is created until initiator verification at exchange
@@ -127,22 +127,22 @@ Login surfaces MUST explain recoverable GitHub identity-resolution or provisioni
 ## ADDED Requirements
 
 ### Requirement: GitHub New Account Resolution Is Deterministic
-When no immutable link exists, GitHub sign-in SHALL preserve active-member verified-email resolution and its primary-address tie-break. If no active member matches, it SHALL resolve matching zero-membership accounts before creating a user. Ambiguity MUST fail safely without merging accounts or selecting by provider list order.
+When no immutable link exists, GitHub sign-in SHALL preserve active-member verified-email resolution and its primary-address tie-break only for existing accounts with durable proof for the same normalized verified email. If no active member safely matches, it SHALL resolve matching zero-membership accounts with the same proof before creating a user. Ambiguity or unproven ownership MUST fail safely without merging accounts or selecting by provider list order.
 
-#### Scenario: One zero-membership account matches
+#### Scenario: One proven zero-membership account matches
 - **GIVEN** no active member matches any verified GitHub email
-- **AND** exactly one existing local account matches those verified emails
+- **AND** exactly one existing local account proves ownership of one of those verified emails
 - **WHEN** the callback resolves the identity
 - **THEN** it stages that account and reuses its Firebase UID at successful exchange
 
 #### Scenario: Multiple zero-membership accounts match
-- **GIVEN** no active member matches and multiple zero-membership accounts match verified emails
+- **GIVEN** no active member safely matches and multiple zero-membership accounts with durable proof match verified emails
 - **WHEN** the verified primary email matches exactly one of those accounts
 - **THEN** that account is selected
 - **AND** without such a primary match the attempt is rejected as ambiguous without provisioning
 
 #### Scenario: No local account matches
-- **GIVEN** no linked account or verified-email local account exists
+- **GIVEN** no linked account or local account with durable proof for a verified email exists
 - **WHEN** the callback prepares a new-account candidate
 - **THEN** it uses the verified primary email, or the sole verified email when there is no verified primary
 - **AND** multiple verified emails without a verified primary produce an ambiguous-account failure
@@ -161,6 +161,12 @@ When no immutable link exists, GitHub sign-in SHALL preserve active-member verif
 - **WHEN** GitHub exchange cannot prove control of that Firebase identity
 - **THEN** it rejects adoption and gives existing-provider authentication or credential-linking recovery guidance
 - **AND** it does not issue a Firebase custom token, replace credentials, fabricate provenance from a pending invite, or provision a workspace
+
+#### Scenario: Preclaimed manual-registration email cannot be adopted
+- **GIVEN** an existing password account was created with an unverified email and has a matching local email value
+- **WHEN** an unlinked GitHub identity proves that normalized email
+- **THEN** the backend returns identity-proof recovery without issuing a session or staging the password account
+- **AND** it does not bind the GitHub identity, merge accounts, transfer ownership, or create a workspace for the password account
 
 #### Scenario: Firebase creation survives failed workspace provisioning
 - **GIVEN** a verified exchange created a Firebase identity using its committed application creation reservation

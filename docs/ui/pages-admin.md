@@ -3,6 +3,10 @@
 
 # Admin SPA Pages
 
+## Authentication
+
+- The admin login keeps the approved shared auth layout and existing provider actions. A successful Google or GitHub session exchange for a verified account with no memberships automatically provisions a `Workspace` and its admin membership; the ordinary role router then opens admin-web for that workspace. Existing memberships keep their normal deterministic selection, and pending invitations remain separate from sign-in.
+
 ## Dashboard
 
 - Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity feed.

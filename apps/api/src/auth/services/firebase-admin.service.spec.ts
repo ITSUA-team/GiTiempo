@@ -52,6 +52,132 @@ describe('RealFirebaseAdminService', () => {
     getApps.mockReturnValue([]);
   });
 
+  it('exposes only the provider claim from the revoked-token-checked Firebase result', async () => {
+    verifyIdToken.mockResolvedValue({
+      uid: 'google-uid',
+      email: 'member@example.test',
+      email_verified: true,
+      firebase: { sign_in_provider: 'google.com' },
+    });
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(
+      service.verifyIdToken('signed-id-token'),
+    ).resolves.toMatchObject({
+      uid: 'google-uid',
+      email_verified: true,
+      signInProvider: 'google.com',
+    });
+    expect(verifyIdToken).toHaveBeenCalledWith('signed-id-token', true);
+  });
+
+  it.each([
+    { uid: 'uid', email: 'other@example.test', disabled: false },
+    { uid: 'uid', email: 'member@example.test', disabled: true },
+    { uid: 'other-uid', email: 'member@example.test', disabled: false },
+  ])(
+    'rejects changed or disabled identity records after lock acquisition %#',
+    async (record) => {
+      getUser.mockResolvedValue(record);
+      const service = new RealFirebaseAdminService(
+        makeConfig({
+          FIREBASE_PROJECT_ID: 'p',
+          FIREBASE_CLIENT_EMAIL: 'x@y.z',
+          FIREBASE_PRIVATE_KEY: 'KEY',
+        }),
+      );
+
+      await expect(
+        service.assertActiveUserByUid('uid', 'member@example.test'),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    },
+  );
+
+  it('returns the authoritative Firebase identity only for an exact UID', async () => {
+    getUser.mockResolvedValueOnce({
+      uid: 'member',
+      email: 'member@example.test',
+      emailVerified: true,
+      disabled: false,
+    });
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(service.getUserByUid('member')).resolves.toEqual({
+      uid: 'member',
+      email: 'member@example.test',
+      emailVerified: true,
+      disabled: false,
+    });
+    expect(getUser).toHaveBeenCalledWith('member');
+  });
+
+  it.each([
+    { emailVerified: false, disabled: false },
+    { emailVerified: true, disabled: true },
+  ])(
+    'preserves Firebase email verification and disabled state %#',
+    async ({ emailVerified, disabled }) => {
+      getUser.mockResolvedValueOnce({
+        uid: 'member',
+        email: 'member@example.test',
+        emailVerified,
+        disabled,
+      });
+      const service = new RealFirebaseAdminService(
+        makeConfig({
+          FIREBASE_PROJECT_ID: 'p',
+          FIREBASE_CLIENT_EMAIL: 'x@y.z',
+          FIREBASE_PRIVATE_KEY: 'KEY',
+        }),
+      );
+
+      await expect(service.getUserByUid('member')).resolves.toMatchObject({
+        emailVerified,
+        disabled,
+      });
+    },
+  );
+
+  it('returns null only when the exact Firebase UID does not exist', async () => {
+    getUser.mockRejectedValueOnce({ code: 'auth/user-not-found' });
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(service.getUserByUid('missing')).resolves.toBeNull();
+  });
+
+  it('fails closed when the Firebase identity lookup is unavailable', async () => {
+    getUser.mockRejectedValueOnce(new Error('network unavailable'));
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(service.getUserByUid('member')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+  });
+
   it.each([
     {
       providerId: 'password',

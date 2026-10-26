@@ -45,3 +45,9 @@ The web frontends MUST normalize successful and failed backend token exchanges t
 - **WHEN** the client handles the failed exchange
 - **THEN** it clears partial application session state and remains on a recoverable guest surface
 - **AND** it does not show a successful workspace or retain partial application tokens
+
+#### Scenario: Existing-account ownership cannot be proven
+- **GIVEN** the backend rejects social sign-in because an email-only existing-account match lacks verified ownership evidence
+- **WHEN** the frontend handles the failed exchange
+- **THEN** it remains in a guest session and presents the existing recoverable identity-proof guidance
+- **AND** it does not present the password account as authenticated or begin an extra onboarding form

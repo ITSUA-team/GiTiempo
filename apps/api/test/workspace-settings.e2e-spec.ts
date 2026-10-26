@@ -436,6 +436,36 @@ describe('Workspace settings (e2e)', () => {
       expect(row?.name).toBe('Updated Workspace');
     });
 
+    it('allows a duplicate display name without changing the workspace ID', async () => {
+      const [otherWorkspace] = await db
+        .insert(workspaces)
+        .values({ name: `Duplicate target ${randomUUID()}` })
+        .returning();
+      if (!otherWorkspace)
+        throw new Error('Failed to create comparison workspace');
+
+      try {
+        const res = await request(app.getHttpServer())
+          .patch('/workspace')
+          .set('Authorization', bearer(adminToken))
+          .send({ name: otherWorkspace.name });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toMatchObject({
+          id: workspaceId,
+          name: otherWorkspace.name,
+        });
+        const [row] = await db
+          .select()
+          .from(workspaces)
+          .where(eq(workspaces.id, workspaceId));
+        expect(row?.id).toBe(workspaceId);
+        expect(row?.name).toBe(otherWorkspace.name);
+      } finally {
+        await db.delete(workspaces).where(eq(workspaces.id, otherWorkspace.id));
+      }
+    });
+
     it('returns 400 for empty body', async () => {
       const res = await request(app.getHttpServer())
         .patch('/workspace')

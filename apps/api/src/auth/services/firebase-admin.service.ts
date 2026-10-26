@@ -10,6 +10,7 @@ import type { Env } from '../../config/env.validation';
 import type {
   DecodedFirebaseToken,
   FirebaseAdminService,
+  FirebaseUserIdentity,
   InvitedFirebaseUser,
   RegisteredFirebaseUser,
 } from './firebase-admin.interface';
@@ -35,19 +36,54 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
         name: decoded.name,
         picture: decoded.picture,
         email_verified: decoded.email_verified,
+        signInProvider: decoded.firebase?.sign_in_provider,
       };
     } catch {
       throw new UnauthorizedException('Unauthorized');
     }
   }
 
+  async assertActiveUserByUid(uid: string, email: string): Promise<void> {
+    try {
+      const user = await this.getUserByUid(uid);
+      if (
+        !user ||
+        user.uid !== uid ||
+        user.disabled ||
+        user.email?.trim().toLowerCase() !== email.trim().toLowerCase()
+      ) {
+        throw new UnauthorizedException('Unauthorized');
+      }
+    } catch (error) {
+      if (error instanceof UnauthorizedException) throw error;
+      throw new UnauthorizedException('Unauthorized');
+    }
+  }
+
+  async getUserByUid(uid: string): Promise<FirebaseUserIdentity | null> {
+    try {
+      const user = await getAuth(this.getApp()).getUser(uid);
+      return {
+        uid: user.uid,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        disabled: user.disabled,
+      };
+    } catch (error) {
+      if (isFirebaseAuthError(error, 'auth/user-not-found')) return null;
+      throw new ServiceUnavailableException('Failed to lookup Firebase user');
+    }
+  }
+
   async createEmailPasswordUser(input: {
+    uid?: string;
     email: string;
     password: string;
     displayName: string;
   }): Promise<RegisteredFirebaseUser> {
     try {
       const user = await getAuth(this.getApp()).createUser({
+        uid: input.uid,
         displayName: input.displayName,
         email: input.email,
         emailVerified: false,
@@ -126,6 +162,39 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
 
       throw new ServiceUnavailableException(
         'Failed to provision invited Firebase user',
+      );
+    }
+  }
+
+  async createUnclaimedUser(input: {
+    uid: string;
+    email: string;
+  }): Promise<InvitedFirebaseUser> {
+    try {
+      const user = await getAuth(this.getApp()).createUser({
+        uid: input.uid,
+        email: input.email,
+        emailVerified: false,
+      });
+      return this.toInvitedUser(user, false);
+    } catch (error) {
+      if (isFirebaseAuthError(error, 'auth/uid-already-exists')) {
+        try {
+          const existing = await getAuth(this.getApp()).getUser(input.uid);
+          if (
+            !existing.disabled &&
+            existing.email?.trim().toLowerCase() ===
+              input.email.trim().toLowerCase()
+          ) {
+            return this.toInvitedUser(existing, true);
+          }
+        } catch {
+          // Fall through to the opaque provisioning failure below.
+        }
+      }
+      throw this.toFirebaseAdminAuthError(
+        error,
+        'Failed to provision Firebase identity',
       );
     }
   }

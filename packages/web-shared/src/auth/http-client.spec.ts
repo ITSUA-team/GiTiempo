@@ -171,10 +171,10 @@ describe("createAuthHttpClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse(
         {
-          code: "workspace_name_unavailable",
-          message: "Workspace name is already in use",
+          code: "invalid_workspace_name",
+          message: "Workspace name is invalid",
         },
-        { status: 409 },
+        { status: 400 },
       ),
     );
     const client = createAuthHttpClient({ fetchFn });
@@ -188,8 +188,8 @@ describe("createAuthHttpClient", () => {
         workspaceName: "Workspace Alpha",
       }),
     ).rejects.toMatchObject({
-      code: "workspace_name_unavailable",
-      message: "Workspace name is already in use",
+      code: "invalid_workspace_name",
+      message: "Workspace name is invalid",
     });
   });
 });

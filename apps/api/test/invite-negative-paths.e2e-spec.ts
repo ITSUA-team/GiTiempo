@@ -30,13 +30,17 @@ async function createResendTestApp(options?: {
       name: 'Admin',
       email_verified: true,
     }),
-    getOrCreateInvitedUserByEmail: options?.firebaseProvisioningError
+    createUnclaimedUser: options?.firebaseProvisioningError
       ? vi.fn().mockRejectedValue(options.firebaseProvisioningError)
-      : vi.fn().mockResolvedValue({
-          uid: 'firebase-invitee',
-          email: 'invitee@example.com',
-          isExistingUser: false,
-        }),
+      : vi
+          .fn()
+          .mockImplementation(
+            async (input: { uid: string; email: string }) => ({
+              ...input,
+              isExistingUser: false,
+            }),
+          ),
+    assertActiveUserByUid: vi.fn().mockResolvedValue(undefined),
     generatePasswordSetupLink: options?.firebasePasswordSetupLinkError
       ? vi.fn().mockRejectedValue(options.firebasePasswordSetupLinkError)
       : vi.fn().mockResolvedValue('https://firebase.test/reset'),
@@ -236,9 +240,9 @@ describe('Invite negative paths (e2e)', () => {
           .from(workspaceMembers)
           .where(eq(workspaceMembers.workspaceId, resendApp.workspace.id));
 
-        expect(
-          resendApp.firebase.getOrCreateInvitedUserByEmail,
-        ).toHaveBeenCalledWith(row!.email);
+        expect(resendApp.firebase.createUnclaimedUser).toHaveBeenCalledWith(
+          expect.objectContaining({ email: row!.email }),
+        );
         expect(
           resendApp.firebase.generatePasswordSetupLink,
         ).toHaveBeenCalledWith(

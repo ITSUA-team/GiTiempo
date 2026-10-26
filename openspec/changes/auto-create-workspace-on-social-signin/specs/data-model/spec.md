@@ -20,13 +20,19 @@ Each local user record MUST have one unique canonical Firebase identity and MAY 
 ## ADDED Requirements
 
 ### Requirement: Application Identity Creation Is Recoverable
-The backend SHALL durably reserve a unique normalized email and explicit Firebase UID before creating a new GitHub or invitation identity. The record SHALL retain purpose, lifecycle state, and timestamps, permitting reconciliation after failure. It MUST NOT itself grant application access or be inferred from a pre-existing Firebase email match.
+The backend SHALL durably reserve a unique normalized email and explicit Firebase UID before creating a new GitHub, invitation, or manual-registration identity. It SHALL retain purpose, lifecycle state, and timestamps for reconciliation. A manual-registration reservation also retains its original validated non-secret foundation payload, never a password. A reservation grants neither application access nor email-ownership proof.
 
 #### Scenario: Reservation precedes external creation
 - **GIVEN** no safely reusable identity exists for an eligible creation
 - **WHEN** the backend creates the Firebase identity
 - **THEN** its reservation was committed first and Firebase uses that exact reserved UID
 - **AND** no local user, workspace, membership, GitHub ownership, or session is granted by the reservation alone
+
+#### Scenario: Manual registration reservation preserves its original foundation
+- **GIVEN** a valid manual registration request with display name, workspace name, and owner acknowledgement
+- **WHEN** the backend commits its registration reservation before Firebase creation
+- **THEN** it stores the exact reserved UID and original validated non-secret foundation payload
+- **AND** it does not store the password or infer email consent
 
 #### Scenario: Reservation binds atomically with the local account
 - **GIVEN** Firebase creation succeeded for a reserved UID
@@ -37,8 +43,21 @@ The backend SHALL durably reserve a unique normalized email and explicit Firebas
 #### Scenario: Unknown external creation outcome is reconciled
 - **GIVEN** Firebase creation timed out or the process crashed before confirming success
 - **WHEN** a later authorized attempt resumes
-- **THEN** it reconciles the reserved UID and verified email without reassigning the UID
+- **THEN** it reconciles the exact reserved UID and matching normalized email without reassigning the UID
+- **AND** manual-registration recovery requires authenticated control of that exact UID without treating an unverified email as proof for cross-account adoption
 - **AND** it refuses an incompatible identity or existing binding
+
+#### Scenario: Manual recovery requires the exact reserved subject
+- **GIVEN** a registration reservation survived a timeout, lost response, or process restart
+- **WHEN** a later backend-verified Firebase authentication proves control of its exact reserved UID
+- **THEN** the backend revalidates UID, email, disabled state, ownership, and reservation state before atomically completing or reusing the compatible original foundation
+- **AND** a different UID with the same email, an unauthenticated retry, or the reservation alone cannot adopt it, mutate credentials, or grant a session
+
+#### Scenario: Temporarily absent reserved UID remains unknown
+- **GIVEN** a registration reservation survived a timeout or lost Firebase response
+- **WHEN** reconciliation temporarily cannot find its exact reserved UID
+- **THEN** the backend retains its immutable UID and registration-intent provenance because late creation may still finish
+- **AND** it does not expire, delete, recreate, or hand the attempt to an unauthenticated retry based only on that observation
 
 #### Scenario: Legacy identity does not acquire invented provenance
 - **GIVEN** an existing Firebase identity has no local binding or application creation reservation

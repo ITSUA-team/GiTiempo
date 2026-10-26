@@ -48,7 +48,31 @@ The registration endpoint MUST expose stable frontend-visible error cases for ex
 - **AND** the response does not expose raw provider errors or secrets
 
 ### Requirement: Registration Partial Failure Handling
-The system MUST prevent user-visible partial registration when first-owner registration fails. Firebase cleanup SHALL be coordinated with competing identity adoption and MUST NOT delete an identity already used by a committed local account.
+The system MUST prevent user-visible partial registration when first-owner registration fails. Before Firebase creation it MUST commit a registration reservation containing an explicit UID and original validated non-secret foundation data, never a password. Firebase cleanup SHALL be coordinated with competing identity adoption and MUST NOT delete an identity already used by a committed local account.
+
+#### Scenario: Timeout retains a recoverable registration attempt
+- **GIVEN** a manual-registration reservation was committed before Firebase creation
+- **WHEN** the bounded Firebase wait times out or the response is lost
+- **THEN** the endpoint returns `registration_service_unavailable` without a session or workspace
+- **AND** it retains the reservation and does not infer Firebase failure, delete or reassign the UID, or treat the reservation as email-ownership proof
+
+#### Scenario: Absent UID after timeout remains an unknown outcome
+- **GIVEN** a manual registration timed out after committing its explicit-UID reservation
+- **WHEN** a reconciliation check temporarily cannot find that UID in Firebase
+- **THEN** the system retains the immutable reservation because a late creation may still finish
+- **AND** it does not expire, delete, recreate, or let an unauthenticated retry adopt the attempt or change credentials
+
+#### Scenario: Verified exact-UID authentication completes a timed-out registration
+- **GIVEN** a manual-registration reservation retained its original display/workspace names after an unknown Firebase outcome
+- **WHEN** backend-verified Firebase authentication proves control of that exact reserved UID
+- **THEN** the system revalidates UID, email, disabled state, reservation state, and ownership under the shared locks
+- **AND** atomically creates the original user, workspace, settings, and owner membership or reuses a compatible committed foundation without duplicates
+- **AND** it does not reset credentials, mint a custom token, or infer email consent
+
+#### Scenario: Same email on a different subject cannot recover registration
+- **GIVEN** a manual-registration reservation exists for a normalized email and reserved UID
+- **WHEN** authentication presents a different Firebase UID with that same email
+- **THEN** the system rejects recovery without a session, workspace, credential mutation, UID reassignment, or ownership transfer
 
 #### Scenario: Application persistence fails after Firebase identity creation
 - **GIVEN** Firebase identity creation succeeds
@@ -67,6 +91,13 @@ The system MUST prevent user-visible partial registration when first-owner regis
 - **AND** the response keeps the stable `registration_service_unavailable` identifier in `code`
 - **AND** the response does not expose raw provider failure details
 - **AND** the backend emits an operational log for cleanup follow-up without logging the raw password
+
+#### Scenario: Unknown cleanup outcome retains provenance
+- **GIVEN** a known registration failure begins guarded compensation
+- **AND** the Firebase deletion outcome is unknown
+- **WHEN** the workflow ends or the process restarts
+- **THEN** the backend retains the reservation for exact-UID reconciliation
+- **AND** it does not blindly erase provenance or delete an identity adopted by another committed flow
 
 #### Scenario: Registration payload is redacted from logs
 - **WHEN** the backend logs registration requests, validation failures, or provider failures

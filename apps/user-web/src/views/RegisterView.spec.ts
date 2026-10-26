@@ -343,23 +343,26 @@ describe("RegisterView", () => {
     );
   });
 
-  it("shows workspace-name-unavailable feedback inline", async () => {
-    const registerWorkspaceOwner = createRegisterWorkspaceOwnerMock(async () => {
-      throw createApiError(
-        "workspace_name_unavailable",
-        "Workspace name is already in use.",
-      );
-    });
+  it("submits a duplicate display name without client-side availability validation", async () => {
+    const registerWorkspaceOwner = createRegisterWorkspaceOwnerMock();
     setAuthRuntimeForTesting(createRuntimeMock({ registerWorkspaceOwner }));
-    const { wrapper } = await mountRegisterView();
+    const { router, wrapper } = await mountRegisterView();
 
     await fillValidRegistrationForm(wrapper);
-    await wrapper.get("form").trigger("submit");
-    await flushPromises();
-
-    expect(wrapper.get('[data-testid="register-inline-error"]').text()).toContain(
-      "That workspace name is already in use. Choose another name.",
+    await wrapper
+      .get('[data-testid="register-workspace-name"]')
+      .setValue("Workspace");
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
     );
+    await wrapper.get("form").trigger("submit");
+    await routeReady;
+
+    expect(registerWorkspaceOwner).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceName: "Workspace" }),
+    );
+    expect(wrapper.find('[data-testid="register-inline-error"]').exists()).toBe(false);
   });
 
   it("shows weak-password guidance from the backend", async () => {

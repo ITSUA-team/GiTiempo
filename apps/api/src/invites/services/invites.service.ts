@@ -20,12 +20,12 @@ import {
   FIREBASE_ADMIN,
   type FirebaseAdminService,
 } from '../../auth/services/firebase-admin.interface';
+import { AuthService } from '../../auth/services/auth.service';
 import { normalizeEmail } from '../../commons/utils/normalize-email';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { Env } from '../../config/env.validation';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
-import { UsersService } from '../../users/services/users.service';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { inviteRowSelection, invites } from '../schemas/invites.schema';
 import { InviteDeliveryService } from './invite-delivery.service';
@@ -42,8 +42,8 @@ export class InvitesService {
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
     @Inject(FIREBASE_ADMIN) private readonly firebase: FirebaseAdminService,
     private readonly config: ConfigService<Env, true>,
-    private readonly users: UsersService,
     private readonly delivery: InviteDeliveryService,
+    private readonly auth: AuthService,
   ) {}
 
   async listInvites(workspaceId: string): Promise<WorkspaceInviteResponse[]> {
@@ -177,14 +177,7 @@ export class InvitesService {
       throw new ForbiddenException('Invite email does not match identity');
     }
 
-    const userRow = await this.users.upsertFromFirebase({
-      firebaseUid: decoded.uid,
-      email,
-      displayName: decoded.name ?? null,
-      avatarUrl: decoded.picture ?? null,
-    });
-
-    await this.db.transaction(async (tx) => {
+    await this.auth.acceptInviteIdentity(decoded, async (tx, userRow) => {
       const [currentInvite] = await tx
         .select(inviteRowSelection)
         .from(invites)
@@ -266,7 +259,7 @@ export class InvitesService {
 
   private async deliverInvite(input: InviteWorkspaceRow): Promise<void> {
     const inviteUrl = buildInviteAcceptUrl(this.config, input.token);
-    await this.firebase.getOrCreateInvitedUserByEmail(input.email);
+    await this.auth.prepareInvitationIdentity(input.email);
     const passwordSetupUrl = await this.firebase.generatePasswordSetupLink(
       input.email,
       inviteUrl,

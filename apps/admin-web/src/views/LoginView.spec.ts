@@ -6,7 +6,11 @@ import { createMemoryHistory } from "vue-router";
 import type { CurrentUserWorkspaceMembershipListResponse, UserResponse } from "@gitiempo/shared";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
-import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
+import {
+  clearRefreshToken,
+  getRefreshToken,
+  setRefreshToken,
+} from "@gitiempo/web-shared/session-storage";
 import { waitForRoute } from "@gitiempo/web-shared/testing";
 import { createAppRouter, routeNames } from "@/router";
 import {
@@ -125,7 +129,13 @@ describe("LoginView", () => {
   });
 
   it("signs in with Google through the UI and redirects to the dashboard", async () => {
-    setAuthRuntimeForTesting(createRuntimeMock());
+    setAuthRuntimeForTesting(createRuntimeMock({
+      loginWithFirebaseToken: async () => ({
+        accessToken: "provisioned-google-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "provisioned-google-refresh-token",
+      }),
+    }));
     const { router, wrapper } = await mountLoginView();
     const routeReady = waitForRoute(
       router,
@@ -136,6 +146,22 @@ describe("LoginView", () => {
     await routeReady;
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+    expect(getRefreshToken()).toBe("provisioned-google-refresh-token");
+  });
+
+  it("clears a stale guest session when Google token exchange fails", async () => {
+    setRefreshToken("stale-refresh-token");
+    setAuthRuntimeForTesting(createRuntimeMock({
+      loginWithFirebaseToken: async () => {
+        throw new Error("Google exchange failed");
+      },
+    }));
+    const { wrapper } = await mountLoginView();
+
+    await wrapper.get('[data-testid="sign-in-google"]').trigger("click");
+    await flushPromises();
+
+    expect(getRefreshToken()).toBeNull();
   });
 
   it("redirects to the backend GitHub sign-in flow when GitHub is clicked", async () => {
@@ -251,7 +277,8 @@ describe("LoginView", () => {
 
     const help = wrapper.get('[data-testid="sign-in-error-help"]');
     expect(help.attributes("href")).toBe("https://github.com/settings/emails");
-    expect(wrapper.text()).toContain("verified email");
+    expect(wrapper.text()).toContain("verified GitHub email");
+    expect(wrapper.text().toLowerCase()).not.toContain("invite");
   });
 
   it("explains an ambiguous match without offering a GitHub link", async () => {
@@ -264,6 +291,18 @@ describe("LoginView", () => {
     );
     expect(wrapper.find('[data-testid="sign-in-error-help"]').exists()).toBe(
       false,
+    );
+  });
+
+  it("guides an unproven GitHub identity through an existing provider", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView(
+      "/login?githubError=identity_proof_required",
+    );
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="sign-in-error"]').text()).toContain(
+      "existing provider",
     );
   });
 

@@ -84,19 +84,28 @@ function makeService(options: { firebaseEmail: string }) {
   const usersService = makeUsersService();
   const config = makeConfig();
   const delivery = { deliver: vi.fn() };
+  const auth = {
+    prepareInvitationIdentity: vi.fn(async (email: string) =>
+      firebase.getOrCreateInvitedUserByEmail(email),
+    ),
+    acceptInviteIdentity: vi.fn(async (_decoded, persist) =>
+      persist(tx, acceptedUser),
+    ),
+  };
   return {
     service: new InvitesService(
       db as never,
       firebase as never,
       config as never,
-      usersService as never,
       delivery as never,
+      auth as never,
     ),
     db,
     firebase,
     usersService,
     insertMembershipValues,
     updateInviteWhere,
+    auth,
   };
 }
 
@@ -114,7 +123,7 @@ describe('InvitesService', () => {
   });
 
   it('creates membership and accepts the invite for a matching identity', async () => {
-    const { service, usersService, insertMembershipValues, updateInviteWhere } =
+    const { service, auth, insertMembershipValues, updateInviteWhere } =
       makeService({ firebaseEmail: 'New.User@Example.com' });
 
     await service.acceptInvite({
@@ -127,12 +136,7 @@ describe('InvitesService', () => {
       userId: acceptedUser.id,
       role: pendingInvite.role,
     });
-    expect(usersService.upsertFromFirebase).toHaveBeenCalledWith({
-      firebaseUid: acceptedUser.firebaseUid,
-      email: pendingInvite.email,
-      displayName: acceptedUser.displayName,
-      avatarUrl: null,
-    });
+    expect(auth.acceptInviteIdentity).toHaveBeenCalledOnce();
     expect(updateInviteWhere).toHaveBeenCalled();
   });
 });
@@ -211,18 +215,22 @@ describe('InvitesService createInvite', () => {
           }),
       verifyIdToken: vi.fn(),
     };
-    const usersService = makeUsersService();
     const config = makeConfig();
+    const auth = {
+      prepareInvitationIdentity: vi.fn(async (email: string) =>
+        firebase.getOrCreateInvitedUserByEmail(email),
+      ),
+    };
 
     const service = new InvitesService(
       db as never,
       firebase as never,
       config as never,
-      usersService as never,
       delivery as never,
+      auth as never,
     );
 
-    return { service, db, delivery, firebase, updateSetWhere };
+    return { service, db, delivery, firebase, updateSetWhere, auth };
   }
 
   it('expires invite when delivery fails', async () => {
@@ -381,8 +389,12 @@ describe('InvitesService resendInvite', () => {
           }),
       verifyIdToken: vi.fn(),
     };
-    const usersService = makeUsersService();
     const config = makeConfig();
+    const auth = {
+      prepareInvitationIdentity: vi.fn(async (email: string) =>
+        firebase.getOrCreateInvitedUserByEmail(email),
+      ),
+    };
 
     return {
       db,
@@ -392,9 +404,10 @@ describe('InvitesService resendInvite', () => {
         db as never,
         firebase as never,
         config as never,
-        usersService as never,
         delivery as never,
+        auth as never,
       ),
+      auth,
     };
   }
 

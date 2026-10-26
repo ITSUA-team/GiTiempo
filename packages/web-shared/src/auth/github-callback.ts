@@ -8,8 +8,10 @@ export const githubCallbackErrorMessages: Record<string, string> = {
     "This GitHub account is already connected to another GiTiempo account. Sign in with a different method or disconnect it from that account first.",
   github_identity_mismatch:
     "A different GitHub account is already connected to this GiTiempo account. Disconnect it before replacing it.",
+  identity_proof_required:
+    "This GitHub identity cannot be linked automatically. Sign in with an existing provider for this account, then connect GitHub from your profile.",
   nomember:
-    "No GiTiempo account matches any verified email on your GitHub account. Add your work address to GitHub and verify it, then try again.",
+    "GitHub sign-in could not match an existing account through the legacy membership lookup. Confirm a verified GitHub email, then try again or sign in with another method.",
   state: "GitHub sign-in could not be verified. Please try again.",
   failed: "Something went wrong while signing in with GitHub.",
 };

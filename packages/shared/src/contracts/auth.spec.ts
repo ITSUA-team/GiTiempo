@@ -88,9 +88,6 @@ describe("registrationErrorCodeSchema", () => {
     expect(
       registrationErrorCodeSchema.parse("invalid_workspace_name"),
     ).toBe("invalid_workspace_name");
-    expect(
-      registrationErrorCodeSchema.parse("workspace_name_unavailable"),
-    ).toBe("workspace_name_unavailable");
     expect(registrationErrorCodeSchema.parse("rate_limited")).toBe(
       "rate_limited",
     );
@@ -103,6 +100,12 @@ describe("registrationErrorCodeSchema", () => {
     const result = registrationErrorCodeSchema.safeParse("firebase/email-taken");
 
     expect(result.success).toBe(false);
+  });
+
+  it("rejects the retired workspace-name availability error", () => {
+    expect(
+      registrationErrorCodeSchema.safeParse("workspace_name_unavailable").success,
+    ).toBe(false);
   });
 });
 

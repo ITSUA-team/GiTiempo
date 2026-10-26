@@ -1353,6 +1353,77 @@ describe('background snapshot broadcast', () => {
     expect(backgroundApiMocks.getWorkspace).toHaveBeenCalledTimes(2);
   });
 
+  it('switches duplicate workspace labels by the selected workspace ID', async () => {
+    const firstWorkspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000';
+    const secondWorkspaceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001';
+    let activeWorkspaceId = firstWorkspaceId;
+    sessionMocks.getStoredSession.mockImplementation(async () => ({
+      accessToken: makeAccessToken({
+        email: 'alexey@example.com',
+        workspaceId: activeWorkspaceId,
+      }),
+      refreshToken: 'refresh-token',
+    }));
+    backgroundApiMocks.getCurrentTimer.mockResolvedValue({ timeEntry: null });
+    backgroundApiMocks.getWorkspace.mockImplementation(async () => ({
+      id: activeWorkspaceId,
+      name: 'Workspace',
+    }));
+    backgroundApiMocks.getWorkspaceMemberships.mockResolvedValue({
+      items: [
+        {
+          isCurrent: true,
+          role: 'admin',
+          workspaceId: firstWorkspaceId,
+          workspaceName: 'Workspace',
+        },
+        {
+          isCurrent: false,
+          role: 'admin',
+          workspaceId: secondWorkspaceId,
+          workspaceName: 'Workspace',
+        },
+      ],
+    });
+    backgroundApiMocks.switchWorkspace.mockImplementation(async (workspaceId) => {
+      activeWorkspaceId = workspaceId;
+    });
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]![0];
+    const membershipsResponse = vi.fn();
+    onMessage({ type: 'workspace/get-memberships' }, {}, membershipsResponse);
+
+    await vi.waitFor(() => expect(membershipsResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: expect.arrayContaining([
+          expect.objectContaining({ workspaceId: firstWorkspaceId, workspaceName: 'Workspace' }),
+          expect.objectContaining({ workspaceId: secondWorkspaceId, workspaceName: 'Workspace' }),
+        ]),
+        ok: true,
+      }),
+    ));
+
+    const switchResponse = vi.fn();
+    onMessage(
+      { type: 'workspace/switch', workspaceId: secondWorkspaceId },
+      {},
+      switchResponse,
+    );
+
+    await vi.waitFor(() => expect(backgroundApiMocks.switchWorkspace).toHaveBeenCalledWith(
+      secondWorkspaceId,
+    ));
+    await vi.waitFor(() => expect(switchResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: true,
+        snapshot: expect.objectContaining({
+          workspace: { id: secondWorkspaceId, name: 'Workspace' },
+        }),
+      }),
+    ));
+  });
+
   it('returns the unauthenticated snapshot, including provider cleanup status, without requesting memberships', async () => {
     sessionMocks.getStoredSession.mockResolvedValue(null);
     sessionMocks.hasPendingProviderCleanup.mockResolvedValue(true);

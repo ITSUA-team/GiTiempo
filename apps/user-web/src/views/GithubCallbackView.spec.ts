@@ -10,7 +10,11 @@ import PrimeVue from "primevue/config";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import { waitForRoute } from "@gitiempo/web-shared/testing";
-import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
+import {
+  clearRefreshToken,
+  getRefreshToken,
+  setRefreshToken,
+} from "@gitiempo/web-shared/session-storage";
 import { createAppRouter, routeNames } from "@/router";
 import {
   resetAuthRuntimeForTesting,
@@ -91,8 +95,23 @@ describe("GithubCallbackView", () => {
     resetAuthRuntimeForTesting();
   });
 
-  it("exchanges the handoff code and redirects to the dashboard", async () => {
-    setAuthRuntimeForTesting(createRuntimeMock());
+  it("boots a provisioned admin session from the GitHub token pair and redirects to the dashboard", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock({
+      getCurrentUser: async () => ({
+        avatarUrl: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        displayName: "Workspace Admin",
+        email: "provisioned@example.com",
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        role: "admin",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      }),
+      exchangeGithubSession: async () => ({
+        accessToken: "provisioned-github-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "provisioned-github-refresh-token",
+      }),
+    }));
     const { router, wrapper } = await mountCallbackView(
       "/auth/github/callback?code=handoff-code",
     );
@@ -102,6 +121,7 @@ describe("GithubCallbackView", () => {
     );
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+    expect(getRefreshToken()).toBe("provisioned-github-refresh-token");
     wrapper.unmount();
   });
 
@@ -147,6 +167,7 @@ describe("GithubCallbackView", () => {
   });
 
   it("funnels a failed session exchange to the login page", async () => {
+    setRefreshToken("stale-refresh-token");
     setAuthRuntimeForTesting(
       createRuntimeMock({
         exchangeGithubSession: async () => {
@@ -161,5 +182,6 @@ describe("GithubCallbackView", () => {
 
     expect(router.currentRoute.value.name).toBe(routeNames.login);
     expect(router.currentRoute.value.query.githubError).toBe("failed");
+    expect(getRefreshToken()).toBeNull();
   });
 });

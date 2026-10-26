@@ -77,7 +77,6 @@ export const registrationErrorCodeSchema = z.enum([
   "duplicate_email",
   "weak_password",
   "invalid_workspace_name",
-  "workspace_name_unavailable",
   "rate_limited",
   "registration_service_unavailable",
 ]);

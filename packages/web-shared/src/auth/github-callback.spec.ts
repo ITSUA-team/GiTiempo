@@ -31,11 +31,13 @@ describe("resolveGithubSignInError", () => {
     expect(resolveGithubSignInError("")).toBeNull();
   });
 
-  it("explains an unmatched account rather than repeating a generic failure", () => {
+  it("explains the legacy no-member fallback without suggesting an invitation", () => {
     const message = resolveGithubSignInError("nomember");
 
     expect(message).toBe(githubCallbackErrorMessages.nomember);
     expect(message).not.toBe(githubCallbackErrorMessages.failed);
+    expect(message).toContain("legacy membership lookup");
+    expect(message?.toLowerCase()).not.toContain("invite");
   });
 
   it("tells an ambiguous match apart from an unmatched one", () => {
@@ -57,6 +59,12 @@ describe("resolveGithubSignInError", () => {
   it("explains a GitHub account-link conflict", () => {
     expect(resolveGithubSignInError("github_account_conflict")).toBe(
       githubCallbackErrorMessages.github_account_conflict,
+    );
+  });
+
+  it("guides identity-proof recovery through an existing provider", () => {
+    expect(resolveGithubSignInError("identity_proof_required")).toContain(
+      "existing provider",
     );
   });
 });
