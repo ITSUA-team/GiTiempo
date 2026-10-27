@@ -87,7 +87,7 @@ export const giTiempoDatePickerPt = {
     root: { class: giTiempoDatePickerInputClass },
   },
   dropdown: { class: giTiempoDropdownControlTriggerClass },
-  clearIcon: { class: "box-content bg-surface-primary end-10" },
+  clearIcon: { class: "box-content bg-surface-primary end-[38px]" },
   panel: {
     class:
       "border-divider bg-surface-primary rounded-md border text-text-dark shadow-popover",
