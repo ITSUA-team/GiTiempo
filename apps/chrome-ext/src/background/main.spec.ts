@@ -96,6 +96,21 @@ function makeAccessToken(payload: Record<string, unknown>): string {
   return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode(payload)}.signature`;
 }
 
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  reject: (reason?: unknown) => void;
+  resolve: (value: T) => void;
+} {
+  let reject!: (reason?: unknown) => void;
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, reject, resolve };
+}
+
 describe('background snapshot broadcast', () => {
   let chromeStub: ChromeStub;
 
@@ -298,6 +313,153 @@ describe('background snapshot broadcast', () => {
       });
     },
   );
+
+  it('blocks a duplicate Google sign-in until the active flow ends, then allows a retry', async () => {
+    const pendingGoogleSignIn = createDeferred<string>();
+    firebaseMocks.signInWithGoogle.mockReturnValueOnce(pendingGoogleSignIn.promise);
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]?.[0];
+    const firstResponse = vi.fn();
+    const duplicateResponse = vi.fn();
+
+    onMessage({ type: 'auth/sign-in-google' }, {}, firstResponse);
+    await vi.waitFor(() => {
+      expect(firebaseMocks.signInWithGoogle).toHaveBeenCalledOnce();
+    });
+
+    onMessage({ type: 'auth/sign-in-google' }, {}, duplicateResponse);
+    await vi.waitFor(() => {
+      expect(duplicateResponse).toHaveBeenCalledWith({
+        errorMessage:
+          'Sign-in is already open. Finish or close the provider window before trying again.',
+        ok: false,
+        snapshot: expect.objectContaining({ authenticated: false }),
+      });
+    });
+    expect(firebaseMocks.signInWithGoogle).toHaveBeenCalledOnce();
+    expect(backgroundApiMocks.loginWithFirebaseToken).not.toHaveBeenCalled();
+    expect(chromeStub.action.openPopup).not.toHaveBeenCalled();
+
+    pendingGoogleSignIn.reject(new Error('User cancelled or denied access.'));
+    await vi.waitFor(() => {
+      expect(firstResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          errorMessage: 'User cancelled or denied access.',
+          ok: false,
+        }),
+      );
+    });
+
+    const retryResponse = vi.fn();
+    onMessage({ type: 'auth/sign-in-google' }, {}, retryResponse);
+    await vi.waitFor(() => {
+      expect(firebaseMocks.signInWithGoogle).toHaveBeenCalledTimes(2);
+      expect(backgroundApiMocks.loginWithFirebaseToken).toHaveBeenCalledWith(
+        'firebase-google-token',
+      );
+      expect(retryResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ ok: true }),
+      );
+    });
+  });
+
+  it('blocks Google while a GitHub sign-in is pending without starting a second provider flow', async () => {
+    const pendingGithubSignIn = createDeferred<{ code: string; verifier: string }>();
+    githubMocks.signInWithGithub.mockReturnValueOnce(pendingGithubSignIn.promise);
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]?.[0];
+    const githubResponse = vi.fn();
+    const googleResponse = vi.fn();
+
+    onMessage({ type: 'auth/sign-in-github' }, {}, githubResponse);
+    await vi.waitFor(() => {
+      expect(githubMocks.signInWithGithub).toHaveBeenCalledOnce();
+    });
+
+    onMessage({ type: 'auth/sign-in-google' }, {}, googleResponse);
+    await vi.waitFor(() => {
+      expect(googleResponse).toHaveBeenCalledWith({
+        errorMessage:
+          'Sign-in is already open. Finish or close the provider window before trying again.',
+        ok: false,
+        snapshot: expect.objectContaining({ authenticated: false }),
+      });
+    });
+    expect(firebaseMocks.signInWithGoogle).not.toHaveBeenCalled();
+    expect(backgroundApiMocks.loginWithFirebaseToken).not.toHaveBeenCalled();
+
+    pendingGithubSignIn.resolve({ code: 'pending-code', verifier: 'pending-verifier' });
+    await vi.waitFor(() => {
+      expect(backgroundApiMocks.exchangeGithubSession).toHaveBeenCalledWith(
+        'pending-code',
+        'pending-verifier',
+      );
+      expect(githubResponse).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
+    });
+
+    const retryResponse = vi.fn();
+    onMessage({ type: 'auth/sign-in-google' }, {}, retryResponse);
+    await vi.waitFor(() => {
+      expect(firebaseMocks.signInWithGoogle).toHaveBeenCalledOnce();
+      expect(backgroundApiMocks.loginWithFirebaseToken).toHaveBeenCalledWith(
+        'firebase-google-token',
+      );
+      expect(retryResponse).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
+    });
+  });
+
+  it('releases the sign-in guard after the session exchange fails', async () => {
+    backgroundApiMocks.loginWithFirebaseToken.mockRejectedValueOnce(
+      new Error('GiTiempo API is temporarily unavailable.'),
+    );
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]?.[0];
+    const failedResponse = vi.fn();
+
+    onMessage({ type: 'auth/sign-in-google' }, {}, failedResponse);
+    await vi.waitFor(() => {
+      expect(failedResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          errorMessage: 'GiTiempo API is temporarily unavailable.',
+          ok: false,
+        }),
+      );
+    });
+
+    const retryResponse = vi.fn();
+    onMessage({ type: 'auth/sign-in-google' }, {}, retryResponse);
+    await vi.waitFor(() => {
+      expect(firebaseMocks.signInWithGoogle).toHaveBeenCalledTimes(2);
+      expect(backgroundApiMocks.loginWithFirebaseToken).toHaveBeenLastCalledWith(
+        'firebase-google-token',
+      );
+      expect(retryResponse).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
+    });
+  });
+
+  it('forwards the transient Google ID token with the Firebase exchange', async () => {
+    firebaseMocks.signInWithGoogle.mockResolvedValueOnce({
+      firebaseIdToken: 'firebase-google-token',
+      googleIdToken: 'google-provider-id-token',
+    });
+
+    await import('./main');
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]?.[0];
+    const response = vi.fn();
+
+    onMessage({ type: 'auth/sign-in-google' }, {}, response);
+
+    await vi.waitFor(() => {
+      expect(backgroundApiMocks.loginWithFirebaseToken).toHaveBeenCalledWith(
+        'firebase-google-token',
+        'google-provider-id-token',
+      );
+      expect(response).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
+    });
+  });
 
   it('completes GitHub exchange and restores the popup after provider success', async () => {
     sessionMocks.getStoredSession.mockResolvedValue({

@@ -1,0 +1,20 @@
+{
+  "executedOn": "2026-10-27",
+  "projectId": "gitiempo",
+  "localDevClientMatchesInspectedWebClient": true,
+  "localDevChromeBuildPassed": true,
+  "localApiVerified": true,
+  "manifestKeyPresent": true,
+  "derivedIdMatchesInstalledId": true,
+  "extensionId": "hbbfpikijbehdncoibkpkhlckmjmkblc",
+  "proposedRedirectUri": "https://hbbfpikijbehdncoibkpkhlckmjmkblc.chromiumapp.org/oauth2",
+  "existingRedirectsPreservedInForm": true,
+  "remoteSaveCompleted": true,
+  "status": "saved-and-user-reported-login-success",
+  "runtimeLoginVerified": true,
+  "remoteSaveActor": "user",
+  "savedStateObserved": "Google Cloud showed OAuth client saved and exact redirect URI",
+  "runtimeEvidenceSource": "User reports Chrome extension Google login succeeded as stoyambo@gmail.com; no direct Chrome automation available",
+  "runtimeCase": "existing-account sign-in after user-web/admin onboarding, not fresh extension-first provisioning",
+  "devProdUnification": "not performed; user chose separate dev and prod configuration"
+}

@@ -9,6 +9,7 @@ export const SENSITIVE_LOG_REDACT_PATHS: string[] = [
   'req.headers.authorization',
   'req.headers.cookie',
   'req.body.firebaseIdToken',
+  'req.body.googleIdToken',
   'req.body.refreshToken',
   'req.body.password',
   'res.body.accessToken',

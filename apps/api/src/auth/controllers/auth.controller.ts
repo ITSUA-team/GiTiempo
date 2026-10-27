@@ -42,7 +42,7 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Invalid Firebase ID token' })
   @ZodSerializerDto(TokenPairResponseDto)
   login(@Body() body: LoginDto): Promise<TokenPairResponseDto> {
-    return this.auth.login(body.firebaseIdToken);
+    return this.auth.login(body.firebaseIdToken, body.googleIdToken);
   }
 
   @Post('register')

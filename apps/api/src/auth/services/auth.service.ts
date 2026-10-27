@@ -45,6 +45,7 @@ import {
 } from './firebase-admin.interface';
 import { REGISTRATION_ERROR_MESSAGES } from '../registration-errors';
 import { TokenService } from './token.service';
+import { GoogleIdTokenVerifier } from './google-id-token-verifier.service';
 import type { AuthUser } from '../types/auth-user';
 
 export interface TokenPair {
@@ -83,6 +84,7 @@ export interface ProvisionSocialSessionInput {
   picture?: string | null;
   /** Firebase subject received from a verified Google ID token. */
   firebaseUid?: string;
+  googleSubject?: string;
 }
 
 export type SocialProvisionPersistence = (
@@ -225,6 +227,7 @@ export class AuthService {
     private readonly users: UsersService,
     private readonly members: MembersService,
     private readonly githubAccounts: GithubAccountService,
+    private readonly googleIdTokens: GoogleIdTokenVerifier,
   ) {
     this.refreshTtlMs = parseDurationMs(
       config.get('JWT_REFRESH_TTL', { infer: true }),
@@ -234,7 +237,10 @@ export class AuthService {
     );
   }
 
-  async login(firebaseIdToken: string): Promise<TokenPair> {
+  async login(
+    firebaseIdToken: string,
+    googleIdToken?: string,
+  ): Promise<TokenPair> {
     let decoded: DecodedFirebaseToken;
     try {
       decoded = await this.firebase.verifyIdToken(firebaseIdToken);
@@ -244,6 +250,29 @@ export class AuthService {
         reason: (err as Error).message,
       });
       throw new UnauthorizedException('Unauthorized');
+    }
+    const firebaseEmail = decoded.email ? normalizeEmail(decoded.email) : null;
+    if (
+      decoded.signInProvider === 'google.com' &&
+      (!firebaseEmail || !decoded.email_verified) &&
+      googleIdToken
+    ) {
+      const proof = await this.googleIdTokens.verify(googleIdToken);
+      if (
+        (firebaseEmail && firebaseEmail !== proof.email) ||
+        decoded.googleSubjects?.length !== 1 ||
+        decoded.googleSubjects[0] !== proof.subject
+      ) {
+        throw new UnauthorizedException('Unauthorized');
+      }
+      return this.provisionSocialSession({
+        provider: 'google',
+        email: proof.email,
+        name: decoded.name ?? null,
+        picture: decoded.picture ?? null,
+        firebaseUid: decoded.uid,
+        googleSubject: proof.subject,
+      });
     }
     if (!decoded.email) {
       this.logger.warn({
@@ -478,7 +507,11 @@ export class AuthService {
         ...(existingCandidate ? [`uid:${existingCandidate.firebaseUid}`] : []),
       ]);
       if (input.provider === 'google') {
-        await this.firebase.assertActiveUserByUid(firebaseUid, candidateEmail!);
+        await this.firebase.assertActiveUserByUid(
+          firebaseUid,
+          candidateEmail!,
+          input.googleSubject,
+        );
       }
 
       const user = await this.resolveSocialUserInTransaction(tx, {

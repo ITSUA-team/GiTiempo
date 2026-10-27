@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { ApiError } from "../http";
 import {
   completeGithubSignInCallback,
   githubCallbackErrorMessages,
@@ -166,6 +167,46 @@ describe("completeGithubSignInCallback", () => {
       {
         exchange: async () => {
           throw new Error("boom");
+        },
+        onSuccess: vi.fn(),
+        onError,
+      },
+    );
+
+    expect(onError).toHaveBeenCalledWith("failed");
+  });
+
+  it("preserves identity proof recovery errors from the exchange", async () => {
+    const onError = vi.fn();
+
+    await completeGithubSignInCallback(
+      { githubError: undefined, code: "handoff" },
+      {
+        exchange: async () => {
+          throw new ApiError("Proof required", {
+            code: "identity_proof_required",
+            status: 401,
+          });
+        },
+        onSuccess: vi.fn(),
+        onError,
+      },
+    );
+
+    expect(onError).toHaveBeenCalledWith("identity_proof_required");
+  });
+
+  it("funnels unrecognized API exchange errors to failed", async () => {
+    const onError = vi.fn();
+
+    await completeGithubSignInCallback(
+      { githubError: undefined, code: "handoff" },
+      {
+        exchange: async () => {
+          throw new ApiError("Unexpected error", {
+            code: "unknown_api_error",
+            status: 500,
+          });
         },
         onSuccess: vi.fn(),
         onError,

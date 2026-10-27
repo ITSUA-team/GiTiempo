@@ -63,9 +63,12 @@ let lastSnapshotGeneration: number | null = null;
 let workspaceSwitching = false;
 let pendingTimerMutation: Promise<void> = Promise.resolve();
 let sessionGeneration = 0;
+let interactiveSignInInFlight = false;
 
 const WORKSPACE_CHANGED_MESSAGE =
   'Your session or workspace changed. Refresh and review the destination before starting.';
+const INTERACTIVE_SIGN_IN_IN_FLIGHT_MESSAGE =
+  'Sign-in is already open. Finish or close the provider window before trying again.';
 
 function withWorkspaceSwitching(snapshot: RuntimeSnapshot): RuntimeSnapshot {
   return workspaceSwitching ? { ...snapshot, workspaceSwitching: true } : snapshot;
@@ -456,9 +459,12 @@ export async function handleWorkspaceSwitch(
 
 async function handleAuthExchange(
   firebaseIdToken: string,
+  googleIdToken?: string,
 ): Promise<RuntimeAuthResult> {
   return handleMutation(() =>
-    apiClient.loginWithFirebaseToken(firebaseIdToken),
+    googleIdToken
+      ? apiClient.loginWithFirebaseToken(firebaseIdToken, googleIdToken)
+      : apiClient.loginWithFirebaseToken(firebaseIdToken),
   );
 }
 
@@ -573,13 +579,26 @@ async function signOutEverywhere(): Promise<void> {
 async function handleInteractiveSignIn(
   exchange: () => Promise<RuntimeAuthResult>,
 ): Promise<RuntimeAuthResult> {
-  const result = await exchange();
-
-  if (result.ok) {
-    await reopenPopupIfPossible();
+  if (interactiveSignInInFlight) {
+    return {
+      errorMessage: INTERACTIVE_SIGN_IN_IN_FLIGHT_MESSAGE,
+      ok: false,
+      snapshot: await loadSnapshot(),
+    };
   }
 
-  return result;
+  interactiveSignInInFlight = true;
+  try {
+    const result = await exchange();
+
+    if (result.ok) {
+      await reopenPopupIfPossible();
+    }
+
+    return result;
+  } finally {
+    interactiveSignInInFlight = false;
+  }
 }
 
 /**
@@ -631,25 +650,34 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return;
       }
       case 'auth/sign-in-github': {
-        sessionGeneration += 1;
         sendResponse(
-          await handleInteractiveSignIn(() =>
-            handleMutation(async () => {
+          await handleInteractiveSignIn(() => {
+            sessionGeneration += 1;
+            return handleMutation(async () => {
               const { code, verifier } = await signInWithGithub();
               await apiClient.exchangeGithubSession(code, verifier);
-            }),
-          ),
+            });
+          }),
         );
         return;
       }
       case 'auth/sign-in-google': {
-        sessionGeneration += 1;
         sendResponse(
-          await handleInteractiveSignIn(() =>
-            handleMutation(async () => {
-              await apiClient.loginWithFirebaseToken(await signInWithGoogle());
-            }),
-          ),
+          await handleInteractiveSignIn(() => {
+            sessionGeneration += 1;
+            return handleMutation(async () => {
+              const signInResult = await signInWithGoogle();
+              const { firebaseIdToken, googleIdToken } = typeof signInResult === 'string'
+                ? { firebaseIdToken: signInResult }
+                : signInResult;
+
+              if (googleIdToken) {
+                await apiClient.loginWithFirebaseToken(firebaseIdToken, googleIdToken);
+              } else {
+                await apiClient.loginWithFirebaseToken(firebaseIdToken);
+              }
+            });
+          }),
         );
         return;
       }

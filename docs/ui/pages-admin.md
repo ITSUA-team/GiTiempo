@@ -6,6 +6,7 @@
 ## Authentication
 
 - The admin login keeps the approved shared auth layout and existing provider actions. A successful Google or GitHub session exchange for a verified account with no memberships automatically provisions a `Workspace` and its admin membership; the ordinary role router then opens admin-web for that workspace. Existing memberships keep their normal deterministic selection, and pending invitations remain separate from sign-in.
+- Admin Google sign-in uses the same immediate paired Firebase/Google ID-token exchange as user-web when the Google credential is available. Backend verification can establish missing Firebase email proof; no raw credential is persisted and exchange failures clear partial session state.
 
 ## Dashboard
 

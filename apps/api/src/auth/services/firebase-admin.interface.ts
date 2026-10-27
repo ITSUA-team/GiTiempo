@@ -7,6 +7,8 @@ export interface DecodedFirebaseToken {
   email_verified?: boolean;
   /** Firebase's trusted `firebase.sign_in_provider` token claim. */
   signInProvider?: string;
+  /** Google subjects from Firebase's signed `firebase.identities` claim. */
+  googleSubjects?: string[];
 }
 
 /** Authoritative Firebase account data used to prove ownership of an identity. */
@@ -43,7 +45,11 @@ export class FirebaseAdminAuthError extends Error {
 export interface FirebaseAdminService {
   verifyIdToken(idToken: string): Promise<DecodedFirebaseToken>;
   getUserByUid(uid: string): Promise<FirebaseUserIdentity | null>;
-  assertActiveUserByUid(uid: string, email: string): Promise<void>;
+  assertActiveUserByUid(
+    uid: string,
+    email: string,
+    googleSubject?: string,
+  ): Promise<void>;
   createEmailPasswordUser(input: {
     uid?: string;
     email: string;

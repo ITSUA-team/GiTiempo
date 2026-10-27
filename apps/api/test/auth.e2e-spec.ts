@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
-import type { INestApplication } from '@nestjs/common';
+import { UnauthorizedException, type INestApplication } from '@nestjs/common';
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { and, eq, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -477,6 +477,144 @@ describe('Auth (e2e)', () => {
           .delete(firebaseIdentityReservations)
           .where(eq(firebaseIdentityReservations.normalizedEmail, email));
         if (userId) await db.delete(users).where(eq(users.id, userId));
+      }
+    });
+
+    it('keeps a pending invite pending when a legacy Firebase identity has no application creation proof', async () => {
+      const email = `legacy-unbound-invite-${randomUUID()}@example.test`;
+      const firebaseUid = `legacy-unbound-${randomUUID()}`;
+      const { admin, workspace } = await getSeededAdminWorkspace(db);
+      const [invite] = await db
+        .insert(invites)
+        .values({
+          workspaceId: workspace.id,
+          email,
+          token: randomUUID(),
+          invitedBy: admin.id,
+          role: 'member',
+          expiresAt: new Date(Date.now() + 60 * 60 * 1_000),
+        })
+        .returning();
+      if (!invite) throw new Error('Expected legacy invite fixture');
+
+      await firebase.createEmailPasswordUser({
+        uid: firebaseUid,
+        email,
+        password: 'password123',
+        displayName: 'Legacy Firebase Identity',
+      });
+      expect(await firebase.getUserByUid(firebaseUid)).toMatchObject({
+        uid: firebaseUid,
+        email,
+        emailVerified: false,
+        disabled: false,
+      });
+      const foundationCounts = () =>
+        Promise.all([
+          db.select({ count: sql<number>`count(*)` }).from(users),
+          db.select({ count: sql<number>`count(*)` }).from(workspaces),
+          db.select({ count: sql<number>`count(*)` }).from(workspaceMembers),
+          db.select({ count: sql<number>`count(*)` }).from(refreshTokens),
+          db
+            .select({ count: sql<number>`count(*)` })
+            .from(firebaseSubjectBindings),
+        ]);
+      const countsBefore = await foundationCounts();
+      const createUnclaimedUser = vi
+        .spyOn(firebase, 'createUnclaimedUser')
+        .mockRejectedValueOnce(
+          new FirebaseAdminAuthError(
+            'auth/email-already-exists',
+            'Legacy Firebase identity already owns this email',
+          ),
+        );
+
+      try {
+        let rejection: unknown;
+        try {
+          await auth.provisionSocialSession({
+            provider: 'github',
+            email,
+            verifiedEmails: [email],
+            name: 'Legacy GitHub Identity',
+          });
+        } catch (error) {
+          rejection = error;
+        }
+
+        expect(rejection).toBeInstanceOf(UnauthorizedException);
+        expect(
+          (rejection as UnauthorizedException).getResponse(),
+        ).toMatchObject({
+          code: 'identity_proof_required',
+        });
+        expect(
+          await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.email, email)),
+        ).toEqual([]);
+        expect(
+          await db
+            .select({ id: firebaseSubjectBindings.id })
+            .from(firebaseSubjectBindings)
+            .where(eq(firebaseSubjectBindings.verifiedEmail, email)),
+        ).toEqual([]);
+        expect(
+          await db
+            .select({ status: invites.status })
+            .from(invites)
+            .where(eq(invites.id, invite.id)),
+        ).toEqual([{ status: 'pending' }]);
+        expect(
+          await db
+            .select({
+              firebaseUid: firebaseIdentityReservations.firebaseUid,
+              purpose: firebaseIdentityReservations.purpose,
+              state: firebaseIdentityReservations.state,
+              userId: firebaseIdentityReservations.userId,
+            })
+            .from(firebaseIdentityReservations)
+            .where(eq(firebaseIdentityReservations.normalizedEmail, email)),
+        ).toEqual([
+          expect.objectContaining({
+            purpose: 'github-signin',
+            state: 'reserved',
+            userId: null,
+          }),
+        ]);
+        const [reservation] = await db
+          .select({ firebaseUid: firebaseIdentityReservations.firebaseUid })
+          .from(firebaseIdentityReservations)
+          .where(eq(firebaseIdentityReservations.normalizedEmail, email));
+        expect(reservation?.firebaseUid).not.toBe(firebaseUid);
+        expect(await firebase.getUserByUid(firebaseUid)).toMatchObject({
+          uid: firebaseUid,
+          email,
+          emailVerified: false,
+          disabled: false,
+        });
+        expect(await foundationCounts()).toEqual(countsBefore);
+      } finally {
+        createUnclaimedUser.mockRestore();
+        await db.delete(invites).where(eq(invites.id, invite.id));
+        await db
+          .delete(firebaseIdentityReservations)
+          .where(eq(firebaseIdentityReservations.normalizedEmail, email));
+        await firebase.deleteUser(firebaseUid);
+        expect(
+          await db
+            .select({ id: invites.id })
+            .from(invites)
+            .where(eq(invites.id, invite.id)),
+        ).toEqual([]);
+        expect(
+          await db
+            .select({ id: firebaseIdentityReservations.id })
+            .from(firebaseIdentityReservations)
+            .where(eq(firebaseIdentityReservations.normalizedEmail, email)),
+        ).toEqual([]);
+        expect(await firebase.getUserByUid(firebaseUid)).toBeNull();
       }
     });
 

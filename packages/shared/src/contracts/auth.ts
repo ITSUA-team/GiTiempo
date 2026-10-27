@@ -9,6 +9,9 @@ import { z } from "zod";
 export const loginRequestSchema = z
   .object({
     firebaseIdToken: z.string().min(1),
+    // A short-lived Google OpenID Connect proof is only used when Firebase's
+    // signed token cannot provide a verified email address.
+    googleIdToken: z.string().min(1).max(16_384).optional(),
   })
   .strict();
 

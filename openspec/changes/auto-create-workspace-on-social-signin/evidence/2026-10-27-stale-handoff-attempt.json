@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-27",
+  "result": {
+    "checkedAt": "2026-10-27T13:18:51.910Z",
+    "database": "gitiempo_476_social_test",
+    "target": {
+      "userId": "ff250241-8f11-452d-a720-96213ad815d2",
+      "email": "alexeuel@gmail.com",
+      "githubUserId": "31486153"
+    },
+    "outcome": "bridge_error",
+    "errorCode": "callback_handler_failed"
+  },
+  "userReported": "GitHub became Disconnected",
+  "postAttemptCheckedAt": "2026-10-27T13:19:09.266Z",
+  "counts": {
+    "users": 89,
+    "workspaces": 58,
+    "memberships": 89
+  },
+  "foundationComparison": {
+    "counts": true,
+    "memberships": true,
+    "settings": true,
+    "subjectBindings": true,
+    "reservations": true
+  },
+  "sameLocalUserAndCanonicalUid": true,
+  "githubLinkCount": 0,
+  "githubGrantCount": 0,
+  "acceptancePassed": false,
+  "limits": "Helper failed before handoff redemption; exact callback guard was not captured. No stale-handoff API outcome is established. User disconnect is independently confirmed. Normal API runtime was restored after failure."
+}

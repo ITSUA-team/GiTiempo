@@ -30,27 +30,50 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
     const app = this.getApp();
     try {
       const decoded = await getAuth(app).verifyIdToken(idToken, true);
+      const googleSubjects = (
+        decoded.firebase?.identities?.['google.com'] ?? []
+      ).filter(
+        (subject): subject is string =>
+          typeof subject === 'string' && subject.length > 0,
+      );
       return {
         uid: decoded.uid,
         email: decoded.email,
         name: decoded.name,
         picture: decoded.picture,
         email_verified: decoded.email_verified,
-        signInProvider: decoded.firebase?.sign_in_provider,
+        ...(decoded.firebase?.sign_in_provider
+          ? { signInProvider: decoded.firebase.sign_in_provider }
+          : {}),
+        ...(googleSubjects.length ? { googleSubjects } : {}),
       };
     } catch {
       throw new UnauthorizedException('Unauthorized');
     }
   }
 
-  async assertActiveUserByUid(uid: string, email: string): Promise<void> {
+  async assertActiveUserByUid(
+    uid: string,
+    email: string,
+    googleSubject?: string,
+  ): Promise<void> {
     try {
-      const user = await this.getUserByUid(uid);
+      const user = await getAuth(this.getApp()).getUser(uid);
       if (
-        !user ||
         user.uid !== uid ||
         user.disabled ||
-        user.email?.trim().toLowerCase() !== email.trim().toLowerCase()
+        (user.email &&
+          user.email.trim().toLowerCase() !== email.trim().toLowerCase()) ||
+        (googleSubject &&
+          !user.providerData.some(
+            (provider) =>
+              provider.providerId === 'google.com' &&
+              provider.uid === googleSubject &&
+              (!provider.email ||
+                provider.email.trim().toLowerCase() ===
+                  email.trim().toLowerCase()),
+          )) ||
+        (!user.email && !googleSubject)
       ) {
         throw new UnauthorizedException('Unauthorized');
       }

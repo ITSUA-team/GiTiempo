@@ -32,7 +32,7 @@ describe('AuthController', () => {
     await expect(
       controller.login({ firebaseIdToken: 'test:u:e@x.com' } as never),
     ).resolves.toBe(pair);
-    expect(authService.login).toHaveBeenCalledWith('test:u:e@x.com');
+    expect(authService.login).toHaveBeenCalledWith('test:u:e@x.com', undefined);
   });
 
   it('POST /auth/refresh delegates to AuthService.refresh', async () => {

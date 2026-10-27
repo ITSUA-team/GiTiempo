@@ -103,6 +103,35 @@ The backend MUST issue application sessions only for an active workspace members
 
 ## ADDED Requirements
 
+### Requirement: Paired Google Proof Can Establish Incoming Verified Email
+For Google-authenticated Firebase tokens lacking verified email, the backend MAY accept a separately verified Google ID token bound to the same signed Google subject. It MUST enforce configured token trust, verified email, live identity availability and existing-account ownership without changing canonical identity or trusting client profile data.
+
+#### Scenario: Google token supplies missing verified email
+- **GIVEN** verified Google Firebase authentication lacks verified email
+- **AND** an independently verified Google ID token proves the same signed Google subject and a verified email
+- **WHEN** the live identity and existing-account ownership checks succeed
+- **THEN** normal account resolution binds the incoming Firebase subject and reuses or creates the eligible foundation atomically
+- **AND** canonical application JWT identity remains unchanged
+- **AND** Google signature, issuer, configured audience, authorized party when present, expiry and issued-at claims are verified
+- **AND** its nonempty email has boolean `email_verified=true` and its subject matches the single signed Firebase Google subject
+- **AND** the live Firebase UID is enabled with that same provider subject under the identity locks, and any present token or live email agrees
+
+#### Scenario: Alternate Google proof is invalid or contradictory
+- **GIVEN** the optional proof has invalid signature, issuer, audience, authorized party or time claims, unverified email, or a mismatching subject or email
+- **WHEN** login evaluates it
+- **THEN** authentication fails without a local user, workspace, binding or session write
+- **AND** no raw credential is logged or persisted
+
+#### Scenario: Missing proof or unavailable live identity cannot bypass checks
+- **GIVEN** Firebase lacks verified email and the alternate proof is absent, its configured audience allowlist is empty, or its live identity is deleted, disabled or no longer has the matching Google subject
+- **WHEN** login is attempted
+- **THEN** the backend rejects the attempt without changing identity ownership or granting access
+
+#### Scenario: Existing verified Firebase email remains compatible
+- **GIVEN** the verified Firebase token already proves Google sign-in and verified email
+- **WHEN** login is submitted without the optional Google proof
+- **THEN** the existing verified-Firebase path and token-pair response remain supported
+
 ### Requirement: Verified Social Email Identifies One Account
 Google and GitHub with the same normalized verified email SHALL resolve to one account only when the incoming identity and the existing account both prove ownership of that email. Additional verified Firebase subjects MAY bind while the canonical UID stays stable. Conflicting owners MUST fail without merging or duplicate onboarding. Unverified email cannot establish account equivalence.
 

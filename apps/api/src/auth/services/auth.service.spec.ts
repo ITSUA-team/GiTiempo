@@ -149,6 +149,7 @@ describe('AuthService', () => {
   let githubAccounts: {
     invalidatePendingAuthorizations: ReturnType<typeof vi.fn>;
   };
+  let googleIdTokens: { verify: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     tokens = new TokenService(fakeConfig as never);
@@ -251,6 +252,7 @@ describe('AuthService', () => {
     githubAccounts = {
       invalidatePendingAuthorizations: vi.fn().mockResolvedValue(undefined),
     };
+    googleIdTokens = { verify: vi.fn() };
 
     service = new AuthService(
       fakeConfig as never,
@@ -261,10 +263,51 @@ describe('AuthService', () => {
       users as never,
       members as never,
       githubAccounts as never,
+      googleIdTokens as never,
     );
   });
 
   describe('login', () => {
+    it('rejects a Google proof whose subject is absent from the signed Firebase identities before DB work', async () => {
+      firebase.verifyIdToken.mockResolvedValueOnce({
+        uid: 'google-uid',
+        signInProvider: 'google.com',
+        email_verified: false,
+        googleSubjects: ['different-subject'],
+      });
+      googleIdTokens.verify.mockResolvedValueOnce({
+        email: 'owner@example.com',
+        subject: 'google-subject',
+      });
+
+      await expect(
+        service.login('test:google-uid:owner@example.com', 'proof'),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(firebase.assertActiveUserByUid).not.toHaveBeenCalled();
+      expect(db.transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects an ambiguous signed Google subject list before DB work', async () => {
+      firebase.verifyIdToken.mockResolvedValueOnce({
+        uid: 'google-uid',
+        signInProvider: 'google.com',
+        email_verified: false,
+        googleSubjects: ['google-subject', 'another-subject'],
+      });
+      googleIdTokens.verify.mockResolvedValueOnce({
+        email: 'owner@example.com',
+        subject: 'google-subject',
+      });
+
+      await expect(
+        service.login('test:google-uid:owner@example.com', 'proof'),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(firebase.assertActiveUserByUid).not.toHaveBeenCalled();
+      expect(db.transaction).not.toHaveBeenCalled();
+    });
+
     it('verifies Firebase, resolves membership, and issues a token pair', async () => {
       firebase.verifyIdToken.mockResolvedValueOnce({
         uid: 'admin-uid',

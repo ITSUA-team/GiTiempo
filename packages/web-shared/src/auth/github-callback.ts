@@ -1,3 +1,5 @@
+import { ApiError } from "../http";
+
 /** User-facing messages for the backend GitHub sign-in `?githubError=` codes. */
 export const githubCallbackErrorMessages: Record<string, string> = {
   ambiguous:
@@ -110,7 +112,11 @@ export async function completeGithubSignInCallback(
   try {
     await handlers.exchange(code);
     await handlers.onSuccess(firstQueryValue(query.redirect));
-  } catch {
-    await handlers.onError("failed");
+  } catch (error) {
+    await handlers.onError(
+      error instanceof ApiError && error.code === "identity_proof_required"
+        ? "identity_proof_required"
+        : "failed",
+    );
   }
 }

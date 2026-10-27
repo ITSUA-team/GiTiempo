@@ -297,6 +297,25 @@ describe("createAuthSessionCore", () => {
     expect(getRefreshToken()).toBe("provisioned-google-refresh-token");
   });
 
+  it("forwards a Google provider ID token only from the Google sign-in result", async () => {
+    const loginWithFirebaseToken = vi.fn(async () => newPair);
+    const runtime = createRuntimeMock({
+      loginWithFirebaseToken,
+      signInWithGoogle: async () => ({
+        firebaseIdToken: "firebase-google-token",
+        googleIdToken: "google-provider-id-token",
+      }),
+    });
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+
+    await session.loginWithGoogle();
+
+    expect(loginWithFirebaseToken).toHaveBeenCalledWith(
+      "firebase-google-token",
+      "google-provider-id-token",
+    );
+  });
+
   it.each([
     ["Google", (session: ReturnType<typeof createAuthSessionCore>) => session.loginWithGoogle()],
     ["GitHub", (session: ReturnType<typeof createAuthSessionCore>) => session.loginWithGithubSession("handoff-code")],

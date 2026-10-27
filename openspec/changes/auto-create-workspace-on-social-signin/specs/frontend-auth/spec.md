@@ -20,6 +20,12 @@ The web frontends MUST normalize successful and failed backend token exchanges t
 - **AND** the frontend persists the rotated refresh token for later restoration
 - **AND** the frontend resolves the authenticated user profile for the active session
 
+#### Scenario: Google sign-in supplies a paired email proof
+- **WHEN** Google sign-in returns an OIDC ID token beside its Firebase identity token
+- **THEN** user-web and admin-web send the Google ID token only with the immediate login exchange
+- **AND** they do not persist or log it or substitute an access token or profile email
+- **AND** failed proof exchange clears application session state through the existing recovery path
+
 #### Scenario: Login exchange fails
 
 - **WHEN** the user-web auth flow receives a failing login result from the identity provider or backend exchange

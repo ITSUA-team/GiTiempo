@@ -17,7 +17,7 @@ Current auth/GitHub specs and `docs/API-ENDPOINTS.md`, `docs/DATA-MODEL.md`, `do
 
 **Goals:** Reuse the existing session and workspace foundation, make the zero-membership decision race-safe across providers and invite acceptance, and preserve identity ownership and transactional session guarantees.
 
-**Non-Goals:** Additional-workspace creation UI (#480), new consent storage, new signup forms, changes to email/password eligibility, automatic invite acceptance, migration of existing memberships, or changes to GitHub App authorization. Existing defaults supply settings; no new billing or time-zone policy is introduced.
+**Non-Goals:** Additional-workspace creation UI (#480), new consent storage, new signup forms, changes to email/password eligibility, automatic invite acceptance, migration of existing memberships, or changes to GitHub App authorization. Existing defaults supply settings; no new billing or time-zone policy is introduced. Transferring the selected account/session between admin-web and user-web belongs to [#483](https://github.com/ITSUA-team/GiTiempo/issues/483) and is excluded from this change’s implementation and acceptance. Existing app-local session bootstrap, UUID selection and role-based redirects remain in scope.
 
 ## Decisions
 
@@ -50,6 +50,24 @@ Alternative: checking membership before the transaction is insufficient under co
 Extend `firebase-admin.interface.ts`, the real adapter, and `FakeFirebaseAdminService` to expose the provider of the verified token's actual sign-in. Only verified Google sign-in enters automatic provisioning through `/auth/login`; the presence of a linked Google provider on a password-authenticated account is insufficient. Do not add a request-body provider switch or relax identity/email collision handling. Keep existing-member login behavior for other supported providers.
 
 The hermetic fake must express Google versus password tokens deterministically while retaining existing fixtures' default meaning. Update adapter, auth, invite, and E2E tests together. The final implementation must verify the SDK's decoded-token field in current official documentation before changing the adapter.
+
+### 3a. Independently verified Google email proof when Firebase omits it
+
+The user approved this extension on 2026-10-27 after a real GitHub-first account's new Google Firebase subject had no top-level email. The API rejected both attempts as `missing_email`; restoring Firebase's temporary duplicate-email setting did not change the retry. Provider profile email is diagnostic information and cannot establish verification.
+
+Allow the strict `/auth/login` request to include an optional, bounded `googleIdToken` beside `firebaseIdToken`. Verify Firebase first with revocation checking. Use the alternate proof only when its actual sign-in provider is `google.com` and the Firebase token lacks verified email. Independently verify Google's RS256 signature using Google's fixed public-key endpoint, accepted issuer, required expiry/issued-at claims and an environment-owned `GOOGLE_OAUTH_CLIENT_IDS` audience allowlist; validate an authorized party when present. An empty allowlist disables the fallback. Never accept a client-selected audience, arbitrary key URL, profile email, access token or custom token as this proof.
+
+Require a nonempty email and boolean `email_verified=true` from the verified Google token. Its `sub` must equal the single Google subject in the already verified Firebase token's `firebase.identities['google.com']`. Reject missing, ambiguous or mismatching subjects and a conflicting present Firebase email. Under the normal identity locks, recheck the Firebase UID is live and enabled and retains that same Google provider subject; any present live account email must agree. A missing live top-level email is acceptable only with this paired proof. Do not mutate Firebase credentials or email fields to make the test pass.
+
+This replaces only the incoming email proof. Existing-account verified ownership, contradictory-owner rejection, canonical JWT identity and atomic subject/session persistence remain required. Failure commits no local foundation, binding or session. Do not persist or log either raw credential; redact `googleIdToken` at request-log boundaries. Use bounded key caching, fixed endpoints and request timeouts, with no new dependency.
+
+Both web popup flows preserve the Google credential's ID token for the immediate backend exchange, without storing it. The extension must obtain an actual Google ID token through a documented OpenID Connect flow with `openid email` scopes, state and a fresh nonce, then pair it with its Firebase token. Its configured OAuth audience remains separate per environment; an access-token-only result cannot substitute. No new user-facing fields or onboarding screen are introduced.
+
+The extension validates the exact callback origin/path, fragment-only credentials, one exact state and an ID-token nonce matching the attempt. Reject duplicate consumed security fields, including `iss`. If authorization-response `iss` is supplied, require exactly `https://accounts.google.com`; historical responses without it remain compatible. Ignore unconsumed metadata such as `authuser` and `prompt`. The API independently verifies the signed Google token, whose documented legacy issuer spelling remains accepted. Safe failure reasons identify the failed check without exposing callback or credential values. This follows [Google's OIDC response contract](https://developers.google.com/identity/openid-connect/reference), [RFC 9207](https://www.rfc-editor.org/rfc/rfc9207.html#section-2.4) and the [OAuth requirement to ignore unrecognized response parameters](https://developers.google.com/identity/oauth2/web/guides/use-code-model).
+
+Verify successful missing-email binding, ordinary verified-Firebase login compatibility, invalid signature/issuer/audience/authorized-party/time claims, unverified email, subject/email mismatch, disabled/deleted live identity, absent proof and failure cleanup. Repeat the real GitHub-first → Google flow after local deployment and confirm one original account/workspace, an additional subject and usable-alternative disconnect behavior.
+
+References: [Google ID-token verification](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token), [Firebase Google sign-in](https://firebase.google.com/docs/auth/web/google-signin), [Firebase token verification](https://firebase.google.com/docs/auth/admin/verify-id-tokens).
 
 ### Canonical account binding and recoverable identity creation
 
@@ -106,8 +124,8 @@ Do not add a social naming/owner checkbox page, submit synthetic `ownerAcknowled
 | Area | Planned changes |
 | --- | --- |
 | API (`apps/api/AGENTS.md`) | Auth service, Firebase contract/real/fake adapters, creation reservations and subject bindings, GitHub sign-in candidate/handoff flow, GitHub account transactional persistence, invite send/accept coordination, workspace/reservation schemas, forward migrations, registration errors, focused unit/E2E suites. Follow backend NestJS/Drizzle skills during implementation. |
-| Shared (`packages/shared`) | Registration error union/schema and generated `openapi.json`; login and token-pair shapes stay compatible. |
-| Shared browser (`packages/web-shared/AGENTS.md`) | GitHub error mapping and session-boundary coverage where applicable; retain app-local stores/routes. |
+| Shared (`packages/shared`) | Registration error union/schema, optional Google proof in login and generated `openapi.json`; existing Firebase-only requests and token pairs stay compatible. |
+| Shared browser (`packages/web-shared/AGENTS.md`) | Google proof transport, GitHub error mapping and session-boundary coverage; retain app-local stores/routes. |
 | User web (`apps/user-web/AGENTS.md`) | Retired registration error mapping, social-login/session tests, safe error recovery. |
 | Admin web (`apps/admin-web/AGENTS.md`) | Social-login/session and role-routing tests; no new registration page. |
 | Extension (`apps/chrome-ext`) | Verify Google token exchange and GitHub handoff accept provisioned sessions, plus same-name ID-based selection regression; change only incompatible consumer assumptions. |

@@ -8,6 +8,7 @@ import type {
 } from "@gitiempo/shared";
 import PrimeVue from "primevue/config";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
+import { ApiError } from "@gitiempo/web-shared/http";
 
 import {
   clearRefreshToken,
@@ -172,5 +173,27 @@ describe("GithubCallbackView (admin)", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.login);
     expect(router.currentRoute.value.query.githubError).toBe("failed");
     expect(getRefreshToken()).toBeNull();
+  });
+
+  it("preserves identity proof recovery errors on the login page", async () => {
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        exchangeGithubSession: async () => {
+          throw new ApiError("Proof required", {
+            code: "identity_proof_required",
+            status: 401,
+          });
+        },
+      }),
+    );
+    const { router } = await mountCallbackView(
+      "/auth/github/callback?code=handoff-code",
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(router.currentRoute.value.query.githubError).toBe(
+      "identity_proof_required",
+    );
   });
 });

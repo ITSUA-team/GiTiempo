@@ -1,5 +1,15 @@
 # Spec Delta
 
+## ADDED Requirements
+
+### Requirement: Login Accepts Optional Paired Google Credential
+The strict login request SHALL accept `firebaseIdToken` and optional bounded `googleIdToken` strings, rejecting unknown keys. The Google field carries a signed credential, never a request-body email or provider selector. Existing Firebase-only callers and token-pair responses MUST remain compatible. Both credentials MUST be redacted from logs and MUST NOT be persisted as application state.
+
+#### Scenario: Paired credential reaches login verification
+- **WHEN** a client submits Firebase and Google ID tokens
+- **THEN** request validation accepts the defined optional proof and the backend verifies its trust rules before granting access
+- **AND** an arbitrary email, audience, provider or other unknown request field is rejected
+
 ## MODIFIED Requirements
 
 ### Requirement: Shared Registration Error Contract

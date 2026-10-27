@@ -11,6 +11,10 @@ import {
   emailPasswordSignInSchema,
   getErrorMessage,
 } from "@gitiempo/web-shared";
+import {
+  getFirebaseSignInTokens,
+  type FirebaseSignInResult,
+} from "@gitiempo/web-shared/auth";
 
 import { routeNames } from "@/router";
 import InviteOnboardingShell from "@/components/invite/InviteOnboardingShell.vue";
@@ -252,9 +256,10 @@ async function handleInviteAcceptanceFailure(error: unknown): Promise<void> {
 }
 
 async function completeInviteAcceptance(
-  firebaseIdToken: string,
+  signInResult: FirebaseSignInResult,
   action: SubmitAction,
 ): Promise<void> {
+  const { firebaseIdToken, googleIdToken } = getFirebaseSignInTokens(signInResult);
   activeAction.value = action;
   inlineErrorMessage.value = null;
   terminalState.value = null;
@@ -273,7 +278,11 @@ async function completeInviteAcceptance(
       "Invitation accepted",
       "Workspace access created. Redirecting to dashboard.",
     );
-    await authStore.loginWithFirebaseToken(firebaseIdToken);
+    if (googleIdToken) {
+      await authStore.loginWithFirebaseToken(firebaseIdToken, googleIdToken);
+    } else {
+      await authStore.loginWithFirebaseToken(firebaseIdToken);
+    }
     await router.replace({ name: routeNames.dashboard });
   } catch (error) {
     if (inviteAccepted) {
@@ -310,11 +319,11 @@ async function handleEmailAccept(): Promise<void> {
   inlineErrorMessage.value = null;
 
   try {
-    const firebaseIdToken = await getAuthRuntime().signInWithEmailPassword(
+    const signInResult = await getAuthRuntime().signInWithEmailPassword(
       email.value,
       password.value,
     );
-    await completeInviteAcceptance(firebaseIdToken, "email");
+    await completeInviteAcceptance(signInResult, "email");
   } catch (error) {
     const message = mapEmailPasswordErrorMessage(error);
     inlineErrorMessage.value = message;
@@ -340,8 +349,8 @@ async function handleGoogleAccept(): Promise<void> {
   inlineErrorMessage.value = null;
 
   try {
-    const firebaseIdToken = await getAuthRuntime().signInWithGoogle();
-    await completeInviteAcceptance(firebaseIdToken, "google");
+    const signInResult = await getAuthRuntime().signInWithGoogle();
+    await completeInviteAcceptance(signInResult, "google");
   } catch (error) {
     const message = mapGoogleErrorMessage(error);
     inlineErrorMessage.value = message;

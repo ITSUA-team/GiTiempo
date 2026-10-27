@@ -155,6 +155,7 @@
 - The main panel title is `Sign in` with email/password fields ordered `Email`, then `Password`.
 - The primary action is `Sign in`.
 - `Continue with Google` remains a secondary sign-in action below the primary action.
+- Google popup sign-in sends its Firebase ID token and, when available, the Google ID token to the immediate backend exchange. The backend verifies the paired Google proof when Firebase lacks verified email. Neither credential is retained in application storage or logs; rejected exchanges use existing guest-state cleanup without another form.
 - `Continue with GitHub` is offered as a secondary sign-in action when GitHub sign-in is enabled for the environment (`VITE_GITHUB_SIGNIN_ENABLED`). It is **backend-driven**: the button leaves the SPA and navigates to the API (`/auth/github/start`), which runs the GitHub OAuth flow and redirects back to the `/auth/github/callback` route with a one-time code that is exchanged for a session. For a verified account with no memberships, the normal session exchange automatically provisions a personal workspace named `Workspace`; an existing member keeps the selected existing workspace. Pending invitations remain a separate acceptance flow. This sign-in is independent of the GitHub App integration.
 - Add a secondary outlined `Create workspace` action below `Continue with Google`. It links to `/register` and opens the register new workflow without changing the login form state.
 - Keep the register action visually secondary to both sign-in actions. Do not render it as a second filled primary button.
