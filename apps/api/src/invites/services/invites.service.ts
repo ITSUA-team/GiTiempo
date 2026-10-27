@@ -169,7 +169,10 @@ export class InvitesService {
     const invite = await this.findInviteByToken(input.token);
     this.assertInviteCanBeAccepted(invite);
 
-    const decoded = await this.firebase.verifyIdToken(input.firebaseIdToken);
+    const { decoded, googleSubject } = await this.auth.verifyFirebaseIdentity(
+      input.firebaseIdToken,
+      input.googleIdToken,
+    );
     if (!decoded.email) throw new UnauthorizedException('Unauthorized');
 
     const email = normalizeEmail(decoded.email);
@@ -177,40 +180,44 @@ export class InvitesService {
       throw new ForbiddenException('Invite email does not match identity');
     }
 
-    await this.auth.acceptInviteIdentity(decoded, async (tx, userRow) => {
-      const [currentInvite] = await tx
-        .select(inviteRowSelection)
-        .from(invites)
-        .where(eq(invites.id, invite.id))
-        .limit(1);
-      if (!currentInvite) throw new NotFoundException('Invite not found');
-      this.assertInviteCanBeAccepted(currentInvite);
+    await this.auth.acceptInviteIdentity(
+      decoded,
+      async (tx, userRow) => {
+        const [currentInvite] = await tx
+          .select(inviteRowSelection)
+          .from(invites)
+          .where(eq(invites.id, invite.id))
+          .limit(1);
+        if (!currentInvite) throw new NotFoundException('Invite not found');
+        this.assertInviteCanBeAccepted(currentInvite);
 
-      const [existingMembership] = await tx
-        .select({ id: workspaceMembers.id })
-        .from(workspaceMembers)
-        .where(
-          and(
-            eq(workspaceMembers.workspaceId, currentInvite.workspaceId),
-            eq(workspaceMembers.userId, userRow.id),
-          ),
-        )
-        .limit(1);
-      if (existingMembership) {
-        throw new ConflictException('User is already a workspace member');
-      }
+        const [existingMembership] = await tx
+          .select({ id: workspaceMembers.id })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, currentInvite.workspaceId),
+              eq(workspaceMembers.userId, userRow.id),
+            ),
+          )
+          .limit(1);
+        if (existingMembership) {
+          throw new ConflictException('User is already a workspace member');
+        }
 
-      await tx.insert(workspaceMembers).values({
-        workspaceId: currentInvite.workspaceId,
-        userId: userRow.id,
-        role: currentInvite.role,
-      });
+        await tx.insert(workspaceMembers).values({
+          workspaceId: currentInvite.workspaceId,
+          userId: userRow.id,
+          role: currentInvite.role,
+        });
 
-      await tx
-        .update(invites)
-        .set({ status: 'accepted' })
-        .where(eq(invites.id, currentInvite.id));
-    });
+        await tx
+          .update(invites)
+          .set({ status: 'accepted' })
+          .where(eq(invites.id, currentInvite.id));
+      },
+      googleSubject,
+    );
   }
 
   private async findInviteByToken(token: string): Promise<InviteRow> {

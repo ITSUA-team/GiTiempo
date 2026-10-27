@@ -2,7 +2,13 @@
 
 Review date: 2026-10-26. Branch: `feat/476-auto-create-workspace-on-social-signin`.
 
-The user-approved timeout/recovery and two-sided verified-email rules are implemented. Independent security re-review approved that recovery delta after the findings below were resolved. The additional paired Google ID-token proof approved on 2026-10-27 is also implemented and independently approved after the follow-up findings below were resolved. All implementation and agreed automated/manual acceptance tasks are complete (47/47), including the independently reviewed fresh local extension run. Graph re-indexing is conditional on available tooling and is N/A in this session, without a re-index or coverage claim.
+The user-approved timeout/recovery and two-sided verified-email rules are implemented. The paired Google proof amendment and subsequent quality-review corrections are implemented and independently re-reviewed. All 51 tasks are complete after fresh automated verification. Earlier review and manual-acceptance entries below retain their historical scope. Graph re-indexing is conditional on available tooling and is N/A in this session, without a re-index or coverage claim.
+
+## Quality-review correction re-review — 2026-10-27
+
+A subsequent quality review found three blocking gaps after the earlier acceptance: cross-purpose reuse of pending registration reservations, fabricated verified-email evidence in linked GitHub login, and dropped paired Google proof during invitation acceptance. The user authorized their correction. All are fixed, along with the new-GitHub live-identity recheck after locks; shared verification also preserves paired-proof registration recovery before social provisioning.
+
+Fresh independent review of the correction diff returned **APPROVE** (code reviewer, zero findings) and **CLEAR** (architect, no blockers). Both reviewed transactional boundaries, canonical/alias ownership and invite-first behavior. The additional existing-account Google-alias invitation regression closes the evidence gap identified during review. Root verification subsequently passed all 412 isolated API E2E tests, root typecheck/lint/test, and both frontend suites. All 51 tasks are complete. The automated corrections did not require a visible design change; no new live-provider manual acceptance is claimed. See the correction section in [verification-report.md](./verification-report.md).
 
 ## Approved paired Google proof amendment — 2026-10-27
 

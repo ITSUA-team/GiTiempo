@@ -983,6 +983,84 @@ describe('Auth (e2e)', () => {
         await db.delete(users).where(eq(users.id, user.id));
       }
     });
+
+    it('does not fabricate a verified-email binding for a linked GitHub sign-in without verified email evidence', async () => {
+      const uid = `linked-without-email-proof-${randomUUID()}`;
+      const email = `${uid}@example.com`;
+      const [user] = await db
+        .insert(users)
+        .values({ firebaseUid: uid, email, displayName: 'Linked owner' })
+        .returning();
+      if (!user) throw new Error('Failed to create linked-owner fixture');
+
+      try {
+        await auth.provisionSocialSession({
+          provider: 'github',
+          userId: user.id,
+          linked: true,
+        });
+
+        expect(
+          await db
+            .select()
+            .from(firebaseSubjectBindings)
+            .where(eq(firebaseSubjectBindings.firebaseUid, uid)),
+        ).toEqual([]);
+
+        const laterUid = `${uid}-later`;
+        await firebase.verifyIdToken(`test:${laterUid}:${email}`);
+        await expect(
+          auth.provisionSocialSession({
+            provider: 'github',
+            firebaseUid: laterUid,
+            email,
+            verifiedEmails: [email],
+          }),
+        ).rejects.toMatchObject({
+          response: expect.objectContaining({
+            code: 'identity_proof_required',
+          }),
+        });
+      } finally {
+        await db.delete(refreshTokens).where(eq(refreshTokens.userId, user.id));
+        await db
+          .delete(workspaceMembers)
+          .where(eq(workspaceMembers.userId, user.id));
+        await db.delete(users).where(eq(users.id, user.id));
+      }
+    });
+
+    it('rechecks a new GitHub identity under the final lock before creating its foundation', async () => {
+      const uid = `github-live-check-${randomUUID()}`;
+      const email = `${uid}@example.com`;
+      await firebase.verifyIdToken(`test:${uid}:${email}`);
+      const activeCheck = vi
+        .spyOn(firebase, 'assertActiveUserByUid')
+        .mockRejectedValueOnce(new UnauthorizedException('Unauthorized'));
+
+      try {
+        await expect(
+          auth.provisionSocialSession({
+            provider: 'github',
+            firebaseUid: uid,
+            email,
+            verifiedEmails: [email],
+          }),
+        ).rejects.toBeInstanceOf(UnauthorizedException);
+        expect(activeCheck).toHaveBeenCalledWith(uid, email, undefined);
+        expect(
+          await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.email, email)),
+        ).toEqual([]);
+      } finally {
+        activeCheck.mockRestore();
+        await db
+          .delete(firebaseIdentityReservations)
+          .where(eq(firebaseIdentityReservations.normalizedEmail, email));
+      }
+    });
   });
 
   describe('POST /auth/register', () => {
@@ -1202,6 +1280,32 @@ describe('Auth (e2e)', () => {
             .where(eq(users.email, payload.email)),
         ).toEqual([]);
 
+        await expect(
+          auth.prepareInvitationIdentity(payload.email),
+        ).rejects.toMatchObject({
+          response: expect.objectContaining({
+            code: 'identity_proof_required',
+          }),
+        });
+        await expect(
+          auth.provisionSocialSession({
+            provider: 'github',
+            email: payload.email,
+            verifiedEmails: [payload.email],
+          }),
+        ).rejects.toMatchObject({
+          response: expect.objectContaining({
+            code: 'identity_proof_required',
+          }),
+        });
+        expect(createSpy).toHaveBeenCalledTimes(1);
+        expect(
+          await db
+            .select({ state: firebaseIdentityReservations.state })
+            .from(firebaseIdentityReservations)
+            .where(eq(firebaseIdentityReservations.id, reserved!.id)),
+        ).toEqual([{ state: 'reserved' }]);
+
         releaseFirebaseCreation();
         for (let attempt = 0; attempt < 20; attempt += 1) {
           const [updated] = await db
@@ -1216,6 +1320,38 @@ describe('Auth (e2e)', () => {
           .from(firebaseIdentityReservations)
           .where(eq(firebaseIdentityReservations.id, reserved!.id));
         expect(confirmed?.state).toBe('confirmed');
+
+        await expect(
+          auth.provisionSocialSession({
+            provider: 'github',
+            email: payload.email,
+            verifiedEmails: [payload.email],
+          }),
+        ).rejects.toMatchObject({
+          response: expect.objectContaining({
+            code: 'identity_proof_required',
+          }),
+        });
+        expect(
+          await db
+            .select({
+              state: firebaseIdentityReservations.state,
+              purpose: firebaseIdentityReservations.purpose,
+              registrationDisplayName:
+                firebaseIdentityReservations.registrationDisplayName,
+              registrationWorkspaceName:
+                firebaseIdentityReservations.registrationWorkspaceName,
+            })
+            .from(firebaseIdentityReservations)
+            .where(eq(firebaseIdentityReservations.id, reserved!.id)),
+        ).toEqual([
+          expect.objectContaining({
+            state: 'confirmed',
+            purpose: 'registration',
+            registrationDisplayName: payload.fullName,
+            registrationWorkspaceName: payload.workspaceName,
+          }),
+        ]);
 
         const recovered = await request(app.getHttpServer())
           .post('/auth/login')

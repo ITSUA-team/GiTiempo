@@ -24,12 +24,14 @@ import type { DrizzleDB } from '../src/db/db.types';
 import {
   firebaseIdentityReservations,
   firebaseSubjectBindings,
+  invites,
   refreshTokens,
   users,
   workspaceMembers,
   workspaceSettings,
   workspaces,
 } from '../src/db/schema';
+import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
 type GoogleProof = { email: string; subject: string };
 
@@ -76,6 +78,12 @@ describe('Google ID-token login proof (e2e)', () => {
     const suffix = randomUUID();
     const email = `google-proof-${suffix}@example.test`;
     const firebaseUid = `github-foundation-${suffix}`;
+    await firebase.createEmailPasswordUser({
+      uid: firebaseUid,
+      email,
+      password: 'password123',
+      displayName: 'GitHub Foundation',
+    });
     const pair = await auth.provisionSocialSession({
       email,
       firebaseUid,
@@ -139,6 +147,7 @@ describe('Google ID-token login proof (e2e)', () => {
       .where(eq(workspaceSettings.workspaceId, input.workspaceId));
     await db.delete(workspaces).where(eq(workspaces.id, input.workspaceId));
     await db.delete(users).where(eq(users.id, input.userId));
+    await firebase.deleteUser(input.firebaseUid);
   }
 
   async function stateForUser(userId: string) {
@@ -170,6 +179,242 @@ describe('Google ID-token login proof (e2e)', () => {
       .set('X-Forwarded-For', `10.476.0.${requestCounter++}`)
       .send({ firebaseIdToken, googleIdToken });
   }
+
+  async function postInviteAcceptance(input: {
+    firebaseIdToken: string;
+    googleIdToken?: string;
+    token: string;
+  }) {
+    return request(app.getHttpServer()).post('/invites/accept').send(input);
+  }
+
+  it('accepts an invite-first missing-email Google identity from its verified proof without creating a personal workspace', async () => {
+    const { admin, workspace } = await getSeededAdminWorkspace(db);
+    const email = `invite-google-proof-${randomUUID()}@example.test`;
+    const firebaseUid = `invite-google-alias-${randomUUID()}`;
+    const subject = `google-subject-${randomUUID()}`;
+    const token = randomUUID();
+    const firebaseIdToken = googleAliasToken(firebaseUid, email);
+    const googleIdToken = `valid-proof-${randomUUID()}`;
+    const [invite] = await db
+      .insert(invites)
+      .values({
+        workspaceId: workspace.id,
+        email,
+        invitedBy: admin.id,
+        role: 'member',
+        token,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1_000),
+      })
+      .returning();
+    if (!invite) throw new Error('Expected invite fixture');
+
+    try {
+      await firebase.verifyIdToken(firebaseIdToken);
+      installMissingEmailGoogleAlias(firebaseIdToken, [subject]);
+      verifier.verify.mockResolvedValue({
+        email,
+        subject,
+      } satisfies GoogleProof);
+      const workspacesBefore = await db
+        .select({ id: workspaces.id })
+        .from(workspaces);
+
+      const response = await postInviteAcceptance({
+        firebaseIdToken,
+        googleIdToken,
+        token,
+      });
+
+      expect(response.status).toBe(204);
+      const [acceptedInvite] = await db
+        .select({ status: invites.status })
+        .from(invites)
+        .where(eq(invites.id, invite.id));
+      expect(acceptedInvite?.status).toBe('accepted');
+      const [invitee] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email));
+      expect(invitee).toBeDefined();
+      expect(
+        await db
+          .select({ workspaceId: workspaceMembers.workspaceId })
+          .from(workspaceMembers)
+          .where(eq(workspaceMembers.userId, invitee!.id)),
+      ).toEqual([{ workspaceId: workspace.id }]);
+      expect(await db.select({ id: workspaces.id }).from(workspaces)).toEqual(
+        workspacesBefore,
+      );
+    } finally {
+      const [invitee] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email));
+      await db.delete(invites).where(eq(invites.id, invite.id));
+      if (invitee) {
+        await db
+          .delete(firebaseSubjectBindings)
+          .where(eq(firebaseSubjectBindings.userId, invitee.id));
+        await db
+          .delete(firebaseIdentityReservations)
+          .where(eq(firebaseIdentityReservations.userId, invitee.id));
+        await db
+          .delete(workspaceMembers)
+          .where(eq(workspaceMembers.userId, invitee.id));
+        await db.delete(users).where(eq(users.id, invitee.id));
+      }
+    }
+  });
+
+  it('rejects a contradictory Google proof without accepting the invite or creating a user', async () => {
+    const { admin, workspace } = await getSeededAdminWorkspace(db);
+    const email = `invite-google-reject-${randomUUID()}@example.test`;
+    const firebaseUid = `invite-google-alias-${randomUUID()}`;
+    const token = randomUUID();
+    const firebaseIdToken = googleAliasToken(firebaseUid, email);
+    const [invite] = await db
+      .insert(invites)
+      .values({
+        workspaceId: workspace.id,
+        email,
+        invitedBy: admin.id,
+        role: 'member',
+        token,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1_000),
+      })
+      .returning();
+    if (!invite) throw new Error('Expected invite fixture');
+
+    try {
+      await firebase.verifyIdToken(firebaseIdToken);
+      installMissingEmailGoogleAlias(firebaseIdToken, ['firebase-subject']);
+      verifier.verify.mockResolvedValue({
+        email,
+        subject: 'different-proof-subject',
+      } satisfies GoogleProof);
+      const workspacesBefore = await db
+        .select({ id: workspaces.id })
+        .from(workspaces);
+
+      const response = await postInviteAcceptance({
+        firebaseIdToken,
+        googleIdToken: `contradictory-proof-${randomUUID()}`,
+        token,
+      });
+
+      expect(response.status).toBe(401);
+      expect(
+        await db
+          .select({ status: invites.status })
+          .from(invites)
+          .where(eq(invites.id, invite.id)),
+      ).toEqual([{ status: 'pending' }]);
+      expect(
+        await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, email)),
+      ).toEqual([]);
+      expect(await db.select({ id: workspaces.id }).from(workspaces)).toEqual(
+        workspacesBefore,
+      );
+    } finally {
+      await db.delete(invites).where(eq(invites.id, invite.id));
+    }
+  });
+
+  it('accepts a team invite for a missing-email Google alias of an existing GitHub-founded user', async () => {
+    const foundation = await createGithubFoundation();
+    const { admin, workspace } = await getSeededAdminWorkspace(db);
+    const aliasUid = `google-invite-alias-${randomUUID()}`;
+    const subject = `google-subject-${randomUUID()}`;
+    const token = randomUUID();
+    const firebaseIdToken = googleAliasToken(aliasUid, foundation.email);
+    const [invite] = await db
+      .insert(invites)
+      .values({
+        workspaceId: workspace.id,
+        email: foundation.email,
+        invitedBy: admin.id,
+        role: 'member',
+        token,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1_000),
+      })
+      .returning();
+    if (!invite) throw new Error('Expected invite fixture');
+
+    try {
+      await firebase.verifyIdToken(firebaseIdToken);
+      installMissingEmailGoogleAlias(firebaseIdToken, [subject]);
+      verifier.verify.mockResolvedValue({
+        email: foundation.email,
+        subject,
+      } satisfies GoogleProof);
+      const workspacesBefore = await db
+        .select({ id: workspaces.id })
+        .from(workspaces);
+
+      const response = await postInviteAcceptance({
+        firebaseIdToken,
+        googleIdToken: `valid-proof-${randomUUID()}`,
+        token,
+      });
+
+      expect(response.status).toBe(204);
+      expect(
+        await db
+          .select({ status: invites.status })
+          .from(invites)
+          .where(eq(invites.id, invite.id)),
+      ).toEqual([{ status: 'accepted' }]);
+      expect(
+        await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, foundation.email)),
+      ).toEqual([{ id: foundation.userId }]);
+      expect(
+        await db
+          .select({ firebaseUid: firebaseSubjectBindings.firebaseUid })
+          .from(firebaseSubjectBindings)
+          .where(
+            and(
+              eq(firebaseSubjectBindings.firebaseUid, aliasUid),
+              eq(firebaseSubjectBindings.userId, foundation.userId),
+            ),
+          ),
+      ).toEqual([{ firebaseUid: aliasUid }]);
+      expect(
+        await db
+          .select({ workspaceId: workspaceMembers.workspaceId })
+          .from(workspaceMembers)
+          .where(eq(workspaceMembers.userId, foundation.userId)),
+      ).toEqual(
+        expect.arrayContaining([
+          { workspaceId: foundation.workspaceId },
+          { workspaceId: workspace.id },
+        ]),
+      );
+      expect(await db.select({ id: workspaces.id }).from(workspaces)).toEqual(
+        workspacesBefore,
+      );
+    } finally {
+      await db.delete(invites).where(eq(invites.id, invite.id));
+      await db
+        .delete(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.userId, foundation.userId),
+            eq(workspaceMembers.workspaceId, workspace.id),
+          ),
+        );
+      await db
+        .delete(firebaseSubjectBindings)
+        .where(eq(firebaseSubjectBindings.firebaseUid, aliasUid));
+      await cleanFoundation(foundation);
+    }
+  });
 
   it('reuses the GitHub-founded user and workspace for a missing-email Google alias', async () => {
     const foundation = await createGithubFoundation();
@@ -292,7 +537,7 @@ describe('Google ID-token login proof (e2e)', () => {
         } else {
           await firebase.createEmailPasswordUser({
             displayName: 'Deleted alias',
-            email: foundation.email,
+            email: `${aliasUid}@example.test`,
             password: 'password123',
             uid: aliasUid,
           });

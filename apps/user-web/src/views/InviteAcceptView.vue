@@ -270,6 +270,7 @@ async function completeInviteAcceptance(
   try {
     await getWorkspaceInvitesClient().acceptInvite({
       firebaseIdToken,
+      ...(googleIdToken ? { googleIdToken } : {}),
       token: inviteToken.value,
     });
     inviteAccepted = true;

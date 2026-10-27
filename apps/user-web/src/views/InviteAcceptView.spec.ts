@@ -258,6 +258,7 @@ describe("InviteAcceptView", () => {
     expect(signInWithGoogle).toHaveBeenCalled();
     expect(acceptInvite).toHaveBeenCalledWith({
       firebaseIdToken: "firebase-google-token",
+      googleIdToken: "google-provider-id-token",
       token: "invite-token",
     });
     expect(loginWithFirebaseToken).toHaveBeenCalledWith(

@@ -337,3 +337,7 @@ The owned fresh API was stopped and normal `gitiempo_476_social_test` runtime re
 
 
 Independent final acceptance review approved 8.1 and the full 7.2 checklist. All 47 tasks are now checked; OpenSpec reports `all_done`. The graph-indexing substep is conditional and N/A because its tools are unavailable; independent review, strict validation and deployment/rollback documentation are verified. Cross-app transfer remains excluded under #483. No further manual scenario is pending within this change.
+
+## Quality-review follow-up — 2026-10-27
+
+The reservation, verified-email evidence and paired-proof invitation corrections were verified through fresh automated regressions, including a real PostgreSQL transaction suite with deterministic provider doubles. The approved Invite Accept design remains visually unchanged. No new real-provider manual scenario was executed for this follow-up; the earlier manual results above retain their original scope. See [verification-report.md](./verification-report.md) for the 412-test E2E run and independent re-review.

@@ -26,6 +26,12 @@ The web frontends MUST normalize successful and failed backend token exchanges t
 - **AND** they do not persist or log it or substitute an access token or profile email
 - **AND** failed proof exchange clears application session state through the existing recovery path
 
+#### Scenario: Explicit invitation acceptance forwards paired Google proof
+- **WHEN** Google sign-in on the invitation page returns a Google ID token beside its Firebase ID token
+- **THEN** the page forwards the optional proof to invitation acceptance before creating an application session
+- **AND** the subsequent login uses the same transient credentials without storing or logging them
+- **AND** invitation-first entry creates no unsolicited personal workspace
+
 #### Scenario: Login exchange fails
 
 - **WHEN** the user-web auth flow receives a failing login result from the identity provider or backend exchange

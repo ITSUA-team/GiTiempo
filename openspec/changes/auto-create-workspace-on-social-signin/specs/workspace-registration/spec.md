@@ -110,4 +110,3 @@ The system MUST prevent user-visible partial registration when first-owner regis
 - **THEN** identity adoption and deletion are serialized
 - **AND** an identity used by a committed local account is never deleted
 - **AND** a social attempt whose verified identity was deleted before adoption fails safely instead of committing a dangling local user
-

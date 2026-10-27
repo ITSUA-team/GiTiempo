@@ -241,39 +241,10 @@ export class AuthService {
     firebaseIdToken: string,
     googleIdToken?: string,
   ): Promise<TokenPair> {
-    let decoded: DecodedFirebaseToken;
-    try {
-      decoded = await this.firebase.verifyIdToken(firebaseIdToken);
-    } catch (err) {
-      this.logger.warn({
-        event: 'auth.login.firebase_rejected',
-        reason: (err as Error).message,
-      });
-      throw new UnauthorizedException('Unauthorized');
-    }
-    const firebaseEmail = decoded.email ? normalizeEmail(decoded.email) : null;
-    if (
-      decoded.signInProvider === 'google.com' &&
-      (!firebaseEmail || !decoded.email_verified) &&
-      googleIdToken
-    ) {
-      const proof = await this.googleIdTokens.verify(googleIdToken);
-      if (
-        (firebaseEmail && firebaseEmail !== proof.email) ||
-        decoded.googleSubjects?.length !== 1 ||
-        decoded.googleSubjects[0] !== proof.subject
-      ) {
-        throw new UnauthorizedException('Unauthorized');
-      }
-      return this.provisionSocialSession({
-        provider: 'google',
-        email: proof.email,
-        name: decoded.name ?? null,
-        picture: decoded.picture ?? null,
-        firebaseUid: decoded.uid,
-        googleSubject: proof.subject,
-      });
-    }
+    const { decoded, googleSubject } = await this.verifyFirebaseIdentity(
+      firebaseIdToken,
+      googleIdToken,
+    );
     if (!decoded.email) {
       this.logger.warn({
         event: 'auth.login.firebase_rejected',
@@ -283,8 +254,10 @@ export class AuthService {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    const recoveredRegistration =
-      await this.recoverPendingRegistration(decoded);
+    const recoveredRegistration = await this.recoverPendingRegistration(
+      decoded,
+      googleSubject,
+    );
     if (recoveredRegistration) return recoveredRegistration;
 
     if (decoded.signInProvider === 'google.com' && decoded.email_verified) {
@@ -294,6 +267,7 @@ export class AuthService {
         name: decoded.name ?? null,
         picture: decoded.picture ?? null,
         firebaseUid: decoded.uid,
+        googleSubject,
       });
     }
 
@@ -340,6 +314,43 @@ export class AuthService {
       userId: row.id,
     });
     return pair;
+  }
+
+  /** Verifies a Firebase session and, when required, its paired Google proof. */
+  async verifyFirebaseIdentity(
+    firebaseIdToken: string,
+    googleIdToken?: string,
+  ): Promise<{ decoded: DecodedFirebaseToken; googleSubject?: string }> {
+    let decoded: DecodedFirebaseToken;
+    try {
+      decoded = await this.firebase.verifyIdToken(firebaseIdToken);
+    } catch (err) {
+      this.logger.warn({
+        event: 'auth.login.firebase_rejected',
+        reason: (err as Error).message,
+      });
+      throw new UnauthorizedException('Unauthorized');
+    }
+    const firebaseEmail = decoded.email ? normalizeEmail(decoded.email) : null;
+    if (
+      decoded.signInProvider === 'google.com' &&
+      (!firebaseEmail || !decoded.email_verified) &&
+      googleIdToken
+    ) {
+      const proof = await this.googleIdTokens.verify(googleIdToken);
+      if (
+        (firebaseEmail && firebaseEmail !== proof.email) ||
+        decoded.googleSubjects?.length !== 1 ||
+        decoded.googleSubjects[0] !== proof.subject
+      ) {
+        throw new UnauthorizedException('Unauthorized');
+      }
+      return {
+        decoded: { ...decoded, email: proof.email, email_verified: true },
+        googleSubject: proof.subject,
+      };
+    }
+    return { decoded };
   }
 
   /**
@@ -422,6 +433,7 @@ export class AuthService {
   async acceptInviteIdentity(
     decoded: DecodedFirebaseToken,
     persist: (tx: DbTransaction, user: ResolvedSocialUser) => Promise<void>,
+    googleSubject?: string,
   ): Promise<void> {
     if (!decoded.email) throw new UnauthorizedException('Unauthorized');
     const email = normalizeEmail(decoded.email);
@@ -434,9 +446,17 @@ export class AuthService {
         ...(existingSubject ? [`uid:${existingSubject.firebaseUid}`] : []),
         ...(existingEmail ? [`uid:${existingEmail.firebaseUid}`] : []),
       ]);
-      await this.firebase.assertActiveUserByUid(decoded.uid, email);
+      await this.rejectPendingRegistrationReservation(tx, email);
+      await this.firebase.assertActiveUserByUid(
+        decoded.uid,
+        email,
+        googleSubject,
+      );
       const user = await this.resolveSocialUserInTransaction(tx, {
-        provider: 'invitation',
+        provider:
+          decoded.signInProvider === 'google.com' && decoded.email_verified
+            ? 'google'
+            : 'invitation',
         email,
         verifiedEmails: [email],
         firebaseUid: decoded.uid,
@@ -444,10 +464,7 @@ export class AuthService {
         avatarUrl: decoded.picture ?? null,
       });
       await persist(tx, user);
-      await tx
-        .update(firebaseIdentityReservations)
-        .set({ state: 'bound', userId: user.id, updatedAt: new Date() })
-        .where(eq(firebaseIdentityReservations.firebaseUid, decoded.uid));
+      await this.bindSocialIdentityReservation(tx, decoded.uid, user.id);
     });
   }
 
@@ -506,7 +523,11 @@ export class AuthService {
         ...(existingSubject ? [`uid:${existingSubject.firebaseUid}`] : []),
         ...(existingCandidate ? [`uid:${existingCandidate.firebaseUid}`] : []),
       ]);
-      if (input.provider === 'google') {
+      await this.rejectPendingRegistrationReservation(tx, candidateEmail);
+      if (
+        input.provider === 'google' ||
+        (!input.userId && input.provider === 'github')
+      ) {
         await this.firebase.assertActiveUserByUid(
           firebaseUid,
           candidateEmail!,
@@ -531,10 +552,7 @@ export class AuthService {
         workspaceMemberId: membership.id,
         workspaceId: membership.workspaceId,
       });
-      await tx
-        .update(firebaseIdentityReservations)
-        .set({ state: 'bound', userId: user.id, updatedAt: new Date() })
-        .where(eq(firebaseIdentityReservations.firebaseUid, firebaseUid));
+      await this.bindSocialIdentityReservation(tx, firebaseUid, user.id);
 
       return {
         accessToken: this.tokens.signAccess({
@@ -872,6 +890,7 @@ export class AuthService {
 
   private async recoverPendingRegistration(
     decoded: DecodedFirebaseToken,
+    googleSubject?: string,
   ): Promise<TokenPair | null> {
     const reservation = await this.findReservationByUid(decoded.uid);
     if (
@@ -886,7 +905,11 @@ export class AuthService {
       throw new UnauthorizedException('Unauthorized');
     }
     try {
-      await this.firebase.assertActiveUserByUid(decoded.uid, email);
+      await this.firebase.assertActiveUserByUid(
+        decoded.uid,
+        email,
+        googleSubject,
+      );
     } catch {
       throw new UnauthorizedException('Unauthorized');
     }
@@ -902,7 +925,11 @@ export class AuthService {
         throw new UnauthorizedException('Unauthorized');
       }
       try {
-        await this.firebase.assertActiveUserByUid(decoded.uid, email);
+        await this.firebase.assertActiveUserByUid(
+          decoded.uid,
+          email,
+          googleSubject,
+        );
       } catch {
         throw new UnauthorizedException('Unauthorized');
       }
@@ -1265,7 +1292,16 @@ export class AuthService {
         sql`lower(btrim(${firebaseIdentityReservations.normalizedEmail})) = ${email}`,
       )
       .limit(1);
-    if (existing) return existing;
+    if (existing) {
+      if (
+        existing.purpose === 'registration' &&
+        existing.state !== 'bound' &&
+        purpose !== 'registration'
+      ) {
+        throw createIdentityProofRequired();
+      }
+      return existing;
+    }
 
     const firebaseUid = randomUUID();
     return (
@@ -1321,6 +1357,41 @@ export class AuthService {
         and(
           eq(firebaseIdentityReservations.id, reservationId),
           eq(firebaseIdentityReservations.state, 'reserved'),
+        ),
+      );
+  }
+
+  /** A social flow must not adopt an unfinished manual-registration foundation. */
+  private async rejectPendingRegistrationReservation(
+    tx: DbTransaction,
+    email: string | null,
+  ): Promise<void> {
+    if (!email) return;
+    const reservation = await this.findReservationByEmail(email, tx);
+    if (
+      reservation?.purpose === 'registration' &&
+      reservation.state !== 'bound'
+    ) {
+      throw createIdentityProofRequired();
+    }
+  }
+
+  /** Only reservations created for social provisioning may become social bindings. */
+  private async bindSocialIdentityReservation(
+    tx: Pick<DrizzleDB, 'update'>,
+    firebaseUid: string,
+    userId: string,
+  ): Promise<void> {
+    await tx
+      .update(firebaseIdentityReservations)
+      .set({ state: 'bound', userId, updatedAt: new Date() })
+      .where(
+        and(
+          eq(firebaseIdentityReservations.firebaseUid, firebaseUid),
+          inArray(firebaseIdentityReservations.purpose, [
+            'github-signin',
+            'invitation',
+          ]),
         ),
       );
   }
@@ -1408,14 +1479,18 @@ export class AuthService {
       row = updated!;
     }
 
-    if (input.provider === 'google' || input.provider === 'github') {
+    const verifiedEmail = input.verifiedEmails[0];
+    if (
+      verifiedEmail &&
+      (input.provider === 'google' || input.provider === 'github')
+    ) {
       await tx
         .insert(firebaseSubjectBindings)
         .values({
           firebaseUid: input.firebaseUid,
           userId: row.id,
           providerId: input.provider,
-          verifiedEmail: input.verifiedEmails[0] ?? row.email,
+          verifiedEmail,
         })
         .onConflictDoNothing();
     }

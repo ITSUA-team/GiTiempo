@@ -2,6 +2,15 @@
 
 ## ADDED Requirements
 
+### Requirement: Invitation Acceptance Accepts Optional Paired Google Credential
+The strict invitation-acceptance request SHALL accept `token`, `firebaseIdToken` and an optional bounded `googleIdToken`. It MUST apply the same paired Google proof verification as login before comparing the effective email with the invitation. Firebase-only callers remain compatible, and unknown fields remain invalid. Neither identity credential SHALL be logged or persisted.
+
+#### Scenario: Missing-email Google identity accepts an invitation
+- **GIVEN** Firebase Google authentication omits verified email
+- **WHEN** the client submits an invitation token and valid Google proof paired to the same Firebase Google subject
+- **THEN** the backend uses the independently verified email to validate and accept the invitation
+- **AND** invalid or contradictory proof leaves the invitation and memberships unchanged
+
 ### Requirement: Login Accepts Optional Paired Google Credential
 The strict login request SHALL accept `firebaseIdToken` and optional bounded `googleIdToken` strings, rejecting unknown keys. The Google field carries a signed credential, never a request-body email or provider selector. Existing Firebase-only callers and token-pair responses MUST remain compatible. Both credentials MUST be redacted from logs and MUST NOT be persisted as application state.
 

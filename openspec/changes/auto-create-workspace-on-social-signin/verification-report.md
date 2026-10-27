@@ -5,9 +5,32 @@ Implementation baseline commit: `51a0ac57` (`feat: auto-create workspace on soci
 
 ## Status
 
-All 47 implementation and verification tasks are complete; OpenSpec reports `all_done`. Independent review approved the final fresh-local-account Chrome entry and combined manual acceptance. Root automated checks, the 407-test isolated API E2E run, renewed 261-test extension verification, builds and strict change validation are recorded below. Real paired-proof web/extension entry, both distinct-UID provider orders, disconnect alternatives and pre-disconnect stale-handoff refusal passed. The final isolated extension run created exactly one local default admin foundation without deleting a Firebase identity. See [manual-test-report.md](./manual-test-report.md).
+All 51 implementation and verification tasks are complete, including section 9's quality-review corrections against baseline `59a8f675`. Fresh root typecheck, lint and tests pass; all 412 API E2E tests passed in a new isolated migrated/seeded database. Independent code review returned APPROVE and architecture review CLEAR. The earlier manual provider results remain recorded below; the new invitation/recovery corrections were verified automatically, without another real-provider manual run. See [manual-test-report.md](./manual-test-report.md).
 
 Cross-app session transfer is excluded by the user's scope decision and belongs to [#483](https://github.com/ITSUA-team/GiTiempo/issues/483). Repository graph tooling is unavailable: the conditional indexing substep is N/A, with no re-index/coverage claim. Earlier failed attempts and partial statuses below are historical and superseded only where successful evidence is explicitly recorded. The earlier unintended development-database E2E incident retains its documented evidence limits; no blanket unchanged-data claim is made.
+
+## Quality-review corrections — 2026-10-27
+
+- Credentialless GitHub/invitation provisioning now rejects unbound manual-registration reservations before creating Firebase users or changing reservation state. Social binding updates are limited to credentialless purposes; authenticated exact-UID login still recovers stored registration names, including paired Google proof. Explicit invite acceptance rejects a pending registration without creating a separate foundation before its transaction.
+- Linked GitHub authentication without actual verified provider email remains usable but creates no fabricated verified-email binding. A later email-only identity cannot use that login as ownership proof. New GitHub adoption also rechecks its live Firebase UID after identity locks.
+- Login and explicit invitation acceptance share Firebase/paired Google verification. The strict invite contract accepts optional bounded `googleIdToken`; user-web forwards it transiently to acceptance and immediate login. Tests cover fresh invite-first entry, existing GitHub-founded account plus new Google alias, contradictory proof rollback, Firebase-only compatibility, and no extra personal workspace.
+- OpenAPI and API/UI/GitHub documentation are aligned. The approved Invite Accept `.pen` reference was checked; the only component change is credential forwarding in its script, with no template, layout or styling delta.
+
+| Fresh check | Result |
+| --- | --- |
+| Root `pnpm typecheck` | Passed, 11/11 Turbo tasks. |
+| Root `pnpm lint` | Passed, 11/11 tasks; existing frontend warnings remain. |
+| Root `pnpm test` | Passed, 11/11 tasks and five CI-target tests. A bounded `pnpm exec turbo run test --concurrency=1` run populated successful task results before the final root confirmation. |
+| API units | 45 files / 628 tests passed. |
+| User / admin web | 53 files / 573 tests and 79 files / 748 tests passed. |
+| Shared browser / extension | 35 files / 242 tests and 12 files / 261 tests passed. |
+| Shared contracts | 28 files / 540 tests passed (the existing script includes source and built copies). |
+| API E2E | 33 files / 412 tests passed in `gitiempo_476_review_fixes_20261027`, a freshly created, migrated and seeded isolated database; deterministic fake Firebase/OAuth providers. The ordinary application database URL and Firebase project configuration were not changed. The owned temporary test database was removed after successful verification. |
+| OpenAPI export | Passed using the built API and isolated database environment; only the optional bounded invite proof field changed. |
+| Static analysis | AuthService diagnostics: zero errors; `git diff --check` passed. Graph tools unavailable, no indexing claim. |
+| Independent review | Code reviewer: APPROVE, zero findings. Architect: CLEAR, no correction-scope blockers. Test results were confirmed by the root after review. |
+
+Earlier attempts exposed six outdated proof-suite fixtures missing a live Firebase identity; after creating/cleaning the exact fixture UID, the deleted-alias fixture also needed its own unique setup email. The final focused proof run passed 9/9, then the full 412-test run passed. An early concurrent root test run hit two existing extension timeouts; bounded task concurrency passed all extension tests. A new invite-client assertion initially compared JSON key order; it now compares the parsed payload. These earlier failures are superseded by the successful final runs above, without relaxing production checks or test timeouts.
 
 ## Implemented working-tree scope
 

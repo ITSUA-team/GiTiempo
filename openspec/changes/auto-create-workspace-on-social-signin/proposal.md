@@ -32,7 +32,7 @@ None. Extend the existing authentication and workspace capabilities.
 - `workspace-membership`: allow social provisioning before issuing a session while retaining membership as the application-access prerequisite.
 - `workspace-management`: allow duplicate display names without affecting workspace identity or access control.
 - `workspace-registration`: allow duplicate display names and guard failed-registration cleanup against concurrent identity adoption.
-- `contracts`: remove the obsolete workspace-name conflict identifier from registration errors and add optional `googleIdToken` to the strict login request.
+- `contracts`: remove the obsolete workspace-name conflict identifier from registration errors and add optional bounded `googleIdToken` to strict login and invitation-acceptance requests.
 - `frontend-auth`: enter the normal authenticated workspace after automatic social provisioning without an additional form or consent inference.
 
 ## Impact

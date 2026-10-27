@@ -1,6 +1,6 @@
 # Tasks
 
-The original implementation and automated verification passed, including manual-registration recovery and account adoption. On 2026-10-27 the user approved paired Google ID-token verification after real missing-email Firebase subjects blocked additional-UID acceptance. Its implementation and renewed verification are tracked below. All 47 implementation and verification tasks are complete. Independent review approved the final fresh-local-account extension run and combined manual acceptance. The graph-tooling substep is not applicable in this environment because the tools are unavailable; no re-index or graph-coverage claim is made. See [design-review.md](./design-review.md) and [manual-test-report.md](./manual-test-report.md).
+The original 47 implementation and verification tasks passed, including manual-registration recovery, account adoption and manual acceptance. A subsequent quality review found reservation-purpose, verified-email-evidence and invitation-proof gaps; the user authorized their correction in section 9. All 51 tasks are now complete after fresh verification and independent re-review. The graph-tooling substep is not applicable in this environment because the tools are unavailable; no re-index or graph-coverage claim is made. See [design-review.md](./design-review.md) and [manual-test-report.md](./manual-test-report.md).
 
 ## 1. API — reusable workspace names
 
@@ -75,3 +75,10 @@ Run after implementation on a migrated local/test environment with real Google/G
 - [x] 8.11 After GitHub-first then Google sign-in, verify GitHub disconnect recognizes a currently usable Google identity, including an additional Firebase subject. With a separate test account lacking a usable alternative, verify disconnect is refused with recovery guidance. Confirm an old pre-disconnect handoff cannot restore the link.
 - [x] 8.12 Remove the membership backing a test session and attempt refresh/re-entry using that session. Verify refresh is rejected and creates no workspace or replacement membership; then check a new eligible social sign-in follows the normal zero-membership provisioning policy.
 - [x] 8.13 Retry the real missing-email Google identity using paired proof on the test deployment. Confirm the original GitHub-created account/workspace and canonical UID are reused, the additional subject is persisted, subsequent Google entry remains usable, and GitHub disconnect recognizes that live alternative. Record actual web/extension results without raw credentials or Firebase identity mutation.
+
+## 9. Quality-review corrections
+
+- [x] 9.1 Prevent GitHub/invitation credentialless creation from consuming a pending manual-registration reservation; preserve exact-UID recovery and stored names, check reservation transitions, and revalidate newly adopted GitHub Firebase identities after identity-lock waits. Add regression coverage for absent reserved UIDs and rejected adoption without mutation.
+- [x] 9.2 Preserve linked GitHub sign-in while preventing local email values from becoming verified-email evidence. Add a regression proving linked login without provider email proof cannot enable later email-only account adoption.
+- [x] 9.3 Share paired Google identity verification between login and explicit invitation acceptance; forward the optional bounded proof through the strict contract and user-web, retain password/Firebase-only compatibility, and verify valid acceptance plus contradictory-proof rollback.
+- [x] 9.4 Regenerate OpenAPI, align affected specs/docs, run root typecheck/lint/tests and both frontend suites, run API E2E against a fresh isolated migrated/seeded database, and obtain independent review with strict OpenSpec validation.

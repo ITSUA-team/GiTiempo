@@ -308,6 +308,48 @@ describe('AuthService', () => {
       expect(db.transaction).not.toHaveBeenCalled();
     });
 
+    it('passes paired Google proof to pending-registration recovery before social provisioning', async () => {
+      const recovered = {
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        accessTokenExpiresIn: 60,
+      };
+      firebase.verifyIdToken.mockResolvedValueOnce({
+        uid: 'registration-uid',
+        signInProvider: 'google.com',
+        email_verified: false,
+        googleSubjects: ['google-subject'],
+      });
+      googleIdTokens.verify.mockResolvedValueOnce({
+        email: 'owner@example.com',
+        subject: 'google-subject',
+      });
+      const recovery = vi
+        .spyOn(
+          service as unknown as {
+            recoverPendingRegistration(
+              decoded: Record<string, unknown>,
+              googleSubject?: string,
+            ): Promise<typeof recovered | null>;
+          },
+          'recoverPendingRegistration',
+        )
+        .mockResolvedValueOnce(recovered);
+
+      await expect(
+        service.login('firebase-token', 'google-proof'),
+      ).resolves.toBe(recovered);
+
+      expect(recovery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          uid: 'registration-uid',
+          email: 'owner@example.com',
+          email_verified: true,
+        }),
+        'google-subject',
+      );
+    });
+
     it('verifies Firebase, resolves membership, and issues a token pair', async () => {
       firebase.verifyIdToken.mockResolvedValueOnce({
         uid: 'admin-uid',
