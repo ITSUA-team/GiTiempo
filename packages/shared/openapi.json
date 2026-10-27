@@ -268,7 +268,7 @@
             "description": "Invalid registration input or weak password"
           },
           "409": {
-            "description": "Duplicate email or workspace name unavailable"
+            "description": "Duplicate email"
           },
           "429": {
             "description": "Too many registration attempts"

@@ -52,12 +52,17 @@ describe('RealFirebaseAdminService', () => {
     getApps.mockReturnValue([]);
   });
 
-  it('exposes only the provider claim from the revoked-token-checked Firebase result', async () => {
+  it('retains signed Google provider, email, and non-empty subjects from the revoked-token-checked Firebase result', async () => {
     verifyIdToken.mockResolvedValue({
       uid: 'google-uid',
       email: 'member@example.test',
       email_verified: true,
-      firebase: { sign_in_provider: 'google.com' },
+      firebase: {
+        sign_in_provider: 'google.com',
+        identities: {
+          'google.com': ['google-subject', '', 7, 'second-subject'],
+        },
+      },
     });
     const service = new RealFirebaseAdminService(
       makeConfig({
@@ -67,14 +72,36 @@ describe('RealFirebaseAdminService', () => {
       }),
     );
 
-    await expect(
-      service.verifyIdToken('signed-id-token'),
-    ).resolves.toMatchObject({
+    await expect(service.verifyIdToken('signed-id-token')).resolves.toEqual({
       uid: 'google-uid',
+      email: 'member@example.test',
       email_verified: true,
       signInProvider: 'google.com',
+      googleSubjects: ['google-subject', 'second-subject'],
     });
     expect(verifyIdToken).toHaveBeenCalledWith('signed-id-token', true);
+  });
+
+  it('omits Google subjects and provider when their signed Firebase claims are absent or unusable', async () => {
+    verifyIdToken.mockResolvedValue({
+      uid: 'uid',
+      firebase: { identities: { 'google.com': ['', null, 0] } },
+    });
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(service.verifyIdToken('signed-id-token')).resolves.toEqual({
+      uid: 'uid',
+      email: undefined,
+      name: undefined,
+      picture: undefined,
+      email_verified: undefined,
+    });
   });
 
   it.each([
@@ -122,6 +149,86 @@ describe('RealFirebaseAdminService', () => {
     });
     expect(getUser).toHaveBeenCalledWith('member');
   });
+
+  it('accepts an email-less live Firebase root only with its matching Google provider subject', async () => {
+    getUser.mockResolvedValue({
+      uid: 'member',
+      disabled: false,
+      providerData: [
+        {
+          providerId: 'google.com',
+          uid: 'google-subject',
+          email: 'member@example.test',
+        },
+      ],
+    });
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(
+      service.assertActiveUserByUid(
+        'member',
+        'member@example.test',
+        'google-subject',
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it.each([
+    {
+      providerData: [
+        {
+          providerId: 'google.com',
+          uid: 'different-subject',
+          email: 'member@example.test',
+        },
+      ],
+      reason: 'the Google provider subject differs',
+    },
+    {
+      providerData: [],
+      reason: 'the Google provider is absent',
+    },
+    {
+      providerData: [
+        {
+          providerId: 'google.com',
+          uid: 'google-subject',
+          email: 'other@example.test',
+        },
+      ],
+      reason: 'the Google provider email differs',
+    },
+  ])(
+    'rejects an email-less live Firebase root when $reason',
+    async ({ providerData }) => {
+      getUser.mockResolvedValue({
+        uid: 'member',
+        disabled: false,
+        providerData,
+      });
+      const service = new RealFirebaseAdminService(
+        makeConfig({
+          FIREBASE_PROJECT_ID: 'p',
+          FIREBASE_CLIENT_EMAIL: 'x@y.z',
+          FIREBASE_PRIVATE_KEY: 'KEY',
+        }),
+      );
+
+      await expect(
+        service.assertActiveUserByUid(
+          'member',
+          'member@example.test',
+          'google-subject',
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    },
+  );
 
   it.each([
     { emailVerified: false, disabled: false },

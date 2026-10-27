@@ -8,7 +8,13 @@ import { AppModule } from '../src/app.module';
 import { FIREBASE_ADMIN } from '../src/auth/services/firebase-admin.interface';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
-import { invites, users, workspaceMembers, workspaces } from '../src/db/schema';
+import {
+  firebaseIdentityReservations,
+  invites,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../src/db/schema';
 import { InviteDeliveryService } from '../src/invites/services/invite-delivery.service';
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
@@ -144,6 +150,64 @@ describe('Invite negative paths (e2e)', () => {
         .set('Authorization', bearer(adminToken))
         .send({ email: dupEmail, role: 'member' });
       expect(res.status).toBe(409);
+    });
+  });
+
+  describe('POST /invites — pending registration reservation', () => {
+    it('rejects the invite, preserves the reservation, and expires its compensation row', async () => {
+      const email = `reserved-registration-${randomUUID()}@example.com`;
+      const [reservation] = await db
+        .insert(firebaseIdentityReservations)
+        .values({
+          normalizedEmail: email,
+          firebaseUid: randomUUID(),
+          purpose: 'registration',
+          state: 'reserved',
+          registrationDisplayName: 'Reserved Registration',
+          registrationWorkspaceName: 'Reserved Workspace',
+          registrationOwnerAcknowledgement: true,
+        })
+        .returning();
+      if (!reservation) throw new Error('Expected registration reservation');
+
+      try {
+        const response = await request(app.getHttpServer())
+          .post('/invites')
+          .set('Authorization', bearer(adminToken))
+          .send({ email, role: 'member' });
+
+        expect(response.status).toBe(401);
+        expect(response.body.code).toBe('identity_proof_required');
+        expect(
+          await db
+            .select({
+              purpose: firebaseIdentityReservations.purpose,
+              state: firebaseIdentityReservations.state,
+            })
+            .from(firebaseIdentityReservations)
+            .where(eq(firebaseIdentityReservations.id, reservation.id)),
+        ).toEqual([{ purpose: 'registration', state: 'reserved' }]);
+        expect(
+          await db
+            .select({ status: invites.status })
+            .from(invites)
+            .where(
+              and(
+                eq(invites.workspaceId, workspaceId),
+                eq(invites.email, email),
+              ),
+            ),
+        ).toEqual([{ status: 'expired' }]);
+      } finally {
+        await db
+          .delete(invites)
+          .where(
+            and(eq(invites.workspaceId, workspaceId), eq(invites.email, email)),
+          );
+        await db
+          .delete(firebaseIdentityReservations)
+          .where(eq(firebaseIdentityReservations.id, reservation.id));
+      }
     });
   });
 

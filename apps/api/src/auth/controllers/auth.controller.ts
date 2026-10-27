@@ -59,7 +59,7 @@ export class AuthController {
     description: 'Invalid registration input or weak password',
   })
   @ApiConflictResponse({
-    description: 'Duplicate email or workspace name unavailable',
+    description: 'Duplicate email',
   })
   @ApiTooManyRequestsResponse({ description: 'Too many registration attempts' })
   @ApiServiceUnavailableResponse({

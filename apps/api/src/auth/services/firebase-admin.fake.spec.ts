@@ -52,6 +52,58 @@ describe('FakeFirebaseAdminService', () => {
     });
   });
 
+  it('retains a Google provider for a missing-email token claim and live identity', async () => {
+    const decoded = await fake.verifyIdToken(
+      'test:google-uid:owner@example.com:provider=google.com:google-subject=google-subject:claim-email=absent:live-email=absent',
+    );
+
+    expect(decoded).toMatchObject({
+      uid: 'google-uid',
+      googleSubjects: ['google-subject'],
+      signInProvider: 'google.com',
+    });
+    expect(decoded.email).toBeUndefined();
+    await expect(fake.getUserByUid('google-uid')).resolves.toEqual({
+      uid: 'google-uid',
+      emailVerified: true,
+      disabled: false,
+    });
+    await expect(
+      fake.assertActiveUserByUid(
+        'google-uid',
+        'owner@example.com',
+        'google-subject',
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it.each([
+    {
+      label: 'the Google provider subject differs',
+      token:
+        'test:google-uid:owner@example.com:provider=google.com:google-subject=actual-subject:live-email=absent',
+      googleSubject: 'different-subject',
+    },
+    {
+      label: 'the Google provider is missing',
+      token: 'test:google-uid:owner@example.com:live-email=absent',
+      googleSubject: 'expected-subject',
+    },
+  ])(
+    'rejects a live identity when $label',
+    async ({ token, googleSubject }) => {
+      await fake.verifyIdToken(token);
+
+      await expect(
+        fake.assertActiveUserByUid(
+          'google-uid',
+          'owner@example.com',
+          googleSubject,
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    },
+  );
+
   it('rejects a previously verified identity after registration compensation deletes it', async () => {
     const user = await fake.createEmailPasswordUser({
       uid: 'registration-rollback-uid',

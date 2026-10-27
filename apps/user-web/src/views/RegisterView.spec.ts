@@ -343,7 +343,7 @@ describe("RegisterView", () => {
     );
   });
 
-  it("submits a duplicate display name without client-side availability validation", async () => {
+  it("submits Workspace without client-side availability validation", async () => {
     const registerWorkspaceOwner = createRegisterWorkspaceOwnerMock();
     setAuthRuntimeForTesting(createRuntimeMock({ registerWorkspaceOwner }));
     const { router, wrapper } = await mountRegisterView();

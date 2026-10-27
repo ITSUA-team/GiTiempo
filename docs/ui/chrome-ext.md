@@ -51,7 +51,7 @@
 - Heading: `text-lg font-semibold text-text-dark`.
 - Three sign-in actions in one hierarchy, matching the approved `Ext Unauthenticated` frame:
   - `Continue with Google` — full width, white on a divider border, carrying the Google mark.
-  - `Continue with GitHub` — full width, on GitHub's own `#24292f`, carrying the GitHub mark. Shown only when `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED` is the string `true` for the build; otherwise omitted entirely, leaving the other two untouched.
+  - `Continue with GitHub` — full width, on GitHub's own `#24292f`, carrying the GitHub mark. Shown by default; omitted only when `VITE_EXTENSION_GITHUB_SIGNIN_ENABLED` is the string `false` for the build, leaving the other two untouched.
   - `Sign in with email` — a brand text action below a labelled `or` divider, revealing the email form in place.
 - The two provider actions wear their own brand marks rather than two identically brand-coloured buttons, so they read as two distinct choices. They are the same marks the web logins use.
 - Starting sends one shared reference-start request with the current repository, positive issue number, bounded visible issue title, and canonical direct issue URL. External recording is default-on for an authenticated workspace member and has no personal GitHub link, installation, organization allow-list, or administrator-toggle prerequisite. The extension never exposes separate managed/external actions.

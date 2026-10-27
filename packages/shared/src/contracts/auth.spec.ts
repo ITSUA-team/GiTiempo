@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   githubSessionRequestSchema,
+  loginRequestSchema,
   registerRequestSchema,
   registrationErrorCodeSchema,
   switchWorkspaceRequestSchema,
@@ -14,6 +15,44 @@ const validRegisterRequest = {
   password: "password123",
   ownerAcknowledgement: true,
 };
+
+describe("loginRequestSchema", () => {
+  it("keeps the Google proof optional and accepts its maximum length", () => {
+    expect(
+      loginRequestSchema.parse({ firebaseIdToken: "firebase-id-token" }),
+    ).toEqual({ firebaseIdToken: "firebase-id-token" });
+    expect(
+      loginRequestSchema.parse({
+        firebaseIdToken: "firebase-id-token",
+        googleIdToken: "g".repeat(16_384),
+      }),
+    ).toEqual({
+      firebaseIdToken: "firebase-id-token",
+      googleIdToken: "g".repeat(16_384),
+    });
+  });
+
+  it("rejects blank, overlong, and unknown login fields", () => {
+    expect(
+      loginRequestSchema.safeParse({
+        firebaseIdToken: "firebase-id-token",
+        googleIdToken: "",
+      }).success,
+    ).toBe(false);
+    expect(
+      loginRequestSchema.safeParse({
+        firebaseIdToken: "firebase-id-token",
+        googleIdToken: "g".repeat(16_385),
+      }).success,
+    ).toBe(false);
+    expect(
+      loginRequestSchema.safeParse({
+        firebaseIdToken: "firebase-id-token",
+        unexpected: true,
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("registerRequestSchema", () => {
   it("accepts a valid first-owner registration payload", () => {

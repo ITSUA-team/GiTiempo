@@ -14,7 +14,6 @@ import {
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/auth/services/auth.service';
-import type { DecodedFirebaseToken } from '../src/auth/services/firebase-admin.interface';
 import { FIREBASE_ADMIN } from '../src/auth/services/firebase-admin.interface';
 import type { FakeFirebaseAdminService } from '../src/auth/services/firebase-admin.fake';
 import { GoogleIdTokenVerifier } from '../src/auth/services/google-id-token-verifier.service';
@@ -37,8 +36,12 @@ type GoogleProof = { email: string; subject: string };
 
 let requestCounter = 1;
 
-function googleAliasToken(firebaseUid: string, email: string): string {
-  return `test:${firebaseUid}:${email}:Google Alias:provider=google.com`;
+function googleAliasToken(
+  firebaseUid: string,
+  email: string,
+  ...subjects: string[]
+): string {
+  return `test:${firebaseUid}:${email}:Google Alias:provider=google.com${subjects.map((subject) => `:google-subject=${subject}`).join('')}:claim-email=absent:live-email=absent`;
 }
 
 describe('Google ID-token login proof (e2e)', () => {
@@ -99,25 +102,6 @@ describe('Google ID-token login proof (e2e)', () => {
       userId: claims.sub,
       workspaceId: claims.workspaceId,
     };
-  }
-
-  function installMissingEmailGoogleAlias(
-    token: string,
-    googleSubjects: string[],
-  ): void {
-    const originalVerify = firebase.verifyIdToken.bind(firebase);
-    vi.spyOn(firebase, 'verifyIdToken').mockImplementation(async (idToken) => {
-      const decoded = await originalVerify(idToken);
-      if (idToken !== token) return decoded;
-
-      return {
-        ...decoded,
-        email: undefined,
-        email_verified: false,
-        googleSubjects,
-        signInProvider: 'google.com',
-      } satisfies DecodedFirebaseToken;
-    });
   }
 
   async function cleanFoundation(input: {
@@ -194,7 +178,7 @@ describe('Google ID-token login proof (e2e)', () => {
     const firebaseUid = `invite-google-alias-${randomUUID()}`;
     const subject = `google-subject-${randomUUID()}`;
     const token = randomUUID();
-    const firebaseIdToken = googleAliasToken(firebaseUid, email);
+    const firebaseIdToken = googleAliasToken(firebaseUid, email, subject);
     const googleIdToken = `valid-proof-${randomUUID()}`;
     const [invite] = await db
       .insert(invites)
@@ -210,8 +194,6 @@ describe('Google ID-token login proof (e2e)', () => {
     if (!invite) throw new Error('Expected invite fixture');
 
     try {
-      await firebase.verifyIdToken(firebaseIdToken);
-      installMissingEmailGoogleAlias(firebaseIdToken, [subject]);
       verifier.verify.mockResolvedValue({
         email,
         subject,
@@ -272,7 +254,11 @@ describe('Google ID-token login proof (e2e)', () => {
     const email = `invite-google-reject-${randomUUID()}@example.test`;
     const firebaseUid = `invite-google-alias-${randomUUID()}`;
     const token = randomUUID();
-    const firebaseIdToken = googleAliasToken(firebaseUid, email);
+    const firebaseIdToken = googleAliasToken(
+      firebaseUid,
+      email,
+      'firebase-subject',
+    );
     const [invite] = await db
       .insert(invites)
       .values({
@@ -287,8 +273,6 @@ describe('Google ID-token login proof (e2e)', () => {
     if (!invite) throw new Error('Expected invite fixture');
 
     try {
-      await firebase.verifyIdToken(firebaseIdToken);
-      installMissingEmailGoogleAlias(firebaseIdToken, ['firebase-subject']);
       verifier.verify.mockResolvedValue({
         email,
         subject: 'different-proof-subject',
@@ -330,7 +314,11 @@ describe('Google ID-token login proof (e2e)', () => {
     const aliasUid = `google-invite-alias-${randomUUID()}`;
     const subject = `google-subject-${randomUUID()}`;
     const token = randomUUID();
-    const firebaseIdToken = googleAliasToken(aliasUid, foundation.email);
+    const firebaseIdToken = googleAliasToken(
+      aliasUid,
+      foundation.email,
+      subject,
+    );
     const [invite] = await db
       .insert(invites)
       .values({
@@ -345,8 +333,6 @@ describe('Google ID-token login proof (e2e)', () => {
     if (!invite) throw new Error('Expected invite fixture');
 
     try {
-      await firebase.verifyIdToken(firebaseIdToken);
-      installMissingEmailGoogleAlias(firebaseIdToken, [subject]);
       verifier.verify.mockResolvedValue({
         email: foundation.email,
         subject,
@@ -420,12 +406,14 @@ describe('Google ID-token login proof (e2e)', () => {
     const foundation = await createGithubFoundation();
     const aliasUid = `google-alias-${randomUUID()}`;
     const subject = `google-subject-${randomUUID()}`;
-    const firebaseIdToken = googleAliasToken(aliasUid, foundation.email);
+    const firebaseIdToken = googleAliasToken(
+      aliasUid,
+      foundation.email,
+      subject,
+    );
     const googleIdToken = `valid-proof-${randomUUID()}`;
 
     try {
-      await firebase.verifyIdToken(firebaseIdToken);
-      installMissingEmailGoogleAlias(firebaseIdToken, [subject]);
       verifier.verify.mockResolvedValue({
         email: foundation.email,
         subject,
@@ -467,30 +455,32 @@ describe('Google ID-token login proof (e2e)', () => {
       proofSubject: 'matching-subject',
       reason: 'a rejected Google proof',
       rejectProof: true,
-      subjects: ['matching-subject'],
+      tokenSubjects: ['matching-subject'],
     },
     {
       proofSubject: 'different-subject',
       reason: 'a mismatched Firebase Google subject',
       rejectProof: false,
-      subjects: ['matching-subject'],
+      tokenSubjects: ['matching-subject'],
     },
     {
       proofSubject: 'matching-subject',
       reason: 'ambiguous Firebase Google subjects',
       rejectProof: false,
-      subjects: ['matching-subject', 'second-subject'],
+      tokenSubjects: ['matching-subject', 'second-subject'],
     },
   ])(
     'rejects $reason without changing account state',
-    async ({ proofSubject, rejectProof, subjects }) => {
+    async ({ proofSubject, rejectProof, tokenSubjects }) => {
       const foundation = await createGithubFoundation();
       const aliasUid = `google-alias-${randomUUID()}`;
-      const firebaseIdToken = googleAliasToken(aliasUid, foundation.email);
+      const firebaseIdToken = googleAliasToken(
+        aliasUid,
+        foundation.email,
+        ...tokenSubjects,
+      );
 
       try {
-        await firebase.verifyIdToken(firebaseIdToken);
-        installMissingEmailGoogleAlias(firebaseIdToken, subjects);
         if (rejectProof) {
           verifier.verify.mockRejectedValue(
             new UnauthorizedException('Unauthorized'),
@@ -528,7 +518,11 @@ describe('Google ID-token login proof (e2e)', () => {
       const foundation = await createGithubFoundation();
       const aliasUid = `google-alias-${randomUUID()}`;
       const subject = `google-subject-${randomUUID()}`;
-      const firebaseIdToken = googleAliasToken(aliasUid, foundation.email);
+      const firebaseIdToken = googleAliasToken(
+        aliasUid,
+        foundation.email,
+        subject,
+      );
 
       try {
         if (liveState === 'disabled') {
@@ -543,7 +537,6 @@ describe('Google ID-token login proof (e2e)', () => {
           });
           await firebase.deleteUser(aliasUid);
         }
-        installMissingEmailGoogleAlias(firebaseIdToken, [subject]);
         verifier.verify.mockResolvedValue({ email: foundation.email, subject });
         const before = await stateForUser(foundation.userId);
 

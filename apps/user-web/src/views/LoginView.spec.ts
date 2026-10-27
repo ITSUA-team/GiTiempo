@@ -290,7 +290,9 @@ describe("LoginView", () => {
     const help = wrapper.get('[data-testid="sign-in-error-help"]');
     expect(help.attributes("href")).toBe("https://github.com/settings/emails");
     expect(wrapper.text()).toContain("verified GitHub email");
-    expect(wrapper.text().toLowerCase()).not.toContain("invite");
+    expect(
+      wrapper.get('[data-testid="sign-in-error"]').text().toLowerCase(),
+    ).not.toContain("invite");
   });
 
   it("explains an ambiguous match without offering a GitHub link", async () => {

@@ -121,6 +121,8 @@ Alternative: adding random suffixes would violate the chosen default and retain 
 
 The API returns the existing token pair, so `packages/web-shared/src/auth/session-core.ts`, the two app auth stores, GitHub callback routes, and extension token handling can use their current bootstrap paths. Change runtime leaves only where a real consumer assumption or error mapping requires it; add behavioral coverage rather than new onboarding orchestration. Remove misleading unmatched-member copy in shared GitHub errors and both login consumers as necessary.
 
+Interactive extension authentication is single-flight across both providers and popup lifetimes. The long-lived background worker owns one shared Google/GitHub attempt guard; reopening the popup observes the active attempt instead of starting another OIDC or handoff transaction and tells the user to finish or close the existing provider window. Success, provider failure, and cancellation all release the guard so a later attempt can start. Keeping the guard out of the popup preserves its authority across popup teardown and prevents concurrent state, nonce, or handoff exchanges.
+
 Do not add a social naming/owner checkbox page, submit synthetic `ownerAcknowledgement`, or write email-consent flags/events. Preserve existing preferences and manual registration's explicit acknowledgement validation. The standalone registration page continues to exclude social signup actions; automatic social provisioning starts from existing login actions.
 
 ### Planned file groups and instructions

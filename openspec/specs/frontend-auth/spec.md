@@ -22,6 +22,18 @@ The web frontends MUST normalize successful and failed backend token exchanges t
 - **AND** the frontend persists the rotated refresh token for later restoration
 - **AND** the frontend resolves the authenticated user profile for the active session
 
+#### Scenario: Google sign-in supplies a paired email proof
+- **WHEN** Google sign-in returns an OIDC ID token beside its Firebase identity token
+- **THEN** user-web and admin-web send the Google ID token only with the immediate login exchange
+- **AND** they do not persist or log it or substitute an access token or profile email
+- **AND** failed proof exchange clears application session state through the existing recovery path
+
+#### Scenario: Explicit invitation acceptance forwards paired Google proof
+- **WHEN** Google sign-in on the invitation page returns a Google ID token beside its Firebase ID token
+- **THEN** the page forwards the optional proof to invitation acceptance before creating an application session
+- **AND** the subsequent login uses the same transient credentials without storing or logging them
+- **AND** invitation-first entry creates no unsolicited personal workspace
+
 #### Scenario: Login exchange fails
 
 - **WHEN** the user-web auth flow receives a failing login result from the identity provider or backend exchange
@@ -53,6 +65,21 @@ The web frontends MUST normalize successful and failed backend token exchanges t
 - **WHEN** the frontend handles the failed exchange
 - **THEN** it remains in a guest session and presents the existing recoverable identity-proof guidance
 - **AND** it does not present the password account as authenticated or begin an extra onboarding form
+
+### Requirement: Extension Interactive Sign-In Is Single-Flight
+The extension MUST allow at most one interactive Google or GitHub sign-in attempt at a time. The background worker SHALL retain that shared guard across popup reopenings, explain an already active attempt, and release the guard after every terminal outcome so the user can retry.
+
+#### Scenario: Duplicate provider attempt is rejected
+- **GIVEN** an interactive Google or GitHub sign-in attempt is active
+- **WHEN** the popup requests another Google or GitHub sign-in
+- **THEN** the extension keeps the original attempt active
+- **AND** it asks the user to finish or close the existing provider window
+
+#### Scenario: Terminal outcome releases the guard
+- **GIVEN** an interactive provider sign-in attempt is active
+- **WHEN** the attempt succeeds, fails, or is cancelled
+- **THEN** the background worker releases the shared guard
+- **AND** a later Google or GitHub sign-in attempt can start
 
 ### Requirement: Frontend Session Bootstrap Restoration
 

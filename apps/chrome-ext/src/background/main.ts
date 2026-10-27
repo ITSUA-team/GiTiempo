@@ -459,12 +459,9 @@ export async function handleWorkspaceSwitch(
 
 async function handleAuthExchange(
   firebaseIdToken: string,
-  googleIdToken?: string,
 ): Promise<RuntimeAuthResult> {
   return handleMutation(() =>
-    googleIdToken
-      ? apiClient.loginWithFirebaseToken(firebaseIdToken, googleIdToken)
-      : apiClient.loginWithFirebaseToken(firebaseIdToken),
+    apiClient.loginWithFirebaseToken(firebaseIdToken),
   );
 }
 
@@ -666,16 +663,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           await handleInteractiveSignIn(() => {
             sessionGeneration += 1;
             return handleMutation(async () => {
-              const signInResult = await signInWithGoogle();
-              const { firebaseIdToken, googleIdToken } = typeof signInResult === 'string'
-                ? { firebaseIdToken: signInResult }
-                : signInResult;
-
-              if (googleIdToken) {
-                await apiClient.loginWithFirebaseToken(firebaseIdToken, googleIdToken);
-              } else {
-                await apiClient.loginWithFirebaseToken(firebaseIdToken);
-              }
+              const { firebaseIdToken, googleIdToken } = await signInWithGoogle();
+              await apiClient.loginWithFirebaseToken(firebaseIdToken, googleIdToken);
             });
           }),
         );

@@ -63,3 +63,20 @@ The web frontends MUST normalize successful and failed backend token exchanges t
 - **WHEN** the frontend handles the failed exchange
 - **THEN** it remains in a guest session and presents the existing recoverable identity-proof guidance
 - **AND** it does not present the password account as authenticated or begin an extra onboarding form
+
+## ADDED Requirements
+
+### Requirement: Extension Interactive Sign-In Is Single-Flight
+The extension MUST allow at most one interactive Google or GitHub sign-in attempt at a time. The background worker SHALL retain that shared guard across popup reopenings, explain an already active attempt, and release the guard after every terminal outcome so the user can retry.
+
+#### Scenario: Duplicate provider attempt is rejected
+- **GIVEN** an interactive Google or GitHub sign-in attempt is active
+- **WHEN** the popup requests another Google or GitHub sign-in
+- **THEN** the extension keeps the original attempt active
+- **AND** it asks the user to finish or close the existing provider window
+
+#### Scenario: Terminal outcome releases the guard
+- **GIVEN** an interactive provider sign-in attempt is active
+- **WHEN** the attempt succeeds, fails, or is cancelled
+- **THEN** the background worker releases the shared guard
+- **AND** a later Google or GitHub sign-in attempt can start

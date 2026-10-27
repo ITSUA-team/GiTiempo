@@ -1,6 +1,6 @@
 # Tasks
 
-The original 47 implementation and verification tasks passed, including manual-registration recovery, account adoption and manual acceptance. A subsequent quality review found reservation-purpose, verified-email-evidence and invitation-proof gaps; the user authorized their correction in section 9. All 51 tasks are now complete after fresh verification and independent re-review. The graph-tooling substep is not applicable in this environment because the tools are unavailable; no re-index or graph-coverage claim is made. See [design-review.md](./design-review.md) and [manual-test-report.md](./manual-test-report.md).
+All 56 implementation and verification tasks are complete, including sections 9 and 10's review corrections, focused coverage, documentation/spec reconciliation and independent approval. AuthService cleanup and safe stranded-registration repair are deferred to #487. The graph-tooling substep is not applicable in this environment because the tools are unavailable; no re-index or graph-coverage claim is made. See [verification-report.md](./verification-report.md), [design-review.md](./design-review.md) and [manual-test-report.md](./manual-test-report.md).
 
 ## 1. API — reusable workspace names
 
@@ -82,3 +82,13 @@ Run after implementation on a migrated local/test environment with real Google/G
 - [x] 9.2 Preserve linked GitHub sign-in while preventing local email values from becoming verified-email evidence. Add a regression proving linked login without provider email proof cannot enable later email-only account adoption.
 - [x] 9.3 Share paired Google identity verification between login and explicit invitation acceptance; forward the optional bounded proof through the strict contract and user-web, retain password/Firebase-only compatibility, and verify valid acceptance plus contradictory-proof rollback.
 - [x] 9.4 Regenerate OpenAPI, align affected specs/docs, run root typecheck/lint/tests and both frontend suites, run API E2E against a fresh isolated migrated/seeded database, and obtain independent review with strict OpenSpec validation.
+
+## 10. External-review follow-up
+
+AuthService structural cleanup and safe, audited repair for stranded registration reservations are intentionally excluded from this change and tracked in [#487](https://github.com/ITSUA-team/GiTiempo/issues/487).
+
+- [x] 10.1 Align the fake and real Firebase adapters for the provider, subject, and live-user semantics used by paired Google proof; add focused adapter coverage without changing existing fixture defaults.
+- [x] 10.2 Close shared-contract and HTTP acceptance gaps for optional paired Google credentials across login and explicit invitation acceptance, including strict unknown-field rejection, controller transport, redaction, invite-first behavior, and failure rollback.
+- [x] 10.3 Remove obsolete extension-auth compatibility and cleanup branches, retain the cross-provider background-worker single-flight lifecycle, bump the extension version for the corrected auth behavior, and run its focused tests and builds.
+- [x] 10.4 Intelligently synchronize all eight change deltas into their main specs while preserving unrelated requirements; add the extension single-flight design/spec contract and correct current user/extension UI documentation without a layout redesign or new `.pen` frame.
+- [x] 10.5 Run the affected package and root verification, isolated migrated/seeded API E2E, strict change/main-spec validation, update the verification report, and obtain independent review before closing the follow-up.

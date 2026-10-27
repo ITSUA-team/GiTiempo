@@ -65,6 +65,14 @@ The shared contracts MUST define request payload schemas for authentication and 
 - **AND** `ownerAcknowledgement` must be `true`
 - **AND** the payload rejects unknown additional fields
 
+### Requirement: Login Accepts Optional Paired Google Credential
+The strict login request SHALL accept `firebaseIdToken` and optional bounded `googleIdToken` strings, rejecting unknown keys. The Google field carries a signed credential, never a request-body email or provider selector. Existing Firebase-only callers and token-pair responses MUST remain compatible. Both credentials MUST be redacted from logs and MUST NOT be persisted as application state.
+
+#### Scenario: Paired credential reaches login verification
+- **WHEN** a client submits Firebase and Google ID tokens
+- **THEN** request validation accepts the defined optional proof and the backend verifies its trust rules before granting access
+- **AND** an arbitrary email, audience, provider or other unknown request field is rejected
+
 ### Requirement: Shared Token Pair Response Contract
 
 The shared contracts MUST define a single response shape for endpoints that issue API session credentials, so that backend responses and frontend consumers agree on the payload.
@@ -188,6 +196,15 @@ The shared contracts SHALL define stable shapes for invite creation, listing, re
 - **WHEN** Firebase setup link generation or invite delivery fails after the pending invite is found
 - **THEN** the API contract documents a 503 response for the resend endpoint
 - **AND** the response surfaces the delivery or Firebase failure message
+
+### Requirement: Invitation Acceptance Accepts Optional Paired Google Credential
+The strict invitation-acceptance request SHALL accept `token`, `firebaseIdToken` and an optional bounded `googleIdToken`. It MUST apply the same paired Google proof verification as login before comparing the effective email with the invitation. Firebase-only callers remain compatible, and unknown fields remain invalid. Neither identity credential SHALL be logged or persisted.
+
+#### Scenario: Missing-email Google identity accepts an invitation
+- **GIVEN** Firebase Google authentication omits verified email
+- **WHEN** the client submits an invitation token and valid Google proof paired to the same Firebase Google subject
+- **THEN** the backend uses the independently verified email to validate and accept the invitation
+- **AND** invalid or contradictory proof leaves the invitation and memberships unchanged
 
 ### Requirement: Shared Project Contract
 

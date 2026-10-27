@@ -122,7 +122,10 @@ describe('background snapshot broadcast', () => {
     sessionMocks.getStoredSession.mockResolvedValue(null);
     sessionMocks.hasPendingProviderCleanup.mockResolvedValue(false);
     firebaseMocks.signOutFromFirebase.mockResolvedValue(undefined);
-    firebaseMocks.signInWithGoogle.mockResolvedValue('firebase-google-token');
+    firebaseMocks.signInWithGoogle.mockResolvedValue({
+      firebaseIdToken: 'firebase-google-token',
+      googleIdToken: 'google-provider-id-token',
+    });
     githubMocks.signInWithGithub.mockResolvedValue({
       code: 'code',
       verifier: 'verifier',
@@ -315,7 +318,10 @@ describe('background snapshot broadcast', () => {
   );
 
   it('blocks a duplicate Google sign-in until the active flow ends, then allows a retry', async () => {
-    const pendingGoogleSignIn = createDeferred<string>();
+    const pendingGoogleSignIn = createDeferred<{
+      firebaseIdToken: string;
+      googleIdToken: string;
+    }>();
     firebaseMocks.signInWithGoogle.mockReturnValueOnce(pendingGoogleSignIn.promise);
 
     await import('./main');
@@ -357,6 +363,7 @@ describe('background snapshot broadcast', () => {
       expect(firebaseMocks.signInWithGoogle).toHaveBeenCalledTimes(2);
       expect(backgroundApiMocks.loginWithFirebaseToken).toHaveBeenCalledWith(
         'firebase-google-token',
+        'google-provider-id-token',
       );
       expect(retryResponse).toHaveBeenCalledWith(
         expect.objectContaining({ ok: true }),
@@ -405,6 +412,7 @@ describe('background snapshot broadcast', () => {
       expect(firebaseMocks.signInWithGoogle).toHaveBeenCalledOnce();
       expect(backgroundApiMocks.loginWithFirebaseToken).toHaveBeenCalledWith(
         'firebase-google-token',
+        'google-provider-id-token',
       );
       expect(retryResponse).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
     });
@@ -435,6 +443,7 @@ describe('background snapshot broadcast', () => {
       expect(firebaseMocks.signInWithGoogle).toHaveBeenCalledTimes(2);
       expect(backgroundApiMocks.loginWithFirebaseToken).toHaveBeenLastCalledWith(
         'firebase-google-token',
+        'google-provider-id-token',
       );
       expect(retryResponse).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
     });

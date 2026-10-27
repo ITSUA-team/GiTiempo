@@ -158,7 +158,6 @@ export class RefreshTokenRepository {
           .returning();
         if (!newRow) {
           tx.rollback();
-          return null;
         }
 
         const [updated] = await tx
@@ -171,7 +170,6 @@ export class RefreshTokenRepository {
 
         if (!updated) {
           tx.rollback();
-          return null;
         }
 
         return { newRow };

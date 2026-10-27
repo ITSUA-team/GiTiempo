@@ -16,7 +16,9 @@ import {
 
 /**
  * Test-only Firebase adapter. Tokens use `test:<uid>:<email>[:<name>[:<picture>]]`
- * with optional trailing `:provider=<provider>` and `:verified=false` controls.
+ * with optional trailing controls: `:provider=<provider>`,
+ * repeated `:google-subject=<subject>`, `:verified=false`, `:claim-email=absent`, and
+ * `:live-email=absent`.
  */
 @Injectable()
 export class FakeFirebaseAdminService implements FirebaseAdminService {
@@ -25,6 +27,10 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
   private readonly registeredUsers = new Map<string, RegisteredFirebaseUser>();
   private readonly registeredUserEmailsByUid = new Map<string, string>();
   private readonly alternativeProvidersByUid = new Map<string, Set<string>>();
+  private readonly googleProvidersByUid = new Map<
+    string,
+    { subject: string; email?: string }
+  >();
   private readonly usersByUid = new Map<string, FirebaseUserIdentity>();
   private readonly deletedUserUids = new Set<string>();
 
@@ -35,6 +41,9 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
     const parts = idToken.split(':');
     let signInProvider = 'password';
     let emailVerified = true;
+    const googleSubjects: string[] = [];
+    let includeClaimEmail = true;
+    let includeLiveEmail = true;
     while (parts.length > 3) {
       const trailing = parts.at(-1)!;
       if (trailing.startsWith('provider=')) {
@@ -44,6 +53,22 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
       }
       if (trailing === 'verified=false') {
         emailVerified = false;
+        parts.pop();
+        continue;
+      }
+      if (trailing.startsWith('google-subject=')) {
+        const subject = trailing.slice('google-subject='.length);
+        if (subject) googleSubjects.unshift(subject);
+        parts.pop();
+        continue;
+      }
+      if (trailing === 'claim-email=absent') {
+        includeClaimEmail = false;
+        parts.pop();
+        continue;
+      }
+      if (trailing === 'live-email=absent') {
+        includeLiveEmail = false;
         parts.pop();
         continue;
       }
@@ -59,24 +84,47 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
     if (!existing && !this.deletedUserUids.has(uid)) {
       this.usersByUid.set(uid, {
         uid,
-        email: normalizedEmail,
+        ...(includeLiveEmail ? { email: normalizedEmail } : {}),
         emailVerified,
         disabled: false,
       });
     }
+    if (signInProvider === 'google.com' && googleSubjects[0]) {
+      this.googleProvidersByUid.set(uid, {
+        subject: googleSubjects[0],
+        email: normalizedEmail,
+      });
+    }
     return {
       uid,
-      email,
+      ...(includeClaimEmail ? { email } : {}),
       ...(name ? { name } : {}),
       ...(picture ? { picture } : {}),
       email_verified: emailVerified,
       signInProvider,
+      ...(googleSubjects.length ? { googleSubjects } : {}),
     };
   }
 
-  async assertActiveUserByUid(uid: string, email: string): Promise<void> {
+  async assertActiveUserByUid(
+    uid: string,
+    email: string,
+    googleSubject?: string,
+  ): Promise<void> {
     const user = await this.getUserByUid(uid);
-    if (!user || user.disabled || user.email !== normalizeEmail(email)) {
+    const normalizedEmail = normalizeEmail(email);
+    const googleProvider = this.googleProvidersByUid.get(uid);
+    if (
+      !user ||
+      user.disabled ||
+      (user.email && user.email !== normalizedEmail) ||
+      (googleSubject &&
+        (!googleProvider ||
+          googleProvider.subject !== googleSubject ||
+          (googleProvider.email &&
+            googleProvider.email !== normalizedEmail))) ||
+      (!user.email && !googleSubject)
+    ) {
       throw new UnauthorizedException('Unauthorized');
     }
   }
@@ -212,6 +260,7 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
     this.usersByUid.delete(uid);
     this.deletedUserUids.add(uid);
     this.alternativeProvidersByUid.delete(uid);
+    this.googleProvidersByUid.delete(uid);
     this.registeredUsers.delete(email);
   }
 

@@ -1,20 +1,45 @@
 # Implementation verification
 
 Dates: 2026-10-26–27. Branch: `feat/476-auto-create-workspace-on-social-signin`.
-Implementation baseline commit: `51a0ac57` (`feat: auto-create workspace on social sign-in`), plus the uncommitted extension interactive-flow guard, legacy-identity integration regression, GitHub recovery-message fix and paired Google proof described below.
+Implementation baseline commit: `51a0ac57` (`feat: auto-create workspace on social sign-in`), subsequent implementation through `f7119722`, and the working-tree external-review corrections described below.
 
 ## Status
 
-All 51 implementation and verification tasks are complete, including section 9's quality-review corrections against baseline `59a8f675`. Fresh root typecheck, lint and tests pass; all 412 API E2E tests passed in a new isolated migrated/seeded database. Independent code review returned APPROVE and architecture review CLEAR. The earlier manual provider results remain recorded below; the new invitation/recovery corrections were verified automatically, without another real-provider manual run. See [manual-test-report.md](./manual-test-report.md).
+All 56 implementation and verification tasks are complete: fresh root typecheck, lint and tests pass, and all 413 API E2E tests passed in a new isolated migrated/seeded database. Independent cross-lane code reviews returned APPROVE with no high or medium findings; independent documentation/evidence review returned APPROVE / architectural CLEAR. The earlier manual provider results remain recorded below; these review corrections were verified automatically, without another real-provider manual run. See [manual-test-report.md](./manual-test-report.md).
 
 Cross-app session transfer is excluded by the user's scope decision and belongs to [#483](https://github.com/ITSUA-team/GiTiempo/issues/483). Repository graph tooling is unavailable: the conditional indexing substep is N/A, with no re-index/coverage claim. Earlier failed attempts and partial statuses below are historical and superseded only where successful evidence is explicitly recorded. The earlier unintended development-database E2E incident retains its documented evidence limits; no blanket unchanged-data claim is made.
+
+## External-review corrections — 2026-10-27
+
+- Deferred all AuthService structural cleanup, dead public/private entry points, duplicate token/membership logic, profile-alias normalization, brittle service mocks and audited stranded-registration repair to [#487](https://github.com/ITSUA-team/GiTiempo/issues/487). AuthService source and tests were not changed by this correction. The issue is open; project-board placement is pending because the CLI token lacks Projects scope.
+- Fake Firebase now retains Google provider subjects and models missing token/live-root emails. Real-adapter tests cover signed subject extraction and live provider/subject/email checks; missing-email integration fixtures use the fake's actual provider state instead of replacing decoded token results.
+- Added login-contract bounds/strictness coverage, configured authorized-party acceptance, controller proof forwarding, and an actual invite-route pending-registration rejection. The invite compensation row expires and the original registration reservation remains reserved.
+- Removed unreachable extension Google string compatibility and local-variable cleanup, plus unreachable refresh rollback returns. The shared password-compatible Firebase result union remains supported. Scoped login-copy assertions and corrected the registration-test description.
+- Synchronized all eight delta capabilities, including the previously missing paired-proof amendment; added the worker single-flight contract. Corrected stale UI documentation and the register conflict description, and regenerated OpenAPI. No approved Invite Accept or Invite Password Setup `.pen` frame exists; those earlier parity claims are corrected below. These changes add no component layout or styling.
+- Bumped extension package and generated Chrome/Firefox manifests to `0.1.2`.
+
+| Fresh check | Result |
+| --- | --- |
+| Root `pnpm typecheck` | Passed, 11/11 tasks. |
+| Root `pnpm lint` | Passed, 11/11 tasks; existing frontend warnings remain. |
+| Root `pnpm test` | Passed, 11/11 tasks plus five CI-target tests. API 638, shared contracts 544, browser helpers 242, web config 18, user-web 573, admin-web 748 and extension 261 tests. |
+| API E2E | 33 files / 413 tests passed in newly created, migrated and seeded `gitiempo_476_review_corrections_20261027`. The direct runner guarded the exact database destination; the temporary database was removed after success. Current application database and Firebase settings were not changed. |
+| OpenAPI export | Passed, 4/4 tasks; generated diff only changes the obsolete register conflict description. |
+| Extension | Chrome/Firefox production builds passed with `0.1.2`; local dev artifacts were then rebuilt for the existing test setup. Remote manifest schema validation was unavailable because its host could not be reached. |
+| Strict OpenSpec | This change and five affected main capabilities pass. The other three (`auth`, `contracts`, `github-signin`) retain pre-existing requirement-length warnings under strict validation; the new paired-proof/single-flight sections add none. |
+| Independent review | Two cross-lane code reviews: APPROVE, no high/medium findings. Independent documentation/evidence review: APPROVE / architectural CLEAR, followed by the requested task-status bookkeeping corrections. Low-risk limit: the fake does not independently represent absent Google-provider email; production's optional-provider-email predicate remains unchanged. |
+| Static tooling | Root compiler/lint and `git diff --check` pass. Optional LSP/AST tools returned `Transport closed`; graph tools are unavailable. No successful LSP/AST or re-index claim. |
+
+The root test run used the normal workspace build dependency ordering. Earlier direct API diagnostics against stale shared build output are superseded by the successful root typecheck. Local Google/GitHub runtime acceptance is the earlier manual evidence; no new manual-provider acceptance is inferred from the automated checks.
+
+The subsequent user-requested DevTools smoke check loaded `0.1.2` in a separate Chrome for Testing: actual Google authorization entry, rendered duplicate Google/GitHub rejection across reopened popups, cancellation, retry and email-form rendering passed, with zero observed JavaScript exceptions or console errors and no stored application session. The local API was offline and credentials were not entered, so complete authenticated entry was not retested. See [manual-test-report.md](./manual-test-report.md#extension-012-devtools-runtime-check--2026-10-27) and the sanitized runtime evidence linked there.
 
 ## Quality-review corrections — 2026-10-27
 
 - Credentialless GitHub/invitation provisioning now rejects unbound manual-registration reservations before creating Firebase users or changing reservation state. Social binding updates are limited to credentialless purposes; authenticated exact-UID login still recovers stored registration names, including paired Google proof. Explicit invite acceptance rejects a pending registration without creating a separate foundation before its transaction.
 - Linked GitHub authentication without actual verified provider email remains usable but creates no fabricated verified-email binding. A later email-only identity cannot use that login as ownership proof. New GitHub adoption also rechecks its live Firebase UID after identity locks.
 - Login and explicit invitation acceptance share Firebase/paired Google verification. The strict invite contract accepts optional bounded `googleIdToken`; user-web forwards it transiently to acceptance and immediate login. Tests cover fresh invite-first entry, existing GitHub-founded account plus new Google alias, contradictory proof rollback, Firebase-only compatibility, and no extra personal workspace.
-- OpenAPI and API/UI/GitHub documentation are aligned. The approved Invite Accept `.pen` reference was checked; the only component change is credential forwarding in its script, with no template, layout or styling delta.
+- OpenAPI and API/UI/GitHub documentation are aligned. Invite acceptance has no dedicated approved `.pen` frame; the component change is credential forwarding in its script, with no template, layout or styling delta.
 
 | Fresh check | Result |
 | --- | --- |

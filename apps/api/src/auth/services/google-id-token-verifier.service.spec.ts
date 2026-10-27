@@ -61,6 +61,13 @@ describe('GoogleIdTokenVerifier', () => {
     });
   });
 
+  it('accepts an authorized party configured as a Google client ID', async () => {
+    await expect(verifier.verify(idToken({ azp: clientId }))).resolves.toEqual({
+      subject: 'google-subject',
+      email: 'user@example.test',
+    });
+  });
+
   it.each([
     ['wrong issuer', { iss: 'https://attacker.example' }],
     ['wrong audience', { aud: 'other-client' }],

@@ -202,39 +202,34 @@ function parseGoogleAuthResponse(
 }
 
 export async function signInWithGoogle(): Promise<GoogleFirebaseSignInResult> {
-  let state: string | null = createGoogleAuthValue();
-  let nonce: string | null = createGoogleAuthValue();
+  const state = createGoogleAuthValue();
+  const nonce = createGoogleAuthValue();
   const redirectUri = createGoogleAuthRedirectUri();
 
-  try {
-    const responseUrl = await launchWebAuthFlow(
-      buildGoogleAuthUrl({
-        clientId: getGoogleOAuthClientId(),
-        nonce,
-        redirectUri,
-        state,
-      }),
-      "Google",
-    );
-    const { accessToken, idToken } = parseGoogleAuthResponse(
-      responseUrl,
+  const responseUrl = await launchWebAuthFlow(
+    buildGoogleAuthUrl({
+      clientId: getGoogleOAuthClientId(),
+      nonce,
       redirectUri,
       state,
-      nonce,
-    );
-    const credential = await signInWithCredential(
-      getFirebaseAuth(),
-      GoogleAuthProvider.credential(idToken, accessToken),
-    );
+    }),
+    "Google",
+  );
+  const { accessToken, idToken } = parseGoogleAuthResponse(
+    responseUrl,
+    redirectUri,
+    state,
+    nonce,
+  );
+  const credential = await signInWithCredential(
+    getFirebaseAuth(),
+    GoogleAuthProvider.credential(idToken, accessToken),
+  );
 
-    return {
-      firebaseIdToken: await credential.user.getIdToken(),
-      googleIdToken: idToken,
-    };
-  } finally {
-    state = null;
-    nonce = null;
-  }
+  return {
+    firebaseIdToken: await credential.user.getIdToken(),
+    googleIdToken: idToken,
+  };
 }
 
 export async function signInWithEmailPassword(
