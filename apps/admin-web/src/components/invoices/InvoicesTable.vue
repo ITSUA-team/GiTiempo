@@ -252,50 +252,47 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
       />
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
-      <div class="flex min-w-0 flex-col gap-1.5">
-        <label
-          for="mobile-invoice-period-filter"
-          class="text-text-muted text-[12px] font-medium"
-        >Period</label>
-        <DatePicker
-          input-id="mobile-invoice-period-filter"
-          :model-value="localDateRange"
-          aria-label="Filter invoices by period"
-          class="w-full"
-          date-format="M d"
-          data-testid="invoices-table-period-filter"
-          icon-display="input"
-          :manual-input="false"
-          placeholder="Date range"
-          :pt="giTiempoDatePickerPt"
-          selection-mode="range"
-          show-clear
-          show-icon
-          :title="selectedPeriodLabel"
-          @update:model-value="updatePeriodFilter"
-        />
-      </div>
+    <div class="flex min-w-0 flex-col gap-1.5">
+      <label
+        for="mobile-invoice-period-filter"
+        class="text-text-muted text-[12px] font-medium"
+      >Period</label>
+      <DatePicker
+        input-id="mobile-invoice-period-filter"
+        :model-value="localDateRange"
+        aria-label="Filter invoices by period"
+        date-format="M d"
+        data-testid="invoices-table-period-filter"
+        icon-display="input"
+        :manual-input="false"
+        placeholder="Date range"
+        :pt="giTiempoDatePickerPt"
+        selection-mode="range"
+        show-clear
+        show-icon
+        :title="selectedPeriodLabel"
+        @update:model-value="updatePeriodFilter"
+      />
+    </div>
 
-      <div class="flex min-w-0 flex-col gap-1.5">
-        <label
-          for="mobile-invoice-status-filter"
-          class="text-text-muted text-[12px] font-medium"
-        >Status</label>
-        <Select
-          id="mobile-invoice-status-filter"
-          :model-value="filters.status"
-          :options="filterOptions.statuses"
-          option-label="label"
-          option-value="value"
-          placeholder="All statuses"
-          show-clear
-          :pt="giTiempoFieldWidthSelectPt"
-          aria-label="Filter invoices by status"
-          data-testid="invoices-table-status-filter"
-          @update:model-value="updateStatusFilter"
-        />
-      </div>
+    <div class="flex min-w-0 flex-col gap-1.5">
+      <label
+        for="mobile-invoice-status-filter"
+        class="text-text-muted text-[12px] font-medium"
+      >Status</label>
+      <Select
+        id="mobile-invoice-status-filter"
+        :model-value="filters.status"
+        :options="filterOptions.statuses"
+        option-label="label"
+        option-value="value"
+        placeholder="All statuses"
+        show-clear
+        :pt="giTiempoFieldWidthSelectPt"
+        aria-label="Filter invoices by status"
+        data-testid="invoices-table-status-filter"
+        @update:model-value="updateStatusFilter"
+      />
     </div>
   </div>
 
