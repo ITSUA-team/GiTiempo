@@ -5,6 +5,7 @@ import {
   giTiempoFieldWidthSelectPt,
 } from '@gitiempo/web-config/theme';
 import {
+  DatePickerButtonBar,
   EmptyStateBlock,
   FilterAutoComplete,
   ManagementTableShell,
@@ -12,6 +13,7 @@ import {
   SectionHeader,
   filterAutocompleteOptions,
   normalizeReportDateRangeValue,
+  useDatePickerConfirmCancel,
   useIsMobileViewport,
   type ManagementTableColumn,
   type ReportDatePickerRangeValue,
@@ -76,6 +78,7 @@ const datePickerStyle = computed(() => {
   const width = reportDatePickerWidth.value;
   return width ? { width } : undefined;
 });
+const datePicker = useDatePickerConfirmCancel<ReportDatePickerRangeValue>();
 const projectFilterSuggestions = ref<ReportFilterOption[]>([]);
 const memberFilterSuggestions = ref<ReportFilterOption[]>([]);
 
@@ -282,6 +285,7 @@ function handleMemberFilterUpdate(
             class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center"
           >
             <DatePicker
+              :ref="datePicker.datePickerRef"
               :model-value="dateRange"
               aria-label="Report date range"
               class="w-full sm:w-[220px]"
@@ -295,8 +299,16 @@ function handleMemberFilterUpdate(
               show-button-bar
               show-clear
               show-icon
+              @show="datePicker.handleShow"
               @update:model-value="handleDateRangeUpdate"
-            />
+            >
+              <template #buttonbar>
+                <DatePickerButtonBar
+                  @cancel="datePicker.handleCancel"
+                  @confirm="datePicker.handleConfirm"
+                />
+              </template>
+            </DatePicker>
 
             <IconField class="w-full sm:w-[240px] md:w-[280px]">
               <InputIcon class="pi pi-search text-text-muted" />

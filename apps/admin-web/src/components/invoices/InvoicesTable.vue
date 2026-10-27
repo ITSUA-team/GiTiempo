@@ -4,11 +4,13 @@ import { PlusIcon } from '@heroicons/vue/24/outline';
 import type { InvoiceStatus } from '@gitiempo/shared';
 import { MAX_SEARCH_LENGTH } from '@gitiempo/shared';
 import {
+  DatePickerButtonBar,
   EmptyStateBlock,
   EntryActionButton,
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
+  useDatePickerConfirmCancel,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import {
@@ -103,6 +105,11 @@ watch(
     localDateRange.value = toInvoicesDatePickerRange(dateFrom, dateTo);
   },
 );
+
+const mobilePeriodPicker =
+  useDatePickerConfirmCancel<InvoicesDatePickerRangeValue>();
+const desktopPeriodPicker =
+  useDatePickerConfirmCancel<InvoicesDatePickerRangeValue>();
 
 const paginatorProps = computed(() => ({
   currentPageReportTemplate:
@@ -258,6 +265,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
         class="text-text-muted text-[12px] font-medium"
       >Period</label>
       <DatePicker
+        :ref="mobilePeriodPicker.datePickerRef"
         input-id="mobile-invoice-period-filter"
         :model-value="localDateRange"
         aria-label="Filter invoices by period"
@@ -268,11 +276,20 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
         placeholder="Date range"
         :pt="giTiempoDatePickerPt"
         selection-mode="range"
+        show-button-bar
         show-clear
         show-icon
         :title="selectedPeriodLabel"
+        @show="mobilePeriodPicker.handleShow"
         @update:model-value="updatePeriodFilter"
-      />
+      >
+        <template #buttonbar>
+          <DatePickerButtonBar
+            @cancel="mobilePeriodPicker.handleCancel"
+            @confirm="mobilePeriodPicker.handleConfirm"
+          />
+        </template>
+      </DatePicker>
     </div>
 
     <div class="flex min-w-0 flex-col gap-1.5">
@@ -392,6 +409,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
 
           <div class="w-[200px] pr-3">
             <DatePicker
+              :ref="desktopPeriodPicker.datePickerRef"
               :model-value="localDateRange"
               aria-label="Filter invoices by period"
               class="w-full"
@@ -402,11 +420,20 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
               placeholder="Date range"
               :pt="giTiempoDatePickerPt"
               selection-mode="range"
+              show-button-bar
               show-clear
               show-icon
               :title="selectedPeriodLabel"
+              @show="desktopPeriodPicker.handleShow"
               @update:model-value="updatePeriodFilter"
-            />
+            >
+              <template #buttonbar>
+                <DatePickerButtonBar
+                  @cancel="desktopPeriodPicker.handleCancel"
+                  @confirm="desktopPeriodPicker.handleConfirm"
+                />
+              </template>
+            </DatePicker>
           </div>
 
           <div class="w-[100px] pr-3" />
