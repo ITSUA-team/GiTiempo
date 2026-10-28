@@ -36,7 +36,7 @@ function getIconShellClass(name: string): string {
 
 <template>
   <aside
-    class="border-divider bg-surface-primary hidden w-20 border-r sm:flex sm:flex-col"
+    class="border-divider bg-surface-primary hidden w-20 border-r sm:sticky sm:top-16 sm:h-[calc(100dvh-4rem)] sm:shrink-0 sm:flex sm:flex-col sm:overflow-y-auto"
   >
     <nav class="flex flex-1 flex-col items-center gap-1 py-4">
       <RouterLink
