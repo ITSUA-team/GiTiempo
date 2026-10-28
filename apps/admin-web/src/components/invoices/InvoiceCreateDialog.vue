@@ -32,6 +32,7 @@ import Textarea from 'primevue/textarea';
 import { useEligibleEntriesPreview } from '@/composables/invoices/useEligibleEntriesPreview';
 import { getSettingsCurrencyOptions } from '@/lib/currencies';
 import { formatCurrency } from '@/lib/format-currency';
+import { computeInvoiceAmount } from '@/lib/invoice-amount';
 import { formatDuration } from '@/lib/format-duration';
 import type { AdminServerStateScope } from '@/lib/query-keys';
 import { getRoundingStepOptions } from '@/lib/rounding-step-options';
@@ -260,7 +261,7 @@ const computedTotalAmount = computed<number | null>(() => {
   const data = preview.value;
   if (!data) return null;
   const rate = hourlyRate.value ?? data.defaultHourlyRate ?? 0;
-  return data.totalHours * rate * (1 - (discountPercent.value ?? 0) / 100);
+  return computeInvoiceAmount(data.totalHours, rate, discountPercent.value ?? 0);
 });
 
 const previewSummary = computed<string | null>(() => {
@@ -628,7 +629,7 @@ async function handleCreate(): Promise<void> {
               body-style="text-align: right"
             >
               <template #body="{ data }">
-                {{ formatDuration(data.durationSeconds) }}
+                {{ formatDuration(data.roundedDurationSeconds) }}
               </template>
             </Column>
             <Column

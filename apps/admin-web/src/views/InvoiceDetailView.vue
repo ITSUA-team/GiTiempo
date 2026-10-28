@@ -523,7 +523,7 @@ function formatInstant(dateInput: string): string {
                   {{ entry.taskName ?? '—' }}
                 </td>
                 <td class="px-3 py-2 text-right">
-                  {{ formatDuration(entry.durationSeconds) }}
+                  {{ formatDuration(entry.roundedDurationSeconds) }}
                 </td>
                 <td class="text-text-muted px-3 py-2">
                   {{ entry.description ?? '—' }}

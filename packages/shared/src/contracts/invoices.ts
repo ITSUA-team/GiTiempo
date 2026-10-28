@@ -17,6 +17,9 @@ export const invoiceProjectSummarySchema = z.object({
 
 // A compact summary of a time entry linked to an invoice, used in the
 // detail response to show what was billed without re-fetching full entry context.
+// `durationSeconds` is the original raw tracked duration; `roundedDurationSeconds`
+// is the per-entry ceiling-rounded duration (using the invoice's rounding step)
+// that feeds the invoice totals and is what should be displayed to the user.
 export const invoiceTimeEntrySummarySchema = z.object({
   id: z.uuid(),
   taskId: z.uuid(),
@@ -26,6 +29,7 @@ export const invoiceTimeEntrySummarySchema = z.object({
   startedAt: dateTimeSchema,
   endedAt: dateTimeSchema,
   durationSeconds: z.number().int().positive(),
+  roundedDurationSeconds: z.number().int().positive(),
   isBillable: z.boolean(),
   description: z.string().nullable(),
 });
