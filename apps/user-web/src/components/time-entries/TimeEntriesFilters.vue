@@ -123,6 +123,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           selection-mode="range"
           fluid
           show-button-bar
+          show-clear
           show-icon
           :pt="giTiempoDatePickerPt"
           @show="datePicker.handleShow"

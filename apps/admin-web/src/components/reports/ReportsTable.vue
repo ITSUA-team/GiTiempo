@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
   giTiempoDatePickerPt,
   giTiempoFieldWidthSelectPt,
@@ -79,6 +79,11 @@ const datePickerStyle = computed(() => {
   return width ? { width } : undefined;
 });
 const datePicker = useDatePickerConfirmCancel<ReportDatePickerRangeValue>();
+const pendingDateRange = ref<ReportDatePickerRangeValue>(dateRange.value);
+
+watch(dateRange, (value) => {
+  pendingDateRange.value = value;
+});
 const projectFilterSuggestions = ref<ReportFilterOption[]>([]);
 const memberFilterSuggestions = ref<ReportFilterOption[]>([]);
 
@@ -228,7 +233,12 @@ function handleGlobalSearchUpdate(value: string | null | undefined): void {
 }
 
 function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
-  dateRange.value = normalizeReportDateRangeValue(value);
+  pendingDateRange.value = value;
+}
+
+function handleDateRangeConfirm(): void {
+  dateRange.value = normalizeReportDateRangeValue(pendingDateRange.value);
+  datePicker.handleConfirm();
 }
 
 function handleProjectFilterComplete(event: AutoCompleteCompleteEvent): void {
@@ -286,7 +296,7 @@ function handleMemberFilterUpdate(
           >
             <DatePicker
               :ref="datePicker.datePickerRef"
-              :model-value="dateRange"
+              :model-value="pendingDateRange"
               aria-label="Report date range"
               class="w-full sm:w-[220px]"
               date-format="M d, yy"
@@ -305,7 +315,7 @@ function handleMemberFilterUpdate(
               <template #buttonbar>
                 <DatePickerButtonBar
                   @cancel="datePicker.handleCancel"
-                  @confirm="datePicker.handleConfirm"
+                  @confirm="handleDateRangeConfirm"
                 />
               </template>
             </DatePicker>
