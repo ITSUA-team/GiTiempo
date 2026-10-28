@@ -19,21 +19,25 @@ import { useAuthStore } from '@/stores/auth';
 const AddProjectMockView = () => import('@/views/AddProjectView.vue');
 const DashboardView = () => import('@/views/DashboardView.vue');
 const ForbiddenView = () => import('@/views/ForbiddenView.vue');
+const ForgotPasswordView = () => import('@/views/ForgotPasswordView.vue');
 const GithubCallbackView = () => import('@/views/GithubCallbackView.vue');
 const InvoiceDetailView = () => import('@/views/InvoiceDetailView.vue');
 const InvoicesView = () => import('@/views/InvoicesView.vue');
 const MembersView = () => import('@/views/MembersView.vue');
 const NotFoundView = () => import('@/views/NotFoundView.vue');
 const ProjectsView = () => import('@/views/ProjectsView.vue');
+const ResetPasswordView = () => import('@/views/ResetPasswordView.vue');
 const ReportsView = () => import('@/views/ReportsView.vue');
 const SettingsView = () => import('@/views/SettingsView.vue');
 
 type AdminRouteName = (typeof routeNames)[keyof typeof routeNames];
 type AdminNonProductRouteName =
   | typeof routeNames.forbidden
+  | typeof routeNames.forgotPassword
   | typeof routeNames.githubCallback
   | typeof routeNames.login
-  | typeof routeNames.notFound;
+  | typeof routeNames.notFound
+  | typeof routeNames.resetPassword;
 type AdminProductRouteName = Exclude<AdminRouteName, AdminNonProductRouteName>;
 
 const adminOnlyRoles = [
@@ -60,6 +64,22 @@ const publicRoutes: RouteRecordRaw[] = [
     path: '/auth/github/callback',
     name: routeNames.githubCallback,
     component: GithubCallbackView,
+    meta: {
+      allowAuthenticatedGuestFlow: true,
+    },
+  },
+  {
+    path: '/auth/forgot-password',
+    name: routeNames.forgotPassword,
+    component: ForgotPasswordView,
+    meta: {
+      guestOnly: true,
+    },
+  },
+  {
+    path: '/auth/reset-password',
+    name: routeNames.resetPassword,
+    component: ResetPasswordView,
     meta: {
       allowAuthenticatedGuestFlow: true,
     },

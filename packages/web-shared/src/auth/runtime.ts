@@ -1,8 +1,11 @@
 import {
   GoogleAuthProvider,
+  confirmPasswordReset as firebaseConfirmPasswordReset,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  verifyPasswordResetCode as firebaseVerifyPasswordResetCode,
   type Auth,
 } from "firebase/auth";
 
@@ -38,6 +41,11 @@ export interface AuthRuntime {
   ): Promise<string>;
   signInWithGoogle(): Promise<FirebaseSignInResult>;
   signOutIdentityProvider(): Promise<void>;
+  requestPasswordReset(email: string): Promise<void>;
+  // Deliberately granular (no combined resetPasswordWithActionCode): verify
+  // returns the email at mount, confirm applies the update on submit.
+  verifyPasswordResetCode(oobCode: string): Promise<string>;
+  confirmPasswordReset(oobCode: string, newPassword: string): Promise<void>;
   updateCurrentUser: CurrentUserClient["updateCurrentUser"];
 }
 
@@ -90,6 +98,36 @@ export function createDefaultAuthRuntime({
     await signOut(getFirebaseAuth());
   }
 
+  // The continueUrl is where Firebase redirects AFTER it processes the action
+  // on its own handler page. It is NOT the URL that appears as the link in the
+  // reset email — that is controlled by the Firebase Console Action URL setting.
+  // The login page is the sensible post-reset destination; the SPA's own
+  // /auth/reset-password route is reached directly when the Firebase Console
+  // Action URL is configured to point at it (see docs/ui/pages-user.md).
+  function getResetPasswordContinueUrl(): string {
+    const origin =
+      typeof window === "undefined" ? "http://localhost" : window.location.origin;
+
+    return `${origin}/login`;
+  }
+
+  async function requestPasswordReset(email: string): Promise<void> {
+    await sendPasswordResetEmail(getFirebaseAuth(), email, {
+      url: getResetPasswordContinueUrl(),
+    });
+  }
+
+  async function verifyPasswordResetCode(oobCode: string): Promise<string> {
+    return firebaseVerifyPasswordResetCode(getFirebaseAuth(), oobCode);
+  }
+
+  async function confirmPasswordReset(
+    oobCode: string,
+    newPassword: string,
+  ): Promise<void> {
+    await firebaseConfirmPasswordReset(getFirebaseAuth(), oobCode, newPassword);
+  }
+
   return {
     getCurrentUser: currentUserClient.getCurrentUser,
     listCurrentUserWorkspaces: currentUserClient.listCurrentUserWorkspaces,
@@ -102,6 +140,9 @@ export function createDefaultAuthRuntime({
     signInWithEmailPassword,
     signInWithGoogle,
     signOutIdentityProvider,
+    requestPasswordReset,
+    verifyPasswordResetCode,
+    confirmPasswordReset,
     updateCurrentUser: currentUserClient.updateCurrentUser,
   };
 }

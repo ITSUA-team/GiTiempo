@@ -1,6 +1,7 @@
 export const routeNames = {
   addProject: 'admin-add-project',
   dashboard: 'admin-dashboard',
+  forgotPassword: 'forgot-password',
   forbidden: 'admin-forbidden',
   githubCallback: 'admin-github-callback',
   invoiceDetail: 'admin-invoice-detail',
@@ -10,5 +11,6 @@ export const routeNames = {
   notFound: 'admin-not-found',
   projects: 'admin-projects',
   reports: 'admin-reports',
+  resetPassword: 'reset-password',
   settings: 'admin-settings',
 } as const;

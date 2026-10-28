@@ -61,6 +61,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "user@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,

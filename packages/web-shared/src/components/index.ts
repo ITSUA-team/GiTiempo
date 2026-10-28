@@ -4,6 +4,8 @@ export { authGradientPanelClass } from "./auth-panel";
 export { default as ExtensionCallout } from "./ExtensionCallout.vue";
 export { getExtensionInstallHref } from "./extension-link";
 export { default as AuthSignInForm } from "./AuthSignInForm.vue";
+export { default as AuthForgotPasswordForm } from "./AuthForgotPasswordForm.vue";
+export { default as AuthResetPasswordForm } from "./AuthResetPasswordForm.vue";
 export { default as BillableDefaultBackfillDialog } from "./BillableDefaultBackfillDialog.vue";
 export { default as DatePickerButtonBar } from "./DatePickerButtonBar.vue";
 export { default as DialogFooterActionGroups } from "./DialogFooterActionGroups.vue";

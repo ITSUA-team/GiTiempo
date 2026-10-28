@@ -3,6 +3,7 @@ export * from "./autocomplete";
 export * from "./avatar";
 export * from "./browser-history";
 export * from "./debounce";
+export * from "./firebase-errors";
 export * from "./feedback";
 export * from "./components";
 export * from "./date-picker-button-bar";

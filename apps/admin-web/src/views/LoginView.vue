@@ -156,6 +156,7 @@ function handleGithubSignIn(): void {
           :error-help-href="errorHelpHref"
           :error-help-label="errorHelpLabel"
           :error-message="errorMessage"
+          :forgot-password-to="{ name: routeNames.forgotPassword }"
           :github-enabled="appEnv.githubSignInEnabled"
           :is-submitting="authStore.isSubmitting"
           @submit-credentials="handleEmailSignIn"

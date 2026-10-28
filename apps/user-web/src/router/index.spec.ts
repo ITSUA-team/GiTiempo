@@ -15,10 +15,12 @@ import {
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
 import ForbiddenView from "@/views/ForbiddenView.vue";
+import ForgotPasswordView from "@/views/ForgotPasswordView.vue";
 import InviteAcceptView from "@/views/InviteAcceptView.vue";
 import InvitePasswordSetupView from "@/views/InvitePasswordSetupView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
 import RegisterView from "@/views/RegisterView.vue";
+import ResetPasswordView from "@/views/ResetPasswordView.vue";
 
 type LazyRouteComponent = () => Promise<{ default: unknown }>;
 
@@ -80,6 +82,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "user@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -172,6 +177,42 @@ describe("app router auth guards", () => {
     );
   });
 
+  it("defines the standalone forgot password route outside the app shell", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const forgotPasswordRoute = router.resolve("/auth/forgot-password");
+
+    expect(forgotPasswordRoute.name).toBe(routeNames.forgotPassword);
+    expect(forgotPasswordRoute.meta.guestOnly).toBe(true);
+    expect(forgotPasswordRoute.matched).toHaveLength(1);
+    await expectLazyRouteComponent(
+      forgotPasswordRoute.matched[0]?.components?.default,
+      ForgotPasswordView,
+    );
+  });
+
+  it("defines the standalone reset password route outside the app shell", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const resetPasswordRoute = router.resolve(
+      "/auth/reset-password?mode=resetPassword&oobCode=valid-code",
+    );
+
+    expect(resetPasswordRoute.name).toBe(routeNames.resetPassword);
+    expect(resetPasswordRoute.meta.allowAuthenticatedGuestFlow).toBe(true);
+    expect(resetPasswordRoute.matched).toHaveLength(1);
+    await expectLazyRouteComponent(
+      resetPasswordRoute.matched[0]?.components?.default,
+      ResetPasswordView,
+    );
+  });
+
   it("defines the standalone register route outside the app shell", () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
@@ -248,6 +289,45 @@ describe("app router auth guards", () => {
     await router.isReady();
 
     expect(router.currentRoute.value.fullPath).toBe("/time-entries");
+  });
+
+  it("redirects authenticated users away from the forgot password route", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "access-token";
+    authStore.bootstrapComplete = true;
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/auth/forgot-password");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("keeps authenticated users on the reset password route from an action-code link", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "access-token";
+    authStore.bootstrapComplete = true;
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/auth/reset-password?mode=resetPassword&oobCode=valid-code");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.resetPassword);
+    expect(router.currentRoute.value.query.oobCode).toBe("valid-code");
   });
 
   it("redirects anonymous users from unknown routes to login", async () => {

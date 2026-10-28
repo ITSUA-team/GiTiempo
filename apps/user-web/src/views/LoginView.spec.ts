@@ -68,6 +68,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "user@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -126,6 +129,34 @@ describe("LoginView", () => {
     await routeReady;
 
     expect(router.currentRoute.value.fullPath).toBe("/time-entries");
+  });
+
+  it("renders the forgot password link in the password field row", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    const forgotLink = wrapper.get('[data-testid="sign-in-forgot-password"]');
+
+    expect(forgotLink.text()).toContain("Forgot?");
+    expect(forgotLink.attributes("href")).toBe("/auth/forgot-password");
+  });
+
+  it("navigates to the forgot password route without submitting the login form", async () => {
+    const signInWithEmailPassword = vi.fn(async () => "firebase-email-token");
+    setAuthRuntimeForTesting(createRuntimeMock({ signInWithEmailPassword }));
+    const { router, wrapper } = await mountLoginView();
+
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("alexey@example.com");
+    await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.forgotPassword,
+    );
+    await wrapper.get('[data-testid="sign-in-forgot-password"]').trigger("click");
+    await routeReady;
+
+    expect(router.currentRoute.value.fullPath).toBe("/auth/forgot-password");
+    expect(signInWithEmailPassword).not.toHaveBeenCalled();
   });
 
   it("signs in with Google through the UI and redirects to the dashboard", async () => {

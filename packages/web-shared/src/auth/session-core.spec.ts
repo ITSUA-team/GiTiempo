@@ -62,6 +62,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "alexey@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -267,6 +270,60 @@ describe("createAuthSessionCore", () => {
 
     expect(session.isAuthenticated.value).toBe(true);
     expect(session.profile.value?.email).toBe("alexey@example.com");
+    expect(session.isSubmitting.value).toBe(false);
+  });
+
+  it("forwards password recovery calls to the auth runtime", async () => {
+    const requestPasswordReset = vi.fn(async () => undefined);
+    const verifyPasswordResetCode = vi.fn(async () => "alexey@example.com");
+    const confirmPasswordReset = vi.fn(async () => undefined);
+    const runtime = createRuntimeMock({
+      requestPasswordReset,
+      verifyPasswordResetCode,
+      confirmPasswordReset,
+    });
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+
+    const verifiedEmail = await session.verifyPasswordResetCode("valid-code");
+    await session.confirmPasswordReset("valid-code", "new-password");
+    await session.requestPasswordReset("alexey@example.com");
+
+    expect(verifiedEmail).toBe("alexey@example.com");
+    expect(verifyPasswordResetCode).toHaveBeenCalledWith("valid-code");
+    expect(confirmPasswordReset).toHaveBeenCalledWith(
+      "valid-code",
+      "new-password",
+    );
+    expect(requestPasswordReset).toHaveBeenCalledWith("alexey@example.com");
+  });
+
+  it("propagates password recovery failures without touching the session", async () => {
+    const pendingRequest = deferred<void>();
+    const runtime = createRuntimeMock({
+      requestPasswordReset: () => pendingRequest.promise,
+      verifyPasswordResetCode: async () => {
+        throw new Error("verify failed");
+      },
+      confirmPasswordReset: async () => {
+        throw new Error("confirm failed");
+      },
+    });
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+
+    const request = session.requestPasswordReset("alexey@example.com");
+    // Recovery calls bypass runSubmittingLogin, so the flag must stay down
+    // even while the request is still pending.
+    expect(session.isSubmitting.value).toBe(false);
+
+    pendingRequest.reject(new Error("send failed"));
+    await expect(request).rejects.toThrow("send failed");
+    await expect(session.verifyPasswordResetCode("valid-code")).rejects.toThrow(
+      "verify failed",
+    );
+    await expect(
+      session.confirmPasswordReset("valid-code", "new-password"),
+    ).rejects.toThrow("confirm failed");
+    expect(session.isAuthenticated.value).toBe(false);
     expect(session.isSubmitting.value).toBe(false);
   });
 

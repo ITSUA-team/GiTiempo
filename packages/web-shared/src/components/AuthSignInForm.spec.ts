@@ -1,6 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
 import { describe, expect, it } from "vitest";
+import { createMemoryHistory, createRouter } from "vue-router";
 
 import AuthSignInForm from "./AuthSignInForm.vue";
 
@@ -18,6 +19,42 @@ function mountForm(props?: Partial<InstanceType<typeof AuthSignInForm>["$props"]
       plugins: [PrimeVue],
     },
   });
+}
+
+async function mountFormWithRouter(
+  props?: Partial<InstanceType<typeof AuthSignInForm>["$props"]>,
+  slots?: Record<string, string>,
+) {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: "/", name: "login", component: { template: "<div />" } },
+      {
+        path: "/auth/forgot-password",
+        name: "forgot-password",
+        component: { template: "<div />" },
+      },
+    ],
+  });
+  await router.push("/");
+  await router.isReady();
+
+  const wrapper = mount(AuthSignInForm, {
+    props: {
+      description: "Use your workspace account to continue.",
+      emailPlaceholder: "alex@example.com",
+      errorMessage: null,
+      isSubmitting: false,
+      title: "Sign in",
+      ...props,
+    },
+    slots,
+    global: {
+      plugins: [PrimeVue, router],
+    },
+  });
+
+  return { router, wrapper };
 }
 
 function mountFormWithSlot() {
@@ -162,5 +199,84 @@ describe("AuthSignInForm", () => {
 
     expect(wrapper.get('label[for="sign-in-email"]').text()).toBe("Email");
     expect(wrapper.get("input#sign-in-email").attributes("name")).toBe("email");
+  });
+
+  it("renders no forgot-password link by default", () => {
+    const wrapper = mountForm();
+
+    expect(wrapper.find('[data-testid="sign-in-forgot-password"]').exists()).toBe(false);
+  });
+
+  it("renders the Forgot? link inline with the password label when forgotPasswordTo is set", async () => {
+    const { wrapper } = await mountFormWithRouter({
+      forgotPasswordTo: { name: "forgot-password" },
+    });
+
+    const row = wrapper
+      .get('label[for="sign-in-password"]')
+      .element.parentElement!;
+    const link = wrapper.get('[data-testid="sign-in-forgot-password"]');
+
+    expect(row.className).toContain("justify-between");
+    expect(link.text()).toBe("Forgot?");
+    expect(link.classes()).toContain("text-brand");
+    expect(link.classes()).toContain("text-[13px]");
+    expect(link.classes()).toContain("font-semibold");
+  });
+
+  it("renders forgot-password slot content when the prop is not set", async () => {
+    const { wrapper } = await mountFormWithRouter(
+      {},
+      {
+        "forgot-password":
+          '<a href="#" data-testid="custom-forgot-link">Custom forgot</a>',
+      },
+    );
+
+    expect(wrapper.get('[data-testid="custom-forgot-link"]').text()).toBe(
+      "Custom forgot",
+    );
+    expect(
+      wrapper.find('[data-testid="sign-in-forgot-password"]').exists(),
+    ).toBe(false);
+  });
+
+  it("navigates via the Forgot? link without submitting the login form", async () => {
+    const { router, wrapper } = await mountFormWithRouter({
+      forgotPasswordTo: { name: "forgot-password" },
+    });
+
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("alex@example.com");
+    await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
+    await wrapper.get('[data-testid="sign-in-forgot-password"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("forgot-password");
+    expect(wrapper.emitted("submitCredentials")).toBeUndefined();
+    // The login attempt state survives the navigation untouched.
+    expect(
+      (wrapper.get('[data-testid="sign-in-email"]').element as HTMLInputElement).value,
+    ).toBe("alex@example.com");
+  });
+
+  describe("renders mobile-friendly class hooks", () => {
+    it("keeps the Forgot? link visible and unwrapped in the password row", async () => {
+      const { wrapper } = await mountFormWithRouter({
+        forgotPasswordTo: { name: "forgot-password" },
+      });
+
+      const row = wrapper
+        .get('label[for="sign-in-password"]')
+        .element.parentElement!;
+      const link = wrapper.get('[data-testid="sign-in-forgot-password"]');
+
+      expect(row.className).toContain("items-center");
+      expect(row.className).toContain("gap-2");
+      // shrink-0 + whitespace-nowrap keep the single-word label intact rather
+      // than wrapping or being squeezed out below the breakpoint.
+      expect(link.classes()).toContain("shrink-0");
+      expect(link.classes()).toContain("whitespace-nowrap");
+      expect(link.isVisible()).toBe(true);
+    });
   });
 });
