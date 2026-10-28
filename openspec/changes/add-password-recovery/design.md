@@ -36,7 +36,7 @@ See `proposal.md` for motivation. The relevant current state, gathered from the 
 
 ### D1: Pure frontend, Firebase client SDK `sendPasswordResetEmail`
 
-Use `sendPasswordResetEmail(auth, email, { url: <in-app continue URL>, handleCodeInApp: true })` from `firebase/auth`. No new `apps/api` endpoint.
+Use `sendPasswordResetEmail(auth, email, { url: <continue URL> })` from `firebase/auth`. No new `apps/api` endpoint. The continue URL points at `/login` (the sensible post-action destination). `handleCodeInApp` is deliberately NOT set — for password reset, Firebase's `__/auth/action` handler always shows its own reset form regardless of this flag, and `handleCodeInApp: true` only causes a post-action redirect to the continue URL with an already-consumed `oobCode`. The email link URL is controlled by the Firebase Console Action URL setting, which must be configured to point at the SPA's `/auth/reset-password` route for the in-app reset flow to work.
 
 **Why over a backend endpoint:** the project's documented auth direction is "frontend authenticates with Firebase Auth". The existing invite password-setup flow already handles Firebase action codes entirely in-app. Issue #474 mentions "integrate backend API for sending the password reset link", but the standard Firebase client SDK call satisfies the user-visible requirement with less surface area, no new contract, and no throttle/auth changes. The `FirebaseAdminService` extension point (interface + real + fake + tests + e2e, per `apps/api/AGENTS.md`) remains the path if branded backend-delivered email is needed later.
 
@@ -44,7 +44,7 @@ Use `sendPasswordResetEmail(auth, email, { url: <in-app continue URL>, handleCod
 
 ### D2: App-hosted reset landing page (not Firebase-hosted)
 
-`sendPasswordResetEmail`'s `actionCodeSettings.url` points at a new in-app route `/auth/reset-password` (both SPAs) with `handleCodeInApp: true`. The landing page runs `verifyPasswordResetCode` then `confirmPasswordReset`, exactly like `InvitePasswordSetupView.vue`.
+`sendPasswordResetEmail`'s `actionCodeSettings.url` is the continue URL pointing at `/login` (where Firebase redirects after processing the action on its handler page). The email link itself is controlled by the Firebase Console Action URL setting, which must be set to the SPA's `/auth/reset-password` route so the email link goes directly to the SPA with `mode=resetPassword&oobCode=...` query parameters. The landing page runs `verifyPasswordResetCode` then `confirmPasswordReset`, exactly like `InvitePasswordSetupView.vue`. `handleCodeInApp` is NOT set (see D1).
 
 **Why:** the issue requires a success notification and redirect to Login after the password update. Firebase's hosted reset page would hand control back to the app only via `continueUrl`, with no in-app toast. The invite password-setup precedent proves in-app action-code handling works and keeps passwords out of GiTiempo APIs.
 

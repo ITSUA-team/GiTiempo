@@ -98,17 +98,22 @@ export function createDefaultAuthRuntime({
     await signOut(getFirebaseAuth());
   }
 
+  // The continueUrl is where Firebase redirects AFTER it processes the action
+  // on its own handler page. It is NOT the URL that appears as the link in the
+  // reset email — that is controlled by the Firebase Console Action URL setting.
+  // The login page is the sensible post-reset destination; the SPA's own
+  // /auth/reset-password route is reached directly when the Firebase Console
+  // Action URL is configured to point at it (see docs/ui/pages-user.md).
   function getResetPasswordContinueUrl(): string {
     const origin =
       typeof window === "undefined" ? "http://localhost" : window.location.origin;
 
-    return `${origin}/auth/reset-password`;
+    return `${origin}/login`;
   }
 
   async function requestPasswordReset(email: string): Promise<void> {
     await sendPasswordResetEmail(getFirebaseAuth(), email, {
       url: getResetPasswordContinueUrl(),
-      handleCodeInApp: true,
     });
   }
 

@@ -177,7 +177,7 @@
 
 - `/auth/forgot-password` and `/auth/reset-password` exist in admin-web with the same standalone placement, route guards (guest-only request route, `allowAuthenticatedGuestFlow` reset route), fields, gradient actions, and Firebase action-code behavior as the user-web Password Recovery Request Page and Reset Password Landing Page.
 - Both pages render the shared `AuthForgotPasswordForm` and `AuthResetPasswordForm` forms and follow the same notification conventions: `createAppToast` for toasts, inline `Message` for client-side validation, `logContext: { action, feature }` on Firebase-failure error toasts, and a success toast with redirect to the admin-web `/login` route after the password update.
-- The full sections in `pages-user.md` cover the shared details: the checking state (`Checking reset link...`), the verified-email notice, success and invalid-link panel states, mapped Firebase error codes, the no-enumeration success copy, the Firebase Console continue-URL allowlisting step, the `.pen` parity fallback (including the `Forgot?` label-row placement deviation), and the narrow-viewport collapse. Admin-web implements the same behavior with its own routes, intro content, and redirect targets.
+- The full sections in `pages-user.md` cover the shared details: the checking state (`Checking reset link...`), the verified-email notice, success and invalid-link panel states, mapped Firebase error codes, the no-enumeration success copy, the Firebase Console Action URL and authorized-domains setup, the `.pen` parity fallback (including the `Forgot?` label-row placement deviation), and the narrow-viewport collapse. Admin-web implements the same behavior with its own routes, intro content, and redirect targets.
 
 ## Cross-App Navigation
 

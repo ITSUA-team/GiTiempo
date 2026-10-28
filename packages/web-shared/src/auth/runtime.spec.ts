@@ -200,7 +200,7 @@ describe("createDefaultAuthRuntime", () => {
     });
   });
 
-  it("sends the password reset email with an in-app continue URL", async () => {
+  it("sends the password reset email with a login continue URL", async () => {
     firebaseMocks.sendPasswordResetEmail.mockResolvedValueOnce(undefined);
     const runtime = createRuntime();
 
@@ -211,8 +211,7 @@ describe("createDefaultAuthRuntime", () => {
       {},
       "alexey@example.com",
       {
-        url: `${window.location.origin}/auth/reset-password`,
-        handleCodeInApp: true,
+        url: `${window.location.origin}/login`,
       },
     );
   });
