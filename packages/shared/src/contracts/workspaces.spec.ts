@@ -18,6 +18,7 @@ const settingsResponse = {
   workspaceId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002',
   currency: 'USD',
   defaultHourlyRate: 100,
+  timeRoundingStepMinutes: 1,
   timeZone: 'UTC',
   createdAt: '2026-05-01T00:00:00.000Z',
   updatedAt: '2026-05-01T00:00:00.000Z',
@@ -68,6 +69,36 @@ describe('workspaceSettingsResponseSchema', () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(['timeZone']);
   });
+
+  it('requires a non-null timeRoundingStepMinutes in the response', () => {
+    const result = workspaceSettingsResponseSchema.safeParse({
+      ...settingsResponse,
+      timeRoundingStepMinutes: null,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
+
+  it('rejects timeRoundingStepMinutes of 0 in the response', () => {
+    const result = workspaceSettingsResponseSchema.safeParse({
+      ...settingsResponse,
+      timeRoundingStepMinutes: 0,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
+
+  it('rejects timeRoundingStepMinutes over 60 in the response', () => {
+    const result = workspaceSettingsResponseSchema.safeParse({
+      ...settingsResponse,
+      timeRoundingStepMinutes: 61,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
 });
 
 describe('updateWorkspaceSettingsSchema', () => {
@@ -116,6 +147,58 @@ describe('updateWorkspaceSettingsSchema', () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it('accepts a valid timeRoundingStepMinutes update', () => {
+    const result = updateWorkspaceSettingsSchema.parse({
+      timeRoundingStepMinutes: 5,
+    });
+
+    expect(result.timeRoundingStepMinutes).toBe(5);
+  });
+
+  it('accepts timeRoundingStepMinutes as the only updated field', () => {
+    const result = updateWorkspaceSettingsSchema.safeParse({
+      timeRoundingStepMinutes: 15,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects timeRoundingStepMinutes of 0', () => {
+    const result = updateWorkspaceSettingsSchema.safeParse({
+      timeRoundingStepMinutes: 0,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
+
+  it('rejects timeRoundingStepMinutes over 60', () => {
+    const result = updateWorkspaceSettingsSchema.safeParse({
+      timeRoundingStepMinutes: 61,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
+
+  it('rejects a non-integer timeRoundingStepMinutes', () => {
+    const result = updateWorkspaceSettingsSchema.safeParse({
+      timeRoundingStepMinutes: 2.5,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
+
+  it('rejects null timeRoundingStepMinutes', () => {
+    const result = updateWorkspaceSettingsSchema.safeParse({
+      timeRoundingStepMinutes: null,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
   });
 });
 

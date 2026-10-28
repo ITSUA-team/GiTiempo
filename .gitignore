@@ -17,6 +17,7 @@ packages/shared/dist/
 packages/shared/*.tsbuildinfo
 packages/*/dist/
 packages/*/*.tsbuildinfo
+firebase-debug.log
 .claude
 .codegraph
 .omc

@@ -3,6 +3,7 @@ import {
   check,
   date,
   index,
+  integer,
   numeric,
   pgTable,
   text,
@@ -59,6 +60,7 @@ export const invoices = pgTable(
     })
       .default(0)
       .notNull(),
+    roundingStepMinutes: integer('rounding_step_minutes').default(1).notNull(),
     notes: text('notes'),
     createdBy: uuid('created_by')
       .notNull()
@@ -88,6 +90,10 @@ export const invoices = pgTable(
     check('invoices_hourly_rate_check', sql`${table.hourlyRate} >= 0`),
     check('invoices_total_hours_check', sql`${table.totalHours} >= 0`),
     check('invoices_total_amount_check', sql`${table.totalAmount} >= 0`),
+    check(
+      'invoices_rounding_step_minutes_check',
+      sql`${table.roundingStepMinutes} >= 1 AND ${table.roundingStepMinutes} <= 60`,
+    ),
   ],
 );
 

@@ -90,6 +90,7 @@ const settingsResponse = {
   currency: 'USD',
   defaultHourlyRate: 120,
   id: '22222222-2222-4222-8222-222222222222',
+  timeRoundingStepMinutes: 1,
   timeZone: 'UTC',
   updatedAt: '2026-05-01T10:00:00.000Z',
   workspaceId: '11111111-1111-4111-8111-111111111111',
@@ -233,7 +234,7 @@ const SelectStub = {
       :id="inputId"
       :aria-invalid="invalid ? 'true' : undefined"
       :value="modelValue"
-      @change="$emit('update:modelValue', $event.target.value)"
+      @change="$emit('update:modelValue', options[$event.target.selectedIndex]?.[optionValue] ?? $event.target.value)"
     >
       <option
         v-for="option in options"
@@ -438,6 +439,7 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('Workspace name');
     expect(wrapper.text()).toContain('Default hourly rate');
     expect(wrapper.text()).toContain('Currency');
+    expect(wrapper.text()).toContain('Time rounding step (minutes)');
     expect(wrapper.text()).toContain('Time zone');
     expect(wrapper.text()).toContain('Billing Defaults');
     expect(wrapper.text()).toContain('Invoice prefix');
@@ -454,6 +456,22 @@ describe('SettingsView', () => {
     expect(
       wrapper.get<HTMLInputElement>('#settings-time-zone').element.value,
     ).toBe('UTC');
+    expect(
+      wrapper.get<HTMLSelectElement>('#settings-time-rounding-step-minutes')
+        .element.value,
+    ).toBe('1');
+
+    const sectionLabels = wrapper
+      .findAll('label')
+      .map((label) => label.text());
+    const currencyIndex = sectionLabels.indexOf('Currency');
+    const roundingStepIndex = sectionLabels.indexOf(
+      'Time rounding step (minutes)',
+    );
+    const timeZoneIndex = sectionLabels.indexOf('Time zone');
+
+    expect(roundingStepIndex).toBeGreaterThan(currencyIndex);
+    expect(timeZoneIndex).toBeGreaterThan(roundingStepIndex);
     expect(
       wrapper.get('#settings-workspace-name').element.closest('form'),
     ).not.toBeNull();
@@ -777,6 +795,75 @@ describe('SettingsView', () => {
       timeZone: 'Europe/Kyiv',
     });
     expect(testMocks.successToast).toHaveBeenCalledWith('Settings saved.');
+  });
+
+  it('initializes the rounding step selector from loaded settings', async () => {
+    testMocks.getWorkspaceSettings.mockResolvedValueOnce({
+      ...settingsResponse,
+      timeRoundingStepMinutes: 15,
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(
+      wrapper.get('label[for="settings-time-rounding-step-minutes"]').text(),
+    ).toBe('Time rounding step (minutes)');
+    expect(
+      wrapper.get<HTMLSelectElement>('#settings-time-rounding-step-minutes')
+        .element.value,
+    ).toBe('15');
+    expect(wrapper.text()).toContain('1 min');
+    expect(wrapper.text()).toContain('5 min');
+    expect(wrapper.text()).toContain('10 min');
+    expect(wrapper.text()).toContain('15 min');
+    expect(wrapper.text()).toContain('30 min');
+    expect(wrapper.text()).toContain('60 min');
+  });
+
+  it('submits changed rounding step through the existing workspace settings save action', async () => {
+    testMocks.updateWorkspaceSettings.mockResolvedValueOnce({
+      ...settingsResponse,
+      timeRoundingStepMinutes: 30,
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    await wrapper.get('#settings-time-rounding-step-minutes').setValue('30');
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Save Settings')
+      ?.trigger('click');
+    await flushPromises();
+
+    expect(testMocks.updateWorkspace).not.toHaveBeenCalled();
+    expect(testMocks.updateWorkspaceSettings).toHaveBeenCalledWith({
+      timeRoundingStepMinutes: 30,
+    });
+    expect(testMocks.successToast).toHaveBeenCalledWith('Settings saved.');
+    expect(
+      wrapper.get<HTMLSelectElement>('#settings-time-rounding-step-minutes')
+        .element.value,
+    ).toBe('30');
+  });
+
+  it('restores the persisted rounding step on cancel without saving', async () => {
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    await wrapper.get('#settings-time-rounding-step-minutes').setValue('30');
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Cancel')
+      ?.trigger('click');
+
+    expect(
+      wrapper.get<HTMLSelectElement>('#settings-time-rounding-step-minutes')
+        .element.value,
+    ).toBe('1');
+    expect(testMocks.updateWorkspace).not.toHaveBeenCalled();
+    expect(testMocks.updateWorkspaceSettings).not.toHaveBeenCalled();
   });
 
   it('keeps initial request failures distinct and retryable', async () => {

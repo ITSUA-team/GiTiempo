@@ -22,6 +22,7 @@ const project: ProjectResponse = {
   members: [],
   name: "External project",
   referenceProvenance: "user-supplied",
+  timeRoundingStepMinutes: null,
   source: "github",
   totalSeconds: 3600,
   trackingMode: "external-reference",

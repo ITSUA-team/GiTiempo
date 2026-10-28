@@ -52,6 +52,7 @@ function createInvoiceResponse(): InvoiceResponse {
     timeEntries: [],
     timeEntryCount: 0,
     title: 'April 2026 — Backend',
+    roundingStepMinutes: 1,
     totalAmount: 1000,
     totalHours: 12.5,
     updatedAt: '2026-05-01T10:00:00.000Z',

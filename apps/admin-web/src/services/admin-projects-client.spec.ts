@@ -37,6 +37,7 @@ const projectResponse = {
 	color: null,
 	createdAt: '2026-05-01T10:00:00.000Z',
 	defaultBillableForTasks: false,
+	timeRoundingStepMinutes: null,
 	description: null,
 	id: '11111111-1111-4111-8111-111111111111',
 	isActive: true,
@@ -101,6 +102,31 @@ describe('createAdminProjectsClient', () => {
 			visibility: 'private',
 		});
 		expect(result.defaultBillableForTasks).toBe(false);
+	});
+
+	it('sends the time rounding step in create and update payloads', async () => {
+		fetchFn.mockResolvedValue(jsonResponse(projectResponse));
+
+		await client.createProject({
+			defaultBillableForTasks: false,
+			name: 'Project Orion',
+			timeRoundingStepMinutes: null,
+			visibility: 'private',
+		});
+
+		expect(getRequestBody(fetchFn)).toMatchObject({
+			timeRoundingStepMinutes: null,
+		});
+
+		fetchFn.mockResolvedValue(jsonResponse(projectResponse));
+
+		await client.updateProject(projectResponse.id, {
+			timeRoundingStepMinutes: 15,
+		});
+
+		expect(getRequestBody(fetchFn)).toEqual({
+			timeRoundingStepMinutes: 15,
+		});
 	});
 
 	it('updates projects with the future default only', async () => {

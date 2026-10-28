@@ -105,16 +105,16 @@ type PrivateMethod<TArgs extends unknown[], TResult> = (
   ...args: TArgs
 ) => TResult;
 
-/** Accesses a private service helper for behavior-focused unit assertions. */
+/** Accesses a private class helper (instance or static) for unit assertions. */
 function priv<TArgs extends unknown[], TResult>(
-  service: InvoicesService,
+  owner: InvoicesService | typeof InvoicesService,
   name: string,
 ): PrivateMethod<TArgs, TResult> {
-  const candidate = (service as unknown as Record<string, unknown>)[name];
+  const candidate = (owner as unknown as Record<string, unknown>)[name];
   if (typeof candidate !== 'function') {
     throw new Error(`Private helper "${name}" not found on InvoicesService`);
   }
-  return (candidate as PrivateMethod<TArgs, TResult>).bind(service);
+  return (candidate as PrivateMethod<TArgs, TResult>).bind(owner);
 }
 
 /**
@@ -167,6 +167,7 @@ const sampleInvoiceRow = {
   discountPercent: 0,
   totalHours: 10,
   totalAmount: 750,
+  roundingStepMinutes: 5,
   notes: null,
   createdBy: adminUser.sub,
   createdAt: new Date('2026-04-30T18:00:00.000Z'),
@@ -211,9 +212,13 @@ function stageCreateDb(
     settings: Array<{
       defaultHourlyRate: number | null;
       currency: string | null;
+      timeRoundingStepMinutes: number;
     }>;
-    /** Rows for the requirePmProjectAccess/requireWorkspaceProject probe. Omit when no project is involved; pass `[]` for an inaccessible project. */
-    projectProbeRows?: Array<{ id: string }>;
+    /** Rows for the requirePmProjectAccess/requireWorkspaceProject probe, which returns the project's rounding step. Omit when no project is involved; pass `[]` for an inaccessible project. */
+    projectProbeRows?: Array<{
+      id: string;
+      timeRoundingStepMinutes: number | null;
+    }>;
     /** True when the input carries a projectId, which adds the eligibility inArray subquery as a db.select call inside the transaction. */
     eligibilitySubquery?: boolean;
     /** Row the transaction's detail re-read returns. */
@@ -585,6 +590,29 @@ describe('InvoicesService', () => {
     expect(compute(360000036, 1000.01, 0)).toEqual({
       totalHours: 100000.01,
       totalAmount: 100001010,
+    });
+  });
+
+  describe('roundEntrySeconds', () => {
+    const round = priv<[number, number], number>(
+      InvoicesService,
+      'roundEntrySeconds',
+    );
+
+    it('rounds 60s up to 300s with a 5-minute step', () => {
+      expect(round(60, 5)).toBe(300);
+    });
+
+    it('keeps 300s at 300s with a 5-minute step', () => {
+      expect(round(300, 5)).toBe(300);
+    });
+
+    it('rounds 90s up to 300s with a 5-minute step', () => {
+      expect(round(90, 5)).toBe(300);
+    });
+
+    it('keeps 60s at 60s with a 1-minute step', () => {
+      expect(round(60, 1)).toBe(60);
     });
   });
 
@@ -1054,7 +1082,13 @@ describe('InvoicesService', () => {
   it('rejects creation when neither input nor settings provide a currency', async () => {
     const { service } = createService('admin');
     const { transactionSpy } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 75, currency: null }],
+      settings: [
+        {
+          defaultHourlyRate: 75,
+          currency: null,
+          timeRoundingStepMinutes: 5,
+        },
+      ],
     });
 
     const thrown = await service
@@ -1079,7 +1113,13 @@ describe('InvoicesService', () => {
   it('rejects creation when the computed total overflows NUMERIC(12,2)', async () => {
     const { service } = createService('admin');
     const { insertSpy, transactionSpy } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 150_000, currency: 'USD' }],
+      settings: [
+        {
+          defaultHourlyRate: 150_000,
+          currency: 'USD',
+          timeRoundingStepMinutes: 5,
+        },
+      ],
       // 360,000,000 seconds = 100,000 hours →
       // 100,000h × $150,000 = $15,000,000,000, far above the
       // NUMERIC(12,2) ceiling of $9,999,999,999.99.
@@ -1111,7 +1151,9 @@ describe('InvoicesService', () => {
   it('falls back to workspace settings for both rate and currency', async () => {
     const { service } = createService('admin');
     const { insertValuesSpy } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 75, currency: 'EUR' }],
+      settings: [
+        { defaultHourlyRate: 75, currency: 'EUR', timeRoundingStepMinutes: 5 },
+      ],
     });
 
     const result = await service.createInvoice(adminUser, {
@@ -1138,7 +1180,9 @@ describe('InvoicesService', () => {
   it('prefers explicit input rate and currency over workspace settings', async () => {
     const { service } = createService('admin');
     const { insertValuesSpy } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 75, currency: 'EUR' }],
+      settings: [
+        { defaultHourlyRate: 75, currency: 'EUR', timeRoundingStepMinutes: 5 },
+      ],
     });
 
     await service.createInvoice(adminUser, {
@@ -1163,7 +1207,13 @@ describe('InvoicesService', () => {
     const { service } = createService('admin');
     const { insertSpy, insertReturningSpy, updateSetSpy, transactionSpy } =
       stageCreateDb(service, {
-        settings: [{ defaultHourlyRate: 75, currency: 'USD' }],
+        settings: [
+          {
+            defaultHourlyRate: 75,
+            currency: 'USD',
+            timeRoundingStepMinutes: 5,
+          },
+        ],
         eligibleEntries: [
           {
             id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9020',
@@ -1193,9 +1243,11 @@ describe('InvoicesService', () => {
   it('allows PMs to create for a public project without an assignment', async () => {
     const { service } = createService('pm');
     const { insertValuesSpy, selectSpy, probeStage } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 75, currency: 'USD' }],
+      settings: [
+        { defaultHourlyRate: 75, currency: 'USD', timeRoundingStepMinutes: 5 },
+      ],
       // Access probe matches: the public project row satisfies visibility.
-      projectProbeRows: [{ id: pmProjectId }],
+      projectProbeRows: [{ id: pmProjectId, timeRoundingStepMinutes: 15 }],
       // Project-scoped creation wires the eligibility inArray subquery.
       eligibilitySubquery: true,
     });
@@ -1223,6 +1275,7 @@ describe('InvoicesService', () => {
         createdBy: pmUser.sub,
         hourlyRate: 75,
         currency: 'USD',
+        roundingStepMinutes: 15,
       }),
     );
   });
@@ -1232,7 +1285,13 @@ describe('InvoicesService', () => {
     const { transactionSpy, insertValuesSpy, probeStage } = stageCreateDb(
       service,
       {
-        settings: [{ defaultHourlyRate: 75, currency: 'USD' }],
+        settings: [
+          {
+            defaultHourlyRate: 75,
+            currency: 'USD',
+            timeRoundingStepMinutes: 5,
+          },
+        ],
         // Access probe finds no active+visible project row.
         projectProbeRows: [],
       },
@@ -1258,7 +1317,9 @@ describe('InvoicesService', () => {
   it('rejects admins creating for a project outside the workspace', async () => {
     const { service } = createService('admin');
     const { transactionSpy, insertValuesSpy } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 75, currency: 'USD' }],
+      settings: [
+        { defaultHourlyRate: 75, currency: 'USD', timeRoundingStepMinutes: 5 },
+      ],
       // Workspace probe finds no such project row.
       projectProbeRows: [],
     });

@@ -152,6 +152,7 @@ function createWorkspaceSettingsFixture(
     currency: 'EUR',
     defaultHourlyRate: null,
     id: '77777777-7777-4777-8777-777777777777',
+    timeRoundingStepMinutes: 1,
     timeZone: 'UTC',
     updatedAt: '2026-01-01T00:00:00.000Z',
     workspaceId,
@@ -173,6 +174,7 @@ function createProjectFixture(): ProjectResponse {
     name: 'Project Orion',
     source: 'manual',
     referenceProvenance: null,
+    timeRoundingStepMinutes: null,
     trackingMode: 'managed',
     totalSeconds: 3600,
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -197,6 +199,7 @@ function createInvoiceItem(
     notes: null,
     project: { id: projectId, name: 'Project Orion' },
     projectId,
+    roundingStepMinutes: 1,
     status: 'draft',
     timeEntryCount: 2,
     title: 'April 2026 — Backend',
@@ -224,6 +227,7 @@ function createInvoiceResponse(
     notes: null,
     project: { id: projectId, name: 'Project Orion' },
     projectId,
+    roundingStepMinutes: 1,
     status: 'draft',
     timeEntries: [],
     timeEntryCount: 0,
@@ -388,6 +392,7 @@ const InvoiceCreateDialogStub = defineComponent({
     scope: { type: Object, required: true },
     visible: { type: Boolean, required: true },
     workspaceCurrency: { type: String, default: null },
+    workspaceRoundingStepMinutes: { type: Number, default: null },
   },
   emits: ['created', 'update:visible'],
   methods: {
@@ -412,6 +417,7 @@ const InvoiceCreateDialogStub = defineComponent({
     <div
       data-testid="invoice-create-dialog"
       :data-workspace-currency="workspaceCurrency"
+      :data-workspace-rounding-step-minutes="workspaceRoundingStepMinutes"
     >
       visible={{ visible }}
       <button
@@ -617,9 +623,12 @@ describe('InvoicesView', () => {
     expect(wrapper.find('[data-testid="invoices-table"]').exists()).toBe(true);
   });
 
-  it('passes the workspace settings currency to the create dialog', async () => {
+  it('passes the workspace settings currency and rounding step to the create dialog', async () => {
     testMocks.getWorkspaceSettings.mockResolvedValue(
-      createWorkspaceSettingsFixture({ currency: 'EUR' }),
+      createWorkspaceSettingsFixture({
+        currency: 'EUR',
+        timeRoundingStepMinutes: 30,
+      }),
     );
 
     const wrapper = mountInvoicesView();
@@ -628,11 +637,12 @@ describe('InvoicesView', () => {
     await wrapper.get('[data-testid="invoices-create-intent"]').trigger('click');
     await flushPromises();
 
+    const createDialog = wrapper.get('[data-testid="invoice-create-dialog"]');
+
+    expect(createDialog.attributes('data-workspace-currency')).toBe('EUR');
     expect(
-      wrapper
-        .get('[data-testid="invoice-create-dialog"]')
-        .attributes('data-workspace-currency'),
-    ).toBe('EUR');
+      createDialog.attributes('data-workspace-rounding-step-minutes'),
+    ).toBe('30');
   });
 
   it('toasts an error when the workspace settings request fails', async () => {
