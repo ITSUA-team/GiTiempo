@@ -124,3 +124,12 @@
 - [x] 15.1 Render `roundedDurationSeconds` (not raw `durationSeconds`) in the time-entries table Duration column of `InvoiceDetailView.vue`. Verify: the detail page shows the rounded billed duration per entry.
 - [x] 15.2 Update `InvoiceDetailView.spec.ts` mock entry factories to include `roundedDurationSeconds`. Add or update a test asserting the Duration column renders the rounded value. Verify: `pnpm test --filter admin-web` passes for the detail view tests.
 - [x] 15.3 Final design parity review: confirm the time-entries table still matches the approved .pen frame structure (no new columns or layout changes; only the displayed duration value changes). Verify: any remaining deltas are explicitly identified.
+
+## 16. Invoice Amount Ceiling to Cents (backend + admin-web)
+
+- [x] 16.1 Change `computeInvoiceTotals` in `apps/api/src/invoices/services/invoices.service.ts` to round the amount UP to the next whole cent (ceiling) instead of half-up: add `999_999n` (divisor - 1) before BigInt floor division instead of `500_000n`. Update the doc comment. Verify: unit test confirms 3.33h x $10.01 x 90% = $3.34 (not $3.33), and existing half-cent boundary cases (37.605 -> $37.61) still pass.
+- [x] 16.2 Update the `preserves exact cents when the triple product exceeds MAX_SAFE_INTEGER` test expectation to the ceiling result ($100001010.01). Verify: `pnpm test --filter @gitiempo/api` passes.
+- [x] 16.3 Add `apps/admin-web/src/lib/invoice-amount.ts` with a `computeInvoiceAmount(totalHours, hourlyRate, discountPercent)` helper that mirrors the backend fixed-point BigInt ceiling, so the create dialog estimate matches the authoritative server total. Verify: unit test covers exact-cent, sub-cent ceiling, half-cent, and zero cases.
+- [x] 16.4 Use `computeInvoiceAmount` in `InvoiceCreateDialog.vue` `computedTotalAmount` instead of the raw `totalHours * rate * discount` product. Verify: the estimate displays the ceiling-to-cents amount and existing estimate tests ($170.00, $200.00) still pass.
+- [x] 16.5 Update the `invoices-api` spec rounding scenarios and add an `admin-invoices-page` scenario for the estimate ceiling. Verify: `openspec validate --strict` passes.
+- [ ] 16.6 Manual: create an invoice whose raw amount has a sub-cent fraction (e.g. 3.33h x $10.01 x 90%) and verify the detail page Total amount shows $3.34, and the create dialog estimate shows $3.34 before submitting. Verify: both surfaces show the ceiled value, never a truncated one.

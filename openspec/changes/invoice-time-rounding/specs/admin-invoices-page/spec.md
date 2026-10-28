@@ -102,3 +102,10 @@ The invoice detail page time-entries table and the create dialog eligible-entrie
 - **WHEN** the admin or PM opens the invoice detail page
 - **THEN** the rounding step value (5) is not rendered anywhere on the detail page
 - **AND** only the rounded `totalHours` and the rounded per-entry durations reflect the rounding
+
+#### Scenario: Create dialog estimate rounds the total amount up to the next cent
+
+- **GIVEN** the create dialog preview returns `totalHours: 3.33` and the user enters a rate of $10.01 with a 90% discount
+- **WHEN** the dialog renders the live total amount estimate (3.33 x 10.01 x 0.1 = 3.3333)
+- **THEN** the estimate displays $3.34 (ceiling to the next cent), matching the authoritative server-side total
+- **AND** the estimate never displays a truncated or half-up value such as $3.33

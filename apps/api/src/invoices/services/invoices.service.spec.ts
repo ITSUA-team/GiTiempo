@@ -454,6 +454,24 @@ describe('InvoicesService', () => {
     expect(compute(7200, 75, 100)).toEqual({ totalHours: 2, totalAmount: 0 });
   });
 
+  it('rounds sub-cent fractional amounts up to the next whole cent (ceiling)', () => {
+    const { service } = createService('admin');
+    const compute = priv<
+      [number, number, number],
+      {
+        totalHours: number;
+        totalAmount: number;
+      }
+    >(service, 'computeInvoiceTotals');
+
+    // 11988 seconds = 3.33 hours x $10.01 minus 90% = $3.3333 -> $3.34.
+    // Half-up would give $3.33; ceiling always rounds the fractional cent up.
+    expect(compute(11988, 10.01, 90)).toEqual({
+      totalHours: 3.33,
+      totalAmount: 3.34,
+    });
+  });
+
   it('rounds half-cent amounts like 16.665 up to 16.67', () => {
     const { service } = createService('admin');
     const compute = priv<
@@ -583,13 +601,14 @@ describe('InvoicesService', () => {
       }
     >(service, 'computeInvoiceTotals');
 
-    // 360000036 s → 100000.01 centihours × $1000.01/hr × no discount.
-    // The intermediate product 10000001 × 100001 × 10000 = 10000101000010000
+    // 360000036 s -> 100000.01 centihours x $1000.01/hr x no discount.
+    // The intermediate product 10000001 x 100001 x 10000 = 10000101000010000
     // exceeds Number.MAX_SAFE_INTEGER (9007199254740991). BigInt arithmetic
-    // keeps the intermediate exact: amountCents = 10000101000 → $100001010.00.
+    // keeps the intermediate exact: amountCents = 10000101000.01, which
+    // ceiling rounds UP to 10000101001 -> $100001010.01.
     expect(compute(360000036, 1000.01, 0)).toEqual({
       totalHours: 100000.01,
-      totalAmount: 100001010,
+      totalAmount: 100001010.01,
     });
   });
 

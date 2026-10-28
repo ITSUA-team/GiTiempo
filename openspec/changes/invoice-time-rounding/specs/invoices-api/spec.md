@@ -113,12 +113,20 @@ The backend MUST compute invoice totals as the sum of tracked hours of selected 
 - **WHEN** a linked time entry is edited after invoice creation
 - **THEN** the invoice `total_hours` and `total_amount` remain as originally captured
 
-#### Scenario: Totals are rounded correctly at half-cent boundaries
+#### Scenario: Totals are rounded up to the next whole cent (ceiling)
 
 - **GIVEN** an invoice is created with 0.5 tracked hours at a rate of $75.21
 - **WHEN** the backend computes the total amount
 - **THEN** the stored `total_amount` is $37.61 (rounded up from 37.605)
 - **AND** the computation uses integer fixed-point arithmetic to avoid floating-point drift
+- **AND** any fractional cent is always rounded UP, never down or truncated
+
+#### Scenario: Sub-cent fractional amounts round up to the next cent
+
+- **GIVEN** an invoice is created with 3.33 tracked hours at a rate of $10.01 and a 90% discount
+- **WHEN** the backend computes the total amount (3.33 x 10.01 x 0.1 = 3.3333)
+- **THEN** the stored `total_amount` is $3.34 (ceiling), not $3.33 (half-up)
+- **AND** the rounding mode is ceiling so the billed amount never loses a fractional cent
 
 #### Scenario: Hours rounding avoids floating-point drift from seconds conversion
 
