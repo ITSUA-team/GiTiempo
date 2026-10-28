@@ -326,7 +326,9 @@ async function handleCreate(): Promise<void> {
       currency: currency.value.trim().toUpperCase() || undefined,
       discountPercent: discountPercent.value ?? 0,
       notes: notes.value.trim() || undefined,
-      roundingStepMinutes: roundingStepMinutes.value,
+      ...(roundingStepTouched.value
+        ? { roundingStepMinutes: roundingStepMinutes.value }
+        : {}),
     });
     emit('created', invoice);
     emit('update:visible', false);

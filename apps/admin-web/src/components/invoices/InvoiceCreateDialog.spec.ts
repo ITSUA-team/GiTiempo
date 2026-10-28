@@ -715,7 +715,7 @@ describe('InvoiceCreateDialog', () => {
       currency: 'USD',
       discountPercent: 0,
       notes: undefined,
-      roundingStepMinutes: 15,
+      roundingStepMinutes: undefined,
     });
     expect(wrapper.emitted('created')).toEqual([[createInvoiceResponse()]]);
   });
@@ -742,7 +742,7 @@ describe('InvoiceCreateDialog', () => {
       currency: 'USD',
       discountPercent: 0,
       notes: undefined,
-      roundingStepMinutes: 15,
+      roundingStepMinutes: undefined,
     });
     expect(wrapper.emitted('created')).toEqual([[createInvoiceResponse()]]);
     expect(wrapper.emitted('update:visible')).toEqual([[false]]);
@@ -823,7 +823,7 @@ describe('InvoiceCreateDialog', () => {
       currency: 'USD',
       discountPercent: 15,
       notes: undefined,
-      roundingStepMinutes: 15,
+      roundingStepMinutes: undefined,
     });
   });
 
@@ -1198,6 +1198,49 @@ describe('InvoiceCreateDialog', () => {
       discountPercent: 0,
       notes: undefined,
       roundingStepMinutes: 30,
+    });
+  });
+
+  it('omits roundingStepMinutes from the create request when the preview has not resolved yet', async () => {
+    // Simulate a slow preview: the eligible-entries call never resolves
+    // before the user submits. The initial roundingStepMinutes ref is still
+    // the temporary 1-minute default, but the workspace setting is 15.
+    // The create payload must NOT send roundingStepMinutes so the server
+    // applies workspace/project inheritance instead of treating the
+    // stale 1-minute value as an explicit override.
+    testMocks.listEligibleEntries.mockReturnValue(
+      new Promise(() => {}),
+    );
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({
+      isAdmin: true,
+      createInvoice,
+      workspaceRoundingStepMinutes: 15,
+      workspaceCurrency: 'USD',
+    });
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+
+    // The field still shows the temporary 1-minute default because the
+    // preview has not arrived yet.
+    expect(getRoundingStepLabelElement().textContent).toBe('1 min');
+
+    await submitInvoice(wrapper);
+
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice).toHaveBeenCalledWith({
+      title: 'Website redesign',
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: undefined,
+      hourlyRate: undefined,
+      currency: 'USD',
+      discountPercent: 0,
+      notes: undefined,
+      roundingStepMinutes: undefined,
     });
   });
 
