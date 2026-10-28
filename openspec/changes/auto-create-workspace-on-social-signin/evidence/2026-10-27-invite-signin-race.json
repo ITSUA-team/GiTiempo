@@ -1,0 +1,173 @@
+{
+  "date": "2026-10-27",
+  "database": "gitiempo_476_social_test",
+  "testEmail": "tsukanovmfs@gmail.com",
+  "client": "user-web; normal Chrome Google invite acceptance and incognito GitHub ordinary sign-in; user-operated",
+  "testedCode": "51a0ac57 plus recorded working-tree fixes",
+  "precondition": {
+    "userId": "9d25c96b-582f-4fa4-a584-dacdd27e522f",
+    "canonicalFirebaseUid": "HT9I1Ue0zNRexKrtmrQ0xIvBEIB2",
+    "originalMembershipTemporarilyRemoved": true,
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 87
+    },
+    "firebaseIdentityRetained": true
+  },
+  "synchronization": {
+    "status": "success",
+    "barrierPid": 64941,
+    "waiters": [
+      {
+        "pid": 65682,
+        "waitEventType": "Lock",
+        "waitEvent": "advisory",
+        "blockingPids": [
+          64941
+        ]
+      },
+      {
+        "pid": 65714,
+        "waitEventType": "Lock",
+        "waitEvent": "advisory",
+        "blockingPids": [
+          64941
+        ]
+      }
+    ],
+    "timestamp": "2026-10-27T10:45:31.958Z",
+    "readyAt": "2026-10-27T10:44:07.484Z",
+    "method": "Read-only production identity email/UID advisory-lock barrier; released automatically after two blocked transactions.",
+    "perWaiterProviderAttributionCaptured": false,
+    "commitOrderCaptured": false
+  },
+  "userReported": {
+    "bothApplicationsOpened": true,
+    "teamMembershipVisible": true
+  },
+  "after": {
+    "checkedAt": "2026-10-27T10:46:36.644Z",
+    "userCount": 1,
+    "counts": {
+      "users": 88,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "invitation": {
+      "id": "bf3c597f-9d23-4646-a808-faab691259ea",
+      "status": "accepted"
+    },
+    "memberships": [
+      {
+        "id": "20fbec92-6f99-4733-a37e-f682640b495b",
+        "workspace_id": "5730b2dc-9d71-46f1-b2f3-5daee3aee7fa",
+        "role": "member",
+        "joined_at": "2026-10-27T10:45:28.543Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-26T14:43:27.753Z"
+      },
+      {
+        "id": "6c58715c-e2e1-4ea4-9e74-b6f3d3589b2b",
+        "workspace_id": "e191f329-4060-4e29-90f8-0d884851ca7d",
+        "role": "admin",
+        "joined_at": "2026-10-27T10:45:31.687Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-27T10:45:31.687Z"
+      }
+    ],
+    "settings": [
+      {
+        "workspace_id": "5730b2dc-9d71-46f1-b2f3-5daee3aee7fa",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-26T14:43:27.753Z",
+        "updated_at": "2026-10-26T14:43:27.753Z"
+      },
+      {
+        "workspace_id": "e191f329-4060-4e29-90f8-0d884851ca7d",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-27T10:45:31.687Z",
+        "updated_at": "2026-10-27T10:45:31.687Z"
+      }
+    ],
+    "sessions": [
+      {
+        "id": "5ef6e780-a063-4726-bea2-35df7a62c21a",
+        "workspace_member_id": "6c58715c-e2e1-4ea4-9e74-b6f3d3589b2b",
+        "workspace_id": "e191f329-4060-4e29-90f8-0d884851ca7d",
+        "created_at": "2026-10-27T10:45:31.687Z",
+        "revoked_at": "2026-10-27T10:46:00.006Z"
+      },
+      {
+        "id": "fe9bf1be-8199-44f4-a535-f4dfb600e4bf",
+        "workspace_member_id": "20fbec92-6f99-4733-a37e-f682640b495b",
+        "workspace_id": "5730b2dc-9d71-46f1-b2f3-5daee3aee7fa",
+        "created_at": "2026-10-27T10:45:32.634Z",
+        "revoked_at": null
+      },
+      {
+        "id": "58e414d3-9831-47df-9733-171e93127416",
+        "workspace_member_id": "6c58715c-e2e1-4ea4-9e74-b6f3d3589b2b",
+        "workspace_id": "e191f329-4060-4e29-90f8-0d884851ca7d",
+        "created_at": "2026-10-27T10:46:00.002Z",
+        "revoked_at": null
+      }
+    ],
+    "allSessionsTargetOwnedMemberships": true
+  },
+  "cleanup": {
+    "checkedAt": "2026-10-27T10:48:31.402Z",
+    "mode": "cleanup",
+    "removedInviteId": "bf3c597f-9d23-4646-a808-faab691259ea",
+    "removedTeamMembershipId": "20fbec92-6f99-4733-a37e-f682640b495b",
+    "removedEmptyPersonalWorkspaceId": "e191f329-4060-4e29-90f8-0d884851ca7d",
+    "restoredMemberships": [
+      {
+        "id": "931a11da-b60e-4b0f-aca2-8aac10ad8a9e",
+        "workspace_id": "b9d4ffdc-7103-4c9d-83be-ad39eed5f425",
+        "role": "admin",
+        "joined_at": "2026-10-27T10:00:47.551Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-27T10:00:47.551Z"
+      }
+    ],
+    "restoredSettings": [
+      {
+        "workspace_id": "b9d4ffdc-7103-4c9d-83be-ad39eed5f425",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-27T10:00:47.551Z",
+        "updated_at": "2026-10-27T10:00:47.551Z"
+      }
+    ],
+    "restoredSubjectBindings": [
+      {
+        "id": "65a73b65-3b5d-47ea-ae67-80f3919b418f",
+        "firebase_uid": "HT9I1Ue0zNRexKrtmrQ0xIvBEIB2",
+        "provider_id": "google",
+        "verified_email": "tsukanovmfs@gmail.com",
+        "created_at": "2026-10-27T10:00:47.551Z",
+        "updated_at": "2026-10-27T10:00:47.551Z"
+      }
+    ],
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 88
+    },
+    "remainingRefreshRows": 0,
+    "invitationAbsent": true,
+    "temporaryBridgeStopped": true,
+    "firebaseIdentityDeleted": false
+  },
+  "limitations": [
+    "Individual waiting transactions were not attributed to providers; provider attribution is user-reported.",
+    "Commit order was not captured. PostgreSQL created_at/joined_at timestamps do not prove commit order.",
+    "Final state preserves both valid memberships and one personal foundation, consistent with the documented social-first outcome; direct commit-order verification is not claimed."
+  ]
+}

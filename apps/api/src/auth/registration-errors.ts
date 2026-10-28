@@ -3,8 +3,7 @@ type RegistrationErrorCode =
   | 'invalid_workspace_name'
   | 'rate_limited'
   | 'registration_service_unavailable'
-  | 'weak_password'
-  | 'workspace_name_unavailable';
+  | 'weak_password';
 
 export const REGISTRATION_ERROR_MESSAGES: Record<
   RegistrationErrorCode,
@@ -16,7 +15,6 @@ export const REGISTRATION_ERROR_MESSAGES: Record<
   registration_service_unavailable:
     'Registration is temporarily unavailable. Please try again later.',
   weak_password: 'Choose a stronger password and try again.',
-  workspace_name_unavailable: 'That workspace name is already in use.',
 };
 
 type RegistrationValidationCode = Extract<

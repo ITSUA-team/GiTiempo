@@ -223,7 +223,10 @@ describe("InviteAcceptView", () => {
   });
 
   it("accepts the invite with Google and redirects to the dashboard", async () => {
-    const signInWithGoogle = vi.fn(async () => "firebase-google-token");
+    const signInWithGoogle = vi.fn(async () => ({
+      firebaseIdToken: "firebase-google-token",
+      googleIdToken: "google-provider-id-token",
+    }));
     const acceptInvite = vi.fn(async () => undefined);
     setAuthRuntimeForTesting(
       createRuntimeMock({ signInWithGoogle }),
@@ -237,9 +240,9 @@ describe("InviteAcceptView", () => {
     const originalLoginWithFirebaseToken = authStore.loginWithFirebaseToken.bind(authStore);
     const loginWithFirebaseToken = vi
       .spyOn(authStore, "loginWithFirebaseToken")
-      .mockImplementation(async (firebaseIdToken: string) => {
+      .mockImplementation(async (firebaseIdToken: string, googleIdToken?: string) => {
         expect(acceptInviteCompleted).toBe(true);
-        return originalLoginWithFirebaseToken(firebaseIdToken);
+        return originalLoginWithFirebaseToken(firebaseIdToken, googleIdToken);
       });
     acceptInvite.mockImplementation(async () => {
       acceptInviteCompleted = true;
@@ -255,9 +258,13 @@ describe("InviteAcceptView", () => {
     expect(signInWithGoogle).toHaveBeenCalled();
     expect(acceptInvite).toHaveBeenCalledWith({
       firebaseIdToken: "firebase-google-token",
+      googleIdToken: "google-provider-id-token",
       token: "invite-token",
     });
-    expect(loginWithFirebaseToken).toHaveBeenCalledWith("firebase-google-token");
+    expect(loginWithFirebaseToken).toHaveBeenCalledWith(
+      "firebase-google-token",
+      "google-provider-id-token",
+    );
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
