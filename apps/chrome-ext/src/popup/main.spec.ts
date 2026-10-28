@@ -537,6 +537,47 @@ describe("popup app", () => {
       expect(document.body.textContent).toContain("Workspace Beta");
     });
 
+    it("switches identically named workspaces by the selected ID", async () => {
+      const firstWorkspaceId = "workspace-alpha";
+      const secondWorkspaceId = "workspace-beta";
+      const memberships = [
+        { isCurrent: true, role: "admin" as const, workspaceId: firstWorkspaceId, workspaceName: "Workspace" },
+        { isCurrent: false, role: "admin" as const, workspaceId: secondWorkspaceId, workspaceName: "Workspace" },
+      ];
+      const switchWorkspace = vi.fn(async () => ({
+        ok: true,
+        snapshot: signedInSnapshot({
+          workspace: { id: secondWorkspaceId, name: "Workspace" },
+        }),
+      }));
+      await openMenu({
+        getWorkspaceMemberships: vi.fn(async () => ({
+          items: memberships,
+          ok: true,
+          snapshot: signedInSnapshot({
+            workspace: { id: firstWorkspaceId, name: "Workspace" },
+          }),
+        })),
+        switchWorkspace,
+      });
+      await settle();
+
+      const selector = document.querySelector<HTMLSelectElement>('[data-testid="workspace-selector"]')!;
+      expect([...selector.options].map((option) => ({
+        label: option.textContent,
+        value: option.value,
+      }))).toEqual([
+        { label: "Workspace", value: firstWorkspaceId },
+        { label: "Workspace", value: secondWorkspaceId },
+      ]);
+
+      selector.value = secondWorkspaceId;
+      selector.dispatchEvent(new Event("change", { bubbles: true }));
+      await settle();
+
+      expect(switchWorkspace).toHaveBeenCalledWith(secondWorkspaceId);
+    });
+
     it("re-enables controls when the menu reopens during a workspace switch", async () => {
       let completeSwitch!: (result: Awaited<ReturnType<RuntimeClient["switchWorkspace"]>>) => void;
       const switchedSnapshot = signedInSnapshot({

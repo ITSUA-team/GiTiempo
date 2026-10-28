@@ -3,6 +3,7 @@ import {
   GoneException,
   NotFoundException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
@@ -52,7 +53,11 @@ function selectRows(rows: unknown[]) {
   return { from };
 }
 
-function makeService(options: { firebaseEmail: string }) {
+function makeService(options: {
+  identityEmail: string;
+  googleSubject?: string;
+  verificationError?: Error;
+}) {
   const insertMembershipValues = vi.fn().mockResolvedValue(undefined);
   const updateInviteWhere = vi.fn().mockResolvedValue(undefined);
   const tx = {
@@ -75,34 +80,50 @@ function makeService(options: { firebaseEmail: string }) {
   const firebase = {
     generatePasswordSetupLink: vi.fn(),
     getOrCreateInvitedUserByEmail: vi.fn(),
-    verifyIdToken: vi.fn().mockResolvedValue({
-      uid: acceptedUser.firebaseUid,
-      email: options.firebaseEmail,
-      name: acceptedUser.displayName,
-    }),
   };
   const usersService = makeUsersService();
   const config = makeConfig();
   const delivery = { deliver: vi.fn() };
+  const auth = {
+    prepareInvitationIdentity: vi.fn(async (email: string) =>
+      firebase.getOrCreateInvitedUserByEmail(email),
+    ),
+    acceptInviteIdentity: vi.fn(async (_decoded, persist) =>
+      persist(tx, acceptedUser),
+    ),
+    verifyFirebaseIdentity: options.verificationError
+      ? vi.fn().mockRejectedValue(options.verificationError)
+      : vi.fn().mockResolvedValue({
+          decoded: {
+            uid: acceptedUser.firebaseUid,
+            email: options.identityEmail,
+            name: acceptedUser.displayName,
+          },
+          googleSubject: options.googleSubject,
+        }),
+  };
   return {
     service: new InvitesService(
       db as never,
       firebase as never,
       config as never,
-      usersService as never,
       delivery as never,
+      auth as never,
     ),
     db,
     firebase,
     usersService,
     insertMembershipValues,
     updateInviteWhere,
+    auth,
   };
 }
 
 describe('InvitesService', () => {
   it('rejects invite acceptance when Firebase email does not match', async () => {
-    const { service, db } = makeService({ firebaseEmail: 'other@example.com' });
+    const { service, db } = makeService({
+      identityEmail: 'other@example.com',
+    });
 
     await expect(
       service.acceptInvite({
@@ -114,8 +135,8 @@ describe('InvitesService', () => {
   });
 
   it('creates membership and accepts the invite for a matching identity', async () => {
-    const { service, usersService, insertMembershipValues, updateInviteWhere } =
-      makeService({ firebaseEmail: 'New.User@Example.com' });
+    const { service, auth, insertMembershipValues, updateInviteWhere } =
+      makeService({ identityEmail: 'New.User@Example.com' });
 
     await service.acceptInvite({
       token: 'invite-token',
@@ -127,13 +148,73 @@ describe('InvitesService', () => {
       userId: acceptedUser.id,
       role: pendingInvite.role,
     });
-    expect(usersService.upsertFromFirebase).toHaveBeenCalledWith({
-      firebaseUid: acceptedUser.firebaseUid,
-      email: pendingInvite.email,
-      displayName: acceptedUser.displayName,
-      avatarUrl: null,
-    });
+    expect(auth.acceptInviteIdentity).toHaveBeenCalledOnce();
     expect(updateInviteWhere).toHaveBeenCalled();
+  });
+
+  it('accepts a missing-email Google Firebase identity when the verified Google proof supplies the invited email', async () => {
+    const { service, auth, insertMembershipValues } = makeService({
+      identityEmail: 'new.user@example.com',
+      googleSubject: 'google-subject-1',
+    });
+
+    await service.acceptInvite({
+      token: 'invite-token',
+      firebaseIdToken: 'firebase-token-without-email',
+      googleIdToken: 'verified-google-proof',
+    });
+
+    expect(auth.verifyFirebaseIdentity).toHaveBeenCalledWith(
+      'firebase-token-without-email',
+      'verified-google-proof',
+    );
+    expect(auth.acceptInviteIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'new.user@example.com' }),
+      expect.any(Function),
+      'google-subject-1',
+    );
+    expect(insertMembershipValues).toHaveBeenCalledOnce();
+  });
+
+  it('rejects a mismatched Google proof before it changes invite state', async () => {
+    const { service, db, insertMembershipValues, updateInviteWhere } =
+      makeService({
+        identityEmail: 'new.user@example.com',
+        verificationError: new UnauthorizedException('Unauthorized'),
+      });
+
+    await expect(
+      service.acceptInvite({
+        token: 'invite-token',
+        firebaseIdToken: 'firebase-token-without-email',
+        googleIdToken: 'mismatched-google-proof',
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(insertMembershipValues).not.toHaveBeenCalled();
+    expect(updateInviteWhere).not.toHaveBeenCalled();
+  });
+
+  it('accepts a password identity without a Google proof', async () => {
+    const { service, auth } = makeService({
+      identityEmail: 'new.user@example.com',
+    });
+
+    await service.acceptInvite({
+      token: 'invite-token',
+      firebaseIdToken: 'password-firebase-token',
+    });
+
+    expect(auth.verifyFirebaseIdentity).toHaveBeenCalledWith(
+      'password-firebase-token',
+      undefined,
+    );
+    expect(auth.acceptInviteIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'new.user@example.com' }),
+      expect.any(Function),
+      undefined,
+    );
   });
 });
 
@@ -211,18 +292,22 @@ describe('InvitesService createInvite', () => {
           }),
       verifyIdToken: vi.fn(),
     };
-    const usersService = makeUsersService();
     const config = makeConfig();
+    const auth = {
+      prepareInvitationIdentity: vi.fn(async (email: string) =>
+        firebase.getOrCreateInvitedUserByEmail(email),
+      ),
+    };
 
     const service = new InvitesService(
       db as never,
       firebase as never,
       config as never,
-      usersService as never,
       delivery as never,
+      auth as never,
     );
 
-    return { service, db, delivery, firebase, updateSetWhere };
+    return { service, db, delivery, firebase, updateSetWhere, auth };
   }
 
   it('expires invite when delivery fails', async () => {
@@ -381,8 +466,12 @@ describe('InvitesService resendInvite', () => {
           }),
       verifyIdToken: vi.fn(),
     };
-    const usersService = makeUsersService();
     const config = makeConfig();
+    const auth = {
+      prepareInvitationIdentity: vi.fn(async (email: string) =>
+        firebase.getOrCreateInvitedUserByEmail(email),
+      ),
+    };
 
     return {
       db,
@@ -392,9 +481,10 @@ describe('InvitesService resendInvite', () => {
         db as never,
         firebase as never,
         config as never,
-        usersService as never,
         delivery as never,
+        auth as never,
       ),
+      auth,
     };
   }
 

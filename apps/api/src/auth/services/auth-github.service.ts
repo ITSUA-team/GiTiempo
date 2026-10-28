@@ -78,8 +78,13 @@ const HANDOFF_TTL_MS = 60_000;
  * the caller turns every one of them into the same opaque 401, so nothing here
  * tells a client which of them applied.
  */
+type GithubLoginCandidate =
+  | { kind: 'linked'; userId: string }
+  | { kind: 'email'; userId: string; verifiedEmails: string[] }
+  | { kind: 'new'; email: string };
+
 type HandoffClaim =
-  | { memberId: string; staged: string; generation: number; startedAt: Date }
+  | { staged: string; generation: number; startedAt: Date }
   | { reason: 'unknown' | 'expired' | 'verifier' };
 
 interface VerifiedGithubEmails {
@@ -132,7 +137,6 @@ export class AuthGithubService {
   private readonly pendingHandoffs = new Map<
     string,
     {
-      memberId: string;
       expiresAt: number;
       challenge?: string;
       staged: string;
@@ -260,10 +264,9 @@ export class AuthGithubService {
       const tokens = await this.oauthClient.exchangeCode(input.code);
       const profile = await this.oauthClient.getCurrentUser(tokens.accessToken);
       const linked = await this.accounts.findByGithubId(profile.githubUserId);
-      let memberId: string | null;
+      let candidate: GithubLoginCandidate;
       if (linked) {
-        memberId = linked.userId;
-        await this.auth.assertActiveMember(memberId);
+        candidate = { kind: 'linked', userId: linked.userId };
       } else {
         const { emails, primaryEmail } = await this.fetchVerifiedEmails(
           tokens.accessToken,
@@ -271,39 +274,75 @@ export class AuthGithubService {
         if (emails.length === 0) {
           return this.appRedirect(app, '/login', { githubError: 'email' });
         }
-        const memberIds =
+        const activeIds =
           await this.auth.resolveActiveMemberIdsByEmails(emails);
-        if (memberIds.length === 0) {
-          return this.appRedirect(app, '/login', { githubError: 'nomember' });
+        const matchedIds =
+          activeIds.length > 0
+            ? activeIds
+            : await this.auth.resolveUserIdsByEmails(emails);
+        if (matchedIds.length > 0) {
+          const provenIds: string[] = [];
+          for (const candidateId of matchedIds) {
+            try {
+              await this.auth.assertVerifiedEmailOwnership(candidateId, emails);
+              provenIds.push(candidateId);
+            } catch (error) {
+              if (!isIdentityProofRequired(error)) throw error;
+            }
+          }
+          if (provenIds.length === 0) {
+            return this.appRedirect(app, '/login', {
+              githubError: 'identity_proof_required',
+            });
+          }
+          const userId =
+            provenIds.length === 1
+              ? provenIds[0]!
+              : await this.resolvePreferredMemberId(
+                  provenIds,
+                  primaryEmail,
+                  activeIds.length > 0,
+                );
+          if (!userId) {
+            return this.appRedirect(app, '/login', {
+              githubError: 'ambiguous',
+            });
+          }
+          candidate = { kind: 'email', userId, verifiedEmails: emails };
+        } else {
+          const email =
+            primaryEmail ?? (emails.length === 1 ? emails[0] : null);
+          if (!email) {
+            return this.appRedirect(app, '/login', {
+              githubError: 'ambiguous',
+            });
+          }
+          candidate = { kind: 'new', email };
         }
-        memberId =
-          memberIds.length === 1
-            ? memberIds[0]!
-            : await this.resolvePreferredMemberId(memberIds, primaryEmail);
-        if (!memberId) {
-          return this.appRedirect(app, '/login', { githubError: 'ambiguous' });
-        }
-      }
-      const existing = await this.accounts.findByUserId(memberId);
-      if (existing && existing.githubUserId !== profile.githubUserId) {
-        return this.appRedirect(app, '/login', {
-          githubError: 'github_identity_mismatch',
-        });
       }
       const startedAt = new Date(claims.startedAt);
-      const version = await this.accounts.getVersion(memberId);
-      await this.accounts.assertLoginCurrent(
-        memberId,
-        startedAt,
-        version.generation,
-      );
+      let generation = 0;
+      if (candidate.kind !== 'new') {
+        const existing = await this.accounts.findByUserId(candidate.userId);
+        if (existing && existing.githubUserId !== profile.githubUserId) {
+          return this.appRedirect(app, '/login', {
+            githubError: 'github_identity_mismatch',
+          });
+        }
+        const version = await this.accounts.getVersion(candidate.userId);
+        generation = version.generation;
+        await this.accounts.assertLoginCurrent(
+          candidate.userId,
+          startedAt,
+          generation,
+        );
+      }
       const staged = this.encryption.encrypt(
-        JSON.stringify({ profile, tokens }),
+        JSON.stringify({ profile, tokens, candidate }),
       );
       const handoff = this.createHandoff(
-        memberId,
         staged,
-        version.generation,
+        generation,
         startedAt,
         claims.challenge,
       );
@@ -324,7 +363,7 @@ export class AuthGithubService {
 
   async exchangeSession(code: string, verifier?: string): Promise<TokenPair> {
     const claim = this.claimHandoff(code, verifier);
-    if (!('memberId' in claim)) {
+    if (!('staged' in claim)) {
       // The reason never reaches the client — every rejection is an opaque 401 —
       // but `verifier` is the one value here that indicates an attempt to redeem
       // someone else's handoff, and it is worth telling apart from a slow client
@@ -338,6 +377,7 @@ export class AuthGithubService {
     const staged = JSON.parse(this.encryption.decrypt(claim.staged)) as {
       profile: GithubUserProfile;
       tokens: GithubAccountTokenSet;
+      candidate: GithubLoginCandidate;
     };
     // Date values serialize as strings in the encrypted staged envelope.
     if (staged.tokens.tokenExpiresAt)
@@ -346,13 +386,31 @@ export class AuthGithubService {
       staged.tokens.refreshTokenExpiresAt = new Date(
         staged.tokens.refreshTokenExpiresAt,
       );
-    return this.accounts.saveOAuthAndRun(
-      claim.memberId,
-      staged.profile,
-      staged.tokens,
-      claim.generation,
-      claim.startedAt,
-      (tx) => this.auth.createSessionForMember(claim.memberId, tx),
+    const { candidate } = staged;
+    return this.auth.provisionSocialSession(
+      {
+        provider: 'github',
+        ...(candidate.kind === 'new'
+          ? { email: candidate.email }
+          : {
+              userId: candidate.userId,
+              ...(candidate.kind === 'email'
+                ? { verifiedEmails: candidate.verifiedEmails }
+                : { linked: true }),
+            }),
+        name: staged.profile.login,
+        picture: staged.profile.avatarUrl ?? undefined,
+      },
+      async (tx, user) => {
+        await this.accounts.saveOAuthInTransaction(
+          tx,
+          user.id,
+          staged.profile,
+          staged.tokens,
+          claim.generation,
+          claim.startedAt,
+        );
+      },
     );
   }
 
@@ -361,14 +419,15 @@ export class AuthGithubService {
   private async resolvePreferredMemberId(
     matchedMemberIds: string[],
     primaryEmail: string | null,
+    activeOnly = true,
   ): Promise<string | null> {
     if (!primaryEmail) {
       return null;
     }
 
-    const primaryMemberIds = await this.auth.resolveActiveMemberIdsByEmails([
-      primaryEmail,
-    ]);
+    const primaryMemberIds = activeOnly
+      ? await this.auth.resolveActiveMemberIdsByEmails([primaryEmail])
+      : await this.auth.resolveUserIdsByEmails([primaryEmail]);
     const [preferred] = primaryMemberIds;
 
     return preferred && matchedMemberIds.includes(preferred) ? preferred : null;
@@ -398,13 +457,16 @@ export class AuthGithubService {
     }
 
     const verified = entries.filter(
-      (entry) => entry.verified === true && Boolean(entry.email),
+      (entry) =>
+        entry.verified === true &&
+        typeof entry.email === 'string' &&
+        entry.email.trim(),
     );
-
+    const normalize = (email: string) => email.trim().toLowerCase();
+    const primary = verified.find((entry) => entry.primary === true)?.email;
     return {
-      emails: verified.map((entry) => entry.email as string),
-      primaryEmail:
-        verified.find((entry) => entry.primary === true)?.email ?? null,
+      emails: [...new Set(verified.map((entry) => normalize(entry.email!)))],
+      primaryEmail: primary ? normalize(primary) : null,
     };
   }
 
@@ -523,7 +585,6 @@ export class AuthGithubService {
    * logs) reveals nothing — staged credentials stay server-side.
    */
   private createHandoff(
-    memberId: string,
     staged: string,
     generation: number,
     startedAt: Date,
@@ -532,7 +593,6 @@ export class AuthGithubService {
     this.purgeExpiredHandoffs();
     const code = randomBytes(32).toString('hex');
     this.pendingHandoffs.set(code, {
-      memberId,
       staged,
       generation,
       startedAt,
@@ -567,7 +627,6 @@ export class AuthGithubService {
       return { reason: 'verifier' };
     }
     return {
-      memberId: entry.memberId,
       staged: entry.staged,
       generation: entry.generation,
       startedAt: entry.startedAt,
@@ -656,4 +715,16 @@ export class AuthGithubService {
     if (typeof value === 'string' && value.length > 0) return value;
     throw new ServiceUnavailableException('GitHub sign-in is not configured');
   }
+}
+
+function isIdentityProofRequired(error: unknown): boolean {
+  if (!(error instanceof UnauthorizedException)) return false;
+  const response = error.getResponse();
+  return (
+    response === 'identity_proof_required' ||
+    (typeof response === 'object' &&
+      response !== null &&
+      'code' in response &&
+      response.code === 'identity_proof_required')
+  );
 }

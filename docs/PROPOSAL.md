@@ -18,7 +18,7 @@ The data model preserves `workspaceId` foreign keys on all workspace-owned entit
 
 ## Authentication
 
-**Primary authentication:** Firebase Auth with Google SSO and email/password. All users (Members, PMs, Admins) sign in through Firebase Auth. The backend verifies Firebase ID tokens and issues its own JWT access/refresh token pair. All subsequent API requests use the JWT access token in the `Authorization: Bearer <token>` header. No GitHub login required.
+**Primary authentication:** Firebase Auth with Google SSO and email/password. All users (Members, PMs, Admins) sign in through Firebase Auth. The backend verifies Firebase ID tokens and issues its own JWT access/refresh token pair. A verified first Google or GitHub sign-in creates a personal `Workspace` with default settings and an admin membership only when the resolved account has no memberships; existing memberships are reused. Email-only account adoption requires verified ownership on both identities; an unverified password email cannot be silently adopted by social sign-in. Workspace display names, including `Workspace`, are deliberately reusable. This automatic sign-in does not record consent for workspace emails. Manual registration retains a password-free attempt after an unknown Firebase result; authentication of its exact reserved account can finish its original workspace without duplicate creation. All subsequent API requests use the JWT access token in the `Authorization: Bearer <token>` header.
 
 **GitHub integration:** Users optionally connect their GitHub account via a GitHub App (user-to-server flow) in their profile settings. This is independent of authentication and enables:
 
@@ -89,7 +89,7 @@ Admins and Project Managers create invoice records from time report data:
 
 ### 6. Invite by Email
 
-Admins invite new members by entering an email address. The invited user receives a link, signs in via Firebase Auth (Google or email/password), and joins the workspace with the assigned role.
+Admins invite new members by entering an email address. The invited user receives a link, signs in via Firebase Auth (Google or email/password), and explicitly joins the workspace with the assigned role. A pending invitation does not block personal-workspace provisioning and is never accepted by an ordinary login.
 
 ### 7. Chrome Extension
 
