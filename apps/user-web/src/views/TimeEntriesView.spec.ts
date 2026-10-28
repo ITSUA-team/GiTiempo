@@ -645,10 +645,8 @@ describe("TimeEntriesView", () => {
       taskId: undefined,
     });
     expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
-    // The inline clear cross is intentionally absent; clearing goes through
-    // the panel's button bar instead.
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-clear")).toBe(
-      "false",
+      "true",
     );
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-button-bar")).toBe(
       "true",
@@ -1157,7 +1155,7 @@ describe("TimeEntriesView", () => {
     );
     expect(dateRangeFilter.attributes("data-selection-mode")).toBe("range");
     expect(dateRangeFilter.attributes("data-show-button-bar")).toBe("true");
-    expect(dateRangeFilter.attributes("data-show-clear")).toBe("false");
+    expect(dateRangeFilter.attributes("data-show-clear")).toBe("true");
     expect(dateRangeFilter.attributes("data-show-icon")).toBe("true");
     expect(dateRangeFilter.attributes("data-pt-input-class")).toContain("h-[38px]");
     expect(dateRangeFilter.attributes("data-pt-input-class")).toContain("rounded-[6px]");

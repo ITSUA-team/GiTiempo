@@ -3,6 +3,7 @@
 @import "@gitiempo/web-config/styles/tokens.css";
 
 @source "../../../../packages/web-shared/src";
+@source "../../../../packages/web-config/src";
 
 :root {
   font-family: "Inter", sans-serif;
