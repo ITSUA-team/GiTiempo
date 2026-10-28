@@ -56,6 +56,7 @@ function createTimeEntry(
   return {
     description: 'Backend API implementation',
     durationSeconds: 9000,
+    roundedDurationSeconds: 9000,
     endedAt: '2026-04-15T11:30:00.000Z',
     id: '66666666-6666-4666-8666-666666666666',
     isBillable: true,
@@ -1165,6 +1166,61 @@ describe('InvoiceCreateDialog', () => {
       projectId: undefined,
       roundingStepMinutes: 30,
     });
+  });
+
+  it('updates the preview Duration column when the rounding step changes', async () => {
+    const shortEntry = (
+      roundedDurationSeconds: number,
+    ): InvoiceTimeEntrySummary =>
+      createTimeEntry({
+        durationSeconds: 360,
+        roundedDurationSeconds,
+        description: 'Short task',
+      });
+
+    testMocks.listEligibleEntries
+      .mockResolvedValueOnce(
+        createEntriesResponse({
+          defaultRoundingStepMinutes: 5,
+          entries: [shortEntry(600)],
+          totalHours: 0.17,
+        }),
+      )
+      .mockResolvedValueOnce(
+        createEntriesResponse({
+          defaultRoundingStepMinutes: 5,
+          entries: [shortEntry(1800)],
+          totalHours: 0.5,
+        }),
+      );
+
+    const wrapper = await mountDialog({ isAdmin: true });
+    await enterDateRange(wrapper);
+    await flushPromises();
+    await flushPromises();
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="invoice-create-preview-toggle"]',
+      )
+      ?.click();
+    await flushPromises();
+
+    // Step 5: 360s (6 min) rounds up to 600s (10 min).
+    expect(bodyText()).toContain('0h 10m');
+    expect(bodyText()).not.toContain('0h 6m');
+
+    await getSelectByInputId(
+      wrapper,
+      'invoice-create-rounding-step',
+    ).vm.$emit('update:modelValue', 30);
+    await flushPromises();
+    await flushPromises();
+
+    // Step 30: 360s rounds up to 1800s (30 min). The Duration column
+    // re-renders from the fresh preview response.
+    expect(bodyText()).toContain('0h 30m');
+    expect(bodyText()).not.toContain('0h 10m');
   });
 
   it('sends the selected rounding step in the create request', async () => {

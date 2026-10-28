@@ -628,7 +628,7 @@ async function handleCreate(): Promise<void> {
               body-style="text-align: right"
             >
               <template #body="{ data }">
-                {{ formatDuration(data.durationSeconds) }}
+                {{ formatDuration(data.roundedDurationSeconds) }}
               </template>
             </Column>
             <Column

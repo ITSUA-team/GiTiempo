@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the admin SPA invoice management surface behavior — list, search, filter, stats, create dialog, detail/edit page, status actions, and role-aware interactions for Admin and PM users. This capability is introduced jointly by the `add-admin-invoices-ui` change (base invoice UI) and this change (the time rounding step field with dynamic project-based pre-fill in the create dialog). Rounding is always active: the rounding step is a computation parameter resolved from the project or workspace, and the invoice detail page does not display it — only the rounded `totalHours` result is visible to the user.
+Define the admin SPA invoice management surface behavior — list, search, filter, stats, create dialog, detail/edit page, status actions, and role-aware interactions for Admin and PM users. This capability is introduced jointly by the `add-admin-invoices-ui` change (base invoice UI) and this change (the time rounding step field with dynamic project-based pre-fill in the create dialog, and the rounded per-entry duration display in the detail page and create dialog preview). Rounding is always active: the rounding step is a computation parameter resolved from the project or workspace, and the invoice detail page does not display the step value — only the rounded `totalHours` result and the rounded per-entry durations are visible to the user.
 
 ## ADDED Requirements
 
@@ -68,3 +68,37 @@ The invoice create dialog MUST include a time rounding step field — a PrimeVue
 - **WHEN** a new preview response arrives with a different `defaultRoundingStepMinutes`
 - **THEN** the field is not overwritten by the preview default
 - **AND** the user's manual value is preserved
+
+### Requirement: Invoice Surfaces Display Rounded Per-Entry Duration
+
+The invoice detail page time-entries table and the create dialog eligible-entries preview MUST display the rounded billed duration per entry — the `roundedDurationSeconds` value from the response — not the original raw `durationSeconds`. The raw duration is retained in the response payload for transparency but is not the value rendered in the Duration column. The rounding step value itself is not displayed; only its effect on each entry's duration and the aggregate `totalHours` is visible.
+
+#### Scenario: Invoice detail time-entries table shows rounded duration
+
+- **GIVEN** an invoice was created with `roundingStepMinutes: 5`
+- **AND** a linked time entry has `durationSeconds: 360` and `roundedDurationSeconds: 600`
+- **WHEN** the admin or PM opens the invoice detail page
+- **THEN** the time-entries table Duration column for that entry renders the rounded duration (10 minutes)
+- **AND** the raw 6-minute duration is not rendered in the Duration column
+
+#### Scenario: Create dialog eligible-entries preview shows rounded duration
+
+- **GIVEN** the create dialog preview returns an entry with `durationSeconds: 360` and `roundedDurationSeconds: 600`
+- **WHEN** the user expands the eligible time entries preview
+- **THEN** the preview table Duration column for that entry renders the rounded duration (10 minutes)
+- **AND** the raw 6-minute duration is not rendered in the Duration column
+
+#### Scenario: Preview Duration column recalculates when the rounding step changes
+
+- **GIVEN** the create dialog preview shows an entry whose `roundedDurationSeconds` is 600 (10 minutes) under a 5-minute step
+- **WHEN** the user changes the `Rounding step` dropdown to 30
+- **THEN** the eligible-entries preview re-fetches with `roundingStepMinutes=30`
+- **AND** the preview table Duration column for that entry re-renders with the new rounded duration (30 minutes) from the fresh response
+- **AND** the previously displayed 10-minute value is no longer rendered
+
+#### Scenario: Rounding step value is not displayed on the invoice detail page
+
+- **GIVEN** an invoice has a `roundingStepMinutes` snapshot of 5
+- **WHEN** the admin or PM opens the invoice detail page
+- **THEN** the rounding step value (5) is not rendered anywhere on the detail page
+- **AND** only the rounded `totalHours` and the rounded per-entry durations reflect the rounding

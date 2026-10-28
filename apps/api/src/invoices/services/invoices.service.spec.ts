@@ -637,6 +637,7 @@ describe('InvoicesService', () => {
     expect(response.timeEntries[0]).toMatchObject({
       id: sampleEntries[0].id,
       durationSeconds: 7200,
+      roundedDurationSeconds: 7200,
     });
   });
 
@@ -685,10 +686,37 @@ describe('InvoicesService', () => {
         startedAt: '2026-04-21T09:15:45.123Z',
         endedAt: '2026-04-21T15:30:45.123Z',
         durationSeconds: 3661,
+        roundedDurationSeconds: 3900,
         isBillable: false,
         description: 'Backend work',
       },
     ]);
+  });
+
+  it('rounds each entry duration up to the step multiple in the response', () => {
+    const { service } = createService('admin');
+    const toResponse = priv<[unknown, unknown[]], InvoiceResponse>(
+      service,
+      'toInvoiceResponse',
+    );
+
+    const response = toResponse(sampleInvoiceRow, [
+      {
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9030',
+        taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9006',
+        userId: adminUser.sub,
+        startedAt: new Date('2026-04-21T09:00:00.000Z'),
+        endedAt: new Date('2026-04-21T09:01:30.000Z'),
+        durationSeconds: 90,
+        isBillable: true,
+        description: null,
+      },
+    ]);
+
+    expect(response.timeEntries[0]).toMatchObject({
+      durationSeconds: 90,
+      roundedDurationSeconds: 300,
+    });
   });
 
   it('casts the stored status string for all three statuses', () => {

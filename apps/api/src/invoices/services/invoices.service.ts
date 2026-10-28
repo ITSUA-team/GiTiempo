@@ -535,6 +535,10 @@ export class InvoicesService {
       startedAt: e.startedAt.toISOString(),
       endedAt: e.endedAt!.toISOString(),
       durationSeconds: e.durationSeconds!,
+      roundedDurationSeconds: InvoicesService.roundEntrySeconds(
+        e.durationSeconds ?? 0,
+        effectiveRoundingStepMinutes,
+      ),
       isBillable: e.isBillable,
       description: e.description,
     }));
@@ -1072,6 +1076,10 @@ export class InvoicesService {
       startedAt: e.startedAt.toISOString(),
       endedAt: e.endedAt!.toISOString(),
       durationSeconds: e.durationSeconds!,
+      roundedDurationSeconds: InvoicesService.roundEntrySeconds(
+        e.durationSeconds ?? 0,
+        row.roundingStepMinutes,
+      ),
       isBillable: e.isBillable,
       description: e.description,
     }));

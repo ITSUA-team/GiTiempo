@@ -9325,6 +9325,11 @@
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
                 },
+                "roundedDurationSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
                 "isBillable": {
                   "type": "boolean"
                 },
@@ -9342,6 +9347,7 @@
                 "startedAt",
                 "endedAt",
                 "durationSeconds",
+                "roundedDurationSeconds",
                 "isBillable",
                 "description"
               ]
@@ -9524,6 +9530,11 @@
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
                 },
+                "roundedDurationSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
                 "isBillable": {
                   "type": "boolean"
                 },
@@ -9541,6 +9552,7 @@
                 "startedAt",
                 "endedAt",
                 "durationSeconds",
+                "roundedDurationSeconds",
                 "isBillable",
                 "description"
               ]

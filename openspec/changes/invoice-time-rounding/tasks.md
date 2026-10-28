@@ -15,6 +15,7 @@
 - [x] 2.4 Extend `eligibleEntriesResponseSchema` with non-null `defaultRoundingStepMinutes` (integer 1–60). Extend `eligibleEntriesQuerySchema` (or equivalent query contract) with optional `roundingStepMinutes` (integer 1–60). Verify: schema validates both fields.
 - [x] 2.5 Extend `createProjectSchema` and `updateProjectSchema` in `packages/shared/src/contracts/projects.ts` with optional nullable `timeRoundingStepMinutes` (integer 1–60 or null, null = inherit). Extend `projectResponseSchema` and `projectDetailResponseSchema` with nullable `timeRoundingStepMinutes`. Verify: `pnpm typecheck --filter @gitiempo/shared` passes.
 - [x] 2.6 Run `pnpm typecheck --filter @gitiempo/shared` and `pnpm lint --filter @gitiempo/shared` to verify the shared package is clean.
+- [x] 2.7 Add `roundedDurationSeconds` (positive integer) to `invoiceTimeEntrySummarySchema` in `packages/shared/src/contracts/invoices.ts`, alongside the existing raw `durationSeconds`. Document that it is the per-entry ceiling-rounded duration. Verify: `pnpm typecheck --filter @gitiempo/shared` passes and the field is present on `InvoiceTimeEntrySummary`.
 
 ## 3. Backend Workspace Settings Service (API)
 
@@ -30,6 +31,7 @@
 - [x] 4.4 Update `previewEligibleEntries` to accept an optional `roundingStepMinutes` query param, apply per-entry rounding with it (or the effective project step when omitted), and include `defaultRoundingStepMinutes` (always non-null: project effective step or workspace setting) in the response. Verify: test covers explicit override, project-explicit, project-inherit, and workspace-wide cases.
 - [x] 4.5 Update invoice response mapping (`getInvoice`, list endpoint) to include `roundingStepMinutes` from the invoice row. Verify: `GET /invoices/:id` response includes the snapshot field.
 - [x] 4.6 Add or update e2e/integration tests in `apps/api/test/` for: invoice creation with per-entry rounding, effective-step resolution (project-explicit, project-inherit, workspace-wide), explicit override, preview with rounding, and invalid step rejection. Verify: `pnpm test --filter @gitiempo/api` passes.
+- [x] 4.7 Attach `roundedDurationSeconds` to each entry summary in `toInvoiceResponse` (computed with `row.roundingStepMinutes`) and in `previewEligibleEntries` (computed with the effective rounding step), using `InvoicesService.roundEntrySeconds`. Keep raw `durationSeconds` unchanged. Verify: unit test confirms 90s→300s (step 5), 3661s→3900s (step 5), and already-multiple durations are unchanged; original `durationSeconds` remains raw.
 
 ## 5. Backend Project Service (API)
 
@@ -41,6 +43,7 @@
 ## 6. OpenAPI Export (API)
 
 - [x] 6.1 Run `pnpm openapi:export` and verify the generated spec includes `timeRoundingStepMinutes` on workspace settings response/update, `roundingStepMinutes` on invoice create/response, `defaultRoundingStepMinutes` on eligible-entries response, `roundingStepMinutes` on eligible-entries query, and `timeRoundingStepMinutes` on project create/update/response schemas. Verify: diff shows only the expected new fields.
+- [x] 6.2 Regenerate the OpenAPI spec and verify `roundedDurationSeconds` appears on the invoice time-entry summary schema (used by invoice detail and eligible-entries responses). Verify: diff shows only the expected new field.
 
 ## 7. Shared Frontend Form Schema (packages/web-shared)
 
@@ -59,6 +62,7 @@
 - [x] 9.2 Update the Add Project form description (around L114) to include `Time rounding step` alongside `Default billable for new tasks`, defaulting to "Inherit from workspace". Verify: docs text matches the updated .pen frame.
 - [x] 9.3 Update the invoice create dialog fields list (around L67) to add `Rounding step` (PrimeVue `<Select>` with presets: 1, 5, 10, 15, 30, 60; pre-filled from the eligible-entries preview `defaultRoundingStepMinutes`; dynamically updates when the project selection changes — both immediately from the project's `timeRoundingStepMinutes` and via the preview response; overridable per-invoice without changing project settings; uses the same touched-flag pattern as rate and currency). Field order: Currency, Discount, Rounding step. Add a pricing row layout bullet: equal-width single row on desktop (`sm:flex-1`), vertical stack on mobile. Verify: docs text covers pre-fill, immediate and preview-based dynamic project change, layout, override, and touched-flag behavior.
 - [x] 9.4 Update the workspace settings card description in the admin Settings section to include `Time rounding step (minutes)` as an active editable PrimeVue `<Select>` (presets: 1, 5, 10, 15, 30, 60, default 1) near the Default hourly rate / Currency row, saved via `PATCH /workspace/settings`. Verify: docs text matches the updated .pen frame and the implementation contract.
+- [x] 9.5 Update the invoice detail page time-entries card description and the create dialog eligible-entries preview description in `docs/ui/pages-admin.md` to state that the Duration column renders the rounded billed duration (`roundedDurationSeconds`), not the raw tracked duration. Verify: docs text matches the implementation and the spec.
 
 ## 10. Admin Workspace Settings UI (admin-web)
 
@@ -84,6 +88,7 @@
 - [x] 12.4 Include `roundingStepMinutes` in the preview query params (when the user has touched the field) so the preview updates when the step changes. Verify: changing the step triggers a re-fetch with the new value.
 - [x] 12.5 Include `roundingStepMinutes` in the create request payload in `handleCreate`. Update `admin-invoices-client.ts` `createInvoice` to pass the field. Verify: create request body includes the field.
 - [x] 12.6 Add or update component tests for `InvoiceCreateDialog.vue` covering: pre-fill from preview, dynamic update on project change, user override preserving value, preview re-fetch on step change, and create payload inclusion. Verify: `pnpm test --filter admin-web` passes for the dialog tests.
+- [x] 12.7 Render `roundedDurationSeconds` (not raw `durationSeconds`) in the eligible-entries preview Duration column of `InvoiceCreateDialog.vue`. The Duration column MUST re-render with the new rounded value when the user changes the `Rounding step` dropdown, because the preview re-fetches with the new `roundingStepMinutes` and the response carries fresh `roundedDurationSeconds` per entry. Verify: the preview table shows the rounded duration per entry and updates live when the step changes. Update `InvoiceCreateDialog.spec.ts` mock entry factories to include `roundedDurationSeconds`.
 
 ## 13. Manual Testing
 
@@ -102,6 +107,9 @@
 - [ ] 13.13 Attempt to create an invoice with `roundingStepMinutes: 0` via API. Verify: the request is rejected with a validation error.
 - [ ] 13.14 Attempt to update an existing invoice's `roundingStepMinutes` via `PATCH /invoices/:id`. Verify: the request is rejected (snapshot field is not mutable).
 - [ ] 13.15 Verify original time entries are not modified: after creating an invoice with rounding step 5, check the time entries linked to that invoice via the API or DB. Verify: their `durationSeconds` values remain the original raw values, not the rounded ones.
+- [ ] 13.16 Open an invoice detail page for an invoice created with rounding step 5 that links a 6-minute (360s) entry. Verify: the time-entries table Duration column shows 10 minutes (the rounded duration), not 6 minutes; the rounding step value (5) is not displayed anywhere on the page.
+- [ ] 13.17 Open the invoice create dialog, select a project with rounding step 5 and a date range that includes a 6-minute entry, and expand the eligible-entries preview. Verify: the preview Duration column shows 10 minutes for that entry.
+- [ ] 13.18 In the same create dialog preview, change the `Rounding step` dropdown from 5 to 30. Verify: the preview Duration column for the 6-minute entry immediately recalculates and shows 30 minutes (not 10).
 
 ## 14. Integration Verification
 
@@ -110,3 +118,9 @@
 - [x] 14.3 Run `pnpm test` across the monorepo and confirm all tests pass. Verify: command exits 0.
 - [x] 14.4 Run `pnpm test:e2e` and confirm invoice creation, project settings, and workspace settings e2e tests pass with the new rounding fields. Verify: command exits 0 or only pre-existing failures remain.
 - [x] 14.5 Run `openspec validate --strict` for this change and confirm it passes. Verify: command exits 0.
+
+## 15. Admin Invoice Detail Rounded Duration UI (admin-web)
+
+- [x] 15.1 Render `roundedDurationSeconds` (not raw `durationSeconds`) in the time-entries table Duration column of `InvoiceDetailView.vue`. Verify: the detail page shows the rounded billed duration per entry.
+- [x] 15.2 Update `InvoiceDetailView.spec.ts` mock entry factories to include `roundedDurationSeconds`. Add or update a test asserting the Duration column renders the rounded value. Verify: `pnpm test --filter admin-web` passes for the detail view tests.
+- [x] 15.3 Final design parity review: confirm the time-entries table still matches the approved .pen frame structure (no new columns or layout changes; only the displayed duration value changes). Verify: any remaining deltas are explicitly identified.
