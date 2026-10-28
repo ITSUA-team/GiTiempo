@@ -46,13 +46,17 @@ async function createApp(options?: {
       name: 'Admin',
       email_verified: true,
     }),
-    getOrCreateInvitedUserByEmail: options?.firebaseProvisioningError
+    createUnclaimedUser: options?.firebaseProvisioningError
       ? vi.fn().mockRejectedValue(options.firebaseProvisioningError)
-      : vi.fn().mockResolvedValue({
-          uid: 'firebase-invitee',
-          email: 'invitee@example.com',
-          isExistingUser: false,
-        }),
+      : vi
+          .fn()
+          .mockImplementation(
+            async (input: { uid: string; email: string }) => ({
+              ...input,
+              isExistingUser: false,
+            }),
+          ),
+    assertActiveUserByUid: vi.fn().mockResolvedValue(undefined),
     generatePasswordSetupLink: options?.firebasePasswordSetupLinkError
       ? vi.fn().mockRejectedValue(options.firebasePasswordSetupLinkError)
       : vi.fn().mockResolvedValue('https://firebase.test/reset'),
@@ -146,7 +150,8 @@ describe('Invite create failure compensation (e2e)', () => {
       .set('Authorization', bearer(failed.adminToken))
       .send({ email, role: 'member' });
 
-    expect(failedResponse.status).toBe(500);
+    expect(failedResponse.status).toBe(503);
+    expect(failedResponse.body.code).toBe('registration_service_unavailable');
     expect(failed.delivery.deliver).not.toHaveBeenCalled();
 
     const failedRows = await failed.db

@@ -137,3 +137,80 @@ describe('GithubAccountService OAuth authorization recovery', () => {
     },
   );
 });
+
+describe('GithubAccountService additional Firebase subjects', () => {
+  it.each([
+    { canonical: false, additional: true, expected: 'allowed' },
+    { canonical: 'unavailable', additional: true, expected: 'allowed' },
+    {
+      canonical: false,
+      additional: false,
+      expected: 'alternative_signin_required',
+    },
+    {
+      canonical: false,
+      additional: 'unavailable',
+      expected: 'verification_unavailable',
+    },
+  ])(
+    'checks live credentials before allowing disconnect: %j',
+    async (scenario) => {
+      const results = [
+        [
+          {
+            id: 'link',
+            userId: 'user',
+            githubUserId: 'github',
+            login: 'person',
+            avatarUrl: null,
+            connectedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        [],
+        [],
+        [{ firebaseUid: 'canonical' }],
+        [{ firebaseUid: 'additional' }],
+      ];
+      const db = {
+        select: () => {
+          const rows = results.shift();
+          const query = {
+            from: () => query,
+            where: () => query,
+            limit: async () => rows,
+            then: (resolve: (value: unknown) => unknown) =>
+              Promise.resolve(rows).then(resolve),
+          };
+          return query;
+        },
+      };
+      const firebase = {
+        hasUsableAlternativeLogin: vi.fn(async (uid: string) => {
+          const available =
+            uid === 'canonical' ? scenario.canonical : scenario.additional;
+          if (available === 'unavailable')
+            throw new Error('provider unavailable');
+          return available;
+        }),
+      };
+      const service = new GithubAccountService(
+        db as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        firebase as never,
+      );
+      expect((await service.status('user')).disconnect).toBe(scenario.expected);
+      expect(firebase.hasUsableAlternativeLogin).toHaveBeenCalledWith(
+        'canonical',
+      );
+      expect(firebase.hasUsableAlternativeLogin).toHaveBeenCalledWith(
+        'additional',
+      );
+    },
+  );
+});

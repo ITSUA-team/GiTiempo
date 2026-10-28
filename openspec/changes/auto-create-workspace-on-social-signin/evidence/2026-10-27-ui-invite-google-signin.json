@@ -1,0 +1,74 @@
+{
+  "at": "2026-10-27T08:26:22.673Z",
+  "mode": "read",
+  "action": {
+    "trackedInvite": {
+      "id": "af1d1d83-0211-413f-a6a2-e971876fa4ae",
+      "workspaceId": "5730b2dc-9d71-46f1-b2f3-5daee3aee7fa",
+      "invitedBy": "ac30309f-2282-408f-a5b3-a7765036886d",
+      "createdAt": "2026-10-27T08:15:38.187Z"
+    }
+  },
+  "state": {
+    "user": [
+      {
+        "id": "e3a7fb68-fc56-4d64-9819-42f87eb96e0a",
+        "firebase_uid": "lQL2U42bKferstDmUKvhAtSQc0s1"
+      }
+    ],
+    "membership": [],
+    "settings": [
+      {
+        "id": "72d15004-264e-4d89-8b8d-62789db4f063",
+        "workspace_id": "73da954f-a587-40d6-b43b-4dd53f2521c3",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "created_at": "2026-10-27T08:03:07.689Z",
+        "updated_at": "2026-10-27T08:03:07.689Z",
+        "time_zone": "UTC"
+      }
+    ],
+    "bindings": [
+      {
+        "id": "d8c31aad-4e4c-44bd-bf68-8eeb216e5484",
+        "user_id": "e3a7fb68-fc56-4d64-9819-42f87eb96e0a",
+        "firebase_uid": "lQL2U42bKferstDmUKvhAtSQc0s1",
+        "provider_id": "google"
+      }
+    ],
+    "memberships": [
+      {
+        "id": "70a5a4b9-c6a8-4841-98d9-6b6eda4d4aaf",
+        "workspace_id": "7f91cc10-6377-434c-997e-66d814f449c4",
+        "role": "admin",
+        "joined_at": "2026-10-27T08:24:49.434Z",
+        "name": "Workspace"
+      }
+    ],
+    "invites": [
+      {
+        "id": "af1d1d83-0211-413f-a6a2-e971876fa4ae",
+        "workspace_id": "5730b2dc-9d71-46f1-b2f3-5daee3aee7fa",
+        "invited_by": "ac30309f-2282-408f-a5b3-a7765036886d",
+        "role": "member",
+        "status": "pending",
+        "created_at": "2026-10-27T08:15:38.187Z",
+        "expires_at": "2026-11-03T08:15:38.187Z"
+      }
+    ],
+    "refreshSessions": [
+      {
+        "id": "de554e53-d1ba-42f6-a5d0-05605331ee56",
+        "workspace_id": "7f91cc10-6377-434c-997e-66d814f449c4",
+        "workspace_member_id": "70a5a4b9-c6a8-4841-98d9-6b6eda4d4aaf",
+        "created_at": "2026-10-27T08:24:49.434Z",
+        "revoked_at": null
+      }
+    ],
+    "counts": {
+      "users": 87,
+      "workspaces": 57,
+      "members": 87
+    }
+  }
+}

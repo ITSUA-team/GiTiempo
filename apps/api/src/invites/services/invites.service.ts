@@ -20,12 +20,12 @@ import {
   FIREBASE_ADMIN,
   type FirebaseAdminService,
 } from '../../auth/services/firebase-admin.interface';
+import { AuthService } from '../../auth/services/auth.service';
 import { normalizeEmail } from '../../commons/utils/normalize-email';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { Env } from '../../config/env.validation';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
-import { UsersService } from '../../users/services/users.service';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { inviteRowSelection, invites } from '../schemas/invites.schema';
 import { InviteDeliveryService } from './invite-delivery.service';
@@ -42,8 +42,8 @@ export class InvitesService {
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
     @Inject(FIREBASE_ADMIN) private readonly firebase: FirebaseAdminService,
     private readonly config: ConfigService<Env, true>,
-    private readonly users: UsersService,
     private readonly delivery: InviteDeliveryService,
+    private readonly auth: AuthService,
   ) {}
 
   async listInvites(workspaceId: string): Promise<WorkspaceInviteResponse[]> {
@@ -169,7 +169,10 @@ export class InvitesService {
     const invite = await this.findInviteByToken(input.token);
     this.assertInviteCanBeAccepted(invite);
 
-    const decoded = await this.firebase.verifyIdToken(input.firebaseIdToken);
+    const { decoded, googleSubject } = await this.auth.verifyFirebaseIdentity(
+      input.firebaseIdToken,
+      input.googleIdToken,
+    );
     if (!decoded.email) throw new UnauthorizedException('Unauthorized');
 
     const email = normalizeEmail(decoded.email);
@@ -177,47 +180,44 @@ export class InvitesService {
       throw new ForbiddenException('Invite email does not match identity');
     }
 
-    const userRow = await this.users.upsertFromFirebase({
-      firebaseUid: decoded.uid,
-      email,
-      displayName: decoded.name ?? null,
-      avatarUrl: decoded.picture ?? null,
-    });
+    await this.auth.acceptInviteIdentity(
+      decoded,
+      async (tx, userRow) => {
+        const [currentInvite] = await tx
+          .select(inviteRowSelection)
+          .from(invites)
+          .where(eq(invites.id, invite.id))
+          .limit(1);
+        if (!currentInvite) throw new NotFoundException('Invite not found');
+        this.assertInviteCanBeAccepted(currentInvite);
 
-    await this.db.transaction(async (tx) => {
-      const [currentInvite] = await tx
-        .select(inviteRowSelection)
-        .from(invites)
-        .where(eq(invites.id, invite.id))
-        .limit(1);
-      if (!currentInvite) throw new NotFoundException('Invite not found');
-      this.assertInviteCanBeAccepted(currentInvite);
+        const [existingMembership] = await tx
+          .select({ id: workspaceMembers.id })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, currentInvite.workspaceId),
+              eq(workspaceMembers.userId, userRow.id),
+            ),
+          )
+          .limit(1);
+        if (existingMembership) {
+          throw new ConflictException('User is already a workspace member');
+        }
 
-      const [existingMembership] = await tx
-        .select({ id: workspaceMembers.id })
-        .from(workspaceMembers)
-        .where(
-          and(
-            eq(workspaceMembers.workspaceId, currentInvite.workspaceId),
-            eq(workspaceMembers.userId, userRow.id),
-          ),
-        )
-        .limit(1);
-      if (existingMembership) {
-        throw new ConflictException('User is already a workspace member');
-      }
+        await tx.insert(workspaceMembers).values({
+          workspaceId: currentInvite.workspaceId,
+          userId: userRow.id,
+          role: currentInvite.role,
+        });
 
-      await tx.insert(workspaceMembers).values({
-        workspaceId: currentInvite.workspaceId,
-        userId: userRow.id,
-        role: currentInvite.role,
-      });
-
-      await tx
-        .update(invites)
-        .set({ status: 'accepted' })
-        .where(eq(invites.id, currentInvite.id));
-    });
+        await tx
+          .update(invites)
+          .set({ status: 'accepted' })
+          .where(eq(invites.id, currentInvite.id));
+      },
+      googleSubject,
+    );
   }
 
   private async findInviteByToken(token: string): Promise<InviteRow> {
@@ -266,7 +266,7 @@ export class InvitesService {
 
   private async deliverInvite(input: InviteWorkspaceRow): Promise<void> {
     const inviteUrl = buildInviteAcceptUrl(this.config, input.token);
-    await this.firebase.getOrCreateInvitedUserByEmail(input.email);
+    await this.auth.prepareInvitationIdentity(input.email);
     const passwordSetupUrl = await this.firebase.generatePasswordSetupLink(
       input.email,
       inviteUrl,

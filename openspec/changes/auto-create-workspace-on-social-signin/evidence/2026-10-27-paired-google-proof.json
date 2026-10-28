@@ -1,0 +1,213 @@
+{
+  "date": "2026-10-27",
+  "baselineCommit": "51a0ac577aa8dd9dcfe584e221ce9d6a3a098790",
+  "testedState": "uncommitted working tree including paired Google proof",
+  "database": "gitiempo_476_social_test",
+  "email": "alexeuel@gmail.com",
+  "baseline": {
+    "checkedAt": "2026-10-27T12:06:30.654Z",
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "userId": "ff250241-8f11-452d-a720-96213ad815d2",
+    "canonicalFirebaseUid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+    "workspaceId": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+    "membershipId": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3"
+  },
+  "googleWebRetry": {
+    "userReported": "Workspace opened",
+    "checkedAt": "2026-10-27T12:10:06.282Z",
+    "sameAccount": true,
+    "sameCanonicalFirebaseUid": true,
+    "sameMembershipsAndSettings": true,
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "addedBinding": {
+      "id": "55851530-977d-46e7-9b49-d730cc528bcb",
+      "firebase_uid": "UJc8VsqmqDhMTjbEFw0pKhbPW133",
+      "provider_id": "google",
+      "verified_email": "alexeuel@gmail.com",
+      "created_at": "2026-10-27T12:09:36.899Z",
+      "updated_at": "2026-10-27T12:09:36.899Z"
+    },
+    "allSessionDestinationsUseOriginalMembership": true
+  },
+  "liveFirebaseRead": {
+    "checkedAt": "2026-10-27T12:12:12.254Z",
+    "alias": {
+      "uid": "UJc8VsqmqDhMTjbEFw0pKhbPW133",
+      "email": null,
+      "emailVerified": false,
+      "disabled": false,
+      "providers": [
+        {
+          "providerId": "google.com",
+          "subject": "107306125014900689031",
+          "email": "alexeuel@gmail.com"
+        }
+      ]
+    },
+    "metadataMutated": false
+  },
+  "repeatGoogleAndDisconnect": {
+    "userReported": "repeat Google entry and GitHub Disconnect succeeded",
+    "checkedAt": "2026-10-27T12:12:32.531Z",
+    "sameFoundationAndBindings": true,
+    "githubLinkCount": 0,
+    "githubGrantCount": 0,
+    "providerRevocationResponseCaptured": false
+  },
+  "automatedVerification": {
+    "rootTypecheck": "passed 11/11 tasks",
+    "rootLint": "passed 11/11 tasks, existing frontend warnings",
+    "rootTest": "passed 11/11 cached tasks following immediate successful bounded-concurrency run, plus 5 CI-target tests",
+    "unitTests": {
+      "api": 624,
+      "userWeb": 572,
+      "adminWeb": 748,
+      "webShared": 242,
+      "shared": 534,
+      "webConfig": 18,
+      "extension": 259
+    },
+    "googleVerifier": {
+      "tests": 20,
+      "signatureFixture": "flips signature byte; 5 fresh focused runs passed"
+    },
+    "apiE2e": {
+      "database": "gitiempo_476_google_proof_e2e",
+      "files": 33,
+      "tests": 407,
+      "migratedAndSeeded": true,
+      "manualDatabaseUsed": false
+    },
+    "extensionDevBuilds": [
+      "Chrome passed",
+      "Firefox passed"
+    ],
+    "remoteManifestSchemaValidation": "skipped, host unreachable",
+    "openApiDiff": "only optional googleIdToken with minLength1/maxLength16384",
+    "strictChangeValidation": "passed",
+    "independentReview": "approved after JWKS cooldown, crypto coverage and Nest DI fixes"
+  },
+  "runtime": {
+    "apiPort": 3000,
+    "googleAudienceConfiguration": "local process only; confirmed dev Firebase Google client ID",
+    "firebaseDuplicateEmailPolicy": "restored false before this implementation; not changed by retry",
+    "devProdClientIdsUnified": false
+  },
+  "remaining": [],
+  "extensionCallbackCorrection": {
+    "initialUserReported": "Google sign-in could not be verified. Please try again.",
+    "observedFailureReasonCaptured": false,
+    "independentlyReproducedDefect": "rejecting unconsumed Google response metadata",
+    "correction": "ignore unconsumed metadata; validate optional fixed response issuer and reject duplicate consumed security fields; preserve callback/state/nonce/proof checks",
+    "safeFailureReasons": [
+      "callback",
+      "duplicate_parameter",
+      "issuer",
+      "missing_credentials",
+      "nonce",
+      "state"
+    ],
+    "independentReview": "approved",
+    "freshVerification": {
+      "extensionTests": 261,
+      "rootTypecheck": "11/11 passed, nine cached",
+      "rootLint": "11/11 passed, nine cached",
+      "rootTest": "11/11 passed, ten cached; extension tests freshly run; five CI-target tests passed",
+      "productionBuilds": [
+        "Chrome passed",
+        "Firefox passed"
+      ],
+      "localDevBuilds": [
+        "Chrome passed",
+        "Firefox passed"
+      ],
+      "strictChangeValidation": "passed",
+      "diffCheck": "passed"
+    },
+    "manualRetry": "user confirmed Workspace opened after reloading corrected dev build"
+  },
+  "googleExtensionRetry": {
+    "userReported": "Workspace opened",
+    "checkedAt": "2026-10-27T12:50:43.264Z",
+    "sameLocalUserId": true,
+    "sameCanonicalFirebaseUid": true,
+    "sameMembershipsSettingsAndBindings": true,
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "userRowChanges": [
+      "updated_at"
+    ],
+    "githubLinkCount": 0,
+    "githubGrantCount": 0,
+    "newSessions": [
+      {
+        "id": "c7e8027a-a3b5-4a86-a9f5-704840c98514",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "created_at": "2026-10-27T12:50:19.903Z",
+        "revoked_at": null
+      }
+    ],
+    "runtimeGoogleProofSource": "Reloaded local dev Chrome build; user-operated Google sign-in as alexeuel@gmail.com",
+    "credentialsCaptured": false,
+    "independentAcceptanceReview": "approved; combined web/repeat/disconnect/live-Firebase and extension evidence fulfills8.13"
+  },
+  "differentUidReverseEntry": {
+    "userReported": "Google entry followed by signed-out fresh GitHub OAuth entry opened Workspace",
+    "checkedAt": "2026-10-27T12:55:32.339Z",
+    "sameLocalUserAndCanonicalUid": true,
+    "unchanged": [
+      "counts",
+      "memberships",
+      "settings",
+      "subjectBindings",
+      "reservations"
+    ],
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "userRowChanges": [
+      "display_name",
+      "updated_at"
+    ],
+    "githubLinks": [
+      {
+        "id": "25c480e5-23f1-4d0d-915a-da5a9a94ee7c",
+        "github_user_id": "31486153",
+        "login": "AlexeyTsukanov",
+        "connected_at": "2026-10-27T12:55:09.926Z",
+        "updated_at": "2026-10-27T12:55:09.926Z"
+      }
+    ],
+    "newSessionDestinations": [
+      {
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "created_at": "2026-10-27T12:55:09.888Z",
+        "revoked_at": null
+      }
+    ],
+    "scope": "reverse provider entry order using already-proven different Firebase subjects; does not assert a fresh Google-founded account",
+    "independentAcceptanceReview": "approved; completes2.8 combined with prior sameUID bothorders and distinctUID GitHub\u2192Google plus reviewed automated security coverage"
+  },
+  "laterAcceptanceEvidence": {
+    "freshLocalExtensionFirst": "2026-10-27-extension-first-isolated-db.json",
+    "realPreDisconnectStaleHandoff": "2026-10-27-real-github-stale-handoff.json"
+  },
+  "limitations": [
+    "Repository graph tooling unavailable; indexing conditional substep is N/A, with no re-index/coverage claim."
+  ]
+}

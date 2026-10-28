@@ -17,6 +17,7 @@ describe('FakeFirebaseAdminService', () => {
       uid: 'admin-uid',
       email: 'admin@example.com',
       email_verified: true,
+      signInProvider: 'password',
     });
   });
 
@@ -40,6 +41,86 @@ describe('FakeFirebaseAdminService', () => {
     expect(decoded.picture).toBeUndefined();
   });
 
+  it('accepts trusted provider and verification test controls', async () => {
+    await expect(
+      fake.verifyIdToken(
+        'test:u1:alice@example.com:Alice:provider=google.com:verified=false',
+      ),
+    ).resolves.toMatchObject({
+      signInProvider: 'google.com',
+      email_verified: false,
+    });
+  });
+
+  it('retains a Google provider for a missing-email token claim and live identity', async () => {
+    const decoded = await fake.verifyIdToken(
+      'test:google-uid:owner@example.com:provider=google.com:google-subject=google-subject:claim-email=absent:live-email=absent',
+    );
+
+    expect(decoded).toMatchObject({
+      uid: 'google-uid',
+      googleSubjects: ['google-subject'],
+      signInProvider: 'google.com',
+    });
+    expect(decoded.email).toBeUndefined();
+    await expect(fake.getUserByUid('google-uid')).resolves.toEqual({
+      uid: 'google-uid',
+      emailVerified: true,
+      disabled: false,
+    });
+    await expect(
+      fake.assertActiveUserByUid(
+        'google-uid',
+        'owner@example.com',
+        'google-subject',
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it.each([
+    {
+      label: 'the Google provider subject differs',
+      token:
+        'test:google-uid:owner@example.com:provider=google.com:google-subject=actual-subject:live-email=absent',
+      googleSubject: 'different-subject',
+    },
+    {
+      label: 'the Google provider is missing',
+      token: 'test:google-uid:owner@example.com:live-email=absent',
+      googleSubject: 'expected-subject',
+    },
+  ])(
+    'rejects a live identity when $label',
+    async ({ token, googleSubject }) => {
+      await fake.verifyIdToken(token);
+
+      await expect(
+        fake.assertActiveUserByUid(
+          'google-uid',
+          'owner@example.com',
+          googleSubject,
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    },
+  );
+
+  it('rejects a previously verified identity after registration compensation deletes it', async () => {
+    const user = await fake.createEmailPasswordUser({
+      uid: 'registration-rollback-uid',
+      email: 'rollback@example.com',
+      password: 'long-enough-password',
+      displayName: 'Rollback',
+    });
+    await fake.verifyIdToken(
+      `test:${user.uid}:${user.email}:provider=google.com`,
+    );
+    await fake.deleteUser(user.uid);
+
+    await expect(
+      fake.assertActiveUserByUid(user.uid, user.email),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
   it('rejects tokens without the `test:` prefix', async () => {
     await expect(
       fake.verifyIdToken('eyJhbGciOiJSUzI1NiI...'),
@@ -53,6 +134,56 @@ describe('FakeFirebaseAdminService', () => {
     await expect(fake.verifyIdToken('test::no@uid.com')).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+  });
+
+  it('records verified observed identities, but creates manual identities as unverified', async () => {
+    await fake.verifyIdToken(
+      'test:google-uid:owner@example.com:provider=google.com',
+    );
+    const manual = await fake.createEmailPasswordUser({
+      uid: 'password-uid',
+      email: 'password@example.com',
+      password: 'long-enough-password',
+      displayName: 'Password owner',
+    });
+    await fake.createUnclaimedUser({
+      uid: 'unclaimed-uid',
+      email: 'invitee@example.com',
+    });
+
+    await expect(fake.getUserByUid('google-uid')).resolves.toEqual({
+      uid: 'google-uid',
+      email: 'owner@example.com',
+      emailVerified: true,
+      disabled: false,
+    });
+    await expect(fake.getUserByUid(manual.uid)).resolves.toMatchObject({
+      emailVerified: false,
+    });
+    await expect(fake.getUserByUid('unclaimed-uid')).resolves.toMatchObject({
+      emailVerified: false,
+    });
+    await expect(fake.getUserByUid('unknown-uid')).resolves.toBeNull();
+  });
+
+  it('rejects disabled and deleted identities', async () => {
+    const user = await fake.createEmailPasswordUser({
+      uid: 'disabled-user',
+      email: 'disabled@example.com',
+      password: 'long-enough-password',
+      displayName: 'Disabled owner',
+    });
+    fake.setUserDisabled(user.uid, true);
+
+    await expect(
+      fake.assertActiveUserByUid(user.uid, user.email),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    await fake.deleteUser(user.uid);
+    await expect(fake.getUserByUid(user.uid)).resolves.toBeNull();
+
+    await fake.verifyIdToken(`test:${user.uid}:${user.email}`);
+    await expect(fake.getUserByUid(user.uid)).resolves.toBeNull();
   });
 
   it('rejects non-string tokens', async () => {

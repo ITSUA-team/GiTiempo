@@ -1,0 +1,55 @@
+{
+  "executedOn": "2026-10-27",
+  "baselineCommit": "51a0ac57",
+  "workingTreeFollowups": [
+    "extension interactive-flow guard",
+    "legacy unbound identity/pending invitation integration regression",
+    "manual acceptance evidence"
+  ],
+  "checks": {
+    "rootTypecheck": {
+      "status": "passed",
+      "tasks": 11,
+      "rawLog": "/tmp/gitiempo476-final-typecheck.log"
+    },
+    "rootLint": {
+      "status": "passed",
+      "tasks": 11,
+      "rawLog": "/tmp/gitiempo476-final-lint.log",
+      "note": "Initial formatting errors in added test were corrected before this successful run; existing frontend warnings remain"
+    },
+    "rootTestComponents": {
+      "status": "passed",
+      "tasks": 11,
+      "command": "pnpm exec turbo run test --concurrency=1",
+      "rawLog": "/tmp/gitiempo476-final-tests.log"
+    },
+    "ciTargets": {
+      "status": "passed",
+      "tests": 5,
+      "rawLog": "/tmp/gitiempo476-final-ci-target-tests.log"
+    },
+    "targetedLegacyIntegration": {
+      "status": "passed",
+      "tests": 1,
+      "skipped": 35,
+      "evidence": "2026-10-27-legacy-pending-invite.json"
+    },
+    "strictChangeValidation": "passed",
+    "diffCheck": "passed",
+    "independentAcceptanceReview": "approved8.5and8.6"
+  },
+  "progress": {
+    "complete": 36,
+    "total": 43
+  },
+  "remainingBoundary": "Deferred real GitHub/new identity/provider-race checks and unavailable repository code graph tools; not ready to archive",
+  "scopeAmendment": {
+    "approvedBy": "user",
+    "date": "2026-10-27",
+    "excludedBehavior": "Cross-app account/session transfer between admin-web and user-web",
+    "ownerIssue": "https://github.com/ITSUA-team/GiTiempo/issues/483",
+    "effect": "Task8.4 complete for verified remaining scope; transfer defect not fixed or counted as blocker",
+    "applicationCodeChanged": false
+  }
+}

@@ -72,37 +72,71 @@ function setChromeRuntime({
   });
 }
 
+function createIdToken(nonce: string): string {
+  const payload = btoa(JSON.stringify({ nonce }))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  return `header.${payload}.signature`;
+}
+
+function stubGoogleRandomValues(): { nonce: string; state: string } {
+  const state = "11".repeat(32);
+  const nonce = "22".repeat(32);
+  vi.spyOn(globalThis.crypto, "getRandomValues")
+    .mockImplementationOnce((values) => {
+      (values as Uint8Array).fill(0x11);
+      return values;
+    })
+    .mockImplementationOnce((values) => {
+      (values as Uint8Array).fill(0x22);
+      return values;
+    });
+
+  return { nonce, state };
+}
+
 describe("extension firebase auth", () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     firebaseConfigured = true;
   });
 
-  it("uses launchWebAuthFlow and exchanges the Google access token through Firebase", async () => {
+  it("uses a nonce-bound Google ID token with Firebase and returns both proofs", async () => {
+    const { nonce, state } = stubGoogleRandomValues();
     setChromeRuntime({
-      launchWebAuthFlow: (
-        _details: unknown,
+      launchWebAuthFlow: (details: unknown,
         callback: unknown,
       ) => {
+        const authUrl = new URL((details as { url: string }).url);
+        expect(authUrl.searchParams.get("response_type")).toBe("token id_token");
+        expect(authUrl.searchParams.get("scope")).toContain("openid");
+        expect(authUrl.searchParams.get("scope")).toContain("email");
+        expect(authUrl.searchParams.get("nonce")).toBe(nonce);
         const respond = callback as Function;
 
         respond(
-          "https://extension-id.chromiumapp.org/oauth2#access_token=google-access-token&state=11111111-1111-4111-8111-111111111111",
+          `https://extension-id.chromiumapp.org/oauth2#access_token=google-access-token&id_token=${createIdToken(nonce)}&state=${state}&token_type=Bearer&authuser=0&prompt=select_account&iss=https%3A%2F%2Faccounts.google.com`,
         );
       },
     });
-    vi
-      .spyOn(globalThis.crypto, "randomUUID")
-      .mockReturnValue("11111111-1111-4111-8111-111111111111");
     signInWithCredential.mockResolvedValue({
       user: { getIdToken: vi.fn(async () => "firebase-id-token") },
     });
 
     const { signInWithGoogle } = await import("./firebase");
 
-    await expect(signInWithGoogle()).resolves.toBe("firebase-id-token");
-    expect(googleCredential).toHaveBeenCalledWith(null, "google-access-token");
+    await expect(signInWithGoogle()).resolves.toEqual({
+      firebaseIdToken: "firebase-id-token",
+      googleIdToken: createIdToken(nonce),
+    });
+    expect(googleCredential).toHaveBeenCalledWith(
+      createIdToken(nonce),
+      "google-access-token",
+    );
     expect(signInWithCredential).toHaveBeenCalledWith(
       "firebase-auth-instance",
       expect.objectContaining({ accessToken: "google-access-token" }),
@@ -124,11 +158,12 @@ describe("extension firebase auth", () => {
   });
 
   it("reads the OAuth client from config rather than the manifest", async () => {
+    const { nonce, state } = stubGoogleRandomValues();
     setChromeRuntime({
       launchWebAuthFlow: vi.fn(
         (_details: unknown, callback: (responseUrl?: string) => void) => {
           callback(
-            "https://extension-id.chromiumapp.org/oauth2#access_token=google-access-token&state=11111111-1111-4111-8111-111111111111",
+            `https://extension-id.chromiumapp.org/oauth2#access_token=google-access-token&id_token=${createIdToken(nonce)}&state=${state}`,
           );
         },
       ),
@@ -140,7 +175,75 @@ describe("extension firebase auth", () => {
 
     const { signInWithGoogle } = await import("./firebase");
 
-    await expect(signInWithGoogle()).resolves.toBe("firebase-id-token");
+    await expect(signInWithGoogle()).resolves.toEqual({
+      firebaseIdToken: "firebase-id-token",
+      googleIdToken: createIdToken(nonce),
+    });
+  });
+
+  it.each([
+    [
+      "a mismatched callback path",
+      "callback",
+      ({ nonce, state }: { nonce: string; state: string }) =>
+        `https://extension-id.chromiumapp.org/unexpected#access_token=access&id_token=${createIdToken(nonce)}&state=${state}`,
+    ],
+    [
+      "a duplicate state",
+      "duplicate_parameter",
+      ({ nonce, state }: { nonce: string; state: string }) =>
+        `https://extension-id.chromiumapp.org/oauth2#access_token=access&id_token=${createIdToken(nonce)}&state=${state}&state=${state}`,
+    ],
+    [
+      "a duplicate ID token",
+      "duplicate_parameter",
+      ({ nonce, state }: { nonce: string; state: string }) =>
+        `https://extension-id.chromiumapp.org/oauth2#access_token=access&id_token=${createIdToken(nonce)}&id_token=${createIdToken(nonce)}&state=${state}`,
+    ],
+    [
+      "a duplicate issuer",
+      "duplicate_parameter",
+      ({ nonce, state }: { nonce: string; state: string }) =>
+        `https://extension-id.chromiumapp.org/oauth2#access_token=access&id_token=${createIdToken(nonce)}&state=${state}&iss=https%3A%2F%2Faccounts.google.com&iss=https%3A%2F%2Faccounts.google.com`,
+    ],
+    [
+      "a mismatched state",
+      "state",
+      ({ nonce }: { nonce: string; state: string }) =>
+        `https://extension-id.chromiumapp.org/oauth2#access_token=access&id_token=${createIdToken(nonce)}&state=wrong-state`,
+    ],
+    [
+      "a missing ID token",
+      "missing_credentials",
+      ({ state }: { nonce: string; state: string }) =>
+        `https://extension-id.chromiumapp.org/oauth2#access_token=access&state=${state}`,
+    ],
+    [
+      "a mismatched nonce",
+      "nonce",
+      ({ state }: { nonce: string; state: string }) =>
+        `https://extension-id.chromiumapp.org/oauth2#access_token=access&id_token=${createIdToken("wrong-nonce")}&state=${state}`,
+    ],
+    [
+      "an unexpected issuer",
+      "issuer",
+      ({ nonce, state }: { nonce: string; state: string }) =>
+        `https://extension-id.chromiumapp.org/oauth2#access_token=access&id_token=${createIdToken(nonce)}&state=${state}&iss=https%3A%2F%2Funexpected.example.com`,
+    ],
+  ])("rejects %s before Firebase credential exchange", async (_reason, expectedReason, createResponse) => {
+    const values = stubGoogleRandomValues();
+    setChromeRuntime({
+      launchWebAuthFlow: (_details: unknown, callback: (responseUrl?: string) => void) => {
+        callback(createResponse(values));
+      },
+    });
+
+    const { signInWithGoogle } = await import("./firebase");
+
+    await expect(signInWithGoogle()).rejects.toThrow(
+      `Google sign-in could not be verified (${expectedReason}). Please try again.`,
+    );
+    expect(signInWithCredential).not.toHaveBeenCalled();
   });
 
   it("keeps email sign-in inside the popup-owned auth boundary", async () => {

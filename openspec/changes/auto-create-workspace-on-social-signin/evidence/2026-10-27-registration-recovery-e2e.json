@@ -1,0 +1,20 @@
+{
+  "executedAt": "2026-10-27T08:28:06.850Z",
+  "command": "node --env-file=apps/api/.env /tmp/gitiempo476-recovery-registration-run.cjs",
+  "database": "gitiempo_476_social_test",
+  "databaseGuard": "localhost/127.0.0.1 only, forced database path, SELECT current_database before execution",
+  "provider": "FakeFirebaseAdminService via NODE_ENV=test; no real provider or email mutation",
+  "testFile": "apps/api/test/auth.e2e-spec.ts",
+  "selectedTests": [
+    "recovers a timed-out manual registration only from its exact Firebase UID without persisting the password",
+    "retains timeout provenance after a late Firebase failure and rejects unauthenticated retries without another credential write",
+    "retains a reservation when Firebase may have created the exact UID before reporting an ambiguous internal error",
+    "reuses a compatible existing foundation during exact-UID registration recovery without another membership",
+    "rebuilds an unbound stored registration from durable reservation and live Firebase identity without a pending creation promise"
+  ],
+  "result": {
+    "passed": 5
+  },
+  "boundary": "Targeted existing HTTP/PostgreSQL controlled failure/recovery tests; not browser cancellation or real external Firebase timeout",
+  "rawLog": "/tmp/gitiempo476-recovery-registration.log"
+}

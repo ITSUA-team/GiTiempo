@@ -50,8 +50,6 @@ function mapRegistrationErrorMessage(error: unknown): string {
       return "Registration is temporarily unavailable. Try again in a moment.";
     case "weak_password":
       return "Choose a stronger password and try again.";
-    case "workspace_name_unavailable":
-      return "That workspace name is already in use. Choose another name.";
     default:
       return getErrorMessage(error, "Could not create the workspace.");
   }
@@ -86,10 +84,7 @@ export function useRegisterForm() {
       fieldErrors.email = inlineErrorMessage.value;
     }
 
-    if (
-      code === "invalid_workspace_name" ||
-      code === "workspace_name_unavailable"
-    ) {
+    if (code === "invalid_workspace_name") {
       fieldErrors.workspaceName = inlineErrorMessage.value;
     }
 
