@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { TransactionRollbackError } from 'drizzle-orm';
 import { RefreshTokenRepository } from './refresh-token.repository';
 
 /**
@@ -58,7 +59,9 @@ function makeDbMock(
     const tx = {
       insert: txInsert,
       update: txUpdate,
-      rollback: () => {},
+      rollback: () => {
+        throw new TransactionRollbackError();
+      },
     };
     return fn(tx);
   });

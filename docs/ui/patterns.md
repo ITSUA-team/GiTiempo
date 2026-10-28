@@ -99,10 +99,35 @@ Use `<DatePicker>`.
 - Time-only fields use `timeOnly` and `hourFormat="24"`.
 - Date and time combined uses `showTime` and should be used for time-entry create and edit forms that submit `startedAt` and `endedAt` ISO datetimes.
 - Do not split HH/MM into separate text inputs.
+- All DatePickers use `showButtonBar` with the shared `DatePickerButtonBar` component in the `#buttonbar` slot to provide explicit Cancel and Confirm actions. The `useDatePickerConfirmCancel` composable manages the value snapshot and overlay lifecycle. Use a dynamic `:ref` binding (not a string `ref`) so the composable's ref receives the component instance.
 
 ```vue
-<DatePicker v-model="dateRange" selectionMode="range" :manualInput="false" showIcon showClear />
-<DatePicker v-model="startTime" timeOnly hourFormat="24" />
+<script setup lang="ts">
+import { DatePickerButtonBar, useDatePickerConfirmCancel } from "@gitiempo/web-shared";
+
+const picker = useDatePickerConfirmCancel<Date[]>();
+</script>
+
+<template>
+  <DatePicker
+    :ref="picker.datePickerRef"
+    v-model="dateRange"
+    selection-mode="range"
+    :manual-input="false"
+    show-button-bar
+    show-clear
+    show-icon
+    @show="picker.handleShow"
+  >
+    <template #buttonbar>
+      <DatePickerButtonBar
+        @cancel="picker.handleCancel"
+        @confirm="picker.handleConfirm"
+      />
+    </template>
+  </DatePicker>
+  <DatePicker v-model="startTime" time-only hour-format="24" />
+</template>
 ```
 
 ## Cascading Task Selector

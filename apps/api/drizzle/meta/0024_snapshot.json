@@ -1,5 +1,5 @@
 {
-  "id": "c54b138a-562d-4170-a379-b6f3d86aeda2",
+  "id": "8fa79c48-7844-4b9e-92de-9863af1340c1",
   "prevId": "3b2b4e6b-a6a5-45d9-88b4-6e2b6a0dad12",
   "version": "7",
   "dialect": "postgresql",
@@ -316,6 +316,219 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.firebase_identity_reservations": {
+      "name": "firebase_identity_reservations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "normalized_email": {
+          "name": "normalized_email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "firebase_uid": {
+          "name": "firebase_uid",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'reserved'"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "firebase_identity_reservations_email_unique": {
+          "name": "firebase_identity_reservations_email_unique",
+          "columns": [
+            {
+              "expression": "lower(btrim(\"normalized_email\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "firebase_identity_reservations_uid_unique": {
+          "name": "firebase_identity_reservations_uid_unique",
+          "columns": [
+            {
+              "expression": "firebase_uid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "firebase_identity_reservations_user_id_users_id_fk": {
+          "name": "firebase_identity_reservations_user_id_users_id_fk",
+          "tableFrom": "firebase_identity_reservations",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.firebase_subject_bindings": {
+      "name": "firebase_subject_bindings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "firebase_uid": {
+          "name": "firebase_uid",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_email": {
+          "name": "verified_email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "firebase_subject_bindings_uid_unique": {
+          "name": "firebase_subject_bindings_uid_unique",
+          "columns": [
+            {
+              "expression": "firebase_uid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "firebase_subject_bindings_user_id_idx": {
+          "name": "firebase_subject_bindings_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "firebase_subject_bindings_user_id_users_id_fk": {
+          "name": "firebase_subject_bindings_user_id_users_id_fk",
+          "tableFrom": "firebase_subject_bindings",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.workspaces": {
       "name": "workspaces",
       "schema": "",
@@ -348,23 +561,7 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "workspaces_name_lookup_unique": {
-          "name": "workspaces_name_lookup_unique",
-          "columns": [
-            {
-              "expression": "lower(regexp_replace(btrim(\"name\"), '[[:space:]]+', ' ', 'g'))",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -408,13 +605,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'UTC'"
-        },
-        "time_rounding_step_minutes": {
-          "name": "time_rounding_step_minutes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
         },
         "created_at": {
           "name": "created_at",
@@ -466,12 +656,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "workspace_settings_time_rounding_step_minutes_check": {
-          "name": "workspace_settings_time_rounding_step_minutes_check",
-          "value": "\"workspace_settings\".\"time_rounding_step_minutes\" >= 1 AND \"workspace_settings\".\"time_rounding_step_minutes\" <= 60"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.workspace_members": {
@@ -796,12 +981,6 @@
           "notNull": true,
           "default": true
         },
-        "time_rounding_step_minutes": {
-          "name": "time_rounding_step_minutes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
         "is_active": {
           "name": "is_active",
           "type": "boolean",
@@ -915,10 +1094,6 @@
         "projects_tracking_mode_check": {
           "name": "projects_tracking_mode_check",
           "value": "\"projects\".\"tracking_mode\" IN ('managed', 'external-reference')"
-        },
-        "projects_time_rounding_step_minutes_check": {
-          "name": "projects_time_rounding_step_minutes_check",
-          "value": "\"projects\".\"time_rounding_step_minutes\" IS NULL OR (\"projects\".\"time_rounding_step_minutes\" >= 1 AND \"projects\".\"time_rounding_step_minutes\" <= 60)"
         }
       },
       "isRLSEnabled": false
@@ -3325,13 +3500,6 @@
           "notNull": true,
           "default": 0
         },
-        "rounding_step_minutes": {
-          "name": "rounding_step_minutes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
         "notes": {
           "name": "notes",
           "type": "text",
@@ -3465,10 +3633,6 @@
         "invoices_total_amount_check": {
           "name": "invoices_total_amount_check",
           "value": "\"invoices\".\"total_amount\" >= 0"
-        },
-        "invoices_rounding_step_minutes_check": {
-          "name": "invoices_rounding_step_minutes_check",
-          "value": "\"invoices\".\"rounding_step_minutes\" >= 1 AND \"invoices\".\"rounding_step_minutes\" <= 60"
         }
       },
       "isRLSEnabled": false

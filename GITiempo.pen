@@ -48075,6 +48075,191 @@
           "fontFamily": "Inter",
           "fontSize": 18,
           "fontWeight": "500"
+        },
+        {
+          "type": "frame",
+          "id": "mInvM1",
+          "x": 1400,
+          "y": 148,
+          "name": "Admin Invoices — Mobile filters",
+          "context": "Mobile variant (< 640px). Project, Period, and Status all full-width and equal width, stacked one under the other.",
+          "width": 375,
+          "height": 420,
+          "fill": "$color-surface",
+          "cornerRadius": 12,
+          "layout": "vertical",
+          "padding": [
+            16,
+            16
+          ],
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "mInvM1h",
+              "fill": "#27272A",
+              "content": "Mobile · Invoices — filters (< 640px)",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "mInvM1n",
+              "fill": "#52525B",
+              "content": "Project, Period, and Status all full-width and equal width, stacked one under the other.",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "textGrowth": "fixed-width",
+              "width": 343,
+              "lineHeight": 1.3
+            },
+            {
+              "type": "frame",
+              "id": "mInvM1p",
+              "name": "projectFilter",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mInvM1pl",
+                  "fill": "$color-text-muted",
+                  "content": "Project",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "mInvM1pi",
+                  "name": "projectInput",
+                  "width": "fill_container",
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "cornerRadius": "$radius-sm",
+                  "layout": "horizontal",
+                  "alignItems": "center",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "mInvM1pv",
+                      "fill": "$color-text-muted",
+                      "content": "All projects",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mInvM1pr",
+              "name": "periodFilter",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mInvM1prl",
+                  "fill": "$color-text-muted",
+                  "content": "Period",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "mInvM1pri",
+                  "name": "periodInput",
+                  "width": "fill_container",
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "cornerRadius": "$radius-sm",
+                  "layout": "horizontal",
+                  "alignItems": "center",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "mInvM1prv",
+                      "fill": "$color-text-muted",
+                      "content": "Date range",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mInvM1s",
+              "name": "statusFilter",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mInvM1sl",
+                  "fill": "$color-text-muted",
+                  "content": "Status",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "mInvM1si",
+                  "name": "statusInput",
+                  "width": "fill_container",
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "cornerRadius": "$radius-sm",
+                  "layout": "horizontal",
+                  "alignItems": "center",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "mInvM1sv",
+                      "fill": "$color-text-muted",
+                      "content": "All statuses",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     },

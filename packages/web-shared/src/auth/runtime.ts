@@ -9,6 +9,19 @@ import {
 import type { AuthHttpClient } from "./http-client";
 import type { CurrentUserClient } from "./current-user-client";
 
+export type FirebaseSignInResult =
+  | string
+  | {
+      firebaseIdToken: string;
+      googleIdToken?: string;
+    };
+
+export function getFirebaseSignInTokens(result: FirebaseSignInResult): {
+  firebaseIdToken: string;
+  googleIdToken?: string;
+} {
+  return typeof result === "string" ? { firebaseIdToken: result } : result;
+}
 
 export interface AuthRuntime {
   getCurrentUser: CurrentUserClient["getCurrentUser"];
@@ -19,8 +32,11 @@ export interface AuthRuntime {
   registerWorkspaceOwner: AuthHttpClient["registerWorkspaceOwner"];
   refreshSession: AuthHttpClient["refreshAuthSession"];
   switchWorkspace: AuthHttpClient["switchWorkspace"];
-  signInWithEmailPassword(email: string, password: string): Promise<string>;
-  signInWithGoogle(): Promise<string>;
+  signInWithEmailPassword(
+    email: string,
+    password: string,
+  ): Promise<string>;
+  signInWithGoogle(): Promise<FirebaseSignInResult>;
   signOutIdentityProvider(): Promise<void>;
   updateCurrentUser: CurrentUserClient["updateCurrentUser"];
 }
@@ -51,14 +67,19 @@ export function createDefaultAuthRuntime({
     return userCredential.user.getIdToken();
   }
 
-  async function signInWithGoogle(): Promise<string> {
+  async function signInWithGoogle(): Promise<FirebaseSignInResult> {
     const provider = new GoogleAuthProvider();
     provider.addScope("profile");
     provider.addScope("email");
 
     const userCredential = await signInWithPopup(getFirebaseAuth(), provider);
 
-    return userCredential.user.getIdToken();
+    const credential = GoogleAuthProvider.credentialFromResult(userCredential);
+
+    return {
+      firebaseIdToken: await userCredential.user.getIdToken(),
+      ...(credential?.idToken ? { googleIdToken: credential.idToken } : {}),
+    };
   }
 
   async function signOutIdentityProvider(): Promise<void> {

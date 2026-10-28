@@ -3,6 +3,7 @@ node_modules/
 coverage/
 pnpm-debug.log*
 
+firebase-debug.log
 .pnpm-store
 .DS_Store
 .env

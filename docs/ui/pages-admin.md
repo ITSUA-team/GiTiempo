@@ -3,6 +3,11 @@
 
 # Admin SPA Pages
 
+## Authentication
+
+- The admin login keeps the approved shared auth layout and existing provider actions. A successful Google or GitHub session exchange for a verified account with no memberships automatically provisions a `Workspace` and its admin membership; the ordinary role router then opens admin-web for that workspace. Existing memberships keep their normal deterministic selection, and pending invitations remain separate from sign-in.
+- Admin Google sign-in uses the same immediate paired Firebase/Google ID-token exchange as user-web when the Google credential is available. Backend verification can establish missing Firebase email proof; no raw credential is persisted and exchange failures clear partial session state.
+
 ## Dashboard
 
 - Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity feed.
@@ -51,7 +56,7 @@
 - Searchable invoice table with columns: Title, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
 - Search filters by invoice title (API `search` param, case-insensitive ILIKE). The search input is capped at 200 characters to match the API contract; the filter row stays interactive so the user can always clear filters even when a load error replaces the table.
 - Filter row: Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
-- Mobile filters (< 640px): the same three filters stack vertically — Project full-width, then Period and Status side-by-side in a 2-column grid. Filter wrappers use `min-w-0` so long project names truncate inside the Select instead of expanding the grid track beyond the container.
+- Mobile filters (< 640px): the same three filters stack vertically — Project, Period, and Status all full-width and equal width, one under the other. Filter wrappers use `min-w-0` so long project names truncate inside the Select instead of expanding the container.
 - If the projects request fails, a separate inline error card with Retry is shown between the stats cards and the table. The invoice list stays usable for non-project filtering; the project dropdown shows no options until the retry succeeds. For PMs this explains why invoice creation is blocked (a project is required).
 - Pagination control below the table (API returns `meta.totalPages`).
 - Table header has a `Create invoice` action button (plus icon).

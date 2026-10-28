@@ -5,7 +5,11 @@ import type {
   EligibleEntriesQuery,
   InvoiceResponse,
 } from '@gitiempo/shared';
-import { AppDialog } from '@gitiempo/web-shared';
+import {
+  AppDialog,
+  DatePickerButtonBar,
+  useDatePickerConfirmCancel,
+} from '@gitiempo/web-shared';
 import {
   formatLocalCalendarDate,
   getLocalDateKey,
@@ -73,6 +77,7 @@ const ROUNDING_STEP_OPTIONS = getRoundingStepOptions();
 const title = ref('');
 const selectedProjectId = ref<string | null>(null);
 const dateRange = ref<Date[] | null>(null);
+const datePicker = useDatePickerConfirmCancel<Date[] | null>();
 const hourlyRate = ref<number | null>(null);
 const currency = ref('');
 const discountPercent = ref<number | null>(0);
@@ -403,6 +408,7 @@ async function handleCreate(): Promise<void> {
             class="text-text-dark text-[13px] font-medium"
           >Date range</label>
           <DatePicker
+            :ref="datePicker.datePickerRef"
             v-model="dateRange"
             input-id="invoice-create-date-range"
             date-format="M d, yy"
@@ -414,7 +420,15 @@ async function handleCreate(): Promise<void> {
             show-icon
             class="w-full"
             :pt="giTiempoDatePickerPt"
-          />
+            @show="datePicker.handleShow"
+          >
+            <template #buttonbar>
+              <DatePickerButtonBar
+                @cancel="datePicker.handleCancel"
+                @confirm="datePicker.handleConfirm"
+              />
+            </template>
+          </DatePicker>
           <Message
             v-if="dateRangeError"
             severity="error"

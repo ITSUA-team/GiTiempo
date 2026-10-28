@@ -2,7 +2,7 @@
 
 Entity definitions and relationships for GI Tiempo.
 
-**Workspace model:** The application keeps a seeded default workspace for bootstrap and local development, and now also supports creating additional workspaces through first-owner registration. All workspace-owned entities reference `workspace_id`.
+**Workspace model:** The application keeps a seeded default workspace for bootstrap and local development, and also creates a personal workspace for a verified first Google or GitHub sign-in whose account has no memberships. The automatic workspace is named `Workspace`; manual registration may create another workspace with the same display name. All workspace-owned entities reference `workspace_id`.
 
 ---
 
@@ -51,7 +51,7 @@ Entity definitions and relationships for GI Tiempo.
 
 ### User (`users`)
 
-A person authenticated via Firebase Auth (Google SSO or email/password). GitHub identity is optional and stored in `github_account_links`; OAuth and personal App credentials are separate.
+A person authenticated via Firebase Auth (Google SSO or email/password). `firebase_uid` remains the stable canonical Firebase subject; additional verified social Firebase subjects are stored separately and resolve to the same user without replacing it. GitHub identity is optional and stored in `github_account_links`; OAuth and personal App credentials are separate.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -66,6 +66,12 @@ A person authenticated via Firebase Auth (Google SSO or email/password). GitHub 
 **Indexes:**
 - `users_firebase_uid_unique` UNIQUE on `firebase_uid`
 - `users_email_lookup_unique` UNIQUE on `lower(btrim(email))`
+
+### Firebase social identities and reservations
+
+`firebase_subject_bindings` maps proven social Firebase subjects to exactly one local user and records trusted provider/normalized verified-email evidence, including canonical-subject evidence where needed for later account adoption. Together with `users.firebase_uid`, it preserves canonical ownership while allowing additional verified subjects. Email-only adoption requires proof on both the incoming identity and existing account; a local email value or reservation alone does not verify ownership. A conflicting subject owned by another local user is rejected rather than merged.
+
+`firebase_identity_reservations` reserves an exact generated Firebase UID before the API calls Firebase for a new GitHub-sign-in, invitation, or manual-registration identity. It stores normalized email, purpose (`github-signin`, `invitation`, or `registration`), lifecycle (`reserved`, `confirmed`, or `bound`), and immutable non-secret original manual-registration data when applicable. Passwords are never persisted. Unknown creation/deletion outcomes retain the reservation, including across process restarts; an absent UID after a timeout does not authorize erasing or recreating it. Only authenticated control of the exact manual reserved UID can finish its foundation. Background UID reconciliation updates reservation state without granting access. Email lookup, invitation presence, and the reservation alone are not email-ownership proof. Reservations and subject bindings use the same normalized-email and canonical/alias UID locks as all identity writers.
 
 ---
 
@@ -112,11 +118,9 @@ A grouping container for workspace-owned operational data. A default workspace m
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 
-**Indexes:**
-- `workspaces_name_lookup_unique` UNIQUE on `lower(regexp_replace(btrim(name), '[[:space:]]+', ' ', 'g'))`
-
 **Notes:**
-- Workspace-name availability is global for MVP and is checked against the normalized lookup value above, not the raw display string.
+- Workspace names are display labels, not identifiers. They are intentionally not globally unique; selection and authorization always use the immutable workspace ID.
+- A verified first social login with no membership creates an exact `Workspace` label, default settings, and an admin membership in one transaction. Existing memberships select the earliest `joined_at`, then workspace ID, instead.
 
 ---
 
