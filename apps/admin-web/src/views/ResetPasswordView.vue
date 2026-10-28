@@ -53,6 +53,40 @@ const oobCode = computed(() => {
   return typeof code === "string" ? code.trim() : "";
 });
 const resetMode = computed(() => route.query.mode);
+const continueUrl = computed(() => {
+  const value = route.query.continueUrl;
+
+  return typeof value === "string" ? value : null;
+});
+const safePostResetTarget = computed<URL | null>(() => {
+  const raw = continueUrl.value;
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const currentOrigin =
+      typeof window === "undefined" ? "http://localhost" : window.location.origin;
+    const parsed = new URL(raw, currentOrigin);
+
+    const counterpartOrigin = appEnv.userAppUrl
+      ? new URL(appEnv.userAppUrl).origin
+      : null;
+
+    if (parsed.pathname !== "/login") {
+      return null;
+    }
+
+    if (parsed.origin === currentOrigin || parsed.origin === counterpartOrigin) {
+      return parsed;
+    }
+  } catch {
+    // Malformed continueUrl falls through to the default login redirect.
+  }
+
+  return null;
+});
 const panelState = computed<"checking" | "form" | "invalid">(() => {
   if (isChecking.value) {
     return "checking";
@@ -125,7 +159,13 @@ async function handleUpdatePassword(newPassword: string): Promise<void> {
   try {
     await authStore.confirmPasswordReset(oobCode.value, newPassword);
     successToast("Password updated. Sign in with your new password.");
-    await router.replace({ name: routeNames.login });
+    const target = safePostResetTarget.value;
+
+    if (target && target.origin !== window.location.origin) {
+      window.location.href = target.href;
+    } else {
+      await router.replace({ name: routeNames.login });
+    }
   } catch (error) {
     const detail = getFirebaseAuthErrorMessage(
       error,

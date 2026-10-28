@@ -56,6 +56,40 @@ const oobCode = computed(() => {
 
   return typeof value === "string" ? value.trim() : "";
 });
+const continueUrl = computed(() => {
+  const value = route.query.continueUrl;
+
+  return typeof value === "string" ? value : null;
+});
+const safePostResetTarget = computed<URL | null>(() => {
+  const raw = continueUrl.value;
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const currentOrigin =
+      typeof window === "undefined" ? "http://localhost" : window.location.origin;
+    const parsed = new URL(raw, currentOrigin);
+
+    const counterpartOrigin = appEnv.adminAppUrl
+      ? new URL(appEnv.adminAppUrl).origin
+      : null;
+
+    if (parsed.pathname !== "/login") {
+      return null;
+    }
+
+    if (parsed.origin === currentOrigin || parsed.origin === counterpartOrigin) {
+      return parsed;
+    }
+  } catch {
+    // Malformed continueUrl falls through to the default login redirect.
+  }
+
+  return null;
+});
 const invalidCopy = computed(() => {
   if (mode.value !== "resetPassword" || !oobCode.value) {
     return "This password reset link is invalid or incomplete. Request a new one to continue.";
@@ -118,7 +152,13 @@ async function handleResetPassword(newPassword: string): Promise<void> {
       "Password updated",
       "You can now sign in with your new password.",
     );
-    await router.replace({ name: routeNames.login });
+    const target = safePostResetTarget.value;
+
+    if (target && target.origin !== window.location.origin) {
+      window.location.href = target.href;
+    } else {
+      await router.replace({ name: routeNames.login });
+    }
   } catch (error) {
     errorMessage.value = getFirebaseAuthErrorMessage(error, "Could not update your password.");
     appToast.showErrorToast({

@@ -133,6 +133,7 @@ describe("ResetPasswordView", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     globalThis.fetch = originalFetch;
   });
 
@@ -412,5 +413,69 @@ describe("ResetPasswordView", () => {
     expect(wrapper.text()).not.toContain(submittedPassword);
     expect(JSON.stringify(toastAdd.mock.calls)).not.toContain(submittedPassword);
     expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain(submittedPassword);
+  });
+
+  it("redirects to the admin app login when continueUrl points there after a successful reset", async () => {
+    vi.stubEnv("VITE_ADMIN_APP_URL", "https://admin.example.test/login");
+    const adminLoginUrl = encodeURIComponent("https://admin.example.test/login");
+    const path = `/auth/reset-password?mode=resetPassword&oobCode=valid-code&continueUrl=${adminLoginUrl}`;
+    const verifyPasswordResetCode = vi.fn().mockResolvedValue("user@example.com");
+    const confirmPasswordReset = vi.fn(async () => undefined);
+    setAuthRuntimeForTesting(
+      createRuntimeMock({ verifyPasswordResetCode, confirmPasswordReset }),
+    );
+
+    let redirectedTo = "";
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        origin: originalLocation.origin,
+        get href() {
+          return redirectedTo;
+        },
+        set href(value: string) {
+          redirectedTo = value;
+        },
+      },
+    });
+
+    const { wrapper } = await mountResetPasswordView(path);
+    await wrapper.get('[data-testid="reset-password-password"]').setValue(submittedPassword);
+    await wrapper.get('[data-testid="reset-password-confirm"]').setValue(submittedPassword);
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: originalLocation,
+    });
+
+    expect(confirmPasswordReset).toHaveBeenCalledWith("valid-code", submittedPassword);
+    expect(redirectedTo).toBe("https://admin.example.test/login");
+  });
+
+  it("falls back to the local login redirect when continueUrl is an unsafe external URL", async () => {
+    const evilUrl = encodeURIComponent("https://evil.example/login");
+    const path = `/auth/reset-password?mode=resetPassword&oobCode=valid-code&continueUrl=${evilUrl}`;
+    const verifyPasswordResetCode = vi.fn().mockResolvedValue("user@example.com");
+    const confirmPasswordReset = vi.fn(async () => undefined);
+    setAuthRuntimeForTesting(
+      createRuntimeMock({ verifyPasswordResetCode, confirmPasswordReset }),
+    );
+
+    const { router, wrapper } = await mountResetPasswordView(path);
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.login,
+    );
+    await wrapper.get('[data-testid="reset-password-password"]').setValue(submittedPassword);
+    await wrapper.get('[data-testid="reset-password-confirm"]').setValue(submittedPassword);
+    await wrapper.get("form").trigger("submit");
+    await routeReady;
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(router.currentRoute.value.fullPath).toBe("/login");
   });
 });
