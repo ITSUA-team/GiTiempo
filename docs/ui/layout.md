@@ -34,6 +34,7 @@ User SPA and Admin SPA share the same shell:
 ### Sidebar Navigation
 
 - Nav item hit area: `h-11`; visible icon shell: `size-8 rounded-lg`, matching the top-bar logo square.
+- On non-mobile breakpoints, the sidebar stays sticky below the 64px top bar and scrolls within the remaining viewport height when needed.
 - Sidebar links are icon-only in both authenticated SPAs. Do not render visible text labels in the sidebar on desktop or collapsed layouts.
 - Mobile bottom navigation uses the same icon-only shared nav items; keep labels available through accessibility naming rather than visible text.
 - Use the former link text as the PrimeVue tooltip copy and the accessible label on sidebar links, e.g. icon-only `Dashboard` link with tooltip `Dashboard`.
