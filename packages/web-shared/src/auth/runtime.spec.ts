@@ -8,6 +8,7 @@ import {
 } from "./runtime";
 
 const firebaseMocks = vi.hoisted(() => ({
+  credentialFromResult: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),
   signInWithPopup: vi.fn(),
   signOut: vi.fn(),
@@ -17,13 +18,13 @@ const firebaseMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("firebase/auth", () => ({
-  GoogleAuthProvider: class GoogleAuthProvider {
+  GoogleAuthProvider: Object.assign(class GoogleAuthProvider {
     scopes: string[] = [];
 
     addScope(scope: string): void {
       this.scopes.push(scope);
     }
-  },
+  }, { credentialFromResult: firebaseMocks.credentialFromResult }),
   signInWithEmailAndPassword: firebaseMocks.signInWithEmailAndPassword,
   signInWithPopup: firebaseMocks.signInWithPopup,
   signOut: firebaseMocks.signOut,
@@ -124,13 +125,19 @@ describe("createDefaultAuthRuntime", () => {
     );
   });
 
-  it("signs in with Google and returns the Firebase ID token", async () => {
+  it("signs in with Google and returns Firebase and provider ID tokens", async () => {
     firebaseMocks.signInWithPopup.mockResolvedValueOnce({
       user: { getIdToken: async () => "google-id-token" },
     });
+    firebaseMocks.credentialFromResult.mockReturnValueOnce({
+      idToken: "google-provider-id-token",
+    });
     const runtime = createRuntime();
 
-    await expect(runtime.signInWithGoogle()).resolves.toBe("google-id-token");
+    await expect(runtime.signInWithGoogle()).resolves.toEqual({
+      firebaseIdToken: "google-id-token",
+      googleIdToken: "google-provider-id-token",
+    });
     expect(firebaseMocks.signInWithPopup).toHaveBeenCalledOnce();
   });
 

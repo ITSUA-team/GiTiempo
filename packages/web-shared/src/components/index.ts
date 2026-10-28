@@ -7,6 +7,7 @@ export { default as AuthSignInForm } from "./AuthSignInForm.vue";
 export { default as AuthForgotPasswordForm } from "./AuthForgotPasswordForm.vue";
 export { default as AuthResetPasswordForm } from "./AuthResetPasswordForm.vue";
 export { default as BillableDefaultBackfillDialog } from "./BillableDefaultBackfillDialog.vue";
+export { default as DatePickerButtonBar } from "./DatePickerButtonBar.vue";
 export { default as DialogFooterActionGroups } from "./DialogFooterActionGroups.vue";
 export { default as StandaloneSplitPage } from "./StandaloneSplitPage.vue";
 export { default as EditFormPanel } from "./EditFormPanel.vue";

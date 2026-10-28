@@ -10,7 +10,11 @@ import {
   getRefreshToken,
   setRefreshToken,
 } from "../session-storage";
-import type { AuthRuntime } from "./runtime";
+import {
+  getFirebaseSignInTokens,
+  type AuthRuntime,
+  type FirebaseSignInResult,
+} from "./runtime";
 import { SessionContextChangedError } from "./session-context-changed-error";
 
 const SESSION_EXPIRED_MESSAGE =
@@ -176,11 +180,14 @@ export function createAuthSessionCore({
     return refreshAccessPromise;
   }
 
-  async function exchangeFirebaseIdToken(firebaseIdToken: string): Promise<void> {
+  async function exchangeFirebaseIdToken(
+    signInResult: FirebaseSignInResult,
+  ): Promise<void> {
+    const { firebaseIdToken, googleIdToken } = getFirebaseSignInTokens(signInResult);
     const generation = sessionGeneration;
-    const tokenPair = await getAuthRuntime().loginWithFirebaseToken(
-      firebaseIdToken,
-    );
+    const tokenPair = googleIdToken
+      ? await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken, googleIdToken)
+      : await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
     assertSessionContext(generation);
 
     await establishSessionFromTokenPair(tokenPair);
@@ -268,8 +275,13 @@ export function createAuthSessionCore({
     return runSubmittingLogin(() => exchangeGithubHandoff(code));
   }
 
-  function loginWithFirebaseToken(firebaseIdToken: string): Promise<void> {
-    return runSubmittingLogin(() => exchangeFirebaseIdToken(firebaseIdToken));
+  function loginWithFirebaseToken(
+    firebaseIdToken: string,
+    googleIdToken?: string,
+  ): Promise<void> {
+    return runSubmittingLogin(() =>
+      exchangeFirebaseIdToken({ firebaseIdToken, ...(googleIdToken ? { googleIdToken } : {}) }),
+    );
   }
 
   function loginWithEmailPassword(
@@ -291,10 +303,10 @@ export function createAuthSessionCore({
   function loginWithGoogle(): Promise<void> {
     return runSubmittingLogin(async () => {
       const generation = sessionGeneration;
-      const firebaseIdToken = await getAuthRuntime().signInWithGoogle();
+      const signInResult = await getAuthRuntime().signInWithGoogle();
       assertSessionContext(generation);
 
-      await exchangeFirebaseIdToken(firebaseIdToken);
+      await exchangeFirebaseIdToken(signInResult);
     });
   }
 

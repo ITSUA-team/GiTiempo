@@ -268,7 +268,7 @@
             "description": "Invalid registration input or weak password"
           },
           "409": {
-            "description": "Duplicate email or workspace name unavailable"
+            "description": "Duplicate email"
           },
           "429": {
             "description": "Too many registration attempts"
@@ -3808,6 +3808,17 @@
               "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
               "type": "string"
             }
+          },
+          {
+            "name": "roundingStepMinutes",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minimum": 1,
+              "maximum": 60,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -4237,6 +4248,11 @@
           "firebaseIdToken": {
             "type": "string",
             "minLength": 1
+          },
+          "googleIdToken": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384
           }
         },
         "required": [
@@ -5175,6 +5191,11 @@
             "minLength": 1,
             "maxLength": 64
           },
+          "timeRoundingStepMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -5192,6 +5213,7 @@
           "currency",
           "defaultHourlyRate",
           "timeZone",
+          "timeRoundingStepMinutes",
           "createdAt",
           "updatedAt"
         ]
@@ -5212,6 +5234,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 64
+          },
+          "timeRoundingStepMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
           }
         },
         "additionalProperties": false
@@ -5771,6 +5798,11 @@
           "firebaseIdToken": {
             "type": "string",
             "minLength": 1
+          },
+          "googleIdToken": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384
           }
         },
         "required": [
@@ -5813,6 +5845,12 @@
           },
           "defaultBillableForTasks": {
             "type": "boolean"
+          },
+          "timeRoundingStepMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "nullable": true
           },
           "source": {
             "type": "string",
@@ -5922,6 +5960,7 @@
           "color",
           "visibility",
           "defaultBillableForTasks",
+          "timeRoundingStepMinutes",
           "source",
           "trackingMode",
           "referenceProvenance",
@@ -6009,6 +6048,12 @@
           },
           "defaultBillableForTasks": {
             "type": "boolean"
+          },
+          "timeRoundingStepMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "nullable": true
           }
         },
         "required": [
@@ -6050,6 +6095,12 @@
           },
           "defaultBillableForTasks": {
             "type": "boolean"
+          },
+          "timeRoundingStepMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "nullable": true
           },
           "source": {
             "type": "string",
@@ -6285,6 +6336,7 @@
           "color",
           "visibility",
           "defaultBillableForTasks",
+          "timeRoundingStepMinutes",
           "source",
           "trackingMode",
           "referenceProvenance",
@@ -6330,6 +6382,12 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "timeRoundingStepMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -8958,6 +9016,11 @@
                   "maximum": 9999999999.99,
                   "multipleOf": 0.01
                 },
+                "roundingStepMinutes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 60
+                },
                 "notes": {
                   "type": "string",
                   "nullable": true
@@ -9018,6 +9081,7 @@
                 "discountPercent",
                 "totalHours",
                 "totalAmount",
+                "roundingStepMinutes",
                 "notes",
                 "createdBy",
                 "createdByName",
@@ -9111,6 +9175,11 @@
             "type": "string",
             "maxLength": 5000,
             "nullable": true
+          },
+          "roundingStepMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
           }
         },
         "required": [
@@ -9189,6 +9258,11 @@
             "minimum": 0,
             "maximum": 9999999999.99,
             "multipleOf": 0.01
+          },
+          "roundingStepMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
           },
           "notes": {
             "type": "string",
@@ -9315,6 +9389,7 @@
           "discountPercent",
           "totalHours",
           "totalAmount",
+          "roundingStepMinutes",
           "notes",
           "createdBy",
           "createdByName",
@@ -9482,6 +9557,11 @@
             "maxLength": 3,
             "pattern": "^[A-Za-z]{3}$",
             "nullable": true
+          },
+          "defaultRoundingStepMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
           }
         },
         "required": [
@@ -9489,7 +9569,8 @@
           "totalHours",
           "entries",
           "defaultHourlyRate",
-          "defaultCurrency"
+          "defaultCurrency",
+          "defaultRoundingStepMinutes"
         ]
       },
       "UpdateInvoiceRequestDto": {

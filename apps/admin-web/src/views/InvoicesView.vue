@@ -14,10 +14,10 @@ import InvoicesTable from '@/components/invoices/InvoicesTable.vue';
 import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import { useAdminProjectsQuery, useWorkspaceSettingsQuery } from '@/composables/query';
+import { useAdminProjectsQuery } from '@/composables/query';
 import { adminProjectsClient } from '@/services/admin-projects-client';
-import { getAdminSettingsClient } from '@/services/admin-settings-client';
 import { useToasts } from '@/composables/feedback/useToasts';
+import { useWorkspaceRoundingSettings } from '@/composables/useWorkspaceRoundingSettings';
 import { useInvoiceCreate } from '@/composables/invoices/useInvoiceCreate';
 import { useInvoicesData } from '@/composables/invoices/useInvoicesData';
 import { routeNames } from '@/constants/routes';
@@ -131,26 +131,16 @@ watch(
   },
 );
 
-const workspaceSettingsQuery = useWorkspaceSettingsQuery({
-  client: getAdminSettingsClient(),
-  enabled: computed(() => Boolean(accessToken.value)),
-  scope,
-});
+const { workspaceSettingsQuery, workspaceRoundingStepMinutes } =
+  useWorkspaceRoundingSettings({
+    enabled: computed(() => Boolean(accessToken.value)),
+    fallback: null,
+    feature: 'invoices',
+    scope,
+  });
 
 const workspaceCurrency = computed(
   () => workspaceSettingsQuery.data.value?.currency ?? null,
-);
-
-watch(
-  () => workspaceSettingsQuery.error.value,
-  (error) => {
-    if (error) {
-      errorToast(getErrorMessage(error), {
-        error,
-        logContext: { action: 'load-workspace-settings', feature: 'invoices' },
-      });
-    }
-  },
 );
 
 const loadErrorMessage = computed(() =>
@@ -182,6 +172,14 @@ const filterOptions = computed<InvoicesTableFilterOptions>(() => ({
   })),
   statuses: INVOICE_STATUS_OPTIONS,
 }));
+
+const dialogProjects = computed(() =>
+  (projectsQuery.data.value ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    timeRoundingStepMinutes: p.timeRoundingStepMinutes,
+  })),
+);
 
 const statsCards = computed(() => {
   const statsData = stats.value;
@@ -337,9 +335,10 @@ function handleCreateSuccess(): void {
       v-model:visible="createDialogVisible"
       :create-mutation="createMutation"
       :is-admin="isAdmin"
-      :projects="filterOptions.projects"
+      :projects="dialogProjects"
       :scope="scope"
       :workspace-currency="workspaceCurrency"
+      :workspace-rounding-step-minutes="workspaceRoundingStepMinutes"
       @created="handleCreateSuccess"
     />
   </div>

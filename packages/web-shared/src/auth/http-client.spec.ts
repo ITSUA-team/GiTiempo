@@ -34,6 +34,28 @@ describe("createAuthHttpClient", () => {
     });
   });
 
+  it("posts a Google ID token only when the Google sign-in flow supplies one", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      }),
+    );
+    const client = createAuthHttpClient({ fetchFn });
+
+    await client.loginWithFirebaseToken("firebase-token", "google-id-token");
+
+    expect(fetchFn).toHaveBeenCalledWith("/auth/login", {
+      body: JSON.stringify({
+        firebaseIdToken: "firebase-token",
+        googleIdToken: "google-id-token",
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+  });
+
   it("posts refresh tokens to the refresh endpoint", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
@@ -171,10 +193,10 @@ describe("createAuthHttpClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse(
         {
-          code: "workspace_name_unavailable",
-          message: "Workspace name is already in use",
+          code: "invalid_workspace_name",
+          message: "Workspace name is invalid",
         },
-        { status: 409 },
+        { status: 400 },
       ),
     );
     const client = createAuthHttpClient({ fetchFn });
@@ -188,8 +210,8 @@ describe("createAuthHttpClient", () => {
         workspaceName: "Workspace Alpha",
       }),
     ).rejects.toMatchObject({
-      code: "workspace_name_unavailable",
-      message: "Workspace name is already in use",
+      code: "invalid_workspace_name",
+      message: "Workspace name is invalid",
     });
   });
 });

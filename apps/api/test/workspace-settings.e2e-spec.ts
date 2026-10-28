@@ -386,6 +386,27 @@ describe('Workspace settings (e2e)', () => {
       expect(row?.timeZone).toBe('Europe/Kyiv');
     });
 
+    it('updates timeRoundingStepMinutes', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ timeRoundingStepMinutes: 5 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.timeRoundingStepMinutes).toBe(5);
+
+      const verify = await request(app.getHttpServer())
+        .get('/workspace/settings')
+        .set('Authorization', bearer(adminToken));
+      expect(verify.body.timeRoundingStepMinutes).toBe(5);
+
+      const [row] = await db
+        .select()
+        .from(workspaceSettings)
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+      expect(row?.timeRoundingStepMinutes).toBe(5);
+    });
+
     it('returns 400 for empty body', async () => {
       const res = await request(app.getHttpServer())
         .patch('/workspace/settings')
@@ -412,6 +433,33 @@ describe('Workspace settings (e2e)', () => {
 
       expect(res.status).toBe(400);
     });
+
+    it('returns 400 for timeRoundingStepMinutes below minimum', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ timeRoundingStepMinutes: 0 });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for timeRoundingStepMinutes above maximum', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ timeRoundingStepMinutes: 61 });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for non-integer timeRoundingStepMinutes', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ timeRoundingStepMinutes: 2.5 });
+
+      expect(res.status).toBe(400);
+    });
   });
 
   describe('PATCH /workspace', () => {
@@ -434,6 +482,36 @@ describe('Workspace settings (e2e)', () => {
         .from(workspaces)
         .where(eq(workspaces.id, workspaceId));
       expect(row?.name).toBe('Updated Workspace');
+    });
+
+    it('allows a duplicate display name without changing the workspace ID', async () => {
+      const [otherWorkspace] = await db
+        .insert(workspaces)
+        .values({ name: `Duplicate target ${randomUUID()}` })
+        .returning();
+      if (!otherWorkspace)
+        throw new Error('Failed to create comparison workspace');
+
+      try {
+        const res = await request(app.getHttpServer())
+          .patch('/workspace')
+          .set('Authorization', bearer(adminToken))
+          .send({ name: otherWorkspace.name });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toMatchObject({
+          id: workspaceId,
+          name: otherWorkspace.name,
+        });
+        const [row] = await db
+          .select()
+          .from(workspaces)
+          .where(eq(workspaces.id, workspaceId));
+        expect(row?.id).toBe(workspaceId);
+        expect(row?.name).toBe(otherWorkspace.name);
+      } finally {
+        await db.delete(workspaces).where(eq(workspaces.id, otherWorkspace.id));
+      }
     });
 
     it('returns 400 for empty body', async () => {

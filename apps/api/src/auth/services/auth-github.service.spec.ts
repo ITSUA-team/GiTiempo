@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { Logger } from '@nestjs/common';
+import { Logger, UnauthorizedException } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGithubService, type GithubLoginApp } from './auth-github.service';
 import { GithubAccountOauthClientService } from '../../github/services/github-account-oauth-client.service';
@@ -36,11 +36,27 @@ function createServiceWithout(...omitted: string[]) {
 const pair = { accessToken: 'a', refreshToken: 'r', accessTokenExpiresIn: 900 };
 
 function createAuthStub() {
-  return {
+  const auth = {
     resolveActiveMemberIdsByEmails: vi.fn(async () => ['member-1']),
-    createSessionForMember: vi.fn(async () => pair),
+    resolveUserIdsByEmails: vi.fn(async () => [] as string[]),
+    assertVerifiedEmailOwnership: vi.fn(async () => undefined),
+    createSessionForMember: vi
+      .fn<(id: string, tx: unknown) => Promise<typeof pair>>()
+      .mockResolvedValue(pair),
     assertActiveMember: vi.fn(async () => undefined),
+    provisionSocialSession: vi.fn(
+      async (
+        input: { userId?: string },
+        persist: (tx: unknown, user: { id: string }) => Promise<void>,
+      ) => {
+        const tx = {};
+        const userId = input.userId ?? 'new-user';
+        await persist(tx, { id: userId });
+        return auth.createSessionForMember(userId, tx);
+      },
+    ),
   };
+  return auth;
 }
 
 function createAccountsStub() {
@@ -49,10 +65,7 @@ function createAccountsStub() {
     findByUserId: vi.fn().mockResolvedValue(null),
     getVersion: vi.fn(async () => ({ generation: 0, disconnectedAt: null })),
     assertLoginCurrent: vi.fn(async () => undefined),
-    saveOAuthAndRun: vi.fn(
-      async (_memberId, _profile, _tokens, _generation, _startedAt, run) =>
-        run({}),
-    ),
+    saveOAuthInTransaction: vi.fn(async () => undefined),
   };
 }
 
@@ -171,7 +184,7 @@ describe('AuthGithubService', () => {
   });
 
   it('completes the callback for a primary verified email and hands off a code', async () => {
-    const { svc } = createService();
+    const { svc, auth } = createService();
     const { state, stateNonce } = startTransaction(svc);
     vi.stubGlobal(
       'fetch',
@@ -186,6 +199,65 @@ describe('AuthGithubService', () => {
       'http://localhost:5173/auth/github/callback',
     );
     expect(redirect.searchParams.get('code')).toBeTruthy();
+    expect(auth.assertVerifiedEmailOwnership).toHaveBeenCalledWith('member-1', [
+      'me@example.com',
+    ]);
+  });
+
+  it('does not stage an email-matched account without Firebase ownership proof', async () => {
+    const { svc, auth } = createService();
+    auth.assertVerifiedEmailOwnership.mockRejectedValueOnce(
+      new UnauthorizedException({ code: 'identity_proof_required' }),
+    );
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'claimed@example.com', primary: true, verified: true },
+      ]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+
+    expect(redirect.pathname).toBe('/login');
+    expect(redirect.searchParams.get('githubError')).toBe(
+      'identity_proof_required',
+    );
+    expect(auth.provisionSocialSession).not.toHaveBeenCalled();
+    expect(auth.resolveUserIdsByEmails).not.toHaveBeenCalled();
+  });
+
+  it('filters unproven candidates before applying the primary-email tie-break', async () => {
+    const { svc, auth } = createService();
+    auth.resolveActiveMemberIdsByEmails
+      .mockResolvedValueOnce(['unproven', 'proven'])
+      .mockResolvedValueOnce(['proven']);
+    auth.assertVerifiedEmailOwnership
+      .mockRejectedValueOnce(
+        new UnauthorizedException({ code: 'identity_proof_required' }),
+      )
+      .mockResolvedValueOnce(undefined);
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'other@example.com', verified: true },
+        { email: 'primary@example.com', primary: true, verified: true },
+      ]),
+    );
+
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+    await svc.exchangeSession(redirect.searchParams.get('code')!);
+
+    expect(auth.assertVerifiedEmailOwnership).toHaveBeenCalledTimes(2);
+    expect(auth.provisionSocialSession).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'proven' }),
+      expect.any(Function),
+    );
   });
 
   it('prefers an existing GitHub identity and does not consult email ownership', async () => {
@@ -207,17 +279,17 @@ describe('AuthGithubService', () => {
     );
 
     expect(redirect.searchParams.get('code')).toBeTruthy();
-    expect(auth.assertActiveMember).toHaveBeenCalledWith('linked-member');
+    expect(auth.assertActiveMember).not.toHaveBeenCalled();
+    expect(auth.assertVerifiedEmailOwnership).not.toHaveBeenCalled();
     expect(auth.resolveActiveMemberIdsByEmails).not.toHaveBeenCalled();
   });
 
-  it('does not fall back to email when the linked GitHub owner is inactive', async () => {
+  it('stages the linked zero-membership owner without falling back to email', async () => {
     const { svc, auth, accounts } = createService();
     accounts.findByGithubId.mockResolvedValueOnce({
       userId: 'former-member',
       githubUserId: '123',
     });
-    auth.assertActiveMember.mockRejectedValueOnce(new Error('inactive'));
     const { state, stateNonce } = startTransaction(svc);
     vi.stubGlobal(
       'fetch',
@@ -230,7 +302,12 @@ describe('AuthGithubService', () => {
       await svc.completeCallback({ code: 'abc', state, stateNonce }),
     );
 
-    expect(redirect.searchParams.get('githubError')).toBe('failed');
+    expect(redirect.searchParams.get('code')).toBeTruthy();
+    await svc.exchangeSession(redirect.searchParams.get('code')!);
+    expect(auth.provisionSocialSession).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'former-member', linked: true }),
+      expect.any(Function),
+    );
     expect(auth.resolveActiveMemberIdsByEmails).not.toHaveBeenCalled();
   });
 
@@ -270,10 +347,10 @@ describe('AuthGithubService', () => {
     });
     const handoff = new URL(callback).searchParams.get('code')!;
 
-    expect(accounts.saveOAuthAndRun).not.toHaveBeenCalled();
+    expect(accounts.saveOAuthInTransaction).not.toHaveBeenCalled();
     expect(callback).not.toContain('gh-token');
     await svc.exchangeSession(handoff);
-    expect(accounts.saveOAuthAndRun).toHaveBeenCalledOnce();
+    expect(accounts.saveOAuthInTransaction).toHaveBeenCalledOnce();
   });
 
   it('rejects a sign-in when its authorization generation is no longer current', async () => {
@@ -415,7 +492,7 @@ describe('AuthGithubService', () => {
     ]);
   });
 
-  it('redirects with githubError=nomember when no verified address matches a member', async () => {
+  it('stages a new account without provisioning until handoff exchange', async () => {
     const { svc, auth } = createService();
     auth.resolveActiveMemberIdsByEmails.mockResolvedValueOnce([]);
     const { state, stateNonce } = startTransaction(svc);
@@ -428,10 +505,120 @@ describe('AuthGithubService', () => {
       await svc.completeCallback({ code: 'abc', state, stateNonce }),
     );
 
-    expect(redirect.pathname).toBe('/login');
-    expect(redirect.searchParams.get('githubError')).toBe('nomember');
-    expect(redirect.searchParams.get('code')).toBeNull();
+    expect(redirect.pathname).toBe('/auth/github/callback');
+    expect(auth.provisionSocialSession).not.toHaveBeenCalled();
+    await svc.exchangeSession(redirect.searchParams.get('code')!);
+    expect(auth.provisionSocialSession).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'me@example.com', provider: 'github' }),
+      expect.any(Function),
+    );
+  });
+
+  it('reuses a zero-membership email account before considering a new one', async () => {
+    const { svc, auth } = createService();
+    auth.resolveActiveMemberIdsByEmails.mockResolvedValue([]);
+    auth.resolveUserIdsByEmails.mockResolvedValue(['without-workspace']);
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'other@example.com', primary: true, verified: true },
+        { email: 'existing@example.com', primary: false, verified: true },
+      ]),
+    );
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+    await svc.exchangeSession(redirect.searchParams.get('code')!);
+    expect(auth.provisionSocialSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'without-workspace',
+        verifiedEmails: ['other@example.com', 'existing@example.com'],
+      }),
+      expect.any(Function),
+    );
+  });
+
+  it('rejects multiple unmatched verified emails without a primary instead of choosing by order', async () => {
+    const { svc, auth } = createService();
+    auth.resolveActiveMemberIdsByEmails.mockResolvedValue([]);
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([
+        { email: 'first@example.com', verified: true },
+        { email: 'second@example.com', verified: true },
+      ]),
+    );
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+    expect(redirect.searchParams.get('githubError')).toBe('ambiguous');
+    expect(auth.provisionSocialSession).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])(
+    'resolves zero-membership ambiguity only with a matching primary: %s',
+    async (primaryMatches) => {
+      const { svc, auth } = createService();
+      auth.resolveActiveMemberIdsByEmails.mockResolvedValue([]);
+      auth.resolveUserIdsByEmails
+        .mockResolvedValueOnce(['zero-1', 'zero-2'])
+        .mockResolvedValueOnce(primaryMatches ? ['zero-2'] : []);
+      const { state, stateNonce } = startTransaction(svc);
+      vi.stubGlobal(
+        'fetch',
+        mockGithub([
+          { email: 'first@example.com', verified: true },
+          { email: 'primary@example.com', verified: true, primary: true },
+        ]),
+      );
+      const redirect = new URL(
+        await svc.completeCallback({ code: 'abc', state, stateNonce }),
+      );
+      if (primaryMatches) {
+        await svc.exchangeSession(redirect.searchParams.get('code')!);
+        expect(auth.provisionSocialSession).toHaveBeenCalledWith(
+          expect.objectContaining({ userId: 'zero-2' }),
+          expect.any(Function),
+        );
+      } else {
+        expect(redirect.searchParams.get('githubError')).toBe('ambiguous');
+        expect(auth.provisionSocialSession).not.toHaveBeenCalled();
+      }
+    },
+  );
+
+  it('carries generation zero and original flow time into exchange for a new candidate', async () => {
+    const { svc, auth, accounts } = createService();
+    auth.resolveActiveMemberIdsByEmails.mockResolvedValue([]);
+    const { state, stateNonce } = startTransaction(svc);
+    vi.stubGlobal(
+      'fetch',
+      mockGithub([{ email: 'single@example.com', verified: true }]),
+    );
+    const redirect = new URL(
+      await svc.completeCallback({ code: 'abc', state, stateNonce }),
+    );
+    expect(accounts.getVersion).not.toHaveBeenCalled();
+    accounts.saveOAuthInTransaction.mockRejectedValueOnce(
+      new Error('stale after disconnect'),
+    );
+    await expect(
+      svc.exchangeSession(redirect.searchParams.get('code')!),
+    ).rejects.toThrow('stale after disconnect');
+    expect(accounts.saveOAuthInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      'new-user',
+      expect.objectContaining({ githubUserId: '123' }),
+      expect.anything(),
+      0,
+      expect.any(Date),
+    );
     expect(auth.createSessionForMember).not.toHaveBeenCalled();
+    await expect(
+      svc.exchangeSession(redirect.searchParams.get('code')!),
+    ).rejects.toThrow();
   });
 
   it('breaks a tie with the primary address instead of refusing', async () => {

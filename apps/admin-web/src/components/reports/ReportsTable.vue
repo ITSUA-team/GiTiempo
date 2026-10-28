@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
   giTiempoDatePickerPt,
   giTiempoFieldWidthSelectPt,
 } from '@gitiempo/web-config/theme';
 import {
+  DatePickerButtonBar,
   EmptyStateBlock,
   FilterAutoComplete,
   ManagementTableShell,
@@ -12,6 +13,7 @@ import {
   SectionHeader,
   filterAutocompleteOptions,
   normalizeReportDateRangeValue,
+  useDatePickerConfirmCancel,
   useIsMobileViewport,
   type ManagementTableColumn,
   type ReportDatePickerRangeValue,
@@ -75,6 +77,12 @@ const datePickerStyle = computed(() => {
   if (isMobileViewport.value) return undefined;
   const width = reportDatePickerWidth.value;
   return width ? { width } : undefined;
+});
+const datePicker = useDatePickerConfirmCancel<ReportDatePickerRangeValue>();
+const pendingDateRange = ref<ReportDatePickerRangeValue>(dateRange.value);
+
+watch(dateRange, (value) => {
+  pendingDateRange.value = value;
 });
 const projectFilterSuggestions = ref<ReportFilterOption[]>([]);
 const memberFilterSuggestions = ref<ReportFilterOption[]>([]);
@@ -225,7 +233,12 @@ function handleGlobalSearchUpdate(value: string | null | undefined): void {
 }
 
 function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
-  dateRange.value = normalizeReportDateRangeValue(value);
+  pendingDateRange.value = value;
+}
+
+function handleDateRangeConfirm(): void {
+  dateRange.value = normalizeReportDateRangeValue(pendingDateRange.value);
+  datePicker.handleConfirm();
 }
 
 function handleProjectFilterComplete(event: AutoCompleteCompleteEvent): void {
@@ -282,7 +295,8 @@ function handleMemberFilterUpdate(
             class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center"
           >
             <DatePicker
-              :model-value="dateRange"
+              :ref="datePicker.datePickerRef"
+              :model-value="pendingDateRange"
               aria-label="Report date range"
               class="w-full sm:w-[220px]"
               date-format="M d, yy"
@@ -295,8 +309,16 @@ function handleMemberFilterUpdate(
               show-button-bar
               show-clear
               show-icon
+              @show="datePicker.handleShow"
               @update:model-value="handleDateRangeUpdate"
-            />
+            >
+              <template #buttonbar>
+                <DatePickerButtonBar
+                  @cancel="datePicker.handleCancel"
+                  @confirm="handleDateRangeConfirm"
+                />
+              </template>
+            </DatePicker>
 
             <IconField class="w-full sm:w-[240px] md:w-[280px]">
               <InputIcon class="pi pi-search text-text-muted" />

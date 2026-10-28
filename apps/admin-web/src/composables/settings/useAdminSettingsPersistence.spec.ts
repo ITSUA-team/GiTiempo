@@ -22,6 +22,7 @@ const settingsResponse = {
   currency: 'USD',
   defaultHourlyRate: 120,
   id: '22222222-2222-4222-8222-222222222222',
+  timeRoundingStepMinutes: 1,
   timeZone: 'UTC',
   updatedAt: '2026-05-01T10:00:00.000Z',
   workspaceId: '11111111-1111-4111-8111-111111111111',
@@ -30,6 +31,7 @@ const settingsResponse = {
 const currentValues = {
   currency: 'USD',
   defaultHourlyRate: 120,
+  timeRoundingStepMinutes: 1,
   timeZone: 'UTC',
   workspaceName: 'GiTiempo Studio',
 };
@@ -139,6 +141,7 @@ describe('useAdminSettingsPersistence', () => {
       values: {
         currency: 'EUR',
         defaultHourlyRate: null,
+        timeRoundingStepMinutes: 1,
         timeZone: 'Europe/Kyiv',
         workspaceName: 'GiTiempo Studio',
       },
@@ -157,6 +160,35 @@ describe('useAdminSettingsPersistence', () => {
         defaultHourlyRate: null,
         timeZone: 'Europe/Kyiv',
       },
+      wroteChanges: true,
+    });
+  });
+
+  it('saves rounding step changes', async () => {
+    const client = createClient({
+      updateWorkspaceSettings: vi.fn().mockResolvedValue({
+        ...settingsResponse,
+        timeRoundingStepMinutes: 15,
+      }),
+    });
+    const { persistence } = createSubject({ client });
+
+    const result = await persistence.saveSettings({
+      current: currentValues,
+      settings: settingsResponse,
+      values: {
+        ...currentValues,
+        timeRoundingStepMinutes: 15,
+      },
+      workspace: workspaceResponse,
+    });
+
+    expect(client.updateWorkspace).not.toHaveBeenCalled();
+    expect(client.updateWorkspaceSettings).toHaveBeenCalledWith({
+      timeRoundingStepMinutes: 15,
+    });
+    expect(result).toMatchObject({
+      values: { timeRoundingStepMinutes: 15 },
       wroteChanges: true,
     });
   });

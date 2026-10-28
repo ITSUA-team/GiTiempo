@@ -157,10 +157,10 @@
 - Clicking the `Forgot?` link navigates to `/auth/forgot-password` without submitting the login form, without clearing the entered email state, and without changing login submission behavior. The recovery page it opens is documented below.
 - The primary action is `Sign in`.
 - `Continue with Google` remains a secondary sign-in action below the primary action.
-- `Continue with GitHub` is offered as a secondary sign-in action when GitHub sign-in is enabled for the environment (`VITE_GITHUB_SIGNIN_ENABLED`). It is **backend-driven**: the button leaves the SPA and navigates to the API (`/auth/github/start`), which runs the GitHub OAuth flow and redirects back to the `/auth/github/callback` route with a one-time code that is exchanged for a session. It authenticates existing members by their verified GitHub email and is independent of the GitHub App integration.
+- Google popup sign-in sends its Firebase ID token and, when available, the Google ID token to the immediate backend exchange. The backend verifies the paired Google proof when Firebase lacks verified email. Neither credential is retained in application storage or logs; rejected exchanges use existing guest-state cleanup without another form.
+- `Continue with GitHub` is offered as a secondary sign-in action when GitHub sign-in is enabled for the environment (`VITE_GITHUB_SIGNIN_ENABLED`). It is **backend-driven**: the button leaves the SPA and navigates to the API (`/auth/github/start`), which runs the GitHub OAuth flow and redirects back to the `/auth/github/callback` route with a one-time code that is exchanged for a session. For a verified account with no memberships, the normal session exchange automatically provisions a personal workspace named `Workspace`; an existing member keeps the selected existing workspace. Pending invitations remain a separate acceptance flow. This sign-in is independent of the GitHub App integration.
 - Add a secondary outlined `Create workspace` action below `Continue with Google`. It links to `/register` and opens the register new workflow without changing the login form state.
 - Keep the register action visually secondary to both sign-in actions. Do not render it as a second filled primary button.
-- Keep the existing invite/help text below the action stack so users joining an existing workspace still understand they need an invitation.
 - The left brand panel carries a `Browser extension` callout below the feature cards: a puzzle icon, the title `Browser extension`, the line `Track time right from your browser`, and a trailing arrow. It opens in a new tab so an in-progress sign-in survives. It is intro content, not a sign-in action, and never renders inside the sign-in form.
 - The callout sends the user to the extension's install page (`VITE_EXTENSION_INSTALL_URL`). With that value unset the callout is omitted entirely — no placeholder and no inactive link — so no environment shows a dead end.
 - The admin login shows the same callout, driven by the same value; both register screens carry none. The shared intro panel exposes it through an optional slot each login fills.
@@ -199,14 +199,14 @@ The approved `.pen` auth screens (user login, admin login, and both register scr
 - The page must not ship as a disabled placeholder. If the registration backend is unavailable, the route should remain unregistered or intentionally gated until the approved contract exists.
 - While registration is submitting, keep the panel shape stable, show loading on `Create workspace`, and prevent duplicate submissions.
 - Successful registration should establish the normal app session from the approved registration response and redirect to the dashboard.
-- Registration errors stay inline in the panel and should also use toast feedback for failed submission. Required mapped cases once backend support exists: duplicate email, weak password, invalid workspace name, workspace name unavailable, rate limiting, and registration service unavailable.
+- Registration errors stay inline in the panel and should also use toast feedback for failed submission. Required mapped cases once backend support exists: duplicate email, weak password, invalid workspace name, rate limiting, and registration service unavailable. Duplicate workspace labels are valid and do not produce a registration error.
 - Query and form tests should cover default render, required-field validation, owner acknowledgement validation, duplicate-submit prevention, successful dashboard redirect, existing-account navigation, and each mapped backend error once implementation begins.
 
 ## Invite Accept Page
 
 - `/invites/accept?token=...` renders as a standalone unauthenticated route-level page outside the authenticated app shell.
 - The invite accept page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
-- Use the approved `Invite Accept` `.pen` screen as the desktop parity source.
+- No dedicated approved `.pen` frame exists for invite acceptance. Follow the documented states below and the shared auth-page visual language; no new frame or layout redesign is required for these corrections.
 - The left brand panel explains the invite-only onboarding flow: use invited email, set a password from the invite email if needed, sign in to the Firebase identity, accept invite, continue to dashboard.
 - The default main panel title is `Accept invite` with helper copy explaining that the user should sign in with the invited email after setting a password from the invite email if this is their first time.
 - If the `token` query parameter is present, show the soft accent token notice `Invite token detected from the email link.`
@@ -215,8 +215,8 @@ The approved `.pen` auth screens (user login, admin login, and both register scr
 - The page MUST NOT create Firebase email/password accounts in the browser. First-time email/password invitees use the password setup/reset link sent in the invite email; backend invite delivery owns Firebase Admin SDK user provisioning and password setup/reset link generation.
 - The secondary account action is `Need a password setup link? Check your invite email or ask an admin to send a fresh invite`; it preserves the invite token and does not expose a browser signup form.
 - `Continue with Google` may remain available as an alternative sign-in action; it uses the same invite token and accepts the invite after Firebase returns an identity token for the invited email.
-- The page MUST submit `POST /invites/accept` with `{ token, firebaseIdToken }` after Firebase sign-in, before trying to create an app API session for a first-time invited user.
-- After `POST /invites/accept` returns `204`, the page signs in to the normal app session with the same Firebase identity token, then redirects to the dashboard.
+- The page MUST submit `POST /invites/accept` with `{ token, firebaseIdToken, googleIdToken? }` after Firebase sign-in, before trying to create an app API session for a first-time invited user. Forward the transient Google ID token when available so the API can verify a missing-email Firebase identity before accepting the invitation.
+- After `POST /invites/accept` returns `204`, the page signs in to the normal app session with the same Firebase identity token and optional paired Google proof, then redirects to the dashboard. Neither credential is stored or logged.
 - While acceptance is in progress, keep the panel shape stable, show a loading state on the active action, and prevent duplicate submissions.
 - Success state copy is `Workspace access created. Redirecting to dashboard.` and may be brief because successful users are redirected.
 - API errors stay inline in the panel and use the backend error message when available. Required mapped cases: `Invite not found`, `Invite has expired`, `Invite cannot be accepted`, `Invite email does not match identity`, and `User is already a workspace member`.
@@ -233,7 +233,7 @@ The approved `.pen` auth screens (user login, admin login, and both register scr
 
 - `/invites/password-setup?mode=resetPassword&oobCode=...&continueUrl=...` renders as a standalone unauthenticated route-level page outside the authenticated app shell.
 - The invite password setup page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
-- Use the approved `Invite Password Setup` `.pen` screen as the desktop parity source.
+- No dedicated approved `.pen` frame exists for invite password setup. Follow the documented states below and the shared auth-page visual language; no new frame or layout redesign is required for these corrections.
 - The page handles Firebase password reset/setup action links in app UI while still using Firebase Auth as the password authority.
 - The page MUST NOT send raw passwords to GiTiempo APIs. Password validation and reset confirmation happen only through the Firebase browser SDK with `verifyPasswordResetCode` and `confirmPasswordReset`.
 - The page reads the Firebase `oobCode` from the action link and validates it before showing the password form.

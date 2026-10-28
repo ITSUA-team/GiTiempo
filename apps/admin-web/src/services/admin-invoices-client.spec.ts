@@ -66,6 +66,7 @@ const invoiceListItem = {
 	notes: null,
 	project: { id: projectId, name: 'Project Orion' },
 	projectId,
+	roundingStepMinutes: 15,
 	status: 'draft',
 	timeEntryCount: 1,
 	title: 'Invoice 2026-04',
@@ -89,6 +90,7 @@ const eligibleEntriesResponse = {
 	count: 1,
 	defaultCurrency: 'USD',
 	defaultHourlyRate: 120,
+	defaultRoundingStepMinutes: 5,
 	entries: [timeEntrySummary],
 	totalHours: 12.5,
 };
@@ -162,6 +164,7 @@ describe('createAdminInvoicesClient', () => {
 	it('serializes eligible entry previews with project scope and date bounds', async () => {
 		fetchFn
 			.mockResolvedValueOnce(jsonResponse(eligibleEntriesResponse))
+			.mockResolvedValueOnce(jsonResponse(eligibleEntriesResponse))
 			.mockResolvedValueOnce(jsonResponse(eligibleEntriesResponse));
 
 		const result = await client.listEligibleEntries({
@@ -173,6 +176,12 @@ describe('createAdminInvoicesClient', () => {
 		await client.listEligibleEntries({
 			dateFrom: '2026-04-01',
 			dateTo: '2026-04-30',
+		});
+
+		await client.listEligibleEntries({
+			dateFrom: '2026-04-01',
+			dateTo: '2026-04-30',
+			roundingStepMinutes: 30,
 		});
 
 		const [firstUrl, firstRequestOptions] = fetchFn.mock.calls[0] ?? [];
@@ -189,9 +198,19 @@ describe('createAdminInvoicesClient', () => {
 		const secondParsedUrl = new URL(secondUrl as string);
 		expect(secondParsedUrl.pathname).toBe('/invoices/eligible-entries');
 		expect(secondParsedUrl.searchParams.get('projectId')).toBeNull();
+		expect(secondParsedUrl.searchParams.get('roundingStepMinutes')).toBeNull();
 		expect(secondParsedUrl.searchParams.get('dateFrom')).toBe('2026-04-01');
 		expect(secondParsedUrl.searchParams.get('dateTo')).toBe('2026-04-30');
 		expect(secondRequestOptions).toMatchObject({
+			method: 'GET',
+		});
+
+		const [thirdUrl, thirdRequestOptions] = fetchFn.mock.calls[2] ?? [];
+		const thirdParsedUrl = new URL(thirdUrl as string);
+		expect(thirdParsedUrl.pathname).toBe('/invoices/eligible-entries');
+		expect(thirdParsedUrl.searchParams.get('projectId')).toBeNull();
+		expect(thirdParsedUrl.searchParams.get('roundingStepMinutes')).toBe('30');
+		expect(thirdRequestOptions).toMatchObject({
 			method: 'GET',
 		});
 		expect(result.count).toBe(1);
@@ -214,6 +233,7 @@ describe('createAdminInvoicesClient', () => {
 			hourlyRate: 85.5,
 			notes: 'April billing',
 			projectId,
+			roundingStepMinutes: 15,
 			title: 'Invoice 2026-04',
 		});
 
@@ -235,6 +255,7 @@ describe('createAdminInvoicesClient', () => {
 			hourlyRate: 85.5,
 			notes: 'April billing',
 			projectId,
+			roundingStepMinutes: 15,
 			title: 'Invoice 2026-04',
 		});
 		expect(result.title).toBe('Invoice 2026-04');

@@ -1,0 +1,28 @@
+{
+  "executedOn": "2026-10-27",
+  "database": "gitiempo_476_social_test",
+  "guardedReadOnly": true,
+  "reportedClient": "Chrome extension",
+  "clientEvidence": "user-reported Google login success as stoyambo@gmail.com; SQL does not independently identify the client",
+  "accountCountForNormalizedEmail": 1,
+  "userId": "e3a7fb68-fc56-4d64-9819-42f87eb96e0a",
+  "canonicalFirebaseUidUnchanged": true,
+  "googleSubjectOwnershipUnchanged": true,
+  "workspaceId": "73da954f-a587-40d6-b43b-4dd53f2521c3",
+  "workspaceName": "Workspace",
+  "memberId": "1754f8b1-c7c6-44c9-9599-3ddc30090abc",
+  "role": "admin",
+  "latestSessionCreatedAt": "2026-10-27T09:06:05.789Z",
+  "latestSessionUsesOriginalWorkspaceAndMembership": true,
+  "counts": {
+    "users": 87,
+    "workspaces": 56,
+    "members": 87
+  },
+  "noDuplicateFoundation": true,
+  "limitations": [
+    "Existing-account reuse, not extension-first signup",
+    "Browser version and extension screenshot not collected",
+    "No tokens stored in this evidence"
+  ]
+}

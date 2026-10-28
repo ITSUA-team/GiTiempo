@@ -3,6 +3,11 @@
 
 # Admin SPA Pages
 
+## Authentication
+
+- The admin login keeps the approved shared auth layout and existing provider actions. A successful Google or GitHub session exchange for a verified account with no memberships automatically provisions a `Workspace` and its admin membership; the ordinary role router then opens admin-web for that workspace. Existing memberships keep their normal deterministic selection, and pending invitations remain separate from sign-in.
+- Admin Google sign-in uses the same immediate paired Firebase/Google ID-token exchange as user-web when the Google credential is available. Backend verification can establish missing Firebase email proof; no raw credential is persisted and exchange failures clear partial session state.
+
 ## Dashboard
 
 - Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity feed.
@@ -51,7 +56,7 @@
 - Searchable invoice table with columns: Title, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
 - Search filters by invoice title (API `search` param, case-insensitive ILIKE). The search input is capped at 200 characters to match the API contract; the filter row stays interactive so the user can always clear filters even when a load error replaces the table.
 - Filter row: Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
-- Mobile filters (< 640px): the same three filters stack vertically — Project full-width, then Period and Status side-by-side in a 2-column grid. Filter wrappers use `min-w-0` so long project names truncate inside the Select instead of expanding the grid track beyond the container.
+- Mobile filters (< 640px): the same three filters stack vertically — Project, Period, and Status all full-width and equal width, one under the other. Filter wrappers use `min-w-0` so long project names truncate inside the Select instead of expanding the container.
 - If the projects request fails, a separate inline error card with Retry is shown between the stats cards and the table. The invoice list stays usable for non-project filtering; the project dropdown shows no options until the retry succeeds. For PMs this explains why invoice creation is blocked (a project is required).
 - Pagination control below the table (API returns `meta.totalPages`).
 - Table header has a `Create invoice` action button (plus icon).
@@ -66,7 +71,8 @@
 ### Create dialog (modal)
 
 - Triggered from the list page `Create invoice` action button.
-- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From settings" when empty, falls back to workspace default), Currency (optional — PrimeVue `<Select>` with the same currency options as Settings → Currency, pre-selected with the workspace settings currency as soon as the dialog opens; placeholder "Auto" while unknown, falls back to workspace default on submit), Discount (optional, default 0), Notes (optional).
+- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From settings" when empty, falls back to workspace default), Currency (optional — PrimeVue `<Select>` with the same currency options as Settings → Currency, pre-selected with the workspace settings currency as soon as the dialog opens; placeholder "Auto" while unknown, falls back to workspace default on submit), Discount (optional, default 0), `Rounding step` (PrimeVue `<Select>` with presets: 1, 5, 10, 15, 30, 60; pre-filled from the eligible-entries preview `defaultRoundingStepMinutes` which sources the project's effective rounding step; dynamically updates when the project selection changes; updates immediately from the selected project's `timeRoundingStepMinutes` (or the workspace default when the project inherits) without waiting for the preview response, with the preview response subsequently reconciling the value; overridable per-invoice without changing project settings; uses the same touched-flag pattern as rate and currency), Notes (optional).
+- Pricing row layout: on desktop (sm and up), Currency, Discount, and `Rounding step` share a single row with equal widths (`sm:flex-1`); on mobile (below sm), they stack vertically full-width. The date range and hourly rate share a separate row (date range flexible, hourly rate fixed-width on desktop, stacked on mobile).
 - Calculated fields: Total hours and Total amount update live from `GET /invoices/eligible-entries` preview.
 - Expandable preview section: shows eligible time entries (count, total hours, computed amount). Collapsed by default; expands to a scrollable table with Date, User, Duration, Description.
 - Empty state: if preview returns 0 entries, show a warning banner ("No billable entries found for this project and date range"). Create button stays enabled — the API allows empty invoices.
@@ -112,8 +118,8 @@
 - An icon-only primary action sits in the projects table header next to the search control. Use tooltip/accessibility copy `New project`.
 - The project name is the edit entry point and opens the inline project settings section instead of using a row-level edit icon.
 - The status-specific secondary action lives inside the inline project settings section instead of the table row: active projects show `Archive project`, and archived projects show `Unarchive project`.
-- Project settings row is a single line: `Select members` uses PrimeVue `<AutoComplete multiple dropdown forceSelection>` with selected members shown as removable chips and typeahead search over non-admin members, `Visibility` uses PrimeVue `<Select>` for the fixed Public/Private choice, `New task billable default` uses a binary billable control, followed by `Cancel` and `Save` actions.
-- Manual project creation uses the authenticated Add Project page at `/projects/new` and includes `Default billable for new tasks`.
+- Project settings row is a single line: `Select members` uses PrimeVue `<AutoComplete multiple dropdown forceSelection>` with selected members shown as removable chips and typeahead search over non-admin members, `Visibility` uses PrimeVue `<Select>` for the fixed Public/Private choice, `New task billable default` uses a binary billable control, `Time rounding step` uses PrimeVue `<Select>` with `Inherit from workspace (N min)` as the first option, then 1, 5, 10, 15, 30, 60, followed by `Cancel` and `Save` actions.
+- Manual project creation uses the authenticated Add Project page at `/projects/new` and includes `Default billable for new tasks` and `Time rounding step`, defaulting to `Inherit from workspace`.
 - When a project default billable value changes after tasks or time entries already exist in that project, save the new default immediately for future tasks, then show a follow-up popup that asks only whether existing tasks and existing time entries in that project should also be updated.
 
 ## Settings Page
@@ -121,7 +127,8 @@
 - Single-column workspace settings form inside the authenticated admin shell.
 - Settings uses the shared top-bar breadcrumb pattern instead of a large in-content title/subtitle block.
 - Desktop card target is `max-width: 620px` with token-backed surface, `rounded-lg`, `shadow-card`, 20px padding, 12px field gaps, and a right-aligned bottom action row.
-- Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, and `Time zone`.
+- Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, `Time rounding step (minutes)`, and `Time zone`.
+- `Time rounding step (minutes)` uses PrimeVue `<Select>` with presets 1, 5, 10, 15, 30, 60 and default 1, renders near the Default hourly rate + Currency row, and is saved via `PATCH /workspace/settings`.
 - `Currency` uses PrimeVue `<Select>` and `Time zone` uses PrimeVue `<AutoComplete dropdown forceSelection>`. `Time zone` stays full width below the Default hourly rate + Currency row, enables predictive filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source. Time-zone option values remain exact IANA identifiers, while visible labels replace underscores with spaces, for example `Africa/Addis_Ababa` displays as `Africa/Addis Ababa`.
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.

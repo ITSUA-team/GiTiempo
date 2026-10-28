@@ -18,6 +18,7 @@ import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { users } from '../../users/schemas/users.schema';
+import { firebaseSubjectBindings } from '../../auth/schemas/firebase-subject-bindings.schema';
 import {
   FIREBASE_ADMIN,
   type FirebaseAdminService,
@@ -258,27 +259,60 @@ export class GithubAccountService {
     ) => Promise<T>,
   ): Promise<T> {
     return this.db.transaction(async (tx) => {
-      const version = await this.lockVersionFor(tx, userId);
-      if (
-        version.generation !== expectedGeneration ||
-        (version.disconnectedAt !== null && version.disconnectedAt >= startedAt)
-      ) {
-        throw new UnauthorizedException(
-          'GitHub authorization is no longer current',
-        );
-      }
+      const link = await this.saveOAuthInTransaction(
+        tx,
+        userId,
+        profile,
+        tokens,
+        expectedGeneration,
+        startedAt,
+      );
+      return run(tx, link);
+    });
+  }
 
-      // A callback can outlive the authenticated browser session.  Re-check a
-      // live workspace membership while holding the same durable operation
-      // lock so an account link cannot be committed for a removed member.
-      await this.assertHasMembership(tx, userId);
+  async saveOAuthInTransaction(
+    tx: GithubAccountTransaction,
+    userId: string,
+    profile: GithubUserProfile,
+    tokens: GithubOAuthTokenSet,
+    expectedGeneration: number,
+    startedAt: Date,
+  ): Promise<GithubAccountLinkRow> {
+    const version = await this.lockVersionFor(tx, userId);
+    if (
+      version.generation !== expectedGeneration ||
+      (version.disconnectedAt !== null && version.disconnectedAt >= startedAt)
+    ) {
+      throw new UnauthorizedException(
+        'GitHub authorization is no longer current',
+      );
+    }
 
-      const link = await this.claimLink(tx, userId, profile);
-      const now = new Date();
-      await tx
-        .insert(githubOauthGrants)
-        .values({
-          accountLinkId: link.id,
+    // A callback can outlive the authenticated browser session.  Re-check a
+    // live workspace membership while holding the same durable operation
+    // lock so an account link cannot be committed for a removed member.
+    await this.assertHasMembership(tx, userId);
+
+    const link = await this.claimLink(tx, userId, profile);
+    const now = new Date();
+    await tx
+      .insert(githubOauthGrants)
+      .values({
+        accountLinkId: link.id,
+        accessTokenEncrypted: this.encryption.encrypt(tokens.accessToken),
+        refreshTokenEncrypted: tokens.refreshToken
+          ? this.encryption.encrypt(tokens.refreshToken)
+          : null,
+        scopes: normalizeGrantedScopes(tokens.scopes),
+        tokenExpiresAt: tokens.tokenExpiresAt,
+        refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
+        authorizedAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: githubOauthGrants.accountLinkId,
+        set: {
           accessTokenEncrypted: this.encryption.encrypt(tokens.accessToken),
           refreshTokenEncrypted: tokens.refreshToken
             ? this.encryption.encrypt(tokens.refreshToken)
@@ -288,23 +322,9 @@ export class GithubAccountService {
           refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
           authorizedAt: now,
           updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: githubOauthGrants.accountLinkId,
-          set: {
-            accessTokenEncrypted: this.encryption.encrypt(tokens.accessToken),
-            refreshTokenEncrypted: tokens.refreshToken
-              ? this.encryption.encrypt(tokens.refreshToken)
-              : null,
-            scopes: normalizeGrantedScopes(tokens.scopes),
-            tokenExpiresAt: tokens.tokenExpiresAt,
-            refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
-            authorizedAt: now,
-            updatedAt: now,
-          },
-        });
-      return run(tx, link);
-    });
+        },
+      });
+    return link;
   }
 
   async status(userId: string): Promise<GitHubConnectionStatusResponse> {
@@ -786,7 +806,28 @@ export class GithubAccountService {
       throw new ServiceUnavailableException(
         'Unable to verify another sign-in method',
       );
-    return this.firebase.hasUsableAlternativeLogin(user.firebaseUid);
+    const bindings = await this.db
+      .select({ firebaseUid: firebaseSubjectBindings.firebaseUid })
+      .from(firebaseSubjectBindings)
+      .where(eq(firebaseSubjectBindings.userId, userId));
+    const subjects = new Set([
+      user.firebaseUid,
+      ...bindings.map((binding) => binding.firebaseUid),
+    ]);
+    let verificationFailed = false;
+    for (const uid of subjects) {
+      try {
+        if (await this.firebase.hasUsableAlternativeLogin(uid)) return true;
+      } catch {
+        verificationFailed = true;
+      }
+    }
+    if (verificationFailed) {
+      throw new ServiceUnavailableException(
+        'Unable to verify another sign-in method',
+      );
+    }
+    return false;
   }
 
   private profileRedirect(code: string | null): string {

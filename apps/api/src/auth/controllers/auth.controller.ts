@@ -42,7 +42,7 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Invalid Firebase ID token' })
   @ZodSerializerDto(TokenPairResponseDto)
   login(@Body() body: LoginDto): Promise<TokenPairResponseDto> {
-    return this.auth.login(body.firebaseIdToken);
+    return this.auth.login(body.firebaseIdToken, body.googleIdToken);
   }
 
   @Post('register')
@@ -59,7 +59,7 @@ export class AuthController {
     description: 'Invalid registration input or weak password',
   })
   @ApiConflictResponse({
-    description: 'Duplicate email or workspace name unavailable',
+    description: 'Duplicate email',
   })
   @ApiTooManyRequestsResponse({ description: 'Too many registration attempts' })
   @ApiServiceUnavailableResponse({

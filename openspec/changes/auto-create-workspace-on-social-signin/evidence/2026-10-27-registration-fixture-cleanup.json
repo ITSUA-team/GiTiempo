@@ -1,0 +1,15 @@
+{
+  "database": "gitiempo_476_social_test",
+  "cleanup": {
+    "deletedUserId": "25db6e30-4702-411a-afe7-51f50ba36f60",
+    "deletedWorkspaceId": "95fdfe53-f6e9-4c9d-ba88-590a7f8704cd",
+    "precondition": "guarded cleanup completed only after no-domain-data checks"
+  },
+  "postCleanup": {
+    "exactEmailUserCount": 0,
+    "exactUserIdCount": 0,
+    "exactWorkspaceIdCount": 0,
+    "exactWorkspaceMembershipCount": 0,
+    "exactEmailReservationCount": 0
+  }
+}

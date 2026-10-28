@@ -8,6 +8,7 @@ import request from 'supertest';
 export const ADMIN_FAKE_TOKEN = 'test:admin-uid:admin@example.com:Admin';
 export const ADMIN_EMAIL = 'admin@example.com';
 export const ADMIN_UID = 'admin-uid';
+let loginTrackerCounter = 1;
 
 export interface IssuedTokens {
   accessToken: string;
@@ -26,6 +27,7 @@ export async function login(
 ): Promise<IssuedTokens> {
   const res = await request(app.getHttpServer())
     .post('/auth/login')
+    .set('X-Forwarded-For', `10.43.0.${loginTrackerCounter++}`)
     .send({ firebaseIdToken });
   if (res.status !== 200) {
     throw new Error(

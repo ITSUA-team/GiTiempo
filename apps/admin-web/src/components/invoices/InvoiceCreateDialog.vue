@@ -5,7 +5,11 @@ import type {
   EligibleEntriesQuery,
   InvoiceResponse,
 } from '@gitiempo/shared';
-import { AppDialog } from '@gitiempo/web-shared';
+import {
+  AppDialog,
+  DatePickerButtonBar,
+  useDatePickerConfirmCancel,
+} from '@gitiempo/web-shared';
 import {
   formatLocalCalendarDate,
   getLocalDateKey,
@@ -30,6 +34,7 @@ import { getSettingsCurrencyOptions } from '@/lib/currencies';
 import { formatCurrency } from '@/lib/format-currency';
 import { formatDuration } from '@/lib/format-duration';
 import type { AdminServerStateScope } from '@/lib/query-keys';
+import { getRoundingStepOptions } from '@/lib/rounding-step-options';
 
 /**
  * Presentational create-invoice dialog for the admin invoices list page.
@@ -47,9 +52,15 @@ const props = defineProps<{
   visible: boolean;
   /** Admin may submit without a project (workspace-wide); PM must select one. */
   isAdmin: boolean;
-  projects: Array<{ id: string; name: string }>;
+  projects: Array<{
+    id: string;
+    name: string;
+    timeRoundingStepMinutes: number | null;
+  }>;
   /** Currency selected in workspace Settings; pre-selected on dialog open. */
   workspaceCurrency: string | null;
+  /** Rounding step from workspace Settings; resolves project "inherit" values. */
+  workspaceRoundingStepMinutes: number | null;
   scope: AdminServerStateScope;
   createMutation: InvoiceCreateMutation;
 }>();
@@ -61,16 +72,21 @@ const emit = defineEmits<{
 
 const WORKSPACE_WIDE_PROJECT_VALUE = '';
 
+const ROUNDING_STEP_OPTIONS = getRoundingStepOptions();
+
 const title = ref('');
 const selectedProjectId = ref<string | null>(null);
 const dateRange = ref<Date[] | null>(null);
+const datePicker = useDatePickerConfirmCancel<Date[] | null>();
 const hourlyRate = ref<number | null>(null);
 const currency = ref('');
 const discountPercent = ref<number | null>(0);
+const roundingStepMinutes = ref<number>(1);
 const notes = ref('');
 
 const rateTouched = ref(false);
 const currencyTouched = ref(false);
+const roundingStepTouched = ref(false);
 const validationTriggered = ref(false);
 const previewExpanded = ref(false);
 
@@ -82,6 +98,9 @@ const previewQuery = computed<EligibleEntriesQuery | null>(() => {
     dateFrom: getLocalDateKey(dates[0]),
     dateTo: getLocalDateKey(dates[1]),
     projectId: selectedProjectId.value || undefined,
+    ...(roundingStepTouched.value
+      ? { roundingStepMinutes: roundingStepMinutes.value }
+      : {}),
   };
 });
 
@@ -108,9 +127,11 @@ watch(
     hourlyRate.value = null;
     currency.value = '';
     discountPercent.value = 0;
+    roundingStepMinutes.value = 1;
     notes.value = '';
     rateTouched.value = false;
     currencyTouched.value = false;
+    roundingStepTouched.value = false;
     validationTriggered.value = false;
     previewExpanded.value = false;
   },
@@ -129,11 +150,11 @@ watch(
   { immediate: true },
 );
 
-// Sync rate/currency defaults from every fresh preview response until
-// the user edits those fields; after a manual change the entered values win.
-// Relying on the touched flags (instead of also checking the field is empty)
-// keeps the dialog in sync when workspace settings change between opens even
-// if vue-query serves a cached preview response first.
+// Sync rate/currency/rounding defaults from every fresh preview response
+// until the user edits those fields; after a manual change the entered
+// values win. Relying on the touched flags (instead of also checking the
+// field is empty) keeps the dialog in sync when workspace settings change
+// between opens even if vue-query serves a cached preview response first.
 watch(
   [preview, () => props.visible],
   ([data, visible]) => {
@@ -151,9 +172,36 @@ watch(
     ) {
       currency.value = data.defaultCurrency;
     }
+    if (!roundingStepTouched.value) {
+      roundingStepMinutes.value = data.defaultRoundingStepMinutes;
+    }
   },
   { immediate: true },
 );
+
+// When a project is selected, immediately update the rounding step from the
+// project's configured value (or the workspace default when the project
+// inherits) so the field reflects the selection without waiting for the
+// preview response. The preview sync above still reconciles afterwards.
+watch(selectedProjectId, (newProjectId) => {
+  if (roundingStepTouched.value) return;
+
+  if (!newProjectId || newProjectId === WORKSPACE_WIDE_PROJECT_VALUE) {
+    if (props.workspaceRoundingStepMinutes !== null) {
+      roundingStepMinutes.value = props.workspaceRoundingStepMinutes;
+    }
+    return;
+  }
+
+  const project = props.projects.find((p) => p.id === newProjectId);
+  if (!project) return;
+
+  if (project.timeRoundingStepMinutes !== null) {
+    roundingStepMinutes.value = project.timeRoundingStepMinutes;
+  } else if (props.workspaceRoundingStepMinutes !== null) {
+    roundingStepMinutes.value = props.workspaceRoundingStepMinutes;
+  }
+});
 
 const isCreating = computed(() => props.createMutation.isCreating.value);
 
@@ -247,6 +295,11 @@ function handleDiscountUpdate(value: number | null): void {
   discountPercent.value = value ?? 0;
 }
 
+function handleRoundingStepUpdate(value: number | undefined): void {
+  roundingStepMinutes.value = value ?? 1;
+  roundingStepTouched.value = true;
+}
+
 function handleCancel(): void {
   emit('update:visible', false);
 }
@@ -273,6 +326,9 @@ async function handleCreate(): Promise<void> {
       currency: currency.value.trim().toUpperCase() || undefined,
       discountPercent: discountPercent.value ?? 0,
       notes: notes.value.trim() || undefined,
+      ...(roundingStepTouched.value
+        ? { roundingStepMinutes: roundingStepMinutes.value }
+        : {}),
     });
     emit('created', invoice);
     emit('update:visible', false);
@@ -354,6 +410,7 @@ async function handleCreate(): Promise<void> {
             class="text-text-dark text-[13px] font-medium"
           >Date range</label>
           <DatePicker
+            :ref="datePicker.datePickerRef"
             v-model="dateRange"
             input-id="invoice-create-date-range"
             date-format="M d, yy"
@@ -365,7 +422,15 @@ async function handleCreate(): Promise<void> {
             show-icon
             class="w-full"
             :pt="giTiempoDatePickerPt"
-          />
+            @show="datePicker.handleShow"
+          >
+            <template #buttonbar>
+              <DatePickerButtonBar
+                @cancel="datePicker.handleCancel"
+                @confirm="datePicker.handleConfirm"
+              />
+            </template>
+          </DatePicker>
           <Message
             v-if="dateRangeError"
             severity="error"
@@ -398,7 +463,7 @@ async function handleCreate(): Promise<void> {
         data-testid="invoice-create-row-pricing"
         class="flex flex-col gap-4 sm:flex-row sm:gap-3"
       >
-        <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
+        <div class="flex w-full flex-col gap-1 sm:flex-1">
           <label
             for="invoice-create-currency"
             class="text-text-dark text-[13px] font-medium"
@@ -416,7 +481,7 @@ async function handleCreate(): Promise<void> {
             @update:model-value="handleCurrencyUpdate"
           />
         </div>
-        <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
+        <div class="flex w-full flex-col gap-1 sm:flex-1">
           <label
             for="invoice-create-discount"
             class="text-text-dark text-[13px] font-medium"
@@ -431,6 +496,22 @@ async function handleCreate(): Promise<void> {
             input-class="h-[38px] w-full"
             class="w-full"
             @update:model-value="handleDiscountUpdate"
+          />
+        </div>
+        <div class="flex w-full flex-col gap-1 sm:flex-1">
+          <label
+            for="invoice-create-rounding-step"
+            class="text-text-dark text-[13px] font-medium"
+          >Rounding step</label>
+          <Select
+            input-id="invoice-create-rounding-step"
+            :model-value="roundingStepMinutes"
+            :options="ROUNDING_STEP_OPTIONS"
+            option-label="label"
+            option-value="value"
+            class="w-full"
+            :pt="giTiempoFieldWidthSelectPt"
+            @update:model-value="handleRoundingStepUpdate"
           />
         </div>
       </div>

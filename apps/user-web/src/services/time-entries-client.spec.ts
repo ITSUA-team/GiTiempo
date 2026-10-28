@@ -63,6 +63,7 @@ const projectResponseMetadata = {
   accessScope: "project",
   capabilities: { canManageTasks: true },
   referenceProvenance: null,
+  timeRoundingStepMinutes: null,
   trackingMode: "managed",
 };
 

@@ -6,6 +6,7 @@ export * from "./debounce";
 export * from "./firebase-errors";
 export * from "./feedback";
 export * from "./components";
+export * from "./date-picker-button-bar";
 export * from "./query";
 export * from "./router";
 export * from "./session-storage";

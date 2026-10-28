@@ -59,6 +59,7 @@ interface InvoiceDetailRow {
   discountPercent: number;
   totalHours: number;
   totalAmount: number;
+  roundingStepMinutes: number;
   notes: string | null;
   createdBy: string;
   createdByName: string | null;
@@ -95,6 +96,7 @@ const invoiceDetailSelection = {
   discountPercent: invoices.discountPercent,
   totalHours: invoices.totalHours,
   totalAmount: invoices.totalAmount,
+  roundingStepMinutes: invoices.roundingStepMinutes,
   notes: invoices.notes,
   createdBy: invoices.createdBy,
   createdByName: users.displayName,
@@ -432,19 +434,25 @@ export class InvoicesService {
       ['admin', 'pm'],
     );
 
+    // Both probes validate access and return the project's rounding step;
+    // null means the project inherits the workspace setting.
+    let projectRoundingStepMinutes: number | null = null;
     if (membership.role === 'pm') {
       if (query.projectId === undefined) {
         throw new ForbiddenException(
           'Project managers must scope invoices to an assigned project',
         );
       }
-      await this.requirePmProjectAccess(
+      projectRoundingStepMinutes = await this.requirePmProjectAccess(
         user.sub,
         user.workspaceId,
         query.projectId,
       );
     } else if (query.projectId !== undefined) {
-      await this.requireWorkspaceProject(user.workspaceId, query.projectId);
+      projectRoundingStepMinutes = await this.requireWorkspaceProject(
+        user.workspaceId,
+        query.projectId,
+      );
     }
 
     const [settings] = await this.db
@@ -452,11 +460,19 @@ export class InvoicesService {
         defaultHourlyRate: workspaceSettings.defaultHourlyRate,
         currency: workspaceSettings.currency,
         timeZone: workspaceSettings.timeZone,
+        timeRoundingStepMinutes: workspaceSettings.timeRoundingStepMinutes,
       })
       .from(workspaceSettings)
       .where(eq(workspaceSettings.workspaceId, user.workspaceId))
       .limit(1);
     const timeZone = settings?.timeZone ?? 'UTC';
+
+    // Effective step: explicit override wins, else the project step (null =
+    // inherits), else the workspace setting.
+    const defaultRoundingStepMinutes =
+      projectRoundingStepMinutes ?? settings?.timeRoundingStepMinutes ?? 1;
+    const effectiveRoundingStepMinutes =
+      query.roundingStepMinutes ?? defaultRoundingStepMinutes;
 
     const conditions = [
       eq(timeEntries.workspaceId, user.workspaceId),
@@ -501,7 +517,12 @@ export class InvoicesService {
       .orderBy(timeEntries.startedAt);
 
     const totalSeconds = rows.reduce(
-      (sum, e) => sum + (e.durationSeconds ?? 0),
+      (sum, e) =>
+        sum +
+        InvoicesService.roundEntrySeconds(
+          e.durationSeconds ?? 0,
+          effectiveRoundingStepMinutes,
+        ),
       0,
     );
     const totalHours = InvoicesService.secondsToCentihours(totalSeconds) / 100;
@@ -524,6 +545,7 @@ export class InvoicesService {
       entries,
       defaultHourlyRate: settings?.defaultHourlyRate ?? null,
       defaultCurrency: settings?.currency ?? null,
+      defaultRoundingStepMinutes,
     };
   }
 
@@ -539,21 +561,26 @@ export class InvoicesService {
       ['admin', 'pm'],
     );
 
-    // PMs must scope invoice creation to a visible project.
+    // PMs must scope invoice creation to a visible project. Both project
+    // probes validate access and return the project's rounding step.
+    let projectRoundingStepMinutes: number | null = null;
     if (membership.role === 'pm') {
       if (input.projectId === undefined) {
         throw new ForbiddenException(
           'Project managers must scope invoices to an assigned project',
         );
       }
-      await this.requirePmProjectAccess(
+      projectRoundingStepMinutes = await this.requirePmProjectAccess(
         user.sub,
         user.workspaceId,
         input.projectId,
       );
     } else if (input.projectId !== undefined) {
       // Admins: verify the project belongs to the workspace.
-      await this.requireWorkspaceProject(user.workspaceId, input.projectId);
+      projectRoundingStepMinutes = await this.requireWorkspaceProject(
+        user.workspaceId,
+        input.projectId,
+      );
     }
 
     // Resolve snapshot rate and currency from workspace settings when omitted.
@@ -562,6 +589,7 @@ export class InvoicesService {
         defaultHourlyRate: workspaceSettings.defaultHourlyRate,
         currency: workspaceSettings.currency,
         timeZone: workspaceSettings.timeZone,
+        timeRoundingStepMinutes: workspaceSettings.timeRoundingStepMinutes,
       })
       .from(workspaceSettings)
       .where(eq(workspaceSettings.workspaceId, user.workspaceId))
@@ -585,6 +613,14 @@ export class InvoicesService {
     }
     const discountPercent = input.discountPercent;
     const timeZone = settings?.timeZone ?? 'UTC';
+
+    // Snapshot step: explicit body value → project step (null = inherits
+    // workspace) → workspace setting.
+    const roundingStepMinutes =
+      input.roundingStepMinutes ??
+      projectRoundingStepMinutes ??
+      settings?.timeRoundingStepMinutes ??
+      1;
 
     return this.db.transaction(async (tx) => {
       // Lock eligible time entries: completed, billable, not already invoiced,
@@ -629,9 +665,14 @@ export class InvoicesService {
         .where(and(...eligibilityConditions))
         .for('update');
 
-      // Compute snapshot totals.
+      // Compute snapshot totals with per-entry rounding.
       const totalSeconds = eligibleEntries.reduce(
-        (sum, e) => sum + (e.durationSeconds ?? 0),
+        (sum, e) =>
+          sum +
+          InvoicesService.roundEntrySeconds(
+            e.durationSeconds ?? 0,
+            roundingStepMinutes,
+          ),
         0,
       );
       const { totalHours, totalAmount } = this.computeInvoiceTotals(
@@ -664,6 +705,7 @@ export class InvoicesService {
           discountPercent,
           totalHours,
           totalAmount,
+          roundingStepMinutes,
           notes: input.notes ?? null,
           createdBy: user.sub,
         })
@@ -898,6 +940,19 @@ export class InvoicesService {
   }
 
   /**
+   * Rounds a single entry's duration up to the nearest step multiple.
+   * With steps of 1–60 minutes even the minimum step rounds entries up to
+   * whole minutes; entries already at a step multiple stay unchanged.
+   */
+  private static roundEntrySeconds(
+    durationSeconds: number,
+    stepMinutes: number,
+  ): number {
+    const stepSeconds = stepMinutes * 60;
+    return Math.ceil(durationSeconds / stepSeconds) * stepSeconds;
+  }
+
+  /**
    * Pure snapshot-totals computation: hours from seconds, then amount with
    * optional percentage discount. Both values are rounded to 2 decimal
    * places to match the stored DECIMAL precision.
@@ -937,13 +992,16 @@ export class InvoicesService {
     };
   }
 
+  // PM visibility gate for a project that also returns the project's
+  // rounding step so create/preview can snapshot the effective step without
+  // a second project read.
   private async requirePmProjectAccess(
     userId: string,
     workspaceId: string,
     projectId: string,
-  ): Promise<void> {
+  ): Promise<number | null> {
     const [row] = await this.db
-      .select({ id: projects.id })
+      .select({ timeRoundingStepMinutes: projects.timeRoundingStepMinutes })
       .from(projects)
       .leftJoin(
         projectAssignments,
@@ -966,14 +1024,17 @@ export class InvoicesService {
       .limit(1);
 
     if (!row) throw new ForbiddenException('Forbidden');
+    return row.timeRoundingStepMinutes;
   }
 
+  // Existence gate for a workspace project that also returns its rounding
+  // step (null = inherits the workspace setting).
   private async requireWorkspaceProject(
     workspaceId: string,
     projectId: string,
-  ): Promise<void> {
+  ): Promise<number | null> {
     const [row] = await this.db
-      .select({ id: projects.id })
+      .select({ timeRoundingStepMinutes: projects.timeRoundingStepMinutes })
       .from(projects)
       .where(
         and(eq(projects.id, projectId), eq(projects.workspaceId, workspaceId)),
@@ -981,6 +1042,7 @@ export class InvoicesService {
       .limit(1);
 
     if (!row) throw new NotFoundException('Project not found');
+    return row.timeRoundingStepMinutes;
   }
 
   private async requirePmInvoiceAccess(
@@ -1027,6 +1089,7 @@ export class InvoicesService {
       discountPercent: Number(row.discountPercent),
       totalHours: Number(row.totalHours),
       totalAmount: Number(row.totalAmount),
+      roundingStepMinutes: row.roundingStepMinutes,
       notes: row.notes,
       createdBy: row.createdBy,
       createdByName: row.createdByName,
@@ -1058,6 +1121,7 @@ export class InvoicesService {
       discountPercent: Number(row.discountPercent),
       totalHours: Number(row.totalHours),
       totalAmount: Number(row.totalAmount),
+      roundingStepMinutes: row.roundingStepMinutes,
       notes: row.notes,
       createdBy: row.createdBy,
       createdByName: row.createdByName,

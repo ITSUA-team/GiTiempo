@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-27",
+  "database": "gitiempo_476_social_test",
+  "testEmail": "alexeuel@gmail.com",
+  "testedCode": "51a0ac57 plus recorded working-tree fixes",
+  "client": "admin-web; user-operated separate browser",
+  "precondition": {
+    "localUserAbsent": true,
+    "firebaseEmailAbsent": true,
+    "localCheckedAt": "2026-10-27T11:28:44.295Z",
+    "firebaseCheckedAt": "2026-10-27T11:21:15.063Z",
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 88
+    }
+  },
+  "userReported": {
+    "githubEntryOpenedAdminDashboard": true
+  },
+  "after": {
+    "checkedAt": "2026-10-27T11:30:07.404Z",
+    "database": "gitiempo_476_social_test",
+    "email": "alexeuel@gmail.com",
+    "users": [
+      {
+        "id": "ff250241-8f11-452d-a720-96213ad815d2",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "email": "alexeuel@gmail.com",
+        "display_name": "AlexeyTsukanov",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "memberships": [
+      {
+        "id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "role": "admin",
+        "joined_at": "2026-10-27T11:29:45.300Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "settings": [
+      {
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "subjectBindings": [
+      {
+        "id": "6e0cc424-cd4d-43b8-ac01-9b2eb4dc59ff",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "provider_id": "github",
+        "verified_email": "alexeuel@gmail.com",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "githubLinks": [
+      {
+        "id": "0f4a0106-9892-43bf-8d1a-02e25ae10e82",
+        "github_user_id": "31486153",
+        "login": "AlexeyTsukanov",
+        "connected_at": "2026-10-27T11:29:45.387Z",
+        "updated_at": "2026-10-27T11:29:45.387Z"
+      }
+    ],
+    "githubGrantMetadata": [
+      {
+        "id": "ff99f894-eff5-4dc6-81d9-2900341339de",
+        "account_link_id": "0f4a0106-9892-43bf-8d1a-02e25ae10e82",
+        "scopes": [
+          "read:org",
+          "read:project",
+          "user:email"
+        ],
+        "authorized_at": "2026-10-27T11:29:45.391Z",
+        "updated_at": "2026-10-27T11:29:45.391Z"
+      }
+    ],
+    "sessions": [
+      {
+        "id": "5c0e4234-aa55-4f52-90e9-725b9fb51945",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "revoked_at": null
+      }
+    ],
+    "reservations": [
+      {
+        "id": "2b9ddaf9-c303-496b-aa44-534faeefb976",
+        "normalized_email": "alexeuel@gmail.com",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "purpose": "github-signin",
+        "state": "bound",
+        "user_id": "ff250241-8f11-452d-a720-96213ad815d2",
+        "registration_display_name": null,
+        "registration_workspace_name": null,
+        "registration_owner_acknowledgement": null
+      }
+    ],
+    "firebase": {
+      "checkedAt": "2026-10-27T11:30:11.291Z",
+      "projectId": "gitiempo",
+      "email": "alexeuel@gmail.com",
+      "uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+      "emailVerified": false,
+      "disabled": false,
+      "providerIds": [],
+      "creationTime": "Tue, 27 Oct 2026 11:29:44 GMT"
+    }
+  },
+  "coverage": "Fresh GitHub onboarding initiated in admin-web; one user/default workspace/admin membership and one creation reservation with durable verified-GitHub proof. Extension-first remains a separate pending case."
+}

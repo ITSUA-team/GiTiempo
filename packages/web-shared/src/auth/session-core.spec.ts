@@ -327,6 +327,78 @@ describe("createAuthSessionCore", () => {
     expect(session.isSubmitting.value).toBe(false);
   });
 
+  it("boots a provisioned admin session from a Google token exchange", async () => {
+    const provisionedAdmin = {
+      avatarUrl: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "Workspace Admin",
+      email: "admin@example.com",
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      role: "admin" as const,
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const runtime = createRuntimeMock({
+      getCurrentUser: async () => provisionedAdmin,
+      loginWithFirebaseToken: async () => ({
+        accessToken: "provisioned-google-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "provisioned-google-refresh-token",
+      }),
+    });
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+
+    await session.loginWithGoogle();
+
+    expect(session.isAuthenticated.value).toBe(true);
+    expect(session.profile.value).toEqual(provisionedAdmin);
+    expect(getRefreshToken()).toBe("provisioned-google-refresh-token");
+  });
+
+  it("forwards a Google provider ID token only from the Google sign-in result", async () => {
+    const loginWithFirebaseToken = vi.fn(async () => newPair);
+    const runtime = createRuntimeMock({
+      loginWithFirebaseToken,
+      signInWithGoogle: async () => ({
+        firebaseIdToken: "firebase-google-token",
+        googleIdToken: "google-provider-id-token",
+      }),
+    });
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+
+    await session.loginWithGoogle();
+
+    expect(loginWithFirebaseToken).toHaveBeenCalledWith(
+      "firebase-google-token",
+      "google-provider-id-token",
+    );
+  });
+
+  it.each([
+    ["Google", (session: ReturnType<typeof createAuthSessionCore>) => session.loginWithGoogle()],
+    ["GitHub", (session: ReturnType<typeof createAuthSessionCore>) => session.loginWithGithubSession("handoff-code")],
+  ])("clears guest state when the %s exchange fails", async (_provider, login) => {
+    setRefreshToken("stale-refresh-token");
+    const session = createAuthSessionCore({
+      getAuthRuntime: () =>
+        createRuntimeMock({
+          loginWithFirebaseToken: async () => {
+            throw new Error("exchange failed");
+          },
+          exchangeGithubSession: async () => {
+            throw new Error("exchange failed");
+          },
+        }),
+    });
+    session.accessToken.value = "stale-access-token";
+
+    await expect(login(session)).rejects.toThrow("exchange failed");
+
+    expect(session.accessToken.value).toBeNull();
+    expect(session.profile.value).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(session.bootstrapComplete.value).toBe(true);
+  });
+
   it("runs session-context cleanup when a new app session starts", async () => {
     let cleanupCalls = 0;
     const runtime = createRuntimeMock();

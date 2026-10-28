@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-27",
+  "database": "gitiempo_476_social_test",
+  "testEmail": "tsukanovmfs@gmail.com",
+  "entryClient": "admin-web",
+  "userReportedFailure": "Something went wrong while signing in with GitHub.",
+  "postFailureReadOnlyInspection": {
+    "checkedAt": "2026-10-27T09:45:31.451Z",
+    "localUserFound": false,
+    "beforeCounts": { "users": 87, "workspaces": 56, "memberships": 87 },
+    "afterCounts": { "users": 87, "workspaces": 56, "memberships": 87 },
+    "newReservation": {
+      "purpose": "github-signin",
+      "state": "reserved",
+      "userId": null
+    }
+  },
+  "firebaseReadOnlyInspection": {
+    "checkedAt": "2026-10-27T09:51:38.550Z",
+    "project": "gitiempo",
+    "reservedUidExists": false,
+    "emailExistsUnderDifferentUid": true,
+    "emailVerified": true,
+    "disabled": false,
+    "providerIds": ["google.com", "password"],
+    "creationTime": "2026-05-21T08:40:40.000Z"
+  },
+  "diagnosis": {
+    "evidence": "The failed exchange reached reservation-backed provisioning. No local foundation was created. The email already belongs to a different active Firebase identity.",
+    "inferenceFromCodeAndState": "Firebase duplicate-email creation maps to identity_proof_required, which the original shared browser callback replaced with failed.",
+    "httpFailureCaptured": false,
+    "independentCodeReviewConfirmedPath": true
+  },
+  "mutationsDuringDiagnosis": "None. Existing Firebase identity and unbound reservation retained.",
+  "frontendFix": {
+    "mapping": "Preserve only ApiError.code === identity_proof_required; all other exchange errors remain failed.",
+    "regressionsFailedBeforeFix": true,
+    "sharedTests": { "files": 35, "passed": 240 },
+    "adminWebTests": { "files": 79, "passed": 748 },
+    "userWebTests": { "files": 53, "passed": 572 },
+    "rootTestTasks": { "passed": 11, "cached": 7 },
+    "ciTargetTestsPassed": 5,
+    "rootTypecheckTasksPassed": 11,
+    "rootLintTasksPassed": 11,
+    "lintErrors": 0,
+    "preExistingLintWarningsRemain": true,
+    "independentReview": "APPROVE; zero findings in four-file diff",
+    "strictOpenSpecValidation": "passed",
+    "diffCheck": "passed",
+    "designImpact": "Existing error surface and copy reused; no markup/style/design change."
+  },
+  "manualRecovery": {
+    "githubRetry": "User confirmed existing-provider guidance is now displayed.",
+    "afterGithubRetry": {
+      "localUserFound": false,
+      "counts": { "users": 87, "workspaces": 56, "memberships": 87 }
+    },
+    "googleAdminEntry": {
+      "userConfirmed": true,
+      "checkedAt": "2026-10-27T10:01:07.858Z",
+      "userId": "9d25c96b-582f-4fa4-a584-dacdd27e522f",
+      "canonicalFirebaseUid": "HT9I1Ue0zNRexKrtmrQ0xIvBEIB2",
+      "workspaceId": "b9d4ffdc-7103-4c9d-83be-ad39eed5f425",
+      "membershipId": "931a11da-b60e-4b0f-aca2-8aac10ad8a9e",
+      "name": "Workspace",
+      "role": "admin",
+      "currency": "USD",
+      "defaultHourlyRate": null,
+      "timeZone": "UTC",
+      "counts": { "users": 88, "workspaces": 57, "memberships": 88 },
+      "githubLinkCount": 0
+    },
+    "githubReuse": {
+      "userConfirmedAdminEntry": true,
+      "checkedAt": "2026-10-27T10:02:04.222Z",
+      "sameUser": true,
+      "sameCanonicalFirebaseUid": true,
+      "sameWorkspace": true,
+      "sameMembership": true,
+      "sameSettings": true,
+      "sessionUsesOriginalWorkspaceAndMembership": true,
+      "githubLinkCount": 1,
+      "githubGrantCount": 1,
+      "counts": { "users": 88, "workspaces": 57, "memberships": 88 },
+      "additionalFirebaseSubjectObserved": false
+    }
+  }
+}

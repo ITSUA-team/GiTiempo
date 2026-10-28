@@ -84,7 +84,7 @@ describe("readGithubSignInResult", () => {
     ["denied", "declined"],
     ["email", "verified email"],
     ["failed", "try again"],
-    ["nomember", "github.com/settings/emails"],
+    ["nomember", "legacy membership lookup"],
     ["state", "verified"],
   ])("maps the %o indicator to copy naming the cause", (indicator, fragment) => {
     expect(() =>
@@ -112,6 +112,26 @@ describe("readGithubSignInResult", () => {
     // "Try again" and "your account has no verified email" call for different
     // actions, so collapsing them would hide the only actionable part.
     expect(new Set(messages).size).toBe(messages.length);
+  });
+
+  it("keeps the legacy no-member fallback separate from invitation onboarding", () => {
+    expect(() =>
+      readGithubSignInResult(`${EXT}?githubError=nomember`),
+    ).toThrow(/try again or sign in with another method/i);
+
+    try {
+      readGithubSignInResult(`${EXT}?githubError=nomember`);
+    } catch (error) {
+      expect(error instanceof Error ? error.message.toLowerCase() : "").not.toContain(
+        "invite",
+      );
+    }
+  });
+
+  it("guides an unproven identity through an existing provider", () => {
+    expect(() =>
+      readGithubSignInResult(`${EXT}?githubError=identity_proof_required`),
+    ).toThrow(/existing provider/i);
   });
 
   it("treats an unknown indicator as a generic failure rather than success", () => {

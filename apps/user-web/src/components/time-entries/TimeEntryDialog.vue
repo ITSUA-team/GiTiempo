@@ -11,11 +11,13 @@ import {
   giTiempoSelfAppendedAutoCompleteDropdownPt,
 } from "@gitiempo/web-config/theme";
 import {
+  DatePickerButtonBar,
   filterAutocompleteOptions,
   AppDialog,
   DialogFooterActionGroups,
   InlineRequestMessage,
   LabeledCheckbox,
+  useDatePickerConfirmCancel,
 } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
@@ -96,6 +98,9 @@ const endedAtModel = computed({
     emit("update:endedAt", value ?? null);
   },
 });
+
+const startedAtPicker = useDatePickerConfirmCancel<Date | null>();
+const endedAtPicker = useDatePickerConfirmCancel<Date | null>();
 
 const descriptionModel = computed({
   get: () => props.valueDescription,
@@ -383,6 +388,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
             Start
           </label>
           <DatePicker
+            :ref="startedAtPicker.datePickerRef"
             v-model="startedAtModel"
             fluid
             date-format="M d,"
@@ -392,8 +398,17 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
             :invalid="!!props.errors.startedAt"
             :manual-input="false"
             :pt="giTiempoDatePickerPt"
+            show-button-bar
             show-time
-          />
+            @show="startedAtPicker.handleShow"
+          >
+            <template #buttonbar>
+              <DatePickerButtonBar
+                @cancel="startedAtPicker.handleCancel"
+                @confirm="startedAtPicker.handleConfirm"
+              />
+            </template>
+          </DatePicker>
           <small
             v-if="props.errors.startedAt"
             class="text-destructive text-xs"
@@ -410,6 +425,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
             End
           </label>
           <DatePicker
+            :ref="endedAtPicker.datePickerRef"
             v-model="endedAtModel"
             fluid
             date-format="M d,"
@@ -419,8 +435,17 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
             :invalid="!!props.errors.endedAt"
             :manual-input="false"
             :pt="giTiempoDatePickerPt"
+            show-button-bar
             show-time
-          />
+            @show="endedAtPicker.handleShow"
+          >
+            <template #buttonbar>
+              <DatePickerButtonBar
+                @cancel="endedAtPicker.handleCancel"
+                @confirm="endedAtPicker.handleConfirm"
+              />
+            </template>
+          </DatePicker>
           <small
             v-if="props.errors.endedAt"
             class="text-destructive text-xs"

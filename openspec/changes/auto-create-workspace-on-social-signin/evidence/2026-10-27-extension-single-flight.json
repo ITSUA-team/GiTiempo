@@ -1,0 +1,51 @@
+{
+  "executedOn": "2026-10-27",
+  "scope": "Extension interactive sign-in single-flight regression",
+  "result": "passed",
+  "checks": {
+    "extensionTests": {
+      "files": 12,
+      "tests": 251
+    },
+    "rootTypecheck": {
+      "tasks": 11,
+      "passed": true
+    },
+    "rootLint": {
+      "tasks": 11,
+      "passed": true,
+      "note": "Existing frontend warnings only"
+    },
+    "rootTests": {
+      "tasks": 11,
+      "passed": true,
+      "command": "pnpm exec turbo run test --concurrency=1",
+      "cachedTasks": 9
+    },
+    "ciTargetTests": 5,
+    "extensionBuilds": [
+      "chrome",
+      "firefox"
+    ],
+    "localChromeDevRebuild": true,
+    "localApiPermissionAndBundleUrlsVerified": true,
+    "strictOpenSpec": true,
+    "diffCheck": true
+  },
+  "coveredBehavior": [
+    "same-provider duplicate blocked",
+    "cross-provider duplicate blocked",
+    "retry after successful flow",
+    "retry after provider cancellation",
+    "retry after session exchange failure"
+  ],
+  "limitations": [
+    "Real Google extension success remains blocked by redirect_uri_mismatch and was deferred by user",
+    "Remote manifest schema validation skipped because json.schemastore.org was unreachable",
+    "Repository graph reindex tools unavailable"
+  ],
+  "independentReview": {
+    "result": "approved",
+    "blockingFindings": 0
+  }
+}
