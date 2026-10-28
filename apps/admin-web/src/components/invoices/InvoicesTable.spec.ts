@@ -54,6 +54,7 @@ function makeInvoice(overrides: Partial<InvoiceListItem> = {}): InvoiceListItem 
     notes: null,
     project: null,
     projectId: null,
+    roundingStepMinutes: 1,
     status: 'draft',
     timeEntryCount: 85,
     title: 'March Infrastructure',

@@ -1,5 +1,7 @@
-import { getTableColumns } from 'drizzle-orm';
+import { getTableColumns, sql } from 'drizzle-orm';
 import {
+  check,
+  integer,
   numeric,
   pgTable,
   timestamp,
@@ -23,6 +25,9 @@ export const workspaceSettings = pgTable(
       mode: 'number',
     }),
     timeZone: varchar('time_zone', { length: 64 }).default('UTC').notNull(),
+    timeRoundingStepMinutes: integer('time_rounding_step_minutes')
+      .default(1)
+      .notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -32,6 +37,10 @@ export const workspaceSettings = pgTable(
   },
   (table) => [
     uniqueIndex('workspace_settings_workspace_id_unique').on(table.workspaceId),
+    check(
+      'workspace_settings_time_rounding_step_minutes_check',
+      sql`${table.timeRoundingStepMinutes} >= 1 AND ${table.timeRoundingStepMinutes} <= 60`,
+    ),
   ],
 );
 

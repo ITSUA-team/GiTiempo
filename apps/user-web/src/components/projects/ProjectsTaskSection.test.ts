@@ -33,6 +33,7 @@ function createProject(): ProjectResponse {
     defaultBillableForTasks: true,
     source: 'manual',
     referenceProvenance: null,
+    timeRoundingStepMinutes: null,
     trackingMode: 'managed',
     totalSeconds: 0,
     members: [],

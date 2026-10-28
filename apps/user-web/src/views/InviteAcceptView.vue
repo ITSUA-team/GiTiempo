@@ -18,7 +18,7 @@ import {
 
 import { routeNames } from "@/router";
 import InviteOnboardingShell from "@/components/invite/InviteOnboardingShell.vue";
-import { getFirebaseErrorCode } from "@/lib/firebase-errors";
+import { getFirebaseErrorCode } from "@gitiempo/web-shared";
 import { getAuthRuntime } from "@/services/auth-runtime";
 import { getWorkspaceInvitesClient } from "@/services/workspace-invites-client";
 import { useAuthStore } from "@/stores/auth";

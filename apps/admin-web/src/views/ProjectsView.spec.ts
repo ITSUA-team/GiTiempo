@@ -3,8 +3,10 @@ import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import type * as VueRouter from 'vue-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { WorkspaceSettingsResponse } from '@gitiempo/shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
+import { createTestQueryPlugin } from '@/test/query-client';
 import { useAuthStore } from '@/stores/auth';
 
 const testMocks = vi.hoisted(() => ({
@@ -12,6 +14,7 @@ const testMocks = vi.hoisted(() => ({
   backfillProjectBillableDefault: vi.fn(),
   errorToast: vi.fn(),
   getManagementSummary: vi.fn(),
+  getWorkspaceSettings: vi.fn(),
   listProjectTasks: vi.fn(),
   listProjectTimeEntries: vi.fn(),
   listMembers: vi.fn(),
@@ -36,6 +39,12 @@ vi.mock('@/services/admin-members-client', () => ({
   adminMembersClient: {
     listMembers: testMocks.listMembers,
   },
+}));
+
+vi.mock('@/services/admin-settings-client', () => ({
+  getAdminSettingsClient: () => ({
+    getWorkspaceSettings: testMocks.getWorkspaceSettings,
+  }),
 }));
 
 vi.mock('@/services/admin-projects-client', () => ({
@@ -81,6 +90,7 @@ function createProject(
     defaultBillableForTasks?: boolean;
     isActive?: boolean;
     name?: string;
+    timeRoundingStepMinutes?: number | null;
   } = {},
 ) {
   const isActive = options.isActive ?? true;
@@ -95,10 +105,27 @@ function createProject(
     members: [],
     name: options.name ?? (isActive ? 'Project Orion' : 'Legacy Project'),
     source: 'manual',
+    timeRoundingStepMinutes: options.timeRoundingStepMinutes ?? null,
     totalSeconds: 0,
     updatedAt: '2026-05-01T10:00:00.000Z',
     visibility: 'public',
     workspaceId: '33333333-3333-4333-8333-333333333333',
+  };
+}
+
+function createWorkspaceSettingsFixture(
+  overrides: Partial<WorkspaceSettingsResponse> = {},
+): WorkspaceSettingsResponse {
+  return {
+    createdAt: '2026-01-01T00:00:00.000Z',
+    currency: 'USD',
+    defaultHourlyRate: null,
+    id: '77777777-7777-4777-8777-777777777777',
+    timeRoundingStepMinutes: 5,
+    timeZone: 'UTC',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    workspaceId: '33333333-3333-4333-8333-333333333333',
+    ...overrides,
   };
 }
 
@@ -147,17 +174,18 @@ const ProjectEditFormStub = {
     allMembers: { type: Array, required: true },
     project: { type: Object, required: true },
     saving: { type: Boolean, default: false },
+    workspaceRoundingStepMinutes: { type: Number, default: 1 },
   },
   template: `
     <div data-testid="project-edit-form">
-      Edit {{ project.name }} with {{ allMembers.length }} members | saving={{ saving }}
+      Edit {{ project.name }} with {{ allMembers.length }} members | saving={{ saving }} | rounding={{ workspaceRoundingStepMinutes }}
       <button
         data-testid="project-edit-save"
-        @click="$emit('save', { defaultBillableForTasks: project.defaultBillableForTasks, visibility: 'private', memberIds: ['user-3'] })"
+        @click="$emit('save', { defaultBillableForTasks: project.defaultBillableForTasks, timeRoundingStepMinutes: null, visibility: 'private', memberIds: ['user-3'] })"
       />
       <button
         data-testid="project-edit-save-default-change"
-        @click="$emit('save', { defaultBillableForTasks: !project.defaultBillableForTasks, visibility: project.visibility, memberIds: [] })"
+        @click="$emit('save', { defaultBillableForTasks: !project.defaultBillableForTasks, timeRoundingStepMinutes: project.timeRoundingStepMinutes ?? null, visibility: project.visibility, memberIds: [] })"
       />
       <button
         v-if="project.isActive"
@@ -216,7 +244,11 @@ function mountProjectsView() {
 
   return mount(ProjectsView, {
     global: {
-      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+      plugins: [
+        pinia,
+        [PrimeVue, giTiempoPrimeVueOptions],
+        createTestQueryPlugin(),
+      ],
       stubs: {
         BillableDefaultBackfillDialog: BillableDefaultBackfillDialogStub,
         ProjectEditForm: ProjectEditFormStub,
@@ -233,6 +265,7 @@ describe('ProjectsView', () => {
     testMocks.backfillProjectBillableDefault.mockReset();
     testMocks.errorToast.mockReset();
     testMocks.getManagementSummary.mockReset();
+    testMocks.getWorkspaceSettings.mockReset();
     testMocks.listProjectTasks.mockReset();
     testMocks.listProjectTimeEntries.mockReset();
     testMocks.listMembers.mockReset();
@@ -242,6 +275,10 @@ describe('ProjectsView', () => {
     testMocks.routerPush.mockReset();
     testMocks.successToast.mockReset();
     testMocks.updateProject.mockReset();
+
+    testMocks.getWorkspaceSettings.mockResolvedValue(
+      createWorkspaceSettingsFixture(),
+    );
 
     testMocks.getManagementSummary.mockResolvedValue({
       activeProjects: 0,
@@ -577,6 +614,7 @@ describe('ProjectsView', () => {
 
     expect(testMocks.updateProject).toHaveBeenCalledWith('project-active', {
       defaultBillableForTasks: true,
+      timeRoundingStepMinutes: null,
       visibility: 'private',
     });
     expect(testMocks.assignMember).toHaveBeenCalledWith('project-active', 'user-3');
@@ -591,6 +629,43 @@ describe('ProjectsView', () => {
     expect(wrapper.find('[data-testid="project-edit-form"]').exists()).toBe(false);
     expect(testMocks.listProjectTasks).not.toHaveBeenCalled();
     expect(testMocks.backfillProjectBillableDefault).not.toHaveBeenCalled();
+  });
+
+  it('passes the workspace rounding step to the inline project settings form', async () => {
+    testMocks.getWorkspaceSettings.mockResolvedValue(
+      createWorkspaceSettingsFixture({ timeRoundingStepMinutes: 5 }),
+    );
+    testMocks.listProjects.mockResolvedValue([createProject()]);
+
+    const wrapper = mountProjectsView();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.get('[data-testid="project-edit-form"]').text()).toContain(
+      'rounding=5',
+    );
+  });
+
+  it('toasts an error when the workspace settings request fails', async () => {
+    testMocks.getWorkspaceSettings.mockRejectedValueOnce(
+      new Error('Settings unavailable'),
+    );
+    testMocks.listProjects.mockResolvedValue([createProject()]);
+
+    mountProjectsView();
+    await flushPromises();
+
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Settings unavailable',
+      expect.objectContaining({
+        logContext: {
+          action: 'load-workspace-settings',
+          feature: 'projects',
+        },
+      }),
+    );
   });
 
   it('opens a billable-default backfill dialog when changed defaults have historical downstream records', async () => {
@@ -633,6 +708,7 @@ describe('ProjectsView', () => {
 
     expect(testMocks.updateProject).toHaveBeenCalledWith('project-active', {
       defaultBillableForTasks: false,
+      timeRoundingStepMinutes: null,
       visibility: 'public',
     });
     expect(testMocks.listProjectTasks).toHaveBeenCalledWith('project-active', {
@@ -702,6 +778,7 @@ describe('ProjectsView', () => {
 
     expect(testMocks.updateProject).toHaveBeenCalledWith('project-active', {
       defaultBillableForTasks: false,
+      timeRoundingStepMinutes: null,
       visibility: 'public',
     });
     expect(testMocks.removeAssignment).toHaveBeenCalledWith('project-active', 'user-2');
@@ -737,6 +814,7 @@ describe('ProjectsView', () => {
 
     expect(testMocks.updateProject).toHaveBeenCalledWith('project-active', {
       defaultBillableForTasks: false,
+      timeRoundingStepMinutes: null,
       visibility: 'public',
     });
     expect(testMocks.listProjectTasks).toHaveBeenCalledWith('project-active', {

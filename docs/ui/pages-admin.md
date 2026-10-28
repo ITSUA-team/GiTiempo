@@ -56,7 +56,7 @@
 - Searchable invoice table with columns: Title, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
 - Search filters by invoice title (API `search` param, case-insensitive ILIKE). The search input is capped at 200 characters to match the API contract; the filter row stays interactive so the user can always clear filters even when a load error replaces the table.
 - Filter row: Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
-- Mobile filters (< 640px): the same three filters stack vertically — Project full-width, then Period and Status side-by-side in a 2-column grid. Filter wrappers use `min-w-0` so long project names truncate inside the Select instead of expanding the grid track beyond the container.
+- Mobile filters (< 640px): the same three filters stack vertically — Project, Period, and Status all full-width and equal width, one under the other. Filter wrappers use `min-w-0` so long project names truncate inside the Select instead of expanding the container.
 - If the projects request fails, a separate inline error card with Retry is shown between the stats cards and the table. The invoice list stays usable for non-project filtering; the project dropdown shows no options until the retry succeeds. For PMs this explains why invoice creation is blocked (a project is required).
 - Pagination control below the table (API returns `meta.totalPages`).
 - Table header has a `Create invoice` action button (plus icon).
@@ -71,7 +71,8 @@
 ### Create dialog (modal)
 
 - Triggered from the list page `Create invoice` action button.
-- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From settings" when empty, falls back to workspace default), Currency (optional — PrimeVue `<Select>` with the same currency options as Settings → Currency, pre-selected with the workspace settings currency as soon as the dialog opens; placeholder "Auto" while unknown, falls back to workspace default on submit), Discount (optional, default 0), Notes (optional).
+- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From settings" when empty, falls back to workspace default), Currency (optional — PrimeVue `<Select>` with the same currency options as Settings → Currency, pre-selected with the workspace settings currency as soon as the dialog opens; placeholder "Auto" while unknown, falls back to workspace default on submit), Discount (optional, default 0), `Rounding step` (PrimeVue `<Select>` with presets: 1, 5, 10, 15, 30, 60; pre-filled from the eligible-entries preview `defaultRoundingStepMinutes` which sources the project's effective rounding step; dynamically updates when the project selection changes; updates immediately from the selected project's `timeRoundingStepMinutes` (or the workspace default when the project inherits) without waiting for the preview response, with the preview response subsequently reconciling the value; overridable per-invoice without changing project settings; uses the same touched-flag pattern as rate and currency), Notes (optional).
+- Pricing row layout: on desktop (sm and up), Currency, Discount, and `Rounding step` share a single row with equal widths (`sm:flex-1`); on mobile (below sm), they stack vertically full-width. The date range and hourly rate share a separate row (date range flexible, hourly rate fixed-width on desktop, stacked on mobile).
 - Calculated fields: Total hours and Total amount update live from `GET /invoices/eligible-entries` preview.
 - Expandable preview section: shows eligible time entries (count, total hours, computed amount). Collapsed by default; expands to a scrollable table with Date, User, Duration, Description.
 - Empty state: if preview returns 0 entries, show a warning banner ("No billable entries found for this project and date range"). Create button stays enabled — the API allows empty invoices.
@@ -117,8 +118,8 @@
 - An icon-only primary action sits in the projects table header next to the search control. Use tooltip/accessibility copy `New project`.
 - The project name is the edit entry point and opens the inline project settings section instead of using a row-level edit icon.
 - The status-specific secondary action lives inside the inline project settings section instead of the table row: active projects show `Archive project`, and archived projects show `Unarchive project`.
-- Project settings row is a single line: `Select members` uses PrimeVue `<AutoComplete multiple dropdown forceSelection>` with selected members shown as removable chips and typeahead search over non-admin members, `Visibility` uses PrimeVue `<Select>` for the fixed Public/Private choice, `New task billable default` uses a binary billable control, followed by `Cancel` and `Save` actions.
-- Manual project creation uses the authenticated Add Project page at `/projects/new` and includes `Default billable for new tasks`.
+- Project settings row is a single line: `Select members` uses PrimeVue `<AutoComplete multiple dropdown forceSelection>` with selected members shown as removable chips and typeahead search over non-admin members, `Visibility` uses PrimeVue `<Select>` for the fixed Public/Private choice, `New task billable default` uses a binary billable control, `Time rounding step` uses PrimeVue `<Select>` with `Inherit from workspace (N min)` as the first option, then 1, 5, 10, 15, 30, 60, followed by `Cancel` and `Save` actions.
+- Manual project creation uses the authenticated Add Project page at `/projects/new` and includes `Default billable for new tasks` and `Time rounding step`, defaulting to `Inherit from workspace`.
 - When a project default billable value changes after tasks or time entries already exist in that project, save the new default immediately for future tasks, then show a follow-up popup that asks only whether existing tasks and existing time entries in that project should also be updated.
 
 ## Settings Page
@@ -126,7 +127,8 @@
 - Single-column workspace settings form inside the authenticated admin shell.
 - Settings uses the shared top-bar breadcrumb pattern instead of a large in-content title/subtitle block.
 - Desktop card target is `max-width: 620px` with token-backed surface, `rounded-lg`, `shadow-card`, 20px padding, 12px field gaps, and a right-aligned bottom action row.
-- Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, and `Time zone`.
+- Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, `Time rounding step (minutes)`, and `Time zone`.
+- `Time rounding step (minutes)` uses PrimeVue `<Select>` with presets 1, 5, 10, 15, 30, 60 and default 1, renders near the Default hourly rate + Currency row, and is saved via `PATCH /workspace/settings`.
 - `Currency` uses PrimeVue `<Select>` and `Time zone` uses PrimeVue `<AutoComplete dropdown forceSelection>`. `Time zone` stays full width below the Default hourly rate + Currency row, enables predictive filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source. Time-zone option values remain exact IANA identifiers, while visible labels replace underscores with spaces, for example `Africa/Addis_Ababa` displays as `Africa/Addis Ababa`.
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
@@ -163,6 +165,19 @@
 - `Cancel` restores the latest loaded or saved values without sending a request.
 - Use a structured PrimeVue Skeleton first-load state that mirrors the implemented header, card, field rows, and action row.
 - Keep failed initial requests distinct from empty/default settings: show a request-error surface with retry and toast feedback instead of rendering default form values.
+
+## Login Page
+
+- `/login` is a standalone unauthenticated route-level page outside the authenticated admin shell. It follows the approved admin `Login Page` `.pen` screen and the shared auth visual language documented in `pages-user.md` under the Login Page Approved Visual Treatment.
+- The sign-in form is the shared `AuthSignInForm`.
+- The password field label row carries the same `Forgot?` password-recovery link as user-web: brand color via the brand token (`text-brand`), Inter 13px, weight 600, on the right edge of the label row, above the password input. The shared `AuthSignInForm` renders it through its optional `forgotPasswordTo` prop. The `.pen` places the link inline with the password input row; the PrimeVue `Password` component structure renders it in the label row instead. This is a documented PrimeVue-only deviation (see `.pen` parity task 9.5).
+- Clicking the `Forgot?` link navigates to the admin-web `/auth/forgot-password` route without submitting the login form or clearing entered email state.
+
+## Password Recovery / Reset Password
+
+- `/auth/forgot-password` and `/auth/reset-password` exist in admin-web with the same standalone placement, route guards (guest-only request route, `allowAuthenticatedGuestFlow` reset route), fields, gradient actions, and Firebase action-code behavior as the user-web Password Recovery Request Page and Reset Password Landing Page.
+- Both pages render the shared `AuthForgotPasswordForm` and `AuthResetPasswordForm` forms and follow the same notification conventions: `createAppToast` for toasts, inline `Message` for client-side validation, `logContext: { action, feature }` on Firebase-failure error toasts, and a success toast with redirect to the admin-web `/login` route after the password update.
+- The full sections in `pages-user.md` cover the shared details: the checking state (`Checking reset link...`), the verified-email notice, success and invalid-link panel states, mapped Firebase error codes, the no-enumeration success copy, the Firebase Console Action URL and authorized-domains setup, the `.pen` parity fallback (including the `Forgot?` label-row placement deviation), and the narrow-viewport collapse. Admin-web implements the same behavior with its own routes, intro content, and redirect targets.
 
 ## Cross-App Navigation
 

@@ -2,7 +2,12 @@
 import DatePicker from "primevue/datepicker";
 import type { ProjectResponse } from "@gitiempo/shared";
 import { giTiempoDatePickerPt } from "@gitiempo/web-config/theme";
-import { FilterAutoComplete, SurfaceCard } from "@gitiempo/web-shared";
+import {
+  DatePickerButtonBar,
+  FilterAutoComplete,
+  SurfaceCard,
+  useDatePickerConfirmCancel,
+} from "@gitiempo/web-shared";
 import { shallowRef, watch } from "vue";
 
 import type {
@@ -27,6 +32,8 @@ interface TimeEntriesFiltersProps {
 const props = defineProps<TimeEntriesFiltersProps>();
 
 const projectModel = shallowRef<ProjectResponse | string | null>(null);
+
+const datePicker = useDatePickerConfirmCancel<TimeEntryDatePickerRangeValue>();
 
 const emit = defineEmits<{
   projectComplete: [query: string];
@@ -106,6 +113,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           Date range
         </label>
         <DatePicker
+          :ref="datePicker.datePickerRef"
           date-format="M d, yy"
           icon-display="input"
           input-id="time-entries-date-range"
@@ -115,10 +123,19 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           selection-mode="range"
           fluid
           show-button-bar
+          show-clear
           show-icon
           :pt="giTiempoDatePickerPt"
+          @show="datePicker.handleShow"
           @update:model-value="updateDateRange"
-        />
+        >
+          <template #buttonbar>
+            <DatePickerButtonBar
+              @cancel="datePicker.handleCancel"
+              @confirm="datePicker.handleConfirm"
+            />
+          </template>
+        </DatePicker>
       </div>
 
       <div class="flex flex-col gap-1">

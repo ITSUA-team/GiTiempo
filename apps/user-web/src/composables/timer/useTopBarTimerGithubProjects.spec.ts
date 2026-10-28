@@ -58,6 +58,7 @@ const project = {
   defaultBillableForTasks: true,
   source: "manual" as const,
   referenceProvenance: null,
+  timeRoundingStepMinutes: null,
   trackingMode: "managed" as const,
   totalSeconds: 0,
   members: [],

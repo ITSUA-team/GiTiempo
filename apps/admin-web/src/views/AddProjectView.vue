@@ -23,9 +23,17 @@ import Message from 'primevue/message';
 import Select from 'primevue/select';
 
 import { useToasts } from '@/composables/feedback/useToasts';
+import { useWorkspaceRoundingSettings } from '@/composables/useWorkspaceRoundingSettings';
 import { routeNames } from '@/router';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
+import type { RoundingStepOption } from '@/lib/rounding-step-options';
+import {
+  getInheritRoundingStepOption,
+  getRoundingStepOptions,
+  toApiRoundingStepMinutes,
+} from '@/lib/rounding-step-options';
 import { useAuthStore } from '@/stores/auth';
 import GitHubProjectFields from '@/components/projects/GitHubProjectFields.vue';
 import {
@@ -45,6 +53,16 @@ type FormState = Record<string, FormFieldState>;
 const router = useRouter();
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
+
+const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getAdminServerStateScope(accessToken.value));
+
+const { workspaceRoundingStepMinutes } = useWorkspaceRoundingSettings({
+  enabled: computed(() => Boolean(accessToken.value)),
+  fallback: 1,
+  feature: 'projects',
+  scope,
+});
 
 const members = ref<WorkspaceMemberListResponse>([]);
 const membersLoading = ref(false);
@@ -75,6 +93,11 @@ const visibilityOptions = [
   { label: 'Private', value: 'private' as const },
 ];
 
+const roundingStepOptions = computed<RoundingStepOption[]>(() => [
+  getInheritRoundingStepOption(workspaceRoundingStepMinutes.value),
+  ...getRoundingStepOptions(),
+]);
+
 const resolver = computed(() =>
   zodResolver(
     sourceMode.value === 'github'
@@ -86,6 +109,7 @@ const resolver = computed(() =>
 const initialValues: CreateProjectFormInput = {
   defaultBillableForTasks: true,
   name: '',
+  timeRoundingStepMinutes: 0,
   visibility: 'private',
   managerUserId: null,
 };
@@ -273,6 +297,7 @@ async function handleSubmit({
           await adminProjectsClient.createProject({
             defaultBillableForTasks: formValues.defaultBillableForTasks,
             name: trimmedName,
+            timeRoundingStepMinutes: toApiRoundingStepMinutes(formValues.timeRoundingStepMinutes),
             visibility: formValues.visibility,
           })
         ).id;
@@ -506,6 +531,33 @@ onMounted(loadMembers);
               />
               <small class="text-text-muted text-xs">
                 New tasks in this project inherit this value unless changed later.
+              </small>
+            </div>
+
+            <div
+              v-if="!isGitHub"
+              class="flex flex-col gap-1.5"
+              data-testid="project-rounding-step-field"
+            >
+              <label
+                for="project-rounding-step"
+                class="text-text-dark text-[13px] font-medium"
+              >
+                Time rounding step
+              </label>
+              <Select
+                id="project-rounding-step"
+                name="timeRoundingStepMinutes"
+                data-testid="project-rounding-step"
+                :options="roundingStepOptions"
+                option-label="label"
+                option-value="value"
+                :disabled="isSubmitting"
+                :pt="giTiempoSelectPt"
+              />
+              <small class="text-text-muted text-xs">
+                New time entries are rounded to this step. Inherit follows the
+                workspace default ({{ workspaceRoundingStepMinutes }} min).
               </small>
             </div>
 

@@ -183,6 +183,13 @@
       "when": 1793024255234,
       "tag": "0025_misty_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793184235527,
+      "tag": "0026_right_black_tarantula",
+      "breakpoints": true
     }
   ]
 }

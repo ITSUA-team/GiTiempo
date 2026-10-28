@@ -15,12 +15,14 @@ import ProjectsTable from '@/components/ProjectsTable.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
+import { useWorkspaceRoundingSettings } from '@/composables/useWorkspaceRoundingSettings';
 import { useAdminProjectsData } from '@/composables/projects/useAdminProjectsData';
 import { useProjectArchiveActions } from '@/composables/projects/useProjectArchiveActions';
 import { useProjectBillableBackfillFlow } from '@/composables/projects/useProjectBillableBackfillFlow';
 import { useProjectEditActions } from '@/composables/projects/useProjectEditActions';
 import { useProjectsTableState } from '@/composables/useProjectsTableState';
 import { routeNames } from '@/router';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
@@ -30,6 +32,7 @@ const { errorToast, successToast } = useToasts();
 const isMobileViewport = useIsMobileViewport();
 
 const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getAdminServerStateScope(accessToken.value));
 
 function notifyProjectsError(
   message: string,
@@ -54,6 +57,13 @@ const {
 } = useAdminProjectsData({
   accessToken,
   onError: notifyProjectsError,
+});
+
+const { workspaceRoundingStepMinutes } = useWorkspaceRoundingSettings({
+  enabled: computed(() => Boolean(accessToken.value)),
+  fallback: 1,
+  feature: 'projects',
+  scope,
 });
 
 const {
@@ -177,6 +187,7 @@ onMounted(fetchAll);
               :project="row.project"
               :all-members="members"
               :saving="savingProjectEditId === row.id"
+              :workspace-rounding-step-minutes="workspaceRoundingStepMinutes"
               @archive="handleArchive(row.project)"
               @save="handleProjectEditSubmitted(row.project, $event)"
               @unarchive="handleUnarchive(row.project)"

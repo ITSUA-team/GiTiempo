@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { roundingStepMinutesSchema } from './common.js';
 import { githubRepoKeySchema } from './github.js';
 import { workspaceRoleSchema } from './workspace-members.js';
 
@@ -64,6 +65,7 @@ export const projectResponseSchema = z.object({
   color: z.string().nullable(),
   visibility: projectVisibilitySchema,
   defaultBillableForTasks: z.boolean(),
+  timeRoundingStepMinutes: roundingStepMinutesSchema.nullable(),
   source: projectSourceSchema,
   trackingMode: projectTrackingModeSchema,
   referenceProvenance: referenceProvenanceSchema.nullable(),
@@ -138,6 +140,7 @@ export const createProjectSchema = z
       .optional(),
     visibility: projectVisibilitySchema.optional(),
     defaultBillableForTasks: z.boolean().optional(),
+    timeRoundingStepMinutes: roundingStepMinutesSchema.nullable().optional(),
   })
   .strict();
 
@@ -153,6 +156,7 @@ export const updateProjectSchema = z
     visibility: projectVisibilitySchema.optional(),
     defaultBillableForTasks: z.boolean().optional(),
     isActive: z.boolean().optional(),
+    timeRoundingStepMinutes: roundingStepMinutesSchema.nullable().optional(),
   })
   .strict()
   .refine(
@@ -162,7 +166,8 @@ export const updateProjectSchema = z
       data.color !== undefined ||
       data.visibility !== undefined ||
       data.defaultBillableForTasks !== undefined ||
-      data.isActive !== undefined,
+      data.isActive !== undefined ||
+      data.timeRoundingStepMinutes !== undefined,
     {
       message: 'At least one field must be provided',
       path: [],

@@ -26,6 +26,7 @@ function createProject(id: string, name: string): ProjectResponse {
     name,
     source: "manual",
     referenceProvenance: null,
+    timeRoundingStepMinutes: null,
     trackingMode: "managed",
     totalSeconds: 43200,
     updatedAt: "2026-04-20T12:00:00.000Z",

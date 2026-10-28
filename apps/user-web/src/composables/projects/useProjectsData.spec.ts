@@ -28,6 +28,7 @@ function createProject(accessScope: ProjectResponse["accessScope"]): ProjectResp
     members: [],
     name: "External project",
     referenceProvenance: "user-supplied",
+    timeRoundingStepMinutes: null,
     source: "github",
     trackingMode: "external-reference",
     totalSeconds: 0,

@@ -18091,6 +18091,66 @@
                                     },
                                     {
                                       "type": "frame",
+                                      "id": "rndK8w2",
+                                      "name": "roundingStepWrap",
+                                      "width": 250,
+                                      "layout": "vertical",
+                                      "gap": 6,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "rndL3p7",
+                                          "name": "roundingStepLabel",
+                                          "fill": "#1A1A1A",
+                                          "content": "Time rounding step",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "rndS6v4",
+                                          "name": "roundingStepSelect",
+                                          "width": "fill_container",
+                                          "height": 38,
+                                          "fill": "#FFFFFF",
+                                          "cornerRadius": 6,
+                                          "stroke": "#EEEEEE",
+                                          "strokeWidth": 1,
+                                          "strokeAlignment": "inner",
+                                          "padding": [
+                                            0,
+                                            12
+                                          ],
+                                          "justifyContent": "space_between",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "rndV9b1",
+                                              "name": "roundingStepValue",
+                                              "fill": "#1A1A1A",
+                                              "content": "Inherit from workspace (1 min)",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 14,
+                                              "fontWeight": "500"
+                                            },
+                                            {
+                                              "type": "icon",
+                                              "id": "rndC5m8",
+                                              "name": "roundingStepChevron",
+                                              "width": 16,
+                                              "height": 16,
+                                              "icon": "chevron-down",
+                                              "library": "lucide",
+                                              "fill": "#666666"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
                                       "id": "Bq7Yg",
                                       "name": "archiveProjectButton",
                                       "fill": "#FFFFFF",
@@ -19506,6 +19566,78 @@
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
                                       "content": "New tasks in this project inherit this value unless changed later.",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "rndF4x6",
+                                  "name": "projectDialogField",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 6,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "rndL7t9",
+                                      "name": "roundingStepLabel",
+                                      "fill": "$color-text-dark",
+                                      "content": "Time rounding step",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "rndI2k5",
+                                      "name": "projectInput",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "fill": "$color-surface",
+                                      "cornerRadius": "$radius-sm",
+                                      "stroke": "$color-divider",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "padding": [
+                                        0,
+                                        12
+                                      ],
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "rndV8n3",
+                                          "name": "roundingStepValue",
+                                          "fill": "$color-text-dark",
+                                          "content": "Inherit from workspace (1 min)",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "icon",
+                                          "id": "rndC1q7",
+                                          "name": "caret",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "chevron-down",
+                                          "library": "lucide",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "rndH4z2",
+                                      "name": "roundingStepHint",
+                                      "fill": "$color-text-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "New time entries are rounded to this step. Inherit follows the workspace default (1 min).",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
                                       "fontWeight": "normal"
@@ -47467,7 +47599,7 @@
                                   "type": "frame",
                                   "id": "zshp0",
                                   "name": "f3a",
-                                  "width": 150,
+                                  "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
@@ -47524,7 +47656,7 @@
                                   "type": "frame",
                                   "id": "upd035",
                                   "name": "f3b",
-                                  "width": 150,
+                                  "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
@@ -47568,27 +47700,27 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "9to6Y",
-                                  "name": "f3b",
+                                  "id": "rndInv1",
+                                  "name": "roundingStepField",
                                   "width": "fill_container",
                                   "layout": "vertical",
-                                  "gap": 4,
+                                  "gap": 6,
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "cyDuX",
+                                      "id": "rndInvL1",
                                       "fill": "$color-text-dark",
-                                      "content": "Total amount (calculated)",
+                                      "content": "Rounding step",
                                       "fontFamily": "Inter",
                                       "fontSize": 13,
                                       "fontWeight": "500"
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "HTEJN",
+                                      "id": "rndInvS1",
                                       "width": "fill_container",
-                                      "height": 34,
-                                      "fill": "$color-app-bg",
+                                      "height": 38,
+                                      "fill": "$color-surface",
                                       "cornerRadius": "$radius-sm",
                                       "stroke": "$color-divider",
                                       "strokeWidth": 1,
@@ -47597,16 +47729,26 @@
                                         0,
                                         12
                                       ],
+                                      "justifyContent": "space_between",
                                       "alignItems": "center",
                                       "children": [
                                         {
                                           "type": "text",
-                                          "id": "Kcbr2",
+                                          "id": "rndInvV1",
                                           "fill": "$color-text-dark",
-                                          "content": "$12,800",
+                                          "content": "1 min",
                                           "fontFamily": "Inter",
                                           "fontSize": 14,
-                                          "fontWeight": "700"
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "icon",
+                                          "id": "rndInvC1",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "chevron-down",
+                                          "library": "lucide",
+                                          "fill": "$color-text-muted"
                                         }
                                       ]
                                     }
@@ -47933,6 +48075,191 @@
           "fontFamily": "Inter",
           "fontSize": 18,
           "fontWeight": "500"
+        },
+        {
+          "type": "frame",
+          "id": "mInvM1",
+          "x": 1400,
+          "y": 148,
+          "name": "Admin Invoices — Mobile filters",
+          "context": "Mobile variant (< 640px). Project, Period, and Status all full-width and equal width, stacked one under the other.",
+          "width": 375,
+          "height": 420,
+          "fill": "$color-surface",
+          "cornerRadius": 12,
+          "layout": "vertical",
+          "padding": [
+            16,
+            16
+          ],
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "mInvM1h",
+              "fill": "#27272A",
+              "content": "Mobile · Invoices — filters (< 640px)",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "mInvM1n",
+              "fill": "#52525B",
+              "content": "Project, Period, and Status all full-width and equal width, stacked one under the other.",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "textGrowth": "fixed-width",
+              "width": 343,
+              "lineHeight": 1.3
+            },
+            {
+              "type": "frame",
+              "id": "mInvM1p",
+              "name": "projectFilter",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mInvM1pl",
+                  "fill": "$color-text-muted",
+                  "content": "Project",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "mInvM1pi",
+                  "name": "projectInput",
+                  "width": "fill_container",
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "cornerRadius": "$radius-sm",
+                  "layout": "horizontal",
+                  "alignItems": "center",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "mInvM1pv",
+                      "fill": "$color-text-muted",
+                      "content": "All projects",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mInvM1pr",
+              "name": "periodFilter",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mInvM1prl",
+                  "fill": "$color-text-muted",
+                  "content": "Period",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "mInvM1pri",
+                  "name": "periodInput",
+                  "width": "fill_container",
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "cornerRadius": "$radius-sm",
+                  "layout": "horizontal",
+                  "alignItems": "center",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "mInvM1prv",
+                      "fill": "$color-text-muted",
+                      "content": "Date range",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mInvM1s",
+              "name": "statusFilter",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mInvM1sl",
+                  "fill": "$color-text-muted",
+                  "content": "Status",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "mInvM1si",
+                  "name": "statusInput",
+                  "width": "fill_container",
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "cornerRadius": "$radius-sm",
+                  "layout": "horizontal",
+                  "alignItems": "center",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "mInvM1sv",
+                      "fill": "$color-text-muted",
+                      "content": "All statuses",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -48468,6 +48795,66 @@
                                           "fontWeight": "500"
                                         }
                                       ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "rndF9g3",
+                              "name": "roundingStepField",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "rndL5r8",
+                                  "name": "roundingStepLabel",
+                                  "fill": "$color-text-dark",
+                                  "content": "Time rounding step (minutes)",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "rndS7y2",
+                                  "name": "roundingStepSelect",
+                                  "width": "fill_container",
+                                  "height": 38,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "rndV3w6",
+                                      "name": "roundingStepValue",
+                                      "fill": "$color-text-dark",
+                                      "content": "1 min",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 14,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "rndC9h4",
+                                      "name": "roundingStepChevron",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$color-text-muted"
                                     }
                                   ]
                                 }

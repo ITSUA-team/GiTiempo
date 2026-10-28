@@ -1,6 +1,7 @@
 export const routeNames = {
   dashboard: "dashboard",
   forbidden: "forbidden",
+  forgotPassword: "forgot-password",
   githubCallback: "github-callback",
   inviteAccept: "invite-accept",
   invitePasswordSetup: "invite-password-setup",
@@ -9,5 +10,6 @@ export const routeNames = {
   profile: "profile",
   project: "project",
   register: "register",
+  resetPassword: "reset-password",
   timeEntries: "time-entries",
 } as const;

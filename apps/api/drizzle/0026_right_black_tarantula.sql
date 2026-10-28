@@ -1,0 +1,6 @@
+ALTER TABLE "workspace_settings" ADD COLUMN "time_rounding_step_minutes" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "projects" ADD COLUMN "time_rounding_step_minutes" integer;--> statement-breakpoint
+ALTER TABLE "invoices" ADD COLUMN "rounding_step_minutes" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "workspace_settings" ADD CONSTRAINT "workspace_settings_time_rounding_step_minutes_check" CHECK ("workspace_settings"."time_rounding_step_minutes" >= 1 AND "workspace_settings"."time_rounding_step_minutes" <= 60);--> statement-breakpoint
+ALTER TABLE "projects" ADD CONSTRAINT "projects_time_rounding_step_minutes_check" CHECK ("projects"."time_rounding_step_minutes" IS NULL OR ("projects"."time_rounding_step_minutes" >= 1 AND "projects"."time_rounding_step_minutes" <= 60));--> statement-breakpoint
+ALTER TABLE "invoices" ADD CONSTRAINT "invoices_rounding_step_minutes_check" CHECK ("invoices"."rounding_step_minutes" >= 1 AND "invoices"."rounding_step_minutes" <= 60);
