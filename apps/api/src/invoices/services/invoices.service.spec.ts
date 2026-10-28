@@ -454,6 +454,24 @@ describe('InvoicesService', () => {
     expect(compute(7200, 75, 100)).toEqual({ totalHours: 2, totalAmount: 0 });
   });
 
+  it('rounds sub-cent fractional amounts up to the next whole cent (ceiling)', () => {
+    const { service } = createService('admin');
+    const compute = priv<
+      [number, number, number],
+      {
+        totalHours: number;
+        totalAmount: number;
+      }
+    >(service, 'computeInvoiceTotals');
+
+    // 11988 seconds = 3.33 hours x $10.01 minus 90% = $3.3333 -> $3.34.
+    // Half-up would give $3.33; ceiling always rounds the fractional cent up.
+    expect(compute(11988, 10.01, 90)).toEqual({
+      totalHours: 3.33,
+      totalAmount: 3.34,
+    });
+  });
+
   it('rounds half-cent amounts like 16.665 up to 16.67', () => {
     const { service } = createService('admin');
     const compute = priv<
@@ -583,13 +601,14 @@ describe('InvoicesService', () => {
       }
     >(service, 'computeInvoiceTotals');
 
-    // 360000036 s → 100000.01 centihours × $1000.01/hr × no discount.
-    // The intermediate product 10000001 × 100001 × 10000 = 10000101000010000
+    // 360000036 s -> 100000.01 centihours x $1000.01/hr x no discount.
+    // The intermediate product 10000001 x 100001 x 10000 = 10000101000010000
     // exceeds Number.MAX_SAFE_INTEGER (9007199254740991). BigInt arithmetic
-    // keeps the intermediate exact: amountCents = 10000101000 → $100001010.00.
+    // keeps the intermediate exact: amountCents = 10000101000.01, which
+    // ceiling rounds UP to 10000101001 -> $100001010.01.
     expect(compute(360000036, 1000.01, 0)).toEqual({
       totalHours: 100000.01,
-      totalAmount: 100001010,
+      totalAmount: 100001010.01,
     });
   });
 
@@ -637,6 +656,7 @@ describe('InvoicesService', () => {
     expect(response.timeEntries[0]).toMatchObject({
       id: sampleEntries[0].id,
       durationSeconds: 7200,
+      roundedDurationSeconds: 7200,
     });
   });
 
@@ -685,10 +705,37 @@ describe('InvoicesService', () => {
         startedAt: '2026-04-21T09:15:45.123Z',
         endedAt: '2026-04-21T15:30:45.123Z',
         durationSeconds: 3661,
+        roundedDurationSeconds: 3900,
         isBillable: false,
         description: 'Backend work',
       },
     ]);
+  });
+
+  it('rounds each entry duration up to the step multiple in the response', () => {
+    const { service } = createService('admin');
+    const toResponse = priv<[unknown, unknown[]], InvoiceResponse>(
+      service,
+      'toInvoiceResponse',
+    );
+
+    const response = toResponse(sampleInvoiceRow, [
+      {
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9030',
+        taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9006',
+        userId: adminUser.sub,
+        startedAt: new Date('2026-04-21T09:00:00.000Z'),
+        endedAt: new Date('2026-04-21T09:01:30.000Z'),
+        durationSeconds: 90,
+        isBillable: true,
+        description: null,
+      },
+    ]);
+
+    expect(response.timeEntries[0]).toMatchObject({
+      durationSeconds: 90,
+      roundedDurationSeconds: 300,
+    });
   });
 
   it('casts the stored status string for all three statuses', () => {

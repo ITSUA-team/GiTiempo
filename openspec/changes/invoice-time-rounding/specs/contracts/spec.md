@@ -116,7 +116,7 @@ The shared contracts SHALL define a validated invoice update request body for ed
 
 ### Requirement: Shared Invoice Response Contract
 
-The shared contracts SHALL define stable invoice list and detail response shapes that include snapshot fields, status, billing date range, optional project summary, the non-null `roundingStepMinutes` snapshot, and the count of linked time entries. The detail response additionally includes the full array of linked time-entry summaries.
+The shared contracts SHALL define stable invoice list and detail response shapes that include snapshot fields, status, billing date range, optional project summary, the non-null `roundingStepMinutes` snapshot, and the count of linked time entries. The detail response additionally includes the full array of linked time-entry summaries. Each time-entry summary SHALL include both the original raw `durationSeconds` and a `roundedDurationSeconds` positive integer computed with the invoice's `roundingStepMinutes` snapshot, so consumers can display the rounded billed duration per entry without recomputing it.
 
 #### Scenario: Invoice list response uses shared schema
 
@@ -134,6 +134,7 @@ The shared contracts SHALL define stable invoice list and detail response shapes
 - **THEN** the payload matches the shared invoice detail response contract
 - **AND** includes snapshot `hourlyRate`, `currency`, `totalHours`, `totalAmount`, and the non-null `roundingStepMinutes`
 - **AND** includes the linked time entries as an array of summaries
+- **AND** each entry summary includes `durationSeconds` (raw) and `roundedDurationSeconds` (ceiling-rounded with the invoice snapshot step)
 
 ### Requirement: Shared Eligible Entries Query Contract
 
@@ -154,7 +155,7 @@ The shared contracts SHALL define a validated eligible-entries query with a requ
 
 ### Requirement: Shared Eligible Entries Response Contract
 
-The shared contracts SHALL define a stable eligible-entries response shape that includes a count, computed total hours, an array of time-entry summaries with user and task names, the workspace default hourly rate and currency, and the effective default `defaultRoundingStepMinutes` (always a non-null integer).
+The shared contracts SHALL define a stable eligible-entries response shape that includes a count, computed total hours, an array of time-entry summaries with user and task names, the workspace default hourly rate and currency, and the effective default `defaultRoundingStepMinutes` (always a non-null integer). Each entry summary SHALL include both the original raw `durationSeconds` and a `roundedDurationSeconds` positive integer computed with the effective rounding step.
 
 #### Scenario: Eligible entries response uses shared schema
 
@@ -163,3 +164,4 @@ The shared contracts SHALL define a stable eligible-entries response shape that 
 - **THEN** the payload matches the shared eligible-entries response contract
 - **AND** includes `count`, `totalHours`, `entries`, `defaultHourlyRate`, `defaultCurrency`, and the non-null `defaultRoundingStepMinutes`
 - **AND** each entry includes `userName` and `taskName` for display
+- **AND** each entry includes `durationSeconds` (raw) and `roundedDurationSeconds` (ceiling-rounded with the effective step)

@@ -535,6 +535,10 @@ export class InvoicesService {
       startedAt: e.startedAt.toISOString(),
       endedAt: e.endedAt!.toISOString(),
       durationSeconds: e.durationSeconds!,
+      roundedDurationSeconds: InvoicesService.roundEntrySeconds(
+        e.durationSeconds ?? 0,
+        effectiveRoundingStepMinutes,
+      ),
       isBillable: e.isBillable,
       description: e.description,
     }));
@@ -958,9 +962,11 @@ export class InvoicesService {
    * places to match the stored DECIMAL precision.
    *
    * The amount is computed in integer fixed-point (centihours × cents ×
-   * discount basis points) so half-cent boundaries round half-up exactly;
-   * binary floating point can represent e.g. 37.605 as 3760.4999… and round
-   * it down to 37.60 instead of 37.61.
+   * discount basis points) and always rounded UP to the next whole cent
+   * (ceiling): any fractional cent is billed, never discarded. Binary
+   * floating point can represent e.g. 37.605 as 3760.4999…, so the
+   * fixed-point path avoids that drift and guarantees the cent rounds up
+   * (3.3333 → 3.34, 37.605 → 37.61).
    *
    * The triple product (centihours × cents × discount-factor) can exceed
    * Number.MAX_SAFE_INTEGER for large but allowed invoice totals; BigInt
@@ -979,10 +985,11 @@ export class InvoicesService {
     // totalAmount = (totalHoursCents/100) × (rateCents/100) ×
     //                (discountFactor/10_000)
     //             = totalHoursCents × rateCents × discountFactor / 1_000_000
-    // BigInt half-up rounding: add half the divisor before integer division.
+    // BigInt ceiling: add (divisor - 1) before floor division so any
+    // fractional cent rounds UP to the next whole cent (3.3333 → 3.34).
     const amountCents = Number(
       (BigInt(totalHoursCents) * BigInt(rateCents) * BigInt(discountFactor) +
-        500_000n) /
+        999_999n) /
         1_000_000n,
     );
 
@@ -1072,6 +1079,10 @@ export class InvoicesService {
       startedAt: e.startedAt.toISOString(),
       endedAt: e.endedAt!.toISOString(),
       durationSeconds: e.durationSeconds!,
+      roundedDurationSeconds: InvoicesService.roundEntrySeconds(
+        e.durationSeconds ?? 0,
+        row.roundingStepMinutes,
+      ),
       isBillable: e.isBillable,
       description: e.description,
     }));

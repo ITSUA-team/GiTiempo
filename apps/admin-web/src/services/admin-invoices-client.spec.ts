@@ -43,6 +43,7 @@ const entryId = '66666666-6666-4666-8666-666666666666';
 const timeEntrySummary = {
 	description: null,
 	durationSeconds: 7200,
+	roundedDurationSeconds: 7200,
 	endedAt: '2026-04-21T11:00:00.000Z',
 	id: entryId,
 	isBillable: true,

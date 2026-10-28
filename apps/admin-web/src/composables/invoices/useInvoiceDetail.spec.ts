@@ -25,6 +25,7 @@ function createTimeEntrySummary(
   return {
     description: null,
     durationSeconds: 9000,
+    roundedDurationSeconds: 9000,
     endedAt: '2026-04-15T11:30:00.000Z',
     id: timeEntryId,
     isBillable: true,

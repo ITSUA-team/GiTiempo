@@ -113,12 +113,20 @@ The backend MUST compute invoice totals as the sum of tracked hours of selected 
 - **WHEN** a linked time entry is edited after invoice creation
 - **THEN** the invoice `total_hours` and `total_amount` remain as originally captured
 
-#### Scenario: Totals are rounded correctly at half-cent boundaries
+#### Scenario: Totals are rounded up to the next whole cent (ceiling)
 
 - **GIVEN** an invoice is created with 0.5 tracked hours at a rate of $75.21
 - **WHEN** the backend computes the total amount
 - **THEN** the stored `total_amount` is $37.61 (rounded up from 37.605)
 - **AND** the computation uses integer fixed-point arithmetic to avoid floating-point drift
+- **AND** any fractional cent is always rounded UP, never down or truncated
+
+#### Scenario: Sub-cent fractional amounts round up to the next cent
+
+- **GIVEN** an invoice is created with 3.33 tracked hours at a rate of $10.01 and a 90% discount
+- **WHEN** the backend computes the total amount (3.33 x 10.01 x 0.1 = 3.3333)
+- **THEN** the stored `total_amount` is $3.34 (ceiling), not $3.33 (half-up)
+- **AND** the rounding mode is ceiling so the billed amount never loses a fractional cent
 
 #### Scenario: Hours rounding avoids floating-point drift from seconds conversion
 
@@ -161,12 +169,21 @@ The backend MUST compute invoice totals as the sum of tracked hours of selected 
 
 ### Requirement: Invoice Details Can Be Read
 
-The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and `pm` users that returns a single invoice with its snapshot fields (including the non-null `roundingStepMinutes` snapshot), status, and the set of linked time entries.
+The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and `pm` users that returns a single invoice with its snapshot fields (including the non-null `roundingStepMinutes` snapshot), status, and the set of linked time entries. Each linked time-entry summary MUST include both the original raw `durationSeconds` and a `roundedDurationSeconds` value computed by applying per-entry ceiling rounding with the invoice's `roundingStepMinutes` snapshot, so the detail surface can display the rounded billed duration per entry without recomputing it client-side.
 
 #### Scenario: Admin reads any workspace invoice
 
 - **WHEN** an admin requests `GET /invoices/:id` for an invoice in their workspace
 - **THEN** the backend returns the invoice detail including snapshot totals, the non-null `roundingStepMinutes` snapshot, and linked entries
+- **AND** each linked entry includes `durationSeconds` (raw) and `roundedDurationSeconds` (ceiling-rounded using the invoice snapshot step)
+
+#### Scenario: Linked entry rounded duration reflects the invoice snapshot step
+
+- **GIVEN** an invoice was created with `roundingStepMinutes: 5`
+- **AND** a linked time entry has a raw `durationSeconds` of 360 (6 minutes)
+- **WHEN** the backend returns the invoice detail
+- **THEN** that entry's `roundedDurationSeconds` is 600 (10 minutes)
+- **AND** that entry's `durationSeconds` remains 360
 
 #### Scenario: PM cannot read an unassigned private-project invoice
 
@@ -244,13 +261,14 @@ The allowed forward transitions are: `draft → sent`, `draft → paid`, and `se
 
 ### Requirement: Eligible Time Entries Can Be Previewed Before Invoice Creation
 
-The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint for `admin` and `pm` users that returns the set of completed, billable, not-yet-invoiced time entries matching a given date range and optional project scope, along with the computed total hours — without creating an invoice or modifying any data. Rounding is always active: the endpoint MUST accept an optional `roundingStepMinutes` query parameter (positive integer between 1 and 60); when supplied, the computed total hours MUST reflect per-entry ceiling rounding using that step. When `roundingStepMinutes` is omitted, the total hours MUST reflect per-entry ceiling rounding with the effective default step: for project-scoped previews the project's `timeRoundingStepMinutes` when set, otherwise the workspace's `timeRoundingStepMinutes`; for workspace-wide previews the workspace's `timeRoundingStepMinutes`. The response MUST always include a non-null `defaultRoundingStepMinutes` — the effective default step — alongside the existing `defaultHourlyRate` and `defaultCurrency`.
+The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint for `admin` and `pm` users that returns the set of completed, billable, not-yet-invoiced time entries matching a given date range and optional project scope, along with the computed total hours — without creating an invoice or modifying any data. Rounding is always active: the endpoint MUST accept an optional `roundingStepMinutes` query parameter (positive integer between 1 and 60); when supplied, the computed total hours MUST reflect per-entry ceiling rounding using that step. When `roundingStepMinutes` is omitted, the total hours MUST reflect per-entry ceiling rounding with the effective default step: for project-scoped previews the project's `timeRoundingStepMinutes` when set, otherwise the workspace's `timeRoundingStepMinutes`; for workspace-wide previews the workspace's `timeRoundingStepMinutes`. The response MUST always include a non-null `defaultRoundingStepMinutes` — the effective default step — alongside the existing `defaultHourlyRate` and `defaultCurrency`. Each returned entry MUST include both the original raw `durationSeconds` and a `roundedDurationSeconds` value computed by applying per-entry ceiling rounding with the effective rounding step, so the preview surface can display the rounded billed duration per entry.
 
 #### Scenario: Admin previews eligible entries across a date range
 
 - **WHEN** an admin requests `GET /invoices/eligible-entries?dateFrom=2026-04-01&dateTo=2026-04-21` with the workspace JWT claim
 - **THEN** the backend returns all completed, billable, not-yet-invoiced time entries in that workspace and date range
 - **AND** includes the total count and total hours computed from the selected entries
+- **AND** each entry includes `durationSeconds` (raw) and `roundedDurationSeconds` (ceiling-rounded with the effective step)
 - **AND** does not create an invoice or link any time entries
 
 #### Scenario: Admin previews eligible entries scoped to a project
@@ -321,4 +339,5 @@ The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint fo
 - **GIVEN** the preview is scoped to a project with an effective rounding step of 10
 - **WHEN** the request carries `roundingStepMinutes=15`
 - **THEN** the `totalHours` reflect per-entry rounding with a 15-minute step
+- **AND** each entry's `roundedDurationSeconds` is computed with a 15-minute step
 - **AND** the response still includes `defaultRoundingStepMinutes: 10`

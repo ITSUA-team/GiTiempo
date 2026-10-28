@@ -1148,13 +1148,14 @@ describe('Invoices (e2e)', () => {
     expect(res.body.timeEntries).toHaveLength(2);
 
     for (const entry of res.body.timeEntries) {
-      // Exact contract shape: ten summary fields, nothing more.
+      // Exact contract shape: eleven summary fields, nothing more.
       expect(Object.keys(entry).sort()).toEqual([
         'description',
         'durationSeconds',
         'endedAt',
         'id',
         'isBillable',
+        'roundedDurationSeconds',
         'startedAt',
         'taskId',
         'taskName',
@@ -1163,6 +1164,9 @@ describe('Invoices (e2e)', () => {
       ]);
       expect(entry.id).toMatch(UUID_RE);
       expect(entry.durationSeconds).toBeGreaterThan(0);
+      expect(entry.roundedDurationSeconds).toBeGreaterThanOrEqual(
+        entry.durationSeconds,
+      );
       expect(entry.isBillable).toBe(true);
       expect(entry.description).toBeNull();
       expect(entry.taskId).toBe(PLATFORM_API_TASK_ID);

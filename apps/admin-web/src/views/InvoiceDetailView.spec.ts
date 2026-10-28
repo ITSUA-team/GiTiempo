@@ -98,6 +98,7 @@ function createTimeEntrySummary(
   return {
     description: 'API work',
     durationSeconds: 9000,
+    roundedDurationSeconds: 9000,
     endedAt: '2026-04-15T11:30:00.000Z',
     id: timeEntryId,
     isBillable: true,
@@ -355,6 +356,27 @@ describe('InvoiceDetailView', () => {
     expect(table.text()).toContain('Backend API');
     expect(table.text()).toContain('2h 30m');
     expect(table.text()).toContain('API work');
+  });
+
+  it('renders the rounded per-entry duration, not the raw tracked duration', async () => {
+    testMocks.getInvoice.mockResolvedValue(
+      createInvoice({
+        timeEntries: [
+          createTimeEntrySummary({
+            durationSeconds: 360,
+            roundedDurationSeconds: 600,
+          }),
+        ],
+        timeEntryCount: 1,
+      }),
+    );
+
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    const table = wrapper.find('[data-testid="invoice-time-entries-table"]');
+    expect(table.text()).toContain('0h 10m');
+    expect(table.text()).not.toContain('0h 6m');
   });
 
   it('renders an empty state instead of the table when no entries are linked', async () => {

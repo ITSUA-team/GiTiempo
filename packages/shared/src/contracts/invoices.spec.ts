@@ -40,6 +40,7 @@ const validInvoiceResponse = {
       startedAt: "2026-04-21T09:00:00.000Z",
       endedAt: "2026-04-21T11:00:00.000Z",
       durationSeconds: 7200,
+      roundedDurationSeconds: 7200,
       isBillable: true,
       description: null,
     },
@@ -955,6 +956,7 @@ describe("eligibleEntriesResponseSchema", () => {
     startedAt: "2026-04-15T09:00:00.000Z",
     endedAt: "2026-04-15T11:30:00.000Z",
     durationSeconds: 9000,
+    roundedDurationSeconds: 9000,
     isBillable: true,
     description: "Backend API implementation",
   };
