@@ -200,6 +200,42 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(wrapper.emitted('remove')).toEqual([['org-1']]);
   });
 
+  it('stacks organization rows vertically with left-aligned actions on mobile', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        items: [
+          {
+            id: 'org-1',
+            workspaceId: 'workspace-1',
+            organizationLogin: 'Octo-Org',
+            createdByUserId: 'user-1',
+            createdAt: '2026-06-18T00:00:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    const row = wrapper.get(
+      '[data-testid="settings-github-organization-row-org-1"]',
+    );
+    const actionsContainer = wrapper.get(
+      '[data-testid="settings-github-organization-actions"]',
+    );
+
+    expect(row.classes()).toContain('flex-col');
+    expect(row.classes()).toContain('sm:flex-row');
+    expect(actionsContainer.classes()).toContain('justify-start');
+    expect(actionsContainer.classes()).toContain('sm:justify-end');
+  });
+
   it('starts App installation for the selected organization when it is not verified', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {

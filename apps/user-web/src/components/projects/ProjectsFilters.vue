@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import AutoComplete from "primevue/autocomplete";
 import Select from "primevue/select";
-import {
-  giTiempoSelectPt,
-  giTiempoSelfAppendedAutoCompleteDropdownPt,
-} from "@gitiempo/web-config/theme";
+import { FilterAutoComplete } from "@gitiempo/web-shared";
+import { giTiempoSelectPt } from "@gitiempo/web-config/theme";
 
 import type {
   ProjectStatusFilterOption,
@@ -65,21 +62,16 @@ function updateUpdatedFilter(
       >
         Search
       </label>
-      <AutoComplete
+      <FilterAutoComplete
         append-to="self"
         data-testid="projects-search-filter"
         input-id="projects-search"
         class="w-full"
         option-label="label"
         placeholder="Search projects or tasks"
+        show-clear
         :model-value="searchValue"
         :suggestions="searchSuggestions"
-        complete-on-focus
-        dropdown
-        dropdown-mode="blank"
-        fluid
-        :min-length="0"
-        :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
         @complete="emitSearchComplete"
         @update:model-value="updateSearchValue"
       >
@@ -96,7 +88,7 @@ function updateUpdatedFilter(
             </span>
           </div>
         </template>
-      </AutoComplete>
+      </FilterAutoComplete>
     </div>
 
     <div class="flex w-full flex-col gap-1.5 sm:w-[180px]">

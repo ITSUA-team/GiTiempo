@@ -252,6 +252,12 @@ async function setPage(page: number): Promise<void> {
   await data.loadEntries();
 }
 
+// PrimeVue Paginator wraps internally with flex-wrap, pushing the prev/next
+// arrows onto separate lines on narrow screens; scroll instead of wrapping.
+const paginatorPt = {
+  root: { class: "flex-nowrap overflow-x-auto" },
+};
+
 function openActiveTimerDialog(): void {
   topBarTimerDialogController.requestOpen();
 }
@@ -334,7 +340,8 @@ onMounted(async () => {
 
         <SurfaceCard
           border
-          body-class="flex items-center justify-between gap-4"
+          body-class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          data-testid="time-entries-pagination"
           padding-class="p-6"
         >
           <p class="text-text-muted text-[13px]">
@@ -342,9 +349,11 @@ onMounted(async () => {
             {{ (currentPage - 1) * pageSize + entries.length }} of {{ totalRecords }}
           </p>
           <Paginator
+            class="w-full sm:w-auto"
             :first="(currentPage - 1) * pageSize"
             :rows="pageSize"
             :total-records="totalRecords"
+            :pt="paginatorPt"
             current-page-report-template="Showing {first} to {last} of {totalRecords}"
             template="PrevPageLink PageLinks NextPageLink"
             @page="({ page }) => void setPage(page + 1)"

@@ -423,7 +423,15 @@ async function mountView(
         },
         Paginator: {
           emits: ["page"],
-          template: '<button data-testid="paginator-page-2" type="button" @click="$emit(\'page\', { page: 1 })">Page 2</button>',
+          props: ["pt"],
+          template: `
+            <button
+              :data-pt-root-class="pt?.root?.class ?? ''"
+              data-testid="paginator-page-2"
+              type="button"
+              @click="$emit('page', { page: 1 })"
+            >Page 2</button>
+          `,
         },
         Skeleton: {
           props: ["height", "shape", "size", "width"],
@@ -1163,6 +1171,27 @@ describe("TimeEntriesView", () => {
     expect(dateRangeFilter.attributes("data-pt-root-class")).toContain("h-[38px]");
     expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("shadow-popover");
     expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("rounded-md");
+  });
+
+  it("stacks the pagination card body on mobile and keeps the paginator unwrapped", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    const paginationCard = wrapper.get('[data-testid="time-entries-pagination"]');
+
+    expect(paginationCard.attributes("body-class")).toBe(
+      "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
+    );
+
+    const paginator = wrapper.get('[data-testid="paginator-page-2"]');
+
+    expect(paginator.attributes("data-pt-root-class")).toBe(
+      "flex-nowrap overflow-x-auto",
+    );
+    expect(paginator.classes()).toContain("w-full");
+    expect(paginator.classes()).toContain("sm:w-auto");
   });
 
   it("hides filter labels and table column headers in the time entries view", async () => {
