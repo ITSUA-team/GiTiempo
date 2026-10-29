@@ -119,6 +119,7 @@ interface MountDialogOptions {
   }>;
   createInvoice?: (input: CreateInvoiceInput) => Promise<InvoiceResponse>;
   workspaceCurrency?: string | null;
+  workspaceHourlyRate?: number | null;
   workspaceRoundingStepMinutes?: number | null;
 }
 
@@ -154,6 +155,7 @@ async function mountDialog(options: MountDialogOptions = {}) {
       isAdmin,
       projects: options.projects ?? PROJECT_OPTIONS,
       workspaceCurrency: options.workspaceCurrency ?? null,
+      workspaceHourlyRate: options.workspaceHourlyRate ?? null,
       workspaceRoundingStepMinutes:
         options.workspaceRoundingStepMinutes ?? null,
       scope: {
@@ -234,6 +236,20 @@ function getDiscountField(wrapper: MountedDialog) {
   }
 
   return discountField;
+}
+
+function getRateField(wrapper: MountedDialog) {
+  // Select by the stable input-id instead of document order so reordering the
+  // rate/currency/discount row cannot silently bind to the wrong control.
+  const rateField = wrapper
+    .findAllComponents(InputNumber)
+    .find((field) => field.props('inputId') === 'invoice-create-hourly-rate');
+
+  if (!rateField) {
+    throw new Error('No hourly rate InputNumber rendered');
+  }
+
+  return rateField;
 }
 
 async function enterDateRange(wrapper: MountedDialog): Promise<void> {
@@ -688,6 +704,77 @@ describe('InvoiceCreateDialog', () => {
       { label: 'CAD', value: 'CAD' },
       { label: 'AUD', value: 'AUD' },
     ]);
+  });
+
+  it('pre-fills the workspace settings hourly rate when the dialog opens', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({
+      createInvoice,
+      workspaceHourlyRate: 50,
+    });
+
+    // The prefill happens at open, before any date range triggers a preview.
+    expect(testMocks.listEligibleEntries).not.toHaveBeenCalled();
+    expect(getRateField(wrapper).props('modelValue')).toBe(50);
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+    await submitInvoice(wrapper);
+
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ hourlyRate: 50 }),
+    );
+  });
+
+  it('fills a late-arriving workspace hourly rate while untouched and stops after a user edit', async () => {
+    const wrapper = await mountDialog();
+
+    // Workspace settings are still in flight when the dialog opens.
+    expect(getRateField(wrapper).props('modelValue')).toBeNull();
+
+    await wrapper.setProps({ workspaceHourlyRate: 50 });
+    await flushPromises();
+    expect(getRateField(wrapper).props('modelValue')).toBe(50);
+
+    await getRateField(wrapper).vm.$emit('update:modelValue', 120);
+    await flushPromises();
+
+    // A later settings change must not re-fill the field after a user edit.
+    await wrapper.setProps({ workspaceHourlyRate: 75 });
+    await flushPromises();
+    expect(getRateField(wrapper).props('modelValue')).toBe(120);
+  });
+
+  it('keeps the workspace hourly rate when the preview refetches with a different default', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(
+      createEntriesResponse({ defaultHourlyRate: 80 }),
+    );
+    const wrapper = await mountDialog({ workspaceHourlyRate: 50 });
+
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(1);
+
+    // The workspace settings rate is authoritative; the preview default only
+    // fills the field while the settings rate is unknown.
+    expect(getRateField(wrapper).props('modelValue')).toBe(50);
+  });
+
+  it('falls back to the preview default hourly rate when workspace settings are unavailable', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(
+      createEntriesResponse({ defaultHourlyRate: 80 }),
+    );
+    const wrapper = await mountDialog();
+
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    expect(getRateField(wrapper).props('modelValue')).toBe(80);
   });
 
   it('creates a project invoice when a PM selects a project', async () => {

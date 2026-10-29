@@ -60,6 +60,8 @@ const props = defineProps<{
   }>;
   /** Currency selected in workspace Settings; pre-selected on dialog open. */
   workspaceCurrency: string | null;
+  /** Hourly rate from workspace Settings; pre-filled on dialog open. */
+  workspaceHourlyRate: number | null;
   /** Rounding step from workspace Settings; resolves project "inherit" values. */
   workspaceRoundingStepMinutes: number | null;
   scope: AdminServerStateScope;
@@ -138,6 +140,19 @@ watch(
   },
 );
 
+// Pre-fill the workspace Settings hourly rate as soon as the dialog opens, and
+// keep following it while the settings load late or change while open — until
+// the user edits the field. It stays authoritative: the preview sync below
+// fills the rate only while no workspace rate is known yet.
+watch(
+  [() => props.workspaceHourlyRate, () => props.visible],
+  ([workspaceHourlyRate, visible]) => {
+    if (!visible || rateTouched.value || workspaceHourlyRate === null) return;
+    hourlyRate.value = workspaceHourlyRate;
+  },
+  { immediate: true },
+);
+
 // Pre-select the workspace Settings currency as soon as the dialog opens, and
 // keep following it while the settings load late or change while open — until
 // the user edits the field. It stays authoritative: the preview sync below
@@ -160,7 +175,14 @@ watch(
   [preview, () => props.visible],
   ([data, visible]) => {
     if (!visible || !data) return;
-    if (!rateTouched.value && data.defaultHourlyRate !== null) {
+    // The workspace settings rate always wins over the preview value; the
+    // preview default is only the fallback for when the settings query failed
+    // and the workspace rate is unknown.
+    if (
+      !rateTouched.value &&
+      !props.workspaceHourlyRate &&
+      data.defaultHourlyRate !== null
+    ) {
       hourlyRate.value = data.defaultHourlyRate;
     }
     // The workspace settings currency always wins over the preview value; the
