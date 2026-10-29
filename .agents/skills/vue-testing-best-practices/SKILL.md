@@ -18,6 +18,7 @@ Vue.js testing best practices, patterns, and common gotchas.
 - Snapshot tests keep passing despite broken functionality → See [testing-no-snapshot-only](reference/testing-no-snapshot-only.md)
 - Choosing end-to-end testing framework for Vue apps → See [testing-e2e-playwright-recommended](reference/testing-e2e-playwright-recommended.md)
 - Tests need to verify computed styles or real DOM events → See [testing-browser-vs-node-runners](reference/testing-browser-vs-node-runners.md)
+- For GiTiempo UI behavior changes, load `gitiempo-frontend-rules` and pair focused tests with its real-page acceptance checks when a browser-capable environment is available.
 - Testing components created with defineAsyncComponent fails → See [async-component-testing](reference/async-component-testing.md)
 - Teleported modal content can't be found in wrapper queries → See [teleport-testing-complexity](reference/teleport-testing-complexity.md)
 
