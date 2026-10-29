@@ -20,7 +20,7 @@
 ## Verification
 
 - API-only changes: `pnpm --filter @gitiempo/api lint && pnpm --filter @gitiempo/api typecheck && pnpm --filter @gitiempo/api test`.
-- E2E uses a real Postgres DB, loads `apps/api/.env`, and expects `pnpm --filter @gitiempo/api db:migrate` then `pnpm --filter @gitiempo/api db:seed` first.
+- E2E uses the isolated Postgres database `gitiempo_e2e`. `test:e2e` checks the live database identity before specs can mutate it. Prefer `pnpm api:e2e:docker`, which provisions, migrates, seeds, and tears down that database. A direct filtered run requires `DATABASE_URL` for the isolated database plus `pnpm --filter @gitiempo/api e2e:prepare`; it must never use `apps/api/.env`'s development database.
 - `vitest.e2e.config.ts` disables file parallelism; do not assume e2e suites are isolated per file.
 - After contract or DTO changes, run `pnpm openapi:export`.
 

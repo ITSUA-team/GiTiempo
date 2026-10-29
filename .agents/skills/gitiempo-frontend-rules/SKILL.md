@@ -1,6 +1,6 @@
 ---
 name: gitiempo-frontend-rules
-description: Project-specific frontend rules for GiTiempo web apps. Use when building or refactoring UI in apps/user-web, apps/admin-web, or shared frontend theme code in packages/web-config.
+description: Project-specific frontend implementation, review, and acceptance-QA rules for GiTiempo web apps. Use for UI work in apps/user-web, apps/admin-web, or shared frontend theme code in packages/web-config.
 license: MIT
 metadata:
   author: OpenCode
@@ -15,6 +15,7 @@ Use this skill when:
 
 - building or refactoring UI in `apps/user-web`
 - building or refactoring UI in `apps/admin-web`
+- reviewing UI behavior or performing acceptance QA in either SPA
 - changing shared frontend theme/bootstrap code in `packages/web-config`
 - extracting or refactoring shared frontend code across `apps/user-web` and `apps/admin-web`
 - implementing PrimeVue theming, Tailwind tokens, layout, dialogs, forms, tables, or accessibility behavior
@@ -58,6 +59,18 @@ Use this skill when:
 - Treat the approved `.pen` as an implementation checklist, not just visual inspiration.
 - Before marking a UI task complete, perform a final design parity review against the approved `.pen` and identify any remaining deltas explicitly.
 - Mobile can adapt layout for breakpoint constraints, but the same state model, information hierarchy, and design-token language must still hold.
+
+## Real-Page Acceptance Checks
+
+- Apply this workflow to behavior-changing UI implementation or acceptance-QA work. It complements focused tests; it does not turn an explicitly static code review into a browser-testing task.
+- For a static review scope, do not run browser actions. Report real-page acceptance as `NOT PERFORMED — static review scope`; this does not make the static review fail or establish behavioral acceptance.
+- Before choosing a harness, inspect the available browser session, saved-account chooser, and supported sign-in methods. Map the changed component's affected usages and exercise the real consuming pages with materially different integrations; a shared leaf does not require blindly testing every route.
+- If no browser-capable environment can exercise a behavior-changing scenario, report it as `BLOCKED` with the reason. Do not declare acceptance complete, and do not treat a harness or static page inspection as equivalent to real-page behavior.
+- Exercise each selected page on the current revision. Cover the interactions relevant to the change: confirm, cancel, clear/reset, keyboard behavior, loading or refetch transitions, and both empty and populated data states.
+- When the changed contract affects URL query state, browser storage, or route defaults, also navigate or reload and verify the restored or reset state.
+- When a component has desktop and mobile DOM branches, exercise both applicable branches. A component rendered in one viewport is not evidence for the other.
+- Treat production, staging, and real-provider flows as separate environments. Do not create, delete, or alter real data without the authority required for that environment; report that scenario as `BLOCKED` when it cannot be safely exercised.
+- Record each acceptance scenario as `PASS`, `FAIL`, or `BLOCKED` with: revision and dirty-diff state; environment/page; expected and actual result; and a durable evidence link or stated evidence gap. Passing component or transport tests alone is not a real-page acceptance result.
 
 ## Responsive Record-List Workflow
 

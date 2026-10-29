@@ -6,6 +6,7 @@ import request from 'supertest';
 import { and, count, eq } from 'drizzle-orm';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
+import { assertE2eDatabase } from '../src/db/e2e-database';
 import type { DrizzleDB } from '../src/db/db.types';
 import { GithubOauthClientService } from '../src/github/services/github-oauth-client.service';
 import {
@@ -126,6 +127,7 @@ async function sourceConnection(): Promise<SourceConnection> {
 async function run(): Promise<void> {
   let app: INestApplication | undefined;
   assertIsolatedQaEnvironment();
+  await assertE2eDatabase();
   const source = await sourceConnection();
   let refreshAttempts = 0;
   const suffix = randomUUID();
