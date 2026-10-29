@@ -1,3 +1,8 @@
+# user-activity-tracking Specification
+
+## Purpose
+Record a user's most recent successful time-tracking write so workspace member activity can be displayed without disrupting time tracking.
+
 ## Requirements
 
 ### Requirement: Time-Tracking Writes Update User Last-Activity Timestamp
