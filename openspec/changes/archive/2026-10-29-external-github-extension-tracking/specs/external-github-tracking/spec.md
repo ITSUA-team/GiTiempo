@@ -55,7 +55,7 @@ The server MUST resolve an existing issue mapping before a repository mapping wi
 
 
 ### Requirement: Own Time Grants Only Scoped Project And Task Reads
-Without separate project access, an active member SHALL read an active external-reference project only while at least one of their entries belongs to it, and SHALL read only tasks containing their own entries. Running entries MUST count. Lists, detail, search, picker data, pagination, and personal aggregates MUST enforce the same scope. Own-time access alone MUST NOT grant eligibility for management reports or exports; their existing role and explicit project-access checks remain required. Personal access MUST NOT disclose peer entries, task identities, member lists, peer totals, or peer activity summaries and MUST NOT grant shared management.
+Without separate access, an active member SHALL read an active external-reference project only while it contains their entries, including running entries, and only tasks containing their entries. Lists, detail, search, pickers, pagination and personal aggregates MUST enforce this scope. Own-time access MUST NOT grant management, reports or exports without existing role and explicit access checks, or disclose peer entries, task identities, member lists, totals or activity summaries.
 
 #### Scenario: A running entry makes the target visible
 - **GIVEN** the member has no prior entries or separate grant in an external project
