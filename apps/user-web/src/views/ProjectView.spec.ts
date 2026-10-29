@@ -1,5 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { focusManager } from "@tanstack/vue-query";
 import { readonly, shallowRef } from "vue";
 import type {
   ProjectResponse,
@@ -352,6 +353,8 @@ describe("ProjectView", () => {
   });
 
   afterEach(() => {
+    focusManager.setFocused(undefined);
+
     while (mountedWrappers.length > 0) {
       mountedWrappers.pop()?.unmount();
     }
@@ -487,7 +490,7 @@ describe("ProjectView", () => {
     const { wrapper: loadingWrapper } = await mountView(loadingClient);
 
     expect(loadingWrapper.findAll('[data-testid="projects-skeleton"]').length).toBeGreaterThan(0);
-    expect(loadingWrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(false);
+    expect(loadingWrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(true);
 
     const errorClient = createClientMock();
 
@@ -506,6 +509,48 @@ describe("ProjectView", () => {
 
     expect(emptyWrapper.text()).toContain("No projects or tasks match this view");
     expect(emptyWrapper.text()).not.toContain("Could not load projects");
+  });
+
+  it("keeps project groups mounted through a failed refresh and delayed retry", async () => {
+    const client = createClientMock();
+    let resolveRetry!: (projects: ProjectResponse[]) => void;
+
+    client.listVisibleProjects
+      .mockResolvedValueOnce([createProject("project-1", "Project Orion")])
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockImplementationOnce(
+        () => new Promise<ProjectResponse[]>((resolve) => { resolveRetry = resolve; }),
+      );
+    client.listProjectTasks.mockResolvedValue([
+      createTask("task-1", "project-1", "Improve reports filters"),
+    ]);
+
+    const { wrapper } = await mountView(client);
+
+    await waitForProjectsReady(wrapper);
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="projects-refresh-error"]').exists()).toBe(true);
+    });
+
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain("Project Orion");
+    expect(wrapper.text()).toContain("Improve reports filters");
+
+    await wrapper.get('[data-testid="projects-refresh-error"] button').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+    resolveRetry([createProject("project-1", "Project Orion")]);
+    await flushPromises();
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="projects-refresh-error"]').exists()).toBe(false);
+    });
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
   });
 
   it("opens the top-bar timer dialog when a project task start is blocked", async () => {

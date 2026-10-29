@@ -150,6 +150,8 @@ interface UseWorkspaceInvitesQueryOptions extends AdminScopedQueryOptions {
 
 interface UseWorkspaceMembersQueryOptions extends AdminScopedQueryOptions {
   client: WorkspaceMembersClient;
+  gcTime?: number;
+  staleTime?: number;
 }
 
 interface UseWorkspaceQueryOptions extends AdminScopedQueryOptions {
@@ -364,6 +366,8 @@ export const useWorkspaceMembersQuery = (options: UseWorkspaceMembersQueryOption
   useQuery({
     queryKey: computed(() => adminMembersKeys.list(toValue(options.scope))),
     enabled: computed(() => isQueryEnabled(options)),
+    gcTime: options.gcTime,
+    staleTime: options.staleTime,
     queryFn: () => options.client.listMembers(),
   });
 

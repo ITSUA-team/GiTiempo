@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { QueryClient } from "@tanstack/vue-query";
 
 import {
   normalizeTimeEntryListQuery,
@@ -122,16 +123,45 @@ describe("user-web query keys", () => {
     ]);
   });
 
-  it("provides targeted invalidation keys after mutations", () => {
-    expect(userMutationInvalidationKeys.afterTimeEntryMutation(scope)).toEqual([
+  it("keeps a project-A task mutation from invalidating project-B task queries", () => {
+    expect(userMutationInvalidationKeys.afterTimeEntryMutation(scope, ["project-1"])).toEqual([
       timeEntriesKeys.all(scope),
-      timerKeys.all(scope),
-      userProjectsKeys.all(scope),
+      timerKeys.current(scope),
+      timerKeys.eligibleLastEntryAll(scope),
+      userProjectsKeys.visibleProjects(scope),
+      userProjectsKeys.projectTasksAll(scope, "project-1"),
+      timerKeys.projectTaskOptionsAll(scope, "project-1"),
     ]);
     expect(userMutationInvalidationKeys.afterTaskMutation(scope, "project-1")).toEqual([
-      userProjectsKeys.all(scope),
-      timerKeys.all(scope),
+      userProjectsKeys.projectTasksAll(scope, "project-1"),
+      timerKeys.projectTaskOptionsAll(scope, "project-1"),
+      timerKeys.current(scope),
     ]);
+  });
+
+  it("invalidates only the affected project task collection", async () => {
+    const queryClient = new QueryClient();
+    const projectAKey = userProjectsKeys.projectTasks(scope, "project-a", "project");
+    const projectBKey = userProjectsKeys.projectTasks(scope, "project-b", "project");
+
+    queryClient.setQueryData(projectAKey, []);
+    queryClient.setQueryData(projectBKey, []);
+
+    await queryClient.invalidateQueries({
+      queryKey: userMutationInvalidationKeys.afterTaskMutation(scope, "project-a")[0],
+    });
+
+    expect(queryClient.getQueryState(projectAKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(projectBKey)?.isInvalidated).toBe(false);
+  });
+
+  it("uses the broad project fallback only when a deleted entry has no cached source", () => {
+    expect(
+      userMutationInvalidationKeys.afterTimeEntryMutation(scope, [], true),
+    ).toContainEqual(userProjectsKeys.all(scope));
+    expect(
+      userMutationInvalidationKeys.afterTimeEntryMutation(scope, ["project-a"]),
+    ).not.toContainEqual(userProjectsKeys.all(scope));
   });
 
   it("reads normalized list queries from time-entry list keys", () => {

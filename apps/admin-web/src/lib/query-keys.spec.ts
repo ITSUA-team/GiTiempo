@@ -66,7 +66,19 @@ describe('admin-web query keys', () => {
         sortOrder: null,
         userId: null,
       },
+      [],
     ]);
+  });
+
+  it('separates retained report rows when the allowed project scope changes', () => {
+    const query = { groupBy: ['project'] as 'project'[], page: 1 };
+
+    expect(reportsKeys.time(scope, query, ['project-b', 'project-a'])).not.toEqual(
+      reportsKeys.time(scope, query, ['project-a']),
+    );
+    expect(reportsKeys.time(scope, query, ['project-b', 'project-a'])).toEqual(
+      reportsKeys.time(scope, query, ['project-a', 'project-b']),
+    );
   });
 
   it('provides dashboard and settings keys', () => {

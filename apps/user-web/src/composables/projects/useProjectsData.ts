@@ -4,6 +4,7 @@ import { useQueries, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, nextTick, watch, type ComputedRef } from "vue";
 
 import { userProjectsKeys, type UserServerStateScope } from "@/lib/query-keys";
+import { USER_LIST_QUERY_POLICY } from "@/lib/query-policy";
 import { sortProjectTasks } from "@/lib/projects-page-helpers";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
@@ -49,6 +50,7 @@ export function useProjectsData({
         enabled: enabled.value,
         queryFn: () => client.listProjectTasks(project.id),
         refetchOnWindowFocus: false,
+        ...USER_LIST_QUERY_POLICY,
         select: (tasks: TaskResponse[]): ProjectTasksSelection => ({
           projectId: project.id,
           tasks,
@@ -56,26 +58,22 @@ export function useProjectsData({
       })),
     ),
   });
-  let hasCompletedInitialProjectsFetch = false;
-
-  async function refreshVisibleProjectTasks(): Promise<void> {
-    await nextTick();
-    await Promise.all(taskQueries.value.map((taskQuery) => taskQuery.refetch()));
-  }
+  let isManualRefresh = false;
+  let manualRefreshPromise: Promise<void> | null = null;
 
   watch(
-    () => projectsQuery.isFetching.value,
-    (isFetching, wasFetching) => {
-      if (isFetching || !wasFetching) {
+    () => projectsQuery.dataUpdatedAt.value,
+    async (updatedAt, previousUpdatedAt) => {
+      if (!updatedAt || !previousUpdatedAt || isManualRefresh) {
         return;
       }
 
-      if (!hasCompletedInitialProjectsFetch) {
-        hasCompletedInitialProjectsFetch = true;
-        return;
-      }
-
-      void refreshVisibleProjectTasks();
+      await nextTick();
+      await Promise.all(
+        taskQueries.value
+          .filter((taskQuery) => taskQuery.isStale)
+          .map((taskQuery) => taskQuery.refetch({ cancelRefetch: false })),
+      );
     },
   );
   const tasksByProjectId = computed(() => {
@@ -115,9 +113,21 @@ export function useProjectsData({
   const firstTaskError = computed(
     () => Object.values(taskLoadErrors.value)[0] ?? null,
   );
-  const isLoadingProjects = computed(() => projectsQuery.isFetching.value);
-  const isLoadingTasks = computed(() =>
-    taskQueries.value.some((taskQuery) => taskQuery.isFetching),
+  const hasLoadedProjects = computed(() => projectsQuery.data.value !== undefined);
+  const hasLoadedTasks = computed(() =>
+    taskQueries.value.every((taskQuery) => taskQuery.data !== undefined),
+  );
+  const hasLoadedContent = computed(
+    () => hasLoadedProjects.value && hasLoadedTasks.value,
+  );
+  const isLoadingProjects = computed(
+    () => projectsQuery.isPending.value && !hasLoadedProjects.value,
+  );
+  const isLoadingTasks = computed(
+    () => !hasLoadedTasks.value && taskQueries.value.some((taskQuery) => taskQuery.isPending),
+  );
+  const isRefreshing = computed(
+    () => projectsQuery.isFetching.value || taskQueries.value.some((taskQuery) => taskQuery.isFetching),
   );
   const requestErrorMessage = computed(() =>
     projectsQuery.error.value
@@ -126,8 +136,37 @@ export function useProjectsData({
   );
 
   async function loadPage(): Promise<void> {
-    await projectsQuery.refetch();
-    await Promise.all(taskQueries.value.map((taskQuery) => taskQuery.refetch()));
+    if (manualRefreshPromise) {
+      return manualRefreshPromise;
+    }
+
+    isManualRefresh = true;
+    manualRefreshPromise = (async () => {
+      try {
+        const refreshScope = scope.value;
+        const taskQueriesBeforeRefresh = taskQueries.value;
+        await projectsQuery.refetch({ cancelRefetch: false });
+
+        if (
+          scope.value.userId !== refreshScope.userId ||
+          scope.value.workspaceId !== refreshScope.workspaceId
+        ) {
+          return;
+        }
+
+        await nextTick();
+        await Promise.all(
+          taskQueriesBeforeRefresh.map((taskQuery) =>
+            taskQuery.refetch({ cancelRefetch: false }),
+          ),
+        );
+      } finally {
+        isManualRefresh = false;
+        manualRefreshPromise = null;
+      }
+    })();
+
+    return manualRefreshPromise;
   }
 
   function updateCachedProjectTasks(
@@ -165,7 +204,11 @@ export function useProjectsData({
     for (const [projectId, previousAccessScope] of projectAccessScopes) {
       const nextAccessScope = nextAccessScopes.get(projectId);
 
-      if (nextAccessScope !== previousAccessScope) {
+      if (!nextAccessScope) {
+        queryClient.removeQueries({
+          queryKey: userProjectsKeys.projectTasksAll(scope.value, projectId),
+        });
+      } else if (nextAccessScope !== previousAccessScope) {
         queryClient.removeQueries({
           queryKey: userProjectsKeys.projectTasks(
             scope.value,
@@ -199,8 +242,11 @@ export function useProjectsData({
   });
 
   return {
+    hasLoadedContent,
+    hasLoadedProjects,
     isLoadingProjects,
     isLoadingTasks,
+    isRefreshing,
     loadPage,
     removeTask,
     requestErrorMessage,

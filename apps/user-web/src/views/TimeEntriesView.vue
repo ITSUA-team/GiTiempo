@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Paginator from "primevue/paginator";
-import type { ProjectResponse } from "@gitiempo/shared";
+import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
 import {
   createAppToast,
   EntryActionButton,
@@ -8,7 +8,7 @@ import {
   SurfaceCard,
   filterAutocompleteOptions,
 } from "@gitiempo/web-shared";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { PlusIcon } from "@heroicons/vue/24/outline";
@@ -19,6 +19,7 @@ import TimeEntriesLoadingState from "@/components/time-entries/TimeEntriesLoadin
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
 import {
   toEntryTaskOption,
+  isTaskLookupOption,
   type TaskLookupOption,
   type TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
@@ -93,6 +94,7 @@ const runningEntryTicker = useRunningEntryTicker({
 });
 const display = useTimeEntriesDisplay({
   entries: data.entries,
+  hasLoadedEntries: data.hasLoadedEntries,
   isLoadingEntries: data.isLoadingEntries,
   nowMs: runningEntryTicker.nowMs,
   requestErrorMessage: data.requestErrorMessage,
@@ -163,7 +165,10 @@ const {
 } = filters;
 const {
   entries,
+  hasLoadedEntries,
   isLoadingProjects,
+  isRefreshingEntries,
+  isShowingPreviousEntries,
   projectsErrorMessage,
   requestErrorMessage,
   totalRecords,
@@ -181,9 +186,9 @@ const {
   isDeletingDialogEntry,
   isReconcilingDialogTarget,
   isSavingDialogFlow,
-  openCreateDialog,
-  openEditDialog,
-  requestDeleteDialogEntry,
+  openCreateDialog: openCreateDialogWorkflow,
+  openEditDialog: openEditDialogWorkflow,
+  requestDeleteDialogEntry: requestDeleteDialogEntryWorkflow,
   saveDialog,
   setDialogProjectId,
   setDialogTaskValue,
@@ -191,9 +196,9 @@ const {
 const {
   isDirectStartBlockedByCurrentTimer,
   startingTimerEntryId,
-  startTimerForEntry,
+  startTimerForEntry: startTimerForEntryWorkflow,
   stoppingTimerEntryId,
-  stopTimerForEntry,
+  stopTimerForEntry: stopTimerForEntryWorkflow,
 } = directTimerActions;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
 const selectedProjectFilterOption = computed(
@@ -247,17 +252,75 @@ function handleFilterTaskSearch(query: string): void {
   filters.updateTaskSuggestions(query, filteredEntryTaskOptions.value);
 }
 
+watch(visibleProjects, (nextProjects, previousProjects) => {
+  const nextProjectIds = new Set(nextProjects.map((project) => project.id));
+  const previousProjectIds = new Set(previousProjects.map((project) => project.id));
+  const projectIsRevoked = (projectId: string) =>
+    previousProjectIds.has(projectId) && !nextProjectIds.has(projectId);
+
+  projectFilterSuggestions.value = projectFilterSuggestions.value.filter((project) =>
+    nextProjectIds.has(project.id),
+  );
+  filterTaskSuggestions.value = filterTaskSuggestions.value.filter((task) =>
+    nextProjectIds.has(task.projectId),
+  );
+
+  if (selectedProjectId.value && projectIsRevoked(selectedProjectId.value)) {
+    filters.setProjectValue(null);
+    return;
+  }
+
+  if (
+    isTaskLookupOption(selectedTaskFilter.value) &&
+    projectIsRevoked(selectedTaskFilter.value.projectId)
+  ) {
+    filters.setTaskValue(null);
+  }
+});
+
 async function setPage(page: number): Promise<void> {
   filters.setPage(page);
   await data.loadEntries();
 }
 
 function openActiveTimerDialog(): void {
-  topBarTimerDialogController.requestOpen();
+  if (!isShowingPreviousEntries.value) {
+    topBarTimerDialogController.requestOpen();
+  }
 }
 
 async function retryLoadEntries(): Promise<void> {
   await data.loadEntries();
+}
+
+function openCreateDialog(day?: string | null): void {
+  if (!isShowingPreviousEntries.value) {
+    openCreateDialogWorkflow(day);
+  }
+}
+
+function openEditDialog(entry: TimeEntryResponse): void {
+  if (!isShowingPreviousEntries.value) {
+    openEditDialogWorkflow(entry);
+  }
+}
+
+function requestDeleteDialogEntry(): void {
+  if (!isShowingPreviousEntries.value) {
+    requestDeleteDialogEntryWorkflow();
+  }
+}
+
+async function startTimerForEntry(entry: TimeEntryResponse): Promise<void> {
+  if (!isShowingPreviousEntries.value) {
+    await startTimerForEntryWorkflow(entry);
+  }
+}
+
+async function stopTimerForEntry(entry: TimeEntryResponse): Promise<void> {
+  if (!isShowingPreviousEntries.value) {
+    await stopTimerForEntryWorkflow(entry);
+  }
 }
 
 onMounted(async () => {
@@ -285,6 +348,25 @@ onMounted(async () => {
     <TimeEntriesLoadingState v-if="pageState === 'loading'" />
 
     <template v-else>
+      <div
+        v-if="isRefreshingEntries"
+        aria-live="polite"
+        class="text-text-muted text-xs"
+        data-testid="time-entries-refreshing"
+        role="status"
+      >
+        Updating time entries. Rows and totals still reflect the previous filter until this finishes.
+      </div>
+
+      <RequestStateCard
+        v-if="requestErrorMessage && hasLoadedEntries"
+        data-testid="time-entries-refresh-error"
+        :description="requestErrorMessage"
+        retry-label="Retry"
+        title="Could not refresh time entries"
+        @retry="void retryLoadEntries()"
+      />
+
       <RequestStateCard
         v-if="pageState === 'request-error'"
         data-testid="time-entries-request-error"
@@ -320,6 +402,7 @@ onMounted(async () => {
           :format-duration="formatDuration"
           :format-time-range="formatTimeRange"
           :group="group"
+          :is-interaction-disabled="isShowingPreviousEntries"
           :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
           :show-stop-first-guidance="isDirectStartBlockedByCurrentTimer"
           :show-header="false"
@@ -345,6 +428,7 @@ onMounted(async () => {
             :first="(currentPage - 1) * pageSize"
             :rows="pageSize"
             :total-records="totalRecords"
+            :disabled="isShowingPreviousEntries"
             current-page-report-template="Showing {first} to {last} of {totalRecords}"
             template="PrevPageLink PageLinks NextPageLink"
             @page="({ page }) => void setPage(page + 1)"

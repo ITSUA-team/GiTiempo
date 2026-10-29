@@ -91,11 +91,16 @@ export const adminDashboardKeys = {
 export const reportsKeys = {
   all: (scope?: AdminServerStateScope) =>
     ['admin-web', normalizeScope(scope), 'reports'] as const,
-  time: (scope: AdminServerStateScope, query?: Partial<TimeReportRequest>) =>
+  time: (
+    scope: AdminServerStateScope,
+    query?: Partial<TimeReportRequest>,
+    allowedProjectIds: readonly string[] = [],
+  ) =>
     [
       ...reportsKeys.all(scope),
       'time',
       normalizeTimeReportQuery(query),
+      [...allowedProjectIds].sort(),
     ] as const,
 };
 

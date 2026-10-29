@@ -71,12 +71,16 @@ export const timerKeys = {
     ["user-web", normalizeScope(scope), "top-bar-timer"] as const,
   currentRaw: (scope: UserServerStateScope) =>
     [...timerKeys.all(scope), "current", "raw"] as const,
+  current: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "current"] as const,
   summary: (scope: UserServerStateScope) =>
     [...timerKeys.all(scope), "current", "summary"] as const,
   eligibleLastEntry: (
     scope: UserServerStateScope,
     query?: Partial<TimeEntryListQuery>,
   ) => [...timerKeys.all(scope), "eligible-last-entry", normalizeTimeEntryListQuery(query)] as const,
+  eligibleLastEntryAll: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "eligible-last-entry"] as const,
   projectTaskOptions: (
     scope: UserServerStateScope,
     projectId: string | null | undefined,
@@ -88,6 +92,14 @@ export const timerKeys = {
       normalizeString(projectId),
       accessScope,
     ] as const,
+  projectTaskOptionsAll: (
+    scope: UserServerStateScope,
+    projectId: string | null | undefined,
+  ) => [
+    ...timerKeys.all(scope),
+    "project-task-options",
+    normalizeString(projectId),
+  ] as const,
 };
 
 export const timerGithubKeys = {
@@ -133,6 +145,14 @@ export const userProjectsKeys = {
       normalizeString(projectId),
       accessScope,
     ] as const,
+  projectTasksAll: (
+    scope: UserServerStateScope,
+    projectId: string | null | undefined,
+  ) => [
+    ...userProjectsKeys.all(scope),
+    "project-tasks",
+    normalizeString(projectId),
+  ] as const,
   visibleProjects: (scope: UserServerStateScope) =>
     [...userProjectsKeys.all(scope), "visible-projects"] as const,
 };
@@ -140,25 +160,72 @@ export const userProjectsKeys = {
 export const userMutationInvalidationKeys = {
   afterTaskMutation(
     scope: UserServerStateScope,
-    _projectId?: string,
+    projectId: string,
+    refreshCurrentTimer = true,
   ): QueryKey[] {
-    return [
-      userProjectsKeys.all(scope),
-      timerKeys.all(scope),
+    const keys: QueryKey[] = [
+      userProjectsKeys.projectTasksAll(scope, projectId),
+      timerKeys.projectTaskOptionsAll(scope, projectId),
     ];
+
+    if (refreshCurrentTimer) {
+      keys.push(timerKeys.current(scope));
+    }
+
+    return keys;
   },
-  afterTimeEntryMutation(scope: UserServerStateScope): QueryKey[] {
-    return [
+  afterTimeEntryMutation(
+    scope: UserServerStateScope,
+    projectIds: readonly string[] = [],
+    hasUnknownProject = false,
+  ): QueryKey[] {
+    const keys: QueryKey[] = [
       timeEntriesKeys.all(scope),
-      timerKeys.all(scope),
-      userProjectsKeys.all(scope),
+      timerKeys.current(scope),
+      timerKeys.eligibleLastEntryAll(scope),
+      userProjectsKeys.visibleProjects(scope),
     ];
+
+    if (hasUnknownProject) {
+      keys.push(userProjectsKeys.all(scope), timerKeys.all(scope));
+    } else {
+      keys.push(
+        ...[...new Set(projectIds)].map((projectId) =>
+          userProjectsKeys.projectTasksAll(scope, projectId),
+        ),
+        ...[...new Set(projectIds)].map((projectId) =>
+          timerKeys.projectTaskOptionsAll(scope, projectId),
+        ),
+      );
+    }
+
+    return keys;
   },
-  afterTimerMutation(scope: UserServerStateScope): QueryKey[] {
-    return [
-      timerKeys.all(scope),
+  afterTimerMutation(
+    scope: UserServerStateScope,
+    projectIds: readonly string[] = [],
+    hasUnknownProject = false,
+  ): QueryKey[] {
+    const keys: QueryKey[] = [
+      timerKeys.current(scope),
+      timerKeys.eligibleLastEntryAll(scope),
       timeEntriesKeys.all(scope),
-      userProjectsKeys.all(scope),
+      userProjectsKeys.visibleProjects(scope),
     ];
+
+    if (hasUnknownProject) {
+      keys.push(userProjectsKeys.all(scope), timerKeys.all(scope));
+    } else {
+      keys.push(
+        ...[...new Set(projectIds)].map((projectId) =>
+          userProjectsKeys.projectTasksAll(scope, projectId),
+        ),
+        ...[...new Set(projectIds)].map((projectId) =>
+          timerKeys.projectTaskOptionsAll(scope, projectId),
+        ),
+      );
+    }
+
+    return keys;
   },
 };

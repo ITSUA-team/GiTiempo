@@ -208,6 +208,9 @@ Use `<Skeleton>` for inline placeholders and page-level first-load placeholders.
 - Structured content-rich first loads may use PrimeVue `<Skeleton>` placeholders instead of a spinner when the skeleton mirrors the final header, card, field rows, and action layout.
 - Full page loading: centered spinner for generic indeterminate page loads where a structured skeleton is not more accurate.
 - Request-error states must remain distinct from empty states and default form values; do not show empty/default content after a failed required request.
+- Time Entries, Projects, and Reports distinguish cold loading from background refresh. Show the existing skeleton only when no usable authorized result exists; retain loaded rows, controls, and valid local state during refresh with a small non-blocking progress indication and accessible busy state.
+- On those surfaces, a transient refresh failure keeps usable results with scoped retry feedback and the existing error notification. A successful empty result remains loaded content. Authorization or workspace/session changes clear incompatible data and dependent selections before interaction.
+- When Time Entries retains a previous filter/page result, identify it as updating, keep totals associated with that committed result, and disable actions that depend on the superseded selection until the new result commits.
 - Button loading: `<Button loading>`.
 
 ```vue

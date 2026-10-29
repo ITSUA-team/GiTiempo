@@ -102,6 +102,19 @@ export function useSavedReports({
     loadedConfig.value = null;
   }
 
+  function upsertPreset(preset: SavedReport): void {
+    const index = presets.value.findIndex((candidate) => candidate.id === preset.id);
+
+    if (index === -1) {
+      presets.value = [preset, ...presets.value];
+      return;
+    }
+
+    presets.value = presets.value.map((candidate, candidateIndex) =>
+      candidateIndex === index ? preset : candidate,
+    );
+  }
+
   async function withSave<T>(action: () => Promise<T>): Promise<T | null> {
     isSaving.value = true;
     error.value = null;
@@ -124,9 +137,7 @@ export function useSavedReports({
       const saved = await client.updateSavedReport(id, {
         config: currentConfig.value,
       });
-      // Refresh before adopting the result: refresh() drops an active id that
-      // is missing from the list, which would undo the activation below.
-      await refresh();
+      upsertPreset(saved);
       activeId.value = saved.id;
       loadedConfig.value = saved.config;
       return saved;
@@ -139,7 +150,7 @@ export function useSavedReports({
         config: currentConfig.value,
         name,
       });
-      await refresh();
+      upsertPreset(created);
       activeId.value = created.id;
       loadedConfig.value = created.config;
       return created;
@@ -149,7 +160,7 @@ export function useSavedReports({
   function rename(id: string, name: string): Promise<SavedReport | null> {
     return withSave(async () => {
       const renamed = await client.updateSavedReport(id, { name });
-      await refresh();
+      upsertPreset(renamed);
       return renamed;
     });
   }
@@ -157,8 +168,8 @@ export function useSavedReports({
   function remove(id: string): Promise<boolean | null> {
     return withSave(async () => {
       await client.deleteSavedReport(id);
+      presets.value = presets.value.filter((preset) => preset.id !== id);
       if (activeId.value === id) clearActive();
-      await refresh();
       return true;
     });
   }

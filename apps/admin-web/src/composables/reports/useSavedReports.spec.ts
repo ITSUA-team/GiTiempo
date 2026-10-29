@@ -200,6 +200,7 @@ describe('useSavedReports mutations', () => {
       config: current.value,
     });
     expect(saved.isDirty.value).toBe(false);
+    expect(client.listSavedReports).toHaveBeenCalledTimes(1);
   });
 
   it('does nothing on save when no preset is loaded', async () => {
@@ -221,6 +222,7 @@ describe('useSavedReports mutations', () => {
     );
     expect(saved.activeId.value).toBe('preset-new');
     expect(saved.isDirty.value).toBe(false);
+    expect(client.listSavedReports).not.toHaveBeenCalled();
   });
 
   it('surfaces a duplicate-name failure without activating anything', async () => {
@@ -254,6 +256,26 @@ describe('useSavedReports mutations', () => {
     expect(client.updateSavedReport).toHaveBeenCalledWith('preset-1', {
       name: 'Renamed',
     });
+    expect(client.listSavedReports).not.toHaveBeenCalled();
+  });
+
+  it('keeps updates in place and prepends a created preset in API list order', async () => {
+    const { client, saved } = setup([
+      makePreset({ id: 'preset-1', name: 'First' }),
+      makePreset({ id: 'preset-2', name: 'Second' }),
+    ]);
+    await saved.refresh();
+
+    await saved.rename('preset-2', 'Renamed');
+    await saved.saveAsNew('Third');
+
+    expect(saved.presets.value.map((preset) => preset.id)).toEqual([
+      'preset-new',
+      'preset-1',
+      'preset-2',
+    ]);
+    expect(saved.presets.value[2]?.name).toBe('Renamed');
+    expect(client.listSavedReports).toHaveBeenCalledTimes(1);
   });
 
   it('clears the active preset when it is deleted', async () => {
@@ -267,6 +289,8 @@ describe('useSavedReports mutations', () => {
 
     expect(client.deleteSavedReport).toHaveBeenCalledWith('preset-1');
     expect(saved.activeId.value).toBeNull();
+    expect(saved.presets.value).toEqual([]);
+    expect(client.listSavedReports).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the active preset when a different one is deleted', async () => {
@@ -313,6 +337,20 @@ describe('useSavedReports failure handling', () => {
     await expect(saved.refresh()).resolves.toBeUndefined();
     expect(saved.error.value).toContain('session has expired');
     expect(saved.isLoading.value).toBe(false);
+  });
+
+  it('keeps committed presets and the active baseline after a failed write', async () => {
+    const { client, current, saved } = setup();
+    await saved.refresh();
+    saved.selectPreset('preset-1');
+    current.value = makeConfig({ grouping: ['project', 'user'] });
+    client.updateSavedReport.mockRejectedValueOnce(new Error('offline'));
+
+    await expect(saved.save()).resolves.toBeNull();
+
+    expect(saved.presets.value).toEqual([makePreset()]);
+    expect(saved.activeId.value).toBe('preset-1');
+    expect(saved.isDirty.value).toBe(true);
   });
 
   it('keeps the previously loaded presets when a refresh fails', async () => {

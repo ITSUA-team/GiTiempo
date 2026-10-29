@@ -5,6 +5,7 @@ import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Button from 'primevue/button';
 import Menu from 'primevue/menu';
+import Message from 'primevue/message';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
@@ -43,6 +44,7 @@ const {
   dateRange,
   exportReportPdf,
   grouping,
+  hasRetainedRows,
   isInitialLoading,
   loadError,
   loading,
@@ -272,7 +274,7 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
       <ManagementPageSkeleton variant="reports" />
     </template>
 
-    <template v-else-if="loadError && !loading">
+    <template v-else-if="loadError && !loading && !hasRetainedRows">
       <RequestErrorCard
         title="Failed to load reports"
         :message="loadError"
@@ -281,6 +283,19 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
     </template>
 
     <template v-else>
+      <Message
+        v-if="loadError && hasRetainedRows"
+        severity="error"
+        class="flex items-center justify-between"
+      >
+        <span>{{ loadError }}</span>
+        <Button
+          label="Retry"
+          size="small"
+          text
+          @click="refresh"
+        />
+      </Message>
       <SavedReportsBar
         :active-id="savedReports.activeId.value"
         :error="savedReports.error.value"

@@ -40,6 +40,9 @@ interface UseReportRowsDataOptions {
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
 
+const REPORT_ROWS_STALE_TIME_MS = 30_000;
+const REPORT_ROWS_GC_TIME_MS = 5 * 60_000;
+
 export function useReportRowsData({
   appliedFilters,
   enabled,
@@ -104,17 +107,21 @@ export function useReportRowsData({
     return nextRows;
   }
 
-  const reportRowsQuery = useQuery({
-    queryKey: computed(() =>
+  const reportRowsKey = computed(() =>
       reportsKeys.time(
         scope.value,
         toTimeReportQuery(appliedFilters.value, 1, reportPageLimit),
+        getVisibleReportProjectsForScope(
+          projects.value,
+          appliedFilters.value.projectId,
+          isAdminScope.value,
+        ).map((project) => project.id),
       ),
-    ),
-    // Report rows are not kept after leaving the page: every visit starts
-    // from the page skeleton and a fresh fetch, matching the other admin
-    // pages instead of replaying a cached report.
-    gcTime: 0,
+  );
+  const reportRowsQuery = useQuery({
+    queryKey: reportRowsKey,
+    gcTime: REPORT_ROWS_GC_TIME_MS,
+    staleTime: REPORT_ROWS_STALE_TIME_MS,
     enabled: computed(
       () =>
         enabled.value &&
@@ -126,6 +133,7 @@ export function useReportRowsData({
   // Grouping is presentation over the loaded leaf rows: the table folds these
   // into the configured tree, so changing the path never refetches.
   const rows = computed(() => reportRowsQuery.data.value ?? []);
+  const hasRetainedRows = computed(() => reportRowsQuery.data.value !== undefined);
   const summary = computed(() => deriveReportSummaryView(rows.value));
   const loading = computed(
     () =>
@@ -135,8 +143,7 @@ export function useReportRowsData({
   );
   const initialLoaded = computed(
     () =>
-      projectsQuery.isSuccess.value &&
-      reportRowsQuery.isSuccess.value &&
+      hasRetainedRows.value &&
       membersLoaded.value,
   );
   const loadError = computed(() => {
@@ -161,6 +168,8 @@ export function useReportRowsData({
 
   return {
     initialLoaded,
+    hasRetainedRows,
+    key: reportRowsKey,
     isEmpty,
     isInitialLoading,
     loadError,

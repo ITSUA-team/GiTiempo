@@ -118,7 +118,7 @@ const {
   updatedFilterOptions,
 } = search;
 const { isSavingDialog } = mutations;
-const { requestErrorMessage, visibleProjects } = data;
+const { hasLoadedContent, isRefreshing, requestErrorMessage, visibleProjects } = data;
 const manageableProjects = computed(() =>
   visibleProjects.value.filter((project) => project.capabilities.canManageTasks),
 );
@@ -148,7 +148,8 @@ const {
 } = taskActions;
 const pageState = computed(() =>
   resolveDataPageState({
-    hasRequestError: data.requestErrorMessage.value !== null,
+    hasRequestError:
+      data.requestErrorMessage.value !== null && !data.hasLoadedContent.value,
     isEmpty: search.filteredProjectGroups.value.length === 0,
     isLoading: data.isLoadingProjects.value || data.isLoadingTasks.value,
   }),
@@ -166,20 +167,40 @@ function openActiveTimerDialog(): void {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
+    <ProjectsFilters
+      :search-suggestions="searchSuggestions"
+      :search-value="selectedSearchValue"
+      :status-filter="selectedStatusFilter"
+      :status-filter-options="statusFilterOptions"
+      :updated-filter="selectedUpdatedFilter"
+      :updated-filter-options="updatedFilterOptions"
+      @search-complete="handleSearchComplete"
+      @update:search-value="setSearchValue"
+      @update:status-filter="setStatusFilterValue"
+      @update:updated-filter="setUpdatedFilterValue"
+    />
+
     <ProjectsLoadingSkeleton v-if="pageState === 'loading'" />
 
     <template v-else>
-      <ProjectsFilters
-        :search-suggestions="searchSuggestions"
-        :search-value="selectedSearchValue"
-        :status-filter="selectedStatusFilter"
-        :status-filter-options="statusFilterOptions"
-        :updated-filter="selectedUpdatedFilter"
-        :updated-filter-options="updatedFilterOptions"
-        @search-complete="handleSearchComplete"
-        @update:search-value="setSearchValue"
-        @update:status-filter="setStatusFilterValue"
-        @update:updated-filter="setUpdatedFilterValue"
+      <div
+        v-if="isRefreshing"
+        aria-live="polite"
+        class="text-text-muted text-xs"
+        data-testid="projects-refreshing"
+        role="status"
+      >
+        Refreshing projects…
+      </div>
+
+      <RequestStateCard
+        v-if="requestErrorMessage && hasLoadedContent"
+        border
+        data-testid="projects-refresh-error"
+        :description="requestErrorMessage"
+        retry-label="Retry"
+        title="Could not refresh projects"
+        @retry="void retryLoadPage()"
       />
 
       <RequestStateCard
