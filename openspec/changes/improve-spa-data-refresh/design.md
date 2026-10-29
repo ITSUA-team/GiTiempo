@@ -26,11 +26,11 @@ Follow `apps/user-web/AGENTS.md`, `apps/admin-web/AGENTS.md`, `docs/ui/INDEX.md`
 
 ### 1. Separate initial loading, refreshing, and refresh failure
 
-Derive initial loading from the absence of usable data for the current authorized scope, not merely `isFetching`. Keep populated list subtrees mounted on same-key refresh; use an existing PrimeVue-compatible small refreshing indicator and accessible busy state. A successful empty result is still loaded data. Do not reset filters, focus, expansion, or dialogs just because a request started.
+Derive initial loading from the absence of usable data for the current authorized scope, not merely `isFetching`. Keep populated list subtrees mounted on same-key refresh; use an accessible busy state on the stable page region. Time Entries and Projects do not insert visible refresh messages or an extra status row that shifts content. A successful empty result is still loaded data. Do not reset filters, focus, expansion, or dialogs just because a request started.
 
 On a transient refetch failure, retain same-scope data and expose a local retry state plus unchanged toast feedback. On a known authorization loss or session/workspace transition, clear unsafe content and dependent selections immediately. Content retention never takes precedence over access revocation.
 
-For Time Entries server-filter/pagination transitions, retain previous results only within the same authorization scope and mark them as updating. Keep the last committed result's totals associated with those rows; suspend selection-dependent mutations/export of stale results until the requested result commits. Do not reuse previous-scope placeholders. Query identity and request generation must reject late results. Projects search/status/updated filters and Reports grouping remain local-only as documented.
+For Time Entries server-filter/pagination transitions, retain previous results only within the same authorization scope and expose the pending state through `aria-busy` without a visible status row. Keep the last committed result's totals associated with those rows; suspend selection-dependent mutations/export of stale results until the requested result commits. Do not reuse previous-scope placeholders. Query identity and request generation must reject late results. Projects search/status/updated filters and Reports grouping remain local-only as documented.
 
 Alternative rejected: hiding loading indicators without changing subtree conditions, or applying `KeepAlive` globally. Neither addresses duplicate reads or scope safety, and a global route-state policy is unnecessary here.
 
@@ -61,6 +61,15 @@ Remove the generic fetching-completed watcher as a second owner of child refetch
 - Mutation reconciliation: update returned records or target only the affected query keys.
 
 Use existing QueryClient coordination for identical reads rather than inventing a separate request-cache layer. Share a running read only if it can satisfy the current state; an in-flight read started before a successful write cannot prevent post-write revalidation. Cancel or disregard older responses when the newer generation must win. Retain request scopes throughout async continuations so a late callback cannot write into a newly selected workspace.
+
+The timer follow-up applies the same ownership rule to the top bar and page
+actions: they share the authoritative current-timer resource rather than each
+requesting it through a separate projection cache. Idle-context resolution also
+shares required visible-project/task reads in the current refresh wave. This
+does not extend the freshness of authorization data or remove the direct-list
+stop preflight. Active consumers must issue at most one post-mutation current
+read and one read per required project/task input; independent preflight and
+recent-entry inputs remain separately counted. See [the follow-up plan](timer-request-plan.md).
 
 Alternative rejected: deleting only the explicit task loop from `loadPage()` and keeping unconditional watcher fan-out. It removes one duplicate but still refreshes every child collection after unrelated project checks.
 

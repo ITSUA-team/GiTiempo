@@ -786,6 +786,191 @@ describe('useReportsData', () => {
     );
   });
 
+  it('keeps same-scope rows mounted while a changed date range is pending', async () => {
+    const enabled = ref(true);
+    const listProjects = vi.fn().mockResolvedValue(projects);
+    const membersClient = createMembersClientMocks();
+    const reportsClient = createReportsClientMocks();
+    let resolveChangedRange: ((value: TimeReportResponse) => void) | undefined;
+    let reports!: ReturnType<typeof useReportsData>;
+
+    mountWithQuery(
+      defineComponent({
+        setup() {
+          reports = useReportsData({
+            enabled,
+            membersClient,
+            projectsClient: { listProjects },
+            reportsClient,
+            scope: createScope(),
+          });
+          return () => null;
+        },
+      }),
+    );
+
+    await flushPromises();
+    reportsClient.getTimeReport.mockClear();
+    reportsClient.getTimeReport
+      .mockImplementationOnce(
+        () => new Promise<TimeReportResponse>((resolve) => {
+          resolveChangedRange = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(createReportResponse([
+        createLeafReportRow({
+          billableSeconds: 19,
+          displayName: 'Nina PM',
+          email: 'nina@example.com',
+          entryCount: 1,
+          project: { id: projectBillingId, name: 'Billing API' },
+          totalSeconds: 19,
+          userId: ninaId,
+        }),
+      ]));
+
+    reports.dateRange.value = [
+      new Date('2026-05-01T12:00:00.000Z'),
+      new Date('2026-05-02T12:00:00.000Z'),
+    ];
+    expect(reports.isDateRangeChangePending.value).toBe(true);
+    await vi.advanceTimersByTimeAsync(INPUT_DEBOUNCE_MS);
+    await flushPromises();
+
+    expect(reports.isInitialLoading.value).toBe(false);
+    expect(reports.isShowingPreviousRows.value).toBe(true);
+    expect(reports.loading.value).toBe(true);
+    expect(reports.rows.value).toHaveLength(3);
+    expect(reports.summary.value.totalSeconds).toBe(12600);
+
+    resolveChangedRange!(createReportResponse([
+      createLeafReportRow({
+        billableSeconds: 17,
+        displayName: 'Alex Admin',
+        email: 'alex@example.com',
+        entryCount: 1,
+        project: { id: projectOrionId, name: 'Project Orion' },
+        totalSeconds: 17,
+        userId: alexId,
+      }),
+    ]));
+    await flushPromises();
+
+    expect(reports.isShowingPreviousRows.value).toBe(false);
+    expect(reports.isDateRangeChangePending.value).toBe(false);
+    expect(reports.loading.value).toBe(false);
+    expect(reports.rows.value).toHaveLength(2);
+    expect(reports.summary.value.totalSeconds).toBe(36);
+  });
+
+  it('retains same-scope rows and marks them stale when a changed date range fails', async () => {
+    const enabled = ref(true);
+    const reportsClient = createReportsClientMocks();
+    let reports!: ReturnType<typeof useReportsData>;
+
+    mountWithQuery(
+      defineComponent({
+        setup() {
+          reports = useReportsData({
+            enabled,
+            membersClient: createMembersClientMocks(),
+            projectsClient: { listProjects: vi.fn().mockResolvedValue(projects) },
+            reportsClient,
+            scope: createScope(),
+          });
+          return () => null;
+        },
+      }),
+    );
+
+    await flushPromises();
+    reportsClient.getTimeReport.mockRejectedValueOnce(new Error('Range unavailable'));
+    reports.dateRange.value = [
+      new Date('2026-05-01T12:00:00.000Z'),
+      new Date('2026-05-02T12:00:00.000Z'),
+    ];
+    await vi.advanceTimersByTimeAsync(INPUT_DEBOUNCE_MS);
+    await flushPromises();
+
+    expect(reports.rows.value).toHaveLength(3);
+    expect(reports.summary.value.totalSeconds).toBe(12600);
+    expect(reports.hasRetainedRows.value).toBe(true);
+    expect(reports.isShowingPreviousRows.value).toBe(true);
+    expect(reports.loadError.value).toBe('Range unavailable');
+
+    let resolveThirdRange: ((value: TimeReportResponse) => void) | undefined;
+    reportsClient.getTimeReport
+      .mockImplementationOnce(
+        () => new Promise<TimeReportResponse>((resolve) => {
+          resolveThirdRange = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(createReportResponse([]));
+    reports.dateRange.value = [
+      new Date('2026-05-03T12:00:00.000Z'),
+      new Date('2026-05-04T12:00:00.000Z'),
+    ];
+
+    expect(reports.isDateRangeChangePending.value).toBe(true);
+    await vi.advanceTimersByTimeAsync(INPUT_DEBOUNCE_MS);
+    await flushPromises();
+
+    expect(reports.loadError.value).toBeNull();
+    expect(reports.loading.value).toBe(true);
+    expect(reports.isShowingPreviousRows.value).toBe(true);
+    expect(reports.rows.value).toHaveLength(3);
+
+    resolveThirdRange!(createReportResponse([]));
+    await flushPromises();
+  });
+
+  it('does not retain report rows across a workspace scope change', async () => {
+    const enabled = ref(true);
+    const scope = shallowRef({
+      role: 'admin',
+      userId: 'user-1',
+      workspaceId: 'workspace-1',
+    });
+    const listProjects = vi.fn().mockResolvedValue([projects[0]]);
+    const membersClient = createMembersClientMocks();
+    const reportsClient = createReportsClientMocks();
+    let resolveNewScope: ((value: TimeReportResponse) => void) | undefined;
+    let reports!: ReturnType<typeof useReportsData>;
+
+    mountWithQuery(
+      defineComponent({
+        setup() {
+          reports = useReportsData({
+            enabled,
+            membersClient,
+            projectsClient: { listProjects },
+            reportsClient,
+            scope,
+          });
+          return () => null;
+        },
+      }),
+    );
+
+    await flushPromises();
+    expect(reports.rows.value).toHaveLength(2);
+    reportsClient.getTimeReport.mockImplementationOnce(
+      () => new Promise<TimeReportResponse>((resolve) => {
+        resolveNewScope = resolve;
+      }),
+    );
+
+    scope.value = { role: 'admin', userId: 'user-2', workspaceId: 'workspace-2' };
+    await flushPromises();
+
+    expect(reports.hasRetainedRows.value).toBe(false);
+    expect(reports.isShowingPreviousRows.value).toBe(false);
+    expect(reports.rows.value).toEqual([]);
+
+    resolveNewScope!(createReportResponse([]));
+    await flushPromises();
+  });
+
   it('keeps loaded leaf rows without refetching when grouping changes', async () => {
     const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);

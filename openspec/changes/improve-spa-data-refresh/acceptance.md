@@ -3,7 +3,7 @@
 ## Revision, environment, and evidence
 
 - Baseline: exact commit `4a035c61a6386aacf0a059e2b6d85c349e6d2436`.
-- Candidate: current uncommitted working tree on `improve-spa-data-refresh`.
+- Original accepted implementation: committed as `bcf14339` on `improve-spa-data-refresh`. The separate timer follow-up is documented below.
 - Local API: `http://localhost:3000`; User SPA: `http://localhost:5173`; Admin SPA: `http://localhost:5174`.
 - Stable acceptance uses Chrome for Testing 152 through the user-requested `agent-browser` / Chrome DevTools Protocol path. Normal User and Admin sign-in succeeded; no Computer Use permission or authentication bypass was used.
 - Baseline frontends ran sequentially from an exact Git archive on the same origins, using ordinary browser sessions without copying credentials. Interrupted HMR/authentication/service-restart runs are excluded. The archive's font allow-list warnings do not affect data request counts; its visuals are not candidate parity evidence.
@@ -71,3 +71,53 @@ The own-time fixture gap was resolved with two temporary projects and three task
 The owned CDP controller and root QA dev session were stopped after verification. Ports 3000, 5173, 5174, and 4321 had no listening processes, leaving the normal `pnpm dev` launch available. Chrome and the signed-in browser session were left open.
 
 All required browser acceptance scenarios now have evidence. Independent review approved the final own-time acceptance and all 28 task checkboxes are complete. The raw delete trace's HTTP 204 / `failed: true` discrepancy is documented in [own-time evidence](own-time-evidence.md); browser and database checks independently confirm deletion. No implementation commit or archive is implied by acceptance completion.
+
+## Timer request coalescing follow-up
+
+After checkpoint commit `bcf14339`, the additional timer optimization was
+implemented and accepted. [Follow-up evidence](timer-request-evidence.md)
+records comparable browser counts, authority safeguards, desktop/mobile QA,
+regressions, independent review, and guarded cleanup. Projects start is
+10→9 total requests with six task inputs mounted (5→4 excluding five
+distinct other task reads); direct stop is 9→6. Mobile Time Entries stop
+adds its required visible-list refresh. Success messages remain unchanged.
+
+The earlier environment/commit statements above describe the original
+28-task acceptance. The follow-up leaves user-owned dev servers running,
+removes all six entries created during its QA, and completes tasks 7.1–7.4
+for 32/32 total. Its implementation remains uncommitted. No archive, push,
+or deployment was performed.
+
+## Stable refresh layout follow-up
+
+At the user's request, Time Entries and Projects no longer insert visible
+refresh-status messages. Existing page sections retain accessible busy state,
+while rows, controls, and stale-result restrictions keep their behavior.
+[Layout evidence](refresh-layout-evidence.md) records four desktop/mobile
+pending-response checks with unchanged heading positions, updated tests,
+independent review, and final verification. This adds task 8.1, bringing the
+completed implementation total to 33/33 after verification.
+
+
+## Quality review follow-up (2026-10-29)
+
+Current branch `improve-spa-data-refresh`, HEAD `bcf14339` plus the existing timer/layout changes and these uncommitted review fixes. No commit, API changes, or external writes were made for this follow-up.
+
+- Preset reconciliation: deferred regressions cover old list success/failure after a confirmed write, deleted presets not reappearing, and latest-started refresh ordering. Saved-report suite: 27 passing.
+- Reports: delayed date changes retain rows and matching totals; failures keep the committed result marked stale. Scope/visible-project changes reject retained data. Export is blocked during debounce, fetch, and stale/error fallback, including commands from an already-open menu. Composable/view suites: 28 passing, including A → B(error) → C(pending).
+- User: identical eligibility data after a transient failure restores the idle last-task selection. A delayed filter transition from an empty result disables the empty-state create action and re-enables it after completion. Focused timer/view suites: 59 passing.
+- Independent review approved the User fixes and Reports retention/scope guards; the preset stale-error observation was addressed before final checks.
+- Fresh root verification: `pnpm typecheck` and `pnpm lint` 11/11 successful (existing warnings only); `pnpm test` 11/11 successful plus five root tests. User 630/630; Admin 840/840. Strict OpenSpec validation and whitespace check pass. Graph reindex unavailable: no codebase-memory tools are exposed.
+
+### Current real-page checks
+
+Chrome for Testing through the existing DevTools session; localhost User/Admin SPAs and API. User signed in normally. Controlled read delays used CDP and were removed afterwards; no data writes were needed.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Empty Time Entries result → delayed new date filter, desktop 1280×900 | PASS | Existing empty state stayed visible with `aria-busy=true` and native disabled create action. [Desktop](evidence/review-empty-action-desktop.png). |
+| Same pending transition, mobile 390×844 | PASS | Disabled create action and busy region remained; after release busy became false and create became enabled. [Mobile](evidence/review-empty-action-mobile.png). |
+| Reports date change with held `/reports/time` read, desktop/mobile | PASS | Prior report rows/totals stayed visible, stable region was busy, export disabled. Desktop table remained connected across the date change; resizing intentionally selected the mobile branch. [Desktop](evidence/review-reports-date-desktop.png), [mobile](evidence/review-reports-date-mobile.png). |
+| Preset concurrent read/write and identical-data timer error recovery | NOT REPEATED IN BROWSER | Verified by the deferred regression tests above; no new live preset writes or timer actions performed. |
+
+Parity review used `GITiempo.pen` Time Entries (`R2FI0`), Admin Reports V2 (`Y2cJH`), and Admin Reports Mobile (`RTWsH`): existing control order, page regions, typography, and responsive branches preserved. Only intended busy/disabled/retained-result states changed. No PrimeVue exception or new reusable UI block was needed.

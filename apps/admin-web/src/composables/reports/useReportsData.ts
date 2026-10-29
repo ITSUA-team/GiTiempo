@@ -17,6 +17,7 @@ import {
   type AdminMembersClient,
 } from '@/services/admin-members-client';
 import type { AdminServerStateScope } from '@/lib/query-keys';
+import type { ReportDateRange } from '@/lib/report-view-model';
 
 import { useReportExport } from './useReportExport';
 import { useReportFilters } from './useReportFilters';
@@ -32,6 +33,14 @@ interface UseReportsDataOptions {
   reportsClient?: AdminReportsClient;
   onError?: (message: string, error: unknown, action: string) => void;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
+}
+
+function hasChangedDateRange(
+  currentDateRange: ReportDateRange,
+  appliedDateRange: ReportDateRange,
+): boolean {
+  return JSON.stringify(currentDateRange?.map((date) => date?.getTime() ?? null) ?? null) !==
+    JSON.stringify(appliedDateRange?.map((date) => date?.getTime() ?? null) ?? null);
 }
 
 export function useReportsData({
@@ -82,6 +91,12 @@ export function useReportsData({
     enabled,
     reportsClient,
   });
+  const isDateRangeChangePending = computed(() =>
+    hasChangedDateRange(
+      filters.dateRange.value,
+      filters.appliedFilters.value.dateRange,
+    ),
+  );
 
   useReportRefreshDebounce({
     applyCurrentFilters: filters.applyCurrentFilters,
@@ -128,6 +143,8 @@ export function useReportsData({
     initialLoaded: rowsData.initialLoaded,
     isEmpty: rowsData.isEmpty,
     isInitialLoading: rowsData.isInitialLoading,
+    isDateRangeChangePending,
+    isShowingPreviousRows: rowsData.isShowingPreviousRows,
     loadError: rowsData.loadError,
     loading: rowsData.loading,
     memberOptions: reportOptions.memberOptions,

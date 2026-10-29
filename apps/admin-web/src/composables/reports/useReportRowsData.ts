@@ -1,6 +1,12 @@
 import type { ProjectListResponse } from '@gitiempo/shared';
 import { useQuery } from '@tanstack/vue-query';
-import { computed, type ComputedRef, type Ref } from 'vue';
+import {
+  computed,
+  shallowRef,
+  watch,
+  type ComputedRef,
+  type Ref,
+} from 'vue';
 
 import {
   deriveReportSummaryView,
@@ -42,6 +48,17 @@ interface UseReportRowsDataOptions {
 
 const REPORT_ROWS_STALE_TIME_MS = 30_000;
 const REPORT_ROWS_GC_TIME_MS = 5 * 60_000;
+
+function hasSameReportVisibilityScope(
+  previousKey: readonly unknown[],
+  nextScope: AdminServerStateScope,
+  nextProjectIds: readonly string[],
+): boolean {
+  return (
+    JSON.stringify(previousKey[1]) === JSON.stringify(reportsKeys.all(nextScope)[1]) &&
+    JSON.stringify(previousKey[5]) === JSON.stringify([...nextProjectIds].sort())
+  );
+}
 
 export function useReportRowsData({
   appliedFilters,
@@ -107,15 +124,24 @@ export function useReportRowsData({
     return nextRows;
   }
 
+  const visibleProjectIds = computed(() =>
+    getVisibleReportProjectsForScope(
+      projects.value,
+      appliedFilters.value.projectId,
+      isAdminScope.value,
+    ).map((project) => project.id),
+  );
+  const visibilityScopeKey = computed(() =>
+    JSON.stringify([
+      reportsKeys.all(scope.value)[1],
+      [...visibleProjectIds.value].sort(),
+    ]),
+  );
   const reportRowsKey = computed(() =>
       reportsKeys.time(
         scope.value,
         toTimeReportQuery(appliedFilters.value, 1, reportPageLimit),
-        getVisibleReportProjectsForScope(
-          projects.value,
-          appliedFilters.value.projectId,
-          isAdminScope.value,
-        ).map((project) => project.id),
+        visibleProjectIds.value,
       ),
   );
   const reportRowsQuery = useQuery({
@@ -129,11 +155,62 @@ export function useReportRowsData({
         isReportDateRangeValid(appliedFilters.value.dateRange),
     ),
     queryFn: () => fetchReportRowsForScope(projects.value, appliedFilters.value),
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery && hasSameReportVisibilityScope(
+        previousQuery.queryKey,
+        scope.value,
+        visibleProjectIds.value,
+      )
+        ? previousData
+        : undefined,
   });
+  const lastCommittedRows = shallowRef<ReportTableRow[] | undefined>(undefined);
+  const lastCommittedVisibilityScopeKey = shallowRef<string | null>(null);
+
+  watch(
+    [
+      () => reportRowsQuery.data.value,
+      () => reportRowsQuery.isPlaceholderData.value,
+      visibilityScopeKey,
+    ],
+    ([data, isPlaceholderData, nextVisibilityScopeKey]) => {
+      if (data !== undefined && !isPlaceholderData) {
+        lastCommittedRows.value = data;
+        lastCommittedVisibilityScopeKey.value = nextVisibilityScopeKey;
+      }
+    },
+    { immediate: true },
+  );
+
+  const hasCommittedRowsForVisibilityScope = computed(
+    () =>
+      lastCommittedRows.value !== undefined &&
+      lastCommittedVisibilityScopeKey.value === visibilityScopeKey.value,
+  );
+  const isUsingCommittedRowsFallback = computed(
+    () =>
+      reportRowsQuery.data.value === undefined &&
+      hasCommittedRowsForVisibilityScope.value &&
+      (reportRowsQuery.isFetching.value || reportRowsQuery.error.value !== null),
+  );
   // Grouping is presentation over the loaded leaf rows: the table folds these
   // into the configured tree, so changing the path never refetches.
-  const rows = computed(() => reportRowsQuery.data.value ?? []);
-  const hasRetainedRows = computed(() => reportRowsQuery.data.value !== undefined);
+  const rows = computed(
+    () =>
+      reportRowsQuery.data.value ??
+      (hasCommittedRowsForVisibilityScope.value ? lastCommittedRows.value : []) ??
+      [],
+  );
+  const hasRetainedRows = computed(
+    () =>
+      hasCommittedRowsForVisibilityScope.value ||
+      reportRowsQuery.data.value !== undefined,
+  );
+  const isShowingPreviousRows = computed(
+    () =>
+      reportRowsQuery.isPlaceholderData.value ||
+      isUsingCommittedRowsFallback.value,
+  );
   const summary = computed(() => deriveReportSummaryView(rows.value));
   const loading = computed(
     () =>
@@ -169,6 +246,7 @@ export function useReportRowsData({
   return {
     initialLoaded,
     hasRetainedRows,
+    isShowingPreviousRows,
     key: reportRowsKey,
     isEmpty,
     isInitialLoading,

@@ -544,6 +544,8 @@ describe("ProjectView", () => {
     await flushPromises();
 
     expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+    expect(wrapper.attributes("aria-busy")).toBe("true");
+    expect(wrapper.text()).not.toContain("Refreshing projects");
     resolveRetry([createProject("project-1", "Project Orion")]);
     await flushPromises();
 

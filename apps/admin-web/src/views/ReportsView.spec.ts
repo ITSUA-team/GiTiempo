@@ -115,11 +115,15 @@ const summary: ReportSummaryView = {
 
 function createReportState({
   isInitialLoading = false,
+  isDateRangeChangePending = false,
+  isShowingPreviousRows = false,
   loadError = null,
   loading = false,
   rows = [reportRow],
 }: {
   isInitialLoading?: boolean;
+  isDateRangeChangePending?: boolean;
+  isShowingPreviousRows?: boolean;
   loadError?: string | null;
   loading?: boolean;
   rows?: ReportTableRow[];
@@ -133,6 +137,8 @@ function createReportState({
     initialLoaded: ref(!isInitialLoading),
     isEmpty: computed(() => reportRows.value.length === 0),
     isInitialLoading: ref(isInitialLoading),
+    isDateRangeChangePending: ref(isDateRangeChangePending),
+    isShowingPreviousRows: ref(isShowingPreviousRows),
     loadError: ref(loadError),
     loading: ref(loading),
     memberOptions: computed(() => [{ label: 'Alex Admin', value: 'member-1' }]),
@@ -304,6 +310,26 @@ describe('ReportsView', () => {
 
     expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
     expect(reportMocks.exportReportPdf).not.toHaveBeenCalled();
+  });
+
+  it('keeps rendered report content busy and blocks export while prior rows await a new date range', async () => {
+    reportMocks.state = createReportState({
+      isDateRangeChangePending: true,
+      isShowingPreviousRows: true,
+    });
+
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
+    expect(wrapper.find('[data-testid="reports-skeleton"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-busy="true"]').exists()).toBe(true);
+    expect(
+      (wrapper.get('[data-testid="export-reports"]').element as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    await triggerExport(wrapper, 'csv');
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
   });
 
   it('surfaces PDF export failures as error toasts', async () => {

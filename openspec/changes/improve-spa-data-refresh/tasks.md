@@ -46,6 +46,24 @@
 - [x] 6.4 Complete final `.pen` parity, PrimeVue exception, and reusable-pattern reviews; verify only intended refresh transitions differ and document any actual constraint or remaining delta.
 - [x] 6.5 Run independent review and `pnpm exec openspec validate improve-spa-data-refresh --strict`; verify all findings are resolved or explicitly scoped and all implementation/acceptance evidence is linked before marking tasks complete.
 
+## 7. Timer request coalescing follow-up
+
+- [x] 7.1 Add failing active-consumer regressions for duplicate current/project/task reads on timer start/stop, preserving direct-stop preflight, permission checks, and stale-read/workspace isolation.
+- [x] 7.2 Share canonical current-timer and eligible-context resource reads without relaxing authoritative refresh or reusing pre-mutation access data; verify focused timer/query regressions pass.
+- [x] 7.3 Exercise actual desktop/mobile timer start/stop flows and record comparable request counts, unchanged controls/feedback, and any environment limitation.
+- [x] 7.4 Complete independent review, root typecheck/lint/test, strict OpenSpec validation, and updated acceptance evidence for the timer follow-up.
+
+
+## 8. Stable refresh layout
+
+- [x] 8.1 Remove the visible Time Entries and Projects refresh messages without inserting replacement layout rows; retain accessible busy state, stale-action guards, and error/retry feedback, update affected tests/docs, and verify desktop/mobile layout.
+
+## 9. Quality review regressions
+
+- [x] 9.1 Protect authoritative preset writes from older in-flight collection responses and add deferred-response regressions.
+- [x] 9.2 Retain same-scope Reports rows through date changes, gate stale exports, and cover delayed/error/scope transitions.
+- [x] 9.3 Disable the previous-empty-result create action and restore idle timer selection after identical-data retry; add regressions.
+- [x] 9.4 Complete independent review, root checks and strict validation; record current browser acceptance or its explicit limitation.
 
 ## Workflow follow-up
 

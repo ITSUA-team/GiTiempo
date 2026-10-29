@@ -84,7 +84,7 @@
 - Delete is triggered from inside the edit dialog and uses the shared confirmation dialog pattern before removing an entry.
 - Pagination uses PrimeVue `<Paginator>` below the grouped entry sections.
 - Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.
-- On a same-workspace refresh, keep populated rows, filters, focus, and valid dialogs mounted. Show an accessible updating status instead of the initial-load skeleton. While filter or page results are retained as a temporary previous result, label the rows and totals as updating and disable row mutations and pagination until the requested result arrives. A transient refresh failure keeps the populated content visible with a scoped retry; a first-load failure still uses the request-error state.
+- On a same-workspace refresh, keep populated rows, filters, focus, and valid dialogs mounted. Mark the stable page region with `aria-busy` instead of adding a visible refresh message or replacing content with the initial-load skeleton. While filter or page results are retained as a temporary previous result, keep totals tied to the committed rows and disable row mutations and pagination until the requested result arrives. A transient refresh failure keeps the populated content visible with a scoped retry; a first-load failure still uses the request-error state.
 
 ## Projects Page
 
@@ -99,7 +99,7 @@
 - `Updated` options are `Any time`, `Today`, `Last 7 days`, and `Older`.
 - `Status` and `Updated` filters narrow task rows and only keep project groups that still contain at least one matching task.
 - Clearing the search and resetting the status and updated selects restores the full grouped project list.
-- Search, status, and updated filters operate entirely on the loaded project/task collections and never trigger a request. Keep the filter row and populated groups mounted during a refresh, show an accessible refresh status, and retain them with a scoped retry after a transient refresh failure. The skeleton is reserved for the first load.
+- Search, status, and updated filters operate entirely on the loaded project/task collections and never trigger a request. Keep the filter row and populated groups mounted during a refresh, expose refresh through `aria-busy` on the stable page region without inserting a visible status row, and retain them with a scoped retry after a transient refresh failure. The skeleton is reserved for the first load.
 - Content is grouped by visible project instead of by day.
 - Projects does not display tracked-duration totals for projects or tasks. Keep task status and updated metadata here; tracked time is displayed in the existing Time Entries view.
 - Render external-reference projects and their tasks in these existing groups, with a compact `External` tag. Do not add external-only pages, routes, sections, or pickers.

@@ -329,7 +329,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="flex flex-col gap-6 pb-20 sm:pb-0">
+  <section
+    :aria-busy="isRefreshingEntries"
+    class="flex flex-col gap-6 pb-20 sm:pb-0"
+  >
     <TimeEntriesFilters
       :is-loading-projects="isLoadingProjects"
       :project-suggestions="projectFilterSuggestions"
@@ -348,16 +351,6 @@ onMounted(async () => {
     <TimeEntriesLoadingState v-if="pageState === 'loading'" />
 
     <template v-else>
-      <div
-        v-if="isRefreshingEntries"
-        aria-live="polite"
-        class="text-text-muted text-xs"
-        data-testid="time-entries-refreshing"
-        role="status"
-      >
-        Updating time entries. Rows and totals still reflect the previous filter until this finishes.
-      </div>
-
       <RequestStateCard
         v-if="requestErrorMessage && hasLoadedEntries"
         data-testid="time-entries-refresh-error"
@@ -384,6 +377,7 @@ onMounted(async () => {
       >
         <template #actions>
           <EntryActionButton
+            :disabled="isShowingPreviousEntries"
             :icon="PlusIcon"
             label="New time entry"
             @click="void openCreateDialog()"

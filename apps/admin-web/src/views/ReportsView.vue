@@ -46,6 +46,8 @@ const {
   grouping,
   hasRetainedRows,
   isInitialLoading,
+  isDateRangeChangePending,
+  isShowingPreviousRows,
   loadError,
   loading,
   memberOptions,
@@ -142,7 +144,12 @@ const reportDateRangeError = computed(() =>
 // document the server only styles), so every filter and grouping is reflected
 // and there is nothing to block — the file always matches the screen.
 const exportDisabled = computed(
-  () => loading.value || exporting.value || reportDateRangeError.value !== null,
+  () =>
+    loading.value ||
+    isDateRangeChangePending.value ||
+    isShowingPreviousRows.value ||
+    exporting.value ||
+    reportDateRangeError.value !== null,
 );
 
 const selectedProjectLabel = computed(
@@ -213,7 +220,7 @@ function reportExportFilename(format: TimeReportExportFormat): string {
 }
 
 async function handleExport(format: TimeReportExportFormat): Promise<void> {
-  if (exporting.value || reportDateRangeError.value !== null) {
+  if (exportDisabled.value) {
     return;
   }
 
@@ -269,7 +276,10 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 sm:gap-6">
+  <div
+    :aria-busy="loading || isDateRangeChangePending"
+    class="flex flex-col gap-4 sm:gap-6"
+  >
     <template v-if="isInitialLoading">
       <ManagementPageSkeleton variant="reports" />
     </template>
@@ -341,7 +351,7 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
           v-model:date-range="dateRange"
           v-model:grouping="grouping"
           :rows="tableRows"
-          :loading="loading"
+          :loading="loading || isDateRangeChangePending"
           :project-options="projectOptions"
           :member-options="memberOptions"
         >

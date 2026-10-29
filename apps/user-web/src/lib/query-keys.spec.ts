@@ -65,13 +65,6 @@ describe("user-web query keys", () => {
       "current",
       "raw",
     ]);
-    expect(timerKeys.summary(scope)).toEqual([
-      "user-web",
-      { userId: "user-1", workspaceId: "workspace-1" },
-      "top-bar-timer",
-      "current",
-      "summary",
-    ]);
     expect(timerKeys.projectTaskOptions(scope, "project-1")).toEqual([
       "user-web",
       { userId: "user-1", workspaceId: "workspace-1" },

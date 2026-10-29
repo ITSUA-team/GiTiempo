@@ -37,7 +37,8 @@ The Time Entries, Projects, and Reports surfaces SHALL retain already loaded aut
 
 - **GIVEN** a selected surface has loaded content for its current user and workspace
 - **WHEN** a background refresh or successful mutation reconciliation begins
-- **THEN** the existing content and filter controls remain mounted with a non-blocking refreshing indication
+- **THEN** the existing content and filter controls remain mounted with an accessible busy state
+- **AND** Time Entries and Projects do not insert visible refresh-status messages that shift existing content
 - **AND** scroll position, keyboard focus, expansions, and valid form drafts are not reset solely by the refresh
 - **AND** completed results update the affected content in place; removed or unauthorized targets no longer retain invalid interaction state
 
@@ -45,7 +46,7 @@ The Time Entries, Projects, and Reports surfaces SHALL retain already loaded aut
 
 - **GIVEN** a list has rendered results for a previous filter or page selection within the same authorized scope
 - **WHEN** a different server-side filter or page is requested
-- **THEN** retained previous results are explicitly identified as updating until the new response arrives
+- **THEN** the stable result region exposes `aria-busy` until the new response arrives, without inserting a visible status row
 - **AND** old totals, export content, and selection-dependent actions are not presented as authoritative for the new selection
 - **AND** a late response for the previous selection cannot replace results for the latest selection
 
@@ -120,6 +121,15 @@ For the same authorized resource and request inputs, overlapping refresh trigger
 - **WHEN** reconciliation for the newer state starts
 - **THEN** an older response cannot overwrite the newer result or restore invalidated access
 - **AND** request deduplication does not suppress a necessary post-mutation authoritative read
+
+#### Scenario: Timer consumers share authoritative reads
+
+- **GIVEN** the top-bar timer and direct page timer actions are active in the same user/workspace scope
+- **WHEN** a timer starts or stops successfully
+- **THEN** those consumers share one post-mutation current-timer read
+- **AND** idle-context resolution shares any same-wave visible-project and affected-project task read without accepting pre-mutation or invalidated access data
+- **AND** unrelated project task collections are not refreshed solely by the timer action
+- **AND** the direct-list stop preflight, expected-timer-id guard, authoritative focus/conflict checks, and own-time access rules remain in effect
 
 ### Requirement: Mutations Refresh Only Their Affected Resources
 

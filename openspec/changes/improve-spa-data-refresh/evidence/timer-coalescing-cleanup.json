@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-29T13:07:57.113Z",
+  "scope": "completed localhost timer entries created inside recorded QA start windows for the existing tst task only",
+  "removedEntryIds": [
+    "fd6dfaeb-2df2-4369-9e5f-b6983f250658",
+    "c8017cca-50cb-4af4-b977-e10eb655f7ea",
+    "c6a1a1fd-a2bb-4577-a4f4-a6a4de9e481f",
+    "b9351cbb-abeb-4f10-93d1-0652c107292e",
+    "fc6b1bfd-94f8-42f0-beae-21f3ef1cb316",
+    "b227cd6e-cbe7-4fb2-a7b6-bc86ce898632"
+  ],
+  "remaining": 0
+}

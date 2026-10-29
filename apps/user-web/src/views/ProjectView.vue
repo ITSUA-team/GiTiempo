@@ -166,7 +166,10 @@ function openActiveTimerDialog(): void {
 </script>
 
 <template>
-  <section class="flex flex-col gap-6 pb-20 sm:pb-0">
+  <section
+    :aria-busy="isRefreshing"
+    class="flex flex-col gap-6 pb-20 sm:pb-0"
+  >
     <ProjectsFilters
       :search-suggestions="searchSuggestions"
       :search-value="selectedSearchValue"
@@ -183,16 +186,6 @@ function openActiveTimerDialog(): void {
     <ProjectsLoadingSkeleton v-if="pageState === 'loading'" />
 
     <template v-else>
-      <div
-        v-if="isRefreshing"
-        aria-live="polite"
-        class="text-text-muted text-xs"
-        data-testid="projects-refreshing"
-        role="status"
-      >
-        Refreshing projects…
-      </div>
-
       <RequestStateCard
         v-if="requestErrorMessage && hasLoadedContent"
         border

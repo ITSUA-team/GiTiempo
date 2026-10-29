@@ -312,6 +312,38 @@ describe("query timer reconciliation", () => {
     expect(signal?.aborted).toBe(true);
   });
 
+  it("shares one current-timer read between the top bar and a direct timer consumer", async () => {
+    const client = createClientMock();
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({ durationSeconds: null, endedAt: null }),
+    });
+    const queryClient = createTestQueryClient();
+
+    // eslint-disable-next-line vue/one-component-per-file
+    const Harness = defineComponent({
+      setup() {
+        const enabled = computed(() => true);
+        const scope = computed(() => ACTIVE_WORKSPACE_SCOPE);
+
+        useCurrentTimerQuery({ client, enabled, scope });
+        useTopBarTimerSummary({
+          client: client as unknown as TimeEntriesClient,
+          enabled,
+          scope,
+          toast: { add: vi.fn() },
+        });
+
+        return () => h("div");
+      },
+    });
+    const wrapper = mount(Harness, {
+      global: { plugins: [createTestQueryPlugin(queryClient)] },
+    });
+    wrappers.push(wrapper);
+
+    await vi.waitFor(() => expect(client.getCurrentTimer).toHaveBeenCalledTimes(1));
+  });
+
   it("keeps a started timer entry authoritative when a stale recent-list request resolves late", async () => {
     const client = createClientMock();
     const staleListRequest = createAbortableDeferred<TimeEntryListResponse>();
@@ -626,7 +658,6 @@ describe("query timer reconciliation", () => {
       expect(summary.currentTimer.value).toEqual(running ? runningEntry : null);
       expect(summary.selectedContext.value?.taskTitle).toBe(initialTaskA.title);
     });
-
     vi.clearAllMocks();
 
     await updateTaskMutation.mutateAsync({

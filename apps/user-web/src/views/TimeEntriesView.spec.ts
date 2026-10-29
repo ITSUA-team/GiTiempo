@@ -2375,7 +2375,8 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(wrapper.find('[data-testid="time-entries-loading"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="time-entries-refreshing"]').exists()).toBe(true);
+    expect(wrapper.attributes("aria-busy")).toBe("true");
+    expect(wrapper.text()).not.toContain("Updating time entries");
     expect(wrapper.find('[data-testid="date-range-filter"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="filter-task-autocomplete"]').exists()).toBe(true);
   });
@@ -2395,7 +2396,8 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("Improve reports filters");
-    expect(wrapper.find('[data-testid="time-entries-refreshing"]').exists()).toBe(true);
+    expect(wrapper.attributes("aria-busy")).toBe("true");
+    expect(wrapper.text()).not.toContain("Updating time entries");
     expect(wrapper.get('[data-testid="paginator-page-2"]').attributes("disabled")).toBeDefined();
     expect(wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').attributes("disabled")).toBeDefined();
     expect(wrapper.get(`[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`).attributes("disabled")).toBeDefined();
@@ -2417,6 +2419,48 @@ describe("TimeEntriesView", () => {
     resolveFiltered({ items: [], meta: { limit: 20, page: 1, total: 0, totalPages: 0 } });
     await flushPromises();
     expect(wrapper.find('[data-testid="time-entries-empty-state"]').exists()).toBe(true);
+  });
+
+  it("disables the empty-state create action while a delayed filter result retains an empty placeholder", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([], {
+        limit: 20,
+        page: 1,
+        total: 0,
+        totalPages: 0,
+      }),
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    expect(wrapper.find('[data-testid="time-entries-empty-state"]').exists()).toBe(true);
+
+    let resolveFiltered!: (value: TimeEntryListResponse) => void;
+    client.listOwnEntries.mockImplementationOnce(
+      () => new Promise<TimeEntryListResponse>((resolve) => { resolveFiltered = resolve; }),
+    );
+    await wrapper.get('[data-testid="filter-task-type"]').trigger("click");
+    vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
+    await flushPromises();
+
+    const createButton = wrapper.get('button[aria-label="New time entry"]');
+    expect(wrapper.attributes("aria-busy")).toBe("true");
+    expect(createButton.attributes("disabled")).toBeDefined();
+
+    await createButton.trigger("click");
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+
+    resolveFiltered(createEntryListResponse([], {
+      limit: 20,
+      page: 1,
+      total: 0,
+      totalPages: 0,
+    }));
+    await flushPromises();
+
+    expect(createButton.attributes("disabled")).toBeUndefined();
+    await createButton.trigger("click");
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
   });
 
   it("keeps rows, pagination, filter focus, and an open dialog through a same-key refresh failure and delayed retry", async () => {
