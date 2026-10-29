@@ -118,6 +118,21 @@ export function useTopBarTimerViewModel({
       picker.selectedTaskId.value !== currentTaskId
     );
   });
+  const hasRunningTimerDescriptionChange = computed(() => {
+    const currentDescription = summary.currentTimer.value?.description ?? null;
+
+    return picker.getNormalizedDescription() !== currentDescription;
+  });
+  const hasRunningTimerChanges = computed(() => {
+    if (!isTimerRunning.value) {
+      return false;
+    }
+
+    return (
+      hasSelectedDifferentRunningTask.value ||
+      hasRunningTimerDescriptionChange.value
+    );
+  });
   const isCreateTaskDisabled = computed(() => {
     return (
       !picker.canCreateTask.value ||
@@ -171,7 +186,7 @@ export function useTopBarTimerViewModel({
     }
 
     return (
-      !hasSelectedDifferentRunningTask.value ||
+      !hasRunningTimerChanges.value ||
       isConfirmSelectionDisabled.value ||
       timerActions.isPrimaryActionPending.value ||
       isSelectionUpdatePending.value
@@ -185,6 +200,7 @@ export function useTopBarTimerViewModel({
     isCrossWorkspaceTimer: summary.isCrossWorkspaceTimer,
     isDialogPrimaryActionDisabled,
     isDialogSecondaryActionDisabled,
+    hasRunningTimerChanges,
     isNewTaskSelected,
     primaryActionLabel,
     timerContextLabel,
