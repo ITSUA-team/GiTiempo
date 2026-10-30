@@ -252,6 +252,16 @@ async function setPage(page: number): Promise<void> {
   await data.loadEntries();
 }
 
+// PrimeVue sets flex-wrap: wrap on .p-paginator-content (where the arrows and
+// page links live). Tailwind's flex-nowrap loses the cascade because PrimeVue's
+// CSS layer is ordered after utilities in this repo. An inline style on the
+// content element beats both layers, keeping controls in one horizontal row;
+// root gets overflow-x-auto so the row scrolls on very narrow screens.
+const paginatorPt = {
+  root: { class: "overflow-x-auto" },
+  content: { style: { flexWrap: "nowrap" } },
+} as const;
+
 function openActiveTimerDialog(): void {
   topBarTimerDialogController.requestOpen();
 }
@@ -334,7 +344,8 @@ onMounted(async () => {
 
         <SurfaceCard
           border
-          body-class="flex items-center justify-between gap-4"
+          body-class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          data-testid="time-entries-pagination"
           padding-class="p-6"
         >
           <p class="text-text-muted text-[13px]">
@@ -342,9 +353,11 @@ onMounted(async () => {
             {{ (currentPage - 1) * pageSize + entries.length }} of {{ totalRecords }}
           </p>
           <Paginator
+            class="w-full sm:w-auto"
             :first="(currentPage - 1) * pageSize"
             :rows="pageSize"
             :total-records="totalRecords"
+            :pt="paginatorPt"
             current-page-report-template="Showing {first} to {last} of {totalRecords}"
             template="PrevPageLink PageLinks NextPageLink"
             @page="({ page }) => void setPage(page + 1)"

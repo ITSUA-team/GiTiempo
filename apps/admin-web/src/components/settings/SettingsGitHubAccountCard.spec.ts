@@ -103,6 +103,15 @@ describe('SettingsGitHubAccountCard', () => {
     );
   });
 
+  it('keeps the avatar circle at fixed width on narrow screens', () => {
+    const wrapper = mountCard({ connection: connectedStatus });
+
+    const avatar = wrapper.get('[data-testid="avatar"]');
+
+    expect(avatar.classes()).toContain('shrink-0');
+    expect(avatar.classes()).not.toContain('min-w-max');
+  });
+
   it('shows distinct OAuth and personal-data recovery guidance', () => {
     const wrapper = mountCard({
       connection: {

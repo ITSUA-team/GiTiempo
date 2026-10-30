@@ -82,14 +82,14 @@
 - Edit mode allows changing the selected project and task in addition to `startedAt`, `endedAt`, `description`, and `isBillable`.
 - This create/edit surface must ship as a true popup dialog overlay. Do not render it inline inside the Time Entries page layout.
 - Delete is triggered from inside the edit dialog and uses the shared confirmation dialog pattern before removing an entry.
-- Pagination uses PrimeVue `<Paginator>` below the grouped entry sections.
+- Pagination uses PrimeVue `<Paginator>` below the grouped entry sections. The summary text and paginator stack vertically on mobile (below `640px`) and sit side-by-side on larger screens. The paginator content uses an inline `flex-wrap: nowrap` style (via PT) to keep prev/next arrows and page links in a single horizontal row on all screen sizes; the root scrolls horizontally (`overflow-x-auto`) when the row exceeds the available width.
 - Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.
 
 ## Projects Page
 
 - Initial page load uses a skeleton matching the top-bar breadcrumb state, the search row, and grouped project sections.
 - The page uses the same high-level structure as Time Entries: top-bar breadcrumb, grouped content sections, and a card/table shell for each group.
-- A lightweight filter row above the grouped project sections uses a combined standard PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`, plus `Status` and `Updated` PrimeVue `<Select>` controls.
+- A lightweight filter row above the grouped project sections uses the shared `FilterAutoComplete` search with `show-clear` and placeholder copy `Search projects or tasks`, plus `Status` and `Updated` PrimeVue `<Select>` controls.
 - Search suggestions include both project names and task names from the currently loaded visible data set; project suggestions render their main label in bold and task suggestions render regular weight.
 - The combined search and the structured filters operate on already loaded visible projects and tasks on the frontend. Do not document them as backend free-text or backend filter endpoints.
 - Project-name matches keep the full matching project group visible.
