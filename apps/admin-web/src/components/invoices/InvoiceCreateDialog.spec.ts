@@ -119,6 +119,7 @@ interface MountDialogOptions {
   }>;
   createInvoice?: (input: CreateInvoiceInput) => Promise<InvoiceResponse>;
   workspaceCurrency?: string | null;
+  workspaceHourlyRate?: number | null;
   workspaceRoundingStepMinutes?: number | null;
 }
 
@@ -154,6 +155,7 @@ async function mountDialog(options: MountDialogOptions = {}) {
       isAdmin,
       projects: options.projects ?? PROJECT_OPTIONS,
       workspaceCurrency: options.workspaceCurrency ?? null,
+      workspaceHourlyRate: options.workspaceHourlyRate ?? null,
       workspaceRoundingStepMinutes:
         options.workspaceRoundingStepMinutes ?? null,
       scope: {
@@ -234,6 +236,20 @@ function getDiscountField(wrapper: MountedDialog) {
   }
 
   return discountField;
+}
+
+function getRateField(wrapper: MountedDialog) {
+  // Select by the stable input-id instead of document order so reordering the
+  // rate/currency/discount row cannot silently bind to the wrong control.
+  const rateField = wrapper
+    .findAllComponents(InputNumber)
+    .find((field) => field.props('inputId') === 'invoice-create-hourly-rate');
+
+  if (!rateField) {
+    throw new Error('No hourly rate InputNumber rendered');
+  }
+
+  return rateField;
 }
 
 async function enterDateRange(wrapper: MountedDialog): Promise<void> {
@@ -688,6 +704,240 @@ describe('InvoiceCreateDialog', () => {
       { label: 'CAD', value: 'CAD' },
       { label: 'AUD', value: 'AUD' },
     ]);
+  });
+
+  it('clears the stale auto-filled currency when the workspace setting transitions to null', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(
+      createEntriesResponse({ defaultCurrency: null }),
+    );
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({
+      createInvoice,
+      workspaceCurrency: 'EUR',
+    });
+
+    expect(getCurrencyLabelElement().textContent).toBe('EUR');
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    // The setting is cleared after being known; the auto-filled value must be
+    // reset so the create request does not send a currency the user never
+    // entered.
+    await wrapper.setProps({ workspaceCurrency: null });
+    await flushPromises();
+
+    expect(getCurrencyLabelElement().textContent).toBe('Auto');
+
+    await submitInvoice(wrapper);
+
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ currency: undefined }),
+    );
+  });
+
+  it('does not refill the currency from the preview default after the workspace setting is explicitly cleared', async () => {
+    testMocks.listEligibleEntries
+      .mockResolvedValueOnce(createEntriesResponse({ defaultCurrency: 'USD' }))
+      .mockResolvedValueOnce(createEntriesResponse({ defaultCurrency: 'USD' }));
+    const wrapper = await mountDialog({
+      workspaceCurrency: 'EUR',
+    });
+
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    // The workspace currency is authoritative while known.
+    expect(getCurrencyLabelElement().textContent).toBe('EUR');
+
+    // After the setting is cleared, the field stays empty.
+    await wrapper.setProps({ workspaceCurrency: null });
+    await flushPromises();
+
+    expect(getCurrencyLabelElement().textContent).toBe('Auto');
+
+    // A fresh preview response arrives after the setting was known-then-cleared;
+    // the workspaceCurrencyKnown guard must keep the field empty.
+    await wrapper.findComponent(DatePicker).vm.$emit('update:modelValue', [
+      new Date(2026, 4, 1),
+      new Date(2026, 4, 31),
+    ]);
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(2);
+    expect(getCurrencyLabelElement().textContent).toBe('Auto');
+  });
+
+  it('pre-fills the workspace settings hourly rate when the dialog opens', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({
+      createInvoice,
+      workspaceHourlyRate: 50,
+    });
+
+    // The prefill happens at open, before any date range triggers a preview.
+    expect(testMocks.listEligibleEntries).not.toHaveBeenCalled();
+    expect(getRateField(wrapper).props('modelValue')).toBe(50);
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+    await submitInvoice(wrapper);
+
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ hourlyRate: 50 }),
+    );
+  });
+
+  it('fills a late-arriving workspace hourly rate while untouched and stops after a user edit', async () => {
+    const wrapper = await mountDialog();
+
+    // Workspace settings are still in flight when the dialog opens.
+    expect(getRateField(wrapper).props('modelValue')).toBeNull();
+
+    await wrapper.setProps({ workspaceHourlyRate: 50 });
+    await flushPromises();
+    expect(getRateField(wrapper).props('modelValue')).toBe(50);
+
+    await getRateField(wrapper).vm.$emit('update:modelValue', 120);
+    await flushPromises();
+
+    // A later settings change must not re-fill the field after a user edit.
+    await wrapper.setProps({ workspaceHourlyRate: 75 });
+    await flushPromises();
+    expect(getRateField(wrapper).props('modelValue')).toBe(120);
+  });
+
+  it('keeps the workspace hourly rate when the preview refetches with a different default', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(
+      createEntriesResponse({ defaultHourlyRate: 80 }),
+    );
+    const wrapper = await mountDialog({ workspaceHourlyRate: 50 });
+
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(1);
+
+    // The workspace settings rate is authoritative; the preview default only
+    // fills the field while the settings rate is unknown.
+    expect(getRateField(wrapper).props('modelValue')).toBe(50);
+  });
+
+  it('falls back to the preview default hourly rate when workspace settings are unavailable', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(
+      createEntriesResponse({ defaultHourlyRate: 80 }),
+    );
+    const wrapper = await mountDialog();
+
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    expect(getRateField(wrapper).props('modelValue')).toBe(80);
+  });
+
+  it('keeps a zero workspace hourly rate instead of overriding it with the preview default', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(
+      createEntriesResponse({ defaultHourlyRate: 80 }),
+    );
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({
+      createInvoice,
+      workspaceHourlyRate: 0,
+    });
+
+    expect(getRateField(wrapper).props('modelValue')).toBe(0);
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    // The preview default (80) must not overwrite the explicitly-set zero rate.
+    expect(getRateField(wrapper).props('modelValue')).toBe(0);
+
+    await submitInvoice(wrapper);
+
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ hourlyRate: 0 }),
+    );
+  });
+
+  it('clears the stale auto-filled rate when the workspace setting transitions to null', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(
+      createEntriesResponse({ defaultHourlyRate: null }),
+    );
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({
+      createInvoice,
+      workspaceHourlyRate: 50,
+    });
+
+    expect(getRateField(wrapper).props('modelValue')).toBe(50);
+
+    await wrapper
+      .getComponent('#invoice-create-title')
+      .setValue('Website redesign');
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    // The setting is cleared after being known; the auto-filled value must be
+    // reset so the create request does not send a rate the user never entered.
+    await wrapper.setProps({ workspaceHourlyRate: null });
+    await flushPromises();
+
+    expect(getRateField(wrapper).props('modelValue')).toBeNull();
+
+    await submitInvoice(wrapper);
+
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ hourlyRate: undefined }),
+    );
+  });
+
+  it('does not refill the rate from the preview default after the workspace setting is explicitly cleared', async () => {
+    testMocks.listEligibleEntries
+      .mockResolvedValueOnce(createEntriesResponse({ defaultHourlyRate: 80 }))
+      .mockResolvedValueOnce(createEntriesResponse({ defaultHourlyRate: 80 }));
+    const wrapper = await mountDialog({
+      workspaceHourlyRate: 50,
+    });
+
+    await enterDateRange(wrapper);
+    await flushPromises();
+
+    // The workspace rate is authoritative while known.
+    expect(getRateField(wrapper).props('modelValue')).toBe(50);
+
+    // After the setting is cleared, the field stays empty even though the
+    // preview still carries a non-null default.
+    await wrapper.setProps({ workspaceHourlyRate: null });
+    await flushPromises();
+
+    expect(getRateField(wrapper).props('modelValue')).toBeNull();
+
+    // A fresh preview response arrives after the setting was known-then-cleared;
+    // the workspaceRateKnown guard must keep the field empty.
+    await wrapper.findComponent(DatePicker).vm.$emit('update:modelValue', [
+      new Date(2026, 4, 1),
+      new Date(2026, 4, 31),
+    ]);
+    await flushPromises();
+    await flushPromises();
+
+    expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(2);
+    expect(getRateField(wrapper).props('modelValue')).toBeNull();
   });
 
   it('creates a project invoice when a PM selects a project', async () => {
