@@ -2341,6 +2341,134 @@ describe('useTopBarTimer', () => {
     );
   });
 
+  it('updates a running timer description without changing the task', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    const updatedTimer = createRunningEntry({
+      description: 'Pair on the billing export',
+    });
+
+    client.getCurrentTimer
+      .mockResolvedValueOnce({ timeEntry: createRunningEntry() })
+      .mockResolvedValue({ timeEntry: updatedTimer });
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
+    client.updateEntry.mockResolvedValueOnce(updatedTimer);
+
+    const { topBarTimer } = mountTopBarTimer({ client, toast });
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.task);
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(true);
+
+    topBarTimer.setSelectedDescription('Pair on the billing export');
+
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(false);
+
+    await topBarTimer.confirmSelectedTask();
+    await flushPromises();
+
+    expect(client.updateEntry).toHaveBeenCalledWith(TEST_IDS.runningEntry, {
+      description: 'Pair on the billing export',
+      taskId: TEST_IDS.task,
+    });
+    expect(topBarTimer.currentTimer.value?.description).toBe(
+      'Pair on the billing export',
+    );
+    expect(topBarTimer.selectedDescription.value).toBe(
+      'Pair on the billing export',
+    );
+    expect(topBarTimer.isDialogOpen.value).toBe(false);
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'success',
+        summary: 'Timer updated',
+      }),
+    );
+  });
+
+  it('clears a running timer description without changing the task', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    const updatedTimer = createRunningEntry({ description: null });
+
+    client.getCurrentTimer
+      .mockResolvedValueOnce({
+        timeEntry: createRunningEntry({ description: 'Existing note' }),
+      })
+      .mockResolvedValue({ timeEntry: updatedTimer });
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
+    client.updateEntry.mockResolvedValueOnce(updatedTimer);
+
+    const { topBarTimer } = mountTopBarTimer({ client, toast });
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(topBarTimer.selectedDescription.value).toBe('Existing note');
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(true);
+
+    topBarTimer.setSelectedDescription('   ');
+
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(false);
+
+    await topBarTimer.confirmSelectedTask();
+    await flushPromises();
+
+    expect(client.updateEntry).toHaveBeenCalledWith(TEST_IDS.runningEntry, {
+      description: null,
+      taskId: TEST_IDS.task,
+    });
+    expect(topBarTimer.currentTimer.value?.description).toBeNull();
+    expect(topBarTimer.selectedDescription.value).toBe('');
+  });
+
+  it('re-disables the change action when the running timer description is reverted', async () => {
+    const client = createClientMock();
+
+    client.getCurrentTimer.mockResolvedValueOnce({
+      timeEntry: createRunningEntry({ description: 'Existing note' }),
+    });
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
+
+    const { topBarTimer } = mountTopBarTimer({ client });
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(true);
+
+    topBarTimer.setSelectedDescription('Different note');
+
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(false);
+
+    topBarTimer.setSelectedDescription('Existing note');
+
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(true);
+    expect(client.updateEntry).not.toHaveBeenCalled();
+  });
+
   it('blocks cross-workspace running timer task changes', async () => {
     const client = createClientMock();
 

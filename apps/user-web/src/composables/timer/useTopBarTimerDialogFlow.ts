@@ -9,6 +9,7 @@ import type { TopBarTimerSelectionUpdate } from './useTopBarTimerSelectionUpdate
 import type { TopBarTimerSummary } from './useTopBarTimerSummary';
 
 interface UseTopBarTimerDialogFlowOptions {
+  hasRunningTimerChanges: ComputedRef<boolean>;
   isNewTaskSelected: ComputedRef<boolean>;
   isTimerRunning: ComputedRef<boolean>;
   picker: TopBarTaskPicker;
@@ -21,6 +22,7 @@ interface UseTopBarTimerDialogFlowOptions {
 }
 
 export function useTopBarTimerDialogFlow({
+  hasRunningTimerChanges,
   isNewTaskSelected,
   isTimerRunning,
   picker,
@@ -157,17 +159,6 @@ export function useTopBarTimerDialogFlow({
     picker.setSelectedDescription(description);
   }
 
-  function hasSelectedDifferentRunningTask(): boolean {
-    const currentTaskId = summary.currentTimer.value?.task.id ?? null;
-
-    return (
-      isTimerRunning.value &&
-      currentTaskId !== null &&
-      picker.selectedTaskId.value !== null &&
-      picker.selectedTaskId.value !== currentTaskId
-    );
-  }
-
   async function confirmSelectedTask(): Promise<void> {
     if (summary.isCrossWorkspaceTimer.value) {
       return;
@@ -175,7 +166,7 @@ export function useTopBarTimerDialogFlow({
 
     const wasTimerRunning = isTimerRunning.value;
 
-    if (wasTimerRunning && !hasSelectedDifferentRunningTask()) {
+    if (wasTimerRunning && !hasRunningTimerChanges.value) {
       return;
     }
 
