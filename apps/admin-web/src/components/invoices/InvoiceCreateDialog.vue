@@ -92,6 +92,8 @@ const currencyTouched = ref(false);
 const roundingStepTouched = ref(false);
 const validationTriggered = ref(false);
 const previewExpanded = ref(false);
+const workspaceRateKnown = ref(false);
+const workspaceCurrencyKnown = ref(false);
 
 const previewQuery = computed<EligibleEntriesQuery | null>(() => {
   const dates = dateRange.value;
@@ -137,31 +139,46 @@ watch(
     roundingStepTouched.value = false;
     validationTriggered.value = false;
     previewExpanded.value = false;
+    workspaceRateKnown.value = false;
+    workspaceCurrencyKnown.value = false;
   },
 );
 
 // Pre-fill the workspace Settings hourly rate as soon as the dialog opens, and
 // keep following it while the settings load late or change while open — until
-// the user edits the field. It stays authoritative: the preview sync below
-// fills the rate only while no workspace rate is known yet.
+// the user edits the field. The workspaceRateKnown flag distinguishes "settings
+// not yet loaded" (preview default fills in) from "rate explicitly cleared"
+// (field stays empty so the create request does not send a stale auto-fill).
 watch(
   [() => props.workspaceHourlyRate, () => props.visible],
   ([workspaceHourlyRate, visible]) => {
-    if (!visible || rateTouched.value || workspaceHourlyRate === null) return;
-    hourlyRate.value = workspaceHourlyRate;
+    if (!visible || rateTouched.value) return;
+    if (workspaceHourlyRate !== null) {
+      workspaceRateKnown.value = true;
+      hourlyRate.value = workspaceHourlyRate;
+    } else if (workspaceRateKnown.value) {
+      hourlyRate.value = null;
+    }
   },
   { immediate: true },
 );
 
 // Pre-select the workspace Settings currency as soon as the dialog opens, and
 // keep following it while the settings load late or change while open — until
-// the user edits the field. It stays authoritative: the preview sync below
-// fills the currency only while no workspace currency is known yet.
+// the user edits the field. The workspaceCurrencyKnown flag distinguishes
+// "settings not yet loaded" (preview default fills in) from "currency
+// explicitly cleared" (field stays empty so the create request does not send
+// a stale auto-fill).
 watch(
   [() => props.workspaceCurrency, () => props.visible],
   ([workspaceCurrency, visible]) => {
-    if (!visible || currencyTouched.value || !workspaceCurrency) return;
-    currency.value = workspaceCurrency;
+    if (!visible || currencyTouched.value) return;
+    if (workspaceCurrency) {
+      workspaceCurrencyKnown.value = true;
+      currency.value = workspaceCurrency;
+    } else if (workspaceCurrencyKnown.value) {
+      currency.value = '';
+    }
   },
   { immediate: true },
 );
@@ -176,21 +193,25 @@ watch(
   ([data, visible]) => {
     if (!visible || !data) return;
     // The workspace settings rate always wins over the preview value; the
-    // preview default is only the fallback for when the settings query failed
-    // and the workspace rate is unknown.
+    // preview default is only the fallback for when the settings query has
+    // not yet provided a rate. Once a rate was known and then cleared, the
+    // field stays empty rather than silently re-filling from the preview.
     if (
       !rateTouched.value &&
-      !props.workspaceHourlyRate &&
+      props.workspaceHourlyRate === null &&
+      !workspaceRateKnown.value &&
       data.defaultHourlyRate !== null
     ) {
       hourlyRate.value = data.defaultHourlyRate;
     }
     // The workspace settings currency always wins over the preview value; the
-    // preview default is only the fallback for when the settings query failed
-    // and the workspace currency is unknown.
+    // preview default is only the fallback for when the settings query has
+    // not yet provided a currency. Once a currency was known and then cleared,
+    // the field stays empty rather than silently re-filling from the preview.
     if (
       !currencyTouched.value &&
       !props.workspaceCurrency &&
+      !workspaceCurrencyKnown.value &&
       data.defaultCurrency !== null
     ) {
       currency.value = data.defaultCurrency;
