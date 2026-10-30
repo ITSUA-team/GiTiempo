@@ -427,6 +427,7 @@ async function mountView(
           template: `
             <button
               :data-pt-root-class="pt?.root?.class ?? ''"
+              :data-pt-content-flex-wrap="pt?.content?.style?.flexWrap ?? ''"
               data-testid="paginator-page-2"
               type="button"
               @click="$emit('page', { page: 1 })"
@@ -1188,8 +1189,9 @@ describe("TimeEntriesView", () => {
     const paginator = wrapper.get('[data-testid="paginator-page-2"]');
 
     expect(paginator.attributes("data-pt-root-class")).toBe(
-      "flex-nowrap overflow-x-auto",
+      "overflow-x-auto",
     );
+    expect(paginator.attributes("data-pt-content-flex-wrap")).toBe("nowrap");
     expect(paginator.classes()).toContain("w-full");
     expect(paginator.classes()).toContain("sm:w-auto");
   });

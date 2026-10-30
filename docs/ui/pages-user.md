@@ -82,7 +82,7 @@
 - Edit mode allows changing the selected project and task in addition to `startedAt`, `endedAt`, `description`, and `isBillable`.
 - This create/edit surface must ship as a true popup dialog overlay. Do not render it inline inside the Time Entries page layout.
 - Delete is triggered from inside the edit dialog and uses the shared confirmation dialog pattern before removing an entry.
-- Pagination uses PrimeVue `<Paginator>` below the grouped entry sections. The summary text and paginator stack vertically on mobile (below `640px`) and sit side-by-side on larger screens. The paginator itself uses `flex-nowrap` with `overflow-x-auto` so prev/next arrows and page links stay in a single horizontal row instead of wrapping.
+- Pagination uses PrimeVue `<Paginator>` below the grouped entry sections. The summary text and paginator stack vertically on mobile (below `640px`) and sit side-by-side on larger screens. The paginator content uses an inline `flex-wrap: nowrap` style (via PT) to keep prev/next arrows and page links in a single horizontal row on all screen sizes; the root scrolls horizontally (`overflow-x-auto`) when the row exceeds the available width.
 - Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.
 
 ## Projects Page

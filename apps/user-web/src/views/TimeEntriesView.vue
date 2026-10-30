@@ -252,11 +252,15 @@ async function setPage(page: number): Promise<void> {
   await data.loadEntries();
 }
 
-// PrimeVue Paginator wraps internally with flex-wrap, pushing the prev/next
-// arrows onto separate lines on narrow screens; scroll instead of wrapping.
+// PrimeVue sets flex-wrap: wrap on .p-paginator-content (where the arrows and
+// page links live). Tailwind's flex-nowrap loses the cascade because PrimeVue's
+// CSS layer is ordered after utilities in this repo. An inline style on the
+// content element beats both layers, keeping controls in one horizontal row;
+// root gets overflow-x-auto so the row scrolls on very narrow screens.
 const paginatorPt = {
-  root: { class: "flex-nowrap overflow-x-auto" },
-};
+  root: { class: "overflow-x-auto" },
+  content: { style: { flexWrap: "nowrap" } },
+} as const;
 
 function openActiveTimerDialog(): void {
   topBarTimerDialogController.requestOpen();
