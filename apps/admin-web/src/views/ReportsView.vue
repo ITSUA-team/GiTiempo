@@ -5,6 +5,7 @@ import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Button from 'primevue/button';
 import Menu from 'primevue/menu';
+import Message from 'primevue/message';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
@@ -43,7 +44,10 @@ const {
   dateRange,
   exportReportPdf,
   grouping,
+  hasRetainedRows,
   isInitialLoading,
+  isDateRangeChangePending,
+  isShowingPreviousRows,
   loadError,
   loading,
   memberOptions,
@@ -140,7 +144,12 @@ const reportDateRangeError = computed(() =>
 // document the server only styles), so every filter and grouping is reflected
 // and there is nothing to block — the file always matches the screen.
 const exportDisabled = computed(
-  () => loading.value || exporting.value || reportDateRangeError.value !== null,
+  () =>
+    loading.value ||
+    isDateRangeChangePending.value ||
+    isShowingPreviousRows.value ||
+    exporting.value ||
+    reportDateRangeError.value !== null,
 );
 
 const selectedProjectLabel = computed(
@@ -211,7 +220,7 @@ function reportExportFilename(format: TimeReportExportFormat): string {
 }
 
 async function handleExport(format: TimeReportExportFormat): Promise<void> {
-  if (exporting.value || reportDateRangeError.value !== null) {
+  if (exportDisabled.value) {
     return;
   }
 
@@ -267,12 +276,15 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 sm:gap-6">
+  <div
+    :aria-busy="loading || isDateRangeChangePending"
+    class="flex flex-col gap-4 sm:gap-6"
+  >
     <template v-if="isInitialLoading">
       <ManagementPageSkeleton variant="reports" />
     </template>
 
-    <template v-else-if="loadError && !loading">
+    <template v-else-if="loadError && !loading && !hasRetainedRows">
       <RequestErrorCard
         title="Failed to load reports"
         :message="loadError"
@@ -281,6 +293,19 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
     </template>
 
     <template v-else>
+      <Message
+        v-if="loadError && hasRetainedRows"
+        severity="error"
+        class="flex items-center justify-between"
+      >
+        <span>{{ loadError }}</span>
+        <Button
+          label="Retry"
+          size="small"
+          text
+          @click="refresh"
+        />
+      </Message>
       <SavedReportsBar
         :active-id="savedReports.activeId.value"
         :error="savedReports.error.value"
@@ -326,7 +351,7 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
           v-model:date-range="dateRange"
           v-model:grouping="grouping"
           :rows="tableRows"
-          :loading="loading"
+          :loading="loading || isDateRangeChangePending"
           :project-options="projectOptions"
           :member-options="memberOptions"
         >

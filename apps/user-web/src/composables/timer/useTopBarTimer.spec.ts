@@ -2903,7 +2903,10 @@ describe('useTopBarTimer', () => {
       accessScope: 'own-time', capabilities: { canManageTasks: false },
     };
     client.listProjectTasks.mockResolvedValue([remainingTask]);
-    await Promise.all(userMutationInvalidationKeys.afterTimeEntryMutation(TEST_SCOPE)
+    await Promise.all(userMutationInvalidationKeys.afterTimeEntryMutation(
+      TEST_SCOPE,
+      [TEST_IDS.project],
+    )
       .map((queryKey) => queryClient.invalidateQueries({ queryKey })));
     topBarTimer.closeDialog();
     await topBarTimer.openDialog();

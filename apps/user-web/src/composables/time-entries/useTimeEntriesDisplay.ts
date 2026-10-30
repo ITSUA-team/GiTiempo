@@ -11,6 +11,7 @@ import { resolveDataPageState } from "@/lib/page-state";
 
 interface UseTimeEntriesDisplayOptions {
   entries: ComputedRef<TimeEntryResponse[]>;
+  hasLoadedEntries: ComputedRef<boolean>;
   isLoadingEntries: ComputedRef<boolean>;
   nowMs: Readonly<Ref<number>>;
   requestErrorMessage: ComputedRef<string | null>;
@@ -18,13 +19,15 @@ interface UseTimeEntriesDisplayOptions {
 
 export function useTimeEntriesDisplay({
   entries,
+  hasLoadedEntries,
   isLoadingEntries,
   nowMs,
   requestErrorMessage,
 }: UseTimeEntriesDisplayOptions) {
   const pageState = computed(() =>
     resolveDataPageState({
-      hasRequestError: requestErrorMessage.value !== null,
+      hasRequestError:
+        requestErrorMessage.value !== null && !hasLoadedEntries.value,
       isEmpty: entries.value.length === 0,
       isLoading: isLoadingEntries.value,
     }),

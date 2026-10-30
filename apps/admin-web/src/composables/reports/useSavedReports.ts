@@ -39,6 +39,8 @@ export function useSavedReports({
   const isLoading = ref(false);
   const isSaving = ref(false);
   const error = ref<string | null>(null);
+  let collectionVersion = 0;
+  let latestRefreshId = 0;
 
   const activePreset = computed(
     () => presets.value.find((preset) => preset.id === activeId.value) ?? null,
@@ -54,21 +56,31 @@ export function useSavedReports({
 
   /**
    * Never rejects: presets are supplementary to the report, so a failed list
-   * surfaces as a message in the bar rather than taking the page down — and
-   * the mutation paths below await this without needing their own guard.
+   * surfaces as a message in the bar rather than taking the page down.
    */
   async function refresh(): Promise<void> {
+    const refreshId = ++latestRefreshId;
+    const versionAtStart = collectionVersion;
     isLoading.value = true;
     try {
-      presets.value = await client.listSavedReports();
+      const listedPresets = await client.listSavedReports();
+      if (refreshId !== latestRefreshId || versionAtStart !== collectionVersion) {
+        return;
+      }
+
+      presets.value = listedPresets;
       // The loaded preset may have been deleted by someone else.
       if (activeId.value !== null && activePreset.value === null) {
         clearActive();
       }
     } catch (caught) {
-      error.value = toMessage(caught);
+      if (refreshId === latestRefreshId && versionAtStart === collectionVersion) {
+        error.value = toMessage(caught);
+      }
     } finally {
-      isLoading.value = false;
+      if (refreshId === latestRefreshId) {
+        isLoading.value = false;
+      }
     }
   }
 
@@ -102,6 +114,23 @@ export function useSavedReports({
     loadedConfig.value = null;
   }
 
+  function upsertPreset(preset: SavedReport): void {
+    const index = presets.value.findIndex((candidate) => candidate.id === preset.id);
+
+    if (index === -1) {
+      presets.value = [preset, ...presets.value];
+      return;
+    }
+
+    presets.value = presets.value.map((candidate, candidateIndex) =>
+      candidateIndex === index ? preset : candidate,
+    );
+  }
+
+  function recordLocalWrite(): void {
+    collectionVersion += 1;
+  }
+
   async function withSave<T>(action: () => Promise<T>): Promise<T | null> {
     isSaving.value = true;
     error.value = null;
@@ -124,9 +153,8 @@ export function useSavedReports({
       const saved = await client.updateSavedReport(id, {
         config: currentConfig.value,
       });
-      // Refresh before adopting the result: refresh() drops an active id that
-      // is missing from the list, which would undo the activation below.
-      await refresh();
+      recordLocalWrite();
+      upsertPreset(saved);
       activeId.value = saved.id;
       loadedConfig.value = saved.config;
       return saved;
@@ -139,7 +167,8 @@ export function useSavedReports({
         config: currentConfig.value,
         name,
       });
-      await refresh();
+      recordLocalWrite();
+      upsertPreset(created);
       activeId.value = created.id;
       loadedConfig.value = created.config;
       return created;
@@ -149,7 +178,8 @@ export function useSavedReports({
   function rename(id: string, name: string): Promise<SavedReport | null> {
     return withSave(async () => {
       const renamed = await client.updateSavedReport(id, { name });
-      await refresh();
+      recordLocalWrite();
+      upsertPreset(renamed);
       return renamed;
     });
   }
@@ -157,8 +187,9 @@ export function useSavedReports({
   function remove(id: string): Promise<boolean | null> {
     return withSave(async () => {
       await client.deleteSavedReport(id);
+      recordLocalWrite();
+      presets.value = presets.value.filter((preset) => preset.id !== id);
       if (activeId.value === id) clearActive();
-      await refresh();
       return true;
     });
   }

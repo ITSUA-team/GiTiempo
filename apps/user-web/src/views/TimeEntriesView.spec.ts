@@ -12,6 +12,7 @@ import { ApiError } from "@gitiempo/web-shared/http";
 
 import { INPUT_DEBOUNCE_MS } from "@gitiempo/web-shared";
 import {
+  timeEntriesKeys,
   userProjectsKeys,
 } from "@/lib/query-keys";
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
@@ -310,6 +311,7 @@ async function mountView(
             "dropdownMode",
             "inputId",
             "minLength",
+            "modelValue",
             "optionLabel",
             "pt",
             "suggestions",
@@ -320,6 +322,8 @@ async function mountView(
               :data-complete-on-focus="String(completeOnFocus === true || completeOnFocus === '')"
               :data-dropdown-mode="dropdownMode ?? ''"
               :data-min-length="String(minLength)"
+              :data-model-id="typeof modelValue === 'object' && modelValue ? modelValue.id : ''"
+              :data-model-value="typeof modelValue === 'string' ? modelValue : ''"
               :data-testid="inputId === 'time-entries-project-filter' ? 'project-filter-autocomplete' : inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'"
             >
               <p v-for="suggestion in suggestions" :key="suggestion.id">
@@ -423,7 +427,8 @@ async function mountView(
         },
         Paginator: {
           emits: ["page"],
-          template: '<button data-testid="paginator-page-2" type="button" @click="$emit(\'page\', { page: 1 })">Page 2</button>',
+          props: ["disabled"],
+          template: '<button :disabled="disabled" data-testid="paginator-page-2" type="button" @click="$emit(\'page\', { page: 1 })">Page 2</button>',
         },
         Skeleton: {
           props: ["height", "shape", "size", "width"],
@@ -444,6 +449,7 @@ async function mountView(
             "formatDuration",
             "formatTimeRange",
             "group",
+            "isInteractionDisabled",
             "isStartTimerDisabled",
             "showHeader",
             "startingTimerEntryId",
@@ -459,31 +465,33 @@ async function mountView(
                   <button
                     v-if="entry.endedAt !== null"
                     :data-testid="'time-entry-start-timer-' + entry.id"
-                    :disabled="isStartTimerDisabled === true || (startingTimerEntryId !== null && startingTimerEntryId !== undefined)"
+                    :disabled="isInteractionDisabled === true || isStartTimerDisabled === true || (startingTimerEntryId !== null && startingTimerEntryId !== undefined)"
                     type="button"
-                    @click="!(isStartTimerDisabled === true || (startingTimerEntryId !== null && startingTimerEntryId !== undefined)) && $emit('startTimer', entry)"
+                    @click="!(isInteractionDisabled === true || isStartTimerDisabled === true || (startingTimerEntryId !== null && startingTimerEntryId !== undefined)) && $emit('startTimer', entry)"
                   >Start timer</button>
                   <button
                     v-if="entry.endedAt !== null"
                     data-testid="time-entry-edit-entry-completed"
+                    :disabled="isInteractionDisabled === true"
                     type="button"
-                    @click="$emit('editEntry', entry)"
+                    @click="isInteractionDisabled !== true && $emit('editEntry', entry)"
                   >Edit</button>
                   <button
                     v-else
                     :data-testid="'time-entry-open-timer-' + entry.id"
+                    :disabled="isInteractionDisabled === true"
                     type="button"
-                    @click="$emit('openActiveTimer')"
+                    @click="isInteractionDisabled !== true && $emit('openActiveTimer')"
                   >Update timer</button>
                   <button
                     v-if="entry.endedAt === null"
                     :data-testid="'time-entry-stop-timer-' + entry.id"
-                    :disabled="stoppingTimerEntryId !== null && stoppingTimerEntryId !== undefined"
+                    :disabled="isInteractionDisabled === true || (stoppingTimerEntryId !== null && stoppingTimerEntryId !== undefined)"
                     type="button"
-                    @click="!(stoppingTimerEntryId !== null && stoppingTimerEntryId !== undefined) && $emit('stopTimer', entry)"
+                    @click="!(isInteractionDisabled === true || (stoppingTimerEntryId !== null && stoppingTimerEntryId !== undefined)) && $emit('stopTimer', entry)"
                   >Stop timer</button>
                 </div>
-              <button data-testid="time-entries-day-create-2026-04-21" type="button" @click="$emit('createForDay', group.dateKey)">Create day</button>
+              <button :disabled="isInteractionDisabled === true" data-testid="time-entries-day-create-2026-04-21" type="button" @click="isInteractionDisabled !== true && $emit('createForDay', group.dateKey)">Create day</button>
             </section>
           `,
         },
@@ -1954,6 +1962,34 @@ describe("TimeEntriesView", () => {
     expect(client.createManualEntry).not.toHaveBeenCalled();
   });
 
+  it("clears project and task filters with their suggestions when project access is revoked", async () => {
+    const client = createClientMock();
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-filter-search"]').trigger("click");
+    await wrapper.get('[data-testid="filter-task-focus"]').trigger("click");
+    await wrapper.get('[data-testid="project-filter-select"]').trigger("click");
+    await wrapper.get('[data-testid="filter-task-select"]').trigger("click");
+    await flushPromises();
+
+    const projectFilter = wrapper.get('[data-testid="project-filter-autocomplete"]');
+    const taskFilter = wrapper.get('[data-testid="filter-task-autocomplete"]');
+    expect(projectFilter.attributes("data-model-id")).toBe(TEST_IDS.projectAdmin);
+    expect(taskFilter.attributes("data-model-id")).toBe(TEST_IDS.taskAdmin);
+    expect(projectFilter.text()).toContain("Project Orion");
+
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [],
+    );
+    await flushPromises();
+
+    expect(projectFilter.attributes("data-model-id")).toBe("");
+    expect(taskFilter.attributes("data-model-id")).toBe("");
+    expect(projectFilter.text()).not.toContain("Project Orion");
+  });
+
   it("reloads task suggestions with the narrowed project scope after the dialog reopens", async () => {
     const fullAccessTask = createTask({
       id: TEST_IDS.taskAdmin,
@@ -2352,12 +2388,10 @@ describe("TimeEntriesView", () => {
     vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
     await flushPromises();
 
-    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toEqual(
-      expect.objectContaining({ projectId: undefined }),
-    );
+    expect(client.listOwnEntries.mock.calls.length).toBe(callsBeforeClearing);
   });
 
-  it("keeps the filter form mounted while a filter change reloads the list", async () => {
+  it("keeps populated rows mounted while a filter change updates the list", async () => {
     const client = createClientMock();
     const { wrapper } = await mountView(client);
 
@@ -2371,8 +2405,147 @@ describe("TimeEntriesView", () => {
     vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="time-entries-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entries-loading"]').exists()).toBe(false);
+    expect(wrapper.attributes("aria-busy")).toBe("true");
+    expect(wrapper.text()).not.toContain("Updating time entries");
     expect(wrapper.find('[data-testid="date-range-filter"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="filter-task-autocomplete"]').exists()).toBe(true);
+  });
+
+  it("retains prior rows and blocks stale row actions while a delayed filter result is pending", async () => {
+    const client = createClientMock();
+    const { topBarTimerDialogController, wrapper } = await mountView(client);
+
+    await flushPromises();
+    let resolveFiltered!: (value: TimeEntryListResponse) => void;
+    client.listOwnEntries.mockImplementationOnce(
+      () => new Promise<TimeEntryListResponse>((resolve) => { resolveFiltered = resolve; }),
+    );
+
+    await wrapper.get('[data-testid="filter-task-type"]').trigger("click");
+    vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Improve reports filters");
+    expect(wrapper.attributes("aria-busy")).toBe("true");
+    expect(wrapper.text()).not.toContain("Updating time entries");
+    expect(wrapper.get('[data-testid="paginator-page-2"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get(`[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`).attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-testid="time-entry-edit-entry-completed"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).attributes("disabled")).toBeDefined();
+    expect(wrapper.get(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).attributes("disabled")).toBeDefined();
+
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get(`[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`).trigger("click");
+    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger("click");
+    await wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+    await wrapper.get(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+
+    expect(client.startTimer).not.toHaveBeenCalled();
+    expect(client.stopTimer).not.toHaveBeenCalled();
+    expect(topBarTimerDialogController.requestOpen).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+
+    resolveFiltered({ items: [], meta: { limit: 20, page: 1, total: 0, totalPages: 0 } });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="time-entries-empty-state"]').exists()).toBe(true);
+  });
+
+  it("disables the empty-state create action while a delayed filter result retains an empty placeholder", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([], {
+        limit: 20,
+        page: 1,
+        total: 0,
+        totalPages: 0,
+      }),
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    expect(wrapper.find('[data-testid="time-entries-empty-state"]').exists()).toBe(true);
+
+    let resolveFiltered!: (value: TimeEntryListResponse) => void;
+    client.listOwnEntries.mockImplementationOnce(
+      () => new Promise<TimeEntryListResponse>((resolve) => { resolveFiltered = resolve; }),
+    );
+    await wrapper.get('[data-testid="filter-task-type"]').trigger("click");
+    vi.advanceTimersByTime(INPUT_DEBOUNCE_MS);
+    await flushPromises();
+
+    const createButton = wrapper.get('button[aria-label="New time entry"]');
+    expect(wrapper.attributes("aria-busy")).toBe("true");
+    expect(createButton.attributes("disabled")).toBeDefined();
+
+    await createButton.trigger("click");
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+
+    resolveFiltered(createEntryListResponse([], {
+      limit: 20,
+      page: 1,
+      total: 0,
+      totalPages: 0,
+    }));
+    await flushPromises();
+
+    expect(createButton.attributes("disabled")).toBeUndefined();
+    await createButton.trigger("click");
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+  });
+
+  it("keeps rows, pagination, filter focus, and an open dialog through a same-key refresh failure and delayed retry", async () => {
+    const client = createClientMock();
+    const { queryClient, wrapper } = await mountView(client);
+    let resolveRetry!: (response: TimeEntryListResponse) => void;
+
+    await flushPromises();
+    document.body.appendChild(wrapper.element);
+    const filter = wrapper.get('[data-testid="filter-task-focus"]');
+    (filter.element as HTMLButtonElement).focus();
+    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+
+    client.listOwnEntries.mockRejectedValueOnce(new Error("Refresh failed"));
+    await queryClient.invalidateQueries({
+      queryKey: timeEntriesKeys.all({ userId: null, workspaceId: null }),
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Improve reports filters");
+    expect(wrapper.find('[data-testid="time-entries-refresh-error"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entries-groups"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="paginator-page-2"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+    expect(document.activeElement).toBe(filter.element);
+
+    client.listOwnEntries.mockImplementationOnce(
+      () => new Promise<TimeEntryListResponse>((resolve) => { resolveRetry = resolve; }),
+    );
+    await wrapper.get('[data-testid="time-entries-refresh-error"] button').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Improve reports filters");
+    expect(wrapper.find('[data-testid="time-entries-groups"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="paginator-page-2"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+    expect(document.activeElement).toBe(filter.element);
+
+    resolveRetry(createEntryListResponse([
+      createEntry({ id: TEST_IDS.completedEntry }),
+      createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.runningEntry,
+      }),
+    ]));
+    await flushPromises();
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="time-entries-refresh-error"]').exists()).toBe(false);
+    });
+    expect(wrapper.find('[data-testid="time-entries-groups"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="paginator-page-2"]').exists()).toBe(true);
   });
 });

@@ -40,6 +40,21 @@ function makePreset(overrides: Partial<SavedReport> = {}): SavedReport {
   };
 }
 
+function createDeferred<T>() {
+  const deferred = {} as {
+    promise: Promise<T>;
+    reject: (reason?: unknown) => void;
+    resolve: (value: T) => void;
+  };
+
+  deferred.promise = new Promise<T>((resolve, reject) => {
+    deferred.resolve = resolve;
+    deferred.reject = reject;
+  });
+
+  return deferred;
+}
+
 function setup(presets: SavedReport[] = [makePreset()]) {
   const current = ref<SavedReportConfig>(makeConfig());
   const applied: unknown[] = [];
@@ -73,6 +88,26 @@ function setup(presets: SavedReport[] = [makePreset()]) {
 }
 
 describe('useSavedReports listing', () => {
+  it('keeps the latest refresh result when an older request finishes afterwards', async () => {
+    const { client, saved } = setup();
+    const firstRequest = createDeferred<SavedReport[]>();
+    const secondRequest = createDeferred<SavedReport[]>();
+    client.listSavedReports
+      .mockImplementationOnce(() => firstRequest.promise)
+      .mockImplementationOnce(() => secondRequest.promise);
+
+    const firstRefresh = saved.refresh();
+    const secondRefresh = saved.refresh();
+    const latestPreset = makePreset({ id: 'preset-latest', name: 'Latest' });
+    secondRequest.resolve([latestPreset]);
+    await secondRefresh;
+    firstRequest.resolve([makePreset({ id: 'preset-stale', name: 'Stale' })]);
+    await firstRefresh;
+
+    expect(saved.presets.value).toEqual([latestPreset]);
+    expect(saved.isLoading.value).toBe(false);
+  });
+
   it('loads presets for the workspace', async () => {
     const { saved } = setup();
 
@@ -188,6 +223,53 @@ describe('useSavedReports dirty state', () => {
 });
 
 describe('useSavedReports mutations', () => {
+  it('keeps a created preset when an older list request finishes afterwards', async () => {
+    const { client, saved } = setup();
+    const staleList = createDeferred<SavedReport[]>();
+    client.listSavedReports.mockImplementationOnce(() => staleList.promise);
+
+    const refresh = saved.refresh();
+    await saved.saveAsNew('Client hours');
+    staleList.resolve([]);
+    await refresh;
+
+    expect(saved.presets.value.map((preset) => preset.id)).toEqual(['preset-new']);
+    expect(saved.activeId.value).toBe('preset-new');
+    expect(saved.isDirty.value).toBe(false);
+  });
+
+  it('keeps a locally deleted preset deleted when an older list request finishes afterwards', async () => {
+    const existing = makePreset();
+    const { client, saved } = setup([existing]);
+    await saved.refresh();
+    saved.selectPreset(existing.id);
+    const staleList = createDeferred<SavedReport[]>();
+    client.listSavedReports.mockImplementationOnce(() => staleList.promise);
+
+    const refresh = saved.refresh();
+    await saved.remove(existing.id);
+    staleList.resolve([existing]);
+    await refresh;
+
+    expect(saved.presets.value).toEqual([]);
+    expect(saved.activeId.value).toBeNull();
+  });
+
+  it('ignores an older list failure after a successful local write', async () => {
+    const { client, saved } = setup();
+    const staleList = createDeferred<SavedReport[]>();
+    client.listSavedReports.mockImplementationOnce(() => staleList.promise);
+
+    const refresh = saved.refresh();
+    await saved.saveAsNew('Client hours');
+    staleList.reject(new Error('offline'));
+    await refresh;
+
+    expect(saved.error.value).toBeNull();
+    expect(saved.presets.value.map((preset) => preset.id)).toEqual(['preset-new']);
+    expect(saved.activeId.value).toBe('preset-new');
+  });
+
   it('overwrites the loaded preset on save', async () => {
     const { client, current, saved } = setup();
     await saved.refresh();
@@ -200,6 +282,7 @@ describe('useSavedReports mutations', () => {
       config: current.value,
     });
     expect(saved.isDirty.value).toBe(false);
+    expect(client.listSavedReports).toHaveBeenCalledTimes(1);
   });
 
   it('does nothing on save when no preset is loaded', async () => {
@@ -221,6 +304,7 @@ describe('useSavedReports mutations', () => {
     );
     expect(saved.activeId.value).toBe('preset-new');
     expect(saved.isDirty.value).toBe(false);
+    expect(client.listSavedReports).not.toHaveBeenCalled();
   });
 
   it('surfaces a duplicate-name failure without activating anything', async () => {
@@ -254,6 +338,26 @@ describe('useSavedReports mutations', () => {
     expect(client.updateSavedReport).toHaveBeenCalledWith('preset-1', {
       name: 'Renamed',
     });
+    expect(client.listSavedReports).not.toHaveBeenCalled();
+  });
+
+  it('keeps updates in place and prepends a created preset in API list order', async () => {
+    const { client, saved } = setup([
+      makePreset({ id: 'preset-1', name: 'First' }),
+      makePreset({ id: 'preset-2', name: 'Second' }),
+    ]);
+    await saved.refresh();
+
+    await saved.rename('preset-2', 'Renamed');
+    await saved.saveAsNew('Third');
+
+    expect(saved.presets.value.map((preset) => preset.id)).toEqual([
+      'preset-new',
+      'preset-1',
+      'preset-2',
+    ]);
+    expect(saved.presets.value[2]?.name).toBe('Renamed');
+    expect(client.listSavedReports).toHaveBeenCalledTimes(1);
   });
 
   it('clears the active preset when it is deleted', async () => {
@@ -267,6 +371,8 @@ describe('useSavedReports mutations', () => {
 
     expect(client.deleteSavedReport).toHaveBeenCalledWith('preset-1');
     expect(saved.activeId.value).toBeNull();
+    expect(saved.presets.value).toEqual([]);
+    expect(client.listSavedReports).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the active preset when a different one is deleted', async () => {
@@ -313,6 +419,20 @@ describe('useSavedReports failure handling', () => {
     await expect(saved.refresh()).resolves.toBeUndefined();
     expect(saved.error.value).toContain('session has expired');
     expect(saved.isLoading.value).toBe(false);
+  });
+
+  it('keeps committed presets and the active baseline after a failed write', async () => {
+    const { client, current, saved } = setup();
+    await saved.refresh();
+    saved.selectPreset('preset-1');
+    current.value = makeConfig({ grouping: ['project', 'user'] });
+    client.updateSavedReport.mockRejectedValueOnce(new Error('offline'));
+
+    await expect(saved.save()).resolves.toBeNull();
+
+    expect(saved.presets.value).toEqual([makePreset()]);
+    expect(saved.activeId.value).toBe('preset-1');
+    expect(saved.isDirty.value).toBe(true);
   });
 
   it('keeps the previously loaded presets when a refresh fails', async () => {

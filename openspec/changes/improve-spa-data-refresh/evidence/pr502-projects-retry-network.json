@@ -1,0 +1,16 @@
+{
+  "records": [
+    {
+      "path": "/projects",
+      "method": "GET"
+    },
+    {
+      "path": "/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+      "method": "GET"
+    },
+    {
+      "path": "/projects/00000000-0000-4000-8000-000000000004/tasks",
+      "method": "GET"
+    }
+  ]
+}

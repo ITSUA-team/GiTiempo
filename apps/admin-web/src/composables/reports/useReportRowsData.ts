@@ -1,6 +1,12 @@
 import type { ProjectListResponse } from '@gitiempo/shared';
 import { useQuery } from '@tanstack/vue-query';
-import { computed, type ComputedRef, type Ref } from 'vue';
+import {
+  computed,
+  shallowRef,
+  watch,
+  type ComputedRef,
+  type Ref,
+} from 'vue';
 
 import {
   deriveReportSummaryView,
@@ -38,6 +44,18 @@ interface UseReportRowsDataOptions {
   projectsQuery: QueryStateRefs;
   reportsClient: AdminReportsClient;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
+}
+
+const REPORT_ROWS_STALE_TIME_MS = 30_000;
+const REPORT_ROWS_GC_TIME_MS = 5 * 60_000;
+
+function hasSameReportVisibilityScope(
+  previousKey: readonly unknown[],
+  nextScope: AdminServerStateScope,
+  nextProjectIds: readonly string[],
+): boolean {
+  const visibilityKey = reportsKeys.visibility(nextScope, nextProjectIds);
+  return JSON.stringify(previousKey.slice(0, visibilityKey.length)) === JSON.stringify(visibilityKey);
 }
 
 export function useReportRowsData({
@@ -104,28 +122,94 @@ export function useReportRowsData({
     return nextRows;
   }
 
-  const reportRowsQuery = useQuery({
-    queryKey: computed(() =>
+  const visibleProjectIds = computed(() =>
+    getVisibleReportProjectsForScope(
+      projects.value,
+      appliedFilters.value.projectId,
+      isAdminScope.value,
+    ).map((project) => project.id),
+  );
+  const visibilityScopeKey = computed(() =>
+    JSON.stringify(reportsKeys.visibility(scope.value, visibleProjectIds.value)),
+  );
+  const reportRowsKey = computed(() =>
       reportsKeys.time(
         scope.value,
         toTimeReportQuery(appliedFilters.value, 1, reportPageLimit),
+        visibleProjectIds.value,
       ),
-    ),
-    // Report rows are not kept after leaving the page: every visit starts
-    // from the page skeleton and a fresh fetch, matching the other admin
-    // pages instead of replaying a cached report.
-    gcTime: 0,
+  );
+  const lastStartedFetch = shallowRef<{ key: string } | null>(null);
+  const reportRowsQuery = useQuery({
+    queryKey: reportRowsKey,
+    gcTime: REPORT_ROWS_GC_TIME_MS,
+    staleTime: REPORT_ROWS_STALE_TIME_MS,
     enabled: computed(
       () =>
         enabled.value &&
         projectsQuery.isSuccess.value &&
         isReportDateRangeValid(appliedFilters.value.dateRange),
     ),
-    queryFn: () => fetchReportRowsForScope(projects.value, appliedFilters.value),
+    queryFn: ({ queryKey }) => {
+      lastStartedFetch.value = { key: JSON.stringify(queryKey) };
+      return fetchReportRowsForScope(projects.value, appliedFilters.value);
+    },
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery && hasSameReportVisibilityScope(
+        previousQuery.queryKey,
+        scope.value,
+        visibleProjectIds.value,
+      )
+        ? previousData
+        : undefined,
   });
+  const lastCommittedRows = shallowRef<ReportTableRow[] | undefined>(undefined);
+  const lastCommittedVisibilityScopeKey = shallowRef<string | null>(null);
+
+  watch(
+    [
+      () => reportRowsQuery.data.value,
+      () => reportRowsQuery.isPlaceholderData.value,
+      visibilityScopeKey,
+    ],
+    ([data, isPlaceholderData, nextVisibilityScopeKey]) => {
+      if (data !== undefined && !isPlaceholderData) {
+        lastCommittedRows.value = data;
+        lastCommittedVisibilityScopeKey.value = nextVisibilityScopeKey;
+      }
+    },
+    { immediate: true },
+  );
+
+  const hasCommittedRowsForVisibilityScope = computed(
+    () =>
+      lastCommittedRows.value !== undefined &&
+      lastCommittedVisibilityScopeKey.value === visibilityScopeKey.value,
+  );
+  const isUsingCommittedRowsFallback = computed(
+    () =>
+      reportRowsQuery.data.value === undefined &&
+      hasCommittedRowsForVisibilityScope.value &&
+      (reportRowsQuery.isFetching.value || reportRowsQuery.error.value !== null),
+  );
   // Grouping is presentation over the loaded leaf rows: the table folds these
   // into the configured tree, so changing the path never refetches.
-  const rows = computed(() => reportRowsQuery.data.value ?? []);
+  const rows = computed(
+    () =>
+      reportRowsQuery.data.value ??
+      (hasCommittedRowsForVisibilityScope.value ? lastCommittedRows.value : []) ??
+      [],
+  );
+  const hasRetainedRows = computed(
+    () =>
+      hasCommittedRowsForVisibilityScope.value ||
+      reportRowsQuery.data.value !== undefined,
+  );
+  const isShowingPreviousRows = computed(
+    () =>
+      reportRowsQuery.isPlaceholderData.value ||
+      isUsingCommittedRowsFallback.value,
+  );
   const summary = computed(() => deriveReportSummaryView(rows.value));
   const loading = computed(
     () =>
@@ -135,8 +219,7 @@ export function useReportRowsData({
   );
   const initialLoaded = computed(
     () =>
-      projectsQuery.isSuccess.value &&
-      reportRowsQuery.isSuccess.value &&
+      hasRetainedRows.value &&
       membersLoaded.value,
   );
   const loadError = computed(() => {
@@ -156,11 +239,15 @@ export function useReportRowsData({
   );
 
   async function refetchRows(): Promise<void> {
-    await reportRowsQuery.refetch();
+    await reportRowsQuery.refetch({ cancelRefetch: false });
   }
 
   return {
     initialLoaded,
+    hasRetainedRows,
+    isShowingPreviousRows,
+    key: reportRowsKey,
+    lastStartedFetch,
     isEmpty,
     isInitialLoading,
     loadError,
