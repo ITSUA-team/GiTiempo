@@ -3,6 +3,7 @@ import { QueryClient } from "@tanstack/vue-query";
 
 import {
   normalizeTimeEntryListQuery,
+  getScopeKey,
   readTimeEntryListQueryKey,
   timeEntriesKeys,
   timerKeys,
@@ -55,6 +56,12 @@ describe("user-web query keys", () => {
         taskId: null,
       },
     ]);
+  });
+
+  it("normalizes whitespace before comparing server-state scopes", () => {
+    expect(getScopeKey({ userId: " user-1 ", workspaceId: " workspace-1 " })).toBe(
+      getScopeKey(scope),
+    );
   });
 
   it("keeps timer project-task keys separate from projects page task keys", () => {
@@ -155,6 +162,12 @@ describe("user-web query keys", () => {
     expect(
       userMutationInvalidationKeys.afterTimeEntryMutation(scope, ["project-a"]),
     ).not.toContainEqual(userProjectsKeys.all(scope));
+  });
+
+  it("keeps the broad fallback when an unknown source accompanies known project ids", () => {
+    expect(
+      userMutationInvalidationKeys.afterTimeEntryMutation(scope, ["project-a"], true),
+    ).toContainEqual(userProjectsKeys.all(scope));
   });
 
   it("reads normalized list queries from time-entry list keys", () => {

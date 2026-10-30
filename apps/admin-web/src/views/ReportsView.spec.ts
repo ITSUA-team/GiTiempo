@@ -114,6 +114,7 @@ const summary: ReportSummaryView = {
 };
 
 function createReportState({
+  hasRetainedRows = true,
   isInitialLoading = false,
   isDateRangeChangePending = false,
   isShowingPreviousRows = false,
@@ -121,6 +122,7 @@ function createReportState({
   loading = false,
   rows = [reportRow],
 }: {
+  hasRetainedRows?: boolean;
   isInitialLoading?: boolean;
   isDateRangeChangePending?: boolean;
   isShowingPreviousRows?: boolean;
@@ -135,6 +137,7 @@ function createReportState({
     exportReportPdf: reportMocks.exportReportPdf,
     grouping: ref<ReportGrouping>(['project']),
     initialLoaded: ref(!isInitialLoading),
+    hasRetainedRows: ref(hasRetainedRows),
     isEmpty: computed(() => reportRows.value.length === 0),
     isInitialLoading: ref(isInitialLoading),
     isDateRangeChangePending: ref(isDateRangeChangePending),
@@ -219,7 +222,7 @@ describe('ReportsView', () => {
   });
 
   it('renders request errors separately with a retry action', async () => {
-    reportMocks.state = createReportState({ loadError: 'No scope' });
+    reportMocks.state = createReportState({ loadError: 'No scope', hasRetainedRows: false });
 
     const wrapper = mountReportsView();
 
@@ -330,6 +333,22 @@ describe('ReportsView', () => {
 
     await triggerExport(wrapper, 'csv');
     expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
+  });
+
+  it('retains report content with retry feedback and blocks export after a changed-range failure', async () => {
+    reportMocks.state = createReportState({ loadError: 'Temporary outage', isShowingPreviousRows: true });
+    const wrapper = mountReportsView();
+    await flushPromises();
+    expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
+    expect(wrapper.text()).toContain('Temporary outage');
+    expect(wrapper.text()).not.toContain('Failed to load reports');
+    expect((wrapper.get('[data-testid="export-reports"]').element as HTMLButtonElement).disabled).toBe(true);
+    await triggerExport(wrapper, 'csv');
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
+    const retry = wrapper.findAll('button').find((button) => button.text() === 'Retry');
+    expect(retry).toBeDefined();
+    await retry!.trigger('click');
+    expect(reportMocks.refresh).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces PDF export failures as error toasts', async () => {

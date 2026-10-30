@@ -12,6 +12,8 @@ import { computed, nextTick, ref, watch, type ComputedRef } from "vue";
 import { timeEntriesKeys, userProjectsKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
+import { getRemovedProjectIds } from "./project-access";
+
 interface UseTimeEntriesDataOptions {
   client: TimeEntriesClient;
   enabled: ComputedRef<boolean>;
@@ -49,13 +51,10 @@ export function useTimeEntriesData({
     },
   );
   watch(projects, (nextProjects, previousProjects) => {
-    const nextProjectIds = new Set(nextProjects.map((project) => project.id));
     const nextRevokedProjectIds = new Set(revokedProjectIds.value);
 
-    for (const project of previousProjects) {
-      if (!nextProjectIds.has(project.id)) {
-        nextRevokedProjectIds.add(project.id);
-      }
+    for (const projectId of getRemovedProjectIds(previousProjects, nextProjects)) {
+      nextRevokedProjectIds.add(projectId);
     }
 
     for (const project of nextProjects) {

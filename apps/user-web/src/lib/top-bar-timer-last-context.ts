@@ -57,6 +57,8 @@ function isCurrentWave(
 
   return (
     currentQuery?.state.isInvalidated === false &&
+    // Only the authoritative post-mutation current-timer read may satisfy
+    // this wave. A later update could represent focus or another mutation.
     currentQuery.state.dataUpdateCount === wave.currentRawDataUpdateCount + 1
   );
 }

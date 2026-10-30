@@ -8,6 +8,11 @@ export interface UserServerStateScope {
 type QueryKey = readonly unknown[];
 
 export interface EligibleLastEntryRefreshWave {
+  /**
+   * A wave may reuse dependency results only after its one authoritative
+   * current-timer refresh. Any additional current-timer update invalidates
+   * reuse so the eligibility resolver performs its own reads.
+   */
   currentRawDataUpdateCount: number;
   queryVersions: Record<string, number>;
 }
@@ -22,6 +27,10 @@ function normalizeScope(scope: UserServerStateScope = {}) {
     userId: normalizeString(scope.userId),
     workspaceId: normalizeString(scope.workspaceId),
   };
+}
+
+export function getScopeKey(scope: UserServerStateScope = {}): string {
+  return JSON.stringify(normalizeScope(scope));
 }
 
 export function normalizeTimeEntryListQuery(

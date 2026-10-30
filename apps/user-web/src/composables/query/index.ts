@@ -21,6 +21,7 @@ import {
   timerKeys,
   userMutationInvalidationKeys,
   userProjectsKeys,
+  getScopeKey,
   type EligibleLastEntryRefreshWave,
   type UserServerStateScope,
 } from "@/lib/query-keys";
@@ -179,20 +180,14 @@ function belongsToScope(
   queryKey: QueryKey,
   scope: UserServerStateScope,
 ): boolean {
-  return (
-    JSON.stringify(queryKey[1]) ===
-    JSON.stringify(timeEntriesKeys.all(scope)[1])
-  );
+  return JSON.stringify(queryKey[1]) === getScopeKey(scope);
 }
 
 function isSameScope(
   first: UserServerStateScope,
   second: UserServerStateScope,
 ): boolean {
-  return (
-    JSON.stringify(timeEntriesKeys.all(first)[1]) ===
-    JSON.stringify(timeEntriesKeys.all(second)[1])
-  );
+  return getScopeKey(first) === getScopeKey(second);
 }
 
 function readCachedEntry(
@@ -339,6 +334,8 @@ function createEligibleLastEntryRefreshWave(
     }
   }
 
+  // The consumer accepts exactly one subsequent currentRaw update. This is
+  // the authoritative post-mutation read for this invalidation wave.
   return {
     currentRawDataUpdateCount: currentQuery.state.dataUpdateCount,
     queryVersions,
@@ -473,9 +470,7 @@ export const useOwnTimeEntriesQuery = (
   options: UseOwnTimeEntriesQueryOptions,
 ) => {
   const scopeGeneration = ref(0);
-  const scopeKey = computed(() =>
-    JSON.stringify(timeEntriesKeys.all(toValue(options.scope))[1]),
-  );
+  const scopeKey = computed(() => getScopeKey(toValue(options.scope)));
   const fulfilledScopeKey = ref<string | null>(null);
 
   watch(
@@ -513,9 +508,7 @@ export const useOwnTimeEntriesQuery = (
         throw new DOMException("The request scope changed", "AbortError");
       }
 
-      fulfilledScopeKey.value = JSON.stringify(
-        timeEntriesKeys.all(requestScope)[1],
-      );
+      fulfilledScopeKey.value = getScopeKey(requestScope);
       return result;
     },
     refetchOnWindowFocus: true,

@@ -311,6 +311,7 @@ async function mountView(
             "dropdownMode",
             "inputId",
             "minLength",
+            "modelValue",
             "optionLabel",
             "pt",
             "suggestions",
@@ -321,6 +322,8 @@ async function mountView(
               :data-complete-on-focus="String(completeOnFocus === true || completeOnFocus === '')"
               :data-dropdown-mode="dropdownMode ?? ''"
               :data-min-length="String(minLength)"
+              :data-model-id="typeof modelValue === 'object' && modelValue ? modelValue.id : ''"
+              :data-model-value="typeof modelValue === 'string' ? modelValue : ''"
               :data-testid="inputId === 'time-entries-project-filter' ? 'project-filter-autocomplete' : inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'"
             >
               <p v-for="suggestion in suggestions" :key="suggestion.id">
@@ -1957,6 +1960,34 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(client.createManualEntry).not.toHaveBeenCalled();
+  });
+
+  it("clears project and task filters with their suggestions when project access is revoked", async () => {
+    const client = createClientMock();
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-filter-search"]').trigger("click");
+    await wrapper.get('[data-testid="filter-task-focus"]').trigger("click");
+    await wrapper.get('[data-testid="project-filter-select"]').trigger("click");
+    await wrapper.get('[data-testid="filter-task-select"]').trigger("click");
+    await flushPromises();
+
+    const projectFilter = wrapper.get('[data-testid="project-filter-autocomplete"]');
+    const taskFilter = wrapper.get('[data-testid="filter-task-autocomplete"]');
+    expect(projectFilter.attributes("data-model-id")).toBe(TEST_IDS.projectAdmin);
+    expect(taskFilter.attributes("data-model-id")).toBe(TEST_IDS.taskAdmin);
+    expect(projectFilter.text()).toContain("Project Orion");
+
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [],
+    );
+    await flushPromises();
+
+    expect(projectFilter.attributes("data-model-id")).toBe("");
+    expect(taskFilter.attributes("data-model-id")).toBe("");
+    expect(projectFilter.text()).not.toContain("Project Orion");
   });
 
   it("reloads task suggestions with the narrowed project scope after the dialog reopens", async () => {

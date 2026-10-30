@@ -69,3 +69,10 @@
 
 - Synchronize the capability delta and archive the change after implementation and required acceptance are complete.
 - Link the implementation PR to the associated GitHub issue using the repository's supported issue-reference format.
+
+## 10. PR review follow-up
+
+- [x] 10.1 Force explicit Reports revalidation for warm changed keys without duplicate cold reads; centralize visibility key matching and cover scope races and retained-error exports.
+- [x] 10.2 Fix Projects refresh after removal/reordering/access changes and retain populated groups while new collections load or fail; cover stale focus refresh.
+- [x] 10.3 Clarify timer wave and scope contracts, test rejected reuse/abort/fallback paths, and cover Time Entries filter revocation while preserving inactive history.
+- [x] 10.4 Simplify repeated report test setup, run required checks and independent review, and record acceptance evidence or limitations.

@@ -555,6 +555,64 @@ describe("ProjectView", () => {
     expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
   });
 
+  it("keeps loaded groups mounted while a newly visible project's tasks are pending", async () => {
+    const client = createClientMock();
+    let resolveNewProjectTasks!: (tasks: TaskResponse[]) => void;
+    const projectA = createProject("project-1", "Project Orion");
+    const projectB = createProject("project-2", "Billing API");
+
+    client.listVisibleProjects
+      .mockResolvedValueOnce([projectA])
+      .mockResolvedValueOnce([projectA, projectB]);
+    client.listProjectTasks
+      .mockResolvedValueOnce([
+        createTask("task-1", "project-1", "Improve reports filters"),
+      ])
+      .mockImplementationOnce(
+        () => new Promise<TaskResponse[]>((resolve) => { resolveNewProjectTasks = resolve; }),
+      );
+
+    const { wrapper } = await mountView(client);
+    await waitForProjectsReady(wrapper);
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await vi.waitFor(() => expect(client.listProjectTasks).toHaveBeenCalledTimes(2));
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="projects-skeleton"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain("Project Orion");
+    resolveNewProjectTasks([]);
+  });
+
+  it("keeps loaded groups mounted when a newly visible project's task request fails", async () => {
+    const client = createClientMock();
+    const projectA = createProject("project-1", "Project Orion");
+    const projectB = createProject("project-2", "Billing API");
+
+    client.listVisibleProjects
+      .mockResolvedValueOnce([projectA])
+      .mockResolvedValueOnce([projectA, projectB]);
+    client.listProjectTasks
+      .mockResolvedValueOnce([
+        createTask("task-1", "project-1", "Improve reports filters"),
+      ])
+      .mockRejectedValueOnce(new Error("Billing tasks unavailable"));
+
+    const { wrapper } = await mountView(client);
+    await waitForProjectsReady(wrapper);
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="projects-refresh-error"]').exists()).toBe(true);
+    });
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="projects-skeleton"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain("Project Orion");
+  });
+
   it("opens the top-bar timer dialog when a project task start is blocked", async () => {
     const client = createClientMock();
 

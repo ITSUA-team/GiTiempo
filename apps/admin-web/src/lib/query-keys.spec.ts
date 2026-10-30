@@ -53,6 +53,8 @@ describe('admin-web query keys', () => {
       'admin-web',
       { role: 'admin', userId: 'user-1', workspaceId: 'workspace-1' },
       'reports',
+      'visibility',
+      [],
       'time',
       {
         dateFrom: null,
@@ -66,7 +68,6 @@ describe('admin-web query keys', () => {
         sortOrder: null,
         userId: null,
       },
-      [],
     ]);
   });
 

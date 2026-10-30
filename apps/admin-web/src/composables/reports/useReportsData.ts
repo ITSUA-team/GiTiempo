@@ -123,12 +123,20 @@ export function useReportsData({
 
     currentAction.value = rowsData.initialLoaded.value ? 'refresh-reports' : 'load-reports';
     const keyBeforeDependencies = JSON.stringify(rowsData.key.value);
+    const fetchBeforeDependencies = rowsData.lastStartedFetch.value;
     await Promise.all([
       projectsQuery.refetch(),
       isAdminScope.value ? membersQuery.refetch() : Promise.resolve(),
     ]);
     await nextTick();
-    if (JSON.stringify(rowsData.key.value) === keyBeforeDependencies) {
+    const currentKey = JSON.stringify(rowsData.key.value);
+    const fetchAfterDependencies = rowsData.lastStartedFetch.value;
+    // A completed automatic read still satisfies this wave; an idle warm cache does not.
+    if (
+      currentKey === keyBeforeDependencies ||
+      fetchAfterDependencies === fetchBeforeDependencies ||
+      fetchAfterDependencies?.key !== currentKey
+    ) {
       await rowsData.refetchRows();
     }
   }

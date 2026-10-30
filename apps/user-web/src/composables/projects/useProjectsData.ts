@@ -114,17 +114,20 @@ export function useProjectsData({
     () => Object.values(taskLoadErrors.value)[0] ?? null,
   );
   const hasLoadedProjects = computed(() => projectsQuery.data.value !== undefined);
-  const hasLoadedTasks = computed(() =>
-    taskQueries.value.every((taskQuery) => taskQuery.data !== undefined),
+  const hasLoadedTaskContent = computed(() =>
+    taskQueries.value.length === 0 ||
+    taskQueries.value.some((taskQuery) => taskQuery.data !== undefined),
   );
   const hasLoadedContent = computed(
-    () => hasLoadedProjects.value && hasLoadedTasks.value,
+    () => hasLoadedProjects.value && hasLoadedTaskContent.value,
   );
   const isLoadingProjects = computed(
     () => projectsQuery.isPending.value && !hasLoadedProjects.value,
   );
   const isLoadingTasks = computed(
-    () => !hasLoadedTasks.value && taskQueries.value.some((taskQuery) => taskQuery.isPending),
+    () =>
+      !hasLoadedTaskContent.value &&
+      taskQueries.value.some((taskQuery) => taskQuery.isPending),
   );
   const isRefreshing = computed(
     () => projectsQuery.isFetching.value || taskQueries.value.some((taskQuery) => taskQuery.isFetching),
@@ -144,7 +147,17 @@ export function useProjectsData({
     manualRefreshPromise = (async () => {
       try {
         const refreshScope = scope.value;
-        const taskQueriesBeforeRefresh = taskQueries.value;
+        const taskQueryKeysBeforeRefresh = new Set(
+          visibleProjects.value.map((project) =>
+            JSON.stringify(
+              userProjectsKeys.projectTasks(
+                refreshScope,
+                project.id,
+                project.accessScope,
+              ),
+            ),
+          ),
+        );
         await projectsQuery.refetch({ cancelRefetch: false });
 
         if (
@@ -155,11 +168,21 @@ export function useProjectsData({
         }
 
         await nextTick();
-        await Promise.all(
-          taskQueriesBeforeRefresh.map((taskQuery) =>
-            taskQuery.refetch({ cancelRefetch: false }),
-          ),
-        );
+        await Promise.all(taskQueries.value.flatMap((taskQuery, index) => {
+          const project = visibleProjects.value[index];
+
+          return project && taskQueryKeysBeforeRefresh.has(
+            JSON.stringify(
+              userProjectsKeys.projectTasks(
+                refreshScope,
+                project.id,
+                project.accessScope,
+              ),
+            ),
+          )
+            ? [taskQuery.refetch({ cancelRefetch: false })]
+            : [];
+        }));
       } finally {
         isManualRefresh = false;
         manualRefreshPromise = null;

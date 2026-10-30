@@ -23,6 +23,7 @@ import {
   type TaskLookupOption,
   type TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
+import { getRemovedProjectIds } from "@/composables/time-entries/project-access";
 import { useRunningEntryTicker } from "@/composables/time-entries/useRunningEntryTicker";
 import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
 import { useTimeEntriesDisplay } from "@/composables/time-entries/useTimeEntriesDisplay";
@@ -254,9 +255,7 @@ function handleFilterTaskSearch(query: string): void {
 
 watch(visibleProjects, (nextProjects, previousProjects) => {
   const nextProjectIds = new Set(nextProjects.map((project) => project.id));
-  const previousProjectIds = new Set(previousProjects.map((project) => project.id));
-  const projectIsRevoked = (projectId: string) =>
-    previousProjectIds.has(projectId) && !nextProjectIds.has(projectId);
+  const removedProjectIds = getRemovedProjectIds(previousProjects, nextProjects);
 
   projectFilterSuggestions.value = projectFilterSuggestions.value.filter((project) =>
     nextProjectIds.has(project.id),
@@ -265,14 +264,14 @@ watch(visibleProjects, (nextProjects, previousProjects) => {
     nextProjectIds.has(task.projectId),
   );
 
-  if (selectedProjectId.value && projectIsRevoked(selectedProjectId.value)) {
+  if (selectedProjectId.value && removedProjectIds.has(selectedProjectId.value)) {
     filters.setProjectValue(null);
     return;
   }
 
   if (
     isTaskLookupOption(selectedTaskFilter.value) &&
-    projectIsRevoked(selectedTaskFilter.value.projectId)
+    removedProjectIds.has(selectedTaskFilter.value.projectId)
   ) {
     filters.setTaskValue(null);
   }

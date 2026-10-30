@@ -13,7 +13,7 @@ import type {
 } from '@gitiempo/shared';
 
 import { createTestQueryClient, createTestQueryPlugin } from '@/test/query-client';
-import { reportsKeys } from '@/lib/query-keys';
+import { reportsKeys, adminProjectsKeys } from '@/lib/query-keys';
 import { useReportsData } from './useReportsData';
 
 const workspaceId = '44444444-4444-4444-8444-444444444444';
@@ -262,6 +262,20 @@ function createMembersClientMocks(members = workspaceMembers) {
   };
 }
 
+function mountReports(
+  options: Parameters<typeof useReportsData>[0],
+  queryClient = createTestQueryClient(),
+) {
+  let reports!: ReturnType<typeof useReportsData>;
+  const wrapper = mountWithQuery(defineComponent({
+    setup() {
+      reports = useReportsData(options);
+      return () => null;
+    },
+  }), queryClient);
+  return { reports, wrapper, queryClient };
+}
+
 describe('useReportsData', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -285,22 +299,13 @@ describe('useReportsData', () => {
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
 
@@ -374,6 +379,7 @@ describe('useReportsData', () => {
     await flushPromises();
     expect(reportsClient.getTimeReport).toHaveBeenCalledTimes(2);
     expect(reports.rows.value).toHaveLength(3);
+    expect(membersClient.listMembers).toHaveBeenCalledTimes(1);
     freshReturn.unmount();
 
     await vi.advanceTimersByTimeAsync(1_001);
@@ -442,22 +448,13 @@ describe('useReportsData', () => {
       .mockResolvedValueOnce([projects[0]]);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
     reportsClient.getTimeReport.mockClear();
@@ -470,6 +467,51 @@ describe('useReportsData', () => {
       expect.objectContaining({ projectId: projectOrionId }),
     );
     expect(reports.rows.value).toHaveLength(2);
+  });
+
+  it('revalidates a fresh cached target after explicit refresh changes project scope', async () => {
+    const scope = createScope();
+    const listProjects = vi.fn().mockResolvedValue([projects[0]]);
+    const reportsClient = createReportsClientMocks();
+    const { reports, wrapper, queryClient } = mountReports({
+      enabled: ref(true), scope, reportsClient,
+      membersClient: createMembersClientMocks(), projectsClient: { listProjects },
+    });
+    await flushPromises();
+    queryClient.setQueryData(adminProjectsKeys.list(scope.value), projects);
+    await flushPromises();
+    reportsClient.getTimeReport.mockClear();
+    await reports.refresh();
+    await flushPromises();
+    expect(reportsClient.getTimeReport).toHaveBeenCalledTimes(1);
+    expect(reportsClient.getTimeReport).toHaveBeenCalledWith(expect.objectContaining({ projectId: projectOrionId }));
+    wrapper.unmount();
+  });
+
+  it.each([false, true])('rejects late rows after visibility narrows, same tick: %s', async (sameTick) => {
+    const scope = createScope();
+    const listProjects = vi.fn().mockResolvedValue(projects);
+    const reportsClient = createReportsClientMocks();
+    const { reports, wrapper, queryClient } = mountReports({
+      enabled: ref(true), scope, reportsClient,
+      membersClient: createMembersClientMocks(), projectsClient: { listProjects },
+    });
+    await flushPromises();
+    let resolveOld!: (value: TimeReportResponse) => void;
+    reportsClient.getTimeReport
+      .mockImplementationOnce(() => new Promise<TimeReportResponse>((resolve) => { resolveOld = resolve; }))
+      .mockImplementationOnce(() => new Promise<TimeReportResponse>(() => undefined))
+      .mockResolvedValueOnce(createReportResponse(reportRowsByProject.get(projectBillingId) ?? []));
+    const refresh = queryClient.refetchQueries({ queryKey: reportsKeys.all(scope.value) });
+    await flushPromises();
+    queryClient.setQueryData(adminProjectsKeys.list(scope.value), [projects[1]]);
+    if (!sameTick) await flushPromises();
+    resolveOld(createReportResponse(reportRowsByProject.get(projectOrionId) ?? []));
+    await refresh;
+    await flushPromises();
+    expect(reports.rows.value).toEqual([]);
+    expect(reports.hasRetainedRows.value).toBe(false);
+    wrapper.unmount();
   });
 
   it('does not let an older workspace response replace the active report scope', async () => {
@@ -501,22 +543,13 @@ describe('useReportsData', () => {
           }),
         ])),
     };
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope,
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope,
+    });
 
     await flushPromises();
     scope.value = { role: 'admin', userId: 'user-2', workspaceId: 'workspace-2' };
@@ -545,22 +578,13 @@ describe('useReportsData', () => {
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
     reportsClient.getTimeReport.mockRejectedValueOnce(new Error('Temporary outage'));
@@ -595,22 +619,13 @@ describe('useReportsData', () => {
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
     let resolveRetry: ((value: ProjectListResponse) => void) | undefined;
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
     await reports.refresh();
@@ -664,22 +679,13 @@ describe('useReportsData', () => {
     const listProjects = vi.fn().mockResolvedValue(scopedProjects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope('pm'),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope('pm'),
+    });
 
     await flushPromises();
 
@@ -750,22 +756,13 @@ describe('useReportsData', () => {
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
     reportsClient.getTimeReport.mockClear();
@@ -792,22 +789,13 @@ describe('useReportsData', () => {
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
     let resolveChangedRange: ((value: TimeReportResponse) => void) | undefined;
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
     reportsClient.getTimeReport.mockClear();
@@ -866,22 +854,13 @@ describe('useReportsData', () => {
   it('retains same-scope rows and marks them stale when a changed date range fails', async () => {
     const enabled = ref(true);
     const reportsClient = createReportsClientMocks();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient: createMembersClientMocks(),
-            projectsClient: { listProjects: vi.fn().mockResolvedValue(projects) },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient: createMembersClientMocks(),
+      projectsClient: { listProjects: vi.fn().mockResolvedValue(projects) },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
     reportsClient.getTimeReport.mockRejectedValueOnce(new Error('Range unavailable'));
@@ -935,22 +914,13 @@ describe('useReportsData', () => {
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
     let resolveNewScope: ((value: TimeReportResponse) => void) | undefined;
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope,
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope,
+    });
 
     await flushPromises();
     expect(reports.rows.value).toHaveLength(2);
@@ -976,22 +946,13 @@ describe('useReportsData', () => {
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
     const projectTotal = reports.summary.value.totalSeconds;
@@ -1016,22 +977,13 @@ describe('useReportsData', () => {
     const reportsClient = createReportsClientMocks();
     const pdfBlob = new Blob(['%PDF-'], { type: 'application/pdf' });
     reportsClient.exportReportPdf.mockResolvedValue(pdfBlob);
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
 
@@ -1047,22 +999,13 @@ describe('useReportsData', () => {
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
     reportsClient.getTimeReport.mockClear();
@@ -1086,23 +1029,14 @@ describe('useReportsData', () => {
     };
     const reportsClient = createReportsClientMocks();
     const onError = vi.fn();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            onError,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      onError,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
 
@@ -1122,23 +1056,14 @@ describe('useReportsData', () => {
     const reportsClient = createReportsClientMocks();
     reportsClient.getTimeReport.mockRejectedValue(new Error('No scope'));
     const onError = vi.fn();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mountWithQuery(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            enabled,
-            membersClient,
-            onError,
-            projectsClient: { listProjects },
-            reportsClient,
-            scope: createScope(),
-          });
-          return () => null;
-        },
-      }),
-    );
+    const { reports } = mountReports({
+      enabled,
+      membersClient,
+      onError,
+      projectsClient: { listProjects },
+      reportsClient,
+      scope: createScope(),
+    });
 
     await flushPromises();
 

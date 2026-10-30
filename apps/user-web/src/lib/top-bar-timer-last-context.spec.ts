@@ -274,4 +274,87 @@ describe('loadEligibleLastTrackedContext', () => {
     expect(client.listVisibleProjects).not.toHaveBeenCalled();
     expect(client.listProjectTasks).not.toHaveBeenCalled();
   });
+
+  it('does not reuse a wave after another current-timer update', async () => {
+    const client = createClientMock({
+      entries: [createCompletedEntry()],
+      projects: [createProject()],
+      tasks: [createTask()],
+    });
+    const queryClient = createTestQueryClient();
+    const scope = { userId: TEST_IDS.user, workspaceId: TEST_IDS.workspace };
+    const currentKey = timerKeys.currentRaw(scope);
+    const entriesKey = timeEntriesKeys.list(scope, { limit: 1 });
+    const projectsKey = userProjectsKeys.visibleProjects(scope);
+    const tasksKey = userProjectsKeys.projectTasks(
+      scope,
+      TEST_IDS.project,
+      'project',
+    );
+
+    queryClient.setQueryData(currentKey, { timeEntry: null });
+    const currentQuery = queryClient.getQueryCache().find({
+      exact: true,
+      queryKey: currentKey,
+    })!;
+    queryClient.setQueryData(entriesKey, createOwnEntriesResponse([]));
+    queryClient.setQueryData(projectsKey, []);
+    queryClient.setQueryData(tasksKey, []);
+    const entriesQuery = queryClient.getQueryCache().find({
+      exact: true,
+      queryKey: entriesKey,
+    })!;
+    const projectsQuery = queryClient.getQueryCache().find({
+      exact: true,
+      queryKey: projectsKey,
+    })!;
+    const tasksQuery = queryClient.getQueryCache().find({
+      exact: true,
+      queryKey: tasksKey,
+    })!;
+    queryClient.setQueryData(timerKeys.eligibleLastEntryWave(scope), {
+      currentRawDataUpdateCount: currentQuery.state.dataUpdateCount,
+      queryVersions: {
+        [entriesQuery.queryHash]: entriesQuery.state.dataUpdateCount,
+        [projectsQuery.queryHash]: projectsQuery.state.dataUpdateCount,
+        [tasksQuery.queryHash]: tasksQuery.state.dataUpdateCount,
+      },
+    });
+    queryClient.setQueryData(currentKey, { timeEntry: null });
+    queryClient.setQueryData(entriesKey, createOwnEntriesResponse([createCompletedEntry()]));
+    queryClient.setQueryData(projectsKey, [createProject()]);
+    queryClient.setQueryData(tasksKey, [createTask({ title: 'Stale cache task' })]);
+    queryClient.setQueryData(currentKey, { timeEntry: null });
+
+    const context = await loadEligibleLastTrackedContext({ client, queryClient, scope });
+
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(1);
+    expect(client.listVisibleProjects).toHaveBeenCalledTimes(1);
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(1);
+    expect(context?.taskTitle).toBe('Improve reports filters');
+  });
+
+  it('stops before project and task reads when the signal aborts after entries load', async () => {
+    const controller = new AbortController();
+    const client = createClientMock({
+      entries: [createCompletedEntry()],
+      projects: [createProject()],
+      tasks: [createTask()],
+    });
+    client.listOwnEntries.mockImplementationOnce(async () => {
+      controller.abort();
+      return createOwnEntriesResponse([createCompletedEntry()]);
+    });
+
+    await expect(
+      loadEligibleLastTrackedContext({
+        client,
+        queryClient: createTestQueryClient(),
+        scope: { userId: TEST_IDS.user, workspaceId: TEST_IDS.workspace },
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+    expect(client.listVisibleProjects).not.toHaveBeenCalled();
+    expect(client.listProjectTasks).not.toHaveBeenCalled();
+  });
 });

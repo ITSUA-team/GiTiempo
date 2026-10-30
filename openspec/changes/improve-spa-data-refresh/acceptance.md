@@ -96,7 +96,7 @@ while rows, controls, and stale-result restrictions keep their behavior.
 [Layout evidence](refresh-layout-evidence.md) records four desktop/mobile
 pending-response checks with unchanged heading positions, updated tests,
 independent review, and final verification. This adds task 8.1, bringing the
-completed implementation total to 33/33 after verification.
+completed implementation total at that stage to 33/33 after verification.
 
 
 ## Quality review follow-up (2026-10-29)
@@ -121,3 +121,23 @@ Chrome for Testing through the existing DevTools session; localhost User/Admin S
 | Preset concurrent read/write and identical-data timer error recovery | NOT REPEATED IN BROWSER | Verified by the deferred regression tests above; no new live preset writes or timer actions performed. |
 
 Parity review used `GITiempo.pen` Time Entries (`R2FI0`), Admin Reports V2 (`Y2cJH`), and Admin Reports Mobile (`RTWsH`): existing control order, page regions, typography, and responsive branches preserved. Only intended busy/disabled/retained-result states changed. No PrimeVue exception or new reusable UI block was needed.
+
+
+## PR #502 confirmed findings follow-up (2026-10-30)
+
+Scope: HEAD `fb917285` plus this uncommitted follow-up. The confirmed defects were warm-target explicit Reports refresh skipping reads, stale indexed Projects refetch callbacks after visibility changes, and whole-page loading/error replacing usable Projects groups when a new collection loads or fails.
+
+- Reports warm-target regression failed before the fix (zero reads instead of one). Refresh now records started row reads, including immediately completed reads, so explicit refresh revalidates warm targets and cold target transitions do not duplicate their automatic request.
+- Report retention compares the visibility prefix built by `reportsKeys.visibility`; no consumer indexes into its key layout. Delayed old-scope responses are rejected in both same-tick and later-tick project-set changes.
+- Projects refresh matches current child queries against full pre-refresh keys. Removed, reordered, or access-replaced projects cannot invoke stale indexed callbacks. Existing task groups remain usable during partial pending/error states.
+- Timer dependency reuse still requires exactly one authoritative current-timer update; additional updates fall back to direct reads. Regression coverage includes that rejection, abort between eligibility steps, and unknown-source invalidation with known destination IDs.
+- Time Entries uses a small shared project-ID difference helper for access reconciliation and selector cleanup. The data layer still includes inactive historical projects; selectors use active projects. Regression coverage preserves that distinction and clears revoked filters/suggestions.
+- Repeated Reports composable setup is consolidated. View tests cover retained-error retry and blocked stale export; freshness coverage also asserts the member-list read budget.
+
+Design parity: inspected `GITiempo.pen` frames `yAu6B`, `FRM1d`, `R2FI0`, `Y2cJH`, and `RTWsH` against the existing page structure. No production markup or styling was added; existing controls, table/card branches, and request-error presentation are preserved. No PrimeVue deviation was required.
+
+Real-page acceptance: **PASS** for the reviewed refresh scenarios after the user signed in to both local SPAs on 2026-10-30. Chrome for Testing/DevTools checks cover warm-target Reports reads, partial Projects pending/error/retry and project removal, Time Entries revoked filters and inactive history, and identical-data timer recovery on desktop/mobile. See [manual acceptance and request evidence](pr502-manual-acceptance.md) for the exact scope, results, and remaining test-only cases. The earlier missing-session/server blocker is resolved.
+
+Verification: root `pnpm typecheck` and `pnpm lint` passed (11/11 tasks each, existing warnings only). The initial parallel test run exposed a faulty test-stub text expectation, which was corrected, and unrelated timeouts under load. Subsequent complete frontend runs with two workers passed: User 642/642 (59 files), Admin 844/844 (85 files); root CI-target tests passed 5/5. Independent review found no remaining blocker in the Reports/timer fixes and confirmed the full-key Projects refresh; the active-selector/history distinction above was retained intentionally. Strict OpenSpec validation and `git diff --check` passed. Current implementation checklist total: 41 tasks.
+
+Final root rerun: `pnpm test` passed (11/11 workspace tasks and 5/5 CI-target tests). Checklist: **41/41 completed**.

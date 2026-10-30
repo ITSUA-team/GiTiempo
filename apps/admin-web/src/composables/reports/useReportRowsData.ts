@@ -54,10 +54,8 @@ function hasSameReportVisibilityScope(
   nextScope: AdminServerStateScope,
   nextProjectIds: readonly string[],
 ): boolean {
-  return (
-    JSON.stringify(previousKey[1]) === JSON.stringify(reportsKeys.all(nextScope)[1]) &&
-    JSON.stringify(previousKey[5]) === JSON.stringify([...nextProjectIds].sort())
-  );
+  const visibilityKey = reportsKeys.visibility(nextScope, nextProjectIds);
+  return JSON.stringify(previousKey.slice(0, visibilityKey.length)) === JSON.stringify(visibilityKey);
 }
 
 export function useReportRowsData({
@@ -132,10 +130,7 @@ export function useReportRowsData({
     ).map((project) => project.id),
   );
   const visibilityScopeKey = computed(() =>
-    JSON.stringify([
-      reportsKeys.all(scope.value)[1],
-      [...visibleProjectIds.value].sort(),
-    ]),
+    JSON.stringify(reportsKeys.visibility(scope.value, visibleProjectIds.value)),
   );
   const reportRowsKey = computed(() =>
       reportsKeys.time(
@@ -144,6 +139,7 @@ export function useReportRowsData({
         visibleProjectIds.value,
       ),
   );
+  const lastStartedFetch = shallowRef<{ key: string } | null>(null);
   const reportRowsQuery = useQuery({
     queryKey: reportRowsKey,
     gcTime: REPORT_ROWS_GC_TIME_MS,
@@ -154,7 +150,10 @@ export function useReportRowsData({
         projectsQuery.isSuccess.value &&
         isReportDateRangeValid(appliedFilters.value.dateRange),
     ),
-    queryFn: () => fetchReportRowsForScope(projects.value, appliedFilters.value),
+    queryFn: ({ queryKey }) => {
+      lastStartedFetch.value = { key: JSON.stringify(queryKey) };
+      return fetchReportRowsForScope(projects.value, appliedFilters.value);
+    },
     placeholderData: (previousData, previousQuery) =>
       previousQuery && hasSameReportVisibilityScope(
         previousQuery.queryKey,
@@ -240,7 +239,7 @@ export function useReportRowsData({
   );
 
   async function refetchRows(): Promise<void> {
-    await reportRowsQuery.refetch();
+    await reportRowsQuery.refetch({ cancelRefetch: false });
   }
 
   return {
@@ -248,6 +247,7 @@ export function useReportRowsData({
     hasRetainedRows,
     isShowingPreviousRows,
     key: reportRowsKey,
+    lastStartedFetch,
     isEmpty,
     isInitialLoading,
     loadError,

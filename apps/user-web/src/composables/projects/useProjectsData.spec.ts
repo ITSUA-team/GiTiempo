@@ -233,6 +233,52 @@ describe("useProjectsData", () => {
     wrapper.unmount();
   });
 
+  it("finishes a manual refresh when removing project A also moves project B to its old index", async () => {
+    const queryClient = createTestQueryClient();
+    const projectA = createProject("own-time");
+    const projectB = { ...createProject("own-time"), id: "project-2", name: "New project" };
+    const listProjectTasks = vi.fn<TimeEntriesClient["listProjectTasks"]>().mockResolvedValue([]);
+    const client = {
+      listProjectTasks,
+      listVisibleProjects: vi
+        .fn<TimeEntriesClient["listVisibleProjects"]>()
+        .mockResolvedValueOnce([projectA, projectB])
+        .mockResolvedValueOnce([projectB]),
+    } as unknown as TimeEntriesClient;
+    const { data, wrapper } = mountProjectsData({ client, queryClient });
+
+    await vi.waitFor(() => expect(listProjectTasks).toHaveBeenCalledTimes(2));
+    await expect(data.loadPage()).resolves.toBeUndefined();
+
+    expect(listProjectTasks).toHaveBeenCalledTimes(3);
+    expect(listProjectTasks.mock.calls.map(([projectId]) => projectId)).toEqual([
+      projectA.id,
+      projectB.id,
+      projectB.id,
+    ]);
+    wrapper.unmount();
+  });
+
+  it("does not refetch a replacement task query after project access changes during manual refresh", async () => {
+    const queryClient = createTestQueryClient();
+    const client = {
+      listProjectTasks: vi
+        .fn<TimeEntriesClient["listProjectTasks"]>()
+        .mockResolvedValue([createTask("Current task", "own-time")]),
+      listVisibleProjects: vi
+        .fn<TimeEntriesClient["listVisibleProjects"]>()
+        .mockResolvedValueOnce([createProject("project")])
+        .mockResolvedValueOnce([createProject("own-time")]),
+    } as unknown as TimeEntriesClient;
+    const { data, wrapper } = mountProjectsData({ client, queryClient });
+
+    await vi.waitFor(() => expect(client.listProjectTasks).toHaveBeenCalledTimes(1));
+    await expect(data.loadPage()).resolves.toBeUndefined();
+    await vi.waitFor(() => expect(client.listProjectTasks).toHaveBeenCalledTimes(2));
+
+    wrapper.unmount();
+  });
+
   it("loads a newly visible project task input once during a manual refresh wave", async () => {
     const queryClient = createTestQueryClient();
     const projectA = createProject("own-time");
@@ -254,6 +300,57 @@ describe("useProjectsData", () => {
 
     expect(listProjectTasks.mock.calls.filter(([id]) => id === "project-2")).toHaveLength(1);
     expect(listProjectTasks.mock.calls.filter(([id]) => id === "project-1")).toHaveLength(2);
+    wrapper.unmount();
+  });
+
+  it("keeps loaded project content available while a newly visible task collection is pending", async () => {
+    const queryClient = createTestQueryClient();
+    const projectA = createProject("own-time");
+    const projectB = { ...createProject("own-time"), id: "project-2", name: "New project" };
+    let resolveProjectBTasks!: (tasks: TaskResponse[]) => void;
+    const client = {
+      listProjectTasks: vi
+        .fn<TimeEntriesClient["listProjectTasks"]>()
+        .mockResolvedValueOnce([createTask("Task A", "own-time")])
+        .mockImplementationOnce(
+          () => new Promise<TaskResponse[]>((resolve) => { resolveProjectBTasks = resolve; }),
+        ),
+      listVisibleProjects: vi
+        .fn<TimeEntriesClient["listVisibleProjects"]>()
+        .mockResolvedValue([projectA]),
+    } as unknown as TimeEntriesClient;
+    const { data, wrapper } = mountProjectsData({ client, queryClient });
+
+    await vi.waitFor(() => expect(wrapper.text()).toContain("Task A"));
+    queryClient.setQueryData(userProjectsKeys.visibleProjects(scope), [projectA, projectB]);
+    await flushPromises();
+
+    expect(data.hasLoadedContent.value).toBe(true);
+    expect(data.isLoadingTasks.value).toBe(false);
+    resolveProjectBTasks([]);
+    wrapper.unmount();
+  });
+
+  it("refreshes an invalidated task collection once after a visibility focus refresh", async () => {
+    const queryClient = createTestQueryClient();
+    const client = {
+      listProjectTasks: vi
+        .fn<TimeEntriesClient["listProjectTasks"]>()
+        .mockResolvedValue([createTask("Previous task", "own-time")]),
+      listVisibleProjects: vi
+        .fn<TimeEntriesClient["listVisibleProjects"]>()
+        .mockResolvedValue([createProject("own-time")]),
+    } as unknown as TimeEntriesClient;
+    const { wrapper } = mountProjectsData({ client, queryClient });
+
+    await vi.waitFor(() => expect(wrapper.text()).toContain("Previous task"));
+    await queryClient.invalidateQueries({
+      queryKey: userProjectsKeys.projectTasks(scope, "project-1", "own-time"),
+    });
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await vi.waitFor(() => expect(client.listProjectTasks).toHaveBeenCalledTimes(2));
     wrapper.unmount();
   });
 
