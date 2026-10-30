@@ -143,6 +143,10 @@ const workspaceCurrency = computed(
   () => workspaceSettingsQuery.data.value?.currency ?? null,
 );
 
+const workspaceHourlyRate = computed(
+  () => workspaceSettingsQuery.data.value?.defaultHourlyRate ?? null,
+);
+
 const loadErrorMessage = computed(() =>
   loadError.value ? getErrorMessage(loadError.value) : '',
 );
@@ -338,6 +342,7 @@ function handleCreateSuccess(): void {
       :projects="dialogProjects"
       :scope="scope"
       :workspace-currency="workspaceCurrency"
+      :workspace-hourly-rate="workspaceHourlyRate"
       :workspace-rounding-step-minutes="workspaceRoundingStepMinutes"
       @created="handleCreateSuccess"
     />
