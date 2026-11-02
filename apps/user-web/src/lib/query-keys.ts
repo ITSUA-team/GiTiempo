@@ -7,6 +7,16 @@ export interface UserServerStateScope {
 
 type QueryKey = readonly unknown[];
 
+export interface EligibleLastEntryRefreshWave {
+  /**
+   * A wave may reuse dependency results only after its one authoritative
+   * current-timer refresh. Any additional current-timer update invalidates
+   * reuse so the eligibility resolver performs its own reads.
+   */
+  currentRawDataUpdateCount: number;
+  queryVersions: Record<string, number>;
+}
+
 function normalizeString(value: string | null | undefined): string | null {
   const next = value?.trim();
   return next ? next : null;
@@ -17,6 +27,10 @@ function normalizeScope(scope: UserServerStateScope = {}) {
     userId: normalizeString(scope.userId),
     workspaceId: normalizeString(scope.workspaceId),
   };
+}
+
+export function getScopeKey(scope: UserServerStateScope = {}): string {
+  return JSON.stringify(normalizeScope(scope));
 }
 
 export function normalizeTimeEntryListQuery(
@@ -33,7 +47,9 @@ export function normalizeTimeEntryListQuery(
   };
 }
 
-export type NormalizedTimeEntryListQuery = ReturnType<typeof normalizeTimeEntryListQuery>;
+export type NormalizedTimeEntryListQuery = ReturnType<
+  typeof normalizeTimeEntryListQuery
+>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -59,11 +75,23 @@ export const timeEntriesKeys = {
   all: (scope?: UserServerStateScope) =>
     ["user-web", normalizeScope(scope), "time-entries"] as const,
   allList: (scope: UserServerStateScope, query?: Partial<TimeEntryListQuery>) =>
-    [...timeEntriesKeys.all(scope), "list-all", normalizeTimeEntryListQuery(query)] as const,
+    [
+      ...timeEntriesKeys.all(scope),
+      "list-all",
+      normalizeTimeEntryListQuery(query),
+    ] as const,
   detail: (scope: UserServerStateScope, entryId: string | null | undefined) =>
-    [...timeEntriesKeys.all(scope), "detail", normalizeString(entryId)] as const,
+    [
+      ...timeEntriesKeys.all(scope),
+      "detail",
+      normalizeString(entryId),
+    ] as const,
   list: (scope: UserServerStateScope, query?: Partial<TimeEntryListQuery>) =>
-    [...timeEntriesKeys.all(scope), "list", normalizeTimeEntryListQuery(query)] as const,
+    [
+      ...timeEntriesKeys.all(scope),
+      "list",
+      normalizeTimeEntryListQuery(query),
+    ] as const,
 };
 
 export const timerKeys = {
@@ -71,12 +99,21 @@ export const timerKeys = {
     ["user-web", normalizeScope(scope), "top-bar-timer"] as const,
   currentRaw: (scope: UserServerStateScope) =>
     [...timerKeys.all(scope), "current", "raw"] as const,
-  summary: (scope: UserServerStateScope) =>
-    [...timerKeys.all(scope), "current", "summary"] as const,
+  current: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "current"] as const,
   eligibleLastEntry: (
     scope: UserServerStateScope,
     query?: Partial<TimeEntryListQuery>,
-  ) => [...timerKeys.all(scope), "eligible-last-entry", normalizeTimeEntryListQuery(query)] as const,
+  ) =>
+    [
+      ...timerKeys.all(scope),
+      "eligible-last-entry",
+      normalizeTimeEntryListQuery(query),
+    ] as const,
+  eligibleLastEntryAll: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "eligible-last-entry"] as const,
+  eligibleLastEntryWave: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "eligible-last-entry-wave"] as const,
   projectTaskOptions: (
     scope: UserServerStateScope,
     projectId: string | null | undefined,
@@ -87,6 +124,15 @@ export const timerKeys = {
       "project-task-options",
       normalizeString(projectId),
       accessScope,
+    ] as const,
+  projectTaskOptionsAll: (
+    scope: UserServerStateScope,
+    projectId: string | null | undefined,
+  ) =>
+    [
+      ...timerKeys.all(scope),
+      "project-task-options",
+      normalizeString(projectId),
     ] as const,
 };
 
@@ -133,6 +179,15 @@ export const userProjectsKeys = {
       normalizeString(projectId),
       accessScope,
     ] as const,
+  projectTasksAll: (
+    scope: UserServerStateScope,
+    projectId: string | null | undefined,
+  ) =>
+    [
+      ...userProjectsKeys.all(scope),
+      "project-tasks",
+      normalizeString(projectId),
+    ] as const,
   visibleProjects: (scope: UserServerStateScope) =>
     [...userProjectsKeys.all(scope), "visible-projects"] as const,
 };
@@ -140,25 +195,72 @@ export const userProjectsKeys = {
 export const userMutationInvalidationKeys = {
   afterTaskMutation(
     scope: UserServerStateScope,
-    _projectId?: string,
+    projectId: string,
+    refreshCurrentTimer = true,
   ): QueryKey[] {
-    return [
-      userProjectsKeys.all(scope),
-      timerKeys.all(scope),
+    const keys: QueryKey[] = [
+      userProjectsKeys.projectTasksAll(scope, projectId),
+      timerKeys.projectTaskOptionsAll(scope, projectId),
     ];
+
+    if (refreshCurrentTimer) {
+      keys.push(timerKeys.current(scope));
+    }
+
+    return keys;
   },
-  afterTimeEntryMutation(scope: UserServerStateScope): QueryKey[] {
-    return [
+  afterTimeEntryMutation(
+    scope: UserServerStateScope,
+    projectIds: readonly string[] = [],
+    hasUnknownProject = false,
+  ): QueryKey[] {
+    const keys: QueryKey[] = [
       timeEntriesKeys.all(scope),
-      timerKeys.all(scope),
-      userProjectsKeys.all(scope),
+      timerKeys.current(scope),
+      timerKeys.eligibleLastEntryAll(scope),
+      userProjectsKeys.visibleProjects(scope),
     ];
+
+    if (hasUnknownProject) {
+      keys.push(userProjectsKeys.all(scope), timerKeys.all(scope));
+    } else {
+      keys.push(
+        ...[...new Set(projectIds)].map((projectId) =>
+          userProjectsKeys.projectTasksAll(scope, projectId),
+        ),
+        ...[...new Set(projectIds)].map((projectId) =>
+          timerKeys.projectTaskOptionsAll(scope, projectId),
+        ),
+      );
+    }
+
+    return keys;
   },
-  afterTimerMutation(scope: UserServerStateScope): QueryKey[] {
-    return [
-      timerKeys.all(scope),
+  afterTimerMutation(
+    scope: UserServerStateScope,
+    projectIds: readonly string[] = [],
+    hasUnknownProject = false,
+  ): QueryKey[] {
+    const keys: QueryKey[] = [
+      timerKeys.current(scope),
+      timerKeys.eligibleLastEntryAll(scope),
       timeEntriesKeys.all(scope),
-      userProjectsKeys.all(scope),
+      userProjectsKeys.visibleProjects(scope),
     ];
+
+    if (hasUnknownProject) {
+      keys.push(userProjectsKeys.all(scope), timerKeys.all(scope));
+    } else {
+      keys.push(
+        ...[...new Set(projectIds)].map((projectId) =>
+          userProjectsKeys.projectTasksAll(scope, projectId),
+        ),
+        ...[...new Set(projectIds)].map((projectId) =>
+          timerKeys.projectTaskOptionsAll(scope, projectId),
+        ),
+      );
+    }
+
+    return keys;
   },
 };
