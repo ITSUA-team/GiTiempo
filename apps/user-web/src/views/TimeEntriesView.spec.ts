@@ -427,8 +427,19 @@ async function mountView(
         },
         Paginator: {
           emits: ["page"],
-          props: ["disabled"],
-          template: '<button :disabled="disabled" data-testid="paginator-page-2" type="button" @click="$emit(\'page\', { page: 1 })">Page 2</button>',
+          props: ["pt", "disabled"],
+          template: `
+            <button
+              :data-pt-root-class="pt?.root?.class ?? ''"
+              :data-pt-root-justify-content="pt?.root?.style?.justifyContent ?? ''"
+              :data-pt-content-flex-wrap="pt?.content?.style?.flexWrap ?? ''"
+              :data-pt-content-margin-inline="pt?.content?.style?.marginInline ?? ''"
+              :disabled="disabled"
+              data-testid="paginator-page-2"
+              type="button"
+              @click="$emit('page', { page: 1 })"
+            >Page 2</button>
+          `,
         },
         Skeleton: {
           props: ["height", "shape", "size", "width"],
@@ -1171,6 +1182,30 @@ describe("TimeEntriesView", () => {
     expect(dateRangeFilter.attributes("data-pt-root-class")).toContain("h-[38px]");
     expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("shadow-popover");
     expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("rounded-md");
+  });
+
+  it("stacks the pagination card body on mobile and keeps the paginator unwrapped", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    const paginationCard = wrapper.get('[data-testid="time-entries-pagination"]');
+
+    expect(paginationCard.attributes("body-class")).toBe(
+      "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
+    );
+
+    const paginator = wrapper.get('[data-testid="paginator-page-2"]');
+
+    expect(paginator.attributes("data-pt-root-class")).toBe(
+      "overflow-x-auto",
+    );
+    expect(paginator.attributes("data-pt-root-justify-content")).toBe("flex-start");
+    expect(paginator.attributes("data-pt-content-flex-wrap")).toBe("nowrap");
+    expect(paginator.attributes("data-pt-content-margin-inline")).toBe("auto");
+    expect(paginator.classes()).toContain("w-full");
+    expect(paginator.classes()).toContain("sm:w-auto");
   });
 
   it("hides filter labels and table column headers in the time entries view", async () => {
