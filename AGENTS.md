@@ -15,7 +15,7 @@
 - Turbo builds workspace dependencies automatically; direct `pnpm --filter ...` commands do not.
 - Exact package names for filters: `@gitiempo/api`, `user-web`, `admin-web`, `@gitiempo/shared`, `@gitiempo/web-config`, `@gitiempo/web-shared`.
 - Inside this repo prefer `pnpm dlx` instead of `npx`; `npx` is unreliable here. Example: `pnpm dlx ctx7@latest library zod "zod v4 coerce number env validation"`.
-- `apps/chrome-ext/` is only a placeholder (`.gitkeep`); do not assume the extension app exists yet.
+- `apps/chrome-ext/` is a supported Manifest V3 application with its own source, tests, build, and app-local `AGENTS.md`.
 
 ## Source Of Truth
 
@@ -23,7 +23,7 @@
 - Cross-package work usually spans one app plus `packages/shared`, `packages/web-config`, or `packages/web-shared`; inspect only those paths instead of rescanning the whole monorepo.
 - Before implementing, check whether the planned change conflicts with documented behavior or requirements in `docs/`; if it does, escalate immediately instead of silently choosing one source.
 - For GitHub work planning and project-board operations, use `docs/GITHUB-PROJECT-WORKFLOW.md` for the repo's milestone, issue, sub-issue, and project-board rules.
-- There is no checked-in `.github/workflows/` CI config in this repo; do not assume CI will enforce anything beyond the package scripts.
+- Checked-in GitHub Actions workflows under `.github/workflows/` select affected packages and run their configured checks. Treat local verification as required evidence; inspect the relevant workflow rather than assuming its coverage.
 - `.npmrc` enforces `minimum-release-age=10080`, so installs can reject packages published within the last 7 days.
 - API request examples live in `bruno/`; use the `local` environment for manual endpoint checks.
 
@@ -39,7 +39,7 @@
 ## Cross-App Frontend
 
 - For any implementation, refactor, review, or configuration work under `apps/landing-web`, always load the `gitiempo-landing-rules` skill first and follow it throughout the task.
-- For any UI implementation or refactor in `apps/user-web`, `apps/admin-web`, `packages/web-config`, or shared Vue UI in `packages/web-shared`, load the `gitiempo-frontend-rules` skill first.
+- For UI implementation, refactoring, review, or acceptance QA in `apps/user-web`, `apps/admin-web`, `packages/web-config`, or shared Vue UI in `packages/web-shared`, load the `gitiempo-frontend-rules` skill first.
 - UI behavior and styling rules live in `docs/ui/*` and the nearest app `AGENTS.md`; do not duplicate or invent parallel frontend conventions elsewhere.
 - For any frontend UI task, read `docs/ui/INDEX.md` first, then only the smallest relevant `docs/ui/*` section files before reading or editing implementation files.
 - For any frontend UI task, inspect the approved `.pen` screen before implementation and treat it as a parity checklist, not just a rough reference.
@@ -65,19 +65,18 @@
 ## Tooling & Workflow
 
 ### Code Search — codebase-memory-mcp
-- Use codebase-memory-mcp for project-wide code search (symbols, calls, dependencies, impact, data-flow). Before starting work, check the actual project name in the index via `list_projects` or `index_status` — different contributors may have different index names for the same repo.
-- Prefer graph tools (`search_graph`, `trace_path`, `query_graph`, `detect_changes`) over grep/find_path for symbol, dependency, and blast-radius lookups. Use grep/find_path only for text searches and inspecting files flagged as parse_partial/skipped in coverage.
-- After every code change, re-index the project (`index_repository`) to keep the graph in sync with the actual code. Before making trusted claims about file coverage, cross-check with `check_index_coverage` / `index_status`.
+- When codebase-memory-mcp is available, use it for project-wide symbol, dependency, impact, and data-flow lookups. Check the actual project name with `list_projects` or `index_status` before relying on the index.
+- Prefer graph tools (`search_graph`, `trace_path`, `query_graph`, `detect_changes`) for indexed relationships. If the index tools are unavailable, incomplete, or stale, use `rg` and direct file inspection and state that limitation for claims that depend on full coverage.
+- After a logical set of related edits, re-index before relying on graph results for further decisions. Cross-check coverage with `check_index_coverage` or `index_status` when those tools are available.
 
 ### Documentation — Context7
 - When you need to verify the behavior of a library, framework, or API, use the Context7 MCP tools (`resolve-library-id` → `query-docs`). Do not rely on memory — always re-check against current documentation.
 - For sensitive integrations that are prone to API changes, always double-check via Context7 or official docs before implementing or modifying code.
 
-### Sub-agents for large changes and code review
+### Sub-agents for independent work
 - You are the orchestrator for sub-agents.
-- Strongly prefer maximum use of sub-agents (`spawn_agent`). Sub-agents use a cheaper and faster model, which significantly saves resources and speeds up development. Multiple sub-agents can be spawned in parallel.
-- Always use sub-agents for codebase research tasks.
-- Always use sub-agents for code review.
-- Delegate implementation to sub-agents (`spawn_agent`): provide clear, self-contained tasks — file paths, requirements, constraints, and context. A sub-agent does not see the session history.
+- Use sub-agents when independent, bounded work would materially improve quality, speed, or safety. Keep short, dependent, or tightly coupled work in the primary lane.
+- Use an independent reviewer for non-trivial code review when one is available; do not treat a missing review lane as approval.
+- Delegate implementation with clear file paths, requirements, constraints, and expected evidence. Include the task context the agent needs rather than assuming access to the current conversation.
 - Assign sub-agents disjoint write-scopes (non-overlapping file sets). Do not duplicate work between your own edits and a sub-agent's.
 - After each sub-agent completes, re-check the work and fix issues if necessary. Do not take "done" on faith without verification.

@@ -21,6 +21,7 @@ services:
     environment:
       NODE_ENV: test
       DATABASE_URL: postgresql://gitiempo:gitiempo@postgres:5432/gitiempo_e2e
+      E2E_DATABASE_NAME: gitiempo_e2e
       JWT_ACCESS_SECRET: test-access-secret-32-characters-min
       JWT_REFRESH_SECRET: test-refresh-secret-32-characters-min
       INVITES_EMAIL_CONSOLE_FALLBACK: "true"
@@ -31,8 +32,7 @@ services:
       - sh
       - -c
       - >-
-        pnpm --filter @gitiempo/api db:migrate &&
-        pnpm --filter @gitiempo/api db:seed &&
+        pnpm --filter @gitiempo/api e2e:prepare &&
         pnpm --filter @gitiempo/api test:e2e
     networks:
       - api-e2e

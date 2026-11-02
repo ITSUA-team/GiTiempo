@@ -6,8 +6,9 @@ process.env.INVITES_EMAIL_CONSOLE_FALLBACK = 'true';
 process.env.INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS = 'false';
 
 /**
- * E2E tests run against a real Postgres instance (the local dev DB).
- * They live in `test/` and rely on running migrations + seed before suite.
+ * E2E tests run against an isolated Postgres database named `gitiempo_e2e`.
+ * `e2e:prepare` verifies database identity before migrations and seed data;
+ * this global setup verifies it before test files are collected.
  */
 export default defineConfig({
   test: {
@@ -15,6 +16,7 @@ export default defineConfig({
     root: './',
     include: ['test/**/*.e2e-spec.ts'],
     environment: 'node',
+    globalSetup: ['./src/db/e2e-database.global-setup.ts'],
     // E2E suites talk to a real DB and must run sequentially across files
     // to avoid stepping on each other's data.
     fileParallelism: false,
