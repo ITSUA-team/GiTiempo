@@ -1,4 +1,4 @@
-import { computed, ref, type ComputedRef, type Ref } from 'vue';
+import { computed, nextTick, ref, type ComputedRef, type Ref } from 'vue';
 import {
   useAdminProjectsQuery,
   useWorkspaceMembersQuery,
@@ -17,6 +17,7 @@ import {
   type AdminMembersClient,
 } from '@/services/admin-members-client';
 import type { AdminServerStateScope } from '@/lib/query-keys';
+import type { ReportDateRange } from '@/lib/report-view-model';
 
 import { useReportExport } from './useReportExport';
 import { useReportFilters } from './useReportFilters';
@@ -32,6 +33,14 @@ interface UseReportsDataOptions {
   reportsClient?: AdminReportsClient;
   onError?: (message: string, error: unknown, action: string) => void;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
+}
+
+function hasChangedDateRange(
+  currentDateRange: ReportDateRange,
+  appliedDateRange: ReportDateRange,
+): boolean {
+  return JSON.stringify(currentDateRange?.map((date) => date?.getTime() ?? null) ?? null) !==
+    JSON.stringify(appliedDateRange?.map((date) => date?.getTime() ?? null) ?? null);
 }
 
 export function useReportsData({
@@ -53,7 +62,9 @@ export function useReportsData({
   const membersQuery = useWorkspaceMembersQuery({
     client: membersClient,
     enabled: computed(() => enabled.value && isAdminScope.value),
+    gcTime: 5 * 60_000,
     scope,
+    staleTime: 30_000,
   });
   const reportOptions = useReportOptions({
     isAdminScope,
@@ -61,7 +72,7 @@ export function useReportsData({
     projects: computed(() => projectsQuery.data.value ?? []),
   });
   const membersLoaded = computed(
-    () => !isAdminScope.value || membersQuery.isSuccess.value,
+    () => !isAdminScope.value || membersQuery.data.value !== undefined,
   );
   const rowsData = useReportRowsData({
     appliedFilters: filters.appliedFilters,
@@ -80,6 +91,12 @@ export function useReportsData({
     enabled,
     reportsClient,
   });
+  const isDateRangeChangePending = computed(() =>
+    hasChangedDateRange(
+      filters.dateRange.value,
+      filters.appliedFilters.value.dateRange,
+    ),
+  );
 
   useReportRefreshDebounce({
     applyCurrentFilters: filters.applyCurrentFilters,
@@ -105,11 +122,23 @@ export function useReportsData({
     }
 
     currentAction.value = rowsData.initialLoaded.value ? 'refresh-reports' : 'load-reports';
+    const keyBeforeDependencies = JSON.stringify(rowsData.key.value);
+    const fetchBeforeDependencies = rowsData.lastStartedFetch.value;
     await Promise.all([
       projectsQuery.refetch(),
       isAdminScope.value ? membersQuery.refetch() : Promise.resolve(),
     ]);
-    await rowsData.refetchRows();
+    await nextTick();
+    const currentKey = JSON.stringify(rowsData.key.value);
+    const fetchAfterDependencies = rowsData.lastStartedFetch.value;
+    // A completed automatic read still satisfies this wave; an idle warm cache does not.
+    if (
+      currentKey === keyBeforeDependencies ||
+      fetchAfterDependencies === fetchBeforeDependencies ||
+      fetchAfterDependencies?.key !== currentKey
+    ) {
+      await rowsData.refetchRows();
+    }
   }
 
   return {
@@ -118,9 +147,12 @@ export function useReportsData({
     // the on-screen document the view builds.
     exportReportPdf: reportExport.exportReportPdf,
     grouping: filters.grouping,
+    hasRetainedRows: rowsData.hasRetainedRows,
     initialLoaded: rowsData.initialLoaded,
     isEmpty: rowsData.isEmpty,
     isInitialLoading: rowsData.isInitialLoading,
+    isDateRangeChangePending,
+    isShowingPreviousRows: rowsData.isShowingPreviousRows,
     loadError: rowsData.loadError,
     loading: rowsData.loading,
     memberOptions: reportOptions.memberOptions,

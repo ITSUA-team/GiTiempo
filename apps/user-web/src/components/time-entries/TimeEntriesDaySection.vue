@@ -27,6 +27,7 @@ const props = defineProps<{
   formatDuration: (entry: TimeEntryResponse) => string;
   formatTimeRange: (entry: TimeEntryResponse) => string;
   group: TimeEntriesDayGroup;
+  isInteractionDisabled?: boolean;
   isStartTimerDisabled?: boolean;
   showStopFirstGuidance?: boolean;
   showHeader: boolean;
@@ -85,16 +86,26 @@ function isStopTimerPending(entry: TimeEntryResponse): boolean {
 }
 
 function isDirectStartDisabled(): boolean {
-  return props.isStartTimerDisabled === true ||
+  return props.isInteractionDisabled === true ||
+    props.isStartTimerDisabled === true ||
     (props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined);
 }
 
 function isStopTimerDisabled(): boolean {
-  return props.stoppingTimerEntryId !== null && props.stoppingTimerEntryId !== undefined;
+  return props.isInteractionDisabled === true ||
+    (props.stoppingTimerEntryId !== null && props.stoppingTimerEntryId !== undefined);
+}
+
+function handleCreateForDay(): void {
+  if (props.isInteractionDisabled === true) {
+    return;
+  }
+
+  emit("createForDay", props.group.dateKey);
 }
 
 function handleStopTimer(entry: TimeEntryResponse): void {
-  if (entry.endedAt !== null || isStopTimerDisabled()) {
+  if (props.isInteractionDisabled === true || entry.endedAt !== null || isStopTimerDisabled()) {
     return;
   }
 
@@ -102,6 +113,10 @@ function handleStopTimer(entry: TimeEntryResponse): void {
 }
 
 function handleEntryTaskOpen(entry: TimeEntryResponse): void {
+  if (props.isInteractionDisabled === true) {
+    return;
+  }
+
   if (entry.endedAt === null) {
     emit("openActiveTimer");
     return;
@@ -112,6 +127,7 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
 
 function handleStartTimer(entry: TimeEntryResponse): void {
   if (
+    props.isInteractionDisabled === true ||
     entry.endedAt === null ||
     (props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined)
   ) {
@@ -145,9 +161,10 @@ function handleStartTimer(entry: TimeEntryResponse): void {
       </h2>
       <EntryActionButton
         :data-testid="`time-entries-day-create-${props.group.dateKey}`"
+        :disabled="props.isInteractionDisabled === true"
         :icon="PlusIcon"
         label="New time entry"
-        @click="emit('createForDay', props.group.dateKey)"
+        @click="handleCreateForDay"
       />
     </div>
 
@@ -168,7 +185,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
             :disabled="isDirectStartDisabled()"
             :target="{ id: entry.id, title: entry.task.title }"
             :is-loading="isStartTimerPending(entry)"
-            :show-stop-first-guidance="props.showStopFirstGuidance === true"
+            :show-stop-first-guidance="props.isInteractionDisabled !== true && props.showStopFirstGuidance === true"
             test-id-prefix="time-entry-mobile"
             @trigger="() => handleStartTimer(entry)"
           />
@@ -185,6 +202,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
           <div class="flex min-w-0 flex-col gap-1">
             <div class="flex max-w-full min-w-0 items-center gap-1">
               <TaskNameLink
+                :clickable="props.isInteractionDisabled !== true"
                 :label="entry.task.title"
                 :open-label="getEntryTaskOpenLabel(entry)"
                 :test-id="getEntryTaskTestId(entry, 'time-entry-mobile')"
@@ -254,7 +272,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
               :disabled="isDirectStartDisabled()"
               :target="{ id: entry.id, title: entry.task.title }"
               :is-loading="isStartTimerPending(entry)"
-              :show-stop-first-guidance="props.showStopFirstGuidance === true"
+              :show-stop-first-guidance="props.isInteractionDisabled !== true && props.showStopFirstGuidance === true"
               test-id-prefix="time-entry"
               @trigger="() => handleStartTimer(entry)"
             />
@@ -271,6 +289,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
             <div class="flex min-w-0 flex-col">
               <div class="flex max-w-full min-w-0 items-center gap-1">
                 <TaskNameLink
+                  :clickable="props.isInteractionDisabled !== true"
                   :label="entry.task.title"
                   :open-label="getEntryTaskOpenLabel(entry)"
                   :test-id="getEntryTaskTestId(entry, 'time-entry')"
