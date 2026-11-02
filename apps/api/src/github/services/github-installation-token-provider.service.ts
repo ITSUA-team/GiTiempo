@@ -20,10 +20,7 @@ type CachedToken = {
 };
 type InstallationTokenResponse = { token?: string; expires_at?: string };
 export type InstallationPermission =
-  | 'issues'
-  | 'metadata'
-  | 'organization_projects'
-  | 'members';
+  'issues' | 'metadata' | 'organization_projects' | 'members';
 type TokenInput = {
   installationId: string;
   authorizationVersion: number;

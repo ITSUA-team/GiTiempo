@@ -242,8 +242,7 @@ export class GithubConnectionsService {
       sql`SELECT generation, disconnected_at FROM github_authorization_generations WHERE user_id = ${userId}::uuid FOR UPDATE`,
     );
     const row = result.rows[0] as
-      | { generation: number; disconnected_at: Date | null }
-      | undefined;
+      { generation: number; disconnected_at: Date | null } | undefined;
     return {
       generation: row?.generation ?? 0,
       disconnectedAt: row?.disconnected_at ?? null,

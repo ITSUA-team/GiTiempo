@@ -119,8 +119,7 @@ function createService(
         vi.fn(async (...args: unknown[]) => ({
           project: await (
             projects.requireVisibleProject as
-              | ((...input: unknown[]) => Promise<typeof projectRow>)
-              | undefined
+              ((...input: unknown[]) => Promise<typeof projectRow>) | undefined
           )?.(...args),
           scope: 'project' as const,
           canManageTasks: false,
