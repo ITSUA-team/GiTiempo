@@ -53,6 +53,8 @@ describe('admin-web query keys', () => {
       'admin-web',
       { role: 'admin', userId: 'user-1', workspaceId: 'workspace-1' },
       'reports',
+      'visibility',
+      [],
       'time',
       {
         dateFrom: null,
@@ -67,6 +69,17 @@ describe('admin-web query keys', () => {
         userId: null,
       },
     ]);
+  });
+
+  it('separates retained report rows when the allowed project scope changes', () => {
+    const query = { groupBy: ['project'] as 'project'[], page: 1 };
+
+    expect(reportsKeys.time(scope, query, ['project-b', 'project-a'])).not.toEqual(
+      reportsKeys.time(scope, query, ['project-a']),
+    );
+    expect(reportsKeys.time(scope, query, ['project-b', 'project-a'])).toEqual(
+      reportsKeys.time(scope, query, ['project-a', 'project-b']),
+    );
   });
 
   it('provides dashboard and settings keys', () => {

@@ -1,0 +1,829 @@
+{
+  "baseline-bcf14339-projects-stop-desktop": {
+    "startedAt": 1793277254094,
+    "endedAt": 1793277273199,
+    "requests": [
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793277258007.728,
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/stop",
+        "timestamp": 1793277258066.08,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793277258101.0088,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793277258101.1392,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793277258101.301,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793277258154.708,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793277258186.93,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793277258263.908,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793277258275.9,
+        "status": 200
+      }
+    ]
+  },
+  "baseline-bcf14339-projects-stop-fresh-desktop": {
+    "startedAt": 1793277285794,
+    "endedAt": 1793277304249,
+    "requests": [
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793277288714.7378,
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/stop",
+        "timestamp": 1793277288813.7979,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793277288869.578,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793277288869.701,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793277288869.8179,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793277288918.131,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793277288951.46,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793277289094.475,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793277289106.432,
+        "status": 200
+      }
+    ]
+  },
+  "baseline-bcf14339-projects-start-stale-desktop": {
+    "startedAt": 1793277240029,
+    "endedAt": 1793277254093,
+    "requests": [
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/start",
+        "timestamp": 1793277244057.42,
+        "status": 201
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793277244166.2058,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793277244167.271,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793277244167.543,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793277244167.856,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/50b968a6-63ae-42b0-af60-4d2472598c1b/tasks",
+        "timestamp": 1793277244229.233,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/c415adb1-8916-4e44-af07-7321064e5aa9/tasks",
+        "timestamp": 1793277244229.395,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000004/tasks",
+        "timestamp": 1793277244229.543,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000005/tasks",
+        "timestamp": 1793277244229.9858,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/2b55a188-fe5d-4b0f-a7e6-da3efb75fc8b/tasks",
+        "timestamp": 1793277244230.231,
+        "status": 200
+      }
+    ]
+  },
+  "baseline-bcf14339-projects-start-stale-desktop-repeat": {
+    "startedAt": 1793277273201,
+    "endedAt": 1793277285792,
+    "requests": [
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/start",
+        "timestamp": 1793277276642.844,
+        "status": 201
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793277276782.2869,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793277276782.6108,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793277276783.14,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793277276857.875,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/50b968a6-63ae-42b0-af60-4d2472598c1b/tasks",
+        "timestamp": 1793277276907.9841,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/c415adb1-8916-4e44-af07-7321064e5aa9/tasks",
+        "timestamp": 1793277276908.107,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000004/tasks",
+        "timestamp": 1793277276908.182,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000005/tasks",
+        "timestamp": 1793277276908.249,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/2b55a188-fe5d-4b0f-a7e6-da3efb75fc8b/tasks",
+        "timestamp": 1793277276908.323,
+        "status": 200
+      }
+    ]
+  },
+  "candidate-projects-stop-desktop": {
+    "startedAt": 1793278891369,
+    "endedAt": 1793278901191,
+    "requests": [
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793278895127.801,
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/stop",
+        "timestamp": 1793278895250.4958,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793278895352.203,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793278895352.408,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793278895352.553,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793278895421.655,
+        "status": 200
+      }
+    ]
+  },
+  "candidate-projects-start-desktop-settled": {
+    "startedAt": 1793279092433,
+    "endedAt": 1793279109504,
+    "requests": [
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/start",
+        "timestamp": 1793279103413.044,
+        "status": 201
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793279103547.7031,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793279103548.0361,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793279103548.2449,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/50b968a6-63ae-42b0-af60-4d2472598c1b/tasks",
+        "timestamp": 1793279103672.134,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/c415adb1-8916-4e44-af07-7321064e5aa9/tasks",
+        "timestamp": 1793279103672.261,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000004/tasks",
+        "timestamp": 1793279103672.3682,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000005/tasks",
+        "timestamp": 1793279103672.451,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/2b55a188-fe5d-4b0f-a7e6-da3efb75fc8b/tasks",
+        "timestamp": 1793279103672.533,
+        "status": 200
+      }
+    ]
+  },
+  "candidate-projects-stop-desktop-settled": {
+    "startedAt": 1793279109507,
+    "endedAt": 1793279117148,
+    "requests": [
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793279113215.3252,
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/stop",
+        "timestamp": 1793279113292.0361,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793279113364.81,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793279113364.9722,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793279113365.109,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793279113411.7588,
+        "status": 200
+      }
+    ]
+  },
+  "candidate-projects-start-mobile": {
+    "startedAt": 1793279198522,
+    "endedAt": 1793279210063,
+    "requests": [
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/start",
+        "timestamp": 1793279204900.227,
+        "status": 201
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793279205167.482,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793279205167.773,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793279205168.3918,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/50b968a6-63ae-42b0-af60-4d2472598c1b/tasks",
+        "timestamp": 1793279205322.159,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/c415adb1-8916-4e44-af07-7321064e5aa9/tasks",
+        "timestamp": 1793279205322.293,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000004/tasks",
+        "timestamp": 1793279205322.3728,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000005/tasks",
+        "timestamp": 1793279205322.4539,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/2b55a188-fe5d-4b0f-a7e6-da3efb75fc8b/tasks",
+        "timestamp": 1793279205322.5352,
+        "status": 200
+      }
+    ]
+  },
+  "candidate-time-entries-stop-mobile": {
+    "startedAt": 1793279227966,
+    "endedAt": 1793279236169,
+    "requests": [
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793279232224.06,
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/stop",
+        "timestamp": 1793279232281.136,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793279232319.198,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=20",
+        "timestamp": 1793279232319.592,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793279232319.702,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793279232350.159,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793279232380.393,
+        "status": 200
+      }
+    ]
+  },
+  "diagnostic-candidate-projects-start-auth-bootstrap": {
+    "startedAt": 1793278881331,
+    "endedAt": 1793278891368,
+    "requests": [
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793278883002.2532,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793278883016.389,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793278883104.985,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793278883458.649,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793278883495.616,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793278883497.644,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793278883498.074,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793278883548.914,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793278883567.751,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793278883568.1628,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793278883590.098,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793278883856.503,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793278883868.022,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793278883869.7769,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793278883870.1428,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793278884008.2258
+      },
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/auth/refresh",
+        "timestamp": 1793278884292.116,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/users/me",
+        "timestamp": 1793278884327.1748,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/workspace",
+        "timestamp": 1793278884442.405,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/users/me/workspaces",
+        "timestamp": 1793278884442.546,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793278884444.248,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793278884445.084,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/github/owners?type=organization",
+        "timestamp": 1793278884445.315,
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793278884546.519,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793278884557.6501,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/50b968a6-63ae-42b0-af60-4d2472598c1b/tasks",
+        "timestamp": 1793278884557.7769,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/c415adb1-8916-4e44-af07-7321064e5aa9/tasks",
+        "timestamp": 1793278884557.887,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000004/tasks",
+        "timestamp": 1793278884557.987,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000005/tasks",
+        "timestamp": 1793278884558.082,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/2b55a188-fe5d-4b0f-a7e6-da3efb75fc8b/tasks",
+        "timestamp": 1793278884558.176,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793278884601.229,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793278885033.8982,
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/start",
+        "timestamp": 1793278885356.8188,
+        "status": 201
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793278885439.076,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793278885439.944,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793278885440.0999,
+        "status": 200
+      }
+    ]
+  },
+  "candidate-projects-start-stale-desktop-repeat": {
+    "startedAt": 1793279132338,
+    "endedAt": 1793279140899,
+    "requests": [
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/start",
+        "timestamp": 1793279135704.764,
+        "status": 201
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793279136792.13,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793279136792.4312,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793279136792.5872,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/50b968a6-63ae-42b0-af60-4d2472598c1b/tasks",
+        "timestamp": 1793279136999.605,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/c415adb1-8916-4e44-af07-7321064e5aa9/tasks",
+        "timestamp": 1793279136999.717,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000004/tasks",
+        "timestamp": 1793279136999.8,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/00000000-0000-4000-8000-000000000005/tasks",
+        "timestamp": 1793279137001.059,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/2b55a188-fe5d-4b0f-a7e6-da3efb75fc8b/tasks",
+        "timestamp": 1793279137001.281,
+        "status": 200
+      }
+    ]
+  },
+  "candidate-projects-stop-desktop-repeat": {
+    "startedAt": 1793279140900,
+    "endedAt": 1793279151401,
+    "requests": [
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793279146224.483,
+        "status": 200
+      },
+      {
+        "method": "POST",
+        "url": "http://localhost:3000/time-entries/timer/stop",
+        "timestamp": 1793279146281.481,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries/current",
+        "timestamp": 1793279146342.169,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects",
+        "timestamp": 1793279146342.344,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+        "timestamp": 1793279146342.46,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "url": "http://localhost:3000/time-entries?page=1&limit=1",
+        "timestamp": 1793279146384.68,
+        "status": 200
+      }
+    ]
+  }
+}

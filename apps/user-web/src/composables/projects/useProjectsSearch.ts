@@ -1,5 +1,5 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { computed, ref, shallowRef, type ComputedRef } from "vue";
+import { computed, ref, shallowRef, watch, type ComputedRef } from "vue";
 
 import {
   ALL_PROJECT_STATUSES_FILTER,
@@ -46,6 +46,29 @@ export function useProjectsSearch(
       updated: selectedUpdatedFilter.value.value,
     }),
   );
+
+  watch(allProjectGroups, (nextGroups, previousGroups) => {
+    const nextSuggestions = buildProjectSearchSuggestions(nextGroups, "");
+    const nextSuggestionIds = new Set(nextSuggestions.map((suggestion) => suggestion.id));
+    const previousSuggestionIds = new Set(
+      buildProjectSearchSuggestions(previousGroups, "").map(
+        (suggestion) => suggestion.id,
+      ),
+    );
+
+    searchSuggestions.value = searchSuggestions.value.filter((suggestion) =>
+      nextSuggestionIds.has(suggestion.id),
+    );
+
+    if (
+      typeof selectedSearchValue.value !== "string" &&
+      selectedSearchValue.value !== null &&
+      previousSuggestionIds.has(selectedSearchValue.value.id) &&
+      !nextSuggestionIds.has(selectedSearchValue.value.id)
+    ) {
+      selectedSearchValue.value = null;
+    }
+  });
 
   function handleSearchComplete(query: string): void {
     searchSuggestions.value = buildProjectSearchSuggestions(allProjectGroups.value, query);

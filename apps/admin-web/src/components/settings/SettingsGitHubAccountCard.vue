@@ -106,7 +106,7 @@ const oauthPermissionMessage = computed(() => {
           :label="avatarImage ? undefined : avatarLabel"
           shape="circle"
           size="large"
-          class="min-w-max"
+          class="shrink-0"
         />
         <div class="flex min-w-0 flex-col gap-0.5">
           <h3 class="text-text-dark truncate text-sm font-semibold">

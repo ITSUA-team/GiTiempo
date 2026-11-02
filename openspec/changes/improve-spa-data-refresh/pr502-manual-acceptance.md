@@ -1,0 +1,34 @@
+# PR #502 review fixes — manual acceptance
+
+Date: 2026-10-30. Revision: `fb917285` on `improve-spa-data-refresh` plus the uncommitted review fixes listed in `acceptance.md`. This run added evidence/documentation only; no production code changed during QA.
+
+Environment: authenticated Chrome for Testing, User SPA `http://localhost:5173`, Admin SPA `http://localhost:5174`, local API on port 3000. Desktop: 1280×960 CSS pixels; mobile: 390×844. Browser access used DevTools only.
+
+Method: real mounted route components and local API responses. DevTools held or failed selected reads, filtered the real `/projects` response, or temporarily marked one returned project inactive. These changes applied only inside the test browser. Explicit refreshes without a visible refresh button used the mounted route's refresh action; retry buttons, autocomplete selection, and export-menu dismissal used the actual controls. No database, provider, preset, or timer writes were performed. Network files contain method/path and report inputs, without authorization headers.
+
+Project A: `929af6ae-eddb-426e-8dfa-e0cfb7dba9f9` (Verification name reuse); project B: `00000000-0000-4000-8000-000000000004` (Internal Platform).
+
+## Results
+
+| Scenario | Expected and observed | Result / evidence |
+| --- | --- | --- |
+| Projects A loaded → A+B, cold B tasks held | Existing A task stays mounted and visible. Observed `pageState=ready`, original group connected, `aria-busy=true`; mobile uses cards without a table. | PASS — [desktop](evidence/pr502-projects-pending-desktop.png), [mobile](evidence/pr502-projects-pending-mobile.png). |
+| Projects B task read fails, then Retry | Existing A group remains usable with retry feedback; no whole-page replacement. After clicking Retry, error clears and busy becomes false. One project-list read and one task read per current project. | PASS — [desktop error](evidence/pr502-projects-error-desktop.png), [mobile error](evidence/pr502-projects-error-mobile.png), [retry requests](evidence/pr502-projects-retry-network.json). |
+| Projects A+B → B during explicit refresh | Removed A does not trigger a stale indexed callback. Refresh resolves with B's populated task group and `pageState=ready`; reads are `/projects` and B's tasks only. | PASS — [requests](evidence/pr502-projects-removal-network.json). |
+| Reports A → A+B → fresh cached A | Each explicit refresh checks current report data. The expansion reads once per project; the return to A, two seconds after warming A and within its 30-second freshness window, still reads A once. Each wave also reads projects and members once. | PASS — [expanded target](evidence/pr502-reports-expanded-network.json), [warm target](evidence/pr502-reports-warm-target-network.json). |
+| Reports date change with row response held | Prior rows and matching 46m totals remain. Original desktop region stays connected and table text is unchanged; busy/previous-result states are true, export disabled. Mobile renders cards instead of a table. | PASS — [desktop](evidence/pr502-reports-pending-desktop.png), [mobile](evidence/pr502-reports-pending-mobile.png). |
+| Reports pending read fails, then Retry | Prior result remains, error shown, export disabled. Clicking Retry clears error/previous-result state and enables export, with one report read for A. Export menu opens and Escape closes it without exporting. | PASS — [mobile error](evidence/pr502-reports-error-mobile.png), [retry requests](evidence/pr502-reports-retry-network.json). Menu check has interaction evidence from this run, no separate screenshot. |
+| Reports A → B with B response held | A's rows/totals cannot remain under B's visibility key. Observed zero rows, no retained/previous rows, initial-loading state and no A name. After release, B's empty result shows zero totals and the explicit empty state. | PASS — [mobile visibility transition](evidence/pr502-reports-visibility-mobile.png). |
+| Time Entries selected A/task → A removed | Desktop autocomplete selection followed by authoritative project refresh clears selected project, task, and both suggestion lists. Incompatible entries disappear. Repeated on mobile using route selection actions: same null/empty values, no desktop table. | PASS — [desktop](evidence/pr502-time-entries-revoked-desktop.png), [mobile](evidence/pr502-time-entries-revoked-mobile.png). |
+| Time Entries A becomes inactive but remains visible in project response | Active project selection clears and A is excluded from selector options; its historical entries remain. Observed 20 displayed entries, history for A present, `pageState=ready`. | PASS — [mobile historical entries](evidence/pr502-time-entries-inactive-mobile.png). |
+| Idle timer eligibility read fails, identical successful retry | Task becomes unavailable after failed A-task read. Refetching the eligibility query with normal responses restores A/`tst` in the header. Repeated on mobile: successful result is the exact same cached context object as before failure, and the timer control is available again. | PASS — [desktop failure](evidence/pr502-timer-error-desktop.png), [desktop recovery](evidence/pr502-timer-recovered-desktop.png), [mobile failure](evidence/pr502-timer-error-mobile.png), [mobile recovery](evidence/pr502-timer-recovered-mobile.png), [recovery reads](evidence/pr502-timer-recovery-network.json). |
+
+## Scope and cleanup
+
+No new defect was found in these scenarios. This is current-revision acceptance, not another baseline request-count comparison. Same-tick late-response ordering, additional-current-timer-update rejection, abort between eligibility steps, and unknown-source invalidation remain covered by the automated regressions; those exact races were not reproduced manually in this run. Timer start/stop mutations and preset writes were not repeated.
+
+All held responses were released, response overrides removed, and DevTools interception disabled. The original project visibility and report date range were restored; User SPA returned to unfiltered Time Entries with its last-task timer context available. Servers and signed-in tabs remain running. Some failure screenshots include error toasts deliberately produced by the scenarios.
+
+Parity check: existing Projects desktop table/mobile cards, Time Entries controls and cards, and Reports controls/table/cards retain their hierarchy from `GITiempo.pen` frames `yAu6B`, `FRM1d`, `R2FI0`, `Y2cJH`, and `RTWsH`. No markup or styling changes were made during this run, and no PrimeVue exception was required. This check does not claim a new full pixel-by-pixel audit of unaffected screens.
+
+Automated verification for the review fixes is recorded separately in `acceptance.md`: root typecheck/lint/test passed, User 642 tests, Admin 844 tests, strict OpenSpec validation passed. This manual run did not rerun those suites because it changed only evidence and documentation.

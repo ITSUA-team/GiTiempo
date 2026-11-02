@@ -1,0 +1,16 @@
+{
+  "records": [
+    {
+      "path": "/time-entries",
+      "method": "GET"
+    },
+    {
+      "path": "/projects",
+      "method": "GET"
+    },
+    {
+      "path": "/projects/929af6ae-eddb-426e-8dfa-e0cfb7dba9f9/tasks",
+      "method": "GET"
+    }
+  ]
+}

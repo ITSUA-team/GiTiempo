@@ -114,12 +114,18 @@ const summary: ReportSummaryView = {
 };
 
 function createReportState({
+  hasRetainedRows = true,
   isInitialLoading = false,
+  isDateRangeChangePending = false,
+  isShowingPreviousRows = false,
   loadError = null,
   loading = false,
   rows = [reportRow],
 }: {
+  hasRetainedRows?: boolean;
   isInitialLoading?: boolean;
+  isDateRangeChangePending?: boolean;
+  isShowingPreviousRows?: boolean;
   loadError?: string | null;
   loading?: boolean;
   rows?: ReportTableRow[];
@@ -131,8 +137,11 @@ function createReportState({
     exportReportPdf: reportMocks.exportReportPdf,
     grouping: ref<ReportGrouping>(['project']),
     initialLoaded: ref(!isInitialLoading),
+    hasRetainedRows: ref(hasRetainedRows),
     isEmpty: computed(() => reportRows.value.length === 0),
     isInitialLoading: ref(isInitialLoading),
+    isDateRangeChangePending: ref(isDateRangeChangePending),
+    isShowingPreviousRows: ref(isShowingPreviousRows),
     loadError: ref(loadError),
     loading: ref(loading),
     memberOptions: computed(() => [{ label: 'Alex Admin', value: 'member-1' }]),
@@ -213,7 +222,7 @@ describe('ReportsView', () => {
   });
 
   it('renders request errors separately with a retry action', async () => {
-    reportMocks.state = createReportState({ loadError: 'No scope' });
+    reportMocks.state = createReportState({ loadError: 'No scope', hasRetainedRows: false });
 
     const wrapper = mountReportsView();
 
@@ -304,6 +313,42 @@ describe('ReportsView', () => {
 
     expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
     expect(reportMocks.exportReportPdf).not.toHaveBeenCalled();
+  });
+
+  it('keeps rendered report content busy and blocks export while prior rows await a new date range', async () => {
+    reportMocks.state = createReportState({
+      isDateRangeChangePending: true,
+      isShowingPreviousRows: true,
+    });
+
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
+    expect(wrapper.find('[data-testid="reports-skeleton"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-busy="true"]').exists()).toBe(true);
+    expect(
+      (wrapper.get('[data-testid="export-reports"]').element as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    await triggerExport(wrapper, 'csv');
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
+  });
+
+  it('retains report content with retry feedback and blocks export after a changed-range failure', async () => {
+    reportMocks.state = createReportState({ loadError: 'Temporary outage', isShowingPreviousRows: true });
+    const wrapper = mountReportsView();
+    await flushPromises();
+    expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
+    expect(wrapper.text()).toContain('Temporary outage');
+    expect(wrapper.text()).not.toContain('Failed to load reports');
+    expect((wrapper.get('[data-testid="export-reports"]').element as HTMLButtonElement).disabled).toBe(true);
+    await triggerExport(wrapper, 'csv');
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
+    const retry = wrapper.findAll('button').find((button) => button.text() === 'Retry');
+    expect(retry).toBeDefined();
+    await retry!.trigger('click');
+    expect(reportMocks.refresh).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces PDF export failures as error toasts', async () => {
