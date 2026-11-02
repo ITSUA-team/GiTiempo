@@ -431,7 +431,9 @@ async function mountView(
           template: `
             <button
               :data-pt-root-class="pt?.root?.class ?? ''"
+              :data-pt-root-justify-content="pt?.root?.style?.justifyContent ?? ''"
               :data-pt-content-flex-wrap="pt?.content?.style?.flexWrap ?? ''"
+              :data-pt-content-margin-inline="pt?.content?.style?.marginInline ?? ''"
               :disabled="disabled"
               data-testid="paginator-page-2"
               type="button"
@@ -1199,7 +1201,9 @@ describe("TimeEntriesView", () => {
     expect(paginator.attributes("data-pt-root-class")).toBe(
       "overflow-x-auto",
     );
+    expect(paginator.attributes("data-pt-root-justify-content")).toBe("flex-start");
     expect(paginator.attributes("data-pt-content-flex-wrap")).toBe("nowrap");
+    expect(paginator.attributes("data-pt-content-margin-inline")).toBe("auto");
     expect(paginator.classes()).toContain("w-full");
     expect(paginator.classes()).toContain("sm:w-auto");
   });

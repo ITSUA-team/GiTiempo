@@ -282,14 +282,18 @@ async function setPage(page: number): Promise<void> {
   await data.loadEntries();
 }
 
-// PrimeVue sets flex-wrap: wrap on .p-paginator-content (where the arrows and
-// page links live). Tailwind's flex-nowrap loses the cascade because PrimeVue's
-// CSS layer is ordered after utilities in this repo. An inline style on the
-// content element beats both layers, keeping controls in one horizontal row;
-// root gets overflow-x-auto so the row scrolls on very narrow screens.
+// PrimeVue sets flex-wrap: wrap and justify-content: center on both
+// .p-paginator and .p-paginator-content. nowrap keeps the arrows and page
+// links in one horizontal row; but with justify-content: center an
+// overflowing row centers its content, pushing the start (prev button) into
+// the unreachable left overflow so overflow-x-auto cannot scroll back to it.
+// Inline styles beat PrimeVue's CSS layer (ordered after Tailwind utilities):
+//   - root: justify-content flex-start anchors the row start at the left edge;
+//   - content: margin-inline auto re-centers when the row fits (desktop) and
+//     collapses to 0 on overflow so the start stays reachable for scrolling.
 const paginatorPt = {
-  root: { class: "overflow-x-auto" },
-  content: { style: { flexWrap: "nowrap" } },
+  root: { class: "overflow-x-auto", style: { justifyContent: "flex-start" } },
+  content: { style: { flexWrap: "nowrap", marginInline: "auto" } },
 } as const;
 
 function openActiveTimerDialog(): void {
