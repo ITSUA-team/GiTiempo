@@ -1,0 +1,12 @@
+{
+  "records": [
+    {
+      "path": "/projects",
+      "method": "GET"
+    },
+    {
+      "path": "/projects/00000000-0000-4000-8000-000000000004/tasks",
+      "method": "GET"
+    }
+  ]
+}

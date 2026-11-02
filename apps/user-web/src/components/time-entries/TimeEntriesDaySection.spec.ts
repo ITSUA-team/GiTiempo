@@ -230,6 +230,58 @@ describe('TimeEntriesDaySection', () => {
     expect(wrapper.emitted('deleteEntry')).toBeUndefined();
   });
 
+  it('disables stale desktop row mutations and preserves the external issue link', async () => {
+    const wrapper = mountSection({ isInteractionDisabled: true });
+
+    const createButton = wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]');
+    const startButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
+    const stopButton = wrapper.get('[data-testid="time-entry-stop-timer-entry-running"]');
+
+    expect(createButton.attributes('disabled')).toBeDefined();
+    expect(startButton.attributes('disabled')).toBeDefined();
+    expect(stopButton.attributes('disabled')).toBeDefined();
+    expect(wrapper.get('[data-testid="time-entry-edit-entry-completed"]').element.tagName).toBe('SPAN');
+    expect(wrapper.get('[data-testid="time-entry-open-timer-entry-running"]').element.tagName).toBe('SPAN');
+    expect(wrapper.get('[data-testid="time-entry-github-entry-completed"]').attributes('href')).toBe(
+      'https://github.com/octo/repo/issues/43',
+    );
+
+    await createButton.trigger('click');
+    await startButton.trigger('click');
+    await stopButton.trigger('click');
+
+    expect(wrapper.emitted('createForDay')).toBeUndefined();
+    expect(wrapper.emitted('startTimer')).toBeUndefined();
+    expect(wrapper.emitted('stopTimer')).toBeUndefined();
+    expect(wrapper.emitted('editEntry')).toBeUndefined();
+    expect(wrapper.emitted('openActiveTimer')).toBeUndefined();
+  });
+
+  it('disables stale mobile row mutations', async () => {
+    mockMatchMedia(true);
+
+    const wrapper = mountSection({ isInteractionDisabled: true });
+    const createButton = wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]');
+    const startButton = wrapper.get('[data-testid="time-entry-mobile-start-timer-entry-completed"]');
+    const stopButton = wrapper.get('[data-testid="time-entry-mobile-stop-timer-entry-running"]');
+
+    expect(createButton.attributes('disabled')).toBeDefined();
+    expect(startButton.attributes('disabled')).toBeDefined();
+    expect(stopButton.attributes('disabled')).toBeDefined();
+    expect(wrapper.get('[data-testid="time-entry-mobile-edit-entry-completed"]').element.tagName).toBe('SPAN');
+    expect(wrapper.get('[data-testid="time-entry-mobile-open-timer-entry-running"]').element.tagName).toBe('SPAN');
+
+    await createButton.trigger('click');
+    await startButton.trigger('click');
+    await stopButton.trigger('click');
+
+    expect(wrapper.emitted('createForDay')).toBeUndefined();
+    expect(wrapper.emitted('startTimer')).toBeUndefined();
+    expect(wrapper.emitted('stopTimer')).toBeUndefined();
+    expect(wrapper.emitted('editEntry')).toBeUndefined();
+    expect(wrapper.emitted('openActiveTimer')).toBeUndefined();
+  });
+
   it('disables direct timer starts while a start request is pending', () => {
     const wrapper = mountSection({ startingTimerEntryId: 'entry-completed' });
     const startTimerButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
