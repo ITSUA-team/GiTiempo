@@ -24,6 +24,7 @@ import {
   createTestQueryClient,
   createTestQueryPlugin,
 } from "@/test/query-client";
+import { mockMatchMedia } from "@/test/mockMatchMedia";
 
 import TimeEntriesView from "./TimeEntriesView.vue";
 
@@ -427,13 +428,11 @@ async function mountView(
         },
         Paginator: {
           emits: ["page"],
-          props: ["pt", "disabled"],
+          props: ["pageLinkSize", "template", "disabled"],
           template: `
             <button
-              :data-pt-root-class="pt?.root?.class ?? ''"
-              :data-pt-root-justify-content="pt?.root?.style?.justifyContent ?? ''"
-              :data-pt-content-flex-wrap="pt?.content?.style?.flexWrap ?? ''"
-              :data-pt-content-margin-inline="pt?.content?.style?.marginInline ?? ''"
+              :data-page-link-size="pageLinkSize ?? ''"
+              :data-template="template ?? ''"
               :disabled="disabled"
               data-testid="paginator-page-2"
               type="button"
@@ -1184,7 +1183,7 @@ describe("TimeEntriesView", () => {
     expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("rounded-md");
   });
 
-  it("stacks the pagination card body on mobile and keeps the paginator unwrapped", async () => {
+  it("stacks the pagination card body vertically on mobile and uses 5 page links on desktop", async () => {
     const client = createClientMock();
     const { wrapper } = await mountView(client);
 
@@ -1198,14 +1197,30 @@ describe("TimeEntriesView", () => {
 
     const paginator = wrapper.get('[data-testid="paginator-page-2"]');
 
-    expect(paginator.attributes("data-pt-root-class")).toBe(
-      "overflow-x-auto",
+    expect(paginator.attributes("data-page-link-size")).toBe("5");
+    expect(paginator.attributes("data-template")).toBe(
+      "PrevPageLink PageLinks NextPageLink",
     );
-    expect(paginator.attributes("data-pt-root-justify-content")).toBe("flex-start");
-    expect(paginator.attributes("data-pt-content-flex-wrap")).toBe("nowrap");
-    expect(paginator.attributes("data-pt-content-margin-inline")).toBe("auto");
     expect(paginator.classes()).toContain("w-full");
     expect(paginator.classes()).toContain("sm:w-auto");
+  });
+
+  it("limits page links to 3 on mobile viewport to prevent horizontal overflow", async () => {
+    mockMatchMedia(true);
+
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    const paginator = wrapper.get('[data-testid="paginator-page-2"]');
+
+    expect(paginator.attributes("data-page-link-size")).toBe("3");
+    expect(paginator.attributes("data-template")).toBe(
+      "PrevPageLink PageLinks NextPageLink",
+    );
+
+    delete (window as Partial<Window>).matchMedia;
   });
 
   it("hides filter labels and table column headers in the time entries view", async () => {

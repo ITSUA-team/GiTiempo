@@ -7,6 +7,7 @@ import {
   RequestStateCard,
   SurfaceCard,
   filterAutocompleteOptions,
+  useIsMobileViewport,
 } from "@gitiempo/web-shared";
 import { computed, onMounted, ref, watch } from "vue";
 import { useConfirm } from "primevue/useconfirm";
@@ -282,19 +283,11 @@ async function setPage(page: number): Promise<void> {
   await data.loadEntries();
 }
 
-// PrimeVue sets flex-wrap: wrap and justify-content: center on both
-// .p-paginator and .p-paginator-content. nowrap keeps the arrows and page
-// links in one horizontal row; but with justify-content: center an
-// overflowing row centers its content, pushing the start (prev button) into
-// the unreachable left overflow so overflow-x-auto cannot scroll back to it.
-// Inline styles beat PrimeVue's CSS layer (ordered after Tailwind utilities):
-//   - root: justify-content flex-start anchors the row start at the left edge;
-//   - content: margin-inline auto re-centers when the row fits (desktop) and
-//     collapses to 0 on overflow so the start stays reachable for scrolling.
-const paginatorPt = {
-  root: { class: "overflow-x-auto", style: { justifyContent: "flex-start" } },
-  content: { style: { flexWrap: "nowrap", marginInline: "auto" } },
-} as const;
+const isMobileViewport = useIsMobileViewport();
+const paginatorPageLinkSize = computed(() =>
+  isMobileViewport.value ? 3 : 5,
+);
+const paginatorTemplate = "PrevPageLink PageLinks NextPageLink";
 
 function openActiveTimerDialog(): void {
   if (!isShowingPreviousEntries.value) {
@@ -437,10 +430,10 @@ onMounted(async () => {
             :first="(currentPage - 1) * pageSize"
             :rows="pageSize"
             :total-records="totalRecords"
-            :pt="paginatorPt"
+            :page-link-size="paginatorPageLinkSize"
+            :template="paginatorTemplate"
             :disabled="isShowingPreviousEntries"
             current-page-report-template="Showing {first} to {last} of {totalRecords}"
-            template="PrevPageLink PageLinks NextPageLink"
             @page="({ page }) => void setPage(page + 1)"
           />
         </SurfaceCard>
