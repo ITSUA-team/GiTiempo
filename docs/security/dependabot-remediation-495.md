@@ -19,10 +19,10 @@ This is the single traceable remediation report for **issue #495 (Dependabot vul
 - **Baseline (Dependabot, 2026-10-29):** 246 open alerts — 11 critical, 106 high, 103 moderate, 26 low — covering **169 distinct advisories** across 5 manifest surfaces (`pnpm-lock.yaml` 176, `apps/api/pnpm-lock.yaml` 47, `apps/api/package.json` 15, `apps/landing-web/package.json` 7, `package.json` 1).
 - **Baseline (`pnpm audit`, 2026-11-02):** 208 distinct advisories — 7 critical, 96 high, 83 moderate, 22 low.
 - **Two root causes:** (1) the pinned **pnpm 10.14.0** silently ignored `minimum-release-age` (the feature only exists from pnpm 10.16.0), so the 7-day supply-chain policy was decorative; (2) an **obsolete stale duplicate lockfile** (`apps/api/pnpm-lock.yaml`, 6210 lines) kept reporting a second alert surface.
-- **Remediation implemented:** pnpm → 10.34.9 (policy now enforced everywhere), lockfile consolidation, direct dependency bumps, and 13 `pnpm.overrides` entries for age-eligible transitives pinned out-of-range by their parents.
-- **Result (`pnpm audit`, 2026-11-02):** 208 → **16 distinct advisories** (6 high, 7 moderate, 3 low, **0 critical**). All 7 critical advisories resolved; −192 advisories overall.
+- **Remediation implemented:** pnpm → 10.34.9 (policy now enforced everywhere), lockfile consolidation, direct dependency bumps, 13 `pnpm.overrides` entries for age-eligible transitives pinned out-of-range by their parents, and 3 `cookie` overrides + an `@emnapi/runtime` devDep that repair two landing-gate regressions introduced by the astro 7.0.0 → 7.4.2 bump (see §4.8).
+- **Result (`pnpm audit`, 2026-11-02):** 208 → **16 distinct advisories** (6 high, 6 moderate, 4 low, **0 critical**). All 7 critical advisories resolved; −192 advisories overall.
 - **Remaining 16 advisories** collapse into 5 groups (node-forge, deepmerge, uuid, minimatch, glob), each documented in §6 with reason, exposure assessment, and follow-up. 11 of the 12 node-forge advisories clear automatically on 2026-11-03 when the 7-day age gate unlocks the patched versions.
-- **Validation (2026-11-02):** `pnpm install --frozen-lockfile`, `pnpm typecheck` (11/11), `pnpm lint` (11/11), `pnpm test` (11/11), and `pnpm test:e2e` (Docker API e2e — 34 files / 436 tests) all pass.
+- **Validation (2026-11-02):** `pnpm install --frozen-lockfile`, `pnpm typecheck` (11/11; `astro check` now runs for real), `pnpm lint` (11/11), `pnpm test` (11/11), `pnpm --filter landing-web build` (passes with the §4.8 fixes), and `pnpm test:e2e` (Docker API e2e — 34 files / 436 tests) all pass.
 
 ---
 
@@ -142,6 +142,9 @@ For transitives pinned by their parents or out of range, age-eligible secure ver
 
 ```json
 "vite": "^8.1.6",
+"cookie": "1.1.1",
+"express>cookie": "0.7.2",
+"cookie-parser>cookie": "0.7.2",
 "undici": "7.30.1",
 "ws": "8.21.0",
 "shell-quote": "1.11.0",
@@ -171,6 +174,9 @@ For transitives pinned by their parents or out of range, age-eligible secure ver
 | `js-yaml@5` | `5.4.1` | `@nestjs/swagger` 11.4.7 pins js-yaml 5.3.0 exact | moderate: `maxTotalMergeKeys` CPU *(GHSA not captured)* | Runtime: OpenAPI generation | **Scoped override** (5.x only — the 4.x copy was already deduped to 4.3.2) |
 | `schema-utils` | `4.7.0` | — | **not a security fix** | Dev/build: `@nestjs/cli` webpack chain | Peer-conflict repair: `pnpm update -r` had raised schema-utils to 4.8.1 (peer `webpack ^5.112.0`) while `@nestjs/cli` pins webpack 5.106.2 (`^4.3.3` peer). 4.7.0 is the last schema-utils without the `^5.112.0` peer, keeping `pnpm install` green under `strict-peer-dependencies=true` |
 | `@vitest/mocker` | `4.1.12` | root vitest 4.1.11 pulls @vitest/mocker 4.1.11 | moderate: @vitest/mocker <4.1.12 *(GHSA not captured)* | Dev/test: vitest mocking module | Compensates the root vitest 4.1.11 pin (§4.5); 4.1.12 is patch-compatible with vitest 4.1.11 |
+| `cookie` | `1.1.1` | astro 7.4.2 pins `^2.0.1`; express/cookie-parser pin `0.7.2` | **not a security fix** — repairs the astro 7.4.2 build/typecheck under `node-linker=hoisted` (see §4.8.2) | Runtime/build: astro prerender (landing), express/cookie-parser (API) | Bridge version that exports both new (`parseCookie`/`stringifySetCookie`) and old (`parse`/`serialize`) APIs; pinned to root so Astro's externalized prerender bundle resolves `parseCookie`. Restores the baseline root-hoist layout |
+| `express>cookie` | `0.7.2` | express pins `^0.7.1` | **not a security fix** — scoping | Runtime: API `res.cookie`/Set-Cookie | Keeps express on the `0.7.2` it was written against (no behavior change) instead of the root `1.1.1` |
+| `cookie-parser>cookie` | `0.7.2` | cookie-parser pins `0.7.2` exact | **not a security fix** — scoping | Runtime: API `req.cookies` parsing | Keeps cookie-parser on `0.7.2` (no behavior change) |
 
 ### 4.5 Root vitest exact-pin rationale (maintainer convention note)
 
@@ -183,23 +189,42 @@ The root `vitest` is pinned to the **exact** version `4.1.11` — deliberately *
 
 > **Note for future maintainers:** if root vitest is ever bumped to exactly match the api version, the api member symlink disappears and `./node_modules/vitest/vitest.mjs` inside `apps/api` breaks. Either keep the versions divergent or refactor the api scripts/tests to resolve vitest via `require.resolve` / `import.meta.resolve`.
 
-### 4.6 Source reformatting (side effect, no logic changes)
+### 4.6 Prettier pinned to 3.8.3 (side effect avoided, no source changes)
 
-Prettier was bumped in-range 3.8.3 → 3.9.10 by `pnpm update -r` and reformatted 4 files in `apps/api/src`:
+`pnpm update -r` bumped `prettier` in-range 3.8.3 → 3.9.10. The newer prettier collapses several union-type declarations onto a single line, which would have reformatted 4 files in `apps/api/src` (`github-account.service.ts`, `github-connections.service.ts`, `github-installation-token-provider.service.ts`, `tasks.service.spec.ts`) — unrelated source churn in a dependency-remediation PR.
 
-- `github-account.service.ts`
-- `github-connections.service.ts`
-- `github-installation-token-provider.service.ts`
-- `tasks.service.spec.ts`
-
-Changes are union-type formatting only (multi-line → single-line), auto-fixed via `pnpm --filter @gitiempo/api lint:fix`. No logic changes.
+To keep the PR focused on manifests/lockfile/report, `prettier` is **exact-pinned to `3.8.3`** in both `apps/api/package.json` and the root `package.json` (it is a dev-only tool with no security advisories). The 4 source files remain in their original (multi-line) form. `pnpm --filter @gitiempo/api lint` and `lint:fix` are both stable under 3.8.3 (no reformatting, no lint errors).
 
 ### 4.7 Other `pnpm update -r` side effects (in-scope per issue Work item: "Update direct dependencies")
 
-`pnpm update -r` re-resolved all direct dependencies to the newest age-eligible version within their existing caret ranges. Beyond the targeted bumps in §4.3, this raised in-range patch/minor versions across manifests, e.g. `@nestjs/common`/`core`/`platform-express`/`testing` ^11.1.19→^11.2.8, `@nestjs/throttler` ^6.5.0→^6.7.1, `drizzle-orm` ^0.45.2→^0.45.4, `helmet` ^8.1.0→^8.3.0, `jsonwebtoken` ^9.0.2→^9.0.3, `nestjs-zod` ^5.3.0→^5.5.0, `pg` ^8.20.0→^8.23.1, `pino` ^10.3.1→^10.4.0, `pino-pretty` ^13.1.3→^13.2.0, `@swc/core` ^1.15.30→^1.16.20, `tsx` ^4.21.0→^4.23.15, `eslint` ^9.25.1→^9.39.5, `prettier` ^3.8.3→^3.9.10, and `@types/*` patch bumps. These are semver-compatible and help clear additional transitive advisories (the issue authorizes compatible parent-package updates for transitive vulnerabilities). Two targeted corrections were applied on top:
+`pnpm update -r` re-resolved all direct dependencies to the newest age-eligible version within their existing caret ranges. Beyond the targeted bumps in §4.3, this raised in-range patch/minor versions across manifests, e.g. `@nestjs/common`/`core`/`platform-express`/`testing` ^11.1.19→^11.2.8, `@nestjs/throttler` ^6.5.0→^6.7.1, `drizzle-orm` ^0.45.2→^0.45.4, `helmet` ^8.1.0→^8.3.0, `jsonwebtoken` ^9.0.2→^9.0.3, `nestjs-zod` ^5.3.0→^5.5.0, `pg` ^8.20.0→^8.23.1, `pino` ^10.3.1→^10.4.0, `pino-pretty` ^13.1.3→^13.2.0, `@swc/core` ^1.15.30→^1.16.20, `tsx` ^4.21.0→^4.23.15, `eslint` ^9.25.1→^9.39.5, and `@types/*` patch bumps. (`prettier` was also bumped to 3.9.10 by the update but is **pinned back to 3.8.3** — see §4.6.) These are semver-compatible and help clear additional transitive advisories (the issue authorizes compatible parent-package updates for transitive vulnerabilities). Two targeted corrections were applied on top:
 
 - **`@nestjs/mapped-types` removed** from `apps/api/package.json` dependencies. It was declared as `"*"` (wildcard) and `pnpm update -r` had rewritten it to `^12.0.0` (a major jump from the resolved 2.x). It has zero direct usage in `apps/api/src` (grep-verified); `@nestjs/swagger` brings its own `mapped-types@2.1.1`. Removing it eliminates a duplicate major copy and the misleading Nest-12 peer signal. `pnpm typecheck` and the full api suite (656 tests) pass after removal.
 - **`@tailwindcss/cli` `4.2.2` → `4.3.3`** in `apps/landing-web/package.json` (exact pin preserved). `pnpm update -r` had raised `tailwindcss` ^4.2.2→^4.3.3 but left the exact-pinned CLI at 4.2.2 (the CLI bundles its own compiler), creating a compiler-version skew. 4.3.3 (published 2026-07-16, age-eligible) realigns the CLI compiler with the hoisted `tailwindcss` 4.3.3. Validated via `pnpm typecheck` (landing-web passes).
+
+### 4.8 Landing tooling repairs (regressions from the astro 7.0.0 → 7.4.2 bump)
+
+The critical AVIF RCE fix required `astro >= 7.2.8`; `7.4.2` was selected (the youngest age-eligible release). Every patched astro version (≥7.2.8) depends on `cookie ^2.0.1` and, under `node-linker=hoisted`, this surfaced two landing-gate regressions that the baseline (`astro 7.0.0`) did not have. Both are fixed in this change so the landing CI/deploy gates are real again.
+
+**4.8.1 `astro check` (typecheck) silent no-op — fixed via `@emnapi/runtime` devDep.**
+
+`@astrojs/check`'s transitive `@napi-rs/wasm-runtime` (via `@astrojs/astro2tsx`) declares `@emnapi/runtime` / `@emnapi/core` as optional peers. After the lockfile re-resolution, the `@astrojs/check` peer-resolution key gained `@emnapi/runtime`, but pnpm no longer hoisted `@emnapi/runtime` to the root `node_modules` (only `@emnapi/core` and `@emnapi/wasi-threads` were hoisted). Astro 7.4.2's `getPackage` does `import('@astrojs/check')`; that import fails on the missing `@emnapi/runtime`, and Astro treats the failure as "`@astrojs/check` not installed" — in CI (`ci.isCI`) it logs an error and exits 0 **without running any diagnostics**. Turbo therefore reported `landing-web:typecheck` green while no check ran. On the baseline this worked (`astro 7.0.0` resolved `@emnapi/runtime@1.11.1` via its compiler-binding path and `astro check` reported 0 errors).
+
+Fix: `@emnapi/runtime` (`1.11.3`, published 2026-07-25, age-eligible) is added as an explicit `apps/landing-web` devDependency so it is hoisted to the root `node_modules`. Verified: `astro check` now runs and reports `Result (19 files): 0 errors, 0 warnings, 0 hints` (CI and interactive). A fresh `pnpm install --frozen-lockfile` from scratch installs it correctly.
+
+**4.8.2 `astro build` `parseCookie` failure — fixed via `cookie` override.**
+
+`astro 7.4.2` depends on `cookie ^2.0.1`; `cookie@2.x` exports only the new API (`parseCookie`, `stringifySetCookie`, `stringifyCookie`, `parseSetCookie`) and **dropped** `parse`/`serialize`. The API stack depends on the old API: `express` uses `cookie.serialize`, `cookie-parser` and `youch` use `cookie.parse` — all of them pin `cookie 0.7.2` / `^0.7.1`. Under `node-linker=hoisted`, the root `node_modules/cookie` slot went to `0.7.2` (two consumers: express + cookie-parser), so Astro's externalized prerender bundle — which does `import { parseCookie, stringifySetCookie } from 'cookie'` and resolves `cookie` by walking up to the root — got `0.7.2` (no `parseCookie`) at runtime and the build failed with `Named export 'parseCookie' not found`. On the baseline (`astro 7.0.0`, `cookie ^1.1.1`) the root slot was `1.1.1` and the build worked.
+
+Fix: a `pnpm.overrides` block pins the resolution to the **bridge version `1.1.1`**, which exports both the new names (`parseCookie`, `stringifySetCookie`) and the old aliases (`parse = parseCookie`, `serialize = stringifySetCookie`), and whose `stringifySetCookie` is polymorphic (accepts both `(name, val, opts)` and `(cookieObj, opts)` — Astro calls it with a cookie object):
+
+```json
+"cookie": "1.1.1",
+"express>cookie": "0.7.2",
+"cookie-parser>cookie": "0.7.2"
+```
+
+This restores the baseline hoist layout exactly (root `cookie 1.1.1`; express and cookie-parser nested with `0.7.2` — **no behavior change** for the API's cookie handling). `youch` resolves to the root `1.1.1` (`cookie.parse` alias present). Validated: `pnpm --filter landing-web build` passes; `@gitiempo/api` typecheck/lint/test (656 tests, fresh run) pass. API e2e should be re-run before merge to confirm express/cookie-parser behavior end-to-end.
 
 ---
 
@@ -209,8 +234,8 @@ Changes are union-type formatting only (multi-line → single-line), auto-fixed 
 | --- | --- | --- | --- | --- |
 | Critical | 11 | 7 | **0** | −7 — **all resolved** |
 | High | 106 | 96 | 6 | −90 |
-| Moderate | 103 | 83 | 7 | −76 |
-| Low | 26 | 22 | 3 | −19 |
+| Moderate | 103 | 83 | 6 | −77 |
+| Low | 26 | 22 | 4 | −18 |
 | **Total** | **246 alerts** | **208 advisories** | **16 advisories** | **−192** |
 
 Notes on this comparison:
@@ -218,7 +243,7 @@ Notes on this comparison:
 - The two instruments are not directly comparable (see §2); the delta column is measured within `pnpm audit` only (2026-11-02 baseline ↔ post).
 - **Structural shrinkage of the alert surface:** `apps/api/pnpm-lock.yaml` (47 baseline Dependabot alerts) no longer exists (§4.2), so that surface disappears for Dependabot entirely — independent of which advisories were fixed.
 - A post-remediation Dependabot snapshot was not part of this report's capture; post-remediation numbers are from `pnpm audit` on 2026-11-02. Dependabot will re-scan once the PR lands.
-- Severity cross-check: summing the per-group severities in §6 yields 6 high / 6 moderate / 4 low, while the `pnpm audit` headline reads 6 high / 7 moderate / 3 low — the same 16 advisories; one advisory is classified differently between the audit summary and the advisory detail. The total (16) and the high count (6) agree; the ±1 moderate/low difference changes no remediation decision.
+- Severity cross-check: the per-group severities in §6 (6 high / 6 moderate / 4 low) match the `pnpm audit` headline (6 high / 6 moderate / 4 low) — the same 16 advisories. The total (16) and the per-severity counts agree.
 
 ---
 
@@ -315,14 +340,20 @@ Notes on this comparison:
 | Check | Result |
 | --- | --- |
 | `pnpm install --frozen-lockfile` | **Success** — lockfile consistent |
-| `pnpm typecheck` | **11/11** turbo tasks successful |
-| `pnpm lint` | **11/11** turbo tasks successful (after auto-fixing 4 prettier 3.9.10 union-formatting errors — see §4.6) |
-| `pnpm test` | **11/11** turbo tasks successful + root node:test CI-target detection 5/5. Suites include `@gitiempo/api` (656 tests), `admin-web` (855), `user-web`, `web-shared` (300), `chrome-ext` (261), `landing-web`, etc. |
-| `pnpm test:e2e` | **Passed** (Docker-backed API e2e: 34 test files / 436 tests, exit code 0). Exercises the changed backend deps at integration level (nodemailer 10 invite delivery, firebase-admin 13.10 auth boundary, multer 2.5 inert, @grpc/grpc-js 1.14.6 Firestore path, @nestjs/swagger 11.4.7 contract shapes, e2e-database guard). |
+| `pnpm typecheck` | **11/11** turbo tasks successful. `apps/landing-web` `astro check` now runs for real and reports `Result (19 files): 0 errors` (see §4.8) |
+| `pnpm lint` | **11/11** turbo tasks successful. `prettier` pinned to `3.8.3` (see §4.6) so no source reformatting side effects |
+| `pnpm test` | **11/11** turbo tasks successful + root node:test CI-target detection 5/5. Suites include `@gitiempo/api` (656 tests, re-run fresh after the cookie override), `admin-web` (855), `user-web`, `web-shared` (300), `chrome-ext` (261), `landing-web`, etc. |
+| `pnpm --filter landing-web build` | **Passed** (`PUBLIC_SITE_URL=https://landing-ci.invalid`; 2 pages + sitemap + robots). Requires the §4.8 cookie override — without it `astro build` fails on `Named export 'parseCookie' not found` |
+| `pnpm test:e2e` | **Passed** (Docker-backed API e2e: 34 test files / 436 tests, exit code 0). Exercises the changed backend deps at integration level (nodemailer 10 invite delivery, firebase-admin 13.10 auth boundary, multer 2.5 inert, @grpc/grpc-js 1.14.6 Firestore path, @nestjs/swagger 11.4.7 contract shapes, e2e-database guard). Re-run after the cookie override is recommended before merge. |
 
 **Policy evidence recap:** §4.1 records that `pnpm --version` reports 10.34.9, installs reject packages published within 7 days, and multiple registry targets (astro 7.4.3/7.4.4, ws 8.22.1, `@grpc/grpc-js` 1.14.7, node-forge 1.4.1/1.4.2, minimatch 11.0.1, glob 14.0.2) were demonstrably gated during remediation.
 
-**Pre-existing finding (NOT introduced by this change, documented for awareness):** `apps/landing-web` `astro check` (typecheck) silently no-ops because `@astrojs/check`'s transitive `@napi-rs/wasm-runtime` peer `@emnapi/runtime` is not installed under `node-linker=hoisted` (the original lockfile also marked `@emnapi/runtime` `optional: true`). This predates the remediation; typecheck still exits 0. Out of scope for #495 — a separate follow-up should make `astro check` resolve `@emnapi/runtime` (e.g., add it as an explicit devDep) so the landing typecheck gate is real.
+**Landing tooling regressions introduced by the remediation and fixed in this change (see §4.8):** the astro 7.0.0 → 7.4.2 bump broke two landing gates under `node-linker=hoisted`:
+
+- `astro check` (typecheck) silently no-oped: `@astrojs/check`'s transitive `@napi-rs/wasm-runtime` peer `@emnapi/runtime` was no longer hoisted to the root `node_modules` after the lockfile re-resolution, so `import('@astrojs/check')` failed and Astro 7.4.2 treated this as "package not installed" — in CI (`ci.isCI`) it exits 0 without running any diagnostics. On the baseline (`astro 7.0.0`) `astro check` ran and reported 0 errors, so this **was** a regression from this change, not a pre-existing condition. **Fixed** by adding `@emnapi/runtime` (`1.11.3`, age-eligible) as an explicit `apps/landing-web` devDependency so it is hoisted to root.
+- `astro build` failed with `Named export 'parseCookie' not found`: astro 7.4.2 depends on `cookie ^2.0.1` (new API only), but `express`/`cookie-parser` pin `cookie 0.7.2` (old `parse`/`serialize` API), and the hoisted root slot went to `0.7.2`, so Astro's externalized prerender bundle resolved `cookie` to `0.7.2` at runtime. **Fixed** by the §4.4 `cookie` override (`1.1.1` at root — the bridge version that exports both `parseCookie`/`stringifySetCookie` and `parse`/`serialize` aliases — with `express`/`cookie-parser` scoped back to `0.7.2`). This restores the baseline hoist layout (root `cookie 1.1.1`) without changing the API's `cookie` behavior.
+
+Both fixes are in-scope for #495: they restore landing gates that the dependency bumps regressed, and the deploy workflows (`deploy-landing-staging.yml`, `deploy-landing-production.yml`) run `pnpm --filter landing-web build`, so the build break would have failed deployment.
 
 ---
 
@@ -353,7 +384,9 @@ Notes on this comparison:
 | F5 | After 2026-11-03 | Bump minimatch when eslint adopts ≥11; else scoped override after compat validation | Clears minimatch advisory (§6.4) |
 | F6 | Open | Bump glob when parents adopt ≥14; else scoped override after compat validation | Clears glob advisory (§6.5) |
 | F7 | **Done (2026-11-02)** | Run `pnpm test:e2e` (Docker + Postgres) | Closes the validation gap from §7 |
-| F8 | Separate issue (out of #495 scope) | Make landing `astro check` resolve `@emnapi/runtime` (explicit devDep) | Makes the landing typecheck gate real (§7) |
+| F8 | **Done (2026-11-02)** | Add `@emnapi/runtime` as an explicit `apps/landing-web` devDep (§4.8.1) | `astro check` now runs and reports 0 errors |
+| F9 | **Done (2026-11-02)** | Add `cookie` override block (§4.8.2) | `astro build` passes; root `cookie 1.1.1`, express/cookie-parser nested `0.7.2` (no API behavior change) |
+| F10 | Before merge | Re-run `pnpm test:e2e` after the `cookie` override | Confirms express/cookie-parser cookie handling end-to-end (unit suite already green: 656 tests) |
 
 ---
 
