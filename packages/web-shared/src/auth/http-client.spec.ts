@@ -221,6 +221,7 @@ describe("createCurrentUserClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
         avatarUrl: null,
+        canViewInvoices: false,
         createdAt: "2026-01-01T00:00:00.000Z",
         displayName: "Alexey Tsukanov",
         email: "alexey@example.com",
@@ -291,6 +292,7 @@ describe("createCurrentUserClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
         avatarUrl: null,
+        canViewInvoices: false,
         createdAt: "2026-01-01T00:00:00.000Z",
         displayName: "Alexey Updated",
         email: "alexey@example.com",

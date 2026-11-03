@@ -2,6 +2,7 @@ import {
 	createInvoiceSchema,
 	eligibleEntriesQuerySchema,
 	eligibleEntriesResponseSchema,
+	invoiceDefaultsResponseSchema,
 	invoiceListQuerySchema,
 	invoiceListResponseSchema,
 	invoiceResponseSchema,
@@ -10,6 +11,7 @@ import {
 	type CreateInvoiceInput,
 	type EligibleEntriesQuery,
 	type EligibleEntriesResponse,
+	type InvoiceDefaultsResponse,
 	type InvoiceListQuery,
 	type InvoiceListResponse,
 	type InvoiceResponse,
@@ -43,6 +45,7 @@ export interface AdminInvoicesClient {
 	): Promise<InvoiceResponse>;
 	deleteInvoice(invoiceId: string): Promise<void>;
 	getInvoice(invoiceId: string): Promise<InvoiceResponse>;
+	getInvoiceDefaults(): Promise<InvoiceDefaultsResponse>;
 	getInvoiceStats(): Promise<InvoiceStatsResponse>;
 	listEligibleEntries(
 		query: EligibleEntriesQuery,
@@ -83,6 +86,13 @@ export function createAdminInvoicesClient({
 			return apiClient.requestJson({
 				path: `/invoices/${invoiceId}`,
 				responseSchema: invoiceResponseSchema,
+			});
+		},
+
+		getInvoiceDefaults() {
+			return apiClient.requestJson({
+				path: '/invoices/defaults',
+				responseSchema: invoiceDefaultsResponseSchema,
 			});
 		},
 
@@ -178,6 +188,9 @@ export const adminInvoicesClient: AdminInvoicesClient = {
 	},
 	getInvoice(invoiceId) {
 		return createDefaultAdminInvoicesClient().getInvoice(invoiceId);
+	},
+	getInvoiceDefaults() {
+		return createDefaultAdminInvoicesClient().getInvoiceDefaults();
 	},
 	getInvoiceStats() {
 		return createDefaultAdminInvoicesClient().getInvoiceStats();

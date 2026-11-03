@@ -37,6 +37,7 @@ const RouterViewStub = {
 function createAuthProfile(role: WorkspaceRole = WorkspaceRoles.Admin): UserResponse {
   return {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Admin User",
     email: "admin@example.com",
@@ -167,6 +168,7 @@ function setAuthenticatedShellUser(
   authStore.bootstrapComplete = true;
   authStore.profile = {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: "2026-05-01T10:00:00.000Z",
     displayName: "Admin User",
     email: `${role}@example.com`,

@@ -213,3 +213,13 @@ export const invoiceStatsResponseSchema = z.object({
 });
 
 export type InvoiceStatsResponse = z.infer<typeof invoiceStatsResponseSchema>;
+
+export const invoiceDefaultsResponseSchema = z.object({
+  currency: z.string().length(3).regex(/^[A-Za-z]{3}$/).nullable(),
+  defaultHourlyRate: z.number().nonnegative().nullable(),
+  timeRoundingStepMinutes: roundingStepMinutesSchema,
+});
+
+export type InvoiceDefaultsResponse = z.infer<
+  typeof invoiceDefaultsResponseSchema
+>;

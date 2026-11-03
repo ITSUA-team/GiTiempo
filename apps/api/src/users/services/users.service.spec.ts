@@ -194,7 +194,11 @@ describe('UsersService', () => {
 
   describe('findById', () => {
     it('returns the user without firebaseUid when found', async () => {
-      await build({ selectRows: [{ user: sampleRow, role: sampleRole }] });
+      await build({
+        selectRows: [
+          { user: sampleRow, role: sampleRole, canViewInvoices: true },
+        ],
+      });
 
       const result = await service.findById(sampleRow.id, workspaceId);
 
@@ -204,10 +208,24 @@ describe('UsersService', () => {
         displayName: sampleRow.displayName,
         avatarUrl: sampleRow.avatarUrl,
         role: sampleRole,
+        canViewInvoices: true,
         createdAt: sampleRow.createdAt.toISOString(),
         updatedAt: sampleRow.updatedAt.toISOString(),
       });
       expect(result).not.toHaveProperty('firebaseUid');
+      expect(dbMock.select).toHaveBeenCalled();
+    });
+
+    it('returns canViewInvoices false as stored on the membership', async () => {
+      await build({
+        selectRows: [
+          { user: sampleRow, role: sampleRole, canViewInvoices: false },
+        ],
+      });
+
+      const result = await service.findById(sampleRow.id, workspaceId);
+
+      expect(result.canViewInvoices).toBe(false);
       expect(dbMock.select).toHaveBeenCalled();
     });
 
@@ -242,7 +260,7 @@ describe('UsersService', () => {
         updatedAt: new Date('2026-01-02T00:00:00Z'),
       };
       await build({
-        selectRows: [{ role: sampleRole }],
+        selectRows: [{ role: sampleRole, canViewInvoices: false }],
         updateRows: [updated],
       });
 
@@ -262,6 +280,7 @@ describe('UsersService', () => {
 
       expect(result.displayName).toBe('Renamed');
       expect(result.role).toBe(sampleRole);
+      expect(result.canViewInvoices).toBe(false);
       expect(result).not.toHaveProperty('firebaseUid');
     });
 
@@ -274,7 +293,7 @@ describe('UsersService', () => {
 
     it('takes avatar ownership away from the provider when one is set', async () => {
       await build({
-        selectRows: [{ role: sampleRole }],
+        selectRows: [{ role: sampleRole, canViewInvoices: false }],
         updateRows: [
           {
             ...sampleRow,
@@ -298,7 +317,7 @@ describe('UsersService', () => {
 
     it('returns avatar ownership to the provider when it is cleared', async () => {
       await build({
-        selectRows: [{ role: sampleRole }],
+        selectRows: [{ role: sampleRole, canViewInvoices: false }],
         updateRows: [sampleRow],
       });
 
@@ -314,7 +333,7 @@ describe('UsersService', () => {
 
     it('leaves avatar ownership untouched when the payload omits the avatar', async () => {
       await build({
-        selectRows: [{ role: sampleRole }],
+        selectRows: [{ role: sampleRole, canViewInvoices: false }],
         updateRows: [{ ...sampleRow, displayName: 'Renamed' }],
       });
 

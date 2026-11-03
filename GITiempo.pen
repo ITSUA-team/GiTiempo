@@ -1,5 +1,5 @@
 {
-  "version": "2.19",
+  "version": "2.21",
   "children": [
     {
       "type": "frame",
@@ -12449,7 +12449,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "https://avatars.githubusercontent.com/u/123456?v=4",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "cornerRadius": 20,
                                   "stroke": "#EEEEEE",
@@ -25397,6 +25397,69 @@
                                           "fontWeight": "normal"
                                         }
                                       ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "invPerm1",
+                                  "name": "Invoice view permission checkbox field",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 6,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "invPerm2",
+                                      "name": "Invoice permission checkbox row",
+                                      "width": "fill_container",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "invPerm3",
+                                          "name": "Allow viewing invoices checkbox",
+                                          "width": 16,
+                                          "height": 16,
+                                          "fill": "#5D2B85",
+                                          "cornerRadius": 4,
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "invPerm4",
+                                              "name": "Check icon",
+                                              "width": 12,
+                                              "height": 12,
+                                              "icon": "check",
+                                              "library": "lucide",
+                                              "fill": "#FFFFFF"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "invPerm5",
+                                          "name": "Allow viewing invoices label",
+                                          "fill": "#1A1A1A",
+                                          "content": "Allow viewing invoices",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "invPerm6",
+                                      "name": "Invoice permission helper text",
+                                      "fill": "#666666",
+                                      "content": "When enabled, this PM can view and manage invoices for their assigned projects.",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
                                     }
                                   ]
                                 },
@@ -47227,12 +47290,12 @@
                           "name": "paginator",
                           "width": "fill_container",
                           "height": 44,
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
                           "padding": [
                             8,
                             0
                           ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
                           "children": [
                             {
                               "type": "text",
@@ -48088,11 +48151,8 @@
           "fill": "$color-surface",
           "cornerRadius": 12,
           "layout": "vertical",
-          "padding": [
-            16,
-            16
-          ],
           "gap": 12,
+          "padding": 16,
           "children": [
             {
               "type": "text",
@@ -48107,13 +48167,13 @@
               "type": "text",
               "id": "mInvM1n",
               "fill": "#52525B",
-              "content": "Project, Period, and Status all full-width and equal width, stacked one under the other.",
-              "fontFamily": "Inter",
-              "fontSize": 12,
-              "fontWeight": "normal",
               "textGrowth": "fixed-width",
               "width": 343,
-              "lineHeight": 1.3
+              "content": "Project, Period, and Status all full-width and equal width, stacked one under the other.",
+              "lineHeight": 1.3,
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
             },
             {
               "type": "frame",
@@ -48139,16 +48199,15 @@
                   "width": "fill_container",
                   "height": 38,
                   "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
                   "stroke": "$color-divider",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "cornerRadius": "$radius-sm",
-                  "layout": "horizontal",
-                  "alignItems": "center",
                   "padding": [
                     0,
                     12
                   ],
+                  "alignItems": "center",
                   "children": [
                     {
                       "type": "text",
@@ -48187,16 +48246,15 @@
                   "width": "fill_container",
                   "height": 38,
                   "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
                   "stroke": "$color-divider",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "cornerRadius": "$radius-sm",
-                  "layout": "horizontal",
-                  "alignItems": "center",
                   "padding": [
                     0,
                     12
                   ],
+                  "alignItems": "center",
                   "children": [
                     {
                       "type": "text",
@@ -48235,16 +48293,15 @@
                   "width": "fill_container",
                   "height": 38,
                   "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
                   "stroke": "$color-divider",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "cornerRadius": "$radius-sm",
-                  "layout": "horizontal",
-                  "alignItems": "center",
                   "padding": [
                     0,
                     12
                   ],
+                  "alignItems": "center",
                   "children": [
                     {
                       "type": "text",
@@ -50718,7 +50775,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "apps/chrome-ext/public/icons/icon-32.png",
-                            "mode": "fit"
+                            "mode": "contain"
                           },
                           "width": 28,
                           "height": 28
@@ -50958,7 +51015,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "apps/chrome-ext/public/icons/icon-32.png",
-                            "mode": "fit"
+                            "mode": "contain"
                           },
                           "width": 28,
                           "height": 28
@@ -51225,7 +51282,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "apps/chrome-ext/public/icons/icon-32.png",
-                            "mode": "fit"
+                            "mode": "contain"
                           },
                           "width": 28,
                           "height": 28
@@ -51397,7 +51454,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "apps/chrome-ext/public/icons/icon-32.png",
-                            "mode": "fit"
+                            "mode": "contain"
                           },
                           "width": 28,
                           "height": 28
@@ -51638,7 +51695,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "apps/chrome-ext/public/icons/icon-32.png",
-                            "mode": "fit"
+                            "mode": "contain"
                           },
                           "width": 28,
                           "height": 28
@@ -51877,7 +51934,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "apps/chrome-ext/public/icons/icon-32.png",
-                            "mode": "fit"
+                            "mode": "contain"
                           },
                           "width": 28,
                           "height": 28
@@ -56564,6 +56621,9 @@
                       "name": "pat4d",
                       "fill": "$color-surface",
                       "cornerRadius": "$radius-sm",
+                      "stroke": "$color-destructive",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
                       "padding": [
                         10,
                         16
@@ -56589,10 +56649,7 @@
                           "library": "lucide",
                           "fill": "$color-surface"
                         }
-                      ],
-                      "stroke": "$color-destructive",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner"
+                      ]
                     },
                     {
                       "type": "frame",

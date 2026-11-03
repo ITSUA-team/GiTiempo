@@ -13,6 +13,7 @@ import type { AuthRuntime } from "./runtime";
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
+    canViewInvoices: false,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Alexey Tsukanov",
     email: "alexey@example.com",
@@ -242,6 +243,7 @@ describe("createAuthSessionCore", () => {
     session.accessToken.value = "stale-access-token";
     session.profile.value = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Stale User",
       email: "stale@example.com",
@@ -330,6 +332,7 @@ describe("createAuthSessionCore", () => {
   it("boots a provisioned admin session from a Google token exchange", async () => {
     const provisionedAdmin = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Workspace Admin",
       email: "admin@example.com",
@@ -573,6 +576,7 @@ describe("createAuthSessionCore", () => {
     session.accessToken.value = "current-access-token";
     session.profile.value = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Current User",
       email: "current@example.com",
@@ -607,6 +611,7 @@ describe("createAuthSessionCore", () => {
     session.accessToken.value = "current-access-token";
     session.profile.value = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Current User",
       email: "current@example.com",

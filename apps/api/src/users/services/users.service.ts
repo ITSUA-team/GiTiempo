@@ -79,6 +79,7 @@ export class UsersService {
       .select({
         user: users,
         role: workspaceMembers.role,
+        canViewInvoices: workspaceMembers.canViewInvoices,
       })
       .from(users)
       .innerJoin(workspaceMembers, eq(workspaceMembers.userId, users.id))
@@ -87,7 +88,7 @@ export class UsersService {
       )
       .limit(1);
     if (!row) throw new UnauthorizedException('Unauthorized');
-    return this.toResponse(row.user, row.role);
+    return this.toResponse(row.user, row.role, row.canViewInvoices);
   }
 
   /** Internal row lookup by local id. */
@@ -127,8 +128,11 @@ export class UsersService {
       .returning();
     if (!updated) throw new UnauthorizedException('Unauthorized');
     this.logger.log(`Updated user ${updated.id}`);
-    const role = await this.findRole(id, workspaceId);
-    return this.toResponse(updated, role);
+    const { role, canViewInvoices } = await this.findMembershipInfo(
+      id,
+      workspaceId,
+    );
+    return this.toResponse(updated, role, canViewInvoices);
   }
 
   async listCurrentUserWorkspaces(
@@ -215,13 +219,16 @@ export class UsersService {
     return this.applyProviderAvatar(row, input.avatarUrl);
   }
 
-  /** Maps a DB row to the public response shape. */
-  private async findRole(
+  /** Resolves the membership role and invoice permission for the user. */
+  private async findMembershipInfo(
     userId: string,
     workspaceId: string,
-  ): Promise<WorkspaceRole> {
+  ): Promise<{ role: WorkspaceRole; canViewInvoices: boolean }> {
     const [row] = await this.db
-      .select({ role: workspaceMembers.role })
+      .select({
+        role: workspaceMembers.role,
+        canViewInvoices: workspaceMembers.canViewInvoices,
+      })
       .from(workspaceMembers)
       .where(
         and(
@@ -231,16 +238,21 @@ export class UsersService {
       )
       .limit(1);
     if (!row) throw new UnauthorizedException('Unauthorized');
-    return row.role;
+    return { role: row.role, canViewInvoices: row.canViewInvoices };
   }
 
-  private toResponse(row: UserRow, role: WorkspaceRole): UserResponse {
+  private toResponse(
+    row: UserRow,
+    role: WorkspaceRole,
+    canViewInvoices: boolean,
+  ): UserResponse {
     return {
       id: row.id,
       email: row.email,
       displayName: row.displayName,
       avatarUrl: row.avatarUrl,
       role,
+      canViewInvoices,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

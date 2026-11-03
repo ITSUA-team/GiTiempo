@@ -39,9 +39,11 @@ async function expectLazyRouteComponent(
 
 function createUserResponse(
   role: WorkspaceRole = WorkspaceRoles.Admin,
+  canViewInvoices = true,
 ): UserResponse {
   return {
     avatarUrl: null,
+    canViewInvoices,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Admin User",
     email: "admin@example.com",
@@ -123,11 +125,12 @@ function setRestorableSession(role: WorkspaceRole): void {
 function setAuthenticatedUser(
   pinia: ReturnType<typeof createPinia>,
   role: WorkspaceRole = WorkspaceRoles.Admin,
+  canViewInvoices = true,
 ): ReturnType<typeof useAuthStore> {
   const authStore = useAuthStore(pinia);
   authStore.accessToken = `${role}-access-token`;
   authStore.bootstrapComplete = true;
-  authStore.profile = createUserResponse(role);
+  authStore.profile = createUserResponse(role, canViewInvoices);
 
   return authStore;
 }
@@ -549,6 +552,61 @@ describe("admin router", () => {
     await router.isReady();
 
     expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+  });
+
+  it("redirects PM users without invoice view permission from invoice pages", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthenticatedUser(pinia, WorkspaceRoles.PM, false);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/invoices");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+
+    await router.push("/invoices/3d9f2f0e-1111-4111-8111-000000000001");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+  });
+
+  it("allows PM users with invoice view permission to open invoice pages", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthenticatedUser(pinia, WorkspaceRoles.PM, true);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/invoices");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.invoices);
+
+    await router.push("/invoices/3d9f2f0e-1111-4111-8111-000000000001");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.invoiceDetail);
+  });
+
+  it("allows admins to open invoice pages regardless of invoice view permission", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthenticatedUser(pinia, WorkspaceRoles.Admin, false);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/invoices");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.invoices);
   });
 
   it("allows admin users to open admin-only pages", async () => {

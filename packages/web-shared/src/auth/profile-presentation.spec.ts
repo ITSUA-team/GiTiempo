@@ -7,6 +7,7 @@ import { createAuthProfilePresentation } from "./profile-presentation";
 function createProfile(overrides: Partial<UserResponse>): UserResponse {
   return {
     avatarUrl: null,
+    canViewInvoices: false,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Alexey Tsukanov",
     email: "alexey@example.com",

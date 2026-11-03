@@ -6,6 +6,7 @@ import type * as VueRouter from 'vue-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   CreateInvoiceInput,
+  InvoiceDefaultsResponse,
   InvoiceListItem,
   InvoiceListQuery,
   InvoiceListResponse,
@@ -22,7 +23,6 @@ import { routeNames } from '@/constants/routes';
 import { createTestQueryPlugin } from '@/test/query-client';
 import { useAuthStore } from '@/stores/auth';
 import { adminProjectsClient } from '@/services/admin-projects-client';
-import type { WorkspaceSettingsResponse } from '@gitiempo/shared';
 
 import InvoicesView from './InvoicesView.vue';
 
@@ -33,7 +33,7 @@ const mobileViewportMock = vi.hoisted(() => ({
 const testMocks = vi.hoisted(() => ({
   createInvoice: vi.fn(),
   errorToast: vi.fn(),
-  getWorkspaceSettings: vi.fn(),
+  getInvoiceDefaults: vi.fn(),
   refetch: vi.fn(),
   routerPush: vi.fn(),
   successToast: vi.fn(),
@@ -41,10 +41,10 @@ const testMocks = vi.hoisted(() => ({
   useInvoiceCreate: vi.fn(),
 }));
 
-vi.mock('@/services/admin-settings-client', () => ({
-  getAdminSettingsClient: () => ({
-    getWorkspaceSettings: testMocks.getWorkspaceSettings,
-  }),
+vi.mock('@/services/admin-invoices-client', () => ({
+  adminInvoicesClient: {
+    getInvoiceDefaults: testMocks.getInvoiceDefaults,
+  },
 }));
 
 vi.mock('vue-router', async (importOriginal) => {
@@ -135,6 +135,7 @@ let createMutationState: InvoiceCreateMutationState | null = null;
 function createProfile(role: WorkspaceRoleFixture) {
   return {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: '2026-01-01T00:00:00.000Z',
     displayName: 'Alex Admin',
     email: 'alex@example.com',
@@ -144,18 +145,13 @@ function createProfile(role: WorkspaceRoleFixture) {
   };
 }
 
-function createWorkspaceSettingsFixture(
-  overrides: Partial<WorkspaceSettingsResponse> = {},
-): WorkspaceSettingsResponse {
+function createInvoiceDefaultsFixture(
+  overrides: Partial<InvoiceDefaultsResponse> = {},
+): InvoiceDefaultsResponse {
   return {
-    createdAt: '2026-01-01T00:00:00.000Z',
     currency: 'EUR',
-    defaultHourlyRate: null,
-    id: '77777777-7777-4777-8777-777777777777',
+    defaultHourlyRate: 90,
     timeRoundingStepMinutes: 1,
-    timeZone: 'UTC',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    workspaceId,
     ...overrides,
   };
 }
@@ -454,15 +450,15 @@ describe('InvoicesView', () => {
   beforeEach(() => {
     testMocks.createInvoice.mockReset();
     testMocks.errorToast.mockReset();
-    testMocks.getWorkspaceSettings.mockReset();
+    testMocks.getInvoiceDefaults.mockReset();
     testMocks.refetch.mockReset();
     testMocks.routerPush.mockReset();
     testMocks.successToast.mockReset();
     testMocks.useInvoicesData.mockReset();
     testMocks.useInvoiceCreate.mockReset();
 
-    testMocks.getWorkspaceSettings.mockResolvedValue(
-      createWorkspaceSettingsFixture(),
+    testMocks.getInvoiceDefaults.mockResolvedValue(
+      createInvoiceDefaultsFixture(),
     );
 
     invoicesDataRefs = {
@@ -623,9 +619,9 @@ describe('InvoicesView', () => {
     expect(wrapper.find('[data-testid="invoices-table"]').exists()).toBe(true);
   });
 
-  it('passes the workspace settings currency and rounding step to the create dialog', async () => {
-    testMocks.getWorkspaceSettings.mockResolvedValue(
-      createWorkspaceSettingsFixture({
+  it('passes the invoice defaults currency and rounding step to the create dialog', async () => {
+    testMocks.getInvoiceDefaults.mockResolvedValue(
+      createInvoiceDefaultsFixture({
         currency: 'EUR',
         timeRoundingStepMinutes: 30,
       }),
@@ -645,22 +641,22 @@ describe('InvoicesView', () => {
     ).toBe('30');
   });
 
-  it('toasts an error when the workspace settings request fails', async () => {
-    const settingsError = new ApiError('Settings service unavailable', {
+  it('toasts an error when the invoice defaults request fails', async () => {
+    const defaultsError = new ApiError('Defaults service unavailable', {
       status: 503,
     });
-    testMocks.getWorkspaceSettings.mockRejectedValueOnce(settingsError);
+    testMocks.getInvoiceDefaults.mockRejectedValueOnce(defaultsError);
 
     mountInvoicesView();
     await flushPromises();
 
     expect(testMocks.errorToast).toHaveBeenCalledTimes(1);
     expect(testMocks.errorToast).toHaveBeenCalledWith(
-      'Settings service unavailable',
+      'Defaults service unavailable',
       {
-        error: settingsError,
+        error: defaultsError,
         logContext: {
-          action: 'load-workspace-settings',
+          action: 'load-invoice-defaults',
           feature: 'invoices',
         },
       },

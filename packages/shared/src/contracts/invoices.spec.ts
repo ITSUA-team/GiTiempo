@@ -4,6 +4,7 @@ import {
   createInvoiceSchema,
   eligibleEntriesQuerySchema,
   eligibleEntriesResponseSchema,
+  invoiceDefaultsResponseSchema,
   invoiceListQuerySchema,
   invoiceListResponseSchema,
   invoiceResponseSchema,
@@ -1103,5 +1104,80 @@ describe("invoiceStatsResponseSchema", () => {
       },
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("invoiceDefaultsResponseSchema", () => {
+  const validDefaults = {
+    currency: "USD",
+    defaultHourlyRate: 150,
+    timeRoundingStepMinutes: 15,
+  };
+
+  it("accepts valid defaults with non-null currency and rate", () => {
+    const result = invoiceDefaultsResponseSchema.parse(validDefaults);
+
+    expect(result.currency).toBe("USD");
+    expect(result.defaultHourlyRate).toBe(150);
+    expect(result.timeRoundingStepMinutes).toBe(15);
+  });
+
+  it("accepts nullable currency and rate", () => {
+    const result = invoiceDefaultsResponseSchema.parse({
+      currency: null,
+      defaultHourlyRate: null,
+      timeRoundingStepMinutes: 5,
+    });
+
+    expect(result.currency).toBeNull();
+    expect(result.defaultHourlyRate).toBeNull();
+    expect(result.timeRoundingStepMinutes).toBe(5);
+  });
+
+  it("accepts rounding steps at the 1 and 60 boundaries", () => {
+    const min = invoiceDefaultsResponseSchema.parse({
+      ...validDefaults,
+      timeRoundingStepMinutes: 1,
+    });
+    const max = invoiceDefaultsResponseSchema.parse({
+      ...validDefaults,
+      timeRoundingStepMinutes: 60,
+    });
+
+    expect(min.timeRoundingStepMinutes).toBe(1);
+    expect(max.timeRoundingStepMinutes).toBe(60);
+  });
+
+  it("strips unknown keys from the parsed payload", () => {
+    const result = invoiceDefaultsResponseSchema.parse({
+      ...validDefaults,
+      unknown: "extraneous",
+    });
+
+    expect(result).toEqual(validDefaults);
+    expect(result).not.toHaveProperty("unknown");
+  });
+
+  it("rejects a currency with the wrong length", () => {
+    const result = invoiceDefaultsResponseSchema.safeParse({
+      ...validDefaults,
+      currency: "US",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a rounding step below 1 and above 60", () => {
+    const belowMin = invoiceDefaultsResponseSchema.safeParse({
+      ...validDefaults,
+      timeRoundingStepMinutes: 0,
+    });
+    const overMax = invoiceDefaultsResponseSchema.safeParse({
+      ...validDefaults,
+      timeRoundingStepMinutes: 61,
+    });
+
+    expect(belowMin.success).toBe(false);
+    expect(overMax.success).toBe(false);
   });
 });

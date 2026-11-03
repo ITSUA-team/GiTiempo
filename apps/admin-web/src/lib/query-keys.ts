@@ -151,6 +151,8 @@ export const adminInvoicesKeys = {
     ] as const,
   detail: (scope: AdminServerStateScope, invoiceId: string) =>
     [...adminInvoicesKeys.all(scope), 'detail', invoiceId] as const,
+  defaults: (scope: AdminServerStateScope) =>
+    [...adminInvoicesKeys.all(scope), 'defaults'] as const,
   stats: (scope: AdminServerStateScope) =>
     [...adminInvoicesKeys.all(scope), 'stats'] as const,
   eligibleEntries: (

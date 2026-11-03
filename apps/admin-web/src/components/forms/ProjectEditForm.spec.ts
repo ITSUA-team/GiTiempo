@@ -59,6 +59,7 @@ const project: ProjectResponse = {
 const members: WorkspaceMemberListResponse = [
   {
     avatarUrl: null,
+    canViewInvoices: false,
     displayName: 'Alex Admin',
     email: 'alex@example.com',
     id: 'member-1',
@@ -71,6 +72,7 @@ const members: WorkspaceMemberListResponse = [
   },
   {
     avatarUrl: null,
+    canViewInvoices: true,
     displayName: 'Pat PM',
     email: 'pat@example.com',
     id: 'member-2',
@@ -83,6 +85,7 @@ const members: WorkspaceMemberListResponse = [
   },
   {
     avatarUrl: null,
+    canViewInvoices: false,
     displayName: null,
     email: 'member@example.com',
     id: 'member-3',

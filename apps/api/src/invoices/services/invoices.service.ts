@@ -23,6 +23,7 @@ import type {
   CreateInvoiceInput,
   EligibleEntriesQuery,
   EligibleEntriesResponse,
+  InvoiceDefaultsResponse,
   InvoiceListItem,
   InvoiceListQuery,
   InvoiceListResponse,
@@ -37,7 +38,10 @@ import { DomainError } from '../../commons/errors/domain-error';
 import { escapeLikePattern } from '../../commons/utils/escape-like-pattern';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DbTransaction, DrizzleDB } from '../../db/db.types';
-import { MembersService } from '../../members/services/members.service';
+import {
+  MembersService,
+  type ActiveMembership,
+} from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
 import { projects } from '../../projects/schemas/projects.schema';
 import { tasks } from '../../tasks/schemas/tasks.schema';
@@ -145,7 +149,35 @@ export class InvoicesService {
     private readonly members: MembersService,
   ) {}
 
-  // ── List ──────────────────────────────────────────────────────────────
+  // ── Defaults ──────────────────────────────────────────────────────
+
+  /** PM-accessible snapshot of the workspace invoice defaults. */
+  async getInvoiceDefaults(user: AuthUser): Promise<InvoiceDefaultsResponse> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+    this.assertInvoiceViewAccess(membership);
+
+    const [settings] = await this.db
+      .select({
+        currency: workspaceSettings.currency,
+        defaultHourlyRate: workspaceSettings.defaultHourlyRate,
+        timeRoundingStepMinutes: workspaceSettings.timeRoundingStepMinutes,
+      })
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, user.workspaceId))
+      .limit(1);
+
+    return {
+      currency: settings?.currency ?? null,
+      defaultHourlyRate: settings?.defaultHourlyRate ?? null,
+      timeRoundingStepMinutes: settings?.timeRoundingStepMinutes ?? 1,
+    };
+  }
+
+  // ── List ─────────────────────────────────────────────────────────
 
   async listInvoices(
     user: AuthUser,
@@ -156,6 +188,7 @@ export class InvoicesService {
       user.workspaceId,
       ['admin', 'pm'],
     );
+    this.assertInvoiceViewAccess(membership);
 
     const isPm = membership.role === 'pm';
     const conditions: SQL[] = [eq(invoices.workspaceId, user.workspaceId)];
@@ -288,6 +321,7 @@ export class InvoicesService {
       user.workspaceId,
       ['admin', 'pm'],
     );
+    this.assertInvoiceViewAccess(membership);
     const isPm = membership.role === 'pm';
 
     // Resolve workspace default currency for display.
@@ -433,6 +467,7 @@ export class InvoicesService {
       user.workspaceId,
       ['admin', 'pm'],
     );
+    this.assertInvoiceViewAccess(membership);
 
     // Both probes validate access and return the project's rounding step;
     // null means the project inherits the workspace setting.
@@ -564,6 +599,7 @@ export class InvoicesService {
       user.workspaceId,
       ['admin', 'pm'],
     );
+    this.assertInvoiceViewAccess(membership);
 
     // PMs must scope invoice creation to a visible project. Both project
     // probes validate access and return the project's rounding step.
@@ -751,6 +787,7 @@ export class InvoicesService {
       user.workspaceId,
       ['admin', 'pm'],
     );
+    this.assertInvoiceViewAccess(membership);
 
     const invoice = await this.findInvoiceOrThrow(user.workspaceId, id);
 
@@ -775,6 +812,7 @@ export class InvoicesService {
       user.workspaceId,
       ['admin', 'pm'],
     );
+    this.assertInvoiceViewAccess(membership);
 
     return this.db.transaction(async (tx) => {
       const invoice = await this.loadInvoiceDetail(tx, user.workspaceId, id);
@@ -871,6 +909,12 @@ export class InvoicesService {
         `Invoice status cannot transition from ${current} to ${next}`,
         409,
       );
+    }
+  }
+
+  private assertInvoiceViewAccess(membership: ActiveMembership): void {
+    if (membership.role === 'pm' && !membership.canViewInvoices) {
+      throw new ForbiddenException('Forbidden');
     }
   }
 

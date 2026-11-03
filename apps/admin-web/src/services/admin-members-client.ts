@@ -1,11 +1,13 @@
 import {
 	createWorkspaceInviteSchema,
+	updateWorkspaceMemberPermissionsSchema,
 	updateWorkspaceMemberRoleSchema,
 	workspaceInviteListResponseSchema,
 	workspaceInviteResponseSchema,
 	workspaceMemberListResponseSchema,
 	workspaceMemberResponseSchema,
 	type CreateWorkspaceInviteInput,
+	type UpdateWorkspaceMemberPermissionsInput,
 	type UpdateWorkspaceMemberRoleInput,
 	type WorkspaceInviteListResponse,
 	type WorkspaceInviteResponse,
@@ -30,6 +32,10 @@ export interface AdminMembersClient {
 	listMembers(): Promise<WorkspaceMemberListResponse>;
 	removeMember(memberId: string): Promise<void>;
 	resendInvite(inviteId: string): Promise<WorkspaceInviteResponse>;
+	updateMemberPermissions(
+		memberId: string,
+		input: UpdateWorkspaceMemberPermissionsInput,
+	): Promise<WorkspaceMemberResponse>;
 	updateMemberRole(
 		memberId: string,
 		input: UpdateWorkspaceMemberRoleInput,
@@ -86,6 +92,15 @@ export function createAdminMembersClient({
 			});
 		},
 
+		updateMemberPermissions(memberId, input) {
+			return apiClient.requestJson({
+				body: updateWorkspaceMemberPermissionsSchema.parse(input),
+				method: 'PATCH',
+				path: `/members/${memberId}/permissions`,
+				responseSchema: workspaceMemberResponseSchema,
+			});
+		},
+
 		updateMemberRole(memberId, input) {
 			return apiClient.requestJson({
 				body: updateWorkspaceMemberRoleSchema.parse(input),
@@ -121,6 +136,12 @@ export const adminMembersClient: AdminMembersClient = {
 	},
 	resendInvite(inviteId) {
 		return createDefaultAdminMembersClient().resendInvite(inviteId);
+	},
+	updateMemberPermissions(memberId, input) {
+		return createDefaultAdminMembersClient().updateMemberPermissions(
+			memberId,
+			input,
+		);
 	},
 	updateMemberRole(memberId, input) {
 		return createDefaultAdminMembersClient().updateMemberRole(

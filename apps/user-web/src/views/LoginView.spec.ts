@@ -22,6 +22,7 @@ import {
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
+    canViewInvoices: false,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Alexey Tsukanov",
     email: "alexey@example.com",
@@ -162,6 +163,7 @@ describe("LoginView", () => {
   it("signs in with Google through the UI and redirects to the dashboard", async () => {
     const provisionedAdmin: UserResponse = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Workspace Admin",
       email: "provisioned@example.com",
