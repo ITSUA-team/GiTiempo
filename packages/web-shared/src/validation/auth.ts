@@ -13,9 +13,12 @@ export const emailOnlySchema = z.object({
 
 export type EmailOnlyInput = z.infer<typeof emailOnlySchema>;
 
+export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_TOO_SHORT_MESSAGE = "Password must be at least 8 characters.";
+
 export const newPasswordSchema = z
   .object({
-    password: z.string().min(8, "Password must be at least 8 characters."),
+    password: z.string().min(PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE),
     confirmPassword: z.string().min(1, "Confirm your password."),
   })
   .refine((data) => data.password === data.confirmPassword, {
