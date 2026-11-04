@@ -26,6 +26,7 @@ function createMember(
 ): WorkspaceMemberResponse {
   return {
     avatarUrl: null,
+    canViewInvoices: false,
     displayName,
     email: `${id}@example.com`,
     id,

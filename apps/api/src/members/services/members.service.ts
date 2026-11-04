@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { and, asc, count, eq, sql } from 'drizzle-orm';
 import type {
+  UpdateWorkspaceMemberPermissionsInput,
   UpdateWorkspaceMemberRoleInput,
   WorkspaceMemberResponse,
   WorkspaceRole,
@@ -24,6 +25,7 @@ export interface ActiveMembership {
   userId: string;
   workspaceId: string;
   role: WorkspaceRole;
+  canViewInvoices: boolean;
 }
 
 export interface WorkspaceMembershipSummary {
@@ -47,6 +49,7 @@ export class MembersService {
         userId: workspaceMembers.userId,
         workspaceId: workspaceMembers.workspaceId,
         role: workspaceMembers.role,
+        canViewInvoices: workspaceMembers.canViewInvoices,
       })
       .from(workspaceMembers)
       .where(eq(workspaceMembers.userId, userId))
@@ -69,6 +72,7 @@ export class MembersService {
         userId: workspaceMembers.userId,
         workspaceId: workspaceMembers.workspaceId,
         role: workspaceMembers.role,
+        canViewInvoices: workspaceMembers.canViewInvoices,
       })
       .from(workspaceMembers)
       .where(
@@ -92,6 +96,7 @@ export class MembersService {
         userId: workspaceMembers.userId,
         workspaceId: workspaceMembers.workspaceId,
         role: workspaceMembers.role,
+        canViewInvoices: workspaceMembers.canViewInvoices,
       })
       .from(workspaceMembers)
       .where(
@@ -184,6 +189,7 @@ export class MembersService {
         displayName: users.displayName,
         avatarUrl: users.avatarUrl,
         role: workspaceMembers.role,
+        canViewInvoices: workspaceMembers.canViewInvoices,
         joinedAt: workspaceMembers.joinedAt,
         lastActiveAt: users.lastActiveAt,
         projectsAssignedCount: projectsAssignedCount,
@@ -237,42 +243,29 @@ export class MembersService {
         );
       }
 
-      const assignedCount = sql<number>`(
-        SELECT COUNT(*)::int FROM project_assignments pa
-        WHERE pa.user_id = ${updated.userId}
-          AND pa.workspace_id = ${updated.workspaceId}
-      )`.as('projects_assigned_count');
+      return this.loadMemberResponse(tx, updated.id);
+    });
+  }
 
-      const [row] = await tx
-        .select({
-          id: workspaceMembers.id,
-          workspaceId: workspaceMembers.workspaceId,
-          userId: workspaceMembers.userId,
-          email: users.email,
-          displayName: users.displayName,
-          avatarUrl: users.avatarUrl,
-          role: workspaceMembers.role,
-          joinedAt: workspaceMembers.joinedAt,
-          lastActiveAt: users.lastActiveAt,
-          projectsAssignedCount: assignedCount,
-        })
-        .from(workspaceMembers)
-        .innerJoin(users, eq(users.id, workspaceMembers.userId))
-        .where(eq(workspaceMembers.id, updated.id))
-        .limit(1);
+  async updateMemberPermissions(
+    workspaceId: string,
+    memberId: string,
+    input: UpdateWorkspaceMemberPermissionsInput,
+  ): Promise<WorkspaceMemberResponse> {
+    return this.db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(workspaceMembers)
+        .set({ canViewInvoices: input.canViewInvoices })
+        .where(
+          and(
+            eq(workspaceMembers.id, memberId),
+            eq(workspaceMembers.workspaceId, workspaceId),
+          ),
+        )
+        .returning();
+      if (!updated) throw new NotFoundException('Member not found');
 
-      if (!row) {
-        throw DomainError.internal(
-          'member_update_response_missing',
-          'Failed to load updated member',
-        );
-      }
-      return {
-        ...row,
-        joinedAt: row.joinedAt.toISOString(),
-        lastActiveAt: row.lastActiveAt?.toISOString() ?? null,
-        projectsAssignedCount: row.projectsAssignedCount ?? 0,
-      };
+      return this.loadMemberResponse(tx, updated.id);
     });
   }
 
@@ -296,6 +289,49 @@ export class MembersService {
         .delete(workspaceMembers)
         .where(eq(workspaceMembers.id, memberId));
     });
+  }
+
+  private async loadMemberResponse(
+    db: Pick<DrizzleDB, 'select'>,
+    memberId: string,
+  ): Promise<WorkspaceMemberResponse> {
+    const projectsAssignedCount = sql<number>`(
+      SELECT COUNT(*)::int FROM project_assignments pa
+      WHERE pa.user_id = ${workspaceMembers.userId}
+        AND pa.workspace_id = ${workspaceMembers.workspaceId}
+    )`.as('projects_assigned_count');
+
+    const [row] = await db
+      .select({
+        id: workspaceMembers.id,
+        workspaceId: workspaceMembers.workspaceId,
+        userId: workspaceMembers.userId,
+        email: users.email,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        role: workspaceMembers.role,
+        canViewInvoices: workspaceMembers.canViewInvoices,
+        joinedAt: workspaceMembers.joinedAt,
+        lastActiveAt: users.lastActiveAt,
+        projectsAssignedCount: projectsAssignedCount,
+      })
+      .from(workspaceMembers)
+      .innerJoin(users, eq(users.id, workspaceMembers.userId))
+      .where(eq(workspaceMembers.id, memberId))
+      .limit(1);
+
+    if (!row) {
+      throw DomainError.internal(
+        'member_update_response_missing',
+        'Failed to load updated member',
+      );
+    }
+    return {
+      ...row,
+      joinedAt: row.joinedAt.toISOString(),
+      lastActiveAt: row.lastActiveAt?.toISOString() ?? null,
+      projectsAssignedCount: row.projectsAssignedCount ?? 0,
+    };
   }
 
   private async assertCanLoseAdminRole(

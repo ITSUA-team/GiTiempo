@@ -30,6 +30,7 @@ describe('createAdminMembersClient', () => {
         JSON.stringify([
           {
             avatarUrl: null,
+            canViewInvoices: false,
             displayName: 'Alex Admin',
             email: 'alex@example.com',
             id: '11111111-1111-4111-8111-111111111111',
@@ -61,10 +62,70 @@ describe('createAdminMembersClient', () => {
     );
     expect(result).toEqual([
       expect.objectContaining({
+        canViewInvoices: false,
         lastActiveAt: '2026-05-02T11:00:00.000Z',
         projectsAssignedCount: 3,
       }),
     ]);
+  });
+
+  it('updates member invoice permissions with the expected path, payload, and parsed response', async () => {
+    fetchFn.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          avatarUrl: null,
+          canViewInvoices: true,
+          displayName: 'Pat PM',
+          email: 'pat@example.com',
+          id: '11111111-1111-4111-8111-111111111111',
+          joinedAt: '2026-05-01T10:00:00.000Z',
+          lastActiveAt: '2026-05-02T11:00:00.000Z',
+          projectsAssignedCount: 2,
+          role: 'pm',
+          userId: '22222222-2222-4222-8222-222222222222',
+          workspaceId: '33333333-3333-4333-8333-333333333333',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        },
+      ),
+    );
+
+    const result = await client.updateMemberPermissions(
+      '11111111-1111-4111-8111-111111111111',
+      { canViewInvoices: true },
+    );
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/members/11111111-1111-4111-8111-111111111111/permissions',
+      expect.objectContaining({
+        body: JSON.stringify({ canViewInvoices: true }),
+        headers: expect.objectContaining({
+          Authorization: 'Bearer access-token',
+          'Content-Type': 'application/json',
+        }),
+        method: 'PATCH',
+      }),
+    );
+    expect(result.role).toBe('pm');
+    expect(result.canViewInvoices).toBe(true);
+  });
+
+  it('surfaces API errors when member permission updates are rejected', async () => {
+    fetchFn.mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Admin role required' }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 403,
+      }),
+    );
+
+    await expect(
+      client.updateMemberPermissions(
+        '11111111-1111-4111-8111-111111111111',
+        { canViewInvoices: false },
+      ),
+    ).rejects.toThrow('Admin role required');
   });
 
   it('creates invites with the expected path, payload, and parsed response', async () => {

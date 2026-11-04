@@ -37,6 +37,7 @@ const RouterViewStub = {
 function createAuthProfile(role: WorkspaceRole = WorkspaceRoles.Admin): UserResponse {
   return {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Admin User",
     email: "admin@example.com",
@@ -167,6 +168,7 @@ function setAuthenticatedShellUser(
   authStore.bootstrapComplete = true;
   authStore.profile = {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: "2026-05-01T10:00:00.000Z",
     displayName: "Admin User",
     email: `${role}@example.com`,
@@ -384,6 +386,48 @@ describe("AdminAppShell", () => {
     expect(wrapper.findAll('a[href="/settings"]')).toHaveLength(0);
   });
 
+  it("hides invoices navigation for PMs without canViewInvoices permission", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "pm-access-token";
+    authStore.bootstrapComplete = true;
+    authStore.profile = {
+      ...createAuthProfile(WorkspaceRoles.PM),
+      canViewInvoices: false,
+    };
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/");
+    await router.isReady();
+
+    const wrapper = mount(AdminAppShell, {
+      global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute("data-tooltip", String(binding.value));
+            },
+          },
+        },
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
+        stubs: {
+          RouterView: RouterViewStub,
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
+      },
+    });
+
+    expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(0);
+  });
+
   it("keeps Projects active for admins on the add-project route", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -460,6 +504,47 @@ describe("AdminAppShell", () => {
     );
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
     expect(vi.mocked(navigateToExternalHref)).not.toHaveBeenCalled();
+  });
+
+  it("redirects from invoices to dashboard when switching to a workspace where PM lacks canViewInvoices", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "pm-access-token";
+    authStore.bootstrapComplete = true;
+    authStore.profile = { ...createAuthProfile(WorkspaceRoles.PM), canViewInvoices: true };
+
+    vi.spyOn(authStore, "switchWorkspace").mockImplementation(async () => {
+      authStore.profile = { ...createAuthProfile(WorkspaceRoles.PM), canViewInvoices: false };
+      return {
+        profileReloaded: true,
+        profileReloadError: null,
+        membershipsReloaded: true,
+        reloadError: null,
+      };
+    });
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/invoices");
+    await router.isReady();
+
+    const wrapper = mount(AdminAppShell, {
+      global: {
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          RouterView: RouterViewStub,
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-switch-workspace"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
   it("redirects to user-web after switching to a workspace without admin access", async () => {

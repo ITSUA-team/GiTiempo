@@ -106,6 +106,12 @@ const invoiceStatsResponse = {
 	},
 };
 
+const invoiceDefaultsResponse = {
+	currency: 'USD',
+	defaultHourlyRate: 150,
+	timeRoundingStepMinutes: 15,
+};
+
 describe('createAdminInvoicesClient', () => {
 	const fetchFn = vi.fn<typeof fetch>();
 	const client = createAdminInvoicesClient({
@@ -330,6 +336,60 @@ describe('createAdminInvoicesClient', () => {
 			projectCount: 4,
 			totalAmount: 2400,
 		});
+	});
+
+	it('loads invoice defaults with auth headers and parses nullable fields', async () => {
+		fetchFn
+			.mockResolvedValueOnce(jsonResponse(invoiceDefaultsResponse))
+			.mockResolvedValueOnce(
+				jsonResponse({
+					currency: null,
+					defaultHourlyRate: null,
+					timeRoundingStepMinutes: 5,
+				}),
+			);
+
+		const result = await client.getInvoiceDefaults();
+
+		const [url, requestOptions] = fetchFn.mock.calls.at(-1) ?? [];
+		const parsedUrl = new URL(url as string);
+		expect(parsedUrl.pathname).toBe('/invoices/defaults');
+		expect(requestOptions).toMatchObject({
+			headers: expect.objectContaining({
+				Authorization: 'Bearer access-token',
+			}),
+			method: 'GET',
+		});
+		expect(result).toEqual({
+			currency: 'USD',
+			defaultHourlyRate: 150,
+			timeRoundingStepMinutes: 15,
+		});
+
+		const fallbackResult = await client.getInvoiceDefaults();
+
+		expect(fallbackResult).toEqual({
+			currency: null,
+			defaultHourlyRate: null,
+			timeRoundingStepMinutes: 5,
+		});
+	});
+
+	it('rejects invoice defaults payloads that fail response schema validation', async () => {
+		fetchFn.mockResolvedValue(
+			jsonResponse({
+				currency: 'USD',
+				defaultHourlyRate: 150,
+				// 61 exceeds the maximum rounding step of 60 minutes.
+				timeRoundingStepMinutes: 61,
+			}),
+		);
+
+		await expect(client.getInvoiceDefaults()).rejects.toMatchObject({
+			name: 'ZodError',
+			issues: expect.anything(),
+		});
+		expect(fetchFn).toHaveBeenCalledTimes(1);
 	});
 
 	it('deletes invoices with DELETE and no request body', async () => {

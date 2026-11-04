@@ -79,6 +79,7 @@ function createMembers(): WorkspaceMemberListResponse {
   return [
     {
       avatarUrl: null,
+      canViewInvoices: true,
       displayName: 'Pat PM',
       email: 'pat@example.com',
       id: 'member-1',
@@ -91,6 +92,7 @@ function createMembers(): WorkspaceMemberListResponse {
     },
     {
       avatarUrl: null,
+      canViewInvoices: false,
       displayName: 'Alex Admin',
       email: 'alex@example.com',
       id: 'member-2',

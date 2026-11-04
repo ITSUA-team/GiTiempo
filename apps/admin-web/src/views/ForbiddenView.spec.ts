@@ -82,6 +82,7 @@ const WorkspaceSwitchDialogStub = {
 function createAuthProfile(role: WorkspaceRole): UserResponse {
   return {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Admin User",
     email: `${role}@example.com`,

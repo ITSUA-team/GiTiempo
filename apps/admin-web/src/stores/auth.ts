@@ -104,6 +104,7 @@ export const useAuthStore = defineStore("auth", () => {
       const authorizationChanged =
         previousProfile?.id !== profile.id ||
         previousProfile?.role !== profile.role ||
+        previousProfile?.canViewInvoices !== profile.canViewInvoices ||
         JSON.stringify(previousMemberships) !==
           JSON.stringify(membershipsResponse.items);
 

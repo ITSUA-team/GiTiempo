@@ -1,0 +1,1 @@
+ALTER TABLE "workspace_members" ADD COLUMN "can_view_invoices" boolean DEFAULT false NOT NULL;

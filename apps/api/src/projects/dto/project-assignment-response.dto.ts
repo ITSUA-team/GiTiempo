@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from './../../common/zod-dto.js';
 import { projectAssignmentResponseSchema } from '@gitiempo/shared';
 
 export class ProjectAssignmentResponseDto extends createZodDto(

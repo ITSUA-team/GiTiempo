@@ -17,7 +17,7 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useAdminProjectsQuery } from '@/composables/query';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useToasts } from '@/composables/feedback/useToasts';
-import { useWorkspaceRoundingSettings } from '@/composables/useWorkspaceRoundingSettings';
+import { useInvoiceDefaults } from '@/composables/invoices/useInvoiceDefaults';
 import { useInvoiceCreate } from '@/composables/invoices/useInvoiceCreate';
 import { useInvoicesData } from '@/composables/invoices/useInvoicesData';
 import { routeNames } from '@/constants/routes';
@@ -131,20 +131,29 @@ watch(
   },
 );
 
-const { workspaceSettingsQuery, workspaceRoundingStepMinutes } =
-  useWorkspaceRoundingSettings({
-    enabled: computed(() => Boolean(accessToken.value)),
-    fallback: null,
-    feature: 'invoices',
-    scope,
-  });
+const {
+  invoiceDefaultsQuery,
+  workspaceCurrency,
+  workspaceHourlyRate,
+  workspaceRoundingStepMinutes,
+} = useInvoiceDefaults({
+  enabled: computed(() => Boolean(accessToken.value)),
+  scope,
+});
 
-const workspaceCurrency = computed(
-  () => workspaceSettingsQuery.data.value?.currency ?? null,
-);
-
-const workspaceHourlyRate = computed(
-  () => workspaceSettingsQuery.data.value?.defaultHourlyRate ?? null,
+watch(
+  () => invoiceDefaultsQuery.error.value,
+  (error) => {
+    if (error) {
+      errorToast(getErrorMessage(error), {
+        error,
+        logContext: {
+          action: 'load-invoice-defaults',
+          feature: 'invoices',
+        },
+      });
+    }
+  },
 );
 
 const loadErrorMessage = computed(() =>

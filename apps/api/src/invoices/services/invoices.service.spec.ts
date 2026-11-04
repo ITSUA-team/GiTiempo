@@ -40,14 +40,17 @@ const memberUser: AuthUser = {
   role: 'member',
 };
 
-function createService(role: 'admin' | 'pm' | 'member') {
+function createService(
+  role: 'admin' | 'pm' | 'member',
+  canViewInvoices = true,
+) {
   const members = {
     requireRole: vi
       .fn()
       .mockImplementation(
         (_userId: string, _wsId: string, roles: readonly string[]) => {
           if (!roles.includes(role)) throw new ForbiddenException('Forbidden');
-          return Promise.resolve({ role });
+          return Promise.resolve({ role, canViewInvoices });
         },
       ),
   };
@@ -401,6 +404,138 @@ describe('InvoicesService', () => {
         discountPercent: 0,
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  // ── PM invoice view permission ────────────────────────────────────────
+
+  it('rejects PMs without invoice view permission on list', async () => {
+    const { service } = createService('pm', false);
+    await expect(
+      service.listInvoices(pmUser, { page: 1, limit: 20 }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects PMs without invoice view permission on stats', async () => {
+    const { service } = createService('pm', false);
+    await expect(service.getInvoiceStats(pmUser)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('rejects PMs without invoice view permission on eligible-entries preview', async () => {
+    const { service } = createService('pm', false);
+    await expect(
+      service.previewEligibleEntries(pmUser, {
+        projectId: pmProjectId,
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects PMs without invoice view permission on create', async () => {
+    const { service } = createService('pm', false);
+    await expect(
+      service.createInvoice(pmUser, {
+        title: 'Denied',
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+        discountPercent: 0,
+        projectId: pmProjectId,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects PMs without invoice view permission on get', async () => {
+    const { service } = createService('pm', false);
+    await expect(
+      service.getInvoice(pmUser, '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects PMs without invoice view permission on update', async () => {
+    const { service } = createService('pm', false);
+    await expect(
+      service.updateInvoice(pmUser, '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010', {
+        status: 'sent',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  describe('getInvoiceDefaults', () => {
+    function stageDefaultsDb(rows: unknown[]) {
+      const selectSpy = vi.fn(() => makeSelectChain('limit', rows));
+      return { selectSpy };
+    }
+
+    it('returns workspace defaults for admins', async () => {
+      const { service, members } = createService('admin');
+      const { selectSpy } = stageDefaultsDb([
+        {
+          currency: 'USD',
+          defaultHourlyRate: 100,
+          timeRoundingStepMinutes: 5,
+        },
+      ]);
+      Object.defineProperty(service, 'db', { value: { select: selectSpy } });
+
+      const result = await service.getInvoiceDefaults(adminUser);
+
+      expect(result).toEqual({
+        currency: 'USD',
+        defaultHourlyRate: 100,
+        timeRoundingStepMinutes: 5,
+      });
+      expect(members.requireRole).toHaveBeenCalledWith(
+        adminUser.sub,
+        adminUser.workspaceId,
+        ['admin', 'pm'],
+      );
+    });
+
+    it('returns workspace defaults for PMs with invoice view permission', async () => {
+      const { service } = createService('pm');
+      const { selectSpy } = stageDefaultsDb([
+        {
+          currency: 'EUR',
+          defaultHourlyRate: null,
+          timeRoundingStepMinutes: 15,
+        },
+      ]);
+      Object.defineProperty(service, 'db', { value: { select: selectSpy } });
+
+      await expect(service.getInvoiceDefaults(pmUser)).resolves.toEqual({
+        currency: 'EUR',
+        defaultHourlyRate: null,
+        timeRoundingStepMinutes: 15,
+      });
+    });
+
+    it('rejects PMs without invoice view permission', async () => {
+      const { service } = createService('pm', false);
+      await expect(service.getInvoiceDefaults(pmUser)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+    });
+
+    it('rejects members through the role gate', async () => {
+      const { service } = createService('member');
+      await expect(
+        service.getInvoiceDefaults(memberUser),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('falls back to null currency/rate and a 1-minute step without settings', async () => {
+      const { service } = createService('admin');
+      const { selectSpy } = stageDefaultsDb([]);
+      Object.defineProperty(service, 'db', { value: { select: selectSpy } });
+
+      await expect(service.getInvoiceDefaults(adminUser)).resolves.toEqual({
+        currency: null,
+        defaultHourlyRate: null,
+        timeRoundingStepMinutes: 1,
+      });
+    });
   });
 
   // ── Totals calculation ────────────────────────────────────────────────
