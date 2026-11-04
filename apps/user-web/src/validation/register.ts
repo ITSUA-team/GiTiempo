@@ -1,4 +1,5 @@
 import { registerRequestSchema } from "@gitiempo/shared";
+import { PASSWORD_MIN_LENGTH } from "@gitiempo/web-shared";
 import { z } from "zod";
 
 export const registerFormSchema = registerRequestSchema
@@ -12,7 +13,7 @@ export const registerFormSchema = registerRequestSchema
       z.literal(true, "Accept the workspace owner responsibility to continue."),
     ),
     password: z.string().min(1, "Enter a password.").min(
-      8,
+      PASSWORD_MIN_LENGTH,
       "Choose a password with at least 8 characters.",
     ),
     workspaceName: z
