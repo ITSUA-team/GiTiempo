@@ -115,8 +115,11 @@ const paginatorProps = computed(() => ({
   currentPageReportTemplate:
     'Showing {first} to {last} of {totalRecords} invoices',
   first: (props.page - 1) * props.rowsPerPage,
+  pageLinkSize: props.isMobileViewport ? 3 : 5,
   rows: props.rowsPerPage,
-  template: 'PrevPageLink PageLinks NextPageLink CurrentPageReport',
+  template: props.isMobileViewport
+    ? 'PrevPageLink PageLinks NextPageLink'
+    : 'PrevPageLink PageLinks NextPageLink CurrentPageReport',
   totalRecords: props.totalRecords,
 }));
 
