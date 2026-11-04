@@ -192,6 +192,10 @@ describe('admin-web query keys', () => {
       'detail',
       'invoice-1',
     ]);
+    expect(adminInvoicesKeys.defaults(scope)).toEqual([
+      ...scopedKeys,
+      'defaults',
+    ]);
     expect(adminInvoicesKeys.stats(scope)).toEqual([
       ...scopedKeys,
       'stats',

@@ -146,6 +146,7 @@ const projects: ProjectListResponse = [
 const workspaceMembers: WorkspaceMemberListResponse = [
   {
     avatarUrl: null,
+    canViewInvoices: false,
     displayName: 'Alex Admin',
     email: 'alex@example.com',
     id: '55555555-5555-4555-8555-555555555551',
@@ -158,6 +159,7 @@ const workspaceMembers: WorkspaceMemberListResponse = [
   },
   {
     avatarUrl: null,
+    canViewInvoices: true,
     displayName: 'Nina PM',
     email: 'nina@example.com',
     id: '55555555-5555-4555-8555-555555555552',
@@ -170,6 +172,7 @@ const workspaceMembers: WorkspaceMemberListResponse = [
   },
   {
     avatarUrl: null,
+    canViewInvoices: false,
     displayName: 'Zoe Analyst',
     email: 'zoe@example.com',
     id: '55555555-5555-4555-8555-555555555553',

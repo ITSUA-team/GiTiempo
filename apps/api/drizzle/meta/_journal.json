@@ -190,6 +190,13 @@
       "when": 1793184235527,
       "tag": "0026_right_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793710037882,
+      "tag": "0027_strange_snowbird",
+      "breakpoints": true
     }
   ]
 }

@@ -72,6 +72,7 @@ function createRuntime(overrides?: {
     currentUserClient: {
       getCurrentUser: async () => ({
         avatarUrl: null,
+        canViewInvoices: false,
         createdAt: "2026-01-01T00:00:00.000Z",
         displayName: "Alexey Tsukanov",
         email: "alexey@example.com",
@@ -91,6 +92,7 @@ function createRuntime(overrides?: {
       }),
       updateCurrentUser: async () => ({
         avatarUrl: null,
+        canViewInvoices: false,
         createdAt: "2026-01-01T00:00:00.000Z",
         displayName: "Alexey Tsukanov",
         email: "alexey@example.com",

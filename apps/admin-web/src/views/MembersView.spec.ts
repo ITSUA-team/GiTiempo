@@ -15,6 +15,7 @@ const testMocks = vi.hoisted(() => ({
   removeAssignment: vi.fn(),
   resendInvite: vi.fn(),
   successToast: vi.fn(),
+  updateMemberPermissions: vi.fn(),
   listInvites: vi.fn(),
   listMembers: vi.fn(),
   listProjects: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock('@/services/admin-members-client', () => ({
     listMembers: testMocks.listMembers,
     removeMember: testMocks.removeMember,
     resendInvite: testMocks.resendInvite,
+    updateMemberPermissions: testMocks.updateMemberPermissions,
   },
 }));
 
@@ -66,6 +68,7 @@ function createDeferred<T>() {
 function createMember() {
   return {
     avatarUrl: null,
+    canViewInvoices: false,
     displayName: 'Pat PM',
     email: 'pat@example.com',
     id: 'member-remove',
@@ -131,6 +134,11 @@ const MemberEditFormStub = {
       Member settings for {{ member.email }} across {{ projects.length }} projects | assign={{ canAssignPm }} | saving={{ saving }}
       <button v-if="canRemove" data-testid="member-edit-remove" @click="$emit('remove')" />
       <button v-if="canAssignPm" data-testid="member-edit-save" @click="$emit('save', { projectIds: [] })" />
+      <button
+        v-if="member.role === 'pm'"
+        data-testid="member-edit-invoice-permission-toggle"
+        @click="$emit('update:canViewInvoices', true)"
+      />
       <button data-testid="member-edit-cancel" @click="$emit('cancelled')" />
     </div>
   `,
@@ -195,6 +203,7 @@ function mountMembersView() {
   authStore.accessToken = 'access-token';
   authStore.profile = {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: '2026-05-01T10:00:00.000Z',
     displayName: 'Alex Admin',
     email: 'alex@example.com',
@@ -224,6 +233,7 @@ describe('MembersView', () => {
     testMocks.requireConfirmation.mockReset();
     testMocks.resendInvite.mockReset();
     testMocks.successToast.mockReset();
+    testMocks.updateMemberPermissions.mockReset();
 
     testMocks.assignMember.mockResolvedValue(undefined);
     testMocks.removeAssignment.mockResolvedValue(undefined);
@@ -299,6 +309,7 @@ describe('MembersView', () => {
     authStore.accessToken = 'access-token';
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: true,
       createdAt: '2026-05-01T10:00:00.000Z',
       displayName: 'Alex Admin',
       email: 'alex@example.com',
@@ -584,6 +595,76 @@ describe('MembersView', () => {
       'Project assignments for Pat PM saved.',
     );
     expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(false);
+  });
+
+  it('updates the invoice view permission from the member settings toggle, refreshes, and toasts success', async () => {
+    const member = createMember();
+
+    testMocks.listMembers.mockResolvedValue([member]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.updateMemberPermissions.mockResolvedValue({
+      ...member,
+      canViewInvoices: true,
+    });
+
+    const wrapper = mountMembersView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    await wrapper
+      .get('[data-testid="member-edit-invoice-permission-toggle"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(testMocks.updateMemberPermissions).toHaveBeenCalledWith(
+      'member-remove',
+      { canViewInvoices: true },
+    );
+    expect(testMocks.successToast).toHaveBeenCalledWith(
+      'Invoice view permission updated',
+    );
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
+  });
+
+  it('refreshes member data and toasts an error when the invoice permission update fails', async () => {
+    const member = createMember();
+
+    testMocks.listMembers.mockResolvedValue([member]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.updateMemberPermissions.mockRejectedValueOnce(
+      new Error('Admin role required'),
+    );
+
+    const wrapper = mountMembersView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    await wrapper
+      .get('[data-testid="member-edit-invoice-permission-toggle"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(testMocks.updateMemberPermissions).toHaveBeenCalledWith(
+      'member-remove',
+      { canViewInvoices: true },
+    );
+    expect(testMocks.errorToast).toHaveBeenCalledWith('Admin role required', {
+      error: expect.any(Error),
+      logContext: {
+        action: 'update-invoice-permission',
+        feature: 'members',
+      },
+    });
+    // The refresh after failure restores the authoritative permission state
+    // so the toggle reverts.
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
   });
 
   it('keeps project assignment controls unavailable for admin member rows', async () => {

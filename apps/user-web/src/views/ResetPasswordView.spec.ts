@@ -35,6 +35,7 @@ function createFirebaseError(code: string, message = code): Error & { code: stri
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
+    canViewInvoices: false,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Alexey Tsukanov",
     email: "alexey@example.com",

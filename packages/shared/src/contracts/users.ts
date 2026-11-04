@@ -13,6 +13,7 @@ export const userResponseSchema = z.object({
   displayName: z.string().nullable(),
   avatarUrl: z.string().nullable(),
   role: workspaceRoleSchema,
+  canViewInvoices: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });

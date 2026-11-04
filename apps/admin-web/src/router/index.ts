@@ -120,6 +120,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.invoices],
       pageName: 'Invoices',
+      requiresInvoiceViewPermission: true,
     },
   },
   {
@@ -129,6 +130,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.invoiceDetail],
       pageName: 'Invoices',
+      requiresInvoiceViewPermission: true,
     },
   },
   {
@@ -194,7 +196,7 @@ export function createAppRouter(options?: {
 }): Router {
   const appPinia = options?.pinia ?? pinia;
 
-  return createProtectedRouter({
+  const router = createProtectedRouter({
     defaultAuthenticatedRoute: { name: routeNames.dashboard },
     history: options?.history,
     pinia: appPinia,
@@ -213,6 +215,18 @@ export function createAppRouter(options?: {
     },
     useAuthStore,
   });
+
+  router.beforeEach((to) => {
+    if (to.meta.requiresInvoiceViewPermission) {
+      const authStore = useAuthStore(appPinia);
+      const profile = authStore.profile;
+      if (profile?.role === WorkspaceRoles.PM && !profile.canViewInvoices) {
+        return { name: routeNames.forbidden };
+      }
+    }
+  });
+
+  return router;
 }
 
 export const router = createAppRouter();

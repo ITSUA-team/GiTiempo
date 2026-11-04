@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from './../../common/zod-dto.js';
 import { loginRequestSchema } from '@gitiempo/shared';
 
 /** Body for `POST /auth/login`. */

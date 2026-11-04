@@ -27,6 +27,7 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import { CreateInvoiceRequestDto } from '../dto/create-invoice-request.dto';
 import { EligibleEntriesQueryDto } from '../dto/eligible-entries-query.dto';
 import { EligibleEntriesResponseDto } from '../dto/eligible-entries-response.dto';
+import { InvoiceDefaultsResponseDto } from '../dto/invoice-defaults-response.dto';
 import { InvoiceListQueryDto } from '../dto/invoice-list-query.dto';
 import { InvoiceListResponseDto } from '../dto/invoice-list-response.dto';
 import { InvoiceResponseDto } from '../dto/invoice-response.dto';
@@ -94,6 +95,22 @@ export class InvoicesController {
     @Query() query: EligibleEntriesQueryDto,
   ): Promise<EligibleEntriesResponseDto> {
     return this.invoices.previewEligibleEntries(user, query);
+  }
+
+  @Get('defaults')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get invoice defaults (currency, rate, rounding step)',
+  })
+  @ApiOkResponse({ type: InvoiceDefaultsResponseDto })
+  @ApiForbiddenResponse({
+    description: 'Admin or PM role with invoice view permission required',
+  })
+  @ZodSerializerDto(InvoiceDefaultsResponseDto)
+  getInvoiceDefaults(
+    @CurrentUser() user: AuthUser,
+  ): Promise<InvoiceDefaultsResponseDto> {
+    return this.invoices.getInvoiceDefaults(user);
   }
 
   @Get(':id')

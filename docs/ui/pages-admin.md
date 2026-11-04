@@ -97,8 +97,9 @@
 
 ### Navigation
 
-- The `/invoices` route is admin-only. PMs access invoices via the list page but cannot delete.
-- Invoices nav item is visible for Admin and PM roles (`SHOW_INVOICES_NAV = true`).
+- The `/invoices` and `/invoices/:id` routes are accessible to Admin and PM roles. PMs must have `canViewInvoices = true` (set by an admin on the Members page) to access invoices; PMs without the permission are redirected to the forbidden page.
+- Invoices nav item is visible for Admin and PM roles, except PMs with `canViewInvoices = false`, for whom the nav item is hidden from the sidebar and mobile bottom navigation.
+- Invoice defaults (currency, default hourly rate, rounding step) are loaded from `GET /invoices/defaults`, which is accessible to Admin and PMs with `canViewInvoices = true`. The admin-only `GET /workspace/settings` endpoint is NOT called on the invoices page.
 
 ## Members Page
 
@@ -106,7 +107,8 @@
 - Members table shows avatar, role, projects assigned, and last active. The member name is the edit entry point and opens the inline member settings section.
 - Members table is searchable with placeholder `Search members` and uses column filters for member name/email, role, assigned projects, and last active.
 - An icon-only primary action sits in the members table header next to the search control and opens the invite flow. Use tooltip/accessibility copy `Invite member`.
-- The inline member settings section owns assignment changes and the destructive `Remove member` action; do not keep separate edit/delete icons in the main members rows.
+- The inline member settings section owns assignment changes, the PM invoice-view permission toggle, and the destructive `Remove member` action; do not keep separate edit/delete icons in the main members rows.
+- When the expanded member's role is PM, the member settings section shows an "Allow viewing invoices" checkbox. When checked, the PM can view and manage invoices for their assigned projects. When unchecked, the PM cannot access `/invoices` or `/invoices/:id`. Only admins can toggle this permission. The toggle emits immediately on change (separate from the project-assignment Save button) and calls `PATCH /members/:id/permissions`.
 - Pending invitations render in a separate card below the members table using the same management-table/card visual language. Desktop/tablet columns are Email, Role, Expires, and Actions; mobile renders stacked cards with the same fields.
 - Pending invitation row actions are icon-only controls with text tooltips and accessible labels: `Resend invite` and `Cancel invite`. `Resend invite` calls the admin-only resend endpoint, shows success/error toast feedback, and refreshes pending invite data. `Cancel invite` uses the shared destructive confirmation dialog before issuing the existing cancel request.
 - Empty pending invitations state is distinct from request-error state; failed resend or cancel keeps the row visible and surfaces the backend message.
@@ -180,7 +182,7 @@
 
 - `/auth/forgot-password` and `/auth/reset-password` exist in admin-web with the same standalone placement, route guards (guest-only request route, `allowAuthenticatedGuestFlow` reset route), fields, gradient actions, and Firebase action-code behavior as the user-web Password Recovery Request Page and Reset Password Landing Page.
 - Both pages render the shared `AuthForgotPasswordForm` and `AuthResetPasswordForm` forms and follow the same notification conventions: `createAppToast` for toasts, inline `Message` for client-side validation, `logContext: { action, feature }` on Firebase-failure error toasts, and a success toast with redirect to the admin-web `/login` route after the password update.
-- The full sections in `pages-user.md` cover the shared details: the checking state (`Checking reset link...`), the verified-email notice, success and invalid-link panel states, mapped Firebase error codes, the no-enumeration success copy, the Firebase Console Action URL and authorized-domains setup, the `.pen` parity fallback (including the `Forgot?` label-row placement deviation), and the narrow-viewport collapse. Admin-web implements the same behavior with its own routes, intro content, and redirect targets.
+- The full sections in `pages-user.md` cover the shared details: the checking state (`Checking reset link...`), the verified-email notice, success and invalid-link panel states, mapped Firebase error codes, the no-enumeration success copy, the Firebase Console Action URL, authorized-domains, and password policy setup, the `.pen` parity fallback (including the `Forgot?` label-row placement deviation), and the narrow-viewport collapse. Admin-web implements the same behavior with its own routes, intro content, and redirect targets.
 
 ## Cross-App Navigation
 
