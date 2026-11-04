@@ -419,7 +419,7 @@ describe('InvoicesTable', () => {
     expect(paginator.props('rows')).toBe(20);
     expect(paginator.props('totalRecords')).toBe(45);
     expect(paginator.props('template')).toBe(
-      'PrevPageLink PageLinks NextPageLink CurrentPageReport',
+      'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport',
     );
     expect(paginator.props('currentPageReportTemplate')).toBe(
       'Showing {first} to {last} of {totalRecords} invoices',

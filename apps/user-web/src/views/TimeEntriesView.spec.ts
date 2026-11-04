@@ -1199,7 +1199,7 @@ describe("TimeEntriesView", () => {
 
     expect(paginator.attributes("data-page-link-size")).toBe("5");
     expect(paginator.attributes("data-template")).toBe(
-      "PrevPageLink PageLinks NextPageLink",
+      "FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink",
     );
     expect(paginator.classes()).toContain("w-full");
     expect(paginator.classes()).toContain("sm:w-auto");
@@ -1217,7 +1217,7 @@ describe("TimeEntriesView", () => {
 
     expect(paginator.attributes("data-page-link-size")).toBe("3");
     expect(paginator.attributes("data-template")).toBe(
-      "PrevPageLink PageLinks NextPageLink",
+      "FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink",
     );
 
     delete (window as Partial<Window>).matchMedia;
