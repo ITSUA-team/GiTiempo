@@ -5,7 +5,7 @@ import Button from "primevue/button";
 import Message from "primevue/message";
 import Password from "primevue/password";
 import { useToast } from "primevue/usetoast";
-import { createAppToast, getFirebaseAuthErrorMessage } from "@gitiempo/web-shared";
+import { createAppToast, getFirebaseAuthErrorMessage, PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE } from "@gitiempo/web-shared";
 
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
@@ -178,6 +178,8 @@ function validatePasswordSetup(): boolean {
 
   if (!newPassword.value) {
     passwordErrorMessage.value = "Enter a new password.";
+  } else if (newPassword.value.length < PASSWORD_MIN_LENGTH) {
+    passwordErrorMessage.value = PASSWORD_TOO_SHORT_MESSAGE;
   }
 
   if (!confirmPassword.value) {
@@ -258,8 +260,8 @@ async function handleSavePassword(): Promise<void> {
           Set your password
         </h2>
         <p class="text-text-muted text-sm leading-6">
-          Choose a Firebase password for the invited email. GiTiempo never
-          receives or stores this password.
+          Choose a Firebase password (at least 8 characters) for the invited
+          email. GiTiempo never receives or stores this password.
         </p>
       </div>
 

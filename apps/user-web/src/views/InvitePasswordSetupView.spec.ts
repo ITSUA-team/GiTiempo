@@ -228,6 +228,29 @@ describe("InvitePasswordSetupView", () => {
     ).toBe(false);
   });
 
+  it("rejects a short password inline without confirming and without toasting", async () => {
+    const verifyPasswordResetCode = vi.fn();
+    verifyPasswordResetCode.mockResolvedValue(invitedEmail);
+    const confirmPasswordReset = vi.fn();
+    setAuthRuntimeForTesting(
+      createRuntimeMock({ verifyPasswordResetCode, confirmPasswordReset }),
+    );
+    const { wrapper } = await mountInvitePasswordSetupView();
+
+    await wrapper.get('[data-testid="invite-password-setup-password"]').setValue("short12");
+    await wrapper
+      .get('[data-testid="invite-password-setup-confirm-password"]')
+      .setValue("short12");
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(confirmPasswordReset).not.toHaveBeenCalled();
+    expect(toastAdd).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain("Password must be at least 8 characters.");
+    expect(wrapper.find('[data-testid="invite-password-setup-submit"]').exists()).toBe(true);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
   it("keeps the form visible when the confirmation does not match", async () => {
     const verifyPasswordResetCode = vi.fn();
     verifyPasswordResetCode.mockResolvedValue(invitedEmail);

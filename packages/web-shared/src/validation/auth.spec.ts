@@ -51,6 +51,15 @@ describe("newPasswordSchema", () => {
     );
   });
 
+  it("accepts a password of exactly 8 characters", () => {
+    const result = newPasswordSchema.safeParse({
+      password: "12345678",
+      confirmPassword: "12345678",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("rejects a confirmation that does not match the password", () => {
     const result = newPasswordSchema.safeParse({
       password: "password123",
