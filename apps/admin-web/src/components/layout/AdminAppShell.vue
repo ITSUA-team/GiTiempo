@@ -8,6 +8,7 @@ import {
   WorkspaceNavigation,
 } from "@gitiempo/web-shared";
 import { hasAllowedRole } from "@gitiempo/web-shared/router";
+import { WorkspaceRoles } from "@gitiempo/shared";
 import {
   getCounterpartWorkspaceAppHref,
   getCounterpartWorkspaceHref,
@@ -44,12 +45,22 @@ let workspaceNameRequestToken: string | null = null;
 
 const currentRole = computed(() => authStore.profile?.role ?? null);
 const navItems = computed(() =>
-  ADMIN_BASE_NAV_ITEMS.filter((item) =>
-    hasAllowedRole(
-      router.resolve({ name: item.name }).meta.allowedRoles,
-      currentRole.value,
-    ),
-  ),
+  ADMIN_BASE_NAV_ITEMS.filter((item) => {
+    const routeMeta = router.resolve({ name: item.name }).meta;
+
+    if (!hasAllowedRole(routeMeta.allowedRoles, currentRole.value)) {
+      return false;
+    }
+
+    if (routeMeta.requiresInvoiceViewPermission) {
+      const profile = authStore.profile;
+      if (profile?.role === WorkspaceRoles.PM && !profile.canViewInvoices) {
+        return false;
+      }
+    }
+
+    return true;
+  }),
 );
 const showSettings = computed(() =>
   hasAllowedRole(
