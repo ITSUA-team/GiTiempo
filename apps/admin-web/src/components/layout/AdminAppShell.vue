@@ -117,7 +117,10 @@ async function handleSwitchWorkspace(workspaceId: string): Promise<void> {
     if (
       route.name === routeNames.forbidden ||
       route.name === routeNames.notFound ||
-      !hasAllowedRole(route.meta.allowedRoles, nextRole)
+      !hasAllowedRole(route.meta.allowedRoles, nextRole) ||
+      (route.meta.requiresInvoiceViewPermission &&
+        nextRole === WorkspaceRoles.PM &&
+        !authStore.profile?.canViewInvoices)
     ) {
       await router.push({ name: routeNames.dashboard });
     }

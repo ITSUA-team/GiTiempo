@@ -98,7 +98,7 @@
 ### Navigation
 
 - The `/invoices` and `/invoices/:id` routes are accessible to Admin and PM roles. PMs must have `canViewInvoices = true` (set by an admin on the Members page) to access invoices; PMs without the permission are redirected to the forbidden page.
-- Invoices nav item is visible for Admin and PM roles (`SHOW_INVOICES_NAV = true`).
+- Invoices nav item is visible for Admin and PM roles, except PMs with `canViewInvoices = false`, for whom the nav item is hidden from the sidebar and mobile bottom navigation.
 - Invoice defaults (currency, default hourly rate, rounding step) are loaded from `GET /invoices/defaults`, which is accessible to Admin and PMs with `canViewInvoices = true`. The admin-only `GET /workspace/settings` endpoint is NOT called on the invoices page.
 
 ## Members Page

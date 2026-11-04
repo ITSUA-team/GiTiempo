@@ -79,6 +79,9 @@ async function mountAppAt(
         ForbiddenView: {
           template: '<div data-testid="forbidden-view" />',
         },
+        InvoicesView: {
+          template: '<div data-testid="invoices-view" />',
+        },
         ReportsView: {
           template: '<div data-testid="reports-view" />',
         },
@@ -208,6 +211,50 @@ describe("admin App", () => {
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe(routeNames.login));
 
     expect(toastMocks.errorToast).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it("redirects a PM to forbidden when canViewInvoices is revoked on focus refresh", async () => {
+    const { authStore, router, wrapper } = await mountAppAt(
+      "/invoices",
+      (store) => {
+        store.accessToken = "pm-access-token";
+        store.bootstrapComplete = true;
+        store.profile = { ...createProfile("pm"), canViewInvoices: true };
+      },
+    );
+
+    vi.spyOn(authStore, "refreshAuthorizationContext").mockImplementation(async () => {
+      authStore.profile = { ...createProfile("pm"), canViewInvoices: false };
+      return true;
+    });
+
+    window.dispatchEvent(new Event("focus"));
+    await vi.waitFor(() => {
+      expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+    });
+
+    wrapper.unmount();
+  });
+
+  it("keeps a PM with canViewInvoices on the invoices route after focus refresh", async () => {
+    const { authStore, router, wrapper } = await mountAppAt(
+      "/invoices",
+      (store) => {
+        store.accessToken = "pm-access-token";
+        store.bootstrapComplete = true;
+        store.profile = { ...createProfile("pm"), canViewInvoices: true };
+      },
+    );
+
+    vi.spyOn(authStore, "refreshAuthorizationContext").mockImplementation(async () => {
+      return true;
+    });
+
+    window.dispatchEvent(new Event("focus"));
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.invoices);
     wrapper.unmount();
   });
 });

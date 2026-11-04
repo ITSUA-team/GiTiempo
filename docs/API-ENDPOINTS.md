@@ -240,17 +240,25 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 | Method | Path            | Auth | Role     | Description                                |
 | ------ | --------------- | ---- | -------- | ------------------------------------------ |
-| GET    | `/invoices`     | JWT  | Admin/PM | List invoices (PM: assigned projects only) |
-| POST   | `/invoices`     | JWT  | Admin/PM | Create invoice from eligible time entries  |
-| GET    | `/invoices/eligible-entries` | JWT  | Admin/PM | Preview eligible time entries for a potential invoice |
-| GET    | `/invoices/stats`            | JWT  | Admin/PM | Get invoice stats (counts by status, this month summary) |
-| GET    | `/invoices/:id` | JWT  | Admin/PM | Get invoice details                        |
-| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, title)      |
+| GET    | `/invoices`     | JWT  | Admin/PM | List invoices (PM: assigned projects only, requires `canViewInvoices`) |
+| POST   | `/invoices`     | JWT  | Admin/PM | Create invoice from eligible time entries (PM: requires `canViewInvoices`)  |
+| GET    | `/invoices/defaults` | JWT  | Admin/PM | Get invoice defaults (currency, default hourly rate, rounding step) |
+| GET    | `/invoices/eligible-entries` | JWT  | Admin/PM | Preview eligible time entries for a potential invoice (PM: requires `canViewInvoices`) |
+| GET    | `/invoices/stats`            | JWT  | Admin/PM | Get invoice stats (counts by status, this month summary, PM: requires `canViewInvoices`) |
+| GET    | `/invoices/:id` | JWT  | Admin/PM | Get invoice details (PM: requires `canViewInvoices`)                        |
+| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, title, PM: requires `canViewInvoices`)      |
 | DELETE | `/invoices/:id` | JWT  | Admin    | Delete invoice                             |
 
 **GET /invoices** query: `page?`, `limit?`, `projectId?`, `status?`, `dateFrom?`, `dateTo?`, `search?`
 
 - PMs see only invoices scoped to active public projects or private projects assigned to them. Workspace-wide invoices (no project scope) are admin-only.
+- PMs must have `canViewInvoices = true` (set by an admin on the Members page); otherwise the endpoint returns `403`.
+
+**GET /invoices/defaults**
+
+- Returns workspace-level defaults for invoice creation: currency, default hourly rate, and time rounding step.
+- Accessible to both admins and PMs (including PMs without `canViewInvoices`) so the invoices page can load defaults without calling the admin-only `GET /workspace/settings` endpoint.
+- Response: `{ currency: string, defaultHourlyRate: number | null, timeRoundingStepMinutes: number }`
 
 **POST /invoices** body: `{ title: string, dateFrom: string (YYYY-MM-DD), dateTo: string (YYYY-MM-DD), projectId?: string, hourlyRate?: number, currency?: string, discountPercent?: number (0–100, step 0.01, default 0), notes?: string | null }`
 
@@ -305,7 +313,15 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 | ------ | ------------------- | ---- | ----- | ---------------------------- |
 | GET    | `/members`          | JWT  | Admin | List workspace members       |
 | PATCH  | `/members/:id/role` | JWT  | Admin | Update member role           |
+| PATCH  | `/members/:id/permissions` | JWT | Admin | Update member permissions (`canViewInvoices`) |
 | DELETE | `/members/:id`      | JWT  | Admin | Remove member from workspace |
+
+**PATCH /members/:id/permissions** body: `{ canViewInvoices: boolean }`
+
+- Admin-only. Toggles whether a PM member can view and manage invoices for their assigned projects.
+- When `canViewInvoices` is `false`, the PM is denied access to all invoice endpoints (`/invoices`, `/invoices/:id`, `/invoices/stats`, `/invoices/eligible-entries`) with `403`.
+- On the frontend, the PM's invoices nav item is hidden and the `/invoices` and `/invoices/:id` routes redirect to the forbidden page.
+- The updated `canViewInvoices` value is reflected in `GET /users/me` and `GET /members` responses.
 
 ---
 

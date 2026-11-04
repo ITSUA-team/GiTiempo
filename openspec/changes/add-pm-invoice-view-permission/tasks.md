@@ -35,6 +35,9 @@
 ## 6. Frontend — Route Guard
 
 - [x] 6.1 Add `meta.requiresInvoiceViewPermission: true` to the `/invoices` and `/invoices/:id` routes in `apps/admin-web/src/router/index.ts`. Add a `beforeEach` guard after `createProtectedRouter` that redirects PMs with `canViewInvoices = false` to the forbidden route. Verify: `router/index.spec.ts` covers PM-without-permission redirected, PM-with-permission allowed, admin always allowed.
+- [x] 6.2 Hide the invoices nav item from the sidebar and mobile bottom navigation for PMs with `canViewInvoices = false` by filtering `ADMIN_BASE_NAV_ITEMS` in `AdminAppShell.vue` using the `requiresInvoiceViewPermission` route meta. Verify: `AdminAppShell.spec.ts` covers PM-without-permission sees no invoices nav, PM-with-permission sees it.
+- [x] 6.3 Detect `canViewInvoices` changes in `auth.ts` `authorizationChanged` so the query cache is cleared when the permission is revoked. On window focus (`App.vue` `refreshAuthorizationOnFocus`), redirect a PM whose `canViewInvoices` was revoked to the forbidden page if the current route requires invoice view permission. Verify: `App.spec.ts` covers PM redirected on focus after revocation.
+- [x] 6.4 On workspace switch (`AdminAppShell.vue` `handleSwitchWorkspace`), redirect a PM from `/invoices` to the dashboard if the target workspace has `canViewInvoices = false`. Verify: `AdminAppShell.spec.ts` covers workspace switch redirect from invoices.
 
 ## 7. Frontend — Members Permission Toggle
 
@@ -53,6 +56,13 @@
 - [x] 9.2 Run `pnpm lint` — no new errors.
 - [x] 9.3 Run `pnpm test` — all tests pass.
 - [x] 9.4 Run `pnpm --filter @gitiempo/api test` — all API tests pass including new permission enforcement tests.
-- [x] 9.5 Run `pnpm --filter admin-web test` — all admin-web tests pass including new defaults endpoint, route guard, and member checkbox tests.
+- [x] 9.5 Run `pnpm --filter admin-web test` — all admin-web tests pass including new defaults endpoint, route guard, nav hiding, focus refresh, and member checkbox tests.
 - [x] 9.6 Run `openspec validate --strict` for the `add-pm-invoice-view-permission` change — passes with no warnings.
 - [ ] 9.7 Manual test: log in as admin, enable `canViewInvoices` for alice (PM), log in as alice, navigate to `/invoices` — no 403 toast, page loads, create dialog pre-fills currency/rate from `GET /invoices/defaults`.
+- [ ] 9.8 Manual test: as admin, revoke `canViewInvoices` for alice while alice is on `/invoices`; alice switches back to the admin-web tab — she is redirected to the forbidden page.
+
+## 10. OpenAPI Nullable Type Fix
+
+- [x] 10.1 Create `apps/api/src/common/zod-dto.ts` wrapper around `createZodDto` that patches `_OPENAPI_METADATA_FACTORY` to convert `type: [T, "null"]` to `anyOf: [{ type: T }, { type: "null" }]` so NestJS Swagger does not misinterpret nullable strings as arrays. Update all 77 DTO files to import from the wrapper.
+- [x] 10.2 Add `findMisconvertedNullables` validation to `apps/api/src/openapi/export.ts` that checks the generated OpenAPI document for misconverted nullable fields (`type: "array"` + `items: { type: "string" }` with no constraints) and fails the export if any are found.
+- [x] 10.3 Regenerate `packages/shared/openapi.json` — all 11 previously broken nullable fields now use `anyOf` or `nullable: true`.

@@ -506,6 +506,47 @@ describe("AdminAppShell", () => {
     expect(vi.mocked(navigateToExternalHref)).not.toHaveBeenCalled();
   });
 
+  it("redirects from invoices to dashboard when switching to a workspace where PM lacks canViewInvoices", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "pm-access-token";
+    authStore.bootstrapComplete = true;
+    authStore.profile = { ...createAuthProfile(WorkspaceRoles.PM), canViewInvoices: true };
+
+    vi.spyOn(authStore, "switchWorkspace").mockImplementation(async () => {
+      authStore.profile = { ...createAuthProfile(WorkspaceRoles.PM), canViewInvoices: false };
+      return {
+        profileReloaded: true,
+        profileReloadError: null,
+        membershipsReloaded: true,
+        reloadError: null,
+      };
+    });
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/invoices");
+    await router.isReady();
+
+    const wrapper = mount(AdminAppShell, {
+      global: {
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          RouterView: RouterViewStub,
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-switch-workspace"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
   it("redirects to user-web after switching to a workspace without admin access", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
