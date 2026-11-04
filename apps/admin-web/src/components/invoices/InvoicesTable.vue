@@ -118,8 +118,8 @@ const paginatorProps = computed(() => ({
   pageLinkSize: props.isMobileViewport ? 3 : 5,
   rows: props.rowsPerPage,
   template: props.isMobileViewport
-    ? 'PrevPageLink PageLinks NextPageLink'
-    : 'PrevPageLink PageLinks NextPageLink CurrentPageReport',
+    ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink'
+    : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport',
   totalRecords: props.totalRecords,
 }));
 
