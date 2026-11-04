@@ -1205,7 +1205,7 @@ describe("TimeEntriesView", () => {
     expect(paginator.classes()).toContain("sm:w-auto");
   });
 
-  it("limits page links to 3 on mobile viewport to prevent horizontal overflow", async () => {
+  it("limits page links to 1 on mobile viewport to keep first/last buttons on one row", async () => {
     mockMatchMedia(true);
 
     const client = createClientMock();
@@ -1215,7 +1215,7 @@ describe("TimeEntriesView", () => {
 
     const paginator = wrapper.get('[data-testid="paginator-page-2"]');
 
-    expect(paginator.attributes("data-page-link-size")).toBe("3");
+    expect(paginator.attributes("data-page-link-size")).toBe("1");
     expect(paginator.attributes("data-template")).toBe(
       "FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink",
     );

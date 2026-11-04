@@ -322,7 +322,7 @@ Use `<MultiSelect>` with `filter`, `display="chip"`, and the shared
 Use PrimeVue `<Paginator>`.
 
 - Place it below the primary list or grouped results region.
-- Time Entries page uses a compact layout with previous/next buttons, page links, and a current-page report.
+- Time Entries page uses a compact layout with first/previous/next/last buttons, page links, and a current-page report.
 - Keep the current-page report in muted body text.
 - Use the active page as the primary brand-filled state.
 
@@ -330,7 +330,7 @@ Use PrimeVue `<Paginator>`.
 <Paginator
   :rows="10"
   :totalRecords="120"
-  template="PrevPageLink PageLinks NextPageLink CurrentPageReport"
+  template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
   currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
 />
 ```
