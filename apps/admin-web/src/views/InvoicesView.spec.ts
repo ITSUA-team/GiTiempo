@@ -975,7 +975,7 @@ describe('InvoicesView', () => {
     expect(dialog.props('visible')).toBe(true);
   });
 
-  it('closes the dialog and toasts success without an explicit refetch after a successful create', async () => {
+  it('closes the dialog quietly without an explicit refetch after a successful create', async () => {
     const wrapper = mountInvoicesView();
     await flushPromises();
 
@@ -988,7 +988,7 @@ describe('InvoicesView', () => {
 
     expect(testMocks.createInvoice).toHaveBeenCalledTimes(1);
     expect(dialog.props('visible')).toBe(false);
-    expect(testMocks.successToast).toHaveBeenCalledWith('Invoice created');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(testMocks.errorToast).not.toHaveBeenCalled();
     // The list refresh belongs to the mutation's onSuccess key invalidation,
     // so the view must not trigger an additional refetch.

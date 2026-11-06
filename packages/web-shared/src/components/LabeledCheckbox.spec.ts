@@ -1,8 +1,43 @@
-import { mount } from "@vue/test-utils";
+import { Form as PrimeForm, type FormSubmitEvent } from "@primevue/forms";
+import { flushPromises, mount } from "@vue/test-utils";
+import PrimeVue from "primevue/config";
 import { afterEach, describe, expect, it } from "vitest";
-import { nextTick } from "vue";
+import { defineComponent, nextTick, ref } from "vue";
 
 import LabeledCheckbox from "./LabeledCheckbox.vue";
+
+const CheckboxHost = defineComponent({
+  components: { PrimeForm, LabeledCheckbox },
+  props: {
+    initialValue: { type: Boolean, required: true },
+    controlled: Boolean,
+  },
+  emits: ["submitted"],
+  setup: (props, { emit }) => ({
+    initialValues: { billable: props.initialValue },
+    billable: ref(props.initialValue),
+    onSubmit: (event: FormSubmitEvent) => emit("submitted", event.states.billable.value),
+  }),
+  template: `
+    <template v-if="controlled">
+      <LabeledCheckbox v-model="billable" input-id="controlled-billable" label="Billable entry" />
+      <output>{{ billable }}</output>
+    </template>
+    <PrimeForm v-else v-slot="$form" :initial-values="initialValues" @submit="onSubmit">
+      <LabeledCheckbox input-id="form-billable" label="Billable by default" name="billable" />
+      <output>{{ $form.billable?.value }}</output>
+      <button type="button" @click="$form.reset">Reset</button>
+    </PrimeForm>
+  `,
+});
+
+function mountRealCheckbox(initialValue: boolean, controlled = false) {
+  return mount(CheckboxHost, {
+    attachTo: document.body,
+    props: { initialValue, controlled },
+    global: { plugins: [[PrimeVue, { unstyled: true }]] },
+  });
+}
 
 function mountCheckbox(overrides: Partial<InstanceType<typeof LabeledCheckbox>["$props"]> = {}) {
   return mount(LabeledCheckbox, {
@@ -66,5 +101,46 @@ describe("LabeledCheckbox", () => {
     await clickNativeLabel(wrapper);
 
     expect(wrapper.emitted("update:modelValue")).toBeUndefined();
+  });
+
+  it.each([true, false])("preserves a Form-owned initial value of %s when submitted unchanged", async (initialValue) => {
+    const wrapper = mountRealCheckbox(initialValue);
+    await flushPromises();
+
+    expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(initialValue);
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.emitted("submitted")).toEqual([[initialValue]]);
+    wrapper.unmount();
+  });
+
+  it.each([true, false])("toggles and resets a Form-owned initial value of %s", async (initialValue) => {
+    const wrapper = mountRealCheckbox(initialValue);
+    await flushPromises();
+
+    (wrapper.get("label").element as HTMLLabelElement).click();
+    await flushPromises();
+
+    expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(!initialValue);
+    expect(wrapper.get("output").text()).toBe(String(!initialValue));
+
+    await wrapper.get("button").trigger("click");
+    await flushPromises();
+
+    expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(initialValue);
+    expect(wrapper.get("output").text()).toBe(String(initialValue));
+    wrapper.unmount();
+  });
+
+  it.each([true, false])("keeps an explicit v-model with initial value %s in sync", async (initialValue) => {
+    const wrapper = mountRealCheckbox(initialValue, true);
+
+    expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(initialValue);
+    await wrapper.get('input[type="checkbox"]').setValue(!initialValue);
+
+    expect(wrapper.get("output").text()).toBe(String(!initialValue));
+    expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(!initialValue);
+    wrapper.unmount();
   });
 });

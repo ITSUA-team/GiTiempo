@@ -101,7 +101,6 @@ const { handleProjectEditSubmitted, savingProjectEditId } =
     accessToken,
     collapseProjectRow,
     onError: notifyProjectsError,
-    onSuccess: successToast,
     openProjectBackfillDialogIfNeeded,
     refreshProjects,
   });
@@ -110,7 +109,7 @@ const { handleArchive, handleUnarchive } = useProjectArchiveActions({
   accessToken,
   collapseProjectRow,
   onError: notifyProjectsError,
-  onSuccess: successToast,
+  onRename: successToast,
   refreshProjects,
   requireConfirmation,
 });

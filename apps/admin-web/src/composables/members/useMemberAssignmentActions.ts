@@ -10,17 +10,13 @@ import {
   type AdminProjectsClient,
 } from '@/services/admin-projects-client';
 import type { MembersTableRow } from '@/lib/members-table';
-import {
-  diffMemberProjectAssignments,
-  getMemberDisplayName,
-} from '@/lib/member-management';
+import { diffMemberProjectAssignments } from '@/lib/member-management';
 
 interface UseMemberAssignmentActionsOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminProjectsClient, 'assignMember' | 'removeAssignment'>;
   collapseMemberRow: (member: WorkspaceMemberResponse) => void;
   onError: (message: string, error: unknown, action: string) => void;
-  onSuccess: (message: string) => void;
   projects: Ref<ProjectListResponse>;
   refreshMembers: () => Promise<void>;
 }
@@ -34,7 +30,6 @@ export function useMemberAssignmentActions({
   client = adminProjectsClient,
   collapseMemberRow,
   onError,
-  onSuccess,
   projects,
   refreshMembers,
 }: UseMemberAssignmentActionsOptions) {
@@ -65,7 +60,6 @@ export function useMemberAssignmentActions({
         await client.removeAssignment(projectId, member.userId);
       }
 
-      onSuccess(`Project assignments for ${getMemberDisplayName(member)} saved.`);
       collapseMemberRow(member);
       await refreshMembers();
     } catch (error) {

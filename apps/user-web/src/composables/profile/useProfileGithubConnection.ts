@@ -126,10 +126,6 @@ export function useProfileGithubConnection(
 
     try {
       const result = await client.disconnect();
-      appToast.showSuccessToast(
-        "GitHub disconnected",
-        "Your GitHub account has been disconnected.",
-      );
       if (result.providerRevocation === "unconfirmed") {
         appToast.showErrorToast({
           detail: "GiTiempo removed the connection, but GitHub could not confirm revocation. Review GitHub authorized applications if needed.",

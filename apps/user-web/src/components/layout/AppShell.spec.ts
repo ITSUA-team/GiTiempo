@@ -265,7 +265,7 @@ describe("AppShell", () => {
     expect(wrapper.get('[data-testid="workspace-header-memberships"]').text()).toBe("2");
   });
 
-  it("returns to the dashboard after switching workspace from the forbidden route", async () => {
+  it.each([true, false])("returns to the dashboard after switching workspace and reports only partial refresh failure (memberships reloaded: %s)", async (membershipsReloaded) => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = useAuthStore(pinia);
@@ -286,8 +286,9 @@ describe("AppShell", () => {
       .mockImplementation(async () => ({
         profileReloaded: true,
         profileReloadError: null,
-        membershipsReloaded: true,
-        reloadError: null,
+        ...(membershipsReloaded
+          ? { membershipsReloaded: true as const, reloadError: null }
+          : { membershipsReloaded: false as const, reloadError: new Error("Membership refresh failed") }),
       }));
 
     const router = createAppRouter({
@@ -330,6 +331,15 @@ describe("AppShell", () => {
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
     );
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+    if (membershipsReloaded) {
+      expect(testMocks.toastAdd).not.toHaveBeenCalled();
+    } else {
+      expect(testMocks.toastAdd).toHaveBeenCalledWith(expect.objectContaining({
+        severity: "info",
+        summary: "Workspace switched",
+        detail: "The new workspace is active, but the workspace list could not be refreshed yet.",
+      }));
+    }
   });
 
   it("lets keyboard users bypass the shell chrome before the header", async () => {

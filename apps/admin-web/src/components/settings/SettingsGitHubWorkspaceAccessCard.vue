@@ -39,6 +39,8 @@ const props = defineProps<{
   installingOrganizationLogin: string | null;
   installations: readonly WorkspaceGitHubInstallation[];
   installationsLoaded: boolean;
+  installationsLoading: boolean;
+  installationsRequestError: string | null;
   checkingOrganizationLogins: readonly string[];
   items: readonly WorkspaceGitHubOrganizationResponse[];
   organizationLoginError: string | null;
@@ -53,6 +55,7 @@ const emit = defineEmits<{
   remove: [organizationId: string];
   retry: [];
   retryAdd: [];
+  retryInstallations: [];
   retryAvailableOrganizations: [];
 }>();
 
@@ -148,6 +151,18 @@ watch(
           Workspace members can use only the GitHub organizations listed here
           when working inside this workspace.
         </p>
+      </div>
+
+      <div
+        v-if="installationsRequestError"
+        :aria-busy="installationsLoading"
+        data-testid="settings-github-installations-error"
+      >
+        <RequestErrorBlock
+          :message="installationsRequestError"
+          title="Failed to load GitHub App access"
+          @retry="emit('retryInstallations')"
+        />
       </div>
 
       <div

@@ -68,10 +68,6 @@ export function useProjectTaskMutations({
         });
 
         onTaskSaved(updatedTask);
-        appToast.showSuccessToast(
-          "Task updated",
-          "Your changes have been saved.",
-        );
       } else {
         const createdTask = await createTaskMutation.mutateAsync({
           input: validInput.input,
@@ -79,10 +75,6 @@ export function useProjectTaskMutations({
         });
 
         onTaskSaved(createdTask);
-        appToast.showSuccessToast(
-          "Task created",
-          "The new task has been added.",
-        );
       }
 
       return null;
@@ -118,10 +110,6 @@ export function useProjectTaskMutations({
         taskId: task.id,
       });
       onTaskDeleted(task);
-      appToast.showSuccessToast(
-        "Task deleted",
-        "The selected task has been removed.",
-      );
       return true;
     } catch (error) {
       const message = getErrorMessage(error);

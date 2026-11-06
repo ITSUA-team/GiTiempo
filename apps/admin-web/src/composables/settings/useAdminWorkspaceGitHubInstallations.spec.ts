@@ -83,6 +83,23 @@ function createSubject({
 }
 
 describe('useAdminWorkspaceGitHubInstallations', () => {
+  it('keeps a failed completion follow-up read unconfirmed and retryable without extra requests', async () => {
+    const failure = new Error('Installation status unavailable');
+    const client = createClient({
+      listWorkspaceGitHubInstallations: vi.fn()
+        .mockResolvedValueOnce({ items: [] })
+        .mockRejectedValue(failure),
+    });
+    const { result, errors } = createSubject({ client });
+    await flushPromises();
+    await result.completeSetup('a'.repeat(32), '123456');
+    await flushPromises();
+    await vi.waitFor(() => expect(result.isLoaded.value).toBe(false));
+    expect(client.listWorkspaceGitHubInstallations).toHaveBeenCalledTimes(3);
+    expect(errors).toHaveBeenCalledWith(expect.any(String), failure, 'load-workspace-github-installations');
+    expect(result.items.value).toEqual([]);
+  });
+
   it('does not set up an organization removed while a previous organization is checked', async () => {
     let resolveFirst!: (value: typeof installation) => void;
     const secondOrganization = { ...organization, id: '44444444-4444-4444-8444-444444444444', organizationLogin: 'Other-Org' };

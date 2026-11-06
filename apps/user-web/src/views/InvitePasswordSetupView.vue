@@ -211,10 +211,6 @@ async function handleSavePassword(): Promise<void> {
     isSuccess.value = true;
     newPassword.value = "";
     confirmPassword.value = "";
-    appToast.showSuccessToast(
-      "Password saved",
-      "Return to your invite to sign in and accept access.",
-    );
   } catch (error) {
     inlineErrorMessage.value = getFirebaseAuthErrorMessage(
       error,

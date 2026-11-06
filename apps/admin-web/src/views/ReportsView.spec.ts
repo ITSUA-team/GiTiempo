@@ -15,6 +15,10 @@ import type {
 import { useAuthStore } from '@/stores/auth';
 
 const reportMocks = vi.hoisted(() => ({
+  createSavedReport: vi.fn(),
+  updateSavedReport: vi.fn(),
+  deleteSavedReport: vi.fn(),
+  listSavedReports: vi.fn(),
   downloadReportExport: vi.fn(
     (exportResult: { filename: string }) => exportResult.filename,
   ),
@@ -24,6 +28,15 @@ const reportMocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   state: undefined as unknown,
   successToast: vi.fn(),
+}));
+
+vi.mock('@/services/admin-saved-reports-client', () => ({
+  getAdminSavedReportsClient: () => ({
+    createSavedReport: reportMocks.createSavedReport,
+    updateSavedReport: reportMocks.updateSavedReport,
+    deleteSavedReport: reportMocks.deleteSavedReport,
+    listSavedReports: reportMocks.listSavedReports,
+  }),
 }));
 
 vi.mock('@/composables/feedback/useToasts', () => ({
@@ -208,6 +221,39 @@ describe('ReportsView', () => {
     reportMocks.refresh.mockClear();
     reportMocks.successToast.mockClear();
     reportMocks.state = createReportState();
+    reportMocks.listSavedReports.mockReset().mockResolvedValue([]);
+    reportMocks.createSavedReport.mockReset().mockImplementation(async (input) => ({ ...input, id: 'preset-1' }));
+    reportMocks.updateSavedReport.mockReset().mockImplementation(async (id, input) => ({ ...input, id }));
+    reportMocks.deleteSavedReport.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('updates preset state quietly without replacement collection reads', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+    const bar = wrapper.getComponent({ name: 'SavedReportsBar' });
+    bar.vm.$emit('saveAsNew', 'Billing');
+    await flushPromises();
+    expect(bar.props('activeId')).toBe('preset-1');
+    expect(bar.props('isDirty')).toBe(false);
+    expect(bar.props('presets')).toEqual([expect.objectContaining({ name: 'Billing' })]);
+
+    await wrapper.get('[data-testid="change-report-grouping"]').trigger('click');
+    expect(bar.props('isDirty')).toBe(true);
+    bar.vm.$emit('save');
+    await flushPromises();
+    expect(bar.props('isDirty')).toBe(false);
+    bar.vm.$emit('rename', 'preset-1', 'Renamed');
+    await flushPromises();
+    expect(bar.props('presets')).toEqual([expect.objectContaining({ name: 'Renamed' })]);
+    bar.vm.$emit('delete', 'preset-1');
+    await flushPromises();
+    expect(bar.props('activeId')).toBe(null);
+    expect(bar.props('presets')).toEqual([]);
+    expect(reportMocks.createSavedReport).toHaveBeenCalledOnce();
+    expect(reportMocks.updateSavedReport).toHaveBeenCalledTimes(2);
+    expect(reportMocks.deleteSavedReport).toHaveBeenCalledExactlyOnceWith('preset-1');
+    expect(reportMocks.listSavedReports).toHaveBeenCalledOnce();
+    expect(reportMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('shows the reports skeleton during initial load', () => {
@@ -253,7 +299,7 @@ describe('ReportsView', () => {
     });
     expect(lastDownloadedBlob().type).toBe('text/csv;charset=utf-8');
     expect(reportMocks.successToast).toHaveBeenCalledWith(
-      'Exported time-report.csv.',
+      'Download started: time-report.csv.',
     );
   });
 
@@ -271,7 +317,7 @@ describe('ReportsView', () => {
     });
     expect(lastDownloadedBlob().type).toBe('text/csv;charset=utf-8');
     expect(reportMocks.successToast).toHaveBeenCalledWith(
-      'Exported time-report.csv.',
+      'Download started: time-report.csv.',
     );
     expect(reportMocks.infoToast).not.toHaveBeenCalled();
   });
@@ -296,7 +342,7 @@ describe('ReportsView', () => {
     });
     expect(lastDownloadedBlob().type).toBe('application/pdf');
     expect(reportMocks.successToast).toHaveBeenCalledWith(
-      'Exported time-report.pdf.',
+      'Download started: time-report.pdf.',
     );
   });
 

@@ -739,7 +739,7 @@ describe("TimeEntriesView", () => {
     });
     expect(topBarTimerDialogController.requestOpen).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
-    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
       expect.objectContaining({
         detail: "Stopped tracking Improve reports filters.",
         severity: "success",
@@ -828,7 +828,7 @@ describe("TimeEntriesView", () => {
     expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.taskReports });
     expect(topBarTimerDialogController.requestOpen).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
-    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
       expect.objectContaining({
         detail: "Tracking Improve reports filters.",
         severity: "success",
@@ -1013,6 +1013,9 @@ describe("TimeEntriesView", () => {
     expect(wrapper.get(`[data-testid="time-entry-range-${TEST_IDS.completedEntry}"]`).text()).toBe(
       `${formatLocalWallClock(updatedStartedAt)} - ${formatLocalWallClock(updatedEndedAt)}`,
     );
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Time entry updated" }),
+    );
   });
 
   it("deletes the editing entry from inside the dialog and closes after success", async () => {
@@ -1049,6 +1052,9 @@ describe("TimeEntriesView", () => {
     expect(client.deleteEntry).toHaveBeenCalledWith(TEST_IDS.completedEntry);
     expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Time entry deleted" }),
+    );
   });
 
   it("updates grouped entry state after a top-bar stop reconciliation", async () => {
@@ -1649,6 +1655,9 @@ describe("TimeEntriesView", () => {
       search: undefined,
       taskId: undefined,
     });
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Time entry created" }),
+    );
   });
 
   it("materializes a selected GitHub issue before creating a manual entry", async () => {
@@ -1921,7 +1930,7 @@ describe("TimeEntriesView", () => {
       taskId: TEST_IDS.taskCreated,
     });
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
-    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
       expect.objectContaining({
         severity: "success",
         summary: "Task created",

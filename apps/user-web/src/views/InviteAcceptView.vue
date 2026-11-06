@@ -238,10 +238,6 @@ async function handleInviteAcceptanceFailure(error: unknown): Promise<void> {
     terminalMessage.value = "Your account already has workspace access. Sign in to continue.";
     await clearInviteQuery();
     await signOutIdentityProvider();
-    appToast.showInfoToast(
-      "Workspace access already exists",
-      terminalMessage.value,
-    );
     return;
   }
 
@@ -275,10 +271,6 @@ async function completeInviteAcceptance(
     });
     inviteAccepted = true;
     isRedirecting.value = true;
-    appToast.showSuccessToast(
-      "Invitation accepted",
-      "Workspace access created. Redirecting to dashboard.",
-    );
     if (googleIdToken) {
       await authStore.loginWithFirebaseToken(firebaseIdToken, googleIdToken);
     } else {
@@ -328,8 +320,7 @@ async function handleEmailAccept(): Promise<void> {
   } catch (error) {
     const message = mapEmailPasswordErrorMessage(error);
     inlineErrorMessage.value = message;
-    appToast.showErrorToast({
-      detail: message,
+    appToast.logError({
       error,
       logContext: { action: "sign-in", feature: "invite-accept" },
       summary: "Could not sign in",
@@ -468,15 +459,6 @@ async function handleGoogleAccept(): Promise<void> {
           data-testid="invite-accept-error"
         >
           {{ inlineErrorMessage }}
-        </Message>
-
-        <Message
-          v-if="isRedirecting"
-          severity="success"
-          size="small"
-          class="text-sm"
-        >
-          Workspace access created. Redirecting to dashboard.
         </Message>
 
         <div class="flex flex-col gap-2 pt-1">

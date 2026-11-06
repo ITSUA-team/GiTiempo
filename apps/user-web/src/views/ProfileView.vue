@@ -78,10 +78,6 @@ async function handleSaveProfile(): Promise<void> {
         logContext: { action: "save-profile", feature: "profile" },
         summary: "Could not save profile",
       },
-      onSuccess: {
-        detail: "Your display name has been updated.",
-        summary: "Profile saved",
-      },
       run: () => authStore.updateProfile(parsed.data),
       toast: appToast,
     });
@@ -137,9 +133,9 @@ async function handleSaveProfile(): Promise<void> {
               Display name
             </label>
             <InputText
+              id="profile-display-name"
               v-model="displayNameDraft"
               data-testid="profile-display-name-input"
-              input-id="profile-display-name"
               class="h-[42px] w-full"
               :invalid="!!displayNameErrorMessage"
             />
@@ -159,8 +155,8 @@ async function handleSaveProfile(): Promise<void> {
               Email
             </label>
             <InputText
+              id="profile-email"
               data-testid="profile-email-input"
-              input-id="profile-email"
               :model-value="authStore.profile?.email ?? ''"
               disabled
               class="h-[42px] w-full"

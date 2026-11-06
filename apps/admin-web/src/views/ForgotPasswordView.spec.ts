@@ -29,9 +29,6 @@ function createFirebaseError(code: string, message = code): Error & { code: stri
   return Object.assign(new Error(message), { code });
 }
 
-const successToastDetail =
-  "If an account exists for the entered email, a password reset link is on its way. Open it to choose a new password, then sign in again.";
-
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
@@ -159,14 +156,7 @@ describe("ForgotPasswordView", () => {
 
     expect(runtime.requestPasswordReset).toHaveBeenCalledOnce();
     expect(runtime.requestPasswordReset).toHaveBeenCalledWith("admin@example.com");
-    expect(toastAdd).toHaveBeenCalledTimes(1);
-    expect(toastAdd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        detail: successToastDetail,
-        severity: "success",
-        summary: "Success",
-      }),
-    );
+    expect(toastAdd).not.toHaveBeenCalled();
     expect(console.error).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="forgot-password-success-panel"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="forgot-password-form"]').exists()).toBe(false);
@@ -195,27 +185,17 @@ describe("ForgotPasswordView", () => {
     await flushPromises();
 
     expect(runtime.requestPasswordReset).toHaveBeenCalledWith("unknown@example.com");
-    expect(toastAdd).toHaveBeenCalledTimes(1);
-    expect(toastAdd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        detail: successToastDetail,
-        severity: "success",
-        summary: "Success",
-      }),
-    );
+    expect(toastAdd).not.toHaveBeenCalled();
 
     const panelText = wrapper
       .get('[data-testid="forgot-password-success-panel"]')
       .text()
       .toLowerCase();
-    const toastCall = toastAdd.mock.calls[0]?.[0] as Record<string, string>;
-    const toastText = `${toastCall.summary} ${toastCall.detail}`.toLowerCase();
 
     expect(panelText).toContain("check your email");
     expect(panelText).toContain("if an account exists for the address you entered");
-    expect(toastText).toContain(successToastDetail.toLowerCase());
 
-    for (const text of [panelText, toastText]) {
+    for (const text of [panelText]) {
       expect(text).not.toContain("not found");
       expect(text).not.toContain("does not exist");
       expect(text).not.toContain("no such");

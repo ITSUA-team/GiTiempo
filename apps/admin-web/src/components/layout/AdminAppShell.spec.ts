@@ -26,6 +26,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const testMocks = vi.hoisted(() => ({
   errorToast: vi.fn(),
+  infoToast: vi.fn(),
   getWorkspace: vi.fn(),
 }));
 
@@ -56,7 +57,7 @@ vi.mock("@/services/admin-settings-client", () => ({
 vi.mock("@/composables/feedback/useToasts", () => ({
   useToasts: () => ({
     errorToast: testMocks.errorToast,
-    infoToast: vi.fn(),
+    infoToast: testMocks.infoToast,
   }),
 }));
 
@@ -185,6 +186,7 @@ describe("AdminAppShell", () => {
     clearRefreshToken();
     resetAuthRuntimeForTesting();
     testMocks.errorToast.mockReset();
+    testMocks.infoToast.mockReset();
     testMocks.getWorkspace.mockReset();
     vi.mocked(navigateToExternalHref).mockReset();
     testMocks.getWorkspace.mockResolvedValue({
@@ -463,7 +465,7 @@ describe("AdminAppShell", () => {
     expect(wrapper.findAll('a[aria-label="Projects"][aria-current="page"]')).toHaveLength(2);
   });
 
-  it("returns to the admin dashboard after switching to another admin-accessible workspace", async () => {
+  it.each([true, false])("returns to the admin dashboard after switching to another admin-accessible workspace (memberships reloaded: %s)", async (membershipsReloaded) => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = setAuthenticatedShellUser(pinia, WorkspaceRoles.Admin);
@@ -474,8 +476,9 @@ describe("AdminAppShell", () => {
         return {
           profileReloaded: true,
           profileReloadError: null,
-          membershipsReloaded: true,
-          reloadError: null,
+          ...(membershipsReloaded
+            ? { membershipsReloaded: true as const, reloadError: null }
+            : { membershipsReloaded: false as const, reloadError: new Error("Membership refresh failed") }),
         };
       });
 
@@ -504,6 +507,17 @@ describe("AdminAppShell", () => {
     );
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
     expect(vi.mocked(navigateToExternalHref)).not.toHaveBeenCalled();
+    await flushPromises();
+    expect(authStore.profile?.role).toBe(WorkspaceRoles.PM);
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
+    if (membershipsReloaded) {
+      expect(testMocks.infoToast).not.toHaveBeenCalled();
+    } else {
+      expect(testMocks.infoToast).toHaveBeenCalledExactlyOnceWith(
+        "Workspace switched. The workspace list could not be refreshed yet.",
+      );
+    }
+
   });
 
   it("redirects from invoices to dashboard when switching to a workspace where PM lacks canViewInvoices", async () => {

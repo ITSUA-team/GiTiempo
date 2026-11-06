@@ -107,10 +107,6 @@ export function useTimeEntryDialogTaskCreation({
       dialog.setTaskValue(taskOption);
       dialog.updateTaskSuggestions("", options);
       dialog.setNewTaskTitle("");
-      appToast.showSuccessToast(
-        "Task created",
-        "The new task is ready to use for time entries.",
-      );
 
       return taskOption;
     } catch (error) {

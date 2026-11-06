@@ -115,6 +115,8 @@ function createProps(overrides: Record<string, unknown> = {}) {
     installingOrganizationLogin: null,
     installations: [],
     installationsLoaded: false,
+    installationsLoading: false,
+    installationsRequestError: null,
     checkingOrganizationLogins: [],
     items: [],
     organizationLoginError: null,

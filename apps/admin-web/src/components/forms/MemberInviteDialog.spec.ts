@@ -4,6 +4,8 @@ import PrimeVue from 'primevue/config';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
+import { Form } from '@primevue/forms';
+
 import { useAuthStore } from '@/stores/auth';
 
 const testMocks = vi.hoisted(() => ({
@@ -91,6 +93,30 @@ describe('MemberInviteDialog', () => {
 
     expect(testMocks.createInvite).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('Select a role.');
+  });
+
+  it('closes and resets a successful invite without duplicate success feedback', async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useAuthStore(pinia).accessToken = 'access-token';
+    const wrapper = mount(MemberInviteDialog, {
+      props: { visible: true },
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: { Dialog: DialogStub },
+      },
+    });
+    const reset = vi.fn();
+    const values = { email: 'new-member@example.com', role: 'member' };
+    wrapper.getComponent(Form).vm.$emit('submit', { valid: true, values, reset });
+    await flushPromises();
+
+    expect(testMocks.createInvite).toHaveBeenCalledExactlyOnceWith(values);
+    expect(reset).toHaveBeenCalledOnce();
+    expect(wrapper.emitted('update:visible')).toEqual([[false]]);
+    expect(wrapper.emitted('created')).toEqual([[]]);
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
   });
 
   it('shows only the primary invite action in the popup form', () => {

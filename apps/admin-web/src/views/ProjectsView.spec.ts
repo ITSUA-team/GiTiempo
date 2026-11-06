@@ -409,7 +409,7 @@ describe('ProjectsView', () => {
     expect(testMocks.routerPush).toHaveBeenCalledWith({ name: 'admin-add-project' });
   });
 
-  it('confirms project archive, shows success feedback, and refreshes projects', async () => {
+  it('confirms project archive, stays quiet, and refreshes projects', async () => {
     const project = createProject();
 
     testMocks.listProjects
@@ -441,7 +441,7 @@ describe('ProjectsView', () => {
     });
     expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
     expect(testMocks.getManagementSummary).toHaveBeenCalledTimes(2);
-    expect(testMocks.successToast).toHaveBeenCalledWith('Project Orion has been archived.');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('does not archive a project before the confirmation accept callback runs', async () => {
@@ -489,7 +489,7 @@ describe('ProjectsView', () => {
     expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
-  it('unarchives a project, shows success feedback, and refreshes projects', async () => {
+  it('unarchives a project, stays quiet, and refreshes projects', async () => {
     const project = createProject({ isActive: false });
 
     testMocks.listProjects
@@ -509,7 +509,7 @@ describe('ProjectsView', () => {
     });
     expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
     expect(testMocks.getManagementSummary).toHaveBeenCalledTimes(2);
-    expect(testMocks.successToast).toHaveBeenCalledWith('Legacy Project is now active.');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('reports the server-assigned name when unarchiving had to rename the project', async () => {
@@ -622,7 +622,7 @@ describe('ProjectsView', () => {
     expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
     expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
     expect(testMocks.getManagementSummary).toHaveBeenCalledTimes(2);
-    expect(testMocks.successToast).toHaveBeenCalledWith('Project Orion has been updated.');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.get('[data-testid="projects-table"]').text()).toContain(
       '3 member filters',
     );

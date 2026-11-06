@@ -12,7 +12,6 @@ interface UseMemberPermissionActionsOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminMembersClient, 'updateMemberPermissions'>;
   onError: (message: string, error: unknown, action: string) => void;
-  onSuccess: (message: string) => void;
   refreshMembers: () => Promise<void>;
 }
 
@@ -20,7 +19,6 @@ export function useMemberPermissionActions({
   accessToken,
   client = adminMembersClient,
   onError,
-  onSuccess,
   refreshMembers,
 }: UseMemberPermissionActionsOptions) {
   const updatingPermissionMemberId = ref<string | null>(null);
@@ -40,7 +38,6 @@ export function useMemberPermissionActions({
         canViewInvoices: value,
       });
 
-      onSuccess('Invoice view permission updated');
       await refreshMembers();
     } catch (error) {
       onError(
