@@ -285,9 +285,9 @@ async function setPage(page: number): Promise<void> {
 
 const isMobileViewport = useIsMobileViewport();
 const paginatorPageLinkSize = computed(() =>
-  isMobileViewport.value ? 3 : 5,
+  isMobileViewport.value ? 1 : 5,
 );
-const paginatorTemplate = "PrevPageLink PageLinks NextPageLink";
+const paginatorTemplate = "FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink";
 
 function openActiveTimerDialog(): void {
   if (!isShowingPreviousEntries.value) {
