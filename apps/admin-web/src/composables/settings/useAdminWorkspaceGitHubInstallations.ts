@@ -70,6 +70,15 @@ export function useAdminWorkspaceGitHubInstallations({
   const isLoaded = computed(
     () => query.data.value !== undefined && query.error.value === null,
   );
+  const requestError = computed(() =>
+    query.error.value ? getInstallationsErrorMessage(query.error.value) : null,
+  );
+
+  async function retryLoad(): Promise<void> {
+    if (!enabled.value || disposed || query.isFetching.value) return;
+    await query.refetch({ throwOnError: false });
+  }
+
   const installingOrganizationLogin = ref<string | null>(null);
   const scopeKey = computed(() => JSON.stringify(scope.value));
   const pendingChecks = shallowRef<{ login: string; scope: string }[]>([]);
@@ -287,5 +296,8 @@ export function useAdminWorkspaceGitHubInstallations({
     checkingOrganizationLogins,
     isLoaded,
     items,
+    loading: query.isFetching,
+    requestError,
+    retryLoad,
   };
 }

@@ -281,6 +281,8 @@ watch(
             :installing-organization-login="workspaceGitHubInstallations.installingOrganizationLogin.value"
             :installations="workspaceGitHubInstallations.items.value"
             :installations-loaded="workspaceGitHubInstallations.isLoaded.value"
+            :installations-loading="workspaceGitHubInstallations.loading.value"
+            :installations-request-error="workspaceGitHubInstallations.requestError.value"
             :checking-organization-logins="workspaceGitHubInstallations.checkingOrganizationLogins.value"
             :items="workspaceGitHubOrganizations.items.value"
             :organization-login-error="workspaceGitHubOrganizations.organizationLoginError.value"
@@ -292,6 +294,7 @@ watch(
             @remove="workspaceGitHubOrganizations.removeOrganization"
             @retry="workspaceGitHubOrganizations.retryLoad"
             @retry-add="workspaceGitHubOrganizations.addOrganization"
+            @retry-installations="workspaceGitHubInstallations.retryLoad"
             @retry-available-organizations="workspaceGitHubOrganizations.retryAvailableOrganizations"
           />
         </template>

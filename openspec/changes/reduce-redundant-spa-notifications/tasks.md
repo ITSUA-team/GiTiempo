@@ -54,6 +54,10 @@
 - [x] 5.7 Recheck effective main/predecessor requirements and this change's deltas, then run `pnpm exec openspec validate reduce-redundant-spa-notifications --strict`; verify schema validity and separately record whether each predecessor base required for synchronization exists, without treating structural validity as synchronization readiness.
 - [x] 5.8 Perform manual regression testing in a real browser for both SPAs on desktop and mobile, covering the scenarios in 5.2-5.4: ordinary success without redundant notifications, visible state updates, errors/retry, loading/disabled controls, destructive confirmations, navigation, callback cleanup, and every retained exception K1-K10 in its applicable app. Record results in this change's `manual-test-results.md` with steps, expected/actual behavior, browser/viewport, revision/environment, PASS/FAIL/BLOCKED, and screenshots or other evidence; verify failures are resolved and rerun, and explicitly document any blocked scenarios rather than marking them passed.
 
+## Review follow-up
+
+- [x] 6.1 Expose installation-status request errors and scoped Retry in the GitHub Workspace Access card; verify one explicit read, duplicate-click protection, callback cleanup, and no repeated setup/completion. Recheck in the real local Admin page and record evidence.
+
 ## Workflow follow-up
 
 - Synchronize the named predecessor bases only through their normal workflow with sufficient evidence; never check off or archive unfinished predecessor work to unblock this change.

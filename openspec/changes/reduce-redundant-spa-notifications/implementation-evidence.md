@@ -156,3 +156,12 @@ Predecessor requirement bases were compared with current main/source requirement
 3. `PM Invoice View Permission Toggle In Member Settings` in `admin-members-page` from `add-pm-invoice-view-permission`.
 
 Synchronize those approved bases before this change's corresponding MODIFIED blocks. Also synchronize the `improve-spa-data-refresh` preservation requirement before this change's notification-policy replacement, retaining its content-preservation behavior and avoiding restoration of blanket success-notification requirements. This implementation does not mark unfinished predecessors complete or archive/synchronize them.
+
+
+## Review repair — installation query recovery
+
+The branch review found one unmet explicit requirement: installation follow-up read errors reached only a toast, while card recovery belonged to the separate organization query. The installation composable now exports query-derived requestError/loading and a scoped retry guarded by enabled/disposed/fetching state. Settings passes these to a separate installation RequestErrorBlock in the existing workspace access card. Retry refetches the installation query without repeating setup or completion; existing callback cleanup and quiet success remain.
+
+The rendered callback regression was red before the repair and green after it (68 targeted tests across 3 files). Both independent review lanes rechecked the repair: code APPROVE, architecture CLEAR. Real desktop/mobile acceptance and runtime cleanup are recorded in manual report O-A1/O-A2. Root typecheck and lint passed 11 tasks each with no new diagnostics. The first concurrent root test run timed out in unrelated API/User cases; sequential rerun evidence follows below. The three predecessor synchronization gates remain unchanged.
+
+Sequential root verification completed successfully: `pnpm exec turbo run test --concurrency=1` — 11/11 tasks, including API 676, User 660, Admin 894 and web-shared 309 tests. `git diff --check` and strict OpenSpec validation passed. All 40/40 tracked implementation/acceptance tasks are checked.

@@ -1376,7 +1376,7 @@ describe('SettingsView', () => {
     expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
-  it('cleans callback data while failed follow-up reads keep access unconfirmed', async () => {
+  it('retries failed callback follow-up reads in the card without repeating completion', async () => {
     window.history.replaceState({}, '', '/settings?state=' + 'a'.repeat(32) + '&installation_id=123456&keep=value');
     testMocks.listWorkspaceGitHubInstallations
       .mockResolvedValueOnce({ items: [] })
@@ -1391,6 +1391,23 @@ describe('SettingsView', () => {
     expect(testMocks.listWorkspaceGitHubInstallations).toHaveBeenCalledTimes(3);
     expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.text()).not.toContain('GitHub App access confirmed');
+    const errorBlock = wrapper.get('[data-testid="settings-github-installations-error"]');
+    expect(errorBlock.text()).toContain('Installation status unavailable');
+    expect(wrapper.find('[data-testid="settings-github-organizations-error"]').exists()).toBe(false);
+    const recovered = createDeferred<{ items: [] }>();
+    testMocks.listWorkspaceGitHubInstallations.mockReturnValueOnce(recovered.promise);
+    await errorBlock.get('button').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="settings-github-installations-error"]').attributes('aria-busy')).toBe('true');
+    await errorBlock.get('button').trigger('click');
+    expect(testMocks.listWorkspaceGitHubInstallations).toHaveBeenCalledTimes(4);
+    recovered.resolve({ items: [] });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="settings-github-installations-error"]').exists()).toBe(false);
+    expect(testMocks.completeWorkspaceGitHubInstallation).toHaveBeenCalledOnce();
+    expect(testMocks.setupWorkspaceGitHubInstallation).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('?keep=value');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('does not complete an installation callback when GitHub returns only one value', async () => {
