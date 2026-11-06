@@ -101,7 +101,6 @@ const { handleAssignmentsSubmitted, savingMemberAssignmentId } =
     accessToken,
     collapseMemberRow,
     onError: notifyMembersError,
-    onSuccess: successToast,
     projects,
     refreshMembers,
   });
@@ -109,14 +108,12 @@ const { handleAssignmentsSubmitted, savingMemberAssignmentId } =
 const { handleUpdateInvoicePermission } = useMemberPermissionActions({
   accessToken,
   onError: notifyMembersError,
-  onSuccess: successToast,
   refreshMembers,
 });
 
 const { handleRemoveMember } = useMemberRemovalAction({
   accessToken,
   onError: notifyMembersError,
-  onSuccess: successToast,
   refreshMembers,
   requireConfirmation,
 });

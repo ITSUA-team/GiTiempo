@@ -36,10 +36,16 @@ Use `<Toast>` and `useToast()`.
 - Success/info/warn auto-dismiss after 4000ms.
 - Errors require manual dismiss.
 - Width target: `w-80`.
+- Routine successful actions stay quiet when existing rows, selections, forms, timer state, or navigation communicate the result. Do not add success/info toasts or transient inline confirmations for ordinary CRUD, saves, timer actions, background refreshes, or successful GitHub reconciliation.
+- Remove duplicate auth-success toasts when a persistent panel already provides the instructions. Keep those panels, callback URL cleanup, loading/disabled guards, and partial-success recovery. Password-reset completion retains its success toast and existing login redirect; cross-origin navigation may unload that toast and does not promise persisted feedback.
+- Retain meaningful exceptions: workspace-switch partial refresh failure, changed-timer retry/stop-first guidance, billable-backfill counts, automatic project-rename explanations, invitation-resend acknowledgement, and report-export ready/download-started acknowledgement. Never claim email delivery or that a browser download was saved to disk.
+- Read/write failures retain actionable error toasts, logging, and applicable inline error/retry states. In invitation email/password sign-in, a failed authentication attempt is shown once in the existing inline error with diagnostic logging and retry; omit its duplicate toast. Invite acceptance failures and accepted-but-session-failed recovery keep their existing error feedback. Pure client-side validation stays inline. Preserve destructive confirmations, drafts, authoritative reconciliation, navigation, and request counts.
+- Select notifications at their owning action; do not suppress success/info severities globally. Persistent connection/status badges, saved/unsaved indicators, access instructions, and empty/loading/error surfaces remain functional UI.
+- Check focus restoration, busy semantics, and necessary accessible completion status when removing a toast. Do not replace every removed toast with a generic live announcement or announce the timer every second.
 
 ```typescript
 const toast = useToast()
-toast.add({ severity: 'success', summary: 'Saved', detail: 'Time entry updated.', life: 4000 })
+toast.add({ severity: 'success', summary: 'Invitation resent', detail: 'The resend request was accepted.', life: 4000 })
 toast.add({ severity: 'error', summary: 'Error', detail: 'Could not save entry.' })
 ```
 
@@ -50,6 +56,7 @@ Use `<ConfirmDialog>` and `useConfirm()`.
 - Render exactly one `<ConfirmDialog>` service host in the root `App.vue` of each SPA.
 - Do not render ConfirmDialog hosts in shells, routes, pages, rows, cards, fields, or other leaf components.
 - Required before destructive actions.
+- Start focus on the safe Cancel action with `defaultFocus: 'reject'`; the shared destructive-confirmation helper supplies this policy.
 - Title uses `text-lg font-semibold`.
 - Body uses `text-sm text-text-muted`.
 - Footer order separates destructive and safe actions: destructive outlined accept on the left, secondary outlined cancel on the right.
@@ -62,6 +69,7 @@ confirm.require({
   header: 'Delete entry?',
   acceptLabel: 'Delete',
   rejectLabel: 'Cancel',
+  defaultFocus: 'reject',
   acceptProps: {
     severity: 'danger',
     variant: 'outlined',

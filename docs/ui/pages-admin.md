@@ -23,6 +23,8 @@
 
 ## Reports Page
 
+- Saved-report creation, save, rename, and deletion update selection, preset names, and Saved/Unsaved state quietly without replacement collection reads. Export retains an explicit `Download started` acknowledgement after generation and handoff to the browser; it does not claim the file was saved to disk. Generation/download errors remain visible.
+
 - Initial report load uses a skeleton matching the reports header, summary cards, and results table with its header controls. There is no separate setup bar to reserve space for.
 - A populated report stays mounted while a same-scope refresh runs or transiently fails; use the existing table refresh treatment and local retry/error feedback rather than replacing rows, filters, or export controls with the initial skeleton. A returned report may be reused for 30 seconds and retained for five minutes only when its workspace, role, user, and effective visible-project scope still match. Project visibility remains authoritative and is checked separately before retained rows render.
 - Date changes retain the previous authorized rows and their matching totals while the stable region is busy. Export stays disabled during the date debounce, pending request, and retained-result error until the requested result commits. A workspace, role, user, or effective project visibility change prevents reuse.
@@ -53,6 +55,8 @@
 - PM users cannot widen filters beyond active projects visible through their report scope, including active public projects plus active private projects assigned to that PM.
 
 ## Invoices Page
+
+- Successful creation, edits, status transitions, and deletion use the existing list/detail state or navigation without success toasts. Preserve confirmation, errors, pending title/notes edits, and dirty-state clearing only for edits actually saved.
 
 ### List page (`/invoices`)
 
@@ -103,6 +107,8 @@
 
 ## Members Page
 
+- Successful assignment, invoice-permission, member removal, initial invitation, and invitation cancellation update the existing rows/counters and form state without redundant success toasts. Destructive confirmations and error/retry feedback remain. Resending an invitation retains its acknowledgement without claiming email delivery.
+
 - Initial page load uses a skeleton matching the stats header, stat cards, and members table before rendering empty or request-error states.
 - Members table shows avatar, role, projects assigned, and last active. The member name is the edit entry point and opens the inline member settings section.
 - Members table is searchable with placeholder `Search members` and uses column filters for member name/email, role, assigned projects, and last active.
@@ -115,6 +121,8 @@
 - Project assignment is handled with inline expansion and PrimeVue `<AutoComplete multiple dropdown forceSelection>` for non-admin members, with selected projects shown as removable chips and typeahead search over active projects.
 
 ## Projects Page
+
+- Creation, editing, archiving, and ordinary unarchiving update the existing list/navigation quietly. Retain destructive confirmations, errors, billable-backfill affected-record counts, and the explanatory notification when unarchiving automatically renames a project.
 
 - Initial page load uses a skeleton matching the stats header, stat cards, and projects table before rendering empty or request-error states.
 - Project list table includes project name, source, assigned members, total hours, and visibility. It does not keep a separate row-actions column.
@@ -160,13 +168,14 @@
 - The expected card steps are `Authorize your GitHub account`, `Grant GitHub organization permission`, `Approve organization OAuth access`, and `Retry workspace allow-list check`. The backend response decides each card's current status without exposing provider details.
 - The authorization and permission actions open the user profile GitHub connection screen. The approval action opens `https://github.com/organizations/<org-login>/settings/oauth_application_policy` for organization-level OAuth policy review.
 - The retry action retries the organization validation/add flow from the same card. Instruction copy tells the admin to return to Settings, keep the same organization login, and retry after completing the GitHub-side steps.
-- The recovery card group appears only when it helps recovery: missing OAuth authorization/permission, organization OAuth policy restrictions, provider failure, or repeated validation failure for the typed organization. Successful add returns the card to the normal allowed-organization state and confirms with toast feedback.
+- The recovery card group appears only when it helps recovery: missing OAuth authorization/permission, organization OAuth policy restrictions, provider failure, or repeated validation failure for the typed organization. Successful add clears recovery/selection and returns the card to its authoritative allowed-organization state without a success toast; removal is also quiet.
 - These recovery cards apply only to adding an allowed organization with the administrator's OAuth connection. Installation-backed tracking recovery remains separate and does not add status or actions to the Workspace Access rows.
 - External GitHub links in the organization-add recovery checklist open in a new tab and use clear accessible labels such as `Review GitHub organization OAuth access for My-test-org-for-clock`; internal Profile links keep the current app's standard navigation treatment. The allowed-row `Install App` setup action uses the current tab to carry its separate installation setup-and-return flow.
 - Implementation plan: first expose the structured backend recovery payload through the shared contract and admin Settings card state; then render recovery cards from response-provided step ids and statuses without visible status tags; then add focused admin-web tests for blocked, not-installed/unknown, disconnected, retry-success, and still-blocked states using response-provided statuses; finally browser-check the Settings card with a real blocked organization.
 - Initial load reads workspace identity from `/workspace` and workspace settings from `/workspace/settings`.
 - The authenticated admin shell header reads `/workspace` by default for the visible workspace label; Settings save updates that label from the authoritative workspace response.
 - Save sends workspace name changes to `/workspace` and currency/default hourly rate/time zone changes to `/workspace/settings`; unchanged resources are not patched only to satisfy schemas.
+- Settings save updates the authoritative form and workspace label without a success toast. Organization add/remove and automatic, manual, or callback GitHub App completion use the existing authoritative card state quietly; callback URL cleanup, loading guards, errors, and failed follow-up-read/retry guidance remain intact.
 - `Cancel` restores the latest loaded or saved values without sending a request.
 - Use a structured PrimeVue Skeleton first-load state that mirrors the implemented header, card, field rows, and action row.
 - Keep failed initial requests distinct from empty/default settings: show a request-error surface with retry and toast feedback instead of rendering default form values.
@@ -179,6 +188,8 @@
 - Clicking the `Forgot?` link navigates to the admin-web `/auth/forgot-password` route without submitting the login form or clearing entered email state.
 
 ## Password Recovery / Reset Password
+
+- A successful reset-email request uses the persistent account-safe `Check your email` panel without a duplicate success toast, for both known and unknown addresses. Validation and Firebase failure feedback remain unchanged.
 
 - `/auth/forgot-password` and `/auth/reset-password` exist in admin-web with the same standalone placement, route guards (guest-only request route, `allowAuthenticatedGuestFlow` reset route), fields, gradient actions, and Firebase action-code behavior as the user-web Password Recovery Request Page and Reset Password Landing Page.
 - Both pages render the shared `AuthForgotPasswordForm` and `AuthResetPasswordForm` forms and follow the same notification conventions: `createAppToast` for toasts, inline `Message` for client-side validation, `logContext: { action, feature }` on Firebase-failure error toasts, and a success toast with redirect to the admin-web `/login` route after the password update.

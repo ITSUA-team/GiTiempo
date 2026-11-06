@@ -300,9 +300,7 @@ describe('AddProjectView', () => {
       visibility: 'private',
     });
     expect(testMocks.assignMember).toHaveBeenCalledWith('project-1', 'pm-user');
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      '"Customer Portal" has been created successfully.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(testMocks.routerPush).toHaveBeenCalledWith({ name: 'admin-projects' });
   });
 
@@ -368,9 +366,7 @@ describe('AddProjectView', () => {
     });
     expect(testMocks.createProject).not.toHaveBeenCalled();
     expect(testMocks.assignMember).toHaveBeenCalledWith('project-9', 'pm-user');
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      '"ITSUA-team/Krvn" has been created successfully.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('names the settings and the manager in the outcome sentence', async () => {

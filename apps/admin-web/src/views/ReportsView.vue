@@ -116,23 +116,19 @@ function startNewReport(): void {
 }
 
 async function handleSaveReport(): Promise<void> {
-  const saved = await savedReports.save();
-  if (saved) successToast(`Saved "${saved.name}".`);
+  await savedReports.save();
 }
 
 async function handleSaveReportAsNew(name: string): Promise<void> {
-  const created = await savedReports.saveAsNew(name);
-  if (created) successToast(`Saved "${created.name}".`);
+  await savedReports.saveAsNew(name);
 }
 
 async function handleRenameReport(id: string, name: string): Promise<void> {
-  const renamed = await savedReports.rename(id, name);
-  if (renamed) successToast(`Renamed to "${renamed.name}".`);
+  await savedReports.rename(id, name);
 }
 
 async function handleDeleteReport(id: string): Promise<void> {
-  const removed = await savedReports.remove(id);
-  if (removed) successToast('Report deleted.');
+  await savedReports.remove(id);
 }
 const tableRows = computed(() =>
   filterReportRows(rows.value, tableFilters.value),
@@ -262,7 +258,7 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
     }
 
     downloadReportExport({ blob, filename });
-    successToast(`Exported ${filename}.`);
+    successToast(`Download started: ${filename}.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to export reports';
     errorToast(message, {

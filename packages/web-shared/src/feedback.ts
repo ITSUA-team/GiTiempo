@@ -4,6 +4,7 @@ export interface ConfirmLike {
     accept: () => void | Promise<void>;
     acceptLabel: string;
     acceptProps: { severity: "danger"; variant: "outlined" };
+    defaultFocus: "reject";
     header: string;
     message: string;
     pt: {
@@ -127,6 +128,7 @@ export function createAppConfirm(confirm: ConfirmLike) {
       accept,
       acceptLabel,
       acceptProps: { severity: "danger", variant: "outlined" },
+      defaultFocus: "reject",
       header,
       message,
       pt: {

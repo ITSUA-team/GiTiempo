@@ -35,7 +35,6 @@ interface UseAdminWorkspaceGitHubInstallationsOptions {
   enabled: Ref<boolean> | ComputedRef<boolean>;
   navigate?: (url: string) => void;
   onError?: (message: string, error: unknown, action: string) => void;
-  onSuccess?: (message: string, action: string) => void;
   organizations?: Ref<readonly WorkspaceGitHubOrganizationResponse[]> | ComputedRef<readonly WorkspaceGitHubOrganizationResponse[]>;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
@@ -60,7 +59,6 @@ export function useAdminWorkspaceGitHubInstallations({
   enabled,
   navigate = (url) => window.location.assign(url),
   onError,
-  onSuccess,
   organizations,
   scope,
 }: UseAdminWorkspaceGitHubInstallationsOptions) {
@@ -177,9 +175,6 @@ export function useAdminWorkspaceGitHubInstallations({
       await completeMutation.mutateAsync(parsed.data);
       if (!isCurrentScope(currentScope)) return;
       await query.refetch({ throwOnError: false });
-      if (isCurrentScope(currentScope)) {
-        onSuccess?.('GitHub App access confirmed for this workspace.', 'complete-workspace-github-installation');
-      }
     } catch (error) {
       if (isCurrentScope(currentScope)) {
         onError?.(getInstallationsErrorMessage(error), error, 'complete-workspace-github-installation');

@@ -768,7 +768,7 @@ describe('SettingsView', () => {
       name: 'Updated Workspace',
     });
     expect(testMocks.updateWorkspaceSettings).not.toHaveBeenCalled();
-    expect(testMocks.successToast).toHaveBeenCalledWith('Settings saved.');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('submits changed time zone through the existing workspace settings save action', async () => {
@@ -794,7 +794,7 @@ describe('SettingsView', () => {
     expect(testMocks.updateWorkspaceSettings).toHaveBeenCalledWith({
       timeZone: 'Europe/Kyiv',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith('Settings saved.');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('initializes the rounding step selector from loaded settings', async () => {
@@ -841,7 +841,7 @@ describe('SettingsView', () => {
     expect(testMocks.updateWorkspaceSettings).toHaveBeenCalledWith({
       timeRoundingStepMinutes: 30,
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith('Settings saved.');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(
       wrapper.get<HTMLSelectElement>('#settings-time-rounding-step-minutes')
         .element.value,
@@ -951,9 +951,7 @@ describe('SettingsView', () => {
     expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
       organizationLogin: 'Octo-Org',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'GitHub organization added.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('Octo-Org');
   });
 
@@ -978,9 +976,7 @@ describe('SettingsView', () => {
     expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
       organizationLogin: 'Hidden-Org',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'GitHub organization added.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('Hidden-Org');
   });
 
@@ -1004,9 +1000,7 @@ describe('SettingsView', () => {
     expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
       organizationLogin: 'Hidden-Org',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'GitHub organization added.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
       true,
     );
@@ -1079,9 +1073,7 @@ describe('SettingsView', () => {
     expect(testMocks.removeWorkspaceGitHubOrganization).toHaveBeenCalledWith(
       '33333333-3333-4333-8333-333333333333',
     );
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'GitHub organization removed.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain(
       'No GitHub organizations are allowed for this workspace yet.',
     );
@@ -1304,9 +1296,7 @@ describe('SettingsView', () => {
     );
     expect(wrapper.text()).not.toContain('GitHub organization access');
     expect(wrapper.text()).toContain('My-test-org-for-clock');
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'GitHub organization added.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('keeps the checklist visible when retry stays blocked', async () => {
@@ -1353,6 +1343,21 @@ describe('SettingsView', () => {
     expect(wrapper.text()).not.toContain('Blocked');
   });
 
+  it('automatically completes discovered App access quietly and rereads the authoritative card', async () => {
+    testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({ items: [workspaceGitHubOrganizationResponse] });
+    testMocks.setupWorkspaceGitHubInstallation.mockResolvedValue({ existingInstallationId: '123456', state: 'a'.repeat(32) });
+    testMocks.listWorkspaceGitHubInstallations
+      .mockResolvedValueOnce({ items: [] })
+      .mockResolvedValue({ items: [{ organizationLogin: 'Octo-Org', status: 'verified', installationId: '123456' }] });
+    const wrapper = mountSettingsView();
+    await flushPromises();
+    await flushPromises();
+    expect(testMocks.completeWorkspaceGitHubInstallation).toHaveBeenCalledOnce();
+    expect(testMocks.listWorkspaceGitHubInstallations).toHaveBeenCalledTimes(3);
+    expect(wrapper.text()).toContain('Octo-Org');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+  });
+
   it('submits only complete installation callback data and removes it from the URL', async () => {
     window.history.replaceState(
       {},
@@ -1368,6 +1373,24 @@ describe('SettingsView', () => {
       state: 'a'.repeat(32),
     });
     expect(window.location.search).toBe('?keep=value');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+  });
+
+  it('cleans callback data while failed follow-up reads keep access unconfirmed', async () => {
+    window.history.replaceState({}, '', '/settings?state=' + 'a'.repeat(32) + '&installation_id=123456&keep=value');
+    testMocks.listWorkspaceGitHubInstallations
+      .mockResolvedValueOnce({ items: [] })
+      .mockRejectedValue(new Error('Installation status unavailable'));
+    const wrapper = mountSettingsView();
+    await flushPromises();
+    await vi.waitFor(() => expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Installation status unavailable',
+      expect.objectContaining({ logContext: { action: 'load-workspace-github-installations', feature: 'settings-github-installations' } }),
+    ));
+    expect(window.location.search).toBe('?keep=value');
+    expect(testMocks.listWorkspaceGitHubInstallations).toHaveBeenCalledTimes(3);
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+    expect(wrapper.text()).not.toContain('GitHub App access confirmed');
   });
 
   it('does not complete an installation callback when GitHub returns only one value', async () => {

@@ -19,6 +19,8 @@
 - Optional MVP stats row: 3 summary cards.
 - Dashboard page-content timer controls are limited to Recent Time Entries row/card actions; the global top bar remains the main timer surface, and no separate dashboard timer panel appears in page content.
 
+- Successful recent-entry timer actions update the running row and timer state without a success toast. Errors and recovery guidance remain visible.
+
 ## Global Top-Bar Timer
 
 - There is no dedicated Timer page in the authenticated `user-web` MVP navigation.
@@ -59,6 +61,7 @@
 - When `Task` is set to `New task`, show a single required new-task title input directly below the task select and create that task inside the currently selected visible project.
 - The dialog does not support creating a new project.
 - When task creation succeeds, the dialog keeps the newly created task selected and stays open until the user confirms with the state-appropriate timer action.
+- Successful timer start, stop, task reassignment, and inline task creation are confirmed by the existing timer and selection state without success toasts. An authoritative already-stopped result is quiet; changed-timer retry and cross-workspace stop-first guidance remain.
 - Manual interval entry stays on Time Entries only. It does not move into the top-bar timer surface or task-picker dialog.
 
 ## Time Entries Page
@@ -85,6 +88,8 @@
 - Pagination uses PrimeVue `<Paginator>` below the grouped entry sections. The summary text and paginator stack vertically on mobile (below `640px`) and sit side-by-side on larger screens. The paginator limits visible page links via `pageLinkSize` — 3 links on mobile (below `640px`) and 5 on larger screens — using the shared `useIsMobileViewport` helper for the breakpoint. This keeps the paginator compact within its container without horizontal scrolling on any viewport. No inline PT overflow hacks are used.
 - Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.
 - On a same-workspace refresh, keep populated rows, filters, focus, and valid dialogs mounted. Mark the stable page region with `aria-busy` instead of adding a visible refresh message or replacing content with the initial-load skeleton. While filter or page results are retained as a temporary previous result, keep totals tied to the committed rows and disable row mutations and pagination until the requested result arrives. A transient refresh failure keeps the populated content visible with a scoped retry; a first-load failure still uses the request-error state.
+
+- Successful manual entry create, edit, delete, and inline task creation update the existing list or selection and close the appropriate dialog without success toasts. Direct row timer actions are also quiet; errors and retry controls remain.
 
 ## Projects Page
 
@@ -128,6 +133,8 @@
 - Task lists show active tasks by default and exclude inactive tasks from the default grouped list.
 - Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.
 
+- Successful task create, edit, delete, and direct timer actions update the existing rows, selection, and dialogs without routine success toasts. Billable backfill retains its result-count feedback.
+
 ## Profile Page
 
 - Initial page load uses a skeleton matching the profile form and GitHub connection card before rendering disconnected, empty, or request-error states.
@@ -143,7 +150,8 @@
 - This card does not indicate whether a workspace GitHub App installation is ready for timer starts, and tracking errors do not add a reconnect call to action here.
 - Disconnect uses the shared PrimeVue `<ConfirmDialog>` confirmation pattern before removing the identity and both personal GitHub credential families. Its copy explains that workspace installations, saved projects/tasks, and time history remain. The card disables Disconnect and explains the required recovery when the server reports no verified alternative sign-in method.
 - After successful local unlink, a provider-revocation warning is shown through the existing toast pattern when GitHub cannot confirm revocation.
-- GitHub OAuth callback outcomes after redirect back to `/profile` are surfaced with toast notifications only; do not render inline success or error banners for callback results.
+- Successful profile saves and ordinary GitHub disconnects are quiet; the persisted name and authoritative connection card confirm the result.
+- A supported successful GitHub OAuth callback quietly removes its handled query parameters, including when the connection-status read fails. Error callbacks retain their error toast and query cleanup; status-read failures retain their request-error state and retry. Do not render callback banners.
 - When `avatarUrl` is `null`, do not render the avatar row in the GitHub connection card.
 - Disconnect confirmation and callback notifications should use standard PrimeVue `<ConfirmDialog>` and `<Toast>` components; do not invent custom dialog or toast patterns for this page.
 - Sign out is owned by the shared header profile dropdown; do not render a duplicate sign-out action in the Profile page content.
@@ -220,13 +228,13 @@ The approved `.pen` auth screens (user login, admin login, and both register scr
 - The page MUST submit `POST /invites/accept` with `{ token, firebaseIdToken, googleIdToken? }` after Firebase sign-in, before trying to create an app API session for a first-time invited user. Forward the transient Google ID token when available so the API can verify a missing-email Firebase identity before accepting the invitation.
 - After `POST /invites/accept` returns `204`, the page signs in to the normal app session with the same Firebase identity token and optional paired Google proof, then redirects to the dashboard. Neither credential is stored or logged.
 - While acceptance is in progress, keep the panel shape stable, show a loading state on the active action, and prevent duplicate submissions.
-- Success state copy is `Workspace access created. Redirecting to dashboard.` and may be brief because successful users are redirected.
+- Successful acceptance redirects quietly to the dashboard without a success toast or transient redirect message. Keep the redirect state and busy guards active until navigation completes. If acceptance succeeds but app sign-in fails, retain the recovery panel and its login action.
 - API errors stay inline in the panel and use the backend error message when available. Required mapped cases: `Invite not found`, `Invite has expired`, `Invite cannot be accepted`, `Invite email does not match identity`, and `User is already a workspace member`.
 - Firebase sign-in errors stay inline in the panel. Required mapped cases: invalid credentials, missing password setup, too-many-requests, disabled account, popup-cancelled Google sign-in, and Google/email mismatch guidance.
 - If Firebase sign-in succeeds but `POST /invites/accept` fails, do not silently discard the state. Keep the panel in a recovery state that explains that the Firebase account is signed in but workspace access was not created, and offer the correct next action based on the backend error: retry for transient failures, switch account for email mismatch, or go to login/request a fresh invite for terminal invite failures.
 - For expired, missing, already-used, or not-found invite failures, show the invalid-link state and a login-page action instead of leaving the user on a retry-only form.
 - For email mismatch, keep the form visible, show the exact mismatch message inline, and allow the user to retry with the correct account.
-- For already-member, show a success-adjacent state that explains access already exists and offers the primary action `Sign in`.
+- For already-member, retain the persistent state explaining that access already exists and its primary `Sign in` action, without a duplicate info toast.
 - Keep route-level invite errors distinct from authenticated in-shell request errors.
 - Use PrimeVue controls for inputs, buttons, inline messages, loading affordances, and toast feedback where applicable.
 - Query-driven invite accept flows must test missing token, success redirect after email/password sign-in, success redirect after Google sign-in, invalid credentials, missing password setup guidance, email mismatch retry, invalid/expired/already-used link handling, already-member handling, sign-in-succeeded-but-accept-failed recovery, and URL cleanup after terminal outcomes.
@@ -244,7 +252,7 @@ The approved `.pen` auth screens (user login, admin login, and both register scr
 - Initial state: keep the panel shape stable while validating the action code and show copy `Checking password setup link...`.
 - Valid-code state: show title `Set your password`, helper copy explaining that the user is setting a Firebase password (at least 8 characters) for the invited email, the verified email as a soft accent notice, then fields ordered `New password`, `Confirm password`, followed by the primary action `Save password`.
 - Password fields use PrimeVue `<Password>` and must have visible labels. Confirm password must match before calling Firebase.
-- Success state copy is `Password saved. Return to your invite to sign in and accept access.` with primary action `Continue to invite`.
+- Success state copy is `Password saved. Return to your invite to sign in and accept access.` with primary action `Continue to invite`; keep this persistent confirmation without a duplicate success toast.
 - Invalid or expired action-code state title is `Password setup link expired` with helper copy explaining that the link is invalid, expired, or already used, and a primary action `Back to invite` when an invite token is available or `Go to login` otherwise.
 - Firebase reset errors stay inline in the panel. Required mapped cases: invalid/expired action code, weak password, mismatched confirmation, too many requests, and network failure.
 - While reset confirmation is in progress, keep the panel shape stable, show loading on `Save password`, and prevent duplicate submissions.
@@ -270,7 +278,7 @@ The approved `.pen` auth screens (user login, admin login, and both register scr
      - Production: `app.gitiempo.com`, `gitiempo-admin.gitiempo.com`
   3. **Password policy**: In Firebase Console → Authentication → Settings → User actions → Password policy, enforce a minimum password length of 8 characters. This is a server-side safety net: the SPA's Zod validation (`newPasswordSchema` `min(8)`) and the Create Workspace form (`registerFormSchema` `min(8)`) already enforce 8 characters client-side, but the Firebase policy ensures consistency when the Firebase-hosted action handler page is used (for example, if the Action URL is not yet configured) or when passwords are set via the Firebase Admin SDK.
   4. **Cross-app redirect**: When admin-web triggers a password reset, the `ActionCodeSettings.url` (continueUrl) is set to `https://<admin-domain>/login`. Firebase includes this as `continueUrl` in the email link. After user-web's `ResetPasswordView` successfully resets the password, it reads `continueUrl` from the query, validates it matches the current app's origin or the counterpart admin app's origin (from `VITE_ADMIN_APP_URL`), and redirects there via `window.location.href`. Unsafe or missing `continueUrl` values fall back to the local `/login` route.
-- On success the panel switches to an in-panel success confirmation and a success toast is shown through the shared `createAppToast` helper (auto-dismisses per the shared toast rules). The confirmation copy is identical for known and unknown emails so the page never reveals whether an account exists.
+- On success the panel switches to its persistent in-panel confirmation without a duplicate success toast. The confirmation copy is identical for known and unknown emails so the page never reveals whether an account exists.
 - On a Firebase request failure show an inline error `Message` plus an error toast (manual dismiss) via `createAppToast` with `logContext: { action: "send-password-reset", feature: "forgot-password" }`, and keep the form available for retry.
 - On a client-side validation error (empty or malformed email) show the inline field `Message` only, with no toast, matching the project rule that pure client-side validation stays inline.
 - Required mapped Firebase failure cases for the send step: `auth/too-many-requests`, `auth/network-request-failed`, and a generic fallback message for any other Firebase or client error.

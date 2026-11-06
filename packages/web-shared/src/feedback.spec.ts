@@ -120,6 +120,7 @@ describe("createAppConfirm", () => {
       accept,
       acceptLabel: "Disconnect",
       acceptProps: { severity: "danger", variant: "outlined" },
+      defaultFocus: "reject",
       header: "Disconnect GitHub?",
       message: "This will remove the current GitHub connection.",
       pt: {
@@ -135,6 +136,30 @@ describe("createAppConfirm", () => {
 });
 
 describe("runWithFeedback", () => {
+  it("returns a successful action result quietly when success copy is omitted", async () => {
+    const toast = {
+      showErrorToast: vi.fn(),
+      showSuccessToast: vi.fn(),
+    };
+    const savedIdentity = { displayName: "Updated name" };
+    const run = vi.fn(async () => savedIdentity);
+
+    const result = await runWithFeedback({
+      onError: {
+        detail: "Please try again.",
+        logContext: { action: "save-profile", feature: "profile" },
+        summary: "Could not save profile",
+      },
+      run,
+      toast,
+    });
+
+    expect(result).toBe(savedIdentity);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(toast.showSuccessToast).not.toHaveBeenCalled();
+    expect(toast.showErrorToast).not.toHaveBeenCalled();
+  });
+
   it("shows success feedback for successful actions", async () => {
     const toast = {
       showErrorToast: vi.fn(),

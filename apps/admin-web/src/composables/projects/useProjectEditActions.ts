@@ -16,7 +16,6 @@ interface UseProjectEditActionsOptions {
   >;
   collapseProjectRow: (project: ProjectResponse) => void;
   onError: (message: string, error: unknown, action: string) => void;
-  onSuccess: (message: string) => void;
   openProjectBackfillDialogIfNeeded: (project: ProjectResponse) => Promise<void>;
   refreshProjects: () => Promise<void>;
 }
@@ -30,7 +29,6 @@ export function useProjectEditActions({
   client = adminProjectsClient,
   collapseProjectRow,
   onError,
-  onSuccess,
   openProjectBackfillDialogIfNeeded,
   refreshProjects,
 }: UseProjectEditActionsOptions) {
@@ -92,7 +90,6 @@ export function useProjectEditActions({
         await client.removeAssignment(project.id, managerToRemove);
       }
 
-      onSuccess(`${project.name} has been updated.`);
       collapseProjectRow(project);
       await refreshProjects();
 

@@ -18,7 +18,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
 const router = useRouter();
-const { successToast, errorToast } = useToasts();
+const { errorToast } = useToasts();
 
 const inlineErrorMessage = ref<string | null>(null);
 const isRequestSent = ref(false);
@@ -45,11 +45,6 @@ const introFeatureCards = [
   },
 ];
 
-// One success copy for every outcome so the page never reveals whether the
-// account exists.
-const successDetail =
-  "If an account exists for the entered email, a password reset link is on its way. Open it to choose a new password, then sign in again.";
-
 function goToLogin(): void {
   void router.push({ name: routeNames.login });
 }
@@ -67,7 +62,7 @@ async function handleSubmitted(email: string): Promise<void> {
   try {
     await authStore.requestPasswordReset(email);
     isRequestSent.value = true;
-    successToast(successDetail);
+
   } catch (error) {
     const detail = getFirebaseAuthErrorMessage(
       error,

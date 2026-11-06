@@ -60,13 +60,8 @@ async function handleSendResetLink(email: string): Promise<void> {
 
   try {
     await authStore.requestPasswordReset(email);
+    // Firebase resolves for unrecognized emails too, so panel copy stays account-safe.
     showSuccessPanel.value = true;
-    // Firebase resolves for unrecognized emails too, so this copy stays the
-    // same for known and unknown accounts (no account enumeration).
-    appToast.showSuccessToast(
-      "Check your email",
-      "If an account exists for that email, a password reset link has been sent.",
-    );
   } catch (error) {
     errorMessage.value = getFirebaseAuthErrorMessage(
       error,

@@ -43,7 +43,6 @@ export function useProjectArchiveActions({
       await client.updateProject(project.id, {
         isActive: false,
       });
-      onSuccess(`${project.name} has been archived.`);
       collapseProjectRow(project);
       await refreshProjects();
     } catch (error) {
@@ -75,11 +74,9 @@ export function useProjectArchiveActions({
       const updated = await client.updateProject(project.id, {
         isActive: true,
       });
-      onSuccess(
-        updated.name === project.name
-          ? `${project.name} is now active.`
-          : `${project.name} is now active as "${updated.name}", because another project already uses the original name.`,
-      );
+      if (updated.name !== project.name) {
+        onSuccess(`${project.name} is now active as "${updated.name}", because another project already uses the original name.`);
+      }
       collapseProjectRow(project);
       await refreshProjects();
     } catch (error) {

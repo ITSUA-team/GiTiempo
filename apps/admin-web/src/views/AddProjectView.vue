@@ -52,7 +52,7 @@ type FormState = Record<string, FormFieldState>;
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { successToast, errorToast } = useToasts();
+const { errorToast } = useToasts();
 
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getAdminServerStateScope(accessToken.value));
@@ -313,7 +313,6 @@ async function handleSubmit({
       );
     }
 
-    successToast(`"${trimmedName}" has been created successfully.`);
     await router.push({ name: routeNames.projects });
   } catch (err) {
     if (isNameConflict(err)) {

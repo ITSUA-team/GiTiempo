@@ -22,7 +22,7 @@ import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
-const { errorToast, successToast } = useToasts();
+const { errorToast } = useToasts();
 const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 const settingsForm = useAdminSettingsForm();
@@ -81,9 +81,6 @@ const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
       logContext: { action, feature: 'settings-github-workspace-access' },
     });
   },
-  onSuccess(message) {
-    successToast(message);
-  },
   refetchGitHubConnectionStatus: githubConnection.retryLoad,
   scope,
   userAppUrl: appEnv.userAppUrl,
@@ -97,9 +94,6 @@ const workspaceGitHubInstallations = useAdminWorkspaceGitHubInstallations({
       error,
       logContext: { action, feature: 'settings-github-installations' },
     });
-  },
-  onSuccess(message) {
-    successToast(message);
   },
   scope,
 });
@@ -190,7 +184,6 @@ async function saveSettings(): Promise<void> {
   });
   settingsForm.applyPersistedValues(result.values);
   syncWorkspaceName(result.values);
-  successToast('Settings saved.');
 }
 
 watch(

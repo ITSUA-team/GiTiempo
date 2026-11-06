@@ -1,0 +1,173 @@
+# Spec Delta
+
+## MODIFIED Requirements
+
+### Requirement: Invite Member Dialog
+
+The admin Members page MUST provide an `Invite Member` dialog that creates a pending workspace invite and follows the shared non-destructive popup footer pattern.
+
+#### Scenario: Dialog validates and creates invite
+
+- **GIVEN** the admin opens the invite dialog
+- **WHEN** the dialog renders
+- **THEN** it shows email and role fields with `Send Invite` as the only footer action
+- **AND** the dialog footer does not show a `Cancel` dismissal button
+- **AND** invalid email or missing role shows field-level validation without sending a request
+- **AND** successful invite creation closes the dialog and updates the pending invite list and count without a redundant success/info notification
+- **AND** backend errors keep the dialog open and show the rejection reason
+
+#### Scenario: Invite dialog dismissal uses popup close control
+
+- **GIVEN** the invite dialog is open and not submitting
+- **WHEN** the user activates the built-in dialog close control or existing non-destructive mask dismissal
+- **THEN** the dialog closes without creating an invite
+
+### Requirement: Inline PM Assignment Expansion
+
+The Members page MUST provide an inline assignment expansion under non-admin member rows.
+
+#### Scenario: Assignment expansion applies project assignment diff
+
+- **GIVEN** an admin selects Assign PM on a non-admin member row
+- **WHEN** the row expands
+- **THEN** the expansion lists active workspace projects with current assignments pre-checked
+- **AND** saving creates assignment records for newly checked projects and removes assignments for newly unchecked projects
+- **AND** success collapses the expansion and refreshes the member list
+- **AND** cancel collapses without sending requests
+- **AND** admin member rows do not show the Assign PM action
+
+#### Scenario: Members assignment expansion form emits save payload
+
+- **GIVEN** the Members page renders member assignment expansion content
+- **WHEN** the admin submits assignment changes
+- **THEN** the expansion form emits a typed save payload
+- **AND** the Members page or focused composable performs auth checks, member/project API calls, actionable error toast feedback, member refresh, and row collapse without redundant success/info notifications
+- **AND** the expansion form itself does not import admin API clients, auth stores, toast helpers, or confirmation helpers
+
+### Requirement: Edit Member Inline Form
+
+The Members page MUST provide an inline edit panel that updates a member's role.
+
+#### Scenario: Edit panel updates role
+
+- **GIVEN** an admin selects Edit on a member row
+- **WHEN** the row expands
+- **THEN** the panel shows Name, Email, and editable Role fields in that order
+- **AND** saving a role change issues a member-role update, collapses on success, refreshes the member list without a redundant success/info notification
+- **AND** backend last-admin protection failures keep the panel open and surface the rejection
+
+#### Scenario: Members role edit expansion form emits save payload
+
+- **GIVEN** the Members page renders role edit expansion content
+- **WHEN** the admin submits role changes
+- **THEN** the expansion form emits a typed save payload
+- **AND** the Members page or focused composable performs auth checks, member/project API calls, actionable error toast feedback, member refresh, and row collapse without redundant success/info notifications
+- **AND** the expansion form itself does not import admin API clients, auth stores, toast helpers, or confirmation helpers
+
+### Requirement: Remove Member Confirmation
+
+The Members page MUST gate member removal behind a destructive confirmation dialog.
+
+#### Scenario: Removal requires confirmation
+
+- **GIVEN** an admin selects Remove on a member row
+- **WHEN** the action is invoked
+- **THEN** the page opens the shared confirmation dialog with a destructive confirm action
+- **AND** confirming issues a member-remove request, refreshes the member list on success without a redundant success/info notification
+- **AND** cancelling sends no request
+- **AND** backend last-admin protection failures are surfaced without removing the member
+
+### Requirement: Members Table Emits Removal Intent
+
+The Members page MUST keep member-removal API orchestration outside the Members table rendering component while preserving the existing remove-member user flow.
+
+#### Scenario: Members table remove action emits intent
+
+- **GIVEN** the Members table renders a member row in either desktop table or mobile card layout
+- **WHEN** the admin invokes the row's `Remove` action
+- **THEN** the table emits a `remove-member` intent with the selected member
+- **AND** the table itself does not open the confirmation dialog, call the member-remove API, refresh loaded members, or show toast feedback
+
+#### Scenario: Members page handles confirmed removal
+
+- **GIVEN** the Members page receives a `remove-member` intent from the Members table
+- **WHEN** the page handles the intent
+- **THEN** it opens the shared destructive confirmation dialog using the selected member's display name or email
+- **AND** confirming issues the member-remove request, refreshes the member list on success without a redundant success/info notification
+- **AND** cancelling sends no member-remove request
+- **AND** backend last-admin protection failures or other API errors are surfaced through error toast feedback without removing the row from loaded data
+
+### Requirement: Pending Invitation Actions
+The Admin Members page MUST provide accessible icon-only `Resend invite` and `Cancel invite` actions for each pending invitation.
+
+#### Scenario: Resend pending invite
+- **GIVEN** the admin selects `Resend invite` for a pending invitation
+- **WHEN** the resend request succeeds
+- **THEN** the page shows success toast feedback
+- **AND** refreshes pending invite data
+
+#### Scenario: Resend pending invite failure
+- **GIVEN** the admin selects `Resend invite` for a pending invitation
+- **WHEN** the resend request fails
+- **THEN** the page shows error toast feedback using the backend message when available
+- **AND** keeps the pending invitation row visible
+
+#### Scenario: Cancel pending invite
+- **GIVEN** the admin selects `Cancel invite` for a pending invitation
+- **WHEN** the action is invoked
+- **THEN** the page opens the shared destructive confirmation dialog
+- **AND** confirming issues the cancel request, refreshes pending invite data without a redundant success/info notification
+- **AND** cancelling sends no request
+
+#### Scenario: Cancel pending invite failure
+- **GIVEN** the admin confirms `Cancel invite` for a pending invitation
+- **WHEN** the cancel request fails
+- **THEN** the page shows error toast feedback using the backend message when available
+- **AND** keeps the pending invitation row visible
+
+#### Scenario: Pending invitation actions are accessible
+- **GIVEN** the pending invitations card renders
+- **WHEN** row actions are visible
+- **THEN** each action is icon-only with a text tooltip
+- **AND** each action exposes an accessible label matching `Resend invite` or `Cancel invite`
+
+### Requirement: PM Invoice View Permission Toggle In Member Settings
+
+The member edit form SHALL render an "Allow viewing invoices" toggle (checkbox or switch) within the "Member settings" panel when the expanded member's role is `pm`. The toggle reflects the member's current `canViewInvoices` value. Only admins can see and change it.
+
+#### Scenario: Checkbox visible for PM member
+
+- **GIVEN** an admin expands a PM member's row in the members table
+- **WHEN** the member edit form renders
+- **THEN** an "Allow viewing invoices" checkbox is visible
+- **AND** the checkbox reflects the member's current `canViewInvoices` value
+
+#### Scenario: Checkbox hidden for admin or member role
+
+- **GIVEN** an admin expands an admin or member (non-PM) row
+- **WHEN** the member edit form renders
+- **THEN** the "Allow viewing invoices" checkbox is not rendered
+
+#### Scenario: Admin toggles invoice permission on
+
+- **GIVEN** the checkbox is visible and currently unchecked
+- **WHEN** the admin checks it
+- **THEN** the form emits an update event with `canViewInvoices: true`
+- **AND** the parent view calls `PATCH /members/:id/permissions`
+- **AND** the persisted permission control reflects success without a redundant success/info notification
+- **AND** the member list is refreshed
+
+#### Scenario: Admin toggles invoice permission off
+
+- **GIVEN** the checkbox is visible and currently checked
+- **WHEN** the admin unchecks it
+- **THEN** the form emits an update event with `canViewInvoices: false`
+- **AND** the parent view calls `PATCH /members/:id/permissions`
+- **AND** the persisted permission control reflects success without a redundant success/info notification
+
+#### Scenario: Permission update error shows feedback
+
+- **GIVEN** the admin toggles the checkbox
+- **WHEN** the `PATCH /members/:id/permissions` call fails
+- **THEN** an error toast is shown
+- **AND** the checkbox reverts to the previous value

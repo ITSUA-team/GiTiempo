@@ -151,10 +151,6 @@ export function useTopBarTimerSelectionUpdate({
 
       await summary.refreshSummary();
       picker.setSelectedDescription(summary.selectedDescription.value ?? '');
-      appToast.showSuccessToast(
-        'Timer updated',
-        'Your running timer has been updated.',
-      );
       return true;
     } catch (error) {
       const message = getErrorMessage(error);

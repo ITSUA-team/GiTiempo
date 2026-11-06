@@ -659,6 +659,9 @@ describe("ProjectView", () => {
       expect(client.stopTimer).toHaveBeenCalledWith({ expectedTimerId: "entry-1" });
     });
     expect(client.startTimer).not.toHaveBeenCalled();
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Timer stopped" }),
+    );
   });
 
   it("keeps filtered project tasks visible after a direct timer request failure", async () => {
@@ -716,6 +719,9 @@ describe("ProjectView", () => {
     });
     expect(wrapper.text()).toContain("Write release checklist");
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Task created" }),
+    );
   });
 
   it("updates existing entries only after an edited task default changes and the follow-up is submitted", async () => {
@@ -765,6 +771,9 @@ describe("ProjectView", () => {
     expect(client.backfillTaskBillableDefault).toHaveBeenCalledWith("task-1", {
       updateTimeEntries: true,
     });
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ severity: "success", summary: "Task updated" }),
+    );
     expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(false);
     expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -832,6 +841,9 @@ describe("ProjectView", () => {
 
     expect(client.listProjectTimeEntries).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Task updated" }),
+    );
   });
 
   it("dismisses the task backfill follow-up without updating existing entries", async () => {
@@ -927,6 +939,9 @@ describe("ProjectView", () => {
     await flushPromises();
 
     expect(wrapper.text()).not.toContain("Improve reports filters");
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Task deleted" }),
+    );
   });
 
   it("keeps tasks visible after delete conflicts and surfaces the backend message", async () => {

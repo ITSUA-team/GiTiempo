@@ -101,7 +101,6 @@ const { handleProjectEditSubmitted, savingProjectEditId } =
     accessToken,
     collapseProjectRow,
     onError: notifyProjectsError,
-    onSuccess: successToast,
     openProjectBackfillDialogIfNeeded,
     refreshProjects,
   });
