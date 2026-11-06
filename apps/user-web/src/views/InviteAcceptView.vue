@@ -320,9 +320,10 @@ async function handleEmailAccept(): Promise<void> {
   } catch (error) {
     const message = mapEmailPasswordErrorMessage(error);
     inlineErrorMessage.value = message;
-    console.error("Could not sign in", {
-      context: { action: "sign-in", feature: "invite-accept" },
+    appToast.logError({
       error,
+      logContext: { action: "sign-in", feature: "invite-accept" },
+      summary: "Could not sign in",
     });
   } finally {
     if (!isRedirecting.value) {

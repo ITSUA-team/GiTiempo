@@ -109,7 +109,7 @@ const { handleArchive, handleUnarchive } = useProjectArchiveActions({
   accessToken,
   collapseProjectRow,
   onError: notifyProjectsError,
-  onSuccess: successToast,
+  onRename: successToast,
   refreshProjects,
   requireConfirmation,
 });

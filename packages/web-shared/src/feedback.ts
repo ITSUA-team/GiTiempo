@@ -90,13 +90,17 @@ export function createAppToast(
   toast: ToastLike,
   logger: FeedbackLogger = defaultFeedbackLogger,
 ) {
-  function showErrorToast({ detail, error, logContext, summary }: ErrorToastOptions): void {
+  function logError({ error, logContext, summary }: Pick<ErrorToastOptions, "error" | "logContext" | "summary">): void {
     if (error !== undefined) {
       logger.error(summary, {
         context: logContext,
         error,
       });
     }
+  }
+
+  function showErrorToast({ detail, error, logContext, summary }: ErrorToastOptions): void {
+    logError({ error, logContext, summary });
 
     toast.add({ detail, severity: "error", summary });
   }
@@ -110,6 +114,7 @@ export function createAppToast(
   }
 
   return {
+    logError,
     showErrorToast,
     showInfoToast,
     showSuccessToast,

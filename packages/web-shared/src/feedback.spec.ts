@@ -33,6 +33,22 @@ describe("getErrorMessage", () => {
 });
 
 describe("createAppToast", () => {
+  it("logs inline-only errors through the configured logger without a toast", () => {
+    const toast = { add: vi.fn() };
+    const logger = { error: vi.fn() };
+    const appToast = createAppToast(toast, logger);
+    const error = new Error("Invalid credentials");
+    const logContext = { action: "sign-in", feature: "invite-accept" };
+
+    appToast.logError({ error, logContext, summary: "Could not sign in" });
+
+    expect(logger.error).toHaveBeenCalledExactlyOnceWith("Could not sign in", {
+      context: logContext,
+      error,
+    });
+    expect(toast.add).not.toHaveBeenCalled();
+  });
+
   it("shows success toasts with the shared default lifetime", () => {
     const toast = { add: vi.fn() };
     const appToast = createAppToast(toast);

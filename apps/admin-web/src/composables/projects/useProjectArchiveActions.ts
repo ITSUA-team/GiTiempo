@@ -11,7 +11,7 @@ interface UseProjectArchiveActionsOptions {
   client?: Pick<AdminProjectsClient, 'updateProject'>;
   collapseProjectRow: (project: ProjectResponse) => void;
   onError: (message: string, error: unknown, action: string) => void;
-  onSuccess: (message: string) => void;
+  onRename: (message: string) => void;
   refreshProjects: () => Promise<void>;
   requireConfirmation: (
     message: string,
@@ -30,7 +30,7 @@ export function useProjectArchiveActions({
   client = adminProjectsClient,
   collapseProjectRow,
   onError,
-  onSuccess,
+  onRename,
   refreshProjects,
   requireConfirmation,
 }: UseProjectArchiveActionsOptions) {
@@ -75,7 +75,7 @@ export function useProjectArchiveActions({
         isActive: true,
       });
       if (updated.name !== project.name) {
-        onSuccess(`${project.name} is now active as "${updated.name}", because another project already uses the original name.`);
+        onRename(`${project.name} is now active as "${updated.name}", because another project already uses the original name.`);
       }
       collapseProjectRow(project);
       await refreshProjects();
