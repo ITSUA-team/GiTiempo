@@ -181,7 +181,24 @@ describe("useProfileGithubConnection", () => {
     });
   });
 
-  it("handles a success callback toast, cleans the URL, and can still fall back to request-error", async () => {
+  it("quietly consumes a success callback and renders the authoritative connected card state", async () => {
+    const client = createClientMock();
+    client.getConnectionStatus.mockResolvedValueOnce(createConnectedStatus());
+    const { profileGithub, router, toast } = mountProfileGithub({
+      client,
+      query: { github: "connected", code: "handled", keep: "1" },
+    });
+
+    await flushPromises();
+
+    expect(client.getConnectionStatus).toHaveBeenCalledTimes(1);
+    expect(profileGithub.state.value).toBe("connected");
+    expect(profileGithub.connection.value?.account?.login).toBe("alexeytsukanov");
+    expect(router.replace).toHaveBeenCalledWith({ query: { keep: "1" } });
+    expect(toast.add).not.toHaveBeenCalled();
+  });
+
+  it("handles a quiet success callback, cleans the URL, and preserves status-load errors", async () => {
     const client = createClientMock();
     client.getConnectionStatus.mockRejectedValueOnce(new Error("network down"));
 
@@ -193,14 +210,17 @@ describe("useProfileGithubConnection", () => {
     await flushPromises();
 
     expect(router.replace).toHaveBeenCalledWith({ query: { keep: "1" } });
-    expect(toast.add).toHaveBeenNthCalledWith(
-      1,
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({
         severity: "success",
         summary: "GitHub connected",
       }),
     );
     expect(profileGithub.state.value).toBe("request-error");
+    expect(client.getConnectionStatus).toHaveBeenCalledTimes(1);
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ severity: "error", summary: "Could not load GitHub connection" }),
+    );
   });
 
   it("handles callback error toasts and removes handled query params", async () => {
@@ -259,6 +279,33 @@ describe("useProfileGithubConnection", () => {
         summary: "GitHub connection failed",
       }),
     );
+  });
+
+  it("uses the generic callback error when the error code is missing", async () => {
+    const { router, toast } = mountProfileGithub({ query: { github: "error", keep: "1" } });
+
+    await flushPromises();
+
+    expect(router.replace).toHaveBeenCalledWith({ query: { keep: "1" } });
+    expect(toast.add).toHaveBeenCalledWith({
+      detail: "GitHub could not complete the connection flow.",
+      severity: "error",
+      summary: "GitHub connection failed",
+    });
+  });
+
+  it.each([
+    { github: "unsupported", code: "keep" },
+    { github: ["connected", "error"], code: "keep" },
+    { code: "keep" },
+  ] as LocationQuery[])("leaves unsupported callback query values untouched: %j", async (query) => {
+    const { client, router, toast } = mountProfileGithub({ query });
+
+    await flushPromises();
+
+    expect(client.getConnectionStatus).toHaveBeenCalledTimes(1);
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(toast.add).not.toHaveBeenCalled();
   });
 
   it("requests the GitHub auth URL and navigates away on connect", async () => {
@@ -350,7 +397,7 @@ describe("useProfileGithubConnection", () => {
     expect(client.disconnect).toHaveBeenCalledWith();
     expect(client.getConnectionStatus).toHaveBeenCalledTimes(2);
     expect(profileGithub.state.value).toBe("disconnected");
-    expect(toast.add).toHaveBeenCalledWith(
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({
         severity: "success",
         summary: "GitHub disconnected",

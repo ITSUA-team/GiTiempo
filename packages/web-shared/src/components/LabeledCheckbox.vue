@@ -24,7 +24,7 @@ const props = withDefaults(
   },
 );
 
-const modelValue = defineModel<boolean>();
+const modelValue = defineModel<boolean | undefined>({ default: undefined });
 const isControlled = computed(() => modelValue.value !== undefined);
 const checkboxPt = computed(() => ({
   input: props.inputTestId ? { "data-testid": props.inputTestId } : undefined,

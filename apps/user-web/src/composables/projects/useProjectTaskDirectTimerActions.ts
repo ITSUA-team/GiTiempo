@@ -81,7 +81,6 @@ export function useProjectTaskDirectTimerActions({
 
     try {
       await startTimerMutation.mutateAsync({ taskId: task.id });
-      appToast.showSuccessToast("Timer started", `Tracking ${task.title}.`);
     } catch (error) {
       const message = getErrorMessage(error);
       shouldOpenStopFirstGuidance = isApiErrorStatus(error, [409]);
@@ -135,7 +134,6 @@ export function useProjectTaskDirectTimerActions({
       }
 
       await stopTimerMutation.mutateAsync({ expectedTimerId: expectedTimer.id });
-      appToast.showSuccessToast("Timer stopped", `Stopped tracking ${task.title}.`);
     } catch (error) {
       shouldRefreshTimer = true;
       appToast.showErrorToast({

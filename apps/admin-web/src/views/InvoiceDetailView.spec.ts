@@ -538,7 +538,7 @@ describe('InvoiceDetailView', () => {
       notes: 'Approved by finance',
       title: 'April 2026 — Backend (final)',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith('Invoice updated');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
   });
 
@@ -580,7 +580,7 @@ describe('InvoiceDetailView', () => {
     );
   });
 
-  it('marks draft invoices as sent with success feedback and detail refresh', async () => {
+  it('marks draft invoices as sent quietly with detail refresh', async () => {
     const wrapper = mountInvoiceDetailView();
     await flushPromises();
 
@@ -591,11 +591,11 @@ describe('InvoiceDetailView', () => {
     expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
       status: 'sent',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith('Invoice updated');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
   });
 
-  it('marks sent invoices as paid with success feedback and detail refresh', async () => {
+  it('marks sent invoices as paid quietly with detail refresh', async () => {
     testMocks.getInvoice.mockResolvedValue(createInvoice({ status: 'sent' }));
 
     const wrapper = mountInvoiceDetailView();
@@ -608,7 +608,7 @@ describe('InvoiceDetailView', () => {
     expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
       status: 'paid',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith('Invoice updated');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
   });
 
@@ -629,7 +629,7 @@ describe('InvoiceDetailView', () => {
     expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
       status: 'sent',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith('Invoice updated');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
 
     const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
@@ -737,7 +737,7 @@ describe('InvoiceDetailView', () => {
       notes: 'Approved by finance',
       title: 'April 2026 — Backend (final)',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith('Invoice updated');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
 
     await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
     await flushPromises();
@@ -824,7 +824,7 @@ describe('InvoiceDetailView', () => {
     expect(wrapper.text()).toContain('Sent');
   });
 
-  it('confirms the delete with the documented copy, then deletes, toasts, and navigates back', async () => {
+  it('confirms the delete with the documented copy, then deletes quietly and navigates back', async () => {
     const wrapper = mountInvoiceDetailView('admin');
     await flushPromises();
 
@@ -848,7 +848,7 @@ describe('InvoiceDetailView', () => {
     await flushPromises();
 
     expect(testMocks.deleteInvoice).toHaveBeenCalledWith(invoiceId);
-    expect(testMocks.successToast).toHaveBeenCalledWith('Invoice deleted');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(testMocks.routerPush).toHaveBeenCalledWith({
       name: routeNames.invoices,
     });

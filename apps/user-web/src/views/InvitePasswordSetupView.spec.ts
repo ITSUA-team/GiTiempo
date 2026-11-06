@@ -407,7 +407,7 @@ describe("InvitePasswordSetupView", () => {
     expect(confirmPasswordReset).toHaveBeenCalledWith("valid-code", submittedPassword);
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain("Password saved");
-    expect(toastAdd).toHaveBeenCalledWith(
+    expect(toastAdd).not.toHaveBeenCalledWith(
       expect.objectContaining({
         detail: "Return to your invite to sign in and accept access.",
         severity: "success",

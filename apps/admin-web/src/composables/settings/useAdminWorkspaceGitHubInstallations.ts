@@ -35,7 +35,6 @@ interface UseAdminWorkspaceGitHubInstallationsOptions {
   enabled: Ref<boolean> | ComputedRef<boolean>;
   navigate?: (url: string) => void;
   onError?: (message: string, error: unknown, action: string) => void;
-  onSuccess?: (message: string, action: string) => void;
   organizations?: Ref<readonly WorkspaceGitHubOrganizationResponse[]> | ComputedRef<readonly WorkspaceGitHubOrganizationResponse[]>;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
@@ -60,7 +59,6 @@ export function useAdminWorkspaceGitHubInstallations({
   enabled,
   navigate = (url) => window.location.assign(url),
   onError,
-  onSuccess,
   organizations,
   scope,
 }: UseAdminWorkspaceGitHubInstallationsOptions) {
@@ -72,6 +70,15 @@ export function useAdminWorkspaceGitHubInstallations({
   const isLoaded = computed(
     () => query.data.value !== undefined && query.error.value === null,
   );
+  const requestError = computed(() =>
+    query.error.value ? getInstallationsErrorMessage(query.error.value) : null,
+  );
+
+  async function retryLoad(): Promise<void> {
+    if (!enabled.value || disposed || query.isFetching.value) return;
+    await query.refetch({ throwOnError: false });
+  }
+
   const installingOrganizationLogin = ref<string | null>(null);
   const scopeKey = computed(() => JSON.stringify(scope.value));
   const pendingChecks = shallowRef<{ login: string; scope: string }[]>([]);
@@ -177,9 +184,6 @@ export function useAdminWorkspaceGitHubInstallations({
       await completeMutation.mutateAsync(parsed.data);
       if (!isCurrentScope(currentScope)) return;
       await query.refetch({ throwOnError: false });
-      if (isCurrentScope(currentScope)) {
-        onSuccess?.('GitHub App access confirmed for this workspace.', 'complete-workspace-github-installation');
-      }
     } catch (error) {
       if (isCurrentScope(currentScope)) {
         onError?.(getInstallationsErrorMessage(error), error, 'complete-workspace-github-installation');
@@ -292,5 +296,8 @@ export function useAdminWorkspaceGitHubInstallations({
     checkingOrganizationLogins,
     isLoaded,
     items,
+    loading: query.isFetching,
+    requestError,
+    retryLoad,
   };
 }

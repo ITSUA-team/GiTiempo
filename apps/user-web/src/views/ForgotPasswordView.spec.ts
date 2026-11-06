@@ -141,7 +141,7 @@ describe("ForgotPasswordView", () => {
     expect(wrapper.text()).toContain("Enter a valid email address.");
   });
 
-  it("sends the reset email and shows the success panel with a success toast", async () => {
+  it("sends the reset email and shows the success panel without a duplicate toast", async () => {
     const requestPasswordReset = vi.fn();
     setAuthRuntimeForTesting(createRuntimeMock({ requestPasswordReset }));
     const { router, wrapper } = await mountForgotPasswordView();
@@ -151,8 +151,8 @@ describe("ForgotPasswordView", () => {
     await flushPromises();
 
     expect(requestPasswordReset).toHaveBeenCalledWith("alexey@example.com");
-    expect(toastAdd).toHaveBeenCalledTimes(1);
-    expect(toastAdd).toHaveBeenCalledWith(
+    expect(toastAdd).not.toHaveBeenCalled();
+    expect(toastAdd).not.toHaveBeenCalledWith(
       expect.objectContaining({
         detail: "If an account exists for that email, a password reset link has been sent.",
         severity: "success",
@@ -186,15 +186,12 @@ describe("ForgotPasswordView", () => {
     expect(requestPasswordReset).toHaveBeenCalledWith("unknown.account@example.com");
     const panel = wrapper.get('[data-testid="forgot-password-success-panel"]');
     const panelText = panel.text().toLowerCase();
-    const toastCall = toastAdd.mock.calls[0]?.[0] as Record<string, string>;
-    const toastText = `${toastCall.summary} ${toastCall.detail}`.toLowerCase();
+    expect(toastAdd).not.toHaveBeenCalled();
 
     expect(panelText).toContain("check your email");
     expect(panelText).toContain("if an account exists for that email");
-    expect(toastText).toContain("check your email");
-    expect(toastText).toContain("if an account exists for that email");
 
-    for (const text of [panelText, toastText]) {
+    for (const text of [panelText]) {
       expect(text).not.toContain("not found");
       expect(text).not.toContain("does not exist");
       expect(text).not.toContain("unknown account");

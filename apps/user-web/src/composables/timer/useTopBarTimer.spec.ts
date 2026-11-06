@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
 
 import { useTopBarTimer } from './useTopBarTimer';
+import * as timerActionsModule from './useTopBarTimerActions';
 import {
   timeEntriesKeys,
   userMutationInvalidationKeys,
@@ -1293,7 +1294,7 @@ describe('useTopBarTimer', () => {
     );
   });
 
-  it('creates a task from the picker and selects it with success toast feedback', async () => {
+  it('creates a task from the picker and selects it without redundant toast feedback', async () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
 
@@ -1330,7 +1331,7 @@ describe('useTopBarTimer', () => {
         title: 'Write release checklist',
       }),
     );
-    expect(toast.add).toHaveBeenCalledWith(
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({ severity: 'success', summary: 'Task created' }),
     );
   });
@@ -1483,10 +1484,10 @@ describe('useTopBarTimer', () => {
     );
     expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
     expect(topBarTimer.isDialogOpen.value).toBe(false);
-    expect(toast.add).toHaveBeenCalledWith(
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({ severity: 'success', summary: 'Task created' }),
     );
-    expect(toast.add).toHaveBeenCalledWith(
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({ severity: 'success', summary: 'Timer updated' }),
     );
   });
@@ -1578,7 +1579,7 @@ describe('useTopBarTimer', () => {
 
     expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.task });
     expect(topBarTimer.primaryActionLabel.value).toBe('Stop');
-    expect(toast.add).toHaveBeenCalledWith(
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({
         severity: 'success',
         summary: 'Timer started',
@@ -1957,7 +1958,7 @@ describe('useTopBarTimer', () => {
       expectedTimerId: TEST_IDS.runningEntry,
     });
     expect(topBarTimer.primaryActionLabel.value).toBe('Start');
-    expect(toast.add).toHaveBeenCalledWith(
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({
         severity: 'success',
         summary: 'Timer stopped',
@@ -2121,7 +2122,8 @@ describe('useTopBarTimer', () => {
     );
   });
 
-  it('refreshes and informs when the running timer was already stopped', async () => {
+  it('refreshes quietly and succeeds when the running timer was already stopped', async () => {
+    const actionsFactory = vi.spyOn(timerActionsModule, 'useTopBarTimerActions');
     const client = createClientMock();
     const toast = { add: vi.fn() };
 
@@ -2149,10 +2151,17 @@ describe('useTopBarTimer', () => {
 
     const { topBarTimer } = mounted;
 
+    const actionsResult = actionsFactory.mock.results[0];
+    expect(actionsResult?.type).toBe('return');
+    const actions = actionsResult!.value as ReturnType<typeof timerActionsModule.useTopBarTimerActions>;
+    const handlePrimaryAction = vi.spyOn(actions, 'handlePrimaryAction');
+
     await flushPromises();
     await topBarTimer.stopTimerFromDialog();
     await flushPromises();
 
+    expect(handlePrimaryAction).toHaveBeenCalledTimes(1);
+    await expect(handlePrimaryAction.mock.results[0]!.value).resolves.toBe(true);
     expect(client.getCurrentTimer).toHaveBeenCalledTimes(2);
     expect(topBarTimer.currentTimer.value).toBeNull();
     expect(topBarTimer.primaryActionLabel.value).toBe('Start');
@@ -2165,7 +2174,7 @@ describe('useTopBarTimer', () => {
       taskTitle: 'Improve reports filters',
     });
     expect(topBarTimer.timerActionErrorMessage.value).toBeNull();
-    expect(toast.add).toHaveBeenCalledWith(
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({
         detail: 'The timer status has been refreshed.',
         severity: 'info',
@@ -2333,7 +2342,7 @@ describe('useTopBarTimer', () => {
       'Review PM scope rules',
     );
     expect(topBarTimer.isDialogOpen.value).toBe(false);
-    expect(toast.add).toHaveBeenCalledWith(
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({
         severity: 'success',
         summary: 'Timer updated',
@@ -2387,7 +2396,7 @@ describe('useTopBarTimer', () => {
       'Pair on the billing export',
     );
     expect(topBarTimer.isDialogOpen.value).toBe(false);
-    expect(toast.add).toHaveBeenCalledWith(
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({
         severity: 'success',
         summary: 'Timer updated',
@@ -2588,7 +2597,7 @@ describe('useTopBarTimer', () => {
     expect(topBarTimer.currentTimer.value).toBeNull();
     expect(topBarTimer.primaryActionLabel.value).toBe('Start');
     expect(topBarTimer.isDialogOpen.value).toBe(false);
-    expect(toast.add).toHaveBeenCalledWith(
+    expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({
         severity: 'success',
         summary: 'Timer updated',

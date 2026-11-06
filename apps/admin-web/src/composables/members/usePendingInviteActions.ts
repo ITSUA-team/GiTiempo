@@ -75,7 +75,6 @@ export function usePendingInviteActions({
 
         try {
           await client.cancelInvite(invite.id);
-          onSuccess(`Invitation canceled for ${invite.email}.`);
           await refreshPendingInvites();
         } catch (error) {
           onError(

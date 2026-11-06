@@ -34,7 +34,6 @@ interface UseAdminWorkspaceGitHubOrganizationsOptions {
     error: unknown | undefined,
     action: string,
   ) => void;
-  onSuccess?: (message: string, action: string) => void;
   refetchGitHubConnectionStatus?: () => Promise<void>;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
   userAppUrl?: string | null;
@@ -88,7 +87,6 @@ export function useAdminWorkspaceGitHubOrganizations({
   client = getAdminSettingsClient(),
   enabled,
   onError,
-  onSuccess,
   refetchGitHubConnectionStatus,
   scope,
   userAppUrl = null,
@@ -261,10 +259,7 @@ export function useAdminWorkspaceGitHubOrganizations({
       await query.refetch({ throwOnError: false });
       recovery.value = null;
       selectedOrganization.value = null;
-      onSuccess?.(
-        'GitHub organization added.',
-        'add-workspace-github-organization',
-      );
+
     } catch (error) {
       recovery.value = getRecoveryPayload(error);
       onError?.(
@@ -281,10 +276,7 @@ export function useAdminWorkspaceGitHubOrganizations({
     try {
       await removeMutation.mutateAsync(organizationId);
       await query.refetch({ throwOnError: false });
-      onSuccess?.(
-        'GitHub organization removed.',
-        'remove-workspace-github-organization',
-      );
+
     } catch (error) {
       onError?.(
         getErrorMessage(error),

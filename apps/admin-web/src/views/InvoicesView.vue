@@ -35,7 +35,7 @@ const ROWS_PER_PAGE = 20;
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { errorToast, successToast } = useToasts();
+const { errorToast } = useToasts();
 const isMobileViewport = useIsMobileViewport();
 
 const accessToken = computed(() => authStore.accessToken);
@@ -260,12 +260,10 @@ function handleCreateInvoice(): void {
   createDialogVisible.value = true;
 }
 
-// Success side effects (toast) belong to the view: the dialog closes itself
-// via update:visible, and the mutation's onSuccess hook already invalidates
-// the invoice query keys, so the list refetches without an explicit refetch.
+// The mutation invalidates the invoice query keys, so no explicit refetch is needed.
 function handleCreateSuccess(): void {
   createDialogVisible.value = false;
-  successToast('Invoice created');
+
 }
 </script>
 

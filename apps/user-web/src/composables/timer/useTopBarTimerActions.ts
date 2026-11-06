@@ -82,7 +82,6 @@ export function useTopBarTimerActions({
           summary.setSelectedContextFromTimer(stoppedTimer);
           summary.clearSelectedDescription();
         }
-        appToast.showSuccessToast("Timer stopped", "Your running timer has been stopped.");
         return true;
       } catch (error) {
         const message = getErrorMessage(error);
@@ -99,10 +98,6 @@ export function useTopBarTimerActions({
             return false;
           }
 
-          appToast.showInfoToast(
-            "Timer already stopped",
-            "The timer status has been refreshed.",
-          );
           return true;
         }
 
@@ -147,7 +142,6 @@ export function useTopBarTimerActions({
         summary.setSelectedContextFromTimer(summary.currentTimer.value);
         summary.setSelectedDescriptionFromTimer(summary.currentTimer.value);
       }
-      appToast.showSuccessToast("Timer started", "Your timer is now running.");
       return true;
     } catch (error) {
       const message = getErrorMessage(error);

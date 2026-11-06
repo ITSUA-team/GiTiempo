@@ -42,7 +42,7 @@ type InvoiceConflictCode = keyof typeof CONFLICT_TOAST_BY_CODE;
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
-const { errorToast, successToast } = useToasts();
+const { errorToast } = useToasts();
 const { requireConfirmation } = useConfirmation();
 
 const accessToken = computed(() => authStore.accessToken);
@@ -72,7 +72,6 @@ const {
 const updateMutation = useInvoiceUpdate({
   onError: notifyInvoiceActionError,
   onSuccess: () => {
-    successToast('Invoice updated');
     // Only clearing the dirty flags when the in-flight update actually saved
     // title/notes keeps unsaved edits intact across status-only updates.
     if (pendingUpdateIncludesEdits) {
@@ -87,7 +86,6 @@ const updateMutation = useInvoiceUpdate({
 const deleteMutation = useInvoiceDelete({
   onError: notifyInvoiceActionError,
   onSuccess: () => {
-    successToast('Invoice deleted');
     router.push({ name: routeNames.invoices });
   },
   scope,

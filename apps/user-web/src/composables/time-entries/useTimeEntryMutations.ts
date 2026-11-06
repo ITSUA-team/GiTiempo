@@ -96,16 +96,8 @@ export function useTimeEntryMutations({
           entryId: editingEntry.id,
           input: updateTimeEntrySchema.parse(inputToSave),
         });
-        appToast.showSuccessToast(
-          "Time entry updated",
-          "Your changes have been saved.",
-        );
       } else {
         await createEntryMutation.mutateAsync(inputToSave);
-        appToast.showSuccessToast(
-          "Time entry created",
-          "Your manual entry has been added.",
-        );
       }
 
       return {
@@ -143,10 +135,6 @@ export function useTimeEntryMutations({
 
     try {
       await deleteEntryMutation.mutateAsync(entry.id);
-      appToast.showSuccessToast(
-        "Time entry deleted",
-        "The selected entry has been removed.",
-      );
       return true;
     } catch (error) {
       lastMutationErrorMessage.value = getErrorMessage(error);

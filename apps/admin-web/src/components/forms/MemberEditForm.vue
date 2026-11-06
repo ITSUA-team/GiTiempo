@@ -84,6 +84,12 @@ function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
     .map((option) => option.value);
 }
 
+function preventProjectSearchSubmit(event: KeyboardEvent): void {
+  if (event.target instanceof HTMLInputElement && event.target.getAttribute('role') === 'combobox') {
+    event.preventDefault();
+  }
+}
+
 watch(
   activeProjectOptions,
   (options) => {
@@ -123,6 +129,7 @@ function handleSave({
           v-if="props.canAssignPm"
           data-testid="member-edit-project-select"
           class="flex flex-col gap-1.5"
+          @keydown.enter="preventProjectSearchSubmit"
         >
           <label
             :for="`member-settings-${member.id}-projects`"

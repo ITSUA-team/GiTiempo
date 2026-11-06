@@ -495,7 +495,7 @@ describe('MembersView', () => {
 
     expect(testMocks.removeMember).toHaveBeenCalledWith('member-remove');
     expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
-    expect(testMocks.successToast).toHaveBeenCalledWith('Pat PM has been removed.');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('does not remove a member before the confirmation accept callback runs', async () => {
@@ -591,9 +591,7 @@ describe('MembersView', () => {
 
     expect(testMocks.removeAssignment).toHaveBeenCalledWith('project-1', 'user-2');
     expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'Project assignments for Pat PM saved.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(false);
   });
 
@@ -623,9 +621,7 @@ describe('MembersView', () => {
       'member-remove',
       { canViewInvoices: true },
     );
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'Invoice view permission updated',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
     expect(testMocks.errorToast).not.toHaveBeenCalled();
   });
@@ -927,9 +923,7 @@ describe('MembersView', () => {
       '44444444-4444-4444-8444-444444444444',
     );
     expect(testMocks.listInvites).toHaveBeenCalledTimes(2);
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'Invitation canceled for invitee@example.com.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('keeps the pending invite visible when confirmed cancellation fails', async () => {

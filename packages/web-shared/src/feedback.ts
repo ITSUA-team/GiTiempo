@@ -4,6 +4,7 @@ export interface ConfirmLike {
     accept: () => void | Promise<void>;
     acceptLabel: string;
     acceptProps: { severity: "danger"; variant: "outlined" };
+    defaultFocus: "reject";
     header: string;
     message: string;
     pt: {
@@ -89,13 +90,17 @@ export function createAppToast(
   toast: ToastLike,
   logger: FeedbackLogger = defaultFeedbackLogger,
 ) {
-  function showErrorToast({ detail, error, logContext, summary }: ErrorToastOptions): void {
+  function logError({ error, logContext, summary }: Pick<ErrorToastOptions, "error" | "logContext" | "summary">): void {
     if (error !== undefined) {
       logger.error(summary, {
         context: logContext,
         error,
       });
     }
+  }
+
+  function showErrorToast({ detail, error, logContext, summary }: ErrorToastOptions): void {
+    logError({ error, logContext, summary });
 
     toast.add({ detail, severity: "error", summary });
   }
@@ -109,6 +114,7 @@ export function createAppToast(
   }
 
   return {
+    logError,
     showErrorToast,
     showInfoToast,
     showSuccessToast,
@@ -127,6 +133,7 @@ export function createAppConfirm(confirm: ConfirmLike) {
       accept,
       acceptLabel,
       acceptProps: { severity: "danger", variant: "outlined" },
+      defaultFocus: "reject",
       header,
       message,
       pt: {
