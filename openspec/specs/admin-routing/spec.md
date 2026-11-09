@@ -13,7 +13,7 @@ The `admin-web` SPA MUST define a stable route inventory for the documented admi
 #### Scenario: Admin page routes are defined
 
 - **WHEN** the admin-web router is configured
-- **THEN** it includes route entries for dashboard, reports, invoices, members, projects, and settings
+- **THEN** it includes route entries for dashboard, reports, invoices, invoice detail (`/invoices/:id`), members, projects, and settings
 - **AND** each route maps to the admin-web page set described in the project UI requirements
 
 #### Scenario: Route map stays aligned with project docs
@@ -31,7 +31,7 @@ The admin-web router SHALL load route view components other than the primary pub
 - **WHEN** the admin-web router module is initialized
 - **THEN** the public login route is available without a lazy route component loader
 - **AND** the authenticated admin shell route is available without a lazy route component loader
-- **AND** dashboard, reports, invoices, members, projects, add-project, settings, 403, and 404 route views are configured as lazy route components that resolve only when their route is visited
+- **AND** dashboard, reports, invoices, invoice detail, members, projects, add-project, settings, 403, and 404 route views are configured as lazy route components that resolve only when their route is visited
 
 #### Scenario: Admin lazy routes preserve navigation behavior
 
@@ -91,7 +91,7 @@ The `admin-web` router and authenticated shell MUST keep role restrictions consi
 #### Scenario: Product route role matrix is explicit
 
 - **WHEN** the admin-web router defines role-restricted product routes
-- **THEN** Dashboard, Reports, and Invoices allow workspace roles `admin` and `pm`
+- **THEN** Dashboard, Reports, Invoices, and Invoice Detail allow workspace roles `admin` and `pm`
 - **AND** Members, Projects, Add Project, and Settings allow only workspace role `admin`
 - **AND** route-level `/403` and authenticated not-found routes remain authenticated standalone routes without product-page role restrictions
 
@@ -110,7 +110,7 @@ The `admin-web` router and authenticated shell MUST keep role restrictions consi
 #### Scenario: PM users only see PM-safe admin routes
 
 - **WHEN** an authenticated PM uses admin-web
-- **THEN** the dashboard, reports, and invoices routes are available
+- **THEN** the dashboard, reports, invoices, and invoice detail routes are available
 - **AND** members, projects, add-project, and settings are denied until their PM-safe UI behavior is implemented
 - **AND** denied product routes redirect to the standalone 403 route
 - **AND** denied product routes are omitted from the authenticated shell navigation
