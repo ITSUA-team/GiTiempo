@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
 import type { WorkspaceMemberResponse } from '@gitiempo/shared';
 import {
   StatCard,
@@ -22,18 +22,30 @@ import { usePendingInviteActions } from '@/composables/members/usePendingInviteA
 import { usePendingInvitesData } from '@/composables/members/usePendingInvitesData';
 import { useWorkspaceMembersData } from '@/composables/members/useWorkspaceMembersData';
 import { useMembersTableState } from '@/composables/useMembersTableState';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { deriveMemberManagementStats } from '@/lib/member-management';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
-const { requireConfirmation } = useConfirmation();
+const { dismissConfirmation, requireConfirmation } = useConfirmation();
 const { errorToast, successToast } = useToasts();
 const isMobileViewport = useIsMobileViewport();
 
 const inviteDialogVisible = ref(false);
 
 const accessToken = computed(() => authStore.accessToken);
-const currentUserId = computed(() => authStore.profile?.id ?? null);
+const scope = computed(() => getAdminServerStateScope(accessToken.value));
+const canManageMembers = computed(() => Boolean(
+  accessToken.value && scope.value.workspaceId && scope.value.userId && scope.value.role === 'admin',
+));
+const visit = ref(0);
+const getVisit = () => visit.value;
+onScopeDispose(() => {
+  visit.value += 1;
+  resetMembersData();
+  resetInvitesData();
+});
+const currentUserId = computed(() => scope.value.userId ?? null);
 
 function notifyMembersError(
   message: string,
@@ -47,6 +59,7 @@ function notifyMembersError(
 }
 
 const {
+  resetMembersData,
   initialLoaded,
   loadError,
   loading,
@@ -60,6 +73,7 @@ const {
 });
 
 const {
+  resetInvitesData,
   invitesLoadError,
   invitesLoading,
   loadInvites,
@@ -99,6 +113,7 @@ const memberStats = computed(() =>
 const { handleAssignmentsSubmitted, savingMemberAssignmentId } =
   useMemberAssignmentActions({
     accessToken,
+    getVisit,
     collapseMemberRow,
     onError: notifyMembersError,
     projects,
@@ -107,12 +122,14 @@ const { handleAssignmentsSubmitted, savingMemberAssignmentId } =
 
 const { handleUpdateInvoicePermission } = useMemberPermissionActions({
   accessToken,
+  getVisit,
   onError: notifyMembersError,
   refreshMembers,
 });
 
 const { handleRemoveMember } = useMemberRemovalAction({
   accessToken,
+  getVisit,
   onError: notifyMembersError,
   refreshMembers,
   requireConfirmation,
@@ -126,6 +143,7 @@ const {
   resendingInviteId,
 } = usePendingInviteActions({
   accessToken,
+  getVisit,
   onError: notifyMembersError,
   onSuccess: successToast,
   refreshPendingInvites,
@@ -150,7 +168,36 @@ function handleEditMember(member: WorkspaceMemberResponse): void {
   toggleMemberExpansion(member);
 }
 
-onMounted(fetchAll);
+watch(
+  [
+    () => scope.value.workspaceId,
+    () => scope.value.userId,
+    () => scope.value.role,
+    () => Boolean(accessToken.value),
+  ],
+  () => {
+    visit.value += 1;
+    resetMembersData();
+    resetInvitesData();
+    inviteDialogVisible.value = false;
+    memberTableExpandedRows.value = {};
+    updateMemberTableFilters({
+      global: '',
+      memberQuery: '',
+      projectIds: [],
+      role: null,
+      lastActive: 'any',
+    });
+    savingMemberAssignmentId.value = null;
+    cancelingInviteId.value = null;
+    resendingInviteId.value = null;
+    dismissConfirmation?.();
+    if (canManageMembers.value) {
+      void fetchAll();
+    }
+  },
+  { immediate: true, flush: 'sync' },
+);
 </script>
 
 <template>
@@ -183,7 +230,10 @@ onMounted(fetchAll);
         />
       </div>
 
-      <SurfaceCard padding-class="p-6">
+      <SurfaceCard
+        v-if="canManageMembers"
+        padding-class="p-6"
+      >
         <MembersTable
           :empty-description="memberTableEmptyDescription"
           :expanded-rows="memberTableExpandedRows"
@@ -195,7 +245,7 @@ onMounted(fetchAll);
           :role-filter-options="roleFilterOptions"
           :rows="memberTableRows"
           @edit-member="handleEditMember"
-          @invite-member="inviteDialogVisible = true"
+          @invite-member="canManageMembers && (inviteDialogVisible = true)"
           @update:expanded-rows="setMemberTableExpandedRows"
           @update:filters="updateMemberTableFilters"
         >
@@ -233,6 +283,8 @@ onMounted(fetchAll);
     </template>
 
     <MemberInviteDialog
+      v-if="canManageMembers"
+      :key="visit"
       v-model:visible="inviteDialogVisible"
       @created="handleInviteCreated"
     />
