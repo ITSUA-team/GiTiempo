@@ -1,0 +1,2 @@
+ALTER TABLE "firebase_identity_reservations" ADD COLUMN "creation_outcome_pending" boolean DEFAULT false;--> statement-breakpoint
+ALTER TABLE "identity_recovery_audit" ADD COLUMN "registration_owner_acknowledgement" boolean;

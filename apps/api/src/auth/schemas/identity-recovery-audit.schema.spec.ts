@@ -48,6 +48,12 @@ describe('identityRecoveryAudit', () => {
         'varchar(255)',
         false,
       ],
+      [
+        'registrationOwnerAcknowledgement',
+        'registration_owner_acknowledgement',
+        'boolean',
+        false,
+      ],
       ['operatorIdentity', 'operator_identity', 'varchar(255)', true],
       ['operatorDecision', 'operator_decision', 'varchar(255)', true],
       ['providerAbsenceEvidence', 'provider_absence_evidence', 'text', false],

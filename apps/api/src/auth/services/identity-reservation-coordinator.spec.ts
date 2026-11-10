@@ -777,6 +777,7 @@ describe('IdentityReservationCoordinator', () => {
         'providerAbsenceEvidence',
         'purpose',
         'registrationDisplayName',
+        'registrationOwnerAcknowledgement',
         'registrationWorkspaceName',
         'reservationId',
       ]);
@@ -836,6 +837,10 @@ describe('IdentityReservationCoordinator', () => {
     it('refuses to resolve when the uid was adopted by a committed local account', async () => {
       db.select = createSelectMock([[abandonedRow]]);
       lookups.findUserByFirebaseSubject.mockResolvedValue({ id: 'user-1' });
+      firebase.confirmUidAbsent.mockResolvedValue({
+        absent: false,
+        evidence: 'user-present',
+      });
       const harness = stubRecoveryDb({
         reservationRows: [[abandonedRow]],
         bindingRows: [[]],
@@ -847,10 +852,15 @@ describe('IdentityReservationCoordinator', () => {
       expect(harness.isCommitted()).toBe(false);
       expect(harness.attemptedUpdates).toEqual([]);
       expect(harness.attemptedAuditValues).toEqual([]);
+      expect(firebase.confirmUidAbsent).not.toHaveBeenCalled();
     });
 
     it('refuses to resolve when a social subject binding already exists', async () => {
       db.select = createSelectMock([[abandonedRow]]);
+      firebase.confirmUidAbsent.mockResolvedValue({
+        absent: false,
+        evidence: 'user-present',
+      });
       const harness = stubRecoveryDb({
         reservationRows: [[abandonedRow]],
         bindingRows: [[{ id: 'binding-1' }]],
@@ -862,6 +872,7 @@ describe('IdentityReservationCoordinator', () => {
       expect(harness.isCommitted()).toBe(false);
       expect(harness.attemptedUpdates).toEqual([]);
       expect(harness.attemptedAuditValues).toEqual([]);
+      expect(firebase.confirmUidAbsent).not.toHaveBeenCalled();
     });
 
     it('refuses to resolve a reservation that is no longer retained', async () => {
@@ -876,6 +887,26 @@ describe('IdentityReservationCoordinator', () => {
       ).rejects.toBeInstanceOf(ConflictException);
       expect(harness.isCommitted()).toBe(false);
       expect(harness.attemptedUpdates).toEqual([]);
+    });
+
+    it('retains the reservation when the creation outcome is still pending', async () => {
+      db.select = createSelectMock([[abandonedRow]]);
+      firebase.confirmUidAbsent.mockResolvedValue({
+        absent: true,
+        evidence: 'auth/user-not-found',
+      });
+      const harness = stubRecoveryDb({
+        reservationRows: [[{ ...abandonedRow, creationOutcomePending: true }]],
+        bindingRows: [[]],
+      });
+
+      await expect(
+        coordinator.resolveConclusivelyAbandonedRegistration(resolveInput()),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(harness.isCommitted()).toBe(false);
+      expect(harness.attemptedUpdates).toEqual([]);
+      expect(harness.attemptedAuditValues).toEqual([]);
+      expect(firebase.confirmUidAbsent).not.toHaveBeenCalled();
     });
 
     it('keeps the reservation reserved when the audit write fails', async () => {

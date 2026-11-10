@@ -119,7 +119,7 @@ Request body (`IdentityRecoveryResolveRequestDto`, strict):
 | Field | Type | Notes |
 | --- | --- | --- |
 | `reservationId` | UUID | From the `assess` response. |
-| `operatorDecision` | string, 1–500 | Free-form rationale, persisted to the audit trail. |
+| `operatorDecision` | string, 1–255 | Free-form rationale, persisted to the audit trail. |
 
 `operatorIdentity` is rejected as an unrecognized key (400) — it always comes
 from the token.
@@ -134,7 +134,7 @@ Response statuses:
 | `403` | Caller is not in `PLATFORM_OPERATOR_USER_IDS`. | unchanged |
 | `404` | Reservation does not exist. | unchanged |
 | `409` | Not resolvable: not aged (younger than the threshold), state no longer `reserved`, or the Firebase UID is already adopted/bound by a local account. | unchanged |
-| `503` | Firebase existence check is inconclusive (lookup failure, ambiguity). | `reserved` (retained) |
+| `503` | Firebase existence check is inconclusive (lookup failure, ambiguity), or the registration creation outcome is still pending (`creation_outcome_pending = true`). | `reserved` (retained) |
 
 After a `204`, the audit row records the decision and the reservation row is
 retained with `state = 'resolved'`; its `normalizedEmail` becomes
@@ -151,11 +151,15 @@ registration/social-login flows cannot race the operator:
 1. The reservation exists and is re-read as `purpose = 'registration' AND
    state = 'reserved'` under the lock (a single prior read is not trusted).
 2. The reservation is older than `AUTH_AGED_RESERVATION_THRESHOLD`.
-3. Firebase confirms the UID is absent **deterministically**: two consecutive
-   provider lookups both return `auth/user-not-found`. A user-present result or
-   any lookup failure (timeout, transient outage) is *not* absence.
+3. The reservation's `creation_outcome_pending` flag is `false`: the initial
+   Firebase creation attempt has a confirmed final result (success or
+   definitive failure). If the creation timed out and the late-outcome tracker
+   has not yet completed, the flag is `true` and the reservation is retained.
 4. The UID is not adopted locally: no `users.firebase_uid` match and no row in
    `firebase_subject_bindings` for the UID.
+5. Firebase confirms the UID is absent **deterministically**: two consecutive
+   provider lookups both return `auth/user-not-found`. A user-present result or
+   any lookup failure (timeout, transient outage) is *not* absence.
 
 Only then does the same transaction transition the reservation to `resolved`
 and insert the audit row. Any other outcome is a refusal — see the
@@ -173,10 +177,10 @@ schema `apps/api/src/auth/schemas/identity-recovery-audit.schema.ts`):
 | Column | Content |
 | --- | --- |
 | `id` | Audit row UUID. |
-| `reservation_id` | FK to `firebase_identity_reservations.id` (`ON DELETE CASCADE`). |
+| `reservation_id` | FK to `firebase_identity_reservations.id` (`ON DELETE RESTRICT`). |
 | `normalized_email` / `firebase_uid` | The resolved identity keys. |
 | `purpose` | Reservation purpose (`registration`). |
-| `registration_display_name`, `registration_workspace_name` | Provenance snapshot of the abandoned registration. |
+| `registration_display_name`, `registration_workspace_name`, `registration_owner_acknowledgement` | Provenance snapshot of the abandoned registration. |
 | `operator_identity` | JWT `sub` of the authenticated operator (never request-supplied). |
 | `operator_decision` | The operator's free-form rationale. |
 | `provider_absence_evidence` | Provider result summary (e.g. the double-checked `user-not-found`). |
@@ -201,6 +205,12 @@ ORDER BY created_at DESC;
 - **Uncertain outcomes are retained.** A failed or inconclusive provider lookup
   → `503`, the reservation stays `reserved`, and no audit row is written. The
   operator must retry later; there is no force flag.
+- **Pending creation outcomes are retained.** If the initial Firebase creation
+  attempt timed out and the late-outcome tracker has not yet completed
+  (`creation_outcome_pending = true`), `resolve` → `503` and the reservation
+  stays `reserved`. Two consecutive `user-not-found` lookups do not prove the
+  creation never started; the flag clears only when the creation promise
+  settles (success confirms the reservation, failure clears the flag).
 - **Generic errors never authorize cleanup.** Internal/transport errors during
   recovery leave the reservation untouched; `resolve` never deletes the
   reservation row and never deletes a Firebase identity.
@@ -215,27 +225,33 @@ ORDER BY created_at DESC;
 
 ## Monitoring
 
-Today the signal is on-demand: operators poll `assess`, or a scheduled external
-job can call it (see [Deferred follow-ups](#deferred-follow-ups)).
-`AuthService.reportAgedUnboundRegistrationReservations()` emits a structured,
-redacted `warn` event (`auth.identity.aged_unbound_reservation` with
-`reservationId`, `normalizedEmail`, `firebaseUid`, `ageMs`) per aged
-reservation — the query + event pair is intentionally reusable by the future
-scheduler, but nothing invokes it automatically yet, so log-based alerting on
-this event will not fire until that follow-up lands.
+The `assess` endpoint emits a structured, redacted `warn` event
+(`auth.identity.aged_unbound_reservation` with `reservationId`,
+`normalizedEmail`, `firebaseUid`, `ageMs`) per aged reservation on every call,
+so log-based alerting on this event fires whenever an operator or a scheduled
+external job polls `assess`. A future in-process scheduler can invoke
+`AuthService.reportAgedUnboundRegistrationReservations()` directly (the query +
+event pair is intentionally reusable) — see
+[Deferred follow-ups](#deferred-follow-ups).
 
 ## Migration / deployment implications
 
 ### What moves with the release
 
 - **Migration `0028_identity_recovery_audit.sql`** (additive): creates
-  `identity_recovery_audit` with the columns above plus a FK from
-  `reservation_id` to `firebase_identity_reservations(id) ON DELETE CASCADE`.
-  No existing table or column is altered.
+  `identity_recovery_audit` with the columns above. The initial FK was
+  `ON DELETE CASCADE`; migration `0029` replaced it with `ON DELETE RESTRICT`
+  and re-created the email unique index with a `WHERE state != 'resolved'`
+  partial predicate so resolved reservations no longer hold the email.
 - **`resolved` reservation state**: the `state` column is `varchar(16)`, so the
   new value requires **no DDL**. The change is additive; existing
   `reserved` / `confirmed` / `bound` rows are untouched and no existing flow
   ever produces `resolved` — only the operator path does.
+- **Migration `0030_identity_recovery_audit_owner_ack_and_creation_outcome.sql`**
+  (additive): adds `creation_outcome_pending` (boolean, default `false`) to
+  `firebase_identity_reservations` and `registration_owner_acknowledgement`
+  (nullable boolean) to `identity_recovery_audit`. No existing column is
+  altered.
 - **Platform-operator authorization** is deployment configuration only
   (`PLATFORM_OPERATOR_USER_IDS`); no DB-backed role is introduced.
 
@@ -254,16 +270,54 @@ this event will not fire until that follow-up lands.
 
 ### Rollback
 
-- The feature can be disabled without a rollback: set `PLATFORM_OPERATOR_USER_IDS`
-  empty and restart — both endpoints then refuse every caller (403).
-- To roll back the data model, in order:
-  1. Set `resolved` reservations back to `reserved`: `UPDATE
-     firebase_identity_reservations SET state = 'reserved', updated_at = now()
-     WHERE state = 'resolved';` — safe because no automated flow depends on
-     `resolved`; the affected emails were resolvable only through this flow, so
-     reverting simply re-strands them.
-  2. `DROP TABLE identity_recovery_audit;` (no automated flow reads it; the
-     drop only loses the operator-action provenance).
+- The **preferred way to disable the feature** is to set
+  `PLATFORM_OPERATOR_USER_IDS` empty and restart — both endpoints then refuse
+  every caller (403). This leaves all data intact and is reversible.
+- To roll back the **data model**, the steps below must be followed in order.
+  Each step has a precondition that must be verified before proceeding:
+
+  1. **Check for duplicate emails before reverting `resolved` rows.**
+     The email unique index (migration `0029`) excludes `state = 'resolved'`,
+     so a `resolved` reservation and a later `bound` registration can co-exist
+     with the same normalized email. Reverting `resolved` back to `reserved`
+     without checking will violate that index.
+
+     ```sql
+     SELECT lower(btrim(normalized_email)) AS email, count(*) AS n
+     FROM firebase_identity_reservations
+     WHERE state IN ('resolved', 'reserved', 'confirmed', 'bound')
+     GROUP BY lower(btrim(normalized_email))
+     HAVING count(*) > 1;
+     ```
+
+     If any rows are returned, **do not run the bulk UPDATE** — those emails
+     have been re-registered after resolution. Instead, delete the stale
+     `resolved` rows one by one (their audit rows will prevent deletion due to
+     the `ON DELETE RESTRICT` FK — see step 2).
+
+  2. **Preserve the audit trail.** The `identity_recovery_audit` table has a
+     `ON DELETE RESTRICT` FK to `firebase_identity_reservations(id)`
+     (migration `0029`). You **cannot** `DROP TABLE identity_recovery_audit`
+     while referenced reservation rows still exist, and you should **not** drop
+     it at all if you want to keep the operator-action provenance. If you truly
+     need to drop the table, first delete all `resolved` reservation rows that
+     have audit rows — but this permanently loses the audit history.
+
+     To keep the audit and simply re-strand the reservations (recommended):
+     ```sql
+     UPDATE firebase_identity_reservations
+     SET state = 'reserved', updated_at = now()
+     WHERE state = 'resolved'
+       AND lower(btrim(normalized_email)) NOT IN (
+         SELECT lower(btrim(normalized_email))
+         FROM firebase_identity_reservations
+         WHERE state != 'resolved'
+       );
+     ```
+     Any `resolved` rows whose email was re-registered stay `resolved` (their
+     email is already free for the new registration; reverting them would
+     break the unique index).
+
   3. Roll the API release back to the previous version.
 
 ## Deferred follow-ups

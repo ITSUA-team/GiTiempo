@@ -287,6 +287,28 @@ export class IdentityReservationCoordinator {
       );
   }
 
+  async markCreationOutcomePending(reservationId: string): Promise<void> {
+    await this.db
+      .update(firebaseIdentityReservations)
+      .set({ creationOutcomePending: true, updatedAt: new Date() })
+      .where(
+        and(
+          eq(firebaseIdentityReservations.id, reservationId),
+          eq(firebaseIdentityReservations.state, 'reserved'),
+        ),
+      );
+  }
+
+  async clearCreationOutcomePending(
+    reservationId: string,
+    db: Pick<DrizzleDB, 'update'> = this.db,
+  ): Promise<void> {
+    await db
+      .update(firebaseIdentityReservations)
+      .set({ creationOutcomePending: false, updatedAt: new Date() })
+      .where(eq(firebaseIdentityReservations.id, reservationId));
+  }
+
   /** A social flow must not adopt an unfinished manual-registration foundation. */
   async rejectPendingRegistrationReservation(
     tx: DbTransaction,
@@ -425,12 +447,9 @@ export class IdentityReservationCoordinator {
           'Reservation is not old enough to be conclusively abandoned',
         );
       }
-      const confirmation = await this.firebase.confirmUidAbsent(
-        reservation.firebaseUid,
-      );
-      if (!confirmation.absent) {
+      if (reservation.creationOutcomePending === true) {
         throw new ServiceUnavailableException(
-          'Firebase UID existence is not conclusively confirmed absent',
+          'Registration creation outcome is not yet determined',
         );
       }
       if (
@@ -453,6 +472,14 @@ export class IdentityReservationCoordinator {
           'Firebase UID is already adopted by a local account',
         );
       }
+      const confirmation = await this.firebase.confirmUidAbsent(
+        reservation.firebaseUid,
+      );
+      if (!confirmation.absent) {
+        throw new ServiceUnavailableException(
+          'Firebase UID existence is not conclusively confirmed absent',
+        );
+      }
       await tx
         .update(firebaseIdentityReservations)
         .set({ state: 'resolved', updatedAt: new Date() })
@@ -469,6 +496,8 @@ export class IdentityReservationCoordinator {
         purpose: reservation.purpose,
         registrationDisplayName: reservation.registrationDisplayName,
         registrationWorkspaceName: reservation.registrationWorkspaceName,
+        registrationOwnerAcknowledgement:
+          reservation.registrationOwnerAcknowledgement,
         operatorIdentity: input.operatorIdentity,
         operatorDecision: input.operatorDecision,
         providerAbsenceEvidence: confirmation.evidence,

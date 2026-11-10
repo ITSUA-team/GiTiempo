@@ -211,6 +211,13 @@
       "when": 1794314364993,
       "tag": "0029_reservation_email_unique_excludes_resolved",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794322950965,
+      "tag": "0030_identity_recovery_audit_owner_ack_and_creation_outcome",
+      "breakpoints": true
     }
   ]
 }

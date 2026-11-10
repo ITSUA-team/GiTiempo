@@ -62,6 +62,7 @@ describe('IdentityRecoveryController', () => {
   let guard: PlatformOperatorGuard;
   const authService = {
     listAgedUnboundRegistrationReservations: vi.fn(),
+    reportAgedUnboundRegistrationReservations: vi.fn(),
     resolveConclusivelyAbandonedRegistration: vi.fn(),
   };
   const configService = {
@@ -109,6 +110,9 @@ describe('IdentityRecoveryController', () => {
       expect(
         authService.resolveConclusivelyAbandonedRegistration,
       ).not.toHaveBeenCalled();
+      expect(
+        authService.reportAgedUnboundRegistrationReservations,
+      ).toHaveBeenCalledWith([agedReservation]);
     });
 
     it('keeps null registration names null', async () => {

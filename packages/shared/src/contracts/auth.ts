@@ -114,7 +114,7 @@ export const identityRecoveryAssessResponseSchema = z
 export const identityRecoveryResolveRequestSchema = z
   .object({
     reservationId: z.uuid(),
-    operatorDecision: z.string().min(1).max(255),
+    operatorDecision: z.string().trim().min(1).max(255),
   })
   .strict();
 

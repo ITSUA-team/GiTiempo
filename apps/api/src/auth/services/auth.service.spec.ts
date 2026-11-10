@@ -573,6 +573,7 @@ describe('AuthService', () => {
     db.transaction.mockImplementation(async (callback) =>
       callback(transactions.shift()!),
     );
+    members.resolveActiveMembershipForUser.mockResolvedValueOnce(null);
     return { tx, recordedInserts, userRow, workspaceRow, membershipRow };
   }
 
@@ -1319,6 +1320,36 @@ describe('AuthService', () => {
         }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
       expect(txInsert).not.toHaveBeenCalled();
+      expect(repo.create).not.toHaveBeenCalled();
+    });
+
+    it('does not recover a resolved registration', async () => {
+      const reservation = {
+        id: 'reservation-1',
+        firebaseUid: 'firebase-register-1',
+        normalizedEmail: 'owner@example.com',
+        purpose: 'registration',
+        state: 'resolved',
+        registrationDisplayName: 'Owner Person',
+        registrationWorkspaceName: 'Acme Studio',
+        registrationOwnerAcknowledgement: true,
+      };
+      db.select = createSelectMock([[reservation]]);
+
+      const result = await (
+        service as unknown as {
+          recoverPendingRegistration(input: {
+            uid: string;
+            email: string;
+          }): Promise<unknown>;
+        }
+      ).recoverPendingRegistration({
+        uid: reservation.firebaseUid,
+        email: reservation.normalizedEmail,
+      });
+
+      expect(result).toBeNull();
+      expect(firebase.assertActiveUserByUid).not.toHaveBeenCalled();
       expect(repo.create).not.toHaveBeenCalled();
     });
   });

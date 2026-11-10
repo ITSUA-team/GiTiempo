@@ -41,6 +41,7 @@ export class IdentityRecoveryController {
   async assess(): Promise<IdentityRecoveryAssessResponse[]> {
     const reservations =
       await this.auth.listAgedUnboundRegistrationReservations();
+    this.auth.reportAgedUnboundRegistrationReservations(reservations);
     return reservations.map((reservation) => ({
       reservationId: reservation.id,
       normalizedEmail: reservation.normalizedEmail,

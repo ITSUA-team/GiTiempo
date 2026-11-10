@@ -11,7 +11,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { RegisterRequest } from '@gitiempo/shared';
 import type { Env } from '../../config/env.validation';
 import { normalizeEmail } from '../../commons/utils/normalize-email';
@@ -587,6 +587,7 @@ export class AuthService {
     });
 
     let firebaseUid: string | null = null;
+    let timedOutCreation: Promise<{ uid: string }> | null = null;
     try {
       return await this.db.transaction(async (tx) => {
         await this.reservations.lockIdentityReservationKeys(tx, [
@@ -615,7 +616,7 @@ export class AuthService {
         const firebaseUser =
           await this.waitForRegistrationFirebaseCreation(creation);
         if (!firebaseUser) {
-          this.trackLateRegistrationFirebaseOutcome(reservation.id, creation);
+          timedOutCreation = creation;
           throw createRegistrationUnavailable();
         }
         if (firebaseUser.uid !== reservation.firebaseUid) {
@@ -640,6 +641,13 @@ export class AuthService {
         return pair;
       });
     } catch (error) {
+      if (timedOutCreation) {
+        await this.reservations.markCreationOutcomePending(reservation.id);
+        this.trackLateRegistrationFirebaseOutcome(
+          reservation.id,
+          timedOutCreation,
+        );
+      }
       if (firebaseUid) {
         try {
           const compensated =
@@ -890,7 +898,8 @@ export class AuthService {
     if (
       !reservation ||
       reservation.purpose !== 'registration' ||
-      reservation.state === 'bound'
+      reservation.state === 'bound' ||
+      reservation.state === 'resolved'
     ) {
       return null;
     }
@@ -920,7 +929,8 @@ export class AuthService {
         !current ||
         current.id !== reservation.id ||
         current.purpose !== 'registration' ||
-        current.normalizedEmail !== email
+        current.normalizedEmail !== email ||
+        current.state === 'resolved'
       ) {
         throw new UnauthorizedException('Unauthorized');
       }
@@ -1044,19 +1054,10 @@ export class AuthService {
     workspaceName: string,
     createMembershipIfMissing = true,
   ): Promise<TokenPair> {
-    const [membership] = await tx
-      .select({
-        id: workspaceMembers.id,
-        workspaceId: workspaceMembers.workspaceId,
-        role: workspaceMembers.role,
-      })
-      .from(workspaceMembers)
-      .where(eq(workspaceMembers.userId, user.id))
-      .orderBy(
-        asc(workspaceMembers.joinedAt),
-        asc(workspaceMembers.workspaceId),
-      )
-      .limit(1);
+    const membership = await this.members.resolveActiveMembershipForUser(
+      user.id,
+      tx,
+    );
     if (!membership && !createMembershipIfMissing) {
       throw new UnauthorizedException('Unauthorized');
     }
@@ -1123,9 +1124,16 @@ export class AuthService {
               reservationId,
             );
           }
+          await this.reservations.clearCreationOutcomePending(
+            reservationId,
+            tx,
+          );
         });
       })
       .catch((error: unknown) => {
+        this.reservations
+          .clearCreationOutcomePending(reservationId)
+          .catch(() => undefined);
         this.logger.warn({
           event: 'auth.register.firebase_late_failure',
           reason: error instanceof Error ? error.message : 'unknown_error',
@@ -1249,19 +1257,10 @@ export class AuthService {
   }
 
   private async ensureSocialMembership(tx: DbTransaction, userId: string) {
-    const [existing] = await tx
-      .select({
-        id: workspaceMembers.id,
-        workspaceId: workspaceMembers.workspaceId,
-        role: workspaceMembers.role,
-      })
-      .from(workspaceMembers)
-      .where(eq(workspaceMembers.userId, userId))
-      .orderBy(
-        asc(workspaceMembers.joinedAt),
-        asc(workspaceMembers.workspaceId),
-      )
-      .limit(1);
+    const existing = await this.members.resolveActiveMembershipForUser(
+      userId,
+      tx,
+    );
     if (existing) return existing;
 
     return this.createWorkspaceMembershipInTransaction(

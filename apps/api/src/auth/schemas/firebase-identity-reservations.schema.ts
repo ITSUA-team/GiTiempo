@@ -52,6 +52,7 @@ export const firebaseIdentityReservations = pgTable(
     registrationOwnerAcknowledgement: boolean(
       'registration_owner_acknowledgement',
     ),
+    creationOutcomePending: boolean('creation_outcome_pending').default(false),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),

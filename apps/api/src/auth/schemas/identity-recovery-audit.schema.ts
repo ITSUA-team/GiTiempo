@@ -1,5 +1,12 @@
 import { getTableColumns } from 'drizzle-orm';
-import { pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 import {
   FirebaseIdentityReservationPurpose,
   firebaseIdentityReservations,
@@ -24,6 +31,9 @@ export const identityRecoveryAudit = pgTable('identity_recovery_audit', {
   registrationWorkspaceName: varchar('registration_workspace_name', {
     length: 255,
   }),
+  registrationOwnerAcknowledgement: boolean(
+    'registration_owner_acknowledgement',
+  ),
   operatorIdentity: varchar('operator_identity', { length: 255 }).notNull(),
   operatorDecision: varchar('operator_decision', { length: 255 }).notNull(),
   providerAbsenceEvidence: text('provider_absence_evidence'),
