@@ -33,6 +33,7 @@ const AUDIT_ROW_KEYS = [
   'providerAbsenceEvidence',
   'purpose',
   'registrationDisplayName',
+  'registrationOwnerAcknowledgement',
   'registrationWorkspaceName',
   'reservationId',
   'updatedAt',
