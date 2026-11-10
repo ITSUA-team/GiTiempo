@@ -35,6 +35,9 @@ const inviteDialogVisible = ref(false);
 
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getAdminServerStateScope(accessToken.value));
+const canManageMembers = computed(() => Boolean(
+  accessToken.value && scope.value.workspaceId && scope.value.userId && scope.value.role === 'admin',
+));
 const visit = ref(0);
 const getVisit = () => visit.value;
 onScopeDispose(() => {
@@ -42,7 +45,7 @@ onScopeDispose(() => {
   resetMembersData();
   resetInvitesData();
 });
-const currentUserId = computed(() => authStore.profile?.id ?? null);
+const currentUserId = computed(() => scope.value.userId ?? null);
 
 function notifyMembersError(
   message: string,
@@ -189,7 +192,7 @@ watch(
     cancelingInviteId.value = null;
     resendingInviteId.value = null;
     dismissConfirmation?.();
-    if (accessToken.value && (!scope.value.role || scope.value.role === 'admin')) {
+    if (canManageMembers.value) {
       void fetchAll();
     }
   },
@@ -227,7 +230,10 @@ watch(
         />
       </div>
 
-      <SurfaceCard padding-class="p-6">
+      <SurfaceCard
+        v-if="canManageMembers"
+        padding-class="p-6"
+      >
         <MembersTable
           :empty-description="memberTableEmptyDescription"
           :expanded-rows="memberTableExpandedRows"
@@ -239,7 +245,7 @@ watch(
           :role-filter-options="roleFilterOptions"
           :rows="memberTableRows"
           @edit-member="handleEditMember"
-          @invite-member="inviteDialogVisible = true"
+          @invite-member="canManageMembers && (inviteDialogVisible = true)"
           @update:expanded-rows="setMemberTableExpandedRows"
           @update:filters="updateMemberTableFilters"
         >
@@ -277,6 +283,7 @@ watch(
     </template>
 
     <MemberInviteDialog
+      v-if="canManageMembers"
       :key="visit"
       v-model:visible="inviteDialogVisible"
       @created="handleInviteCreated"

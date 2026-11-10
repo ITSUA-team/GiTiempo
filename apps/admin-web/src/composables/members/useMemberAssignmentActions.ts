@@ -1,4 +1,4 @@
-import { ref, type ComputedRef, type Ref } from 'vue';
+import { effectScope, ref, watch, type ComputedRef, type Ref } from 'vue';
 import type {
   ProjectListResponse,
   WorkspaceMemberResponse,
@@ -11,6 +11,7 @@ import {
 } from '@/services/admin-projects-client';
 import type { MembersTableRow } from '@/lib/members-table';
 import { diffMemberProjectAssignments } from '@/lib/member-management';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 
 interface UseMemberAssignmentActionsOptions {
   getVisit?: () => number;
@@ -41,7 +42,8 @@ export function useMemberAssignmentActions({
     row: MembersTableRow,
     input: MemberAssignFormInput,
   ): Promise<void> {
-    if (!row.canAssignPm || !accessToken.value) {
+    const scope = getAdminServerStateScope(accessToken.value);
+    if (!row.canAssignPm || !accessToken.value || !scope.workspaceId || !scope.userId || scope.role !== 'admin') {
       return;
     }
 
@@ -52,27 +54,41 @@ export function useMemberAssignmentActions({
       projects: projects.value,
     });
 
+    let mutationEligible = true;
+    const mutationScope = effectScope(true);
+    mutationScope.run(() => watch(
+      [
+        () => getAdminServerStateScope(accessToken.value).workspaceId,
+        () => getAdminServerStateScope(accessToken.value).userId,
+        () => getAdminServerStateScope(accessToken.value).role,
+        () => Boolean(accessToken.value),
+      ],
+      () => { mutationEligible = false; },
+      { flush: 'sync' },
+    ));
     const visit = getVisit();
     savingMemberAssignmentId.value = member.id;
 
     try {
       for (const projectId of projectIdsToAdd) {
         await client.assignMember(projectId, member.userId);
-        if (visit !== getVisit()) return;
+        if (!mutationEligible) return;
       }
       for (const projectId of projectIdsToRemove) {
         await client.removeAssignment(projectId, member.userId);
-        if (visit !== getVisit()) return;
+        if (!mutationEligible) return;
       }
 
+      if (!mutationEligible || visit !== getVisit()) return;
       collapseMemberRow(member);
       await refreshMembers();
-      if (visit !== getVisit()) return;
+      if (!mutationEligible || visit !== getVisit()) return;
     } catch (error) {
-      if (visit !== getVisit()) return;
+      if (!mutationEligible || visit !== getVisit()) return;
       onError(getErrorMessage(error), error, 'save-project-assignments');
     } finally {
-      if (visit === getVisit()) savingMemberAssignmentId.value = null;
+      mutationScope.stop();
+      if (mutationEligible && visit === getVisit()) savingMemberAssignmentId.value = null;
     }
   }
 

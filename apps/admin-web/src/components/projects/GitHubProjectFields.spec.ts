@@ -347,7 +347,7 @@ describe('GitHubProjectFields', () => {
 			.trigger('click');
 		await flushPromises();
 
-		expect(listBoardRepositories).toHaveBeenLastCalledWith(['PVT_GiTimpo']);
+		expect(listBoardRepositories).toHaveBeenLastCalledWith(['PVT_GiTimpo'], expect.any(AbortSignal));
 		expect(lastSelection(wrapper)?.linkedRepository).toBe(
 			'ITSUA-team/GiTiempo',
 		);
@@ -557,6 +557,7 @@ it('ignores an already queued scan result when the workspace retires synchronous
   const eventsBefore = wrapper.emitted('update:availability')?.length ?? 0;
   resolveScan({ PVT_GiTimpo: summary() });
   wrapper.vm.retire();
+  expect(listBoardRepositories.mock.calls.at(-1)?.[1].aborted).toBe(true);
   await flushPromises();
   expect(wrapper.emitted('update:availability')?.length ?? 0).toBe(eventsBefore);
   wrapper.unmount();

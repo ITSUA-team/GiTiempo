@@ -108,3 +108,25 @@ Task 5.5 **passed** using those approved fixtures, superseding its original bloc
 | Disconnected destination | Retain import mode and prevent submission | Switched to GitHub OAuth acceptance 2026-10-09. The authorization-required message replaced the board fields, derived name and summary cleared, and Add project was disabled. |
 
 No unexpected product failure was observed. Cleanup completed: switched back to GI Tiempo, stopped the proxy, restored the normal Admin SPA API connection without changing environment files, and removed the temporary workspace/settings/memberships and synthetic PM. Database verification found zero remaining rows for both fixture IDs. After restoring the real API, Add Project showed the account's actual authorization-required state again, with no fixture organization or board. The real API remains running on port 3000 and Admin SPA on port 5174.
+
+## Code review corrections — 2026-11-10
+
+Follow-up to the review of implementation commit `606c4873`, still linked to [#522](https://github.com/ITSUA-team/GiTiempo/issues/522):
+
+- Members identifies the current user from token scope while profile reload is pending. Unknown identity disables management actions. Members reads and invitation entry/submission require complete workspace/user claims and the admin role.
+- Reports clears workspace-owned project/member filter IDs on a scope change, including IDs loaded from a saved preset. Same-scope token renewal preserves those filters. Report/options and preset reads and preset actions require complete workspace/user claims and an admin or PM role.
+- GitHub browsing receives the retired child's abort signal and checks it before every owner/page request. Deferred pagination tests prove a source request cannot start a continuation after retirement.
+- Project creation, project editing and member assignment keep necessary subsequent writes eligible after ordinary same-workspace navigation, without refreshing retired views, navigating or opening dialogs. Each in-flight operation owns a detached scope watcher that permanently retires remaining writes after an actual workspace, user, role or authentication change, including A → B → A after unmount. The watcher is stopped when the operation finishes.
+- Projects and Add Project load rounding settings only for a complete admin scope. Tests use representative token claims instead of opaque access-token placeholders, including the real PrimeVue form suite.
+
+Additional manual check through the real local API: on Reports in **GI Tiempo**, selected **Internal Platform**, then switched through the header to **GitHub OAuth acceptance 2026-10-09** without reloading. The project filter cleared and the source preset disappeared. Returned to GI Tiempo and opened Members: the **Admin gitempo** row had no Edit member button, while other members remained editable. This check used no proxy or simulated metadata and performed no data mutation. Delayed-profile, unauthorized-scope, retired-pagination and multi-write navigation cases are covered by deterministic regression tests; the full earlier manual matrix was not repeated for this correction pass.
+
+The corrections change lifecycle and access behavior without layout/styling changes or a PrimeVue design compromise. The approved scope still excludes rewriting the existing report-row pagination implementation.
+
+Final correction-pass verification:
+
+- `pnpm test`: passed, 11/11 Turbo tasks plus 5 CI target-detection checks. Admin SPA freshly ran **947 tests in 89 files**; the other 10 tasks reused valid cache results (`/tmp/gitiempo-522-review-final-test.log`).
+- `pnpm typecheck` and `pnpm lint`: passed, 11/11 tasks each, including fresh Admin SPA checks (`/tmp/gitiempo-522-review-final-typecheck.log`, `/tmp/gitiempo-522-review-final-lint.log`).
+- Independent reviewer: **APPROVE**, no remaining findings in #522 scope; independently ran 173 tests in 11 affected suites and changed-file ESLint.
+- Independent architecture review: **CLEAR** for the reviewed findings. Existing report-row pagination remains outside the approved scope and can continue an already-started paginated read across a switch; no global cancellation guarantee is claimed for that flow.
+- `pnpm exec openspec validate fix-workspace-switch-data-refresh --strict` and `git diff --check`: passed.

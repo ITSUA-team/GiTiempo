@@ -239,7 +239,7 @@ function workspaceToken(workspaceId: string, nonce = 0): string {
   return `header.${btoa(JSON.stringify({ sub: "admin", role: "admin", workspaceId, nonce }))}.signature`;
 }
 
-function mountProjectsView(token = 'access-token') {
+function mountProjectsView(token = workspaceToken('A')) {
   const pinia = createPinia();
   setActivePinia(pinia);
 
@@ -451,6 +451,119 @@ describe('ProjectsView', () => {
     expect(testMocks.assignMember).not.toHaveBeenCalled();
     expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
     expect(testMocks.listProjectTasks).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it.each(['patch', 'assignment'] as const)(
+    'finishes member and manager writes after same-workspace navigation during %s',
+    async (phase) => {
+      const project = {
+        ...createProject(),
+        members: [
+          { avatarUrl: null, displayName: 'Old member', email: 'old@example.com', role: 'member' as const, userId: 'old-member' },
+          { avatarUrl: null, displayName: 'Old manager', email: 'pm@example.com', role: 'pm' as const, userId: 'old-manager' },
+        ],
+      };
+      const update = createDeferred<ReturnType<typeof createProject>>();
+      const assignment = createDeferred<void>();
+      testMocks.listProjects.mockResolvedValue([project]);
+      testMocks.updateProject.mockReturnValueOnce(update.promise);
+      testMocks.assignMember.mockReturnValueOnce(assignment.promise);
+      const wrapper = mountProjectsView();
+      await flushPromises();
+      await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+      wrapper.getComponent(ProjectEditFormStub).vm.$emit('save', {
+        defaultBillableForTasks: false,
+        timeRoundingStepMinutes: null,
+        visibility: 'private',
+        memberIds: ['new-member', 'old-manager'],
+        managerUserId: 'new-manager',
+      });
+      if (phase === 'assignment') {
+        update.resolve(createProject({ defaultBillableForTasks: false }));
+        await flushPromises();
+        expect(testMocks.assignMember).toHaveBeenCalledWith(project.id, 'new-member');
+      }
+      wrapper.unmount();
+      useAuthStore().accessToken = workspaceToken('A', 1);
+      update.resolve(createProject({ defaultBillableForTasks: false }));
+      assignment.resolve();
+      await flushPromises();
+
+      expect(testMocks.assignMember.mock.calls).toEqual([
+        [project.id, 'new-member'],
+        [project.id, 'new-manager'],
+      ]);
+      expect(testMocks.removeAssignment.mock.calls).toEqual([
+        [project.id, 'old-member'],
+        [project.id, 'old-manager'],
+      ]);
+      expect(testMocks.listProjects).toHaveBeenCalledTimes(1);
+      expect(testMocks.listMembers).toHaveBeenCalledTimes(1);
+      expect(testMocks.listProjectTasks).not.toHaveBeenCalled();
+      expect(testMocks.listProjectTimeEntries).not.toHaveBeenCalled();
+      expect(testMocks.errorToast).not.toHaveBeenCalled();
+      expect(testMocks.successToast).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['patch', 'assignment'] as const)(
+    'permanently stops a pending edit after an unmounted A-B-A switch during %s',
+    async (phase) => {
+      const project = createProject();
+      const update = createDeferred<ReturnType<typeof createProject>>();
+      const assignment = createDeferred<void>();
+      testMocks.listProjects.mockResolvedValue([project]);
+      testMocks.updateProject.mockReturnValueOnce(update.promise);
+      testMocks.assignMember.mockReturnValueOnce(assignment.promise);
+      const wrapper = mountProjectsView();
+      await flushPromises();
+      await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+      wrapper.getComponent(ProjectEditFormStub).vm.$emit('save', {
+        defaultBillableForTasks: false,
+        timeRoundingStepMinutes: null,
+        visibility: 'private',
+        memberIds: ['new-member'],
+        managerUserId: 'new-manager',
+      });
+      if (phase === 'assignment') {
+        update.resolve(createProject({ defaultBillableForTasks: false }));
+        await flushPromises();
+      }
+      wrapper.unmount();
+      useAuthStore().accessToken = workspaceToken('B');
+      useAuthStore().accessToken = workspaceToken('A');
+      update.resolve(createProject({ defaultBillableForTasks: false }));
+      assignment.resolve();
+      await flushPromises();
+
+      expect(testMocks.assignMember).toHaveBeenCalledTimes(phase === 'patch' ? 0 : 1);
+      expect(testMocks.removeAssignment).not.toHaveBeenCalled();
+      expect(testMocks.listProjects).toHaveBeenCalledTimes(1);
+      expect(testMocks.listProjectTasks).not.toHaveBeenCalled();
+      expect(testMocks.errorToast).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { sub: 'admin', role: 'pm', workspaceId: 'A' },
+    { role: 'admin', workspaceId: 'A' },
+    { sub: 'admin', role: 'admin' },
+  ])('rejects a retained edit form without full admin scope: %j', async (claims) => {
+    testMocks.listProjects.mockResolvedValue([createProject()]);
+    const wrapper = mountProjectsView();
+    await flushPromises();
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    const form = wrapper.getComponent(ProjectEditFormStub);
+    useAuthStore().accessToken = `header.${btoa(JSON.stringify(claims))}.signature`;
+    form.vm.$emit('save', {
+      defaultBillableForTasks: false,
+      timeRoundingStepMinutes: null,
+      visibility: 'private',
+      memberIds: [],
+    });
+    await flushPromises();
+    expect(testMocks.updateProject).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 

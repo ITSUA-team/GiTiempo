@@ -30,6 +30,9 @@ const submitting = ref(false);
 let active = true;
 onScopeDispose(() => { active = false; });
 const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
+const canInvite = computed(() => Boolean(
+  authStore.accessToken && scope.value.workspaceId && scope.value.userId && scope.value.role === 'admin',
+));
 watch(
   [() => scope.value.workspaceId, () => scope.value.userId, () => scope.value.role, () => Boolean(authStore.accessToken)],
   () => { active = false; },
@@ -52,10 +55,7 @@ async function handleSubmit({
   values: Record<string, unknown>;
   reset: () => void;
 }): Promise<void> {
-  if (!valid || !active) return;
-
-  const token = authStore.accessToken;
-  if (!token) return;
+  if (!valid || !active || !canInvite.value) return;
 
   submitting.value = true;
 
@@ -79,7 +79,7 @@ async function handleSubmit({
 
 function handleVisibleChange(nextVisible: boolean): void {
   if (nextVisible) {
-    visible.value = true;
+    visible.value = active && canInvite.value;
     return;
   }
 
@@ -97,7 +97,7 @@ function handleVisibleChange(nextVisible: boolean): void {
     :closable="!submitting"
     :dismissable-mask="!submitting"
     :pt="{ root: 'w-[min(480px,calc(100vw-2rem))]' }"
-    :visible="visible"
+    :visible="visible && active && canInvite"
     @update:visible="handleVisibleChange"
   >
     <Form
@@ -160,6 +160,7 @@ function handleVisibleChange(nextVisible: boolean): void {
           <Button
             label="Send Invite"
             :loading="submitting"
+            :disabled="!canInvite"
             type="submit"
           />
         </div>

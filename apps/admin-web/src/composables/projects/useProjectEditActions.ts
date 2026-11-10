@@ -1,4 +1,4 @@
-import { ref, type ComputedRef, type Ref } from 'vue';
+import { computed, effectScope, ref, watch, type ComputedRef, type Ref } from 'vue';
 import { WorkspaceRoles, type ProjectResponse } from '@gitiempo/shared';
 import type { ProjectEditFormInput } from '@gitiempo/web-shared';
 
@@ -7,6 +7,7 @@ import {
   type AdminProjectsClient,
 } from '@/services/admin-projects-client';
 import { diffProjectMemberAssignments } from '@/lib/project-management';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 
 interface UseProjectEditActionsOptions {
   getVisit?: () => number;
@@ -35,15 +36,37 @@ export function useProjectEditActions({
   refreshProjects,
 }: UseProjectEditActionsOptions) {
   const savingProjectEditId = ref<string | null>(null);
+  const scope = computed(() => getAdminServerStateScope(accessToken.value));
+  const canEdit = () => Boolean(
+    accessToken.value && scope.value.workspaceId && scope.value.userId &&
+    scope.value.role === WorkspaceRoles.Admin,
+  );
 
   async function handleProjectEditSubmitted(
     project: ProjectResponse,
     input: ProjectEditFormInput,
   ): Promise<void> {
     const visit = getVisit();
-    if (!accessToken.value) {
+    if (!canEdit()) {
       return;
     }
+
+    let eligible = true;
+    const mutationScope = effectScope(true);
+    mutationScope.run(() => {
+      watch(
+        [
+          () => scope.value.workspaceId,
+          () => scope.value.userId,
+          () => scope.value.role,
+          () => Boolean(accessToken.value),
+        ],
+        () => { eligible = false; },
+        { flush: 'sync' },
+      );
+    });
+    const isMutationCurrent = () => eligible && canEdit();
+    const isViewCurrent = () => isMutationCurrent() && visit === getVisit();
 
     const { memberIdsToAdd, memberIdsToRemove } = diffProjectMemberAssignments({
       nextMemberIds: input.memberIds,
@@ -78,36 +101,37 @@ export function useProjectEditActions({
         timeRoundingStepMinutes: input.timeRoundingStepMinutes,
         visibility: input.visibility,
       });
-      if (visit !== getVisit()) return;
+      if (!isMutationCurrent()) return;
 
       for (const userId of memberIdsToAdd) {
         await client.assignMember(project.id, userId);
-        if (visit !== getVisit()) return;
+        if (!isMutationCurrent()) return;
       }
       for (const userId of memberIdsToRemove) {
         await client.removeAssignment(project.id, userId);
-        if (visit !== getVisit()) return;
+        if (!isMutationCurrent()) return;
       }
 
       if (managerToAdd) {
         await client.assignMember(project.id, managerToAdd);
-        if (visit !== getVisit()) return;
+        if (!isMutationCurrent()) return;
       }
       if (managerToRemove) {
         await client.removeAssignment(project.id, managerToRemove);
-        if (visit !== getVisit()) return;
+        if (!isMutationCurrent()) return;
       }
 
+      if (!isViewCurrent()) return;
       collapseProjectRow(project);
       await refreshProjects();
-      if (visit !== getVisit()) return;
+      if (!isViewCurrent()) return;
 
       if (savedProject.defaultBillableForTasks !== project.defaultBillableForTasks) {
         await openProjectBackfillDialogIfNeeded(savedProject);
-        if (visit !== getVisit()) return;
+        if (!isMutationCurrent()) return;
       }
     } catch (error) {
-      if (visit !== getVisit()) return;
+      if (!isViewCurrent()) return;
       onError(getErrorMessage(error), error, 'update-project');
 
       if (
@@ -115,10 +139,11 @@ export function useProjectEditActions({
         savedProject.defaultBillableForTasks !== project.defaultBillableForTasks
       ) {
         await openProjectBackfillDialogIfNeeded(savedProject);
-        if (visit !== getVisit()) return;
+        if (!isMutationCurrent()) return;
       }
     } finally {
-      if (visit === getVisit()) savingProjectEditId.value = null;
+      mutationScope.stop();
+      if (isViewCurrent()) savingProjectEditId.value = null;
     }
   }
 

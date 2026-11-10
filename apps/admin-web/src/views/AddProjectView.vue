@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, effectScope, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   WorkspaceRoles,
@@ -57,21 +57,23 @@ const { errorToast } = useToasts();
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getAdminServerStateScope(accessToken.value));
 
+const canAccessProjectCreation = computed(() => Boolean(
+  accessToken.value && scope.value.workspaceId && scope.value.userId && scope.value.role === WorkspaceRoles.Admin,
+));
+
 const { workspaceRoundingStepMinutes } = useWorkspaceRoundingSettings({
-  enabled: computed(() => Boolean(accessToken.value)),
+  enabled: canAccessProjectCreation,
   fallback: 1,
   feature: 'projects',
   scope,
 });
 
-const canAccessProjectCreation = computed(() =>
-  Boolean(authStore.accessToken) && (!scope.value.role || scope.value.role === WorkspaceRoles.Admin),
-);
 const githubFields = ref<{ retire?: () => void } | null>(null);
 const workspaceVisit = ref(0);
+let viewActive = true;
 onBeforeUnmount(() => {
   githubFields.value?.retire?.();
-  workspaceVisit.value += 1;
+  viewActive = false;
 });
 
 const members = ref<WorkspaceMemberListResponse>([]);
@@ -221,19 +223,19 @@ async function loadMembers(): Promise<void> {
 
   try {
     const loadedMembers = await adminMembersClient.listMembers();
-    if (visit !== workspaceVisit.value) return;
+    if (!viewActive || visit !== workspaceVisit.value) return;
     members.value = loadedMembers;
   } catch (err) {
-    if (visit !== workspaceVisit.value) return;
+    if (!viewActive || visit !== workspaceVisit.value) return;
     membersError.value = err instanceof Error ? err.message : 'Failed to load members';
   } finally {
-    if (visit === workspaceVisit.value) membersLoading.value = false;
+    if (viewActive && visit === workspaceVisit.value) membersLoading.value = false;
   }
 }
 
 async function importSelectedProject(
   values: CreateProjectFormInput,
-  visit: number,
+  isCurrent: () => boolean,
 ): Promise<string | null> {
   const option = githubSelection.value;
 
@@ -251,8 +253,9 @@ async function importSelectedProject(
       },
     ],
   });
-  if (visit !== workspaceVisit.value) return null;
+  if (!isCurrent()) return null;
   const result = response.results[0];
+  if (!viewActive) return result?.status === 'imported' ? result.projectId : null;
 
   if (!result || result.status === 'failed') {
     importError.value = result?.message ?? 'Import failed.';
@@ -297,7 +300,14 @@ async function handleSubmit({
     return;
   }
 
-  const visit = workspaceVisit.value;
+  let eligible = true;
+  const mutationScope = effectScope(true);
+  mutationScope.run(() => watch(
+    [() => scope.value.workspaceId, () => scope.value.userId, () => scope.value.role, () => Boolean(accessToken.value)],
+    () => { eligible = false; },
+    { flush: 'sync' },
+  ));
+  const isCurrent = () => eligible && canAccessProjectCreation.value;
   const formValues = values as CreateProjectFormInput;
   const trimmedName = isGitHub.value
     ? (derivedName.value ?? '')
@@ -309,7 +319,7 @@ async function handleSubmit({
 
   try {
     const projectId = isGitHub.value
-      ? await importSelectedProject(formValues, visit)
+      ? await importSelectedProject(formValues, isCurrent)
       : (
           await adminProjectsClient.createProject({
             defaultBillableForTasks: formValues.defaultBillableForTasks,
@@ -319,7 +329,7 @@ async function handleSubmit({
           })
         ).id;
 
-    if (visit !== workspaceVisit.value || projectId === null) {
+    if (!isCurrent() || projectId === null) {
       return;
     }
 
@@ -330,10 +340,10 @@ async function handleSubmit({
       );
     }
 
-    if (visit !== workspaceVisit.value) return;
+    if (!viewActive || !isCurrent()) return;
     await router.push({ name: routeNames.projects });
   } catch (err) {
-    if (visit !== workspaceVisit.value) return;
+    if (!viewActive || !isCurrent()) return;
     if (isNameConflict(err)) {
       nameError.value =
         err instanceof Error
@@ -347,7 +357,8 @@ async function handleSubmit({
       logContext: { action: 'create-project', feature: 'projects' },
     });
   } finally {
-    if (visit === workspaceVisit.value) isSubmitting.value = false;
+    mutationScope.stop();
+    if (viewActive && isCurrent()) isSubmitting.value = false;
   }
 }
 

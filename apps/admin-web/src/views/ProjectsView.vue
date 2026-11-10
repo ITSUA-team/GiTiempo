@@ -35,6 +35,9 @@ const accessToken = computed(() => authStore.accessToken);
 let visit = 0;
 const getVisit = () => visit;
 const scope = computed(() => getAdminServerStateScope(accessToken.value));
+const canAccessProjects = computed(() => Boolean(
+  accessToken.value && scope.value.workspaceId && scope.value.userId && scope.value.role === 'admin',
+));
 
 function notifyProjectsError(
   message: string,
@@ -63,7 +66,7 @@ const {
 });
 
 const { workspaceRoundingStepMinutes } = useWorkspaceRoundingSettings({
-  enabled: computed(() => Boolean(accessToken.value)),
+  enabled: canAccessProjects,
   fallback: 1,
   feature: 'projects',
   scope,
@@ -147,7 +150,7 @@ watch(
     projectBackfillDialog.value = null;
     submittingProjectBackfill.value = false;
     savingProjectEditId.value = null;
-    if (accessToken.value && (!scope.value.role || scope.value.role === 'admin')) void fetchAll();
+    if (canAccessProjects.value) void fetchAll();
   },
   { immediate: true, flush: 'sync' },
 );

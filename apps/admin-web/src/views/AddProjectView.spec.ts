@@ -144,7 +144,7 @@ function mountAddProjectView() {
   setActivePinia(pinia);
 
   const authStore = useAuthStore(pinia);
-  authStore.accessToken = 'access-token';
+  authStore.accessToken = `header.${btoa(JSON.stringify({ workspaceId: 'A', sub: 'admin', role: 'admin' }))}.signature`;
 
   return mount(AddProjectView, {
     global: {
@@ -280,6 +280,54 @@ describe('AddProjectView', () => {
     await flushPromises();
     expect(testMocks.assignMember).not.toHaveBeenCalled();
     expect(testMocks.routerPush).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('finishes manager assignment after leaving within the same workspace', async () => {
+    let resolveCreation!: (value: typeof projectResponse) => void;
+    testMocks.createProject.mockReturnValueOnce(new Promise((resolve) => { resolveCreation = resolve; }));
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    wrapper.getComponent({ name: 'Form' }).vm.$emit('submit', {
+      valid: true,
+      values: { ...formValues, managerUserId: 'destination-manager' },
+    });
+    wrapper.unmount();
+    resolveCreation(projectResponse);
+    await flushPromises();
+    expect(testMocks.assignMember).toHaveBeenCalledWith(projectResponse.id, 'destination-manager');
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
+  });
+
+  it('stops manager assignment if the session changes after leaving the form', async () => {
+    let resolveCreation!: (value: typeof projectResponse) => void;
+    testMocks.createProject.mockReturnValueOnce(new Promise((resolve) => { resolveCreation = resolve; }));
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    wrapper.getComponent({ name: 'Form' }).vm.$emit('submit', {
+      valid: true,
+      values: { ...formValues, managerUserId: 'source-manager' },
+    });
+    wrapper.unmount();
+    const auth = useAuthStore();
+    const originalToken = auth.accessToken;
+    auth.accessToken = `header.${btoa(JSON.stringify({ workspaceId: 'B', sub: 'admin', role: 'admin' }))}.signature`;
+    auth.accessToken = originalToken;
+    resolveCreation(projectResponse);
+    await flushPromises();
+    expect(testMocks.assignMember).not.toHaveBeenCalled();
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
+  });
+
+  it('does not load manager choices or settings with missing claims', async () => {
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    testMocks.listMembers.mockClear();
+    testMocks.getWorkspaceSettings.mockClear();
+    useAuthStore().accessToken = 'opaque-token';
+    await flushPromises();
+    expect(testMocks.listMembers).not.toHaveBeenCalled();
+    expect(testMocks.getWorkspaceSettings).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 

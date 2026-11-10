@@ -12,7 +12,12 @@ import type {
   ReportSummaryView,
   ReportTableRow,
 } from '@/lib/report-view-model';
+import type * as ReportsDataModule from '@/composables/reports/useReportsData';
 import { useAuthStore } from '@/stores/auth';
+import { createTestQueryPlugin } from '@/test/query-client';
+import { adminProjectsClient } from '@/services/admin-projects-client';
+import { adminMembersClient } from '@/services/admin-members-client';
+import { adminReportsClient } from '@/services/admin-reports-client';
 
 const reportMocks = vi.hoisted(() => ({
   createSavedReport: vi.fn(),
@@ -27,6 +32,7 @@ const reportMocks = vi.hoisted(() => ({
   infoToast: vi.fn(),
   refresh: vi.fn(),
   state: undefined as unknown,
+  useRealReportsData: false,
   successToast: vi.fn(),
 }));
 
@@ -51,9 +57,13 @@ vi.mock('@/lib/report-download', () => ({
   downloadReportExport: reportMocks.downloadReportExport,
 }));
 
-vi.mock('@/composables/reports/useReportsData', () => ({
-  useReportsData: () => reportMocks.state,
-}));
+vi.mock('@/composables/reports/useReportsData', async (importOriginal) => {
+  const actual = await importOriginal<typeof ReportsDataModule>();
+  return {
+    useReportsData: (options: Parameters<typeof actual.useReportsData>[0]) =>
+      reportMocks.useRealReportsData ? actual.useReportsData(options) : reportMocks.state,
+  };
+});
 
 import ReportsView from './ReportsView.vue';
 
@@ -81,8 +91,8 @@ const ReportsTableStub = defineComponent({
       setTableFilters: () => {
         emit('update:filters', {
           ...props.filters,
-          memberId: 'member-1',
-          projectId: 'project-1',
+          memberId: (props.memberOptions[0] as { value: string }).value,
+          projectId: (props.projectOptions[0] as { value: string }).value,
         });
       },
     };
@@ -191,16 +201,20 @@ async function triggerExport(
   await flushPromises();
 }
 
-function mountReportsView() {
+function reportToken(workspaceId: string, exp = 1): string {
+  return `header.${btoa(JSON.stringify({ sub: 'admin', role: 'admin', workspaceId, exp }))}.signature`;
+}
+
+function mountReportsView(accessToken = reportToken('workspace-a')) {
   const pinia = createPinia();
   setActivePinia(pinia);
 
   const authStore = useAuthStore(pinia);
-  authStore.accessToken = 'access-token';
+  authStore.accessToken = accessToken;
 
   return mount(ReportsView, {
     global: {
-      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions], createTestQueryPlugin()],
       stubs: {
         ManagementPageSkeleton: ManagementPageSkeletonStub,
         ReportsTable: ReportsTableStub,
@@ -221,6 +235,7 @@ describe('ReportsView', () => {
     reportMocks.refresh.mockClear();
     reportMocks.successToast.mockClear();
     reportMocks.state = createReportState();
+    reportMocks.useRealReportsData = false;
     reportMocks.listSavedReports.mockReset().mockResolvedValue([]);
     reportMocks.createSavedReport.mockReset().mockImplementation(async (input) => ({ ...input, id: 'preset-1' }));
     reportMocks.updateSavedReport.mockReset().mockImplementation(async (id, input) => ({ ...input, id }));
@@ -251,6 +266,67 @@ describe('ReportsView', () => {
     expect(reportMocks.listSavedReports).toHaveBeenCalledTimes(2);
     expect(reportMocks.refresh).not.toHaveBeenCalled();
     wrapper.unmount();
+  });
+
+  it('clears a source preset identity filter before showing and saving destination rows', async () => {
+    const projectId = '11111111-1111-4111-8111-111111111111';
+    const memberId = '22222222-2222-4222-8222-222222222222';
+    const state = createReportState();
+    state.projectOptions = computed(() => [{ label: 'Source project', value: projectId }]);
+    state.memberOptions = computed(() => [{ label: 'Source member', value: memberId }]);
+    reportMocks.state = state;
+    const wrapper = mountReportsView();
+    await flushPromises();
+    await wrapper.get('[data-testid="set-table-filters"]').trigger('click');
+    const sourceBar = wrapper.getComponent({ name: 'SavedReportsBar' });
+    sourceBar.vm.$emit('saveAsNew', 'Source scoped report');
+    await flushPromises();
+    sourceBar.vm.$emit('select', 'preset-1');
+    await flushPromises();
+    expect(wrapper.getComponent(ReportsTableStub).props('filters')).toMatchObject({
+      projectId, memberId,
+    });
+    useAuthStore().accessToken = reportToken('workspace-a', 2);
+    await flushPromises();
+    expect(wrapper.getComponent(ReportsTableStub).props('filters').projectId).toBe(projectId);
+    state.rows.value = [{ ...reportRow, id: 'project-b', projectIds: ['project-b'], memberIds: ['member-b'] }];
+    useAuthStore().accessToken = reportToken('workspace-b');
+    await flushPromises();
+    expect(wrapper.getComponent(ReportsTableStub).props('rows')).toHaveLength(1);
+    expect(wrapper.getComponent(ReportsTableStub).props('filters')).toMatchObject({ projectId: null, memberId: null });
+    wrapper.getComponent({ name: 'SavedReportsBar' }).vm.$emit('saveAsNew', 'Destination report');
+    await flushPromises();
+    expect(reportMocks.createSavedReport).toHaveBeenLastCalledWith(expect.objectContaining({
+      name: 'Destination report', config: expect.objectContaining({ projectId: null, memberId: null }),
+    }));
+    expect(reportMocks.refresh).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it.each([
+    {},
+    { workspaceId: 'workspace-b', role: 'admin' },
+    { sub: 'admin', role: 'admin' },
+    { sub: 'admin', workspaceId: 'workspace-b' },
+    { sub: 'admin', workspaceId: 'workspace-b', role: 'member' },
+  ])('does not read reports, options or presets or write presets with unauthorized claims %j', async (claims) => {
+    reportMocks.useRealReportsData = true;
+    const projectsRead = vi.spyOn(adminProjectsClient, 'listProjects').mockResolvedValue([]);
+    const membersRead = vi.spyOn(adminMembersClient, 'listMembers').mockResolvedValue([]);
+    const rowsRead = vi.spyOn(adminReportsClient, 'getTimeReport');
+    const wrapper = mountReportsView(`header.${btoa(JSON.stringify(claims))}.signature`);
+    await flushPromises();
+    wrapper.getComponent({ name: 'SavedReportsBar' }).vm.$emit('saveAsNew', 'Unauthorized');
+    await flushPromises();
+    expect(reportMocks.listSavedReports).not.toHaveBeenCalled();
+    expect(reportMocks.createSavedReport).not.toHaveBeenCalled();
+    expect(projectsRead).not.toHaveBeenCalled();
+    expect(membersRead).not.toHaveBeenCalled();
+    expect(rowsRead).not.toHaveBeenCalled();
+    wrapper.unmount();
+    projectsRead.mockRestore();
+    membersRead.mockRestore();
+    rowsRead.mockRestore();
   });
 
   it('updates preset state quietly without replacement collection reads', async () => {
@@ -442,12 +518,12 @@ describe('ReportsView', () => {
 
   it('feeds header grouping back into report state and reflects it in the export', async () => {
     const wrapper = mountReportsView();
-    const state = reportMocks.state as ReturnType<typeof createReportState>;
     await flushPromises();
 
     await wrapper.get('[data-testid="change-report-grouping"]').trigger('click');
 
     // The header control drives report state, which the export mirrors.
+    const state = reportMocks.state as ReturnType<typeof createReportState>;
     expect(state.grouping.value).toEqual(['member']);
 
     await triggerExport(wrapper, 'pdf');

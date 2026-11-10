@@ -39,6 +39,10 @@ const authStore = useAuthStore();
 const { errorToast, successToast } = useToasts();
 const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
+const canAccessReports = computed(() =>
+  Boolean(authStore.accessToken && scope.value.workspaceId && scope.value.userId) &&
+  (scope.value.role === 'admin' || scope.value.role === 'pm'),
+);
 
 const {
   dateRange,
@@ -56,7 +60,7 @@ const {
   rows,
   summary,
 } = useReportsData({
-  enabled: isAuthenticated,
+  enabled: canAccessReports,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -111,7 +115,9 @@ watch(
   () => {
     presetVisit.value += 1;
     savedReports.reset();
-    if (isAuthenticated.value && (!scope.value.role || ['admin', 'pm'].includes(scope.value.role))) {
+    tableFilters.value.projectId = null;
+    tableFilters.value.memberId = null;
+    if (canAccessReports.value) {
       void savedReports.refresh();
     }
   },
@@ -131,18 +137,22 @@ function startNewReport(): void {
 }
 
 async function handleSaveReport(): Promise<void> {
+  if (!canAccessReports.value) return;
   await savedReports.save();
 }
 
 async function handleSaveReportAsNew(name: string): Promise<void> {
+  if (!canAccessReports.value) return;
   await savedReports.saveAsNew(name);
 }
 
 async function handleRenameReport(id: string, name: string): Promise<void> {
+  if (!canAccessReports.value) return;
   await savedReports.rename(id, name);
 }
 
 async function handleDeleteReport(id: string): Promise<void> {
+  if (!canAccessReports.value) return;
   await savedReports.remove(id);
 }
 const tableRows = computed(() =>

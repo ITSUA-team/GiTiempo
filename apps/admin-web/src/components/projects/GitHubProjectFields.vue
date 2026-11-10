@@ -28,8 +28,10 @@ import {
 } from './github-project-import';
 
 let disposed = false;
+const requests = new AbortController();
 function retire(): void {
   disposed = true;
+  requests.abort();
 }
 onBeforeUnmount(retire);
 defineExpose({ retire });
@@ -154,7 +156,7 @@ async function handleProjectUpdate(
   isScanningBoard.value = true;
 
   try {
-    const scanned = await adminGithubBrowsingClient.listBoardRepositories([boardId]);
+    const scanned = await adminGithubBrowsingClient.listBoardRepositories([boardId], requests.signal);
     if (disposed) return;
     summaries.value = { ...summaries.value, ...scanned };
 
@@ -205,7 +207,7 @@ async function load(): Promise<void> {
 
     const [listedBoards, importedProjects, importedRepositories] =
       await Promise.all([
-        adminGithubBrowsingClient.listOrganizationProjects(organizations.value),
+        adminGithubBrowsingClient.listOrganizationProjects(organizations.value, requests.signal),
         adminProjectsClient.listImportedGitHubProjects(),
         adminProjectsClient.listImportedGitHubRepositories(),
       ]);
@@ -237,6 +239,7 @@ async function load(): Promise<void> {
 
     const scanned = await adminGithubBrowsingClient.listBoardRepositories(
       listedBoards.items.map((board) => board.id),
+      requests.signal,
     );
     if (disposed) return;
     summaries.value = scanned;

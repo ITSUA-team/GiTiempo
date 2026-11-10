@@ -196,10 +196,10 @@ const membersViewStubs = {
 };
 
 function workspaceToken(workspaceId: string, expires = 1): string {
-  return `header.${btoa(JSON.stringify({ sub: 'admin', role: 'admin', workspaceId, exp: expires }))}.signature`;
+  return `header.${btoa(JSON.stringify({ sub: 'user-1', role: 'admin', workspaceId, exp: expires }))}.signature`;
 }
 
-function mountMembersView(token = 'access-token') {
+function mountMembersView(token = workspaceToken('A')) {
   const pinia = createPinia();
   setActivePinia(pinia);
 
@@ -241,6 +241,56 @@ describe('MembersView', () => {
 
     testMocks.assignMember.mockResolvedValue(undefined);
     testMocks.removeAssignment.mockResolvedValue(undefined);
+  });
+
+  it('keeps self removal unavailable while the destination profile is pending', async () => {
+    testMocks.listMembers.mockResolvedValue([{ ...createMember(), userId: 'user-1', role: 'admin' }]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    const wrapper = mountMembersView();
+    await flushPromises();
+    useAuthStore().accessToken = workspaceToken('B');
+    useAuthStore().profile = null;
+    await flushPromises();
+    const row = wrapper.getComponent({ name: 'MembersTable' }).props('rows')[0];
+    expect(row.canManage).toBe(false);
+    expect(row.canAssignPm).toBe(false);
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    expect(wrapper.find('[data-testid="member-edit-remove"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it.each([
+    'opaque-token',
+    `header.${btoa(JSON.stringify({ sub: 'user-1', workspaceId: 'A' }))}.signature`,
+    `header.${btoa(JSON.stringify({ role: 'admin', workspaceId: 'A' }))}.signature`,
+    `header.${btoa(JSON.stringify({ sub: 'user-1', role: 'admin' }))}.signature`,
+  ])('does not read protected resources with incomplete claims: %s', async (token) => {
+    const wrapper = mountMembersView(token);
+    await flushPromises();
+    expect(testMocks.listMembers).not.toHaveBeenCalled();
+    expect(testMocks.listProjects).not.toHaveBeenCalled();
+    expect(testMocks.listInvites).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="member-invite-intent"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-invite-dialog"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('removes invitation controls immediately on token role loss with a stale admin profile', async () => {
+    testMocks.listMembers.mockResolvedValue([createMember()]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    const wrapper = mountMembersView();
+    await flushPromises();
+    await wrapper.get('[data-testid="member-invite-intent"]').trigger('click');
+    expect(wrapper.get('[data-testid="member-invite-dialog"]').text()).toContain('visible=true');
+    useAuthStore().accessToken = `header.${btoa(JSON.stringify({ sub: 'user-1', workspaceId: 'A', role: 'member' }))}.signature`;
+    await flushPromises();
+    expect(useAuthStore().profile?.role).toBe('admin');
+    expect(wrapper.find('[data-testid="member-invite-intent"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-invite-dialog"]').exists()).toBe(false);
+    expect(testMocks.listMembers).toHaveBeenCalledOnce();
+    wrapper.unmount();
   });
 
   it('keeps current members across an A to B to A switch with a late first response', async () => {
@@ -305,7 +355,7 @@ describe('MembersView', () => {
     await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
     await wrapper.get('[data-testid="member-edit-remove"]').trigger('click');
     const accept = testMocks.requireConfirmation.mock.calls[0]![3] as () => Promise<void>;
-    useAuthStore().accessToken = `header.${btoa(JSON.stringify({ sub: 'admin', role: 'admin', workspaceId: 'destination' }))}.signature`;
+    useAuthStore().accessToken = `header.${btoa(JSON.stringify({ sub: 'user-1', role: 'admin', workspaceId: 'destination' }))}.signature`;
     await flushPromises();
     await accept();
     expect(testMocks.removeMember).not.toHaveBeenCalled();
@@ -328,7 +378,7 @@ describe('MembersView', () => {
     await flushPromises();
     await wrapper.get('[data-testid="pending-invite-resend"]').trigger('click');
     testMocks.listInvites.mockResolvedValue([]);
-    useAuthStore().accessToken = `header.${btoa(JSON.stringify({ sub: 'admin', role: 'admin', workspaceId: 'destination' }))}.signature`;
+    useAuthStore().accessToken = `header.${btoa(JSON.stringify({ sub: 'user-1', role: 'admin', workspaceId: 'destination' }))}.signature`;
     await flushPromises();
     resend.resolve();
     await flushPromises();
@@ -405,7 +455,7 @@ describe('MembersView', () => {
     setActivePinia(pinia);
 
     const authStore = useAuthStore(pinia);
-    authStore.accessToken = 'access-token';
+    authStore.accessToken = workspaceToken('A');
     authStore.profile = {
       avatarUrl: null,
       canViewInvoices: true,
@@ -498,7 +548,7 @@ describe('MembersView', () => {
     setActivePinia(pinia);
 
     const authStore = useAuthStore(pinia);
-    authStore.accessToken = 'access-token';
+    authStore.accessToken = workspaceToken('A');
 
     const wrapper = mount(MembersView, {
       global: {
@@ -540,7 +590,7 @@ describe('MembersView', () => {
     setActivePinia(pinia);
 
     const authStore = useAuthStore(pinia);
-    authStore.accessToken = 'access-token';
+    authStore.accessToken = workspaceToken('A');
 
     const wrapper = mount(MembersView, {
       global: {
@@ -833,7 +883,7 @@ describe('MembersView', () => {
     setActivePinia(pinia);
 
     const authStore = useAuthStore(pinia);
-    authStore.accessToken = 'access-token';
+    authStore.accessToken = workspaceToken('A');
 
     const wrapper = mount(MembersView, {
       global: {
@@ -902,7 +952,7 @@ describe('MembersView', () => {
     setActivePinia(pinia);
 
     const authStore = useAuthStore(pinia);
-    authStore.accessToken = 'access-token';
+    authStore.accessToken = workspaceToken('A');
 
     const wrapper = mount(MembersView, {
       global: {
@@ -945,7 +995,7 @@ describe('MembersView', () => {
     setActivePinia(pinia);
 
     const authStore = useAuthStore(pinia);
-    authStore.accessToken = 'access-token';
+    authStore.accessToken = workspaceToken('A');
 
     const wrapper = mount(MembersView, {
       global: {
@@ -993,7 +1043,7 @@ describe('MembersView', () => {
     setActivePinia(pinia);
 
     const authStore = useAuthStore(pinia);
-    authStore.accessToken = 'access-token';
+    authStore.accessToken = workspaceToken('A');
 
     const wrapper = mount(MembersView, {
       global: {
@@ -1048,7 +1098,7 @@ describe('MembersView', () => {
     setActivePinia(pinia);
 
     const authStore = useAuthStore(pinia);
-    authStore.accessToken = 'access-token';
+    authStore.accessToken = workspaceToken('A');
 
     const wrapper = mount(MembersView, {
       global: {
