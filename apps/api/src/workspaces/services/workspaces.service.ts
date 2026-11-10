@@ -62,6 +62,9 @@ export class WorkspacesService {
           ? { defaultHourlyRate: input.defaultHourlyRate }
           : {}),
         ...(input.timeZone !== undefined ? { timeZone: input.timeZone } : {}),
+        ...(input.timeRoundingStepMinutes !== undefined
+          ? { timeRoundingStepMinutes: input.timeRoundingStepMinutes }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(workspaceSettings.workspaceId, workspaceId))
@@ -110,6 +113,7 @@ export class WorkspacesService {
       currency: row.currency,
       defaultHourlyRate: row.defaultHourlyRate,
       timeZone: row.timeZone,
+      timeRoundingStepMinutes: row.timeRoundingStepMinutes,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

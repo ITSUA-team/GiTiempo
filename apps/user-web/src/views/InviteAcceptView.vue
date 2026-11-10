@@ -11,10 +11,14 @@ import {
   emailPasswordSignInSchema,
   getErrorMessage,
 } from "@gitiempo/web-shared";
+import {
+  getFirebaseSignInTokens,
+  type FirebaseSignInResult,
+} from "@gitiempo/web-shared/auth";
 
 import { routeNames } from "@/router";
 import InviteOnboardingShell from "@/components/invite/InviteOnboardingShell.vue";
-import { getFirebaseErrorCode } from "@/lib/firebase-errors";
+import { getFirebaseErrorCode } from "@gitiempo/web-shared";
 import { getAuthRuntime } from "@/services/auth-runtime";
 import { getWorkspaceInvitesClient } from "@/services/workspace-invites-client";
 import { useAuthStore } from "@/stores/auth";
@@ -234,10 +238,6 @@ async function handleInviteAcceptanceFailure(error: unknown): Promise<void> {
     terminalMessage.value = "Your account already has workspace access. Sign in to continue.";
     await clearInviteQuery();
     await signOutIdentityProvider();
-    appToast.showInfoToast(
-      "Workspace access already exists",
-      terminalMessage.value,
-    );
     return;
   }
 
@@ -252,9 +252,10 @@ async function handleInviteAcceptanceFailure(error: unknown): Promise<void> {
 }
 
 async function completeInviteAcceptance(
-  firebaseIdToken: string,
+  signInResult: FirebaseSignInResult,
   action: SubmitAction,
 ): Promise<void> {
+  const { firebaseIdToken, googleIdToken } = getFirebaseSignInTokens(signInResult);
   activeAction.value = action;
   inlineErrorMessage.value = null;
   terminalState.value = null;
@@ -265,15 +266,16 @@ async function completeInviteAcceptance(
   try {
     await getWorkspaceInvitesClient().acceptInvite({
       firebaseIdToken,
+      ...(googleIdToken ? { googleIdToken } : {}),
       token: inviteToken.value,
     });
     inviteAccepted = true;
     isRedirecting.value = true;
-    appToast.showSuccessToast(
-      "Invitation accepted",
-      "Workspace access created. Redirecting to dashboard.",
-    );
-    await authStore.loginWithFirebaseToken(firebaseIdToken);
+    if (googleIdToken) {
+      await authStore.loginWithFirebaseToken(firebaseIdToken, googleIdToken);
+    } else {
+      await authStore.loginWithFirebaseToken(firebaseIdToken);
+    }
     await router.replace({ name: routeNames.dashboard });
   } catch (error) {
     if (inviteAccepted) {
@@ -310,16 +312,15 @@ async function handleEmailAccept(): Promise<void> {
   inlineErrorMessage.value = null;
 
   try {
-    const firebaseIdToken = await getAuthRuntime().signInWithEmailPassword(
+    const signInResult = await getAuthRuntime().signInWithEmailPassword(
       email.value,
       password.value,
     );
-    await completeInviteAcceptance(firebaseIdToken, "email");
+    await completeInviteAcceptance(signInResult, "email");
   } catch (error) {
     const message = mapEmailPasswordErrorMessage(error);
     inlineErrorMessage.value = message;
-    appToast.showErrorToast({
-      detail: message,
+    appToast.logError({
       error,
       logContext: { action: "sign-in", feature: "invite-accept" },
       summary: "Could not sign in",
@@ -340,8 +341,8 @@ async function handleGoogleAccept(): Promise<void> {
   inlineErrorMessage.value = null;
 
   try {
-    const firebaseIdToken = await getAuthRuntime().signInWithGoogle();
-    await completeInviteAcceptance(firebaseIdToken, "google");
+    const signInResult = await getAuthRuntime().signInWithGoogle();
+    await completeInviteAcceptance(signInResult, "google");
   } catch (error) {
     const message = mapGoogleErrorMessage(error);
     inlineErrorMessage.value = message;
@@ -458,15 +459,6 @@ async function handleGoogleAccept(): Promise<void> {
           data-testid="invite-accept-error"
         >
           {{ inlineErrorMessage }}
-        </Message>
-
-        <Message
-          v-if="isRedirecting"
-          severity="success"
-          size="small"
-          class="text-sm"
-        >
-          Workspace access created. Redirecting to dashboard.
         </Message>
 
         <div class="flex flex-col gap-2 pt-1">

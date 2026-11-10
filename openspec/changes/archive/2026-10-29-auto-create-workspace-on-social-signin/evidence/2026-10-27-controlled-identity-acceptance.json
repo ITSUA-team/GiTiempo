@@ -1,0 +1,56 @@
+{
+  "status": "passed",
+  "executedAt": "2026-10-27",
+  "command": "node --env-file=apps/api/.env /tmp/gitiempo476-controlled-acceptance-run.cjs",
+  "isolation": {
+    "database": "gitiempo_476_social_test",
+    "databaseGuard": "URL hostname restricted to localhost/127.0.0.1, pathname forced to /gitiempo_476_social_test, then SELECT current_database() asserted the same name before fixture mutations",
+    "http": "separate in-memory Nest application via supertest; existing API :3000 and user SPA :5173 were not used",
+    "providerBoundary": "test-only FakeFirebaseAdminService plus mocked GitHub OAuth/profile/email transport; no external provider, email, credential, or token was used or emitted"
+  },
+  "cases": [
+    {
+      "case": "Conflicting Firebase subject ownership",
+      "requests": ["POST /auth/login"],
+      "statuses": [409],
+      "bodyCode": "identity_conflict",
+      "invariant": "Immediate before/after users/workspaces/members snapshots were equal. Both canonical user id/firebase UID/email rows were equal, the alias subject-binding id/owner/provider/verifiedEmail stayed owned by user2, and neither user membership changed."
+    },
+    {
+      "case": "Different GitHub ID for matched already-linked account",
+      "requests": ["POST /auth/login", "GET /auth/github/start", "GET /auth/github/callback"],
+      "statuses": [200, 302, 302],
+      "redirectError": "github_identity_mismatch",
+      "invariant": "Immediate before/after users/workspaces/members snapshots were equal. Owner canonical id/firebase UID/email, GitHub link id/userId/githubUserId/login, and membership id/userId/workspaceId/role were exactly unchanged; no handoff code."
+    },
+    {
+      "case": "GitHub callback without verified email",
+      "requests": ["GET /auth/github/start", "GET /auth/github/callback"],
+      "statuses": [302, 302],
+      "redirectError": "email",
+      "invariant": "Immediate before/after users/workspaces/members snapshots were equal; no handoff code."
+    },
+    {
+      "case": "Unbound legacy Firebase identity during GitHub exchange",
+      "requests": ["GET /auth/github/start", "GET /auth/github/callback", "POST /auth/github/session"],
+      "statuses": [302, 302, 401],
+      "bodyCode": "identity_proof_required",
+      "invariant": "Immediate before/after users/workspaces/members snapshots were equal. Started with neither local owner nor application reservation. A retained unbound github-signin reservation grants no user, workspace, membership, GitHub link, or session; it was deleted during fixture cleanup."
+    },
+    {
+      "case": "Verified GitHub email against unverified password preclaim",
+      "requests": ["POST /auth/register", "GET /auth/github/start", "GET /auth/github/callback"],
+      "statuses": [201, 302, 302],
+      "redirectError": "identity_proof_required",
+      "invariant": "The snapshot taken immediately after intentional registration and immediately after rejected callback had equal users/workspaces/members counts. Existing canonical id/firebase UID/email and membership id/userId/workspaceId/role were exactly unchanged; no GitHub link or Firebase subject binding was added and no handoff code was issued."
+    }
+  ],
+  "beforeAfterInvariants": {
+    "foundationCountsBefore": { "users": 86, "workspaces": 55, "members": 86 },
+    "foundationCountsAfter": { "users": 86, "workspaces": 55, "members": 86 },
+    "originalAccounts": "All pre-run user id/firebase UID/email tuples were read again after cleanup and exactly matched the original snapshot.",
+    "cleanup": "finally removed only UUID-tagged gitiempo476 fixture users, workspaces, memberships, refresh tokens, GitHub links, Firebase bindings, settings, and reservations. No cleanup process remains."
+  },
+  "result": { "testFiles": 1, "tests": 5, "passed": 5 },
+  "boundary": "This is controlled local acceptance evidence for task 8.9 plus one bounded legacy-unbound recovery case. It is not an external Firebase/GitHub deployed smoke test and does not cover extension runtime UI permissions."
+}

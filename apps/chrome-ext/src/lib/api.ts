@@ -48,7 +48,10 @@ export interface ExtensionApiClient {
     expectedContext?: { workspaceId: string; email: string },
   ): Promise<TrackingCapabilityResponse>;
   getWorkspace(): Promise<WorkspaceResponse>;
-  loginWithFirebaseToken(firebaseIdToken: string): Promise<TokenPairResponse>;
+  loginWithFirebaseToken(
+    firebaseIdToken: string,
+    googleIdToken?: string,
+  ): Promise<TokenPairResponse>;
   startTimerFromGitHub(
     pageContext: SupportedGitHubIssueContext,
     expectedContext?: { workspaceId: string; email: string },
@@ -310,10 +313,14 @@ export function createExtensionApiClient({
 
   async function loginWithFirebaseToken(
     firebaseIdToken: string,
+    googleIdToken?: string,
   ): Promise<TokenPairResponse> {
     return establishSession(
       "/auth/login",
-      loginRequestSchema.parse({ firebaseIdToken }),
+      loginRequestSchema.parse({
+        firebaseIdToken,
+        ...(googleIdToken ? { googleIdToken } : {}),
+      }),
     );
   }
 

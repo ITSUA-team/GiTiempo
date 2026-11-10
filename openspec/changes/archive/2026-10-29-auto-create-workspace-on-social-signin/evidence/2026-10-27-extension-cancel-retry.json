@@ -1,0 +1,20 @@
+{
+  "executedOn": "2026-10-27",
+  "client": "Chrome extension",
+  "provider": "Google",
+  "account": "stoyambo@gmail.com",
+  "status": "passed-user-reported",
+  "steps": [
+    {
+      "action": "Retry while Google window was still open",
+      "result": "Sign-in is already open. Finish or close the provider window before trying again.",
+      "interpretation": "Expected overlapping-flow rejection; user explicitly confirmed Google window was still open"
+    },
+    {
+      "action": "Close the separate Google authorization window, reopen extension panel, retry Google login",
+      "result": "User confirmed successful login"
+    }
+  ],
+  "browserVersion": null,
+  "boundary": "Manual Chrome runtime result reported by user; no extension screenshot collected. Does not establish GitHub callback abandonment or other deferred real-provider cases."
+}

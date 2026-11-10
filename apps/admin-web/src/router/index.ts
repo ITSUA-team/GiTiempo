@@ -19,20 +19,25 @@ import { useAuthStore } from '@/stores/auth';
 const AddProjectMockView = () => import('@/views/AddProjectView.vue');
 const DashboardView = () => import('@/views/DashboardView.vue');
 const ForbiddenView = () => import('@/views/ForbiddenView.vue');
+const ForgotPasswordView = () => import('@/views/ForgotPasswordView.vue');
 const GithubCallbackView = () => import('@/views/GithubCallbackView.vue');
+const InvoiceDetailView = () => import('@/views/InvoiceDetailView.vue');
 const InvoicesView = () => import('@/views/InvoicesView.vue');
 const MembersView = () => import('@/views/MembersView.vue');
 const NotFoundView = () => import('@/views/NotFoundView.vue');
 const ProjectsView = () => import('@/views/ProjectsView.vue');
+const ResetPasswordView = () => import('@/views/ResetPasswordView.vue');
 const ReportsView = () => import('@/views/ReportsView.vue');
 const SettingsView = () => import('@/views/SettingsView.vue');
 
 type AdminRouteName = (typeof routeNames)[keyof typeof routeNames];
 type AdminNonProductRouteName =
   | typeof routeNames.forbidden
+  | typeof routeNames.forgotPassword
   | typeof routeNames.githubCallback
   | typeof routeNames.login
-  | typeof routeNames.notFound;
+  | typeof routeNames.notFound
+  | typeof routeNames.resetPassword;
 type AdminProductRouteName = Exclude<AdminRouteName, AdminNonProductRouteName>;
 
 const adminOnlyRoles = [
@@ -46,6 +51,7 @@ const managementRoles = [
 export const adminRouteAllowedRoles = {
   [routeNames.addProject]: adminOnlyRoles,
   [routeNames.dashboard]: managementRoles,
+  [routeNames.invoiceDetail]: managementRoles,
   [routeNames.invoices]: managementRoles,
   [routeNames.members]: adminOnlyRoles,
   [routeNames.projects]: adminOnlyRoles,
@@ -58,6 +64,22 @@ const publicRoutes: RouteRecordRaw[] = [
     path: '/auth/github/callback',
     name: routeNames.githubCallback,
     component: GithubCallbackView,
+    meta: {
+      allowAuthenticatedGuestFlow: true,
+    },
+  },
+  {
+    path: '/auth/forgot-password',
+    name: routeNames.forgotPassword,
+    component: ForgotPasswordView,
+    meta: {
+      guestOnly: true,
+    },
+  },
+  {
+    path: '/auth/reset-password',
+    name: routeNames.resetPassword,
+    component: ResetPasswordView,
     meta: {
       allowAuthenticatedGuestFlow: true,
     },
@@ -98,6 +120,17 @@ const protectedRoutes: RouteRecordRaw[] = [
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.invoices],
       pageName: 'Invoices',
+      requiresInvoiceViewPermission: true,
+    },
+  },
+  {
+    path: 'invoices/:id',
+    name: routeNames.invoiceDetail,
+    component: InvoiceDetailView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.invoiceDetail],
+      pageName: 'Invoices',
+      requiresInvoiceViewPermission: true,
     },
   },
   {
@@ -163,7 +196,7 @@ export function createAppRouter(options?: {
 }): Router {
   const appPinia = options?.pinia ?? pinia;
 
-  return createProtectedRouter({
+  const router = createProtectedRouter({
     defaultAuthenticatedRoute: { name: routeNames.dashboard },
     history: options?.history,
     pinia: appPinia,
@@ -182,6 +215,18 @@ export function createAppRouter(options?: {
     },
     useAuthStore,
   });
+
+  router.beforeEach((to) => {
+    if (to.meta.requiresInvoiceViewPermission) {
+      const authStore = useAuthStore(appPinia);
+      const profile = authStore.profile;
+      if (profile?.role === WorkspaceRoles.PM && !profile.canViewInvoices) {
+        return { name: routeNames.forbidden };
+      }
+    }
+  });
+
+  return router;
 }
 
 export const router = createAppRouter();

@@ -26,6 +26,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const testMocks = vi.hoisted(() => ({
   errorToast: vi.fn(),
+  infoToast: vi.fn(),
   getWorkspace: vi.fn(),
 }));
 
@@ -37,6 +38,7 @@ const RouterViewStub = {
 function createAuthProfile(role: WorkspaceRole = WorkspaceRoles.Admin): UserResponse {
   return {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Admin User",
     email: "admin@example.com",
@@ -55,7 +57,7 @@ vi.mock("@/services/admin-settings-client", () => ({
 vi.mock("@/composables/feedback/useToasts", () => ({
   useToasts: () => ({
     errorToast: testMocks.errorToast,
-    infoToast: vi.fn(),
+    infoToast: testMocks.infoToast,
   }),
 }));
 
@@ -113,6 +115,9 @@ function createRuntimeMock(
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "admin@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -164,6 +169,7 @@ function setAuthenticatedShellUser(
   authStore.bootstrapComplete = true;
   authStore.profile = {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: "2026-05-01T10:00:00.000Z",
     displayName: "Admin User",
     email: `${role}@example.com`,
@@ -180,6 +186,7 @@ describe("AdminAppShell", () => {
     clearRefreshToken();
     resetAuthRuntimeForTesting();
     testMocks.errorToast.mockReset();
+    testMocks.infoToast.mockReset();
     testMocks.getWorkspace.mockReset();
     vi.mocked(navigateToExternalHref).mockReset();
     testMocks.getWorkspace.mockResolvedValue({
@@ -248,7 +255,7 @@ describe("AdminAppShell", () => {
     );
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(false);
     expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
-    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Settings"]')).toHaveLength(0);
@@ -301,7 +308,7 @@ describe("AdminAppShell", () => {
 
     expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
-    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(0);
     expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(0);
   });
@@ -374,11 +381,53 @@ describe("AdminAppShell", () => {
 
     expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
-    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(0);
     expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(0);
     expect(wrapper.find('[data-testid="profile-menu-settings"]').exists()).toBe(false);
     expect(wrapper.findAll('a[href="/settings"]')).toHaveLength(0);
+  });
+
+  it("hides invoices navigation for PMs without canViewInvoices permission", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "pm-access-token";
+    authStore.bootstrapComplete = true;
+    authStore.profile = {
+      ...createAuthProfile(WorkspaceRoles.PM),
+      canViewInvoices: false,
+    };
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/");
+    await router.isReady();
+
+    const wrapper = mount(AdminAppShell, {
+      global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute("data-tooltip", String(binding.value));
+            },
+          },
+        },
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
+        stubs: {
+          RouterView: RouterViewStub,
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
+      },
+    });
+
+    expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(0);
   });
 
   it("keeps Projects active for admins on the add-project route", async () => {
@@ -416,7 +465,7 @@ describe("AdminAppShell", () => {
     expect(wrapper.findAll('a[aria-label="Projects"][aria-current="page"]')).toHaveLength(2);
   });
 
-  it("returns to the admin dashboard after switching to another admin-accessible workspace", async () => {
+  it.each([true, false])("returns to the admin dashboard after switching to another admin-accessible workspace (memberships reloaded: %s)", async (membershipsReloaded) => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = setAuthenticatedShellUser(pinia, WorkspaceRoles.Admin);
@@ -427,8 +476,9 @@ describe("AdminAppShell", () => {
         return {
           profileReloaded: true,
           profileReloadError: null,
-          membershipsReloaded: true,
-          reloadError: null,
+          ...(membershipsReloaded
+            ? { membershipsReloaded: true as const, reloadError: null }
+            : { membershipsReloaded: false as const, reloadError: new Error("Membership refresh failed") }),
         };
       });
 
@@ -457,6 +507,58 @@ describe("AdminAppShell", () => {
     );
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
     expect(vi.mocked(navigateToExternalHref)).not.toHaveBeenCalled();
+    await flushPromises();
+    expect(authStore.profile?.role).toBe(WorkspaceRoles.PM);
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
+    if (membershipsReloaded) {
+      expect(testMocks.infoToast).not.toHaveBeenCalled();
+    } else {
+      expect(testMocks.infoToast).toHaveBeenCalledExactlyOnceWith(
+        "Workspace switched. The workspace list could not be refreshed yet.",
+      );
+    }
+
+  });
+
+  it("redirects from invoices to dashboard when switching to a workspace where PM lacks canViewInvoices", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "pm-access-token";
+    authStore.bootstrapComplete = true;
+    authStore.profile = { ...createAuthProfile(WorkspaceRoles.PM), canViewInvoices: true };
+
+    vi.spyOn(authStore, "switchWorkspace").mockImplementation(async () => {
+      authStore.profile = { ...createAuthProfile(WorkspaceRoles.PM), canViewInvoices: false };
+      return {
+        profileReloaded: true,
+        profileReloadError: null,
+        membershipsReloaded: true,
+        reloadError: null,
+      };
+    });
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/invoices");
+    await router.isReady();
+
+    const wrapper = mount(AdminAppShell, {
+      global: {
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          RouterView: RouterViewStub,
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-switch-workspace"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
   it("redirects to user-web after switching to a workspace without admin access", async () => {

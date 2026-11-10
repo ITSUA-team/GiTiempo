@@ -153,11 +153,11 @@ test/
 ## Tests
 
 - **Unit**: `pnpm test` or `pnpm --filter @gitiempo/api test` — no DB required.
-- **E2E**: `pnpm test:e2e` or `pnpm --filter @gitiempo/api test:e2e` — requires a reachable Postgres, applied migrations, and deterministic seed data.
+- **E2E**: `pnpm test:e2e` starts the isolated Docker runner. A direct `pnpm --filter @gitiempo/api test:e2e` requires an isolated reachable Postgres with applied migrations and deterministic seed data.
 
 Automated e2e runs must use an isolated ephemeral PostgreSQL database provisioned by the test runner or GitHub Actions. They must not use a developer local database, staging database, production database, or shared persistent CI database. See `../../docs/testing.md`.
 
-The current direct e2e script uses Node's native `--env-file=.env` flag and is a local fallback until the isolated Docker test runner is added.
+The root command is the default because it provisions and tears down `gitiempo_e2e`. Direct E2E use must set `DATABASE_URL` to an isolated `gitiempo_e2e` database (or allowed suffix) and run `pnpm --filter @gitiempo/api e2e:prepare` first. That command verifies the configured and live database identity before migrations or seed data can mutate it; `test:e2e` verifies it again before specs run.
 
 ## API contract for the frontend
 

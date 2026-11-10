@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-27T08:05:13.542Z",
+  "database": "gitiempo_476_social_test",
+  "readOnly": true,
+  "userReported": "Admin dashboard opened after Google sign-in with the same separate test account",
+  "users": [
+    {
+      "id": "e3a7fb68-fc56-4d64-9819-42f87eb96e0a",
+      "firebase_uid": "lQL2U42bKferstDmUKvhAtSQc0s1"
+    }
+  ],
+  "memberships": [
+    {
+      "member_id": "1754f8b1-c7c6-44c9-9599-3ddc30090abc",
+      "workspace_id": "73da954f-a587-40d6-b43b-4dd53f2521c3",
+      "name": "Workspace",
+      "role": "admin",
+      "joined_at": "2026-10-27T08:03:07.689Z"
+    }
+  ],
+  "sessions": [
+    {
+      "user_id": "e3a7fb68-fc56-4d64-9819-42f87eb96e0a",
+      "workspace_id": "73da954f-a587-40d6-b43b-4dd53f2521c3",
+      "created_at": "2026-10-27T08:04:50.979Z",
+      "revoked_at": null
+    },
+    {
+      "user_id": "e3a7fb68-fc56-4d64-9819-42f87eb96e0a",
+      "workspace_id": "73da954f-a587-40d6-b43b-4dd53f2521c3",
+      "created_at": "2026-10-27T08:03:07.689Z",
+      "revoked_at": null
+    }
+  ],
+  "counts": {
+    "users": "87",
+    "workspaces": "56",
+    "members": "87"
+  }
+}

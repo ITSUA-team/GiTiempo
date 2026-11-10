@@ -69,7 +69,7 @@ When a frontend change touches shared frontend packages or shared auth/session/r
 - `packages/web-shared` or `packages/web-config` changes require `user-web` and `admin-web` lint/typecheck.
 - Shared auth/session/runtime changes also require `pnpm --filter user-web test` and `pnpm --filter admin-web test` so both SPA integrations stay protected.
 
-API e2e must run through the isolated database runner. Direct `pnpm --filter @gitiempo/api test:e2e` is a local fallback only and requires a manually prepared database.
+API e2e must run through the isolated database runner. `pnpm test:e2e` runs that Docker runner by default. The direct API command verifies both its configured and actual PostgreSQL database names before running specs; it only accepts an isolated `gitiempo_e2e` database (or a suffixed variant). Prepare one with `pnpm --filter @gitiempo/api e2e:prepare`.
 
 ## GitHub Actions Runs
 

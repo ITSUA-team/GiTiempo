@@ -5,6 +5,18 @@ export interface DecodedFirebaseToken {
   name?: string;
   picture?: string;
   email_verified?: boolean;
+  /** Firebase's trusted `firebase.sign_in_provider` token claim. */
+  signInProvider?: string;
+  /** Google subjects from Firebase's signed `firebase.identities` claim. */
+  googleSubjects?: string[];
+}
+
+/** Authoritative Firebase account data used to prove ownership of an identity. */
+export interface FirebaseUserIdentity {
+  uid: string;
+  email?: string;
+  emailVerified: boolean;
+  disabled: boolean;
 }
 
 export interface InvitedFirebaseUser {
@@ -32,11 +44,22 @@ export class FirebaseAdminAuthError extends Error {
 /** Shared contract for the real and test Firebase adapters. */
 export interface FirebaseAdminService {
   verifyIdToken(idToken: string): Promise<DecodedFirebaseToken>;
+  getUserByUid(uid: string): Promise<FirebaseUserIdentity | null>;
+  assertActiveUserByUid(
+    uid: string,
+    email: string,
+    googleSubject?: string,
+  ): Promise<void>;
   createEmailPasswordUser(input: {
+    uid?: string;
     email: string;
     password: string;
     displayName: string;
   }): Promise<RegisteredFirebaseUser>;
+  createUnclaimedUser(input: {
+    uid: string;
+    email: string;
+  }): Promise<InvitedFirebaseUser>;
   deleteUser(uid: string): Promise<void>;
   getOrCreateInvitedUserByEmail(email: string): Promise<InvitedFirebaseUser>;
   generatePasswordSetupLink(

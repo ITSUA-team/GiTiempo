@@ -22,7 +22,7 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
-const { successToast, errorToast } = useToasts();
+const { errorToast } = useToasts();
 
 const formKey = ref(0);
 const submitting = ref(false);
@@ -52,7 +52,7 @@ async function handleSubmit({
 
   try {
     await adminMembersClient.createInvite(values as WorkspaceInviteFormInput);
-    successToast(`Invitation sent to ${values.email as string}.`);
+
     reset();
     visible.value = false;
     emit('created');
@@ -85,7 +85,7 @@ function handleVisibleChange(nextVisible: boolean): void {
     header="Invite Member"
     :closable="!submitting"
     :dismissable-mask="!submitting"
-    :style="{ width: '480px' }"
+    :pt="{ root: 'w-[min(480px,calc(100vw-2rem))]' }"
     :visible="visible"
     @update:visible="handleVisibleChange"
   >

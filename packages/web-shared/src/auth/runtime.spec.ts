@@ -8,23 +8,34 @@ import {
 } from "./runtime";
 
 const firebaseMocks = vi.hoisted(() => ({
+  credentialFromResult: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),
   signInWithPopup: vi.fn(),
   signOut: vi.fn(),
+  sendPasswordResetEmail: vi.fn(),
+  verifyPasswordResetCode: vi.fn(),
+  confirmPasswordReset: vi.fn(),
 }));
 
 vi.mock("firebase/auth", () => ({
-  GoogleAuthProvider: class GoogleAuthProvider {
+  GoogleAuthProvider: Object.assign(class GoogleAuthProvider {
     scopes: string[] = [];
 
     addScope(scope: string): void {
       this.scopes.push(scope);
     }
-  },
+  }, { credentialFromResult: firebaseMocks.credentialFromResult }),
   signInWithEmailAndPassword: firebaseMocks.signInWithEmailAndPassword,
   signInWithPopup: firebaseMocks.signInWithPopup,
   signOut: firebaseMocks.signOut,
+  sendPasswordResetEmail: firebaseMocks.sendPasswordResetEmail,
+  verifyPasswordResetCode: firebaseMocks.verifyPasswordResetCode,
+  confirmPasswordReset: firebaseMocks.confirmPasswordReset,
 }));
+
+function createFirebaseError(code: string, message = code): Error & { code: string } {
+  return Object.assign(new Error(message), { code });
+}
 
 function createRuntime(overrides?: {
   hasFirebaseConfig?: boolean;
@@ -61,6 +72,7 @@ function createRuntime(overrides?: {
     currentUserClient: {
       getCurrentUser: async () => ({
         avatarUrl: null,
+        canViewInvoices: false,
         createdAt: "2026-01-01T00:00:00.000Z",
         displayName: "Alexey Tsukanov",
         email: "alexey@example.com",
@@ -80,6 +92,7 @@ function createRuntime(overrides?: {
       }),
       updateCurrentUser: async () => ({
         avatarUrl: null,
+        canViewInvoices: false,
         createdAt: "2026-01-01T00:00:00.000Z",
         displayName: "Alexey Tsukanov",
         email: "alexey@example.com",
@@ -114,13 +127,19 @@ describe("createDefaultAuthRuntime", () => {
     );
   });
 
-  it("signs in with Google and returns the Firebase ID token", async () => {
+  it("signs in with Google and returns Firebase and provider ID tokens", async () => {
     firebaseMocks.signInWithPopup.mockResolvedValueOnce({
       user: { getIdToken: async () => "google-id-token" },
     });
+    firebaseMocks.credentialFromResult.mockReturnValueOnce({
+      idToken: "google-provider-id-token",
+    });
     const runtime = createRuntime();
 
-    await expect(runtime.signInWithGoogle()).resolves.toBe("google-id-token");
+    await expect(runtime.signInWithGoogle()).resolves.toEqual({
+      firebaseIdToken: "google-id-token",
+      googleIdToken: "google-provider-id-token",
+    });
     expect(firebaseMocks.signInWithPopup).toHaveBeenCalledOnce();
   });
 
@@ -181,6 +200,81 @@ describe("createDefaultAuthRuntime", () => {
       accessTokenExpiresIn: 900,
       refreshToken: "switched-refresh-token",
     });
+  });
+
+  it("sends the password reset email with a login continue URL", async () => {
+    firebaseMocks.sendPasswordResetEmail.mockResolvedValueOnce(undefined);
+    const runtime = createRuntime();
+
+    await runtime.requestPasswordReset("alexey@example.com");
+
+    expect(firebaseMocks.sendPasswordResetEmail).toHaveBeenCalledOnce();
+    expect(firebaseMocks.sendPasswordResetEmail).toHaveBeenCalledWith(
+      {},
+      "alexey@example.com",
+      {
+        url: `${window.location.origin}/login`,
+      },
+    );
+  });
+
+  it("surfaces password reset email failures from Firebase", async () => {
+    firebaseMocks.sendPasswordResetEmail.mockRejectedValueOnce(
+      createFirebaseError("auth/user-not-found"),
+    );
+    const runtime = createRuntime();
+
+    await expect(runtime.requestPasswordReset("alexey@example.com")).rejects.toMatchObject({
+      code: "auth/user-not-found",
+    });
+  });
+
+  it("verifies the password reset action code and resolves the account email", async () => {
+    firebaseMocks.verifyPasswordResetCode.mockResolvedValueOnce("alexey@example.com");
+    const runtime = createRuntime();
+
+    await expect(runtime.verifyPasswordResetCode("valid-code")).resolves.toBe(
+      "alexey@example.com",
+    );
+    expect(firebaseMocks.verifyPasswordResetCode).toHaveBeenCalledWith(
+      {},
+      "valid-code",
+    );
+  });
+
+  it("surfaces action-code verification failures from Firebase", async () => {
+    firebaseMocks.verifyPasswordResetCode.mockRejectedValueOnce(
+      createFirebaseError("auth/invalid-action-code"),
+    );
+    const runtime = createRuntime();
+
+    await expect(runtime.verifyPasswordResetCode("expired-code")).rejects.toMatchObject({
+      code: "auth/invalid-action-code",
+    });
+  });
+
+  it("confirms the password reset with the action code and the new password", async () => {
+    firebaseMocks.confirmPasswordReset.mockResolvedValueOnce(undefined);
+    const runtime = createRuntime();
+
+    await runtime.confirmPasswordReset("valid-code", "new-password");
+
+    expect(firebaseMocks.confirmPasswordReset).toHaveBeenCalledWith(
+      {},
+      "valid-code",
+      "new-password",
+    );
+  });
+
+  it("surfaces password reset confirmation failures from Firebase", async () => {
+    firebaseMocks.confirmPasswordReset.mockRejectedValueOnce(
+      createFirebaseError("auth/weak-password"),
+    );
+    const runtime = createRuntime();
+
+    await expect(
+      runtime.confirmPasswordReset("valid-code", "new-password"),
+    ).rejects.toMatchObject({ code: "auth/weak-password" });
   });
 
   it("signs out of the identity provider when Firebase is configured", async () => {

@@ -85,10 +85,6 @@ export function useTimeEntryDirectTimerActions({
 
     try {
       await startTimerMutation.mutateAsync({ taskId: entry.taskId });
-      appToast.showSuccessToast(
-        "Timer started",
-        `Tracking ${entry.task.title}.`,
-      );
     } catch (error) {
       appToast.showErrorToast({
         detail: getErrorMessage(error),
@@ -126,10 +122,6 @@ export function useTimeEntryDirectTimerActions({
       }
 
       await stopTimerMutation.mutateAsync({ expectedTimerId: entry.id });
-      appToast.showSuccessToast(
-        "Timer stopped",
-        `Stopped tracking ${entry.task.title}.`,
-      );
     } catch (error) {
       appToast.showErrorToast({
         detail: getErrorMessage(error),

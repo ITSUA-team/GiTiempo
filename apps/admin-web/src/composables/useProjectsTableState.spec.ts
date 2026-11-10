@@ -11,6 +11,7 @@ function createMembers(): WorkspaceMemberListResponse {
   return [
     {
       avatarUrl: null,
+      canViewInvoices: false,
       displayName: 'Alex Admin',
       email: 'alex@example.com',
       id: 'member-1',
@@ -23,6 +24,7 @@ function createMembers(): WorkspaceMemberListResponse {
     },
     {
       avatarUrl: null,
+      canViewInvoices: true,
       displayName: 'Pat PM',
       email: 'pat@example.com',
       id: 'member-2',
@@ -35,6 +37,7 @@ function createMembers(): WorkspaceMemberListResponse {
     },
     {
       avatarUrl: null,
+      canViewInvoices: false,
       displayName: 'Nina Keller',
       email: 'nina@example.com',
       id: 'member-3',
@@ -53,6 +56,7 @@ function createProjects(): ProjectListResponse {
     accessScope: 'project' as const,
     capabilities: { canManageTasks: true },
     referenceProvenance: null,
+    timeRoundingStepMinutes: null,
     trackingMode: 'managed' as const,
   };
 

@@ -111,6 +111,7 @@ describe("useProjectTaskDirectTimerActions", () => {
     expect(
       (queryMocks.currentTimerQuery as { refetch: ReturnType<typeof vi.fn> }).refetch,
     ).not.toHaveBeenCalled();
+    expect(mounted.toastAdd).not.toHaveBeenCalled();
   });
 
   it("prevents a second start while a timer is already running", async () => {

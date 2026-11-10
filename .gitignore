@@ -3,6 +3,7 @@ node_modules/
 coverage/
 pnpm-debug.log*
 
+firebase-debug.log
 .pnpm-store
 .DS_Store
 .env
@@ -16,7 +17,9 @@ packages/shared/dist/
 packages/shared/*.tsbuildinfo
 packages/*/dist/
 packages/*/*.tsbuildinfo
+firebase-debug.log
 .claude
 .codegraph
 .omc
 .reviews
+.codebase-memory

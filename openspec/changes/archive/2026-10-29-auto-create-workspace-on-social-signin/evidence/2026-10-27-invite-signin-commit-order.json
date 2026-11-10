@@ -1,0 +1,171 @@
+{
+  "date": "2026-10-27",
+  "database": "gitiempo_476_social_test",
+  "testEmail": "tsukanovmfs@gmail.com",
+  "testedCode": "51a0ac57 plus recorded working-tree fixes",
+  "client": "user-web; normal Google invite acceptance and incognito linked GitHub sign-in; user-operated",
+  "precondition": {
+    "userId": "9d25c96b-582f-4fa4-a584-dacdd27e522f",
+    "canonicalFirebaseUid": "HT9I1Ue0zNRexKrtmrQ0xIvBEIB2",
+    "originalMembershipId": "931a11da-b60e-4b0f-aca2-8aac10ad8a9e",
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 88
+    },
+    "exactOriginalMembershipTemporarilyRemoved": true
+  },
+  "synchronization": {
+    "status": "success",
+    "barrierPid": 82524,
+    "waiters": [
+      {
+        "pid": 83164,
+        "waitEventType": "Lock",
+        "waitEvent": "advisory",
+        "blockingPids": [
+          82524
+        ]
+      },
+      {
+        "pid": 83165,
+        "waitEventType": "Lock",
+        "waitEvent": "advisory",
+        "blockingPids": [
+          82524
+        ]
+      }
+    ],
+    "timestamp": "2026-10-27T11:07:44.986Z",
+    "readyAt": "2026-10-27T11:06:33.240Z",
+    "perWaiterProviderAttributionCaptured": false
+  },
+  "commitOrderWitness": {
+    "listenerCommittedBeforeTriggerAndRace": true,
+    "triggerFilteredToExactTestUser": true,
+    "notificationChannel": "g476cw_6fce91eb8307405b",
+    "eventsInReceivedOrder": [
+      {
+        "kind": "personal",
+        "transactionId": "29836",
+        "membershipId": "cc8fe7e3-0196-458c-83d6-eda83734d68c",
+        "workspaceId": "724fdbab-ce2f-41c6-834e-02a997051bb0"
+      },
+      {
+        "kind": "team",
+        "transactionId": "29837",
+        "membershipId": "f66c17e6-f3a5-4af9-b696-5f01aa384781",
+        "workspaceId": "5730b2dc-9d71-46f1-b2f3-5daee3aee7fa"
+      }
+    ],
+    "complete": true,
+    "interpretation": "Personal social foundation committed before explicit team invitation acceptance. Both events belong to distinct transactions.",
+    "basis": "PostgreSQL NOTIFY delivers different-transaction notifications in transaction commit order; IDs and row timestamps are not used to infer order.",
+    "documentation": "https://www.postgresql.org/docs/current/sql-notify.html",
+    "listenerDocumentation": "https://www.postgresql.org/docs/current/sql-listen.html"
+  },
+  "userReported": {
+    "bothApplicationsOpened": true,
+    "teamMembershipVisible": true
+  },
+  "after": {
+    "checkedAt": "2026-10-27T11:08:15.914Z",
+    "accountId": "9d25c96b-582f-4fa4-a584-dacdd27e522f",
+    "canonicalFirebaseUid": "HT9I1Ue0zNRexKrtmrQ0xIvBEIB2",
+    "counts": {
+      "users": 88,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "invitation": {
+      "id": "3553c8e2-eb75-4534-b275-2fb3bd76aed0",
+      "status": "accepted"
+    },
+    "memberships": [
+      {
+        "id": "f66c17e6-f3a5-4af9-b696-5f01aa384781",
+        "workspace_id": "5730b2dc-9d71-46f1-b2f3-5daee3aee7fa",
+        "role": "member",
+        "joined_at": "2026-10-27T11:07:44.745Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-26T14:43:27.753Z"
+      },
+      {
+        "id": "cc8fe7e3-0196-458c-83d6-eda83734d68c",
+        "workspace_id": "724fdbab-ce2f-41c6-834e-02a997051bb0",
+        "role": "admin",
+        "joined_at": "2026-10-27T11:07:44.866Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-27T11:07:44.866Z"
+      }
+    ],
+    "settings": [
+      {
+        "workspace_id": "5730b2dc-9d71-46f1-b2f3-5daee3aee7fa",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-26T14:43:27.753Z",
+        "updated_at": "2026-10-26T14:43:27.753Z"
+      },
+      {
+        "workspace_id": "724fdbab-ce2f-41c6-834e-02a997051bb0",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-27T11:07:44.866Z",
+        "updated_at": "2026-10-27T11:07:44.866Z"
+      }
+    ],
+    "sessions": [
+      {
+        "id": "b65c1a39-5f91-43e4-9b8d-9daac562e54c",
+        "workspace_member_id": "cc8fe7e3-0196-458c-83d6-eda83734d68c",
+        "workspace_id": "724fdbab-ce2f-41c6-834e-02a997051bb0",
+        "created_at": "2026-10-27T11:07:44.866Z",
+        "revoked_at": null
+      },
+      {
+        "id": "6d4abeba-56f9-4fc2-9bca-472150ecf0a7",
+        "workspace_member_id": "f66c17e6-f3a5-4af9-b696-5f01aa384781",
+        "workspace_id": "5730b2dc-9d71-46f1-b2f3-5daee3aee7fa",
+        "created_at": "2026-10-27T11:07:45.590Z",
+        "revoked_at": null
+      }
+    ],
+    "allSessionsTargetOwnedMemberships": true
+  },
+  "cleanup": {
+    "checkedAt": "2026-10-27T11:08:54.212Z",
+    "removedFixtureInviteId": "3553c8e2-eb75-4534-b275-2fb3bd76aed0",
+    "removedFixtureTeamMembershipId": "f66c17e6-f3a5-4af9-b696-5f01aa384781",
+    "removedEmptyPersonalWorkspaceId": "724fdbab-ce2f-41c6-834e-02a997051bb0",
+    "restoredMemberships": [
+      {
+        "id": "931a11da-b60e-4b0f-aca2-8aac10ad8a9e",
+        "workspace_id": "b9d4ffdc-7103-4c9d-83be-ad39eed5f425",
+        "role": "admin",
+        "joined_at": "2026-10-27T10:00:47.551Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-27T10:00:47.551Z"
+      }
+    ],
+    "settingsAndBindingOwnershipPreserved": true,
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 88
+    },
+    "refreshSessionCount": 0,
+    "invitationAbsent": true,
+    "witnessTriggerAndFunctionAbsent": true,
+    "witnessCleanedAt": "2026-10-27T11:08:51.474Z",
+    "bridgeStopped": true,
+    "firebaseIdentityDeleted": false,
+    "applicationCodeChanged": false
+  },
+  "limitations": [
+    "Provider attribution comes from user actions and typed membership events; individual advisory-lock waiters were not separately provider-attributed.",
+    "Observed commit order is this controlled test run, not a timing guarantee for all sign-ins."
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "checkedAt": "2026-10-27T13:42:00.892Z",
+  "projectId": "gitiempo",
+  "database": "gitiempo_476_social_test",
+  "email": "oleksii.tsukanov@itsua.com",
+  "firebase": {
+    "foundByExactEmail": true,
+    "uid": "gwqmsJcWWdhswKAQUWm7oh50mde2",
+    "email": "oleksii.tsukanov@itsua.com",
+    "emailVerified": true,
+    "disabled": false,
+    "providers": [
+      {
+        "providerId": "google.com",
+        "subject": "101987431281304742185",
+        "email": "oleksii.tsukanov@itsua.com"
+      },
+      {
+        "providerId": "password",
+        "subject": "oleksii.tsukanov@itsua.com",
+        "email": "oleksii.tsukanov@itsua.com"
+      }
+    ],
+    "createdAt": "Tue, 26 May 2026 13:10:05 GMT",
+    "lastSignInAt": "Tue, 27 Oct 2026 07:41:13 GMT"
+  },
+  "local": {
+    "users": [
+      {
+        "id": "24f796be-fa47-4227-92e9-9f7ceb3929a6",
+        "firebase_uid": "gwqmsJcWWdhswKAQUWm7oh50mde2",
+        "email": "oleksii.tsukanov@itsua.com",
+        "display_name": "Oleksii Tsukanov",
+        "created_at": "2026-10-26T14:39:32.844Z"
+      }
+    ],
+    "bindings": [
+      {
+        "id": "c7eb2eee-9af4-4623-9f1b-2ed804ec36ac",
+        "user_id": "24f796be-fa47-4227-92e9-9f7ceb3929a6",
+        "firebase_uid": "gwqmsJcWWdhswKAQUWm7oh50mde2",
+        "provider_id": "google",
+        "verified_email": "oleksii.tsukanov@itsua.com",
+        "created_at": "2026-10-26T14:39:32.844Z"
+      }
+    ],
+    "reservations": [],
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    }
+  },
+  "reason": "Existing Firebase Google/password identity and existing local test account/Google binding; read-only lookup only.",
+  "freshInExistingSocialTestDatabase": false,
+  "scopeClarification": "Existing in gitiempo_476_social_test. Existing Firebase identity does not itself prevent fresh local provisioning in a new isolated application database."
+}

@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   pgTable,
   timestamp,
@@ -24,6 +25,7 @@ export const workspaceMembers = pgTable(
       .$type<WorkspaceRole>()
       .default('member')
       .notNull(),
+    canViewInvoices: boolean('can_view_invoices').default(false).notNull(),
     joinedAt: timestamp('joined_at', { withTimezone: true })
       .defaultNow()
       .notNull(),

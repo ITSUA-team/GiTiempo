@@ -13,6 +13,7 @@ export const workspaceMemberResponseSchema = z.object({
   joinedAt: z.iso.datetime(),
   lastActiveAt: z.iso.datetime().nullable(),
   projectsAssignedCount: z.number().int().min(0),
+  canViewInvoices: z.boolean(),
 });
 
 export const workspaceMemberListResponseSchema = z.array(
@@ -22,6 +23,12 @@ export const workspaceMemberListResponseSchema = z.array(
 export const updateWorkspaceMemberRoleSchema = z
   .object({
     role: workspaceRoleSchema,
+  })
+  .strict();
+
+export const updateWorkspaceMemberPermissionsSchema = z
+  .object({
+    canViewInvoices: z.boolean(),
   })
   .strict();
 
@@ -40,4 +47,7 @@ export type WorkspaceMemberListResponse = z.infer<
 >;
 export type UpdateWorkspaceMemberRoleInput = z.infer<
   typeof updateWorkspaceMemberRoleSchema
+>;
+export type UpdateWorkspaceMemberPermissionsInput = z.infer<
+  typeof updateWorkspaceMemberPermissionsSchema
 >;

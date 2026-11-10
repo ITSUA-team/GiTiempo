@@ -13,6 +13,7 @@ import type { AuthRuntime } from "./runtime";
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
+    canViewInvoices: false,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Alexey Tsukanov",
     email: "alexey@example.com",
@@ -62,6 +63,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "alexey@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -239,6 +243,7 @@ describe("createAuthSessionCore", () => {
     session.accessToken.value = "stale-access-token";
     session.profile.value = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Stale User",
       email: "stale@example.com",
@@ -268,6 +273,133 @@ describe("createAuthSessionCore", () => {
     expect(session.isAuthenticated.value).toBe(true);
     expect(session.profile.value?.email).toBe("alexey@example.com");
     expect(session.isSubmitting.value).toBe(false);
+  });
+
+  it("forwards password recovery calls to the auth runtime", async () => {
+    const requestPasswordReset = vi.fn(async () => undefined);
+    const verifyPasswordResetCode = vi.fn(async () => "alexey@example.com");
+    const confirmPasswordReset = vi.fn(async () => undefined);
+    const runtime = createRuntimeMock({
+      requestPasswordReset,
+      verifyPasswordResetCode,
+      confirmPasswordReset,
+    });
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+
+    const verifiedEmail = await session.verifyPasswordResetCode("valid-code");
+    await session.confirmPasswordReset("valid-code", "new-password");
+    await session.requestPasswordReset("alexey@example.com");
+
+    expect(verifiedEmail).toBe("alexey@example.com");
+    expect(verifyPasswordResetCode).toHaveBeenCalledWith("valid-code");
+    expect(confirmPasswordReset).toHaveBeenCalledWith(
+      "valid-code",
+      "new-password",
+    );
+    expect(requestPasswordReset).toHaveBeenCalledWith("alexey@example.com");
+  });
+
+  it("propagates password recovery failures without touching the session", async () => {
+    const pendingRequest = deferred<void>();
+    const runtime = createRuntimeMock({
+      requestPasswordReset: () => pendingRequest.promise,
+      verifyPasswordResetCode: async () => {
+        throw new Error("verify failed");
+      },
+      confirmPasswordReset: async () => {
+        throw new Error("confirm failed");
+      },
+    });
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+
+    const request = session.requestPasswordReset("alexey@example.com");
+    // Recovery calls bypass runSubmittingLogin, so the flag must stay down
+    // even while the request is still pending.
+    expect(session.isSubmitting.value).toBe(false);
+
+    pendingRequest.reject(new Error("send failed"));
+    await expect(request).rejects.toThrow("send failed");
+    await expect(session.verifyPasswordResetCode("valid-code")).rejects.toThrow(
+      "verify failed",
+    );
+    await expect(
+      session.confirmPasswordReset("valid-code", "new-password"),
+    ).rejects.toThrow("confirm failed");
+    expect(session.isAuthenticated.value).toBe(false);
+    expect(session.isSubmitting.value).toBe(false);
+  });
+
+  it("boots a provisioned admin session from a Google token exchange", async () => {
+    const provisionedAdmin = {
+      avatarUrl: null,
+      canViewInvoices: false,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "Workspace Admin",
+      email: "admin@example.com",
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      role: "admin" as const,
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const runtime = createRuntimeMock({
+      getCurrentUser: async () => provisionedAdmin,
+      loginWithFirebaseToken: async () => ({
+        accessToken: "provisioned-google-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "provisioned-google-refresh-token",
+      }),
+    });
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+
+    await session.loginWithGoogle();
+
+    expect(session.isAuthenticated.value).toBe(true);
+    expect(session.profile.value).toEqual(provisionedAdmin);
+    expect(getRefreshToken()).toBe("provisioned-google-refresh-token");
+  });
+
+  it("forwards a Google provider ID token only from the Google sign-in result", async () => {
+    const loginWithFirebaseToken = vi.fn(async () => newPair);
+    const runtime = createRuntimeMock({
+      loginWithFirebaseToken,
+      signInWithGoogle: async () => ({
+        firebaseIdToken: "firebase-google-token",
+        googleIdToken: "google-provider-id-token",
+      }),
+    });
+    const session = createAuthSessionCore({ getAuthRuntime: () => runtime });
+
+    await session.loginWithGoogle();
+
+    expect(loginWithFirebaseToken).toHaveBeenCalledWith(
+      "firebase-google-token",
+      "google-provider-id-token",
+    );
+  });
+
+  it.each([
+    ["Google", (session: ReturnType<typeof createAuthSessionCore>) => session.loginWithGoogle()],
+    ["GitHub", (session: ReturnType<typeof createAuthSessionCore>) => session.loginWithGithubSession("handoff-code")],
+  ])("clears guest state when the %s exchange fails", async (_provider, login) => {
+    setRefreshToken("stale-refresh-token");
+    const session = createAuthSessionCore({
+      getAuthRuntime: () =>
+        createRuntimeMock({
+          loginWithFirebaseToken: async () => {
+            throw new Error("exchange failed");
+          },
+          exchangeGithubSession: async () => {
+            throw new Error("exchange failed");
+          },
+        }),
+    });
+    session.accessToken.value = "stale-access-token";
+
+    await expect(login(session)).rejects.toThrow("exchange failed");
+
+    expect(session.accessToken.value).toBeNull();
+    expect(session.profile.value).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(session.bootstrapComplete.value).toBe(true);
   });
 
   it("runs session-context cleanup when a new app session starts", async () => {
@@ -444,6 +576,7 @@ describe("createAuthSessionCore", () => {
     session.accessToken.value = "current-access-token";
     session.profile.value = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Current User",
       email: "current@example.com",
@@ -478,6 +611,7 @@ describe("createAuthSessionCore", () => {
     session.accessToken.value = "current-access-token";
     session.profile.value = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Current User",
       email: "current@example.com",

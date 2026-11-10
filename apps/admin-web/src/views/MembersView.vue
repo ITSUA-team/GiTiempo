@@ -16,6 +16,7 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useMemberAssignmentActions } from '@/composables/members/useMemberAssignmentActions';
+import { useMemberPermissionActions } from '@/composables/members/useMemberPermissionActions';
 import { useMemberRemovalAction } from '@/composables/members/useMemberRemovalAction';
 import { usePendingInviteActions } from '@/composables/members/usePendingInviteActions';
 import { usePendingInvitesData } from '@/composables/members/usePendingInvitesData';
@@ -100,15 +101,19 @@ const { handleAssignmentsSubmitted, savingMemberAssignmentId } =
     accessToken,
     collapseMemberRow,
     onError: notifyMembersError,
-    onSuccess: successToast,
     projects,
     refreshMembers,
   });
 
+const { handleUpdateInvoicePermission } = useMemberPermissionActions({
+  accessToken,
+  onError: notifyMembersError,
+  refreshMembers,
+});
+
 const { handleRemoveMember } = useMemberRemovalAction({
   accessToken,
   onError: notifyMembersError,
-  onSuccess: successToast,
   refreshMembers,
   requireConfirmation,
 });
@@ -207,6 +212,7 @@ onMounted(fetchAll);
                 :saving="savingMemberAssignmentId === row.id"
                 @remove="handleRemoveMember(row.member)"
                 @save="handleAssignmentsSubmitted(row, $event)"
+                @update:can-view-invoices="handleUpdateInvoicePermission(row, $event)"
                 @cancelled="collapseMemberRow(row.member)"
               />
             </div>

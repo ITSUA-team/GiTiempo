@@ -1,0 +1,23 @@
+{
+  "changedAt": "2026-10-27T07:59:10.998Z",
+  "authorization": "User explicitly approved enabling new Firebase accounts in the current project",
+  "field": "client.permissions.disabledUserSignup",
+  "updateMask": "client.permissions.disabledUserSignup",
+  "before": true,
+  "requestedAfter": false,
+  "patchSucceeded": true,
+  "verifiedAt": "2026-10-27T08:01:45.805Z",
+  "readAfterWrite": {
+    "permissions": {},
+    "disabledUserSignupPresent": false,
+    "effectiveDisabledUserSignup": false
+  },
+  "interpretation": "ProtoJSON omits default false boolean values. The Config schema disables signup only when this field is true.",
+  "wholeConfigComparison": "Inconclusive raw-object comparison; default omission changes JSON representation. No full pre-change snapshot retained; whole-config equality is not claimed.",
+  "scope": "Only the approved signup-permission leaf was submitted with the matching update mask. All clients of this Firebase project can now create new Firebase accounts; GiTiempo authorization remains API-controlled.",
+  "sources": [
+    "https://cloud.google.com/identity-platform/docs/reference/rest/v2/Config",
+    "https://cloud.google.com/identity-platform/docs/reference/rest/v2/projects/updateConfig",
+    "https://protobuf.dev/programming-guides/json/#presence-and-default-values"
+  ]
+}

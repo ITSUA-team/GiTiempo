@@ -25,6 +25,7 @@ vi.mock('@/services/admin-projects-client', () => ({
 
 const member: WorkspaceMemberResponse = {
   avatarUrl: null,
+  canViewInvoices: false,
   displayName: 'Pat PM',
   email: 'pat@example.com',
   id: 'member-1',
@@ -40,6 +41,7 @@ const projectContractFields = {
   accessScope: 'project' as const,
   capabilities: { canManageTasks: true },
   referenceProvenance: null,
+  timeRoundingStepMinutes: null,
   trackingMode: 'managed' as const,
 };
 
@@ -143,6 +145,17 @@ const stubs = {
         {{ optionLabel ? optionLabel(suggestion) : suggestion }}
       </span>
     </div>`,
+  },
+  Checkbox: {
+    name: 'Checkbox',
+    props: {
+      binary: Boolean,
+      inputId: String,
+      modelValue: Boolean,
+    },
+    emits: ['update:modelValue'],
+    template:
+      '<input type="checkbox" data-testid="member-edit-invoice-permission-checkbox" :id="inputId" :checked="modelValue" @change="$emit(\'update:modelValue\', !modelValue)" />',
   },
 };
 
@@ -286,5 +299,95 @@ describe('member inline forms', () => {
     await wrapper.get('form').trigger('submit');
 
     expect(wrapper.emitted('save')).toBeUndefined();
+  });
+
+  it('shows the invoice view permission toggle for PM members with the loaded state', () => {
+    const wrapper = mount(MemberEditForm, {
+      props: {
+        canAssignPm: true,
+        member: { ...member, canViewInvoices: true },
+        projects,
+      },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    const permissionBlock = wrapper.get(
+      '[data-testid="member-edit-invoice-permission"]',
+    );
+
+    expect(permissionBlock.text()).toContain('Allow viewing invoices');
+    expect(permissionBlock.text()).toContain(
+      'When enabled, this PM can view and manage invoices for their assigned projects.',
+    );
+    expect(
+      wrapper
+        .get('[data-testid="member-edit-invoice-permission-checkbox"]')
+        .attributes('checked'),
+    ).toBeDefined();
+  });
+
+  it('emits update:canViewInvoices immediately when the invoice toggle changes', async () => {
+    const wrapper = mount(MemberEditForm, {
+      props: { canAssignPm: true, member, projects },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    await wrapper
+      .get('[data-testid="member-edit-invoice-permission-checkbox"]')
+      .setValue();
+
+    expect(wrapper.emitted('update:canViewInvoices')).toEqual([[true]]);
+  });
+
+  it('emits false when the invoice permission checkbox is unchecked', async () => {
+    const pmMember = { ...member, canViewInvoices: true };
+    const wrapper = mount(MemberEditForm, {
+      props: { canAssignPm: true, canRemove: true, member: pmMember, projects },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    const checkbox = wrapper.findComponent({ name: 'Checkbox' });
+    await checkbox.vm.$emit('update:modelValue', false);
+
+    expect(wrapper.emitted('update:canViewInvoices')).toEqual([[false]]);
+  });
+
+  it('hides the invoice view permission toggle for non-PM members', () => {
+    for (const role of ['admin', 'member'] as const) {
+      const wrapper = mount(MemberEditForm, {
+        props: {
+          canAssignPm: true,
+          member: { ...member, role },
+          projects,
+        },
+        global: { plugins: [createPinia()], stubs },
+      });
+
+      expect(
+        wrapper.find('[data-testid="member-edit-invoice-permission"]').exists(),
+      ).toBe(false);
+      expect(wrapper.text()).not.toContain('Allow viewing invoices');
+    }
+  });
+
+  it('resyncs the invoice toggle when the member prop changes with fresh server state', async () => {
+    const wrapper = mount(MemberEditForm, {
+      props: { canAssignPm: true, member, projects },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    expect(
+      wrapper
+        .get('[data-testid="member-edit-invoice-permission-checkbox"]')
+        .attributes('checked'),
+    ).toBeUndefined();
+
+    await wrapper.setProps({ member: { ...member, canViewInvoices: true } });
+
+    expect(
+      wrapper
+        .get('[data-testid="member-edit-invoice-permission-checkbox"]')
+        .attributes('checked'),
+    ).toBeDefined();
   });
 });

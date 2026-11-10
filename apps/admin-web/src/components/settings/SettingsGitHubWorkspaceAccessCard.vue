@@ -39,6 +39,8 @@ const props = defineProps<{
   installingOrganizationLogin: string | null;
   installations: readonly WorkspaceGitHubInstallation[];
   installationsLoaded: boolean;
+  installationsLoading: boolean;
+  installationsRequestError: string | null;
   checkingOrganizationLogins: readonly string[];
   items: readonly WorkspaceGitHubOrganizationResponse[];
   organizationLoginError: string | null;
@@ -53,6 +55,7 @@ const emit = defineEmits<{
   remove: [organizationId: string];
   retry: [];
   retryAdd: [];
+  retryInstallations: [];
   retryAvailableOrganizations: [];
 }>();
 
@@ -151,6 +154,18 @@ watch(
       </div>
 
       <div
+        v-if="installationsRequestError"
+        :aria-busy="installationsLoading"
+        data-testid="settings-github-installations-error"
+      >
+        <RequestErrorBlock
+          :message="installationsRequestError"
+          title="Failed to load GitHub App access"
+          @retry="emit('retryInstallations')"
+        />
+      </div>
+
+      <div
         v-if="requestError"
         data-testid="settings-github-organizations-error"
       >
@@ -169,7 +184,7 @@ watch(
         <div
           v-for="index in 2"
           :key="index"
-          class="border-divider bg-app-bg flex items-center justify-between gap-4 rounded-lg border p-4"
+          class="border-divider bg-app-bg flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
         >
           <div class="flex min-w-0 flex-1 flex-col gap-2">
             <Skeleton
@@ -209,7 +224,7 @@ watch(
           v-for="organization in items"
           :key="organization.id"
           :data-testid="`settings-github-organization-row-${organization.id}`"
-          class="border-divider bg-app-bg flex items-center justify-between gap-4 rounded-lg border p-4"
+          class="border-divider bg-app-bg flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
         >
           <div class="flex min-w-0 flex-1 flex-col gap-0.5">
             <span class="text-text-dark truncate text-sm font-semibold">
@@ -219,7 +234,10 @@ watch(
               Allowed for this workspace
             </span>
           </div>
-          <div class="flex flex-wrap justify-end gap-2">
+          <div
+            class="flex flex-wrap justify-start gap-2 sm:justify-end"
+            data-testid="settings-github-organization-actions"
+          >
             <Button
               v-if="isCheckingInstallation(organization.organizationLogin)"
               label="Checking App"

@@ -33,6 +33,7 @@ export const acceptWorkspaceInviteSchema = z
   .object({
     token: z.string().min(1),
     firebaseIdToken: z.string().min(1),
+    googleIdToken: z.string().min(1).max(16_384).optional(),
   })
   .strict();
 

@@ -37,6 +37,15 @@ export const envSchema = z
           .map((s) => s.trim())
           .filter(Boolean),
       ),
+    GOOGLE_OAUTH_CLIENT_IDS: z
+      .string()
+      .default('')
+      .transform((val) =>
+        val
+          .split(',')
+          .map((clientId) => clientId.trim())
+          .filter(Boolean),
+      ),
 
     // --- Logging ---
     LOG_LEVEL: z

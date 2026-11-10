@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { roundingStepMinutesSchema } from './common.js';
 
 const timeZoneNamePattern = /^(?:UTC|[A-Za-z_]+(?:\/[A-Za-z0-9_+.-]+)+)$/;
 
@@ -62,6 +63,7 @@ export const workspaceSettingsResponseSchema = z.object({
   currency: z.string().length(3),
   defaultHourlyRate: z.number().nonnegative().nullable(),
   timeZone: timeZoneSchema,
+  timeRoundingStepMinutes: roundingStepMinutesSchema,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
@@ -178,13 +180,15 @@ export const updateWorkspaceSettingsSchema = z
       .optional(),
     defaultHourlyRate: z.number().nonnegative().nullable().optional(),
     timeZone: timeZoneSchema.optional(),
+    timeRoundingStepMinutes: roundingStepMinutesSchema.optional(),
   })
   .strict()
   .refine(
     (data) =>
       data.currency !== undefined ||
       data.defaultHourlyRate !== undefined ||
-      data.timeZone !== undefined,
+      data.timeZone !== undefined ||
+      data.timeRoundingStepMinutes !== undefined,
     {
       message: 'At least one field must be provided',
       path: [],

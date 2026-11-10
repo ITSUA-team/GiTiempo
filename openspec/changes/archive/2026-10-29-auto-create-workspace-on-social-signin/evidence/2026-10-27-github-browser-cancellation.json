@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-27",
+  "database": "gitiempo_476_social_test",
+  "testEmail": "tsukanovmfs@gmail.com",
+  "testedCode": "51a0ac57 plus recorded working-tree fixes",
+  "client": "user-web; user-operated separate browser",
+  "userReported": {
+    "githubSignInCancelled": true,
+    "remainedUnauthenticated": true,
+    "action": "Closed provider tab/window before sign-in completed"
+  },
+  "beforeCheckedAt": "2026-10-27T10:52:41.166Z",
+  "afterCheckedAt": "2026-10-27T10:54:08.469Z",
+  "unchanged": {
+    "counts": true,
+    "users": true,
+    "memberships": true,
+    "settings": true,
+    "subjectBindings": true,
+    "githubLinks": true,
+    "githubGrantMetadata": true,
+    "sessions": true,
+    "reservations": true
+  },
+  "accountId": "9d25c96b-582f-4fa4-a584-dacdd27e522f",
+  "canonicalFirebaseUid": "HT9I1Ue0zNRexKrtmrQ0xIvBEIB2",
+  "memberships": [
+    {
+      "id": "931a11da-b60e-4b0f-aca2-8aac10ad8a9e",
+      "workspace_id": "b9d4ffdc-7103-4c9d-83be-ad39eed5f425",
+      "role": "admin",
+      "joined_at": "2026-10-27T10:00:47.551Z",
+      "name": "Workspace",
+      "workspace_created_at": "2026-10-27T10:00:47.551Z"
+    }
+  ],
+  "counts": {
+    "users": 88,
+    "workspaces": 57,
+    "memberships": 88
+  },
+  "refreshSessionCount": 0,
+  "recoveryRetry": {
+    "checkedAt": "2026-10-27T10:55:47.682Z",
+    "userReportedOriginalWorkspaceOpened": true,
+    "sameAccountAndCanonicalUid": true,
+    "sameMembershipsSettingsAndBindings": true,
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 88
+    },
+    "sessions": [
+      {
+        "id": "d417e6ab-b85f-409b-8406-417bc0ccfb2a",
+        "workspace_member_id": "931a11da-b60e-4b0f-aca2-8aac10ad8a9e",
+        "workspace_id": "b9d4ffdc-7103-4c9d-83be-ad39eed5f425",
+        "created_at": "2026-10-27T10:55:34.797Z",
+        "revoked_at": null
+      }
+    ],
+    "allSessionsTargetOriginalMembership": true,
+    "githubLinkId": "d633ace7-3bdb-41a3-b1f0-082c47c62b0e"
+  },
+  "limitations": [
+    "No callback URL, code, state, cookie or token captured."
+  ]
+}

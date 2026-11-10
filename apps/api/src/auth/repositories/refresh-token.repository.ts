@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, TransactionRollbackError } from 'drizzle-orm';
 import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
@@ -143,37 +143,40 @@ export class RefreshTokenRepository {
     oldId: string,
     input: CreateRefreshTokenInput,
   ): Promise<RotateIfActiveResult | null> {
-    return this.db.transaction(async (tx) => {
-      const [newRow] = await tx
-        .insert(refreshTokens)
-        .values({
-          userId: input.userId,
-          workspaceMemberId: input.workspaceMemberId,
-          workspaceId: input.workspaceId,
-          familyId: input.familyId,
-          tokenHash: input.tokenHash,
-          expiresAt: input.expiresAt,
-        })
-        .returning();
-      if (!newRow) {
-        tx.rollback();
-        return null;
-      }
+    return this.db
+      .transaction(async (tx) => {
+        const [newRow] = await tx
+          .insert(refreshTokens)
+          .values({
+            userId: input.userId,
+            workspaceMemberId: input.workspaceMemberId,
+            workspaceId: input.workspaceId,
+            familyId: input.familyId,
+            tokenHash: input.tokenHash,
+            expiresAt: input.expiresAt,
+          })
+          .returning();
+        if (!newRow) {
+          tx.rollback();
+        }
 
-      const [updated] = await tx
-        .update(refreshTokens)
-        .set({ revokedAt: new Date(), replacedBy: newRow.id })
-        .where(
-          and(eq(refreshTokens.id, oldId), isNull(refreshTokens.revokedAt)),
-        )
-        .returning();
+        const [updated] = await tx
+          .update(refreshTokens)
+          .set({ revokedAt: new Date(), replacedBy: newRow.id })
+          .where(
+            and(eq(refreshTokens.id, oldId), isNull(refreshTokens.revokedAt)),
+          )
+          .returning();
 
-      if (!updated) {
-        tx.rollback();
-        return null;
-      }
+        if (!updated) {
+          tx.rollback();
+        }
 
-      return { newRow };
-    });
+        return { newRow };
+      })
+      .catch((error: unknown) => {
+        if (error instanceof TransactionRollbackError) return null;
+        throw error;
+      });
   }
 }

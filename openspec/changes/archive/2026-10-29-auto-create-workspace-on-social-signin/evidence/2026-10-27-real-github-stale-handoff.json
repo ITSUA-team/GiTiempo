@@ -1,0 +1,836 @@
+{
+  "checkedAt": "2026-10-27T13:25:46.537Z",
+  "database": "gitiempo_476_social_test",
+  "target": {
+    "userId": "ff250241-8f11-452d-a720-96213ad815d2",
+    "email": "alexeuel@gmail.com"
+  },
+  "outcome": "passed",
+  "exchange": {
+    "status": 401,
+    "errorCode": null,
+    "responseCompletedAt": "2026-10-27T13:25:46.524Z"
+  },
+  "exchangeAt": "2026-10-27T13:25:46.452Z",
+  "expiresAt": "2026-10-27T13:26:31.855Z",
+  "exchangeBeforeExpiry": true,
+  "responseBeforeExpiry": true,
+  "startupSnapshot": {
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "user": {
+      "id": "ff250241-8f11-452d-a720-96213ad815d2",
+      "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+      "email": "alexeuel@gmail.com",
+      "display_name": "Алексей Цуканов",
+      "created_at": "2026-10-27T11:29:45.300Z",
+      "updated_at": "2026-10-27T13:17:59.640Z"
+    },
+    "memberships": [
+      {
+        "id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "role": "admin",
+        "joined_at": "2026-10-27T11:29:45.300Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "settings": [
+      {
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "bindings": [
+      {
+        "id": "55851530-977d-46e7-9b49-d730cc528bcb",
+        "firebase_uid": "UJc8VsqmqDhMTjbEFw0pKhbPW133",
+        "provider_id": "google",
+        "verified_email": "alexeuel@gmail.com",
+        "created_at": "2026-10-27T12:09:36.899Z",
+        "updated_at": "2026-10-27T12:09:36.899Z"
+      },
+      {
+        "id": "6e0cc424-cd4d-43b8-ac01-9b2eb4dc59ff",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "provider_id": "github",
+        "verified_email": "alexeuel@gmail.com",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "reservations": [
+      {
+        "id": "2b9ddaf9-c303-496b-aa44-534faeefb976",
+        "normalized_email": "alexeuel@gmail.com",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "purpose": "github-signin",
+        "state": "bound",
+        "user_id": "ff250241-8f11-452d-a720-96213ad815d2",
+        "registration_display_name": null,
+        "registration_workspace_name": null,
+        "registration_owner_acknowledgement": null,
+        "created_at": "2026-10-27T11:29:44.386Z",
+        "updated_at": "2026-10-27T12:55:09.945Z"
+      }
+    ],
+    "sessions": [
+      {
+        "id": "5c0e4234-aa55-4f52-90e9-725b9fb51945",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "a1ba337a-f564-4e5a-9b30-49011098a277",
+        "replaced_by": "33ddf000-8b6c-4e6b-a7a7-227fa05fdc57",
+        "revoked_at": "2026-10-27T11:45:49.401Z",
+        "expires_at": "2026-11-03T11:29:45.288Z",
+        "created_at": "2026-10-27T11:29:45.300Z"
+      },
+      {
+        "id": "33ddf000-8b6c-4e6b-a7a7-227fa05fdc57",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "a1ba337a-f564-4e5a-9b30-49011098a277",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T11:45:49.370Z",
+        "created_at": "2026-10-27T11:45:49.372Z"
+      },
+      {
+        "id": "8313b5cb-4d61-4dea-b6e7-8a4fb6203e0b",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "39ac187f-892f-4706-800c-5188732b4808",
+        "replaced_by": "173611e1-d07d-42a9-be94-e2cb39a742e2",
+        "revoked_at": "2026-10-27T12:22:17.337Z",
+        "expires_at": "2026-11-03T12:11:48.995Z",
+        "created_at": "2026-10-27T12:11:49.010Z"
+      },
+      {
+        "id": "173611e1-d07d-42a9-be94-e2cb39a742e2",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "39ac187f-892f-4706-800c-5188732b4808",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T12:22:17.306Z",
+        "created_at": "2026-10-27T12:22:17.306Z"
+      },
+      {
+        "id": "c7e8027a-a3b5-4a86-a9f5-704840c98514",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "17104d33-126e-4dd6-ab98-6c59ac470c64",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T12:50:19.806Z",
+        "created_at": "2026-10-27T12:50:19.903Z"
+      },
+      {
+        "id": "2596d8d4-4489-43d0-a090-542a30c51ca6",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "ce56510c-8f8d-461f-a242-fe2acc24ca77",
+        "replaced_by": "95b6c708-dc12-4825-9e8c-886a60b7ddc2",
+        "revoked_at": "2026-10-27T13:13:30.396Z",
+        "expires_at": "2026-11-03T12:55:09.880Z",
+        "created_at": "2026-10-27T12:55:09.888Z"
+      },
+      {
+        "id": "95b6c708-dc12-4825-9e8c-886a60b7ddc2",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "ce56510c-8f8d-461f-a242-fe2acc24ca77",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:13:30.378Z",
+        "created_at": "2026-10-27T13:13:30.378Z"
+      },
+      {
+        "id": "33548c33-9dbc-402c-b1e8-14ef1e4ae473",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "9624c769-2654-4a98-94e7-f365dd6b746c",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:14:44.081Z",
+        "created_at": "2026-10-27T13:14:44.178Z"
+      },
+      {
+        "id": "278aba6e-65e9-403e-8cc9-8b8baaa41809",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": "26dd1dde-cab0-4fbb-af9b-d73212e97e3f",
+        "revoked_at": "2026-10-27T13:21:31.701Z",
+        "expires_at": "2026-11-03T13:17:59.346Z",
+        "created_at": "2026-10-27T13:17:59.405Z"
+      },
+      {
+        "id": "26dd1dde-cab0-4fbb-af9b-d73212e97e3f",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": "3e741f90-7dc7-4b55-b064-7637c4842e96",
+        "revoked_at": "2026-10-27T13:21:40.922Z",
+        "expires_at": "2026-11-03T13:21:31.698Z",
+        "created_at": "2026-10-27T13:21:31.699Z"
+      },
+      {
+        "id": "3e741f90-7dc7-4b55-b064-7637c4842e96",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:21:40.906Z",
+        "created_at": "2026-10-27T13:21:40.908Z"
+      }
+    ],
+    "links": [
+      {
+        "id": "70a8ab78-6b16-4409-8258-d617cb9c52cb",
+        "github_user_id": "31486153",
+        "login": "AlexeyTsukanov",
+        "connected_at": "2026-10-27T13:21:31.286Z",
+        "updated_at": "2026-10-27T13:21:31.286Z"
+      }
+    ],
+    "grants": [
+      {
+        "id": "98ce186f-148f-47fa-a4f3-4f25a60f1171",
+        "account_link_id": "70a8ab78-6b16-4409-8258-d617cb9c52cb",
+        "scopes": [
+          "read:org",
+          "read:project",
+          "user:email"
+        ],
+        "token_expires_at": "2026-10-27T21:21:30.819Z",
+        "refresh_token_expires_at": "2027-04-27T13:21:30.819Z",
+        "authorized_at": "2026-10-27T13:21:31.292Z",
+        "updated_at": "2026-10-27T13:21:31.292Z"
+      }
+    ],
+    "connections": [],
+    "generation": {
+      "generation": 4,
+      "disconnected_at": "2026-10-27T13:19:06.735Z",
+      "updated_at": "2026-10-27T13:19:07.356Z"
+    }
+  },
+  "callbackSnapshot": {
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "user": {
+      "id": "ff250241-8f11-452d-a720-96213ad815d2",
+      "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+      "email": "alexeuel@gmail.com",
+      "display_name": "Алексей Цуканов",
+      "created_at": "2026-10-27T11:29:45.300Z",
+      "updated_at": "2026-10-27T13:17:59.640Z"
+    },
+    "memberships": [
+      {
+        "id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "role": "admin",
+        "joined_at": "2026-10-27T11:29:45.300Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "settings": [
+      {
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "bindings": [
+      {
+        "id": "55851530-977d-46e7-9b49-d730cc528bcb",
+        "firebase_uid": "UJc8VsqmqDhMTjbEFw0pKhbPW133",
+        "provider_id": "google",
+        "verified_email": "alexeuel@gmail.com",
+        "created_at": "2026-10-27T12:09:36.899Z",
+        "updated_at": "2026-10-27T12:09:36.899Z"
+      },
+      {
+        "id": "6e0cc424-cd4d-43b8-ac01-9b2eb4dc59ff",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "provider_id": "github",
+        "verified_email": "alexeuel@gmail.com",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "reservations": [
+      {
+        "id": "2b9ddaf9-c303-496b-aa44-534faeefb976",
+        "normalized_email": "alexeuel@gmail.com",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "purpose": "github-signin",
+        "state": "bound",
+        "user_id": "ff250241-8f11-452d-a720-96213ad815d2",
+        "registration_display_name": null,
+        "registration_workspace_name": null,
+        "registration_owner_acknowledgement": null,
+        "created_at": "2026-10-27T11:29:44.386Z",
+        "updated_at": "2026-10-27T12:55:09.945Z"
+      }
+    ],
+    "sessions": [
+      {
+        "id": "5c0e4234-aa55-4f52-90e9-725b9fb51945",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "a1ba337a-f564-4e5a-9b30-49011098a277",
+        "replaced_by": "33ddf000-8b6c-4e6b-a7a7-227fa05fdc57",
+        "revoked_at": "2026-10-27T11:45:49.401Z",
+        "expires_at": "2026-11-03T11:29:45.288Z",
+        "created_at": "2026-10-27T11:29:45.300Z"
+      },
+      {
+        "id": "33ddf000-8b6c-4e6b-a7a7-227fa05fdc57",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "a1ba337a-f564-4e5a-9b30-49011098a277",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T11:45:49.370Z",
+        "created_at": "2026-10-27T11:45:49.372Z"
+      },
+      {
+        "id": "8313b5cb-4d61-4dea-b6e7-8a4fb6203e0b",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "39ac187f-892f-4706-800c-5188732b4808",
+        "replaced_by": "173611e1-d07d-42a9-be94-e2cb39a742e2",
+        "revoked_at": "2026-10-27T12:22:17.337Z",
+        "expires_at": "2026-11-03T12:11:48.995Z",
+        "created_at": "2026-10-27T12:11:49.010Z"
+      },
+      {
+        "id": "173611e1-d07d-42a9-be94-e2cb39a742e2",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "39ac187f-892f-4706-800c-5188732b4808",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T12:22:17.306Z",
+        "created_at": "2026-10-27T12:22:17.306Z"
+      },
+      {
+        "id": "c7e8027a-a3b5-4a86-a9f5-704840c98514",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "17104d33-126e-4dd6-ab98-6c59ac470c64",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T12:50:19.806Z",
+        "created_at": "2026-10-27T12:50:19.903Z"
+      },
+      {
+        "id": "2596d8d4-4489-43d0-a090-542a30c51ca6",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "ce56510c-8f8d-461f-a242-fe2acc24ca77",
+        "replaced_by": "95b6c708-dc12-4825-9e8c-886a60b7ddc2",
+        "revoked_at": "2026-10-27T13:13:30.396Z",
+        "expires_at": "2026-11-03T12:55:09.880Z",
+        "created_at": "2026-10-27T12:55:09.888Z"
+      },
+      {
+        "id": "95b6c708-dc12-4825-9e8c-886a60b7ddc2",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "ce56510c-8f8d-461f-a242-fe2acc24ca77",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:13:30.378Z",
+        "created_at": "2026-10-27T13:13:30.378Z"
+      },
+      {
+        "id": "33548c33-9dbc-402c-b1e8-14ef1e4ae473",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "9624c769-2654-4a98-94e7-f365dd6b746c",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:14:44.081Z",
+        "created_at": "2026-10-27T13:14:44.178Z"
+      },
+      {
+        "id": "278aba6e-65e9-403e-8cc9-8b8baaa41809",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": "26dd1dde-cab0-4fbb-af9b-d73212e97e3f",
+        "revoked_at": "2026-10-27T13:21:31.701Z",
+        "expires_at": "2026-11-03T13:17:59.346Z",
+        "created_at": "2026-10-27T13:17:59.405Z"
+      },
+      {
+        "id": "26dd1dde-cab0-4fbb-af9b-d73212e97e3f",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": "3e741f90-7dc7-4b55-b064-7637c4842e96",
+        "revoked_at": "2026-10-27T13:21:40.922Z",
+        "expires_at": "2026-11-03T13:21:31.698Z",
+        "created_at": "2026-10-27T13:21:31.699Z"
+      },
+      {
+        "id": "3e741f90-7dc7-4b55-b064-7637c4842e96",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:21:40.906Z",
+        "created_at": "2026-10-27T13:21:40.908Z"
+      }
+    ],
+    "links": [
+      {
+        "id": "70a8ab78-6b16-4409-8258-d617cb9c52cb",
+        "github_user_id": "31486153",
+        "login": "AlexeyTsukanov",
+        "connected_at": "2026-10-27T13:21:31.286Z",
+        "updated_at": "2026-10-27T13:21:31.286Z"
+      }
+    ],
+    "grants": [
+      {
+        "id": "98ce186f-148f-47fa-a4f3-4f25a60f1171",
+        "account_link_id": "70a8ab78-6b16-4409-8258-d617cb9c52cb",
+        "scopes": [
+          "read:org",
+          "read:project",
+          "user:email"
+        ],
+        "token_expires_at": "2026-10-27T21:21:30.819Z",
+        "refresh_token_expires_at": "2027-04-27T13:21:30.819Z",
+        "authorized_at": "2026-10-27T13:21:31.292Z",
+        "updated_at": "2026-10-27T13:21:31.292Z"
+      }
+    ],
+    "connections": [],
+    "generation": {
+      "generation": 4,
+      "disconnected_at": "2026-10-27T13:19:06.735Z",
+      "updated_at": "2026-10-27T13:19:07.356Z"
+    }
+  },
+  "beforeRedeem": {
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "user": {
+      "id": "ff250241-8f11-452d-a720-96213ad815d2",
+      "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+      "email": "alexeuel@gmail.com",
+      "display_name": "Алексей Цуканов",
+      "created_at": "2026-10-27T11:29:45.300Z",
+      "updated_at": "2026-10-27T13:17:59.640Z"
+    },
+    "memberships": [
+      {
+        "id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "role": "admin",
+        "joined_at": "2026-10-27T11:29:45.300Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "settings": [
+      {
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "bindings": [
+      {
+        "id": "55851530-977d-46e7-9b49-d730cc528bcb",
+        "firebase_uid": "UJc8VsqmqDhMTjbEFw0pKhbPW133",
+        "provider_id": "google",
+        "verified_email": "alexeuel@gmail.com",
+        "created_at": "2026-10-27T12:09:36.899Z",
+        "updated_at": "2026-10-27T12:09:36.899Z"
+      },
+      {
+        "id": "6e0cc424-cd4d-43b8-ac01-9b2eb4dc59ff",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "provider_id": "github",
+        "verified_email": "alexeuel@gmail.com",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "reservations": [
+      {
+        "id": "2b9ddaf9-c303-496b-aa44-534faeefb976",
+        "normalized_email": "alexeuel@gmail.com",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "purpose": "github-signin",
+        "state": "bound",
+        "user_id": "ff250241-8f11-452d-a720-96213ad815d2",
+        "registration_display_name": null,
+        "registration_workspace_name": null,
+        "registration_owner_acknowledgement": null,
+        "created_at": "2026-10-27T11:29:44.386Z",
+        "updated_at": "2026-10-27T12:55:09.945Z"
+      }
+    ],
+    "sessions": [
+      {
+        "id": "5c0e4234-aa55-4f52-90e9-725b9fb51945",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "a1ba337a-f564-4e5a-9b30-49011098a277",
+        "replaced_by": "33ddf000-8b6c-4e6b-a7a7-227fa05fdc57",
+        "revoked_at": "2026-10-27T11:45:49.401Z",
+        "expires_at": "2026-11-03T11:29:45.288Z",
+        "created_at": "2026-10-27T11:29:45.300Z"
+      },
+      {
+        "id": "33ddf000-8b6c-4e6b-a7a7-227fa05fdc57",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "a1ba337a-f564-4e5a-9b30-49011098a277",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T11:45:49.370Z",
+        "created_at": "2026-10-27T11:45:49.372Z"
+      },
+      {
+        "id": "8313b5cb-4d61-4dea-b6e7-8a4fb6203e0b",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "39ac187f-892f-4706-800c-5188732b4808",
+        "replaced_by": "173611e1-d07d-42a9-be94-e2cb39a742e2",
+        "revoked_at": "2026-10-27T12:22:17.337Z",
+        "expires_at": "2026-11-03T12:11:48.995Z",
+        "created_at": "2026-10-27T12:11:49.010Z"
+      },
+      {
+        "id": "173611e1-d07d-42a9-be94-e2cb39a742e2",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "39ac187f-892f-4706-800c-5188732b4808",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T12:22:17.306Z",
+        "created_at": "2026-10-27T12:22:17.306Z"
+      },
+      {
+        "id": "c7e8027a-a3b5-4a86-a9f5-704840c98514",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "17104d33-126e-4dd6-ab98-6c59ac470c64",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T12:50:19.806Z",
+        "created_at": "2026-10-27T12:50:19.903Z"
+      },
+      {
+        "id": "2596d8d4-4489-43d0-a090-542a30c51ca6",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "ce56510c-8f8d-461f-a242-fe2acc24ca77",
+        "replaced_by": "95b6c708-dc12-4825-9e8c-886a60b7ddc2",
+        "revoked_at": "2026-10-27T13:13:30.396Z",
+        "expires_at": "2026-11-03T12:55:09.880Z",
+        "created_at": "2026-10-27T12:55:09.888Z"
+      },
+      {
+        "id": "95b6c708-dc12-4825-9e8c-886a60b7ddc2",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "ce56510c-8f8d-461f-a242-fe2acc24ca77",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:13:30.378Z",
+        "created_at": "2026-10-27T13:13:30.378Z"
+      },
+      {
+        "id": "33548c33-9dbc-402c-b1e8-14ef1e4ae473",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "9624c769-2654-4a98-94e7-f365dd6b746c",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:14:44.081Z",
+        "created_at": "2026-10-27T13:14:44.178Z"
+      },
+      {
+        "id": "278aba6e-65e9-403e-8cc9-8b8baaa41809",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": "26dd1dde-cab0-4fbb-af9b-d73212e97e3f",
+        "revoked_at": "2026-10-27T13:21:31.701Z",
+        "expires_at": "2026-11-03T13:17:59.346Z",
+        "created_at": "2026-10-27T13:17:59.405Z"
+      },
+      {
+        "id": "26dd1dde-cab0-4fbb-af9b-d73212e97e3f",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": "3e741f90-7dc7-4b55-b064-7637c4842e96",
+        "revoked_at": "2026-10-27T13:21:40.922Z",
+        "expires_at": "2026-11-03T13:21:31.698Z",
+        "created_at": "2026-10-27T13:21:31.699Z"
+      },
+      {
+        "id": "3e741f90-7dc7-4b55-b064-7637c4842e96",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:21:40.906Z",
+        "created_at": "2026-10-27T13:21:40.908Z"
+      }
+    ],
+    "links": [],
+    "grants": [],
+    "connections": [],
+    "generation": {
+      "generation": 5,
+      "disconnected_at": "2026-10-27T13:25:45.385Z",
+      "updated_at": "2026-10-27T13:25:46.318Z"
+    }
+  },
+  "afterRedeem": {
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    },
+    "user": {
+      "id": "ff250241-8f11-452d-a720-96213ad815d2",
+      "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+      "email": "alexeuel@gmail.com",
+      "display_name": "Алексей Цуканов",
+      "created_at": "2026-10-27T11:29:45.300Z",
+      "updated_at": "2026-10-27T13:17:59.640Z"
+    },
+    "memberships": [
+      {
+        "id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "role": "admin",
+        "joined_at": "2026-10-27T11:29:45.300Z",
+        "name": "Workspace",
+        "workspace_created_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "settings": [
+      {
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "bindings": [
+      {
+        "id": "55851530-977d-46e7-9b49-d730cc528bcb",
+        "firebase_uid": "UJc8VsqmqDhMTjbEFw0pKhbPW133",
+        "provider_id": "google",
+        "verified_email": "alexeuel@gmail.com",
+        "created_at": "2026-10-27T12:09:36.899Z",
+        "updated_at": "2026-10-27T12:09:36.899Z"
+      },
+      {
+        "id": "6e0cc424-cd4d-43b8-ac01-9b2eb4dc59ff",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "provider_id": "github",
+        "verified_email": "alexeuel@gmail.com",
+        "created_at": "2026-10-27T11:29:45.300Z",
+        "updated_at": "2026-10-27T11:29:45.300Z"
+      }
+    ],
+    "reservations": [
+      {
+        "id": "2b9ddaf9-c303-496b-aa44-534faeefb976",
+        "normalized_email": "alexeuel@gmail.com",
+        "firebase_uid": "9b03f807-0e4b-4fec-970b-08b5d48a1905",
+        "purpose": "github-signin",
+        "state": "bound",
+        "user_id": "ff250241-8f11-452d-a720-96213ad815d2",
+        "registration_display_name": null,
+        "registration_workspace_name": null,
+        "registration_owner_acknowledgement": null,
+        "created_at": "2026-10-27T11:29:44.386Z",
+        "updated_at": "2026-10-27T12:55:09.945Z"
+      }
+    ],
+    "sessions": [
+      {
+        "id": "5c0e4234-aa55-4f52-90e9-725b9fb51945",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "a1ba337a-f564-4e5a-9b30-49011098a277",
+        "replaced_by": "33ddf000-8b6c-4e6b-a7a7-227fa05fdc57",
+        "revoked_at": "2026-10-27T11:45:49.401Z",
+        "expires_at": "2026-11-03T11:29:45.288Z",
+        "created_at": "2026-10-27T11:29:45.300Z"
+      },
+      {
+        "id": "33ddf000-8b6c-4e6b-a7a7-227fa05fdc57",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "a1ba337a-f564-4e5a-9b30-49011098a277",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T11:45:49.370Z",
+        "created_at": "2026-10-27T11:45:49.372Z"
+      },
+      {
+        "id": "8313b5cb-4d61-4dea-b6e7-8a4fb6203e0b",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "39ac187f-892f-4706-800c-5188732b4808",
+        "replaced_by": "173611e1-d07d-42a9-be94-e2cb39a742e2",
+        "revoked_at": "2026-10-27T12:22:17.337Z",
+        "expires_at": "2026-11-03T12:11:48.995Z",
+        "created_at": "2026-10-27T12:11:49.010Z"
+      },
+      {
+        "id": "173611e1-d07d-42a9-be94-e2cb39a742e2",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "39ac187f-892f-4706-800c-5188732b4808",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T12:22:17.306Z",
+        "created_at": "2026-10-27T12:22:17.306Z"
+      },
+      {
+        "id": "c7e8027a-a3b5-4a86-a9f5-704840c98514",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "17104d33-126e-4dd6-ab98-6c59ac470c64",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T12:50:19.806Z",
+        "created_at": "2026-10-27T12:50:19.903Z"
+      },
+      {
+        "id": "2596d8d4-4489-43d0-a090-542a30c51ca6",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "ce56510c-8f8d-461f-a242-fe2acc24ca77",
+        "replaced_by": "95b6c708-dc12-4825-9e8c-886a60b7ddc2",
+        "revoked_at": "2026-10-27T13:13:30.396Z",
+        "expires_at": "2026-11-03T12:55:09.880Z",
+        "created_at": "2026-10-27T12:55:09.888Z"
+      },
+      {
+        "id": "95b6c708-dc12-4825-9e8c-886a60b7ddc2",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "ce56510c-8f8d-461f-a242-fe2acc24ca77",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:13:30.378Z",
+        "created_at": "2026-10-27T13:13:30.378Z"
+      },
+      {
+        "id": "33548c33-9dbc-402c-b1e8-14ef1e4ae473",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "9624c769-2654-4a98-94e7-f365dd6b746c",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:14:44.081Z",
+        "created_at": "2026-10-27T13:14:44.178Z"
+      },
+      {
+        "id": "278aba6e-65e9-403e-8cc9-8b8baaa41809",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": "26dd1dde-cab0-4fbb-af9b-d73212e97e3f",
+        "revoked_at": "2026-10-27T13:21:31.701Z",
+        "expires_at": "2026-11-03T13:17:59.346Z",
+        "created_at": "2026-10-27T13:17:59.405Z"
+      },
+      {
+        "id": "26dd1dde-cab0-4fbb-af9b-d73212e97e3f",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": "3e741f90-7dc7-4b55-b064-7637c4842e96",
+        "revoked_at": "2026-10-27T13:21:40.922Z",
+        "expires_at": "2026-11-03T13:21:31.698Z",
+        "created_at": "2026-10-27T13:21:31.699Z"
+      },
+      {
+        "id": "3e741f90-7dc7-4b55-b064-7637c4842e96",
+        "workspace_member_id": "7c7ccee4-f926-4b9d-b1c1-6d4ff83ffff3",
+        "workspace_id": "8799abdd-a7c4-4e6c-b3d1-2c0016d29595",
+        "family_id": "c6d70c5b-bd40-49d0-86a2-43655969c36b",
+        "replaced_by": null,
+        "revoked_at": null,
+        "expires_at": "2026-11-03T13:21:40.906Z",
+        "created_at": "2026-10-27T13:21:40.908Z"
+      }
+    ],
+    "links": [],
+    "grants": [],
+    "connections": [],
+    "generation": {
+      "generation": 5,
+      "disconnected_at": "2026-10-27T13:25:45.385Z",
+      "updated_at": "2026-10-27T13:25:46.318Z"
+    }
+  },
+  "assertions": {
+    "expectedUnauthorized": true,
+    "exchangeBeforeExpiry": true,
+    "responseBeforeExpiry": true,
+    "githubArtifactsAbsentBeforeRedeem": true,
+    "generationAdvancedExactlyOnceBeforeRedeem": true,
+    "noWriteAfterExchange": true
+  },
+  "userReported": "Disconnect succeeded after Handoff is ready",
+  "testKind": "real GitHub provider flow, temporary local bridge, user-operated Disconnect",
+  "runtimeRestored": {
+    "normalUserSpaOrigin": "http://localhost:5173",
+    "dedicatedDatabase": "gitiempo_476_social_test",
+    "protectedEndpointWithoutCredentials": 401,
+    "temporaryBridgeClosed": true
+  },
+  "limitations": [
+    "The old handoff was tested once after Disconnect; replay/wrong-purpose coverage remains the earlier controlled HTTP evidence.",
+    "No provider-side revoke response captured; database link/grant/connection removal and generation invalidation are confirmed.",
+    "The earlier bridge failure is preserved separately and is not treated as an API failure."
+  ],
+  "independentAcceptanceReview": "approved; combined prior additional-UID live Google alternative/disconnect and no-alternative UI refusal plus this stale-handoff evidence fulfills8.11"
+}

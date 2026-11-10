@@ -10,13 +10,15 @@ Use PrimeVue `<Dialog>`.
 - Backdrop opacity is overridden in the preset.
 - Dialog panel uses `bg-surface-primary rounded-lg shadow-modal`.
 - Common widths: 480px for forms, larger for content-heavy dialogs.
+- The dialog panel must never exceed the viewport: build the width as `min(Npx, calc(100vw - 2rem))` — either as a pt root class (`w-[min(480px,calc(100vw-2rem))]`) or as an inline style (`:style="{ width: 'min(480px, calc(100vw - 2rem))' }"`). The shared `AppDialog` adds a default `max-w-[calc(100vw-2rem)]` cap on the panel root; a consumer that defines its own `pt.root` replaces that default, so self-capped dialogs stay safe either way.
+- Paired field rows inside dialogs stack vertically below 640px: container `flex flex-col gap-4 sm:flex-row sm:gap-3`, fixed-width columns `w-full sm:w-[Npx] sm:shrink-0`.
 - Footer uses `flex justify-end gap-2` and contains the primary action only for non-destructive form dialogs unless the dialog owns contextual entity actions that should not stay in a table row.
 - Non-destructive form dialogs rely on the built-in top-right close control for dismissal instead of a footer `Cancel` button.
 - Destructive dialogs use `severity="danger"` for the main action.
 - `dismissableMask` stays enabled only for non-destructive dialogs.
 
 ```vue
-<Dialog v-model:visible="showDialog" modal header="Invoice" :style="{ width: '480px' }">
+<Dialog v-model:visible="showDialog" modal header="Invoice" :style="{ width: 'min(480px, calc(100vw - 2rem))' }">
   <template #default><!-- form content --></template>
   <template #footer>
     <Button label="Save" @click="handleSave" />
@@ -34,10 +36,16 @@ Use `<Toast>` and `useToast()`.
 - Success/info/warn auto-dismiss after 4000ms.
 - Errors require manual dismiss.
 - Width target: `w-80`.
+- Routine successful actions stay quiet when existing rows, selections, forms, timer state, or navigation communicate the result. Do not add success/info toasts or transient inline confirmations for ordinary CRUD, saves, timer actions, background refreshes, or successful GitHub reconciliation.
+- Remove duplicate auth-success toasts when a persistent panel already provides the instructions. Keep those panels, callback URL cleanup, loading/disabled guards, and partial-success recovery. Password-reset completion retains its success toast and existing login redirect; cross-origin navigation may unload that toast and does not promise persisted feedback.
+- Retain meaningful exceptions: workspace-switch partial refresh failure, changed-timer retry/stop-first guidance, billable-backfill counts, automatic project-rename explanations, invitation-resend acknowledgement, and report-export ready/download-started acknowledgement. Never claim email delivery or that a browser download was saved to disk.
+- Read/write failures retain actionable error toasts, logging, and applicable inline error/retry states. In invitation email/password sign-in, a failed authentication attempt is shown once in the existing inline error with diagnostic logging and retry; omit its duplicate toast. Invite acceptance failures and accepted-but-session-failed recovery keep their existing error feedback. Pure client-side validation stays inline. Preserve destructive confirmations, drafts, authoritative reconciliation, navigation, and request counts.
+- Select notifications at their owning action; do not suppress success/info severities globally. Persistent connection/status badges, saved/unsaved indicators, access instructions, and empty/loading/error surfaces remain functional UI.
+- Check focus restoration, busy semantics, and necessary accessible completion status when removing a toast. Do not replace every removed toast with a generic live announcement or announce the timer every second.
 
 ```typescript
 const toast = useToast()
-toast.add({ severity: 'success', summary: 'Saved', detail: 'Time entry updated.', life: 4000 })
+toast.add({ severity: 'success', summary: 'Invitation resent', detail: 'The resend request was accepted.', life: 4000 })
 toast.add({ severity: 'error', summary: 'Error', detail: 'Could not save entry.' })
 ```
 
@@ -48,6 +56,7 @@ Use `<ConfirmDialog>` and `useConfirm()`.
 - Render exactly one `<ConfirmDialog>` service host in the root `App.vue` of each SPA.
 - Do not render ConfirmDialog hosts in shells, routes, pages, rows, cards, fields, or other leaf components.
 - Required before destructive actions.
+- Start focus on the safe Cancel action with `defaultFocus: 'reject'`; the shared destructive-confirmation helper supplies this policy.
 - Title uses `text-lg font-semibold`.
 - Body uses `text-sm text-text-muted`.
 - Footer order separates destructive and safe actions: destructive outlined accept on the left, secondary outlined cancel on the right.
@@ -60,6 +69,7 @@ confirm.require({
   header: 'Delete entry?',
   acceptLabel: 'Delete',
   rejectLabel: 'Cancel',
+  defaultFocus: 'reject',
   acceptProps: {
     severity: 'danger',
     variant: 'outlined',
@@ -97,10 +107,35 @@ Use `<DatePicker>`.
 - Time-only fields use `timeOnly` and `hourFormat="24"`.
 - Date and time combined uses `showTime` and should be used for time-entry create and edit forms that submit `startedAt` and `endedAt` ISO datetimes.
 - Do not split HH/MM into separate text inputs.
+- All DatePickers use `showButtonBar` with the shared `DatePickerButtonBar` component in the `#buttonbar` slot to provide explicit Cancel and Confirm actions. The `useDatePickerConfirmCancel` composable manages the value snapshot and overlay lifecycle. Use a dynamic `:ref` binding (not a string `ref`) so the composable's ref receives the component instance.
 
 ```vue
-<DatePicker v-model="dateRange" selectionMode="range" :manualInput="false" showIcon showClear />
-<DatePicker v-model="startTime" timeOnly hourFormat="24" />
+<script setup lang="ts">
+import { DatePickerButtonBar, useDatePickerConfirmCancel } from "@gitiempo/web-shared";
+
+const picker = useDatePickerConfirmCancel<Date[]>();
+</script>
+
+<template>
+  <DatePicker
+    :ref="picker.datePickerRef"
+    v-model="dateRange"
+    selection-mode="range"
+    :manual-input="false"
+    show-button-bar
+    show-clear
+    show-icon
+    @show="picker.handleShow"
+  >
+    <template #buttonbar>
+      <DatePickerButtonBar
+        @cancel="picker.handleCancel"
+        @confirm="picker.handleConfirm"
+      />
+    </template>
+  </DatePicker>
+  <DatePicker v-model="startTime" time-only hour-format="24" />
+</template>
 ```
 
 ## Cascading Task Selector
@@ -295,7 +330,7 @@ Use `<MultiSelect>` with `filter`, `display="chip"`, and the shared
 Use PrimeVue `<Paginator>`.
 
 - Place it below the primary list or grouped results region.
-- Time Entries page uses a compact layout with previous/next buttons, page links, and a current-page report.
+- Time Entries page uses a compact layout with first/previous/next/last buttons, page links, and a current-page report.
 - Keep the current-page report in muted body text.
 - Use the active page as the primary brand-filled state.
 
@@ -303,7 +338,7 @@ Use PrimeVue `<Paginator>`.
 <Paginator
   :rows="10"
   :totalRecords="120"
-  template="PrevPageLink PageLinks NextPageLink CurrentPageReport"
+  template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
   currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
 />
 ```

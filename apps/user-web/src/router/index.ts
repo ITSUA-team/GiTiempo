@@ -15,6 +15,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const DashboardView = () => import("@/views/DashboardView.vue");
 const ForbiddenView = () => import("@/views/ForbiddenView.vue");
+const ForgotPasswordView = () => import("@/views/ForgotPasswordView.vue");
 const InviteAcceptView = () => import("@/views/InviteAcceptView.vue");
 const InvitePasswordSetupView = () =>
   import("@/views/InvitePasswordSetupView.vue");
@@ -22,6 +23,7 @@ const GithubCallbackView = () => import("@/views/GithubCallbackView.vue");
 const NotFoundView = () => import("@/views/NotFoundView.vue");
 const ProfileView = () => import("@/views/ProfileView.vue");
 const ProjectView = () => import("@/views/ProjectView.vue");
+const ResetPasswordView = () => import("@/views/ResetPasswordView.vue");
 const TimeEntriesView = () => import("@/views/TimeEntriesView.vue");
 
 const publicRoutes: RouteRecordRaw[] = [
@@ -45,6 +47,22 @@ const publicRoutes: RouteRecordRaw[] = [
     path: "/auth/github/callback",
     name: routeNames.githubCallback,
     component: GithubCallbackView,
+    meta: {
+      allowAuthenticatedGuestFlow: true,
+    },
+  },
+  {
+    path: "/auth/forgot-password",
+    name: routeNames.forgotPassword,
+    component: ForgotPasswordView,
+    meta: {
+      guestOnly: true,
+    },
+  },
+  {
+    path: "/auth/reset-password",
+    name: routeNames.resetPassword,
+    component: ResetPasswordView,
     meta: {
       allowAuthenticatedGuestFlow: true,
     },

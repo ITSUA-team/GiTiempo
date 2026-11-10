@@ -1,0 +1,43 @@
+{
+  "database": "gitiempo_476_social_test",
+  "api": {
+    "origin": "http://localhost:3002",
+    "healthStatus": 200,
+    "environment": "test",
+    "fakeFirebase": true
+  },
+  "subject": {
+    "email": "gitiempo476-register-ui-2b4efea2@example.test",
+    "userId": "25db6e30-4702-411a-afe7-51f50ba36f60",
+    "canonicalUid": "35e7ec2d-8af2-4565-907d-4ba6689da640"
+  },
+  "ownedWorkspace": {
+    "id": "95fdfe53-f6e9-4c9d-ba88-590a7f8704cd",
+    "name": "Workspace",
+    "role": "admin",
+    "membershipId": "d50f6e0e-8572-4dc3-8834-3414d95f43c7",
+    "settings": {
+      "currency": "USD",
+      "defaultHourlyRate": null,
+      "timeZone": "UTC"
+    }
+  },
+  "registrationReservation": {
+    "purpose": "registration",
+    "state": "bound"
+  },
+  "isolation": {
+    "targetWorkspaceId": "73da954f-a587-40d6-b43b-4dd53f2521c3",
+    "targetMembershipBefore": false,
+    "targetMembershipAfter": false,
+    "ownedMembershipIdsBefore": [
+      "d50f6e0e-8572-4dc3-8834-3414d95f43c7"
+    ],
+    "ownedMembershipIdsAfter": [
+      "d50f6e0e-8572-4dc3-8834-3414d95f43c7"
+    ],
+    "loginStatus": 200,
+    "switchWorkspaceStatus": 403,
+    "switchResponseHasTokenPair": false
+  }
+}

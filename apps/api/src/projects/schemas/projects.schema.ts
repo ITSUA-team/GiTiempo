@@ -2,6 +2,7 @@ import {
   boolean,
   check,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -36,6 +37,7 @@ export const projects = pgTable(
     defaultBillableForTasks: boolean('default_task_billable')
       .default(true)
       .notNull(),
+    timeRoundingStepMinutes: integer('time_rounding_step_minutes'),
     isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
@@ -62,6 +64,10 @@ export const projects = pgTable(
     check(
       'projects_tracking_mode_check',
       sql`${table.trackingMode} IN ('managed', 'external-reference')`,
+    ),
+    check(
+      'projects_time_rounding_step_minutes_check',
+      sql`${table.timeRoundingStepMinutes} IS NULL OR (${table.timeRoundingStepMinutes} >= 1 AND ${table.timeRoundingStepMinutes} <= 60)`,
     ),
   ],
 );

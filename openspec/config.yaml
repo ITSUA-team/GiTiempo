@@ -10,7 +10,7 @@ context: |
 rules:
   proposal:
     - Reference the relevant GitHub issue or parent issue when known.
-    - State which layer is affected: backend, frontend, shared, or multiple.
+    - 'State which layer is affected: backend, frontend, shared, or multiple.'
     - Call out if the change modifies contracts or authentication behavior.
   specs:
     - Use behavior-first requirements with Given/When/Then scenarios.
@@ -21,6 +21,6 @@ rules:
     - Reference the nearest AGENTS.md instructions for affected apps.
     - Explain backend/frontend coordination when a change spans multiple layers.
   tasks:
-    - Group tasks by area: API, user-web, admin-web, shared, docs.
+    - 'Group tasks by area: API, user-web, admin-web, shared, docs.'
     - Keep tasks small enough to complete in one focused session when possible.
     - Include verification tasks for each touched area.

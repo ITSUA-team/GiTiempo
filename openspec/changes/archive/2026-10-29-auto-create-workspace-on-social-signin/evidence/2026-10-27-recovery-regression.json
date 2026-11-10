@@ -1,0 +1,33 @@
+{
+  "command": "pnpm --filter @gitiempo/api exec vitest run src/auth/services/auth-github.service.spec.ts src/auth/services/auth.service.spec.ts src/github/services/github-oauth-state.service.spec.ts --reporter=dot",
+  "isolation": {
+    "runtime": "Vitest service tests with mocked Firebase and GitHub transports",
+    "database": "No live PostgreSQL mutation; this avoided interference with the concurrent manually controlled gitiempo_476_social_test invitation fixture",
+    "providers": "No external OAuth, Firebase, email, or credentials were used"
+  },
+  "result": {
+    "testFiles": 3,
+    "tests": 91,
+    "passed": 91
+  },
+  "coveredControls": [
+    {
+      "control": "Provider cancellation or failed callback",
+      "evidence": "GitHub denial routes to the initiating app or safe user-app fallback without a session. Provider callback failure is handled as a failed callback."
+    },
+    {
+      "control": "Abandoned callback",
+      "evidence": "A new GitHub candidate is staged but not provisioned until its handoff is redeemed."
+    },
+    {
+      "control": "Expired, unknown, or consumed handoff",
+      "evidence": "OAuth state service rejects expired state; GitHub handoff service rejects invalid and replayed single-use codes, including verifier mismatch."
+    },
+    {
+      "control": "Manual registration indeterminate outcome and recovery safety",
+      "evidence": "Registration retains an exact-UID reservation after an indeterminate Firebase error, handles persistence failure compensation, preserves adopted or bound identities, and refuses recovery after failed locked identity recheck."
+    }
+  ],
+  "boundary": "Fresh controlled regression evidence for task 8.8. It is not a browser-level real-provider cancellation test, restart process test, or PostgreSQL fixture acceptance; those manual acceptance portions remain open. Raw output: /tmp/gitiempo476-recovery-acceptance.log",
+  "executedOn": "2026-10-27"
+}

@@ -20,6 +20,7 @@ import {
 import { ZodSerializerDto } from 'nestjs-zod';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { UpdateWorkspaceMemberPermissionsDto } from '../dto/update-workspace-member-permissions.dto';
 import { UpdateWorkspaceMemberRoleDto } from '../dto/update-workspace-member-role.dto';
 import { WorkspaceMemberListResponseDto } from '../dto/workspace-member-list-response.dto';
 import { WorkspaceMemberResponseDto } from '../dto/workspace-member-response.dto';
@@ -57,6 +58,20 @@ export class MembersController {
     @Body() body: UpdateWorkspaceMemberRoleDto,
   ): Promise<WorkspaceMemberResponseDto> {
     return this.members.updateMemberRole(user.workspaceId, id, body);
+  }
+
+  @Patch(':id/permissions')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update a workspace member permissions' })
+  @ApiOkResponse({ type: WorkspaceMemberResponseDto })
+  @ApiForbiddenResponse({ description: 'Admin role required' })
+  @ZodSerializerDto(WorkspaceMemberResponseDto)
+  updatePermissions(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: UpdateWorkspaceMemberPermissionsDto,
+  ): Promise<WorkspaceMemberResponseDto> {
+    return this.members.updateMemberPermissions(user.workspaceId, id, body);
   }
 
   @Delete(':id')

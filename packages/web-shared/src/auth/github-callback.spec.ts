@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { ApiError } from "../http";
 import {
   completeGithubSignInCallback,
   githubCallbackErrorMessages,
@@ -31,11 +32,13 @@ describe("resolveGithubSignInError", () => {
     expect(resolveGithubSignInError("")).toBeNull();
   });
 
-  it("explains an unmatched account rather than repeating a generic failure", () => {
+  it("explains the legacy no-member fallback without suggesting an invitation", () => {
     const message = resolveGithubSignInError("nomember");
 
     expect(message).toBe(githubCallbackErrorMessages.nomember);
     expect(message).not.toBe(githubCallbackErrorMessages.failed);
+    expect(message).toContain("legacy membership lookup");
+    expect(message?.toLowerCase()).not.toContain("invite");
   });
 
   it("tells an ambiguous match apart from an unmatched one", () => {
@@ -57,6 +60,12 @@ describe("resolveGithubSignInError", () => {
   it("explains a GitHub account-link conflict", () => {
     expect(resolveGithubSignInError("github_account_conflict")).toBe(
       githubCallbackErrorMessages.github_account_conflict,
+    );
+  });
+
+  it("guides identity-proof recovery through an existing provider", () => {
+    expect(resolveGithubSignInError("identity_proof_required")).toContain(
+      "existing provider",
     );
   });
 });
@@ -158,6 +167,46 @@ describe("completeGithubSignInCallback", () => {
       {
         exchange: async () => {
           throw new Error("boom");
+        },
+        onSuccess: vi.fn(),
+        onError,
+      },
+    );
+
+    expect(onError).toHaveBeenCalledWith("failed");
+  });
+
+  it("preserves identity proof recovery errors from the exchange", async () => {
+    const onError = vi.fn();
+
+    await completeGithubSignInCallback(
+      { githubError: undefined, code: "handoff" },
+      {
+        exchange: async () => {
+          throw new ApiError("Proof required", {
+            code: "identity_proof_required",
+            status: 401,
+          });
+        },
+        onSuccess: vi.fn(),
+        onError,
+      },
+    );
+
+    expect(onError).toHaveBeenCalledWith("identity_proof_required");
+  });
+
+  it("funnels unrecognized API exchange errors to failed", async () => {
+    const onError = vi.fn();
+
+    await completeGithubSignInCallback(
+      { githubError: undefined, code: "handoff" },
+      {
+        exchange: async () => {
+          throw new ApiError("Unexpected error", {
+            code: "unknown_api_error",
+            status: 500,
+          });
         },
         onSuccess: vi.fn(),
         onError,

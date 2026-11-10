@@ -1,0 +1,228 @@
+{
+  "date": "2026-10-27",
+  "baselineCommit": "51a0ac577aa8dd9dcfe584e221ce9d6a3a098790",
+  "testedState": "uncommitted working tree including paired Google proof and extension callback correction",
+  "scope": "Existing verified Firebase Google identity; fresh local application account/foundation in a newly migrated and seeded isolated database. Not a newly created Google/Firebase identity.",
+  "firebaseBefore": {
+    "foundByExactEmail": true,
+    "uid": "lQL2U42bKferstDmUKvhAtSQc0s1",
+    "email": "stoyambo@gmail.com",
+    "emailVerified": true,
+    "disabled": false,
+    "providers": [
+      {
+        "providerId": "google.com",
+        "subject": "111620053767754903287",
+        "email": "stoyambo@gmail.com"
+      }
+    ],
+    "createdAt": "Tue, 27 Oct 2026 08:03:06 GMT",
+    "lastSignInAt": "Tue, 27 Oct 2026 09:26:37 GMT"
+  },
+  "originalDatabaseBefore": {
+    "database": "gitiempo_476_social_test",
+    "checkedAt": "2026-10-27T13:51:19.690Z",
+    "local": {
+      "users": [
+        {
+          "id": "e3a7fb68-fc56-4d64-9819-42f87eb96e0a",
+          "firebase_uid": "lQL2U42bKferstDmUKvhAtSQc0s1",
+          "email": "stoyambo@gmail.com",
+          "display_name": "Олексій Цуканов",
+          "created_at": "2026-10-27T08:03:07.689Z"
+        }
+      ],
+      "bindings": [
+        {
+          "id": "d8c31aad-4e4c-44bd-bf68-8eeb216e5484",
+          "user_id": "e3a7fb68-fc56-4d64-9819-42f87eb96e0a",
+          "firebase_uid": "lQL2U42bKferstDmUKvhAtSQc0s1",
+          "provider_id": "google",
+          "verified_email": "stoyambo@gmail.com",
+          "created_at": "2026-10-27T08:03:07.689Z"
+        }
+      ],
+      "reservations": [],
+      "counts": {
+        "users": 89,
+        "workspaces": 58,
+        "memberships": 89
+      }
+    }
+  },
+  "freshDatabase": "gitiempo_476_extension_first_20261027",
+  "setup": {
+    "ownershipGuard": true,
+    "migrations": "passed",
+    "seed": "passed",
+    "apiMode": "development, real Firebase gitiempo, existing distinct dev Google client",
+    "localApiOrigin": "http://localhost:3000",
+    "userSpaOrigin": "http://localhost:5173",
+    "adminSpaOrigin": "http://localhost:5174",
+    "protectedEndpointWithoutCredentials": 401
+  },
+  "precheck": {
+    "checkedAt": "2026-10-27T13:57:16.211Z",
+    "database": "gitiempo_476_extension_first_20261027",
+    "phase": "pre",
+    "account": {
+      "email": "stoyambo@gmail.com",
+      "firebaseUid": "lQL2U42bKferstDmUKvhAtSQc0s1"
+    },
+    "counts": {
+      "users": 5,
+      "workspaces": 1,
+      "memberships": 5
+    },
+    "users": [],
+    "bindings": [],
+    "reservations": [],
+    "memberships": [],
+    "settings": [],
+    "sessionDestinations": [],
+    "assertions": {
+      "noCanonicalUser": true,
+      "noBindings": true,
+      "noReservations": true,
+      "noMemberships": true,
+      "noSettings": true,
+      "noSessions": true
+    }
+  },
+  "manualResult": "User confirmed entry after signing out and Google signing in as stoyambo@gmail.com through Chrome extension in the isolated application database",
+  "credentialsStored": false,
+  "firebaseIdentityOrPolicyChangedBySetup": false,
+  "postcheck": {
+    "checkedAt": "2026-10-27T14:00:00.306Z",
+    "database": "gitiempo_476_extension_first_20261027",
+    "phase": "post",
+    "account": {
+      "email": "stoyambo@gmail.com",
+      "firebaseUid": "lQL2U42bKferstDmUKvhAtSQc0s1"
+    },
+    "counts": {
+      "users": 6,
+      "workspaces": 2,
+      "memberships": 6
+    },
+    "users": [
+      {
+        "id": "5fa1fd5c-f997-444c-b6c5-fdfcf1abd68c",
+        "firebase_uid": "lQL2U42bKferstDmUKvhAtSQc0s1",
+        "email": "stoyambo@gmail.com",
+        "display_name": "Олексій Цуканов",
+        "created_at": "2026-10-27T13:59:33.763Z"
+      }
+    ],
+    "bindings": [
+      {
+        "id": "f0a98eed-728c-4c94-9426-1b3678193480",
+        "user_id": "5fa1fd5c-f997-444c-b6c5-fdfcf1abd68c",
+        "firebase_uid": "lQL2U42bKferstDmUKvhAtSQc0s1",
+        "provider_id": "google",
+        "verified_email": "stoyambo@gmail.com",
+        "created_at": "2026-10-27T13:59:33.763Z"
+      }
+    ],
+    "reservations": [],
+    "memberships": [
+      {
+        "member_id": "fecf9234-1db6-4f67-a840-0c64545dfe7d",
+        "user_id": "5fa1fd5c-f997-444c-b6c5-fdfcf1abd68c",
+        "workspace_id": "4eda0e3e-a370-4cea-9174-63a726e4a2f4",
+        "role": "admin",
+        "joined_at": "2026-10-27T13:59:33.763Z",
+        "workspace_name": "Workspace",
+        "workspace_created_at": "2026-10-27T13:59:33.763Z"
+      }
+    ],
+    "settings": [
+      {
+        "workspace_id": "4eda0e3e-a370-4cea-9174-63a726e4a2f4",
+        "currency": "USD",
+        "default_hourly_rate": null,
+        "time_zone": "UTC",
+        "created_at": "2026-10-27T13:59:33.763Z"
+      }
+    ],
+    "sessionDestinations": [
+      {
+        "id": "545e24bc-2066-4fb4-acba-d53fcce9ffd9",
+        "user_id": "5fa1fd5c-f997-444c-b6c5-fdfcf1abd68c",
+        "workspace_member_id": "fecf9234-1db6-4f67-a840-0c64545dfe7d",
+        "workspace_id": "4eda0e3e-a370-4cea-9174-63a726e4a2f4",
+        "created_at": "2026-10-27T13:59:33.763Z",
+        "revoked_at": null
+      }
+    ],
+    "assertions": {
+      "exactlyOneCanonicalUser": true,
+      "exactlyOneGoogleBinding": true,
+      "adminWorkspace": true,
+      "defaultSettings": true,
+      "sessionUsesCreatedMembership": true
+    }
+  },
+  "countDelta": {
+    "users": 1,
+    "workspaces": 1,
+    "memberships": 1
+  },
+  "originalDatabaseAfter": {
+    "database": "gitiempo_476_social_test",
+    "checkedAt": "2026-10-27T14:01:02.026Z",
+    "local": {
+      "users": [
+        {
+          "id": "e3a7fb68-fc56-4d64-9819-42f87eb96e0a",
+          "firebase_uid": "lQL2U42bKferstDmUKvhAtSQc0s1",
+          "email": "stoyambo@gmail.com",
+          "display_name": "Олексій Цуканов",
+          "created_at": "2026-10-27T08:03:07.689Z"
+        }
+      ],
+      "bindings": [
+        {
+          "id": "d8c31aad-4e4c-44bd-bf68-8eeb216e5484",
+          "user_id": "e3a7fb68-fc56-4d64-9819-42f87eb96e0a",
+          "firebase_uid": "lQL2U42bKferstDmUKvhAtSQc0s1",
+          "provider_id": "google",
+          "verified_email": "stoyambo@gmail.com",
+          "created_at": "2026-10-27T08:03:07.689Z"
+        }
+      ],
+      "reservations": [],
+      "counts": {
+        "users": 89,
+        "workspaces": 58,
+        "memberships": 89
+      }
+    }
+  },
+  "originalDatabaseSnapshotUnchanged": true,
+  "firebaseAfter": {
+    "foundByExactEmail": true,
+    "uid": "lQL2U42bKferstDmUKvhAtSQc0s1",
+    "email": "stoyambo@gmail.com",
+    "emailVerified": true,
+    "disabled": false,
+    "providers": [
+      {
+        "providerId": "google.com",
+        "subject": "111620053767754903287",
+        "email": "stoyambo@gmail.com"
+      }
+    ],
+    "createdAt": "Tue, 27 Oct 2026 08:03:06 GMT",
+    "lastSignInAt": "Tue, 27 Oct 2026 13:59:32 GMT"
+  },
+  "firebaseIdentityStable": true,
+  "firebaseMetadataNote": "Expected lastSignInAt changed from the user-operated Google sign-in; no identity deletion, credential linking/unlinking or policy mutation was performed.",
+  "runtimeRestored": {
+    "database": "gitiempo_476_social_test",
+    "apiOrigin": "http://localhost:3000",
+    "protectedEndpointWithoutCredentials": 401,
+    "freshFixtureDatabaseRetainedForEvidence": true
+  },
+  "independentAcceptanceReview": "Approved8.1 and combined7.2; existing Firebase identity + fresh local application account satisfies normative condition, with actual earlier fresh-provider web/admin runs retained as separate evidence."
+}

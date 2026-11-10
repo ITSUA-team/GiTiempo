@@ -15,6 +15,10 @@ import type {
 import { useAuthStore } from '@/stores/auth';
 
 const reportMocks = vi.hoisted(() => ({
+  createSavedReport: vi.fn(),
+  updateSavedReport: vi.fn(),
+  deleteSavedReport: vi.fn(),
+  listSavedReports: vi.fn(),
   downloadReportExport: vi.fn(
     (exportResult: { filename: string }) => exportResult.filename,
   ),
@@ -24,6 +28,15 @@ const reportMocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   state: undefined as unknown,
   successToast: vi.fn(),
+}));
+
+vi.mock('@/services/admin-saved-reports-client', () => ({
+  getAdminSavedReportsClient: () => ({
+    createSavedReport: reportMocks.createSavedReport,
+    updateSavedReport: reportMocks.updateSavedReport,
+    deleteSavedReport: reportMocks.deleteSavedReport,
+    listSavedReports: reportMocks.listSavedReports,
+  }),
 }));
 
 vi.mock('@/composables/feedback/useToasts', () => ({
@@ -114,12 +127,18 @@ const summary: ReportSummaryView = {
 };
 
 function createReportState({
+  hasRetainedRows = true,
   isInitialLoading = false,
+  isDateRangeChangePending = false,
+  isShowingPreviousRows = false,
   loadError = null,
   loading = false,
   rows = [reportRow],
 }: {
+  hasRetainedRows?: boolean;
   isInitialLoading?: boolean;
+  isDateRangeChangePending?: boolean;
+  isShowingPreviousRows?: boolean;
   loadError?: string | null;
   loading?: boolean;
   rows?: ReportTableRow[];
@@ -131,8 +150,11 @@ function createReportState({
     exportReportPdf: reportMocks.exportReportPdf,
     grouping: ref<ReportGrouping>(['project']),
     initialLoaded: ref(!isInitialLoading),
+    hasRetainedRows: ref(hasRetainedRows),
     isEmpty: computed(() => reportRows.value.length === 0),
     isInitialLoading: ref(isInitialLoading),
+    isDateRangeChangePending: ref(isDateRangeChangePending),
+    isShowingPreviousRows: ref(isShowingPreviousRows),
     loadError: ref(loadError),
     loading: ref(loading),
     memberOptions: computed(() => [{ label: 'Alex Admin', value: 'member-1' }]),
@@ -199,6 +221,39 @@ describe('ReportsView', () => {
     reportMocks.refresh.mockClear();
     reportMocks.successToast.mockClear();
     reportMocks.state = createReportState();
+    reportMocks.listSavedReports.mockReset().mockResolvedValue([]);
+    reportMocks.createSavedReport.mockReset().mockImplementation(async (input) => ({ ...input, id: 'preset-1' }));
+    reportMocks.updateSavedReport.mockReset().mockImplementation(async (id, input) => ({ ...input, id }));
+    reportMocks.deleteSavedReport.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('updates preset state quietly without replacement collection reads', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+    const bar = wrapper.getComponent({ name: 'SavedReportsBar' });
+    bar.vm.$emit('saveAsNew', 'Billing');
+    await flushPromises();
+    expect(bar.props('activeId')).toBe('preset-1');
+    expect(bar.props('isDirty')).toBe(false);
+    expect(bar.props('presets')).toEqual([expect.objectContaining({ name: 'Billing' })]);
+
+    await wrapper.get('[data-testid="change-report-grouping"]').trigger('click');
+    expect(bar.props('isDirty')).toBe(true);
+    bar.vm.$emit('save');
+    await flushPromises();
+    expect(bar.props('isDirty')).toBe(false);
+    bar.vm.$emit('rename', 'preset-1', 'Renamed');
+    await flushPromises();
+    expect(bar.props('presets')).toEqual([expect.objectContaining({ name: 'Renamed' })]);
+    bar.vm.$emit('delete', 'preset-1');
+    await flushPromises();
+    expect(bar.props('activeId')).toBe(null);
+    expect(bar.props('presets')).toEqual([]);
+    expect(reportMocks.createSavedReport).toHaveBeenCalledOnce();
+    expect(reportMocks.updateSavedReport).toHaveBeenCalledTimes(2);
+    expect(reportMocks.deleteSavedReport).toHaveBeenCalledExactlyOnceWith('preset-1');
+    expect(reportMocks.listSavedReports).toHaveBeenCalledOnce();
+    expect(reportMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('shows the reports skeleton during initial load', () => {
@@ -213,7 +268,7 @@ describe('ReportsView', () => {
   });
 
   it('renders request errors separately with a retry action', async () => {
-    reportMocks.state = createReportState({ loadError: 'No scope' });
+    reportMocks.state = createReportState({ loadError: 'No scope', hasRetainedRows: false });
 
     const wrapper = mountReportsView();
 
@@ -244,7 +299,7 @@ describe('ReportsView', () => {
     });
     expect(lastDownloadedBlob().type).toBe('text/csv;charset=utf-8');
     expect(reportMocks.successToast).toHaveBeenCalledWith(
-      'Exported time-report.csv.',
+      'Download started: time-report.csv.',
     );
   });
 
@@ -262,7 +317,7 @@ describe('ReportsView', () => {
     });
     expect(lastDownloadedBlob().type).toBe('text/csv;charset=utf-8');
     expect(reportMocks.successToast).toHaveBeenCalledWith(
-      'Exported time-report.csv.',
+      'Download started: time-report.csv.',
     );
     expect(reportMocks.infoToast).not.toHaveBeenCalled();
   });
@@ -287,7 +342,7 @@ describe('ReportsView', () => {
     });
     expect(lastDownloadedBlob().type).toBe('application/pdf');
     expect(reportMocks.successToast).toHaveBeenCalledWith(
-      'Exported time-report.pdf.',
+      'Download started: time-report.pdf.',
     );
   });
 
@@ -304,6 +359,42 @@ describe('ReportsView', () => {
 
     expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
     expect(reportMocks.exportReportPdf).not.toHaveBeenCalled();
+  });
+
+  it('keeps rendered report content busy and blocks export while prior rows await a new date range', async () => {
+    reportMocks.state = createReportState({
+      isDateRangeChangePending: true,
+      isShowingPreviousRows: true,
+    });
+
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
+    expect(wrapper.find('[data-testid="reports-skeleton"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-busy="true"]').exists()).toBe(true);
+    expect(
+      (wrapper.get('[data-testid="export-reports"]').element as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    await triggerExport(wrapper, 'csv');
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
+  });
+
+  it('retains report content with retry feedback and blocks export after a changed-range failure', async () => {
+    reportMocks.state = createReportState({ loadError: 'Temporary outage', isShowingPreviousRows: true });
+    const wrapper = mountReportsView();
+    await flushPromises();
+    expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
+    expect(wrapper.text()).toContain('Temporary outage');
+    expect(wrapper.text()).not.toContain('Failed to load reports');
+    expect((wrapper.get('[data-testid="export-reports"]').element as HTMLButtonElement).disabled).toBe(true);
+    await triggerExport(wrapper, 'csv');
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
+    const retry = wrapper.findAll('button').find((button) => button.text() === 'Retry');
+    expect(retry).toBeDefined();
+    await retry!.trigger('click');
+    expect(reportMocks.refresh).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces PDF export failures as error toasts', async () => {

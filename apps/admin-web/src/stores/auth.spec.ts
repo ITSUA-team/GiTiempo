@@ -34,6 +34,7 @@ function expectAuthenticatedQueryCacheCleared(): void {
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Admin User",
     email: "admin@example.com",
@@ -80,6 +81,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "admin@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -125,6 +129,7 @@ describe("useAuthStore", () => {
     authStore.accessToken = "existing-access-token";
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Admin User",
       email: "admin@example.com",
@@ -137,6 +142,7 @@ describe("useAuthStore", () => {
       createRuntimeMock({
         getCurrentUser: async () => ({
           avatarUrl: null,
+          canViewInvoices: true,
           createdAt: "2026-01-01T00:00:00.000Z",
           displayName: "Admin User",
           email: "admin@example.com",
@@ -173,6 +179,7 @@ describe("useAuthStore", () => {
     authStore.accessToken = "existing-access-token";
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "PM User",
       email: "pm@example.com",
@@ -209,6 +216,7 @@ describe("useAuthStore", () => {
     authStore.accessToken = "old-access-token";
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "New Admin",
       email: "new@example.com",
@@ -230,6 +238,7 @@ describe("useAuthStore", () => {
     authStore.accessToken = "new-access-token";
     resolveProfile({
       avatarUrl: null,
+      canViewInvoices: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Old Member",
       email: "old@example.com",
@@ -260,12 +269,12 @@ describe("useAuthStore", () => {
     const older = authStore.refreshAuthorizationContext();
     const newer = authStore.refreshAuthorizationContext();
     await Promise.resolve();
-    profiles[1]!({ avatarUrl: null, createdAt: "2026-01-01T00:00:00.000Z", displayName: "New", email: "new@example.com", id: "new", role: "admin", updatedAt: "2026-01-01T00:00:00.000Z" });
+    profiles[1]!({ avatarUrl: null, canViewInvoices: true, createdAt: "2026-01-01T00:00:00.000Z", displayName: "New", email: "new@example.com", id: "new", role: "admin", updatedAt: "2026-01-01T00:00:00.000Z" });
     memberships[1]!({
       items: [{ isCurrent: true, role: "admin", workspaceId: "new", workspaceName: "New" }],
     });
     await newer;
-    profiles[0]!({ avatarUrl: null, createdAt: "2026-01-01T00:00:00.000Z", displayName: "Old", email: "old@example.com", id: "old", role: "member", updatedAt: "2026-01-01T00:00:00.000Z" });
+    profiles[0]!({ avatarUrl: null, canViewInvoices: true, createdAt: "2026-01-01T00:00:00.000Z", displayName: "Old", email: "old@example.com", id: "old", role: "member", updatedAt: "2026-01-01T00:00:00.000Z" });
     memberships[0]!({
       items: [{ isCurrent: true, role: "member", workspaceId: "old", workspaceName: "Old" }],
     });
@@ -554,6 +563,7 @@ describe("useAuthStore", () => {
     authStore.accessToken = "stale-access-token";
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Stale Admin",
       email: "stale@example.com",
@@ -682,6 +692,7 @@ describe("useAuthStore", () => {
   it("switches workspace, reloads memberships, and resets switching state", async () => {
     const currentUser: UserResponse = {
       avatarUrl: null,
+      canViewInvoices: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Admin User",
       email: "admin@example.com",
@@ -719,6 +730,7 @@ describe("useAuthStore", () => {
     seedAuthenticatedQueryCache();
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Admin User",
       email: "admin@example.com",
@@ -754,6 +766,7 @@ describe("useAuthStore", () => {
   it("keeps the switched admin session when membership reload fails after switching", async () => {
     const currentUser: UserResponse = {
       avatarUrl: null,
+      canViewInvoices: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Admin User",
       email: "admin@example.com",
@@ -776,6 +789,7 @@ describe("useAuthStore", () => {
     seedAuthenticatedQueryCache();
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Admin User",
       email: "admin@example.com",

@@ -8,8 +8,13 @@ import type {
 } from "@gitiempo/shared";
 import PrimeVue from "primevue/config";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
+import { ApiError } from "@gitiempo/web-shared/http";
 
-import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
+import {
+  clearRefreshToken,
+  getRefreshToken,
+  setRefreshToken,
+} from "@gitiempo/web-shared/session-storage";
 import { waitForRoute } from "@gitiempo/web-shared/testing";
 import { createAppRouter, routeNames } from "@/router";
 import {
@@ -21,6 +26,7 @@ import {
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Admin User",
     email: "admin@example.com",
@@ -56,6 +62,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => pair,
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "admin@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -91,8 +100,14 @@ describe("GithubCallbackView (admin)", () => {
     resetAuthRuntimeForTesting();
   });
 
-  it("exchanges the handoff code and redirects to the dashboard", async () => {
-    setAuthRuntimeForTesting(createRuntimeMock());
+  it("boots a provisioned admin session from the GitHub token pair and redirects to the dashboard", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock({
+      exchangeGithubSession: async () => ({
+        accessToken: "provisioned-github-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "provisioned-github-refresh-token",
+      }),
+    }));
     const { router, wrapper } = await mountCallbackView(
       "/auth/github/callback?code=handoff-code",
     );
@@ -102,6 +117,7 @@ describe("GithubCallbackView (admin)", () => {
     );
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+    expect(getRefreshToken()).toBe("provisioned-github-refresh-token");
     wrapper.unmount();
   });
 
@@ -145,6 +161,7 @@ describe("GithubCallbackView (admin)", () => {
   });
 
   it("funnels a failed session exchange to the login page", async () => {
+    setRefreshToken("stale-refresh-token");
     setAuthRuntimeForTesting(
       createRuntimeMock({
         exchangeGithubSession: async () => {
@@ -159,5 +176,28 @@ describe("GithubCallbackView (admin)", () => {
 
     expect(router.currentRoute.value.name).toBe(routeNames.login);
     expect(router.currentRoute.value.query.githubError).toBe("failed");
+    expect(getRefreshToken()).toBeNull();
+  });
+
+  it("preserves identity proof recovery errors on the login page", async () => {
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        exchangeGithubSession: async () => {
+          throw new ApiError("Proof required", {
+            code: "identity_proof_required",
+            status: 401,
+          });
+        },
+      }),
+    );
+    const { router } = await mountCallbackView(
+      "/auth/github/callback?code=handoff-code",
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(router.currentRoute.value.query.githubError).toBe(
+      "identity_proof_required",
+    );
   });
 });

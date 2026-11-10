@@ -40,14 +40,17 @@ const memberUser: AuthUser = {
   role: 'member',
 };
 
-function createService(role: 'admin' | 'pm' | 'member') {
+function createService(
+  role: 'admin' | 'pm' | 'member',
+  canViewInvoices = true,
+) {
   const members = {
     requireRole: vi
       .fn()
       .mockImplementation(
         (_userId: string, _wsId: string, roles: readonly string[]) => {
           if (!roles.includes(role)) throw new ForbiddenException('Forbidden');
-          return Promise.resolve({ role });
+          return Promise.resolve({ role, canViewInvoices });
         },
       ),
   };
@@ -105,16 +108,16 @@ type PrivateMethod<TArgs extends unknown[], TResult> = (
   ...args: TArgs
 ) => TResult;
 
-/** Accesses a private service helper for behavior-focused unit assertions. */
+/** Accesses a private class helper (instance or static) for unit assertions. */
 function priv<TArgs extends unknown[], TResult>(
-  service: InvoicesService,
+  owner: InvoicesService | typeof InvoicesService,
   name: string,
 ): PrivateMethod<TArgs, TResult> {
-  const candidate = (service as unknown as Record<string, unknown>)[name];
+  const candidate = (owner as unknown as Record<string, unknown>)[name];
   if (typeof candidate !== 'function') {
     throw new Error(`Private helper "${name}" not found on InvoicesService`);
   }
-  return (candidate as PrivateMethod<TArgs, TResult>).bind(service);
+  return (candidate as PrivateMethod<TArgs, TResult>).bind(owner);
 }
 
 /**
@@ -167,6 +170,7 @@ const sampleInvoiceRow = {
   discountPercent: 0,
   totalHours: 10,
   totalAmount: 750,
+  roundingStepMinutes: 5,
   notes: null,
   createdBy: adminUser.sub,
   createdAt: new Date('2026-04-30T18:00:00.000Z'),
@@ -211,9 +215,13 @@ function stageCreateDb(
     settings: Array<{
       defaultHourlyRate: number | null;
       currency: string | null;
+      timeRoundingStepMinutes: number;
     }>;
-    /** Rows for the requirePmProjectAccess/requireWorkspaceProject probe. Omit when no project is involved; pass `[]` for an inaccessible project. */
-    projectProbeRows?: Array<{ id: string }>;
+    /** Rows for the requirePmProjectAccess/requireWorkspaceProject probe, which returns the project's rounding step. Omit when no project is involved; pass `[]` for an inaccessible project. */
+    projectProbeRows?: Array<{
+      id: string;
+      timeRoundingStepMinutes: number | null;
+    }>;
     /** True when the input carries a projectId, which adds the eligibility inArray subquery as a db.select call inside the transaction. */
     eligibilitySubquery?: boolean;
     /** Row the transaction's detail re-read returns. */
@@ -398,6 +406,138 @@ describe('InvoicesService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
+  // ── PM invoice view permission ────────────────────────────────────────
+
+  it('rejects PMs without invoice view permission on list', async () => {
+    const { service } = createService('pm', false);
+    await expect(
+      service.listInvoices(pmUser, { page: 1, limit: 20 }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects PMs without invoice view permission on stats', async () => {
+    const { service } = createService('pm', false);
+    await expect(service.getInvoiceStats(pmUser)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('rejects PMs without invoice view permission on eligible-entries preview', async () => {
+    const { service } = createService('pm', false);
+    await expect(
+      service.previewEligibleEntries(pmUser, {
+        projectId: pmProjectId,
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects PMs without invoice view permission on create', async () => {
+    const { service } = createService('pm', false);
+    await expect(
+      service.createInvoice(pmUser, {
+        title: 'Denied',
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+        discountPercent: 0,
+        projectId: pmProjectId,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects PMs without invoice view permission on get', async () => {
+    const { service } = createService('pm', false);
+    await expect(
+      service.getInvoice(pmUser, '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects PMs without invoice view permission on update', async () => {
+    const { service } = createService('pm', false);
+    await expect(
+      service.updateInvoice(pmUser, '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010', {
+        status: 'sent',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  describe('getInvoiceDefaults', () => {
+    function stageDefaultsDb(rows: unknown[]) {
+      const selectSpy = vi.fn(() => makeSelectChain('limit', rows));
+      return { selectSpy };
+    }
+
+    it('returns workspace defaults for admins', async () => {
+      const { service, members } = createService('admin');
+      const { selectSpy } = stageDefaultsDb([
+        {
+          currency: 'USD',
+          defaultHourlyRate: 100,
+          timeRoundingStepMinutes: 5,
+        },
+      ]);
+      Object.defineProperty(service, 'db', { value: { select: selectSpy } });
+
+      const result = await service.getInvoiceDefaults(adminUser);
+
+      expect(result).toEqual({
+        currency: 'USD',
+        defaultHourlyRate: 100,
+        timeRoundingStepMinutes: 5,
+      });
+      expect(members.requireRole).toHaveBeenCalledWith(
+        adminUser.sub,
+        adminUser.workspaceId,
+        ['admin', 'pm'],
+      );
+    });
+
+    it('returns workspace defaults for PMs with invoice view permission', async () => {
+      const { service } = createService('pm');
+      const { selectSpy } = stageDefaultsDb([
+        {
+          currency: 'EUR',
+          defaultHourlyRate: null,
+          timeRoundingStepMinutes: 15,
+        },
+      ]);
+      Object.defineProperty(service, 'db', { value: { select: selectSpy } });
+
+      await expect(service.getInvoiceDefaults(pmUser)).resolves.toEqual({
+        currency: 'EUR',
+        defaultHourlyRate: null,
+        timeRoundingStepMinutes: 15,
+      });
+    });
+
+    it('rejects PMs without invoice view permission', async () => {
+      const { service } = createService('pm', false);
+      await expect(service.getInvoiceDefaults(pmUser)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+    });
+
+    it('rejects members through the role gate', async () => {
+      const { service } = createService('member');
+      await expect(
+        service.getInvoiceDefaults(memberUser),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('falls back to null currency/rate and a 1-minute step without settings', async () => {
+      const { service } = createService('admin');
+      const { selectSpy } = stageDefaultsDb([]);
+      Object.defineProperty(service, 'db', { value: { select: selectSpy } });
+
+      await expect(service.getInvoiceDefaults(adminUser)).resolves.toEqual({
+        currency: null,
+        defaultHourlyRate: null,
+        timeRoundingStepMinutes: 1,
+      });
+    });
+  });
+
   // ── Totals calculation ────────────────────────────────────────────────
 
   it('computes totals from seconds, rate, and discount', () => {
@@ -447,6 +587,24 @@ describe('InvoicesService', () => {
     >(service, 'computeInvoiceTotals');
 
     expect(compute(7200, 75, 100)).toEqual({ totalHours: 2, totalAmount: 0 });
+  });
+
+  it('rounds sub-cent fractional amounts up to the next whole cent (ceiling)', () => {
+    const { service } = createService('admin');
+    const compute = priv<
+      [number, number, number],
+      {
+        totalHours: number;
+        totalAmount: number;
+      }
+    >(service, 'computeInvoiceTotals');
+
+    // 11988 seconds = 3.33 hours x $10.01 minus 90% = $3.3333 -> $3.34.
+    // Half-up would give $3.33; ceiling always rounds the fractional cent up.
+    expect(compute(11988, 10.01, 90)).toEqual({
+      totalHours: 3.33,
+      totalAmount: 3.34,
+    });
   });
 
   it('rounds half-cent amounts like 16.665 up to 16.67', () => {
@@ -578,13 +736,37 @@ describe('InvoicesService', () => {
       }
     >(service, 'computeInvoiceTotals');
 
-    // 360000036 s → 100000.01 centihours × $1000.01/hr × no discount.
-    // The intermediate product 10000001 × 100001 × 10000 = 10000101000010000
+    // 360000036 s -> 100000.01 centihours x $1000.01/hr x no discount.
+    // The intermediate product 10000001 x 100001 x 10000 = 10000101000010000
     // exceeds Number.MAX_SAFE_INTEGER (9007199254740991). BigInt arithmetic
-    // keeps the intermediate exact: amountCents = 10000101000 → $100001010.00.
+    // keeps the intermediate exact: amountCents = 10000101000.01, which
+    // ceiling rounds UP to 10000101001 -> $100001010.01.
     expect(compute(360000036, 1000.01, 0)).toEqual({
       totalHours: 100000.01,
-      totalAmount: 100001010,
+      totalAmount: 100001010.01,
+    });
+  });
+
+  describe('roundEntrySeconds', () => {
+    const round = priv<[number, number], number>(
+      InvoicesService,
+      'roundEntrySeconds',
+    );
+
+    it('rounds 60s up to 300s with a 5-minute step', () => {
+      expect(round(60, 5)).toBe(300);
+    });
+
+    it('keeps 300s at 300s with a 5-minute step', () => {
+      expect(round(300, 5)).toBe(300);
+    });
+
+    it('rounds 90s up to 300s with a 5-minute step', () => {
+      expect(round(90, 5)).toBe(300);
+    });
+
+    it('keeps 60s at 60s with a 1-minute step', () => {
+      expect(round(60, 1)).toBe(60);
     });
   });
 
@@ -609,6 +791,7 @@ describe('InvoicesService', () => {
     expect(response.timeEntries[0]).toMatchObject({
       id: sampleEntries[0].id,
       durationSeconds: 7200,
+      roundedDurationSeconds: 7200,
     });
   });
 
@@ -657,10 +840,37 @@ describe('InvoicesService', () => {
         startedAt: '2026-04-21T09:15:45.123Z',
         endedAt: '2026-04-21T15:30:45.123Z',
         durationSeconds: 3661,
+        roundedDurationSeconds: 3900,
         isBillable: false,
         description: 'Backend work',
       },
     ]);
+  });
+
+  it('rounds each entry duration up to the step multiple in the response', () => {
+    const { service } = createService('admin');
+    const toResponse = priv<[unknown, unknown[]], InvoiceResponse>(
+      service,
+      'toInvoiceResponse',
+    );
+
+    const response = toResponse(sampleInvoiceRow, [
+      {
+        id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9030',
+        taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9006',
+        userId: adminUser.sub,
+        startedAt: new Date('2026-04-21T09:00:00.000Z'),
+        endedAt: new Date('2026-04-21T09:01:30.000Z'),
+        durationSeconds: 90,
+        isBillable: true,
+        description: null,
+      },
+    ]);
+
+    expect(response.timeEntries[0]).toMatchObject({
+      durationSeconds: 90,
+      roundedDurationSeconds: 300,
+    });
   });
 
   it('casts the stored status string for all three statuses', () => {
@@ -1054,7 +1264,13 @@ describe('InvoicesService', () => {
   it('rejects creation when neither input nor settings provide a currency', async () => {
     const { service } = createService('admin');
     const { transactionSpy } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 75, currency: null }],
+      settings: [
+        {
+          defaultHourlyRate: 75,
+          currency: null,
+          timeRoundingStepMinutes: 5,
+        },
+      ],
     });
 
     const thrown = await service
@@ -1079,7 +1295,13 @@ describe('InvoicesService', () => {
   it('rejects creation when the computed total overflows NUMERIC(12,2)', async () => {
     const { service } = createService('admin');
     const { insertSpy, transactionSpy } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 150_000, currency: 'USD' }],
+      settings: [
+        {
+          defaultHourlyRate: 150_000,
+          currency: 'USD',
+          timeRoundingStepMinutes: 5,
+        },
+      ],
       // 360,000,000 seconds = 100,000 hours →
       // 100,000h × $150,000 = $15,000,000,000, far above the
       // NUMERIC(12,2) ceiling of $9,999,999,999.99.
@@ -1111,7 +1333,9 @@ describe('InvoicesService', () => {
   it('falls back to workspace settings for both rate and currency', async () => {
     const { service } = createService('admin');
     const { insertValuesSpy } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 75, currency: 'EUR' }],
+      settings: [
+        { defaultHourlyRate: 75, currency: 'EUR', timeRoundingStepMinutes: 5 },
+      ],
     });
 
     const result = await service.createInvoice(adminUser, {
@@ -1138,7 +1362,9 @@ describe('InvoicesService', () => {
   it('prefers explicit input rate and currency over workspace settings', async () => {
     const { service } = createService('admin');
     const { insertValuesSpy } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 75, currency: 'EUR' }],
+      settings: [
+        { defaultHourlyRate: 75, currency: 'EUR', timeRoundingStepMinutes: 5 },
+      ],
     });
 
     await service.createInvoice(adminUser, {
@@ -1163,7 +1389,13 @@ describe('InvoicesService', () => {
     const { service } = createService('admin');
     const { insertSpy, insertReturningSpy, updateSetSpy, transactionSpy } =
       stageCreateDb(service, {
-        settings: [{ defaultHourlyRate: 75, currency: 'USD' }],
+        settings: [
+          {
+            defaultHourlyRate: 75,
+            currency: 'USD',
+            timeRoundingStepMinutes: 5,
+          },
+        ],
         eligibleEntries: [
           {
             id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9020',
@@ -1193,9 +1425,11 @@ describe('InvoicesService', () => {
   it('allows PMs to create for a public project without an assignment', async () => {
     const { service } = createService('pm');
     const { insertValuesSpy, selectSpy, probeStage } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 75, currency: 'USD' }],
+      settings: [
+        { defaultHourlyRate: 75, currency: 'USD', timeRoundingStepMinutes: 5 },
+      ],
       // Access probe matches: the public project row satisfies visibility.
-      projectProbeRows: [{ id: pmProjectId }],
+      projectProbeRows: [{ id: pmProjectId, timeRoundingStepMinutes: 15 }],
       // Project-scoped creation wires the eligibility inArray subquery.
       eligibilitySubquery: true,
     });
@@ -1223,6 +1457,7 @@ describe('InvoicesService', () => {
         createdBy: pmUser.sub,
         hourlyRate: 75,
         currency: 'USD',
+        roundingStepMinutes: 15,
       }),
     );
   });
@@ -1232,7 +1467,13 @@ describe('InvoicesService', () => {
     const { transactionSpy, insertValuesSpy, probeStage } = stageCreateDb(
       service,
       {
-        settings: [{ defaultHourlyRate: 75, currency: 'USD' }],
+        settings: [
+          {
+            defaultHourlyRate: 75,
+            currency: 'USD',
+            timeRoundingStepMinutes: 5,
+          },
+        ],
         // Access probe finds no active+visible project row.
         projectProbeRows: [],
       },
@@ -1258,7 +1499,9 @@ describe('InvoicesService', () => {
   it('rejects admins creating for a project outside the workspace', async () => {
     const { service } = createService('admin');
     const { transactionSpy, insertValuesSpy } = stageCreateDb(service, {
-      settings: [{ defaultHourlyRate: 75, currency: 'USD' }],
+      settings: [
+        { defaultHourlyRate: 75, currency: 'USD', timeRoundingStepMinutes: 5 },
+      ],
       // Workspace probe finds no such project row.
       projectProbeRows: [],
     });

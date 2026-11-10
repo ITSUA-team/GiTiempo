@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-27",
+  "database": "gitiempo_476_social_test",
+  "testEmail": "tsukanovmfs@gmail.com",
+  "client": "user-web; separate user-operated browser",
+  "precondition": {
+    "userId": "9d25c96b-582f-4fa4-a584-dacdd27e522f",
+    "workspaceId": "b9d4ffdc-7103-4c9d-83be-ad39eed5f425",
+    "membershipId": "931a11da-b60e-4b0f-aca2-8aac10ad8a9e",
+    "canonicalFirebaseUid": "HT9I1Ue0zNRexKrtmrQ0xIvBEIB2",
+    "googleEntryConfirmed": true,
+    "githubEntryConfirmed": true,
+    "additionalFirebaseSubjectObserved": false,
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 88
+    }
+  },
+  "userObservations": {
+    "profileShowsGithubConnected": true,
+    "disconnectButtonEnabled": true,
+    "disconnectConfirmed": true,
+    "profileRemainedOpen": true,
+    "githubStatusBecameDisconnected": true
+  },
+  "postDisconnectReadOnlySql": {
+    "checkedAt": "2026-10-27T10:09:01.061Z",
+    "sameUser": true,
+    "sameCanonicalFirebaseUid": true,
+    "sameWorkspace": true,
+    "sameMembership": true,
+    "sameSettings": true,
+    "googleSubjectBindingPreserved": true,
+    "githubLinkCount": 0,
+    "githubGrantCount": 0,
+    "nonRevokedSessionsStillPresent": true,
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 88
+    }
+  },
+  "providerRevocationResponseCaptured": false,
+  "freshGoogleEntryAndGithubReconnect": {
+    "userConfirmedBoth": true,
+    "checkedAt": "2026-10-27T10:11:23.318Z",
+    "sameUser": true,
+    "sameCanonicalFirebaseUid": true,
+    "sameWorkspace": true,
+    "sameMembership": true,
+    "githubLinkCount": 1,
+    "githubGrantCount": 1,
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 88
+    }
+  },
+  "coverageLimit": "Same canonical UID and usable Google alternative only. Additional-UID, no-alternative refusal and old pre-disconnect handoff manual cases remain open.",
+  "freshGithubAccountAvailability": "User has no other GitHub account. Existing Firebase identity was retained; no Firebase deletion performed."
+}

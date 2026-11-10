@@ -3,6 +3,11 @@
 
 # Admin SPA Pages
 
+## Authentication
+
+- The admin login keeps the approved shared auth layout and existing provider actions. A successful Google or GitHub session exchange for a verified account with no memberships automatically provisions a `Workspace` and its admin membership; the ordinary role router then opens admin-web for that workspace. Existing memberships keep their normal deterministic selection, and pending invitations remain separate from sign-in.
+- Admin Google sign-in uses the same immediate paired Firebase/Google ID-token exchange as user-web when the Google credential is available. Backend verification can establish missing Firebase email proof; no raw credential is persisted and exchange failures clear partial session state.
+
 ## Dashboard
 
 - Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity feed.
@@ -18,7 +23,12 @@
 
 ## Reports Page
 
+- Saved-report creation, save, rename, and deletion update selection, preset names, and Saved/Unsaved state quietly without replacement collection reads. Export retains an explicit `Download started` acknowledgement after generation and handoff to the browser; it does not claim the file was saved to disk. Generation/download errors remain visible.
+
 - Initial report load uses a skeleton matching the reports header, summary cards, and results table with its header controls. There is no separate setup bar to reserve space for.
+- A populated report stays mounted while a same-scope refresh runs or transiently fails; use the existing table refresh treatment and local retry/error feedback rather than replacing rows, filters, or export controls with the initial skeleton. A returned report may be reused for 30 seconds and retained for five minutes only when its workspace, role, user, and effective visible-project scope still match. Project visibility remains authoritative and is checked separately before retained rows render.
+- Date changes retain the previous authorized rows and their matching totals while the stable region is busy. Export stays disabled during the date debounce, pending request, and retained-result error until the requested result commits. A workspace, role, user, or effective project visibility change prevents reuse.
+- Saved-report writes adopt their authoritative response in the existing bar without immediately reloading the preset collection or report rows. Page entry and an explicit preset refresh still reconcile changes made by other users; a failed write leaves the committed preset list and active baseline unchanged. Older in-flight list responses or failures cannot overwrite a successful local write; overlapping refreshes apply only the latest request.
 - The page has no report setup bar. The results table header carries the date range, global search, and an `Export ▾` menu action (brand button with download icon, label, hairline divider, and chevron) whose menu offers `Export as CSV` and `Export as PDF` — the PDF item carries a brand-colored file icon and the subtitle `Styled summary & totals` — in that order; the grouping builder sits on its own full-width row directly below the header (source: the approved "Admin Reports V2" `.pen` frame and the `report-grouping` OpenSpec change).
 - The date control is the existing PrimeVue `<DatePicker selectionMode="range" :manualInput="false">` at `h-[38px]`; report presets persist only its concrete absolute `dateRange`.
 - A saved reports bar sits above the summary cards (source: the approved "Admin Reports V2" `.pen` frame, node `savedReportsBar`): a `Saved reports` label, one 32px pill per preset with the loaded preset tinted `accent-tint` and bookmark-marked, a `+ New report` pill, and on the right an unsaved-changes dot, a `Save` button, and a `Save as new…` action.
@@ -46,11 +56,15 @@
 
 ## Invoices Page
 
+- Successful creation, edits, status transitions, and deletion use the existing list/detail state or navigation without success toasts. Preserve confirmation, errors, pending title/notes edits, and dirty-state clearing only for edits actually saved.
+
 ### List page (`/invoices`)
 
 - Searchable invoice table with columns: Title, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
-- Search filters by invoice title (API `search` param, case-insensitive ILIKE).
+- Search filters by invoice title (API `search` param, case-insensitive ILIKE). The search input is capped at 200 characters to match the API contract; the filter row stays interactive so the user can always clear filters even when a load error replaces the table.
 - Filter row: Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
+- Mobile filters (< 640px): the same three filters stack vertically — Project, Period, and Status all full-width and equal width, one under the other. Filter wrappers use `min-w-0` so long project names truncate inside the Select instead of expanding the container.
+- If the projects request fails, a separate inline error card with Retry is shown between the stats cards and the table. The invoice list stays usable for non-project filtering; the project dropdown shows no options until the retry succeeds. For PMs this explains why invoice creation is blocked (a project is required).
 - Pagination control below the table (API returns `meta.totalPages`).
 - Table header has a `Create invoice` action button (plus icon).
 - Clicking a row title navigates to the detail page (`/invoices/:id`).
@@ -58,14 +72,16 @@
   - "Open Invoices" = draft + sent count. Subtitle: "N ready to send" (draft count).
   - "Billed This Month" = sum of `totalAmount` for invoices created this month. Subtitle: "N invoices · M projects" (invoice count + distinct project count). Currency from workspace default. Totals are approximate if multiple currencies are present.
   - "Drafts" = draft count. Subtitle: "Ready for review".
+- Mobile cards (< 640px): each invoice renders as a `MobileRecordCard` with a clickable title link, status badge, and a `MobileRecordMetadataList` grid (Project, Period, Hours, Amount). The metadata grid uses `min-w-0` on grid items and `break-words` on values so long unbroken strings (e.g., long project names without spaces) wrap instead of overflowing into the adjacent cell.
 - Currency formatting: use `Intl.NumberFormat` with the `currency` field from the API response (e.g., `new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })`). Do not hardcode currency symbols — the workspace may use any 3-letter ISO 4217 currency code.
 
 ### Create dialog (modal)
 
 - Triggered from the list page `Create invoice` action button.
-- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — placeholder "From workspace settings" when empty, falls back to workspace default), Currency (optional — placeholder "Auto" when empty, falls back to workspace default), Discount (optional, default 0), Notes (optional).
+- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — pre-filled from workspace Settings; placeholder "From settings" when the workspace rate is not configured, falls back to the eligible-entries preview default when workspace settings are unavailable), Currency (optional — PrimeVue `<Select>` with the same currency options as Settings → Currency, pre-selected with the workspace settings currency as soon as the dialog opens; placeholder "Auto" while unknown, falls back to workspace default on submit), Discount (optional, default 0), `Rounding step` (PrimeVue `<Select>` with presets: 1, 5, 10, 15, 30, 60; pre-filled from the eligible-entries preview `defaultRoundingStepMinutes` which sources the project's effective rounding step; dynamically updates when the project selection changes; updates immediately from the selected project's `timeRoundingStepMinutes` (or the workspace default when the project inherits) without waiting for the preview response, with the preview response subsequently reconciling the value; overridable per-invoice without changing project settings; uses the same touched-flag pattern as rate and currency), Notes (optional).
+- Pricing row layout: on desktop (sm and up), Currency, Discount, and `Rounding step` share a single row with equal widths (`sm:flex-1`); on mobile (below sm), they stack vertically full-width. The date range and hourly rate share a separate row (date range flexible, hourly rate fixed-width on desktop, stacked on mobile).
 - Calculated fields: Total hours and Total amount update live from `GET /invoices/eligible-entries` preview.
-- Expandable preview section: shows eligible time entries (count, total hours, computed amount). Collapsed by default; expands to a scrollable table with Date, User, Duration, Description.
+- Expandable preview section: shows eligible time entries (count, total hours, computed amount). Collapsed by default; expands to a scrollable table with Date, User, Duration, Description. The Duration column renders the rounded billed duration (`roundedDurationSeconds` from the preview response), computed with the effective rounding step — not the raw tracked duration.
 - Empty state: if preview returns 0 entries, show a warning banner ("No billable entries found for this project and date range"). Create button stays enabled — the API allows empty invoices.
 - Actions: `Cancel` and `Create invoice` (POST). No Status field (always `draft` on creation). No Preview/Send/Delete buttons.
 
@@ -81,26 +97,32 @@
 - Delete requires a confirmation dialog: "Delete this invoice? Linked time entries will be unlinked and become available for future invoices."
 - Summary card (read-only): Project, Date range, Hourly rate, Currency, Discount, Total hours, Total amount, Created, Created by, Last updated. All snapshot fields are immutable after creation.
 - Editable card: Title (input), Notes (textarea), `Save changes` button (PATCH title + notes). No Status dropdown — status transitions happen only via header action buttons.
-- Time entries card: scrollable table of linked time entries (Date, User, Task, Duration, Description) with entry count and total hours in the header.
+- Time entries card: scrollable table of linked time entries (Date, User, Task, Duration, Description) with entry count and total hours in the header. The Duration column renders the rounded billed duration (`roundedDurationSeconds` from the response), computed with the invoice's `roundingStepMinutes` snapshot — not the raw tracked duration. The rounding step value itself is not displayed; only its effect on each entry's duration and the aggregate `totalHours` is visible.
 
 ### Navigation
 
-- The `/invoices` route is admin-only. PMs access invoices via the list page but cannot delete.
-- Invoices nav item is hidden by default (`SHOW_INVOICES_NAV = false`). Enable when invoice UI ships.
+- The `/invoices` and `/invoices/:id` routes are accessible to Admin and PM roles. PMs must have `canViewInvoices = true` (set by an admin on the Members page) to access invoices; PMs without the permission are redirected to the forbidden page.
+- Invoices nav item is visible for Admin and PM roles, except PMs with `canViewInvoices = false`, for whom the nav item is hidden from the sidebar and mobile bottom navigation.
+- Invoice defaults (currency, default hourly rate, rounding step) are loaded from `GET /invoices/defaults`, which is accessible to Admin and PMs with `canViewInvoices = true`. The admin-only `GET /workspace/settings` endpoint is NOT called on the invoices page.
 
 ## Members Page
+
+- Successful assignment, invoice-permission, member removal, initial invitation, and invitation cancellation update the existing rows/counters and form state without redundant success toasts. Destructive confirmations and error/retry feedback remain. Resending an invitation retains its acknowledgement without claiming email delivery.
 
 - Initial page load uses a skeleton matching the stats header, stat cards, and members table before rendering empty or request-error states.
 - Members table shows avatar, role, projects assigned, and last active. The member name is the edit entry point and opens the inline member settings section.
 - Members table is searchable with placeholder `Search members` and uses column filters for member name/email, role, assigned projects, and last active.
 - An icon-only primary action sits in the members table header next to the search control and opens the invite flow. Use tooltip/accessibility copy `Invite member`.
-- The inline member settings section owns assignment changes and the destructive `Remove member` action; do not keep separate edit/delete icons in the main members rows.
+- The inline member settings section owns assignment changes, the PM invoice-view permission toggle, and the destructive `Remove member` action; do not keep separate edit/delete icons in the main members rows.
+- When the expanded member's role is PM, the member settings section shows an "Allow viewing invoices" checkbox. When checked, the PM can view and manage invoices for their assigned projects. When unchecked, the PM cannot access `/invoices` or `/invoices/:id`. Only admins can toggle this permission. The toggle emits immediately on change (separate from the project-assignment Save button) and calls `PATCH /members/:id/permissions`.
 - Pending invitations render in a separate card below the members table using the same management-table/card visual language. Desktop/tablet columns are Email, Role, Expires, and Actions; mobile renders stacked cards with the same fields.
 - Pending invitation row actions are icon-only controls with text tooltips and accessible labels: `Resend invite` and `Cancel invite`. `Resend invite` calls the admin-only resend endpoint, shows success/error toast feedback, and refreshes pending invite data. `Cancel invite` uses the shared destructive confirmation dialog before issuing the existing cancel request.
 - Empty pending invitations state is distinct from request-error state; failed resend or cancel keeps the row visible and surfaces the backend message.
 - Project assignment is handled with inline expansion and PrimeVue `<AutoComplete multiple dropdown forceSelection>` for non-admin members, with selected projects shown as removable chips and typeahead search over active projects.
 
 ## Projects Page
+
+- Creation, editing, archiving, and ordinary unarchiving update the existing list/navigation quietly. Retain destructive confirmations, errors, billable-backfill affected-record counts, and the explanatory notification when unarchiving automatically renames a project.
 
 - Initial page load uses a skeleton matching the stats header, stat cards, and projects table before rendering empty or request-error states.
 - Project list table includes project name, source, assigned members, total hours, and visibility. It does not keep a separate row-actions column.
@@ -109,8 +131,8 @@
 - An icon-only primary action sits in the projects table header next to the search control. Use tooltip/accessibility copy `New project`.
 - The project name is the edit entry point and opens the inline project settings section instead of using a row-level edit icon.
 - The status-specific secondary action lives inside the inline project settings section instead of the table row: active projects show `Archive project`, and archived projects show `Unarchive project`.
-- Project settings row is a single line: `Select members` uses PrimeVue `<AutoComplete multiple dropdown forceSelection>` with selected members shown as removable chips and typeahead search over non-admin members, `Visibility` uses PrimeVue `<Select>` for the fixed Public/Private choice, `New task billable default` uses a binary billable control, followed by `Cancel` and `Save` actions.
-- Manual project creation uses the authenticated Add Project page at `/projects/new` and includes `Default billable for new tasks`.
+- Project settings row is a single line: `Select members` uses PrimeVue `<AutoComplete multiple dropdown forceSelection>` with selected members shown as removable chips and typeahead search over non-admin members, `Visibility` uses PrimeVue `<Select>` for the fixed Public/Private choice, `New task billable default` uses a binary billable control, `Time rounding step` uses PrimeVue `<Select>` with `Inherit from workspace (N min)` as the first option, then 1, 5, 10, 15, 30, 60, followed by `Cancel` and `Save` actions.
+- Manual project creation uses the authenticated Add Project page at `/projects/new` and includes `Default billable for new tasks` and `Time rounding step`, defaulting to `Inherit from workspace`.
 - When a project default billable value changes after tasks or time entries already exist in that project, save the new default immediately for future tasks, then show a follow-up popup that asks only whether existing tasks and existing time entries in that project should also be updated.
 
 ## Settings Page
@@ -118,7 +140,8 @@
 - Single-column workspace settings form inside the authenticated admin shell.
 - Settings uses the shared top-bar breadcrumb pattern instead of a large in-content title/subtitle block.
 - Desktop card target is `max-width: 620px` with token-backed surface, `rounded-lg`, `shadow-card`, 20px padding, 12px field gaps, and a right-aligned bottom action row.
-- Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, and `Time zone`.
+- Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, `Time rounding step (minutes)`, and `Time zone`.
+- `Time rounding step (minutes)` uses PrimeVue `<Select>` with presets 1, 5, 10, 15, 30, 60 and default 1, renders near the Default hourly rate + Currency row, and is saved via `PATCH /workspace/settings`.
 - `Currency` uses PrimeVue `<Select>` and `Time zone` uses PrimeVue `<AutoComplete dropdown forceSelection>`. `Time zone` stays full width below the Default hourly rate + Currency row, enables predictive filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source. Time-zone option values remain exact IANA identifiers, while visible labels replace underscores with spaces, for example `Africa/Addis_Ababa` displays as `Africa/Addis Ababa`.
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
@@ -145,16 +168,32 @@
 - The expected card steps are `Authorize your GitHub account`, `Grant GitHub organization permission`, `Approve organization OAuth access`, and `Retry workspace allow-list check`. The backend response decides each card's current status without exposing provider details.
 - The authorization and permission actions open the user profile GitHub connection screen. The approval action opens `https://github.com/organizations/<org-login>/settings/oauth_application_policy` for organization-level OAuth policy review.
 - The retry action retries the organization validation/add flow from the same card. Instruction copy tells the admin to return to Settings, keep the same organization login, and retry after completing the GitHub-side steps.
-- The recovery card group appears only when it helps recovery: missing OAuth authorization/permission, organization OAuth policy restrictions, provider failure, or repeated validation failure for the typed organization. Successful add returns the card to the normal allowed-organization state and confirms with toast feedback.
+- The recovery card group appears only when it helps recovery: missing OAuth authorization/permission, organization OAuth policy restrictions, provider failure, or repeated validation failure for the typed organization. Successful add clears recovery/selection and returns the card to its authoritative allowed-organization state without a success toast; removal is also quiet.
 - These recovery cards apply only to adding an allowed organization with the administrator's OAuth connection. Installation-backed tracking recovery remains separate and does not add status or actions to the Workspace Access rows.
 - External GitHub links in the organization-add recovery checklist open in a new tab and use clear accessible labels such as `Review GitHub organization OAuth access for My-test-org-for-clock`; internal Profile links keep the current app's standard navigation treatment. The allowed-row `Install App` setup action uses the current tab to carry its separate installation setup-and-return flow.
 - Implementation plan: first expose the structured backend recovery payload through the shared contract and admin Settings card state; then render recovery cards from response-provided step ids and statuses without visible status tags; then add focused admin-web tests for blocked, not-installed/unknown, disconnected, retry-success, and still-blocked states using response-provided statuses; finally browser-check the Settings card with a real blocked organization.
 - Initial load reads workspace identity from `/workspace` and workspace settings from `/workspace/settings`.
 - The authenticated admin shell header reads `/workspace` by default for the visible workspace label; Settings save updates that label from the authoritative workspace response.
 - Save sends workspace name changes to `/workspace` and currency/default hourly rate/time zone changes to `/workspace/settings`; unchanged resources are not patched only to satisfy schemas.
+- Settings save updates the authoritative form and workspace label without a success toast. Organization add/remove and automatic, manual, or callback GitHub App completion use the existing authoritative card state quietly; callback URL cleanup, loading guards, errors, and failed follow-up-read/retry guidance remain intact.
 - `Cancel` restores the latest loaded or saved values without sending a request.
 - Use a structured PrimeVue Skeleton first-load state that mirrors the implemented header, card, field rows, and action row.
 - Keep failed initial requests distinct from empty/default settings: show a request-error surface with retry and toast feedback instead of rendering default form values.
+
+## Login Page
+
+- `/login` is a standalone unauthenticated route-level page outside the authenticated admin shell. It follows the approved admin `Login Page` `.pen` screen and the shared auth visual language documented in `pages-user.md` under the Login Page Approved Visual Treatment.
+- The sign-in form is the shared `AuthSignInForm`.
+- The password field label row carries the same `Forgot?` password-recovery link as user-web: brand color via the brand token (`text-brand`), Inter 13px, weight 600, on the right edge of the label row, above the password input. The shared `AuthSignInForm` renders it through its optional `forgotPasswordTo` prop. The `.pen` places the link inline with the password input row; the PrimeVue `Password` component structure renders it in the label row instead. This is a documented PrimeVue-only deviation (see `.pen` parity task 9.5).
+- Clicking the `Forgot?` link navigates to the admin-web `/auth/forgot-password` route without submitting the login form or clearing entered email state.
+
+## Password Recovery / Reset Password
+
+- A successful reset-email request uses the persistent account-safe `Check your email` panel without a duplicate success toast, for both known and unknown addresses. Validation and Firebase failure feedback remain unchanged.
+
+- `/auth/forgot-password` and `/auth/reset-password` exist in admin-web with the same standalone placement, route guards (guest-only request route, `allowAuthenticatedGuestFlow` reset route), fields, gradient actions, and Firebase action-code behavior as the user-web Password Recovery Request Page and Reset Password Landing Page.
+- Both pages render the shared `AuthForgotPasswordForm` and `AuthResetPasswordForm` forms and follow the same notification conventions: `createAppToast` for toasts, inline `Message` for client-side validation, `logContext: { action, feature }` on Firebase-failure error toasts, and a success toast with redirect to the admin-web `/login` route after the password update.
+- The full sections in `pages-user.md` cover the shared details: the checking state (`Checking reset link...`), the verified-email notice, success and invalid-link panel states, mapped Firebase error codes, the no-enumeration success copy, the Firebase Console Action URL, authorized-domains, and password policy setup, the `.pen` parity fallback (including the `Forgot?` label-row placement deviation), and the narrow-viewport collapse. Admin-web implements the same behavior with its own routes, intro content, and redirect targets.
 
 ## Cross-App Navigation
 

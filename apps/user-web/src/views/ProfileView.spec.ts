@@ -1,5 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import PrimeVue from "primevue/config";
 import { computed, ref, type Component } from "vue";
 import {
   afterAll,
@@ -50,6 +51,7 @@ let ProfileView: Component;
 function createUserProfile(overrides: Partial<UserResponse> = {}): UserResponse {
   return {
     avatarUrl: null,
+    canViewInvoices: false,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Alexey Tsukanov",
     email: "alexey@example.com",
@@ -109,6 +111,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "user@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input: UpdateUserInput) => ({
       ...currentUser,
       ...input,
@@ -134,7 +139,7 @@ async function mountProfileView(options: {
 
   const wrapper = mount(ProfileView, {
     global: {
-      plugins: [pinia],
+      plugins: [pinia, PrimeVue],
       stubs: {
         Avatar: {
           props: ["image", "label", "pt"],
@@ -157,18 +162,6 @@ async function mountProfileView(options: {
           emits: ["click"],
           template:
             '<button type="button" :disabled="disabled || loading" @click="$emit(\'click\')">{{ label }}</button>',
-        },
-        InputText: {
-          props: ["disabled", "inputId", "invalid", "modelValue"],
-          emits: ["update:modelValue"],
-          template: `
-            <input
-              :id="inputId"
-              :disabled="disabled"
-              :value="modelValue"
-              @input="$emit('update:modelValue', $event.target.value)"
-            />
-          `,
         },
         ...(options.renderGithubCard
           ? {}
@@ -241,6 +234,25 @@ describe("ProfileView", () => {
     while (mountedWrappers.length > 0) {
       mountedWrappers.pop()?.unmount();
     }
+  });
+
+  it("associates the visible profile labels with the real inputs", async () => {
+    const { wrapper } = await mountProfileView();
+
+    const displayName = wrapper.get<HTMLInputElement>(
+      '[data-testid="profile-display-name-input"]',
+    );
+    const email = wrapper.get<HTMLInputElement>(
+      '[data-testid="profile-email-input"]',
+    );
+
+    expect(
+      Array.from(displayName.element.labels ?? [], (label) => label.textContent?.trim()),
+    ).toEqual(["Display name"]);
+    expect(
+      Array.from(email.element.labels ?? [], (label) => label.textContent?.trim()),
+    ).toEqual(["Email"]);
+    expect(email.element.disabled).toBe(true);
   });
 
   it("renders the stored avatar image in the account card", async () => {
@@ -328,7 +340,7 @@ describe("ProfileView", () => {
     expect(wrapper.find('[data-testid="profile-signout"]').exists()).toBe(false);
   });
 
-  it("saves a new display name, updates the rendered identity, and shows a success toast", async () => {
+  it("saves a new display name, updates the rendered identity, without a redundant success toast", async () => {
     const { authStore, wrapper } = await mountProfileView();
 
     await wrapper.get('[data-testid="profile-display-name-input"]').setValue("Alexey Updated");
@@ -336,7 +348,7 @@ describe("ProfileView", () => {
     await flushPromises();
 
     expect(authStore.profile?.displayName).toBe("Alexey Updated");
-    expect(toastAddSpy).toHaveBeenCalledWith(
+    expect(toastAddSpy).not.toHaveBeenCalledWith(
       expect.objectContaining({
         severity: "success",
         summary: "Profile saved",

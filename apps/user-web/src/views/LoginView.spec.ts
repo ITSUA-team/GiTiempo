@@ -6,7 +6,11 @@ import PrimeVue from "primevue/config";
 import type { CurrentUserWorkspaceMembershipListResponse, UserResponse } from "@gitiempo/shared";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
-import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
+import {
+  clearRefreshToken,
+  getRefreshToken,
+  setRefreshToken,
+} from "@gitiempo/web-shared/session-storage";
 import { waitForRoute } from "@gitiempo/web-shared/testing";
 import { createAppRouter, routeNames } from "@/router";
 import {
@@ -18,6 +22,7 @@ import {
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
+    canViewInvoices: false,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Alexey Tsukanov",
     email: "alexey@example.com",
@@ -64,6 +69,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "user@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -124,8 +132,53 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.fullPath).toBe("/time-entries");
   });
 
-  it("signs in with Google through the UI and redirects to the dashboard", async () => {
+  it("renders the forgot password link in the password field row", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView();
+
+    const forgotLink = wrapper.get('[data-testid="sign-in-forgot-password"]');
+
+    expect(forgotLink.text()).toContain("Forgot?");
+    expect(forgotLink.attributes("href")).toBe("/auth/forgot-password");
+  });
+
+  it("navigates to the forgot password route without submitting the login form", async () => {
+    const signInWithEmailPassword = vi.fn(async () => "firebase-email-token");
+    setAuthRuntimeForTesting(createRuntimeMock({ signInWithEmailPassword }));
+    const { router, wrapper } = await mountLoginView();
+
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("alexey@example.com");
+    await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.forgotPassword,
+    );
+    await wrapper.get('[data-testid="sign-in-forgot-password"]').trigger("click");
+    await routeReady;
+
+    expect(router.currentRoute.value.fullPath).toBe("/auth/forgot-password");
+    expect(signInWithEmailPassword).not.toHaveBeenCalled();
+  });
+
+  it("signs in with Google through the UI and redirects to the dashboard", async () => {
+    const provisionedAdmin: UserResponse = {
+      avatarUrl: null,
+      canViewInvoices: false,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "Workspace Admin",
+      email: "provisioned@example.com",
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      role: "admin",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    setAuthRuntimeForTesting(createRuntimeMock({
+      getCurrentUser: async () => provisionedAdmin,
+      loginWithFirebaseToken: async () => ({
+        accessToken: "provisioned-google-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "provisioned-google-refresh-token",
+      }),
+    }));
     const { router, wrapper } = await mountLoginView();
     const routeReady = waitForRoute(
       router,
@@ -136,6 +189,22 @@ describe("LoginView", () => {
     await routeReady;
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+    expect(getRefreshToken()).toBe("provisioned-google-refresh-token");
+  });
+
+  it("clears a stale guest session when Google token exchange fails", async () => {
+    setRefreshToken("stale-refresh-token");
+    setAuthRuntimeForTesting(createRuntimeMock({
+      loginWithFirebaseToken: async () => {
+        throw new Error("Google exchange failed");
+      },
+    }));
+    const { wrapper } = await mountLoginView();
+
+    await wrapper.get('[data-testid="sign-in-google"]').trigger("click");
+    await flushPromises();
+
+    expect(getRefreshToken()).toBeNull();
   });
 
   it("redirects to the backend GitHub sign-in flow when GitHub is clicked", async () => {
@@ -253,7 +322,10 @@ describe("LoginView", () => {
 
     const help = wrapper.get('[data-testid="sign-in-error-help"]');
     expect(help.attributes("href")).toBe("https://github.com/settings/emails");
-    expect(wrapper.text()).toContain("verified email");
+    expect(wrapper.text()).toContain("verified GitHub email");
+    expect(
+      wrapper.get('[data-testid="sign-in-error"]').text().toLowerCase(),
+    ).not.toContain("invite");
   });
 
   it("explains an ambiguous match without offering a GitHub link", async () => {
@@ -281,6 +353,18 @@ describe("LoginView", () => {
     );
     expect(wrapper.find('[data-testid="sign-in-error-help"]').exists()).toBe(
       false,
+    );
+  });
+
+  it("guides an unproven GitHub identity through an existing provider", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { wrapper } = await mountLoginView(
+      "/login?githubError=identity_proof_required",
+    );
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="sign-in-error"]').text()).toContain(
+      "existing provider",
     );
   });
 

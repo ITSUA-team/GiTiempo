@@ -22,7 +22,10 @@ interface AuthHttpClientOptions {
 }
 
 export interface AuthHttpClient {
-  loginWithFirebaseToken(firebaseIdToken: string): Promise<TokenPairResponse>;
+  loginWithFirebaseToken(
+    firebaseIdToken: string,
+    googleIdToken?: string,
+  ): Promise<TokenPairResponse>;
   exchangeGithubSession(code: string): Promise<TokenPairResponse>;
   logoutAuthSession(accessToken: string, refreshToken: string): Promise<void>;
   registerWorkspaceOwner(input: RegisterRequest): Promise<TokenPairResponse>;
@@ -40,10 +43,13 @@ export function createAuthHttpClient({
   fetchFn = getDefaultFetchFn(),
 }: AuthHttpClientOptions = {}): AuthHttpClient {
   return {
-    loginWithFirebaseToken(firebaseIdToken) {
+    loginWithFirebaseToken(firebaseIdToken, googleIdToken) {
       return requestJson({
         apiBaseUrl,
-        body: loginRequestSchema.parse({ firebaseIdToken }),
+        body: loginRequestSchema.parse({
+          firebaseIdToken,
+          ...(googleIdToken ? { googleIdToken } : {}),
+        }),
         fetchFn,
         method: "POST",
         path: "/auth/login",

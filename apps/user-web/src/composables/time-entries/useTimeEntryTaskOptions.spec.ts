@@ -28,6 +28,7 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
     members: [],
     name: "Project Orion",
     referenceProvenance: null,
+    timeRoundingStepMinutes: null,
     source: "manual",
     totalSeconds: 0,
     trackingMode: "managed",

@@ -92,4 +92,4 @@ Sign in to GiTiempo and review the workspace destination shown in the popup/cont
 
 New external projects are private and recording is default-on without a linked GitHub account, App installation, customer organization approval or enablement toggle. Recording grants visibility only to your own time and exact tasks with your entries. Existing managed mappings keep installation/project checks and denials never fall back to external recording. One timer remains global across workspaces and Stop uses its owned current ID.
 
-Version `0.1.1` is the external-reference candidate. Build success is not distribution approval: new policy publication verification and Chrome/Firefox runtime QA, including a permitted private customer issue, remain release prerequisites. Repository rename/transfer and mode conversion are deferred.
+Version `0.1.2` includes social sign-in workspace provisioning and Google proof forwarding fixes. Build success is not distribution approval: new policy publication verification and Chrome/Firefox runtime QA, including a permitted private customer issue, remain release prerequisites. Repository rename/transfer and mode conversion are deferred.

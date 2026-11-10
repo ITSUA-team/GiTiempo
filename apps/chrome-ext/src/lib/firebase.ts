@@ -14,6 +14,7 @@ import { launchWebAuthFlow } from "./web-auth-flow";
 
 const extensionConfig = getExtensionConfig();
 const firebaseConfig = extensionConfig.firebase;
+const GOOGLE_OIDC_ISSUER = "https://accounts.google.com";
 const firebaseApp = hasFirebaseConfig(extensionConfig) && firebaseConfig
   ? initializeApp(firebaseConfig)
   : null;
@@ -60,20 +61,29 @@ function createGoogleAuthRedirectUri(): string {
   return redirectUri;
 }
 
-function createGoogleAuthState(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
+export type GoogleFirebaseSignInResult = {
+  firebaseIdToken: string;
+  googleIdToken: string;
+};
+
+function createGoogleAuthValue(): string {
+  if (typeof crypto === "undefined" || typeof crypto.getRandomValues !== "function") {
+    throw new Error("Google sign-in is unavailable because secure random values are not supported.");
   }
 
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const values = crypto.getRandomValues(new Uint8Array(32));
+
+  return Array.from(values, (value) => value.toString(16).padStart(2, "0")).join("");
 }
 
 function buildGoogleAuthUrl({
   clientId,
+  nonce,
   redirectUri,
   state,
 }: {
   clientId: string;
+  nonce: string;
   redirectUri: string;
   state: string;
 }): string {
@@ -81,55 +91,145 @@ function buildGoogleAuthUrl({
 
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
-  url.searchParams.set("response_type", "token");
+  url.searchParams.set("response_type", "token id_token");
   url.searchParams.set("scope", "openid email profile");
   url.searchParams.set("state", state);
+  url.searchParams.set("nonce", nonce);
   url.searchParams.set("prompt", "select_account");
 
   return url.toString();
 }
 
-function parseGoogleAuthResponse(redirectedTo: string, expectedState: string): string {
-  const responseUrl = new URL(redirectedTo);
+type GoogleVerificationFailure =
+  | "callback"
+  | "duplicate_parameter"
+  | "issuer"
+  | "missing_credentials"
+  | "nonce"
+  | "state";
+
+function googleVerificationFailure(reason: GoogleVerificationFailure): Error {
+  return new Error(`Google sign-in could not be verified (${reason}). Please try again.`);
+}
+
+function assertNoDuplicateSecurityResponseParams(params: URLSearchParams): void {
+  for (const key of ["access_token", "error", "id_token", "iss", "state"]) {
+    if (params.getAll(key).length > 1) {
+      throw googleVerificationFailure("duplicate_parameter");
+    }
+  }
+}
+
+function getIdTokenNonce(idToken: string): string | null {
+  const payload = idToken.split(".")[1];
+
+  if (!payload || typeof atob !== "function") {
+    return null;
+  }
+
+  try {
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decodedPayload = atob(
+      normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, "="),
+    );
+    const parsedPayload: unknown = JSON.parse(decodedPayload);
+
+    if (!parsedPayload || typeof parsedPayload !== "object") {
+      return null;
+    }
+
+    const nonce = (parsedPayload as { nonce?: unknown }).nonce;
+    return typeof nonce === "string" ? nonce : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseGoogleAuthResponse(
+  redirectedTo: string,
+  expectedRedirectUri: string,
+  expectedState: string,
+  expectedNonce: string,
+): { accessToken: string; idToken: string } {
+  let responseUrl: URL;
+  let expectedRedirectUrl: URL;
+
+  try {
+    responseUrl = new URL(redirectedTo);
+    expectedRedirectUrl = new URL(expectedRedirectUri);
+  } catch {
+    throw googleVerificationFailure("callback");
+  }
+
+  if (
+    responseUrl.origin !== expectedRedirectUrl.origin ||
+    responseUrl.pathname !== expectedRedirectUrl.pathname ||
+    responseUrl.search.length > 0
+  ) {
+    throw googleVerificationFailure("callback");
+  }
+
   const hashParams = new URLSearchParams(responseUrl.hash.replace(/^#/, ""));
-  const searchParams = responseUrl.searchParams;
-  const returnedState = hashParams.get("state") ?? searchParams.get("state");
-  const error = hashParams.get("error") ?? searchParams.get("error");
+  assertNoDuplicateSecurityResponseParams(hashParams);
+  const returnedState = hashParams.get("state");
+  const issuer = hashParams.get("iss");
+  const error = hashParams.get("error");
 
   if (returnedState !== expectedState) {
-    throw new Error("Google sign-in could not be verified. Please try again.");
+    throw googleVerificationFailure("state");
+  }
+
+  if (issuer !== null && issuer !== GOOGLE_OIDC_ISSUER) {
+    throw googleVerificationFailure("issuer");
   }
 
   if (error) {
     throw new Error(`Google sign-in failed: ${error}`);
   }
 
-  const accessToken = hashParams.get("access_token") ?? searchParams.get("access_token");
+  const accessToken = hashParams.get("access_token");
+  const idToken = hashParams.get("id_token");
 
-  if (!accessToken) {
-    throw new Error("Google sign-in did not return an access token.");
+  if (!accessToken || !idToken) {
+    throw googleVerificationFailure("missing_credentials");
   }
 
-  return accessToken;
+  if (getIdTokenNonce(idToken) !== expectedNonce) {
+    throw googleVerificationFailure("nonce");
+  }
+
+  return { accessToken, idToken };
 }
 
-export async function signInWithGoogle(): Promise<string> {
-  const state = createGoogleAuthState();
+export async function signInWithGoogle(): Promise<GoogleFirebaseSignInResult> {
+  const state = createGoogleAuthValue();
+  const nonce = createGoogleAuthValue();
+  const redirectUri = createGoogleAuthRedirectUri();
+
   const responseUrl = await launchWebAuthFlow(
     buildGoogleAuthUrl({
       clientId: getGoogleOAuthClientId(),
-      redirectUri: createGoogleAuthRedirectUri(),
+      nonce,
+      redirectUri,
       state,
     }),
     "Google",
   );
-  const accessToken = parseGoogleAuthResponse(responseUrl, state);
+  const { accessToken, idToken } = parseGoogleAuthResponse(
+    responseUrl,
+    redirectUri,
+    state,
+    nonce,
+  );
   const credential = await signInWithCredential(
     getFirebaseAuth(),
-    GoogleAuthProvider.credential(null, accessToken),
+    GoogleAuthProvider.credential(idToken, accessToken),
   );
 
-  return credential.user.getIdToken();
+  return {
+    firebaseIdToken: await credential.user.getIdToken(),
+    googleIdToken: idToken,
+  };
 }
 
 export async function signInWithEmailPassword(

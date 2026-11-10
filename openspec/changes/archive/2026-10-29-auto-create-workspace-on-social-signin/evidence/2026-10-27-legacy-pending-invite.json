@@ -1,0 +1,30 @@
+{
+  "executedAt": "2026-10-27T11:21:02+02:00",
+  "database": "gitiempo_476_social_test",
+  "databaseGuard": "Runner forced localhost and dedicated database path, then verified SELECT current_database before execution",
+  "command": "node /tmp/gitiempo476-legacy-invite-run.mjs",
+  "testFile": "apps/api/test/auth.e2e-spec.ts",
+  "testName": "keeps a pending invite pending when a legacy Firebase identity has no application creation proof",
+  "result": {
+    "passed": 1,
+    "skipped": 35,
+    "durationSeconds": 2.36
+  },
+  "assertions": {
+    "identityProofRequired": true,
+    "invitationRemainsPending": true,
+    "legacyFirebaseIdentityUnchanged": true,
+    "noLocalUserOrSubjectBinding": true,
+    "noFoundationOrSessionCountChange": true,
+    "onlyUnboundReservationWithDistinctUid": true,
+    "fixtureCleanupAsserted": true
+  },
+  "provider": "FakeFirebaseAdminService; no real provider credentials or external email",
+  "boundary": "Service plus PostgreSQL integration; direct provisionSocialSession invocation, not HTTP GitHub endpoint acceptance",
+  "checks": {
+    "apiLint": "passed",
+    "apiTypecheck": "passed",
+    "independentReview": "approved"
+  },
+  "evidenceSource": "Executor tool transcript and independent reviewer; no durable raw output file was captured"
+}

@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
+import {
+  WorkspaceRoles,
+  type ProjectListResponse,
+  type WorkspaceMemberResponse,
+} from '@gitiempo/shared';
 import { giTiempoSelfAppendedMultiAutoCompleteDropdownPt } from '@gitiempo/web-config/theme';
 import {
   DialogFooterActionGroups,
@@ -12,6 +16,7 @@ import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
 
 const props = defineProps<{
   canAssignPm?: boolean;
@@ -25,9 +30,30 @@ const emit = defineEmits<{
   cancelled: [];
   remove: [];
   save: [input: MemberAssignFormInput];
+  'update:canViewInvoices': [value: boolean];
 }>();
 
 const resolver = zodResolver(memberAssignFormSchema);
+
+const isPmMember = computed(() => props.member.role === WorkspaceRoles.PM);
+const canViewInvoicesChecked = ref(props.member.canViewInvoices);
+
+// The parent refreshes member data after the permission mutation (success or
+// failure), replacing the member object. Watch the reference — not just the
+// boolean — so a failed toggle that refreshes the same `canViewInvoices`
+// value still reverts the local checkbox to the authoritative server state.
+watch(
+  () => props.member,
+  (member) => {
+    canViewInvoicesChecked.value = member.canViewInvoices;
+  },
+);
+
+function handleCanViewInvoicesChange(value: unknown): void {
+  const next = value === true;
+  canViewInvoicesChecked.value = next;
+  emit('update:canViewInvoices', next);
+}
 
 const activeProjects = computed(() => props.projects.filter((project) => project.isActive));
 const activeProjectOptions = computed(() =>
@@ -56,6 +82,12 @@ function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
   projectSuggestions.value = activeProjectOptions.value
     .filter((option) => option.label.toLowerCase().includes(query))
     .map((option) => option.value);
+}
+
+function preventProjectSearchSubmit(event: KeyboardEvent): void {
+  if (event.target instanceof HTMLInputElement && event.target.getAttribute('role') === 'combobox') {
+    event.preventDefault();
+  }
 }
 
 watch(
@@ -97,6 +129,7 @@ function handleSave({
           v-if="props.canAssignPm"
           data-testid="member-edit-project-select"
           class="flex flex-col gap-1.5"
+          @keydown.enter="preventProjectSearchSubmit"
         >
           <label
             :for="`member-settings-${member.id}-projects`"
@@ -145,6 +178,28 @@ function handleSave({
           class="text-text-muted text-[13px]"
         >
           Project assignments are available only for other non-admin members.
+        </div>
+
+        <div
+          v-if="isPmMember"
+          data-testid="member-edit-invoice-permission"
+          class="flex flex-col gap-1.5"
+        >
+          <div class="flex items-center gap-2">
+            <Checkbox
+              :input-id="`member-settings-${member.id}-can-view-invoices`"
+              :model-value="canViewInvoicesChecked"
+              binary
+              @update:model-value="handleCanViewInvoicesChange"
+            />
+            <label
+              :for="`member-settings-${member.id}-can-view-invoices`"
+              class="text-text-dark font-sans text-[12px] leading-none font-medium"
+            >Allow viewing invoices</label>
+          </div>
+          <small class="text-text-muted text-xs">
+            When enabled, this PM can view and manage invoices for their assigned projects.
+          </small>
         </div>
 
         <DialogFooterActionGroups

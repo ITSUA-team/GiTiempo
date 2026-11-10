@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
+import type { RequestInit } from 'undici';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
@@ -29,6 +30,8 @@ import {
 import { GithubAccountService } from '../src/github/services/github-account.service';
 import { GithubConnectionsService } from '../src/github/services/github-connections.service';
 import { GithubAccountOauthClientService } from '../src/github/services/github-account-oauth-client.service';
+import type { FakeFirebaseAdminService } from '../src/auth/services/firebase-admin.fake';
+import { FIREBASE_ADMIN } from '../src/auth/services/firebase-admin.interface';
 import { bearer, login } from './helpers/auth';
 
 describe('manual HTTP acceptance: partial OAuth permission and App isolation', () => {
@@ -37,6 +40,7 @@ describe('manual HTTP acceptance: partial OAuth permission and App isolation', (
   let accounts: GithubAccountService;
   let connections: GithubConnectionsService;
   let accountOauth: GithubAccountOauthClientService;
+  let firebase: FakeFirebaseAdminService;
   const members: Array<{
     id: string;
     uid: string;
@@ -59,6 +63,9 @@ describe('manual HTTP acceptance: partial OAuth permission and App isolation', (
       .insert(workspaces)
       .values({ name: `Partial ${label} ${id}` })
       .returning();
+    await firebase.verifyIdToken(
+      `test:${uid}:${email}:${label}:provider=google.com`,
+    );
     await db
       .insert(users)
       .values({ id, firebaseUid: uid, email, displayName: label });
@@ -120,6 +127,7 @@ describe('manual HTTP acceptance: partial OAuth permission and App isolation', (
     accounts = app.get(GithubAccountService);
     connections = app.get(GithubConnectionsService);
     accountOauth = app.get(GithubAccountOauthClientService);
+    firebase = app.get(FIREBASE_ADMIN);
     const config = app.get(ConfigService);
     config.set('APP_URL', 'http://localhost:3000');
     config.set('USER_SPA_URL', 'http://localhost:5173');

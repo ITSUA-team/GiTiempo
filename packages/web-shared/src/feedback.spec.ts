@@ -3,10 +3,52 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createAppConfirm,
   createAppToast,
+  getErrorMessage,
   runWithFeedback,
 } from "./feedback";
 
+describe("getErrorMessage", () => {
+  it("returns the error message for regular errors", () => {
+    const error = new Error("Something failed");
+    expect(getErrorMessage(error)).toBe("Something failed");
+  });
+
+  it("returns a user-friendly message for ZodError instead of raw JSON", () => {
+    const zodError = new Error(
+      JSON.stringify([{ code: "too_small", path: ["currency"], message: "Too small" }]),
+    );
+    zodError.name = "ZodError";
+    expect(getErrorMessage(zodError)).toBe("Please check the form fields and try again.");
+  });
+
+  it("returns the fallback for non-Error values", () => {
+    expect(getErrorMessage("string error")).toBe("Something went wrong.");
+    expect(getErrorMessage(null)).toBe("Something went wrong.");
+    expect(getErrorMessage(undefined)).toBe("Something went wrong.");
+  });
+
+  it("returns a custom fallback when provided", () => {
+    expect(getErrorMessage(null, "Custom fallback")).toBe("Custom fallback");
+  });
+});
+
 describe("createAppToast", () => {
+  it("logs inline-only errors through the configured logger without a toast", () => {
+    const toast = { add: vi.fn() };
+    const logger = { error: vi.fn() };
+    const appToast = createAppToast(toast, logger);
+    const error = new Error("Invalid credentials");
+    const logContext = { action: "sign-in", feature: "invite-accept" };
+
+    appToast.logError({ error, logContext, summary: "Could not sign in" });
+
+    expect(logger.error).toHaveBeenCalledExactlyOnceWith("Could not sign in", {
+      context: logContext,
+      error,
+    });
+    expect(toast.add).not.toHaveBeenCalled();
+  });
+
   it("shows success toasts with the shared default lifetime", () => {
     const toast = { add: vi.fn() };
     const appToast = createAppToast(toast);
@@ -94,6 +136,7 @@ describe("createAppConfirm", () => {
       accept,
       acceptLabel: "Disconnect",
       acceptProps: { severity: "danger", variant: "outlined" },
+      defaultFocus: "reject",
       header: "Disconnect GitHub?",
       message: "This will remove the current GitHub connection.",
       pt: {
@@ -109,6 +152,30 @@ describe("createAppConfirm", () => {
 });
 
 describe("runWithFeedback", () => {
+  it("returns a successful action result quietly when success copy is omitted", async () => {
+    const toast = {
+      showErrorToast: vi.fn(),
+      showSuccessToast: vi.fn(),
+    };
+    const savedIdentity = { displayName: "Updated name" };
+    const run = vi.fn(async () => savedIdentity);
+
+    const result = await runWithFeedback({
+      onError: {
+        detail: "Please try again.",
+        logContext: { action: "save-profile", feature: "profile" },
+        summary: "Could not save profile",
+      },
+      run,
+      toast,
+    });
+
+    expect(result).toBe(savedIdentity);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(toast.showSuccessToast).not.toHaveBeenCalled();
+    expect(toast.showErrorToast).not.toHaveBeenCalled();
+  });
+
   it("shows success feedback for successful actions", async () => {
     const toast = {
       showErrorToast: vi.fn(),

@@ -1,4 +1,8 @@
-import { ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { MembersService } from './members.service';
 
@@ -106,6 +110,7 @@ describe('MembersService', () => {
         userId: 'user-1',
         workspaceId: 'workspace-1',
         role: 'member',
+        canViewInvoices: false,
       },
     ]);
     const service = new MembersService(db as never);
@@ -113,5 +118,76 @@ describe('MembersService', () => {
     await expect(
       service.requireRole('user-1', 'workspace-1', ['admin', 'pm']),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('updates member permissions and returns the refreshed response', async () => {
+    const joinedRow = {
+      id: 'membership-1',
+      workspaceId: 'workspace-1',
+      userId: 'user-1',
+      email: 'pm@example.com',
+      displayName: 'Pm',
+      avatarUrl: null,
+      role: 'pm',
+      canViewInvoices: true,
+      joinedAt: new Date('2026-01-01T00:00:00Z'),
+      lastActiveAt: null,
+      projectsAssignedCount: 2,
+    };
+    const returning = vi
+      .fn()
+      .mockResolvedValue([
+        { id: 'membership-1', userId: 'user-1', workspaceId: 'workspace-1' },
+      ]);
+    const updateSet = vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({ returning }),
+    });
+    const update = vi.fn().mockReturnValue({ set: updateSet });
+    const limit = vi.fn().mockResolvedValue([joinedRow]);
+    const joinWhere = vi.fn().mockReturnValue({ limit });
+    const innerJoin = vi.fn().mockReturnValue({ where: joinWhere });
+    const from = vi.fn().mockReturnValue({ innerJoin });
+    const select = vi.fn().mockReturnValue({ from });
+    const db = {
+      transaction: async (
+        handler: (tx: { select: unknown; update: unknown }) => unknown,
+      ) => handler({ select, update }),
+    };
+    const service = new MembersService(db as never);
+
+    const result = await service.updateMemberPermissions(
+      'workspace-1',
+      'membership-1',
+      { canViewInvoices: true },
+    );
+
+    expect(updateSet).toHaveBeenCalledWith({ canViewInvoices: true });
+    expect(result).toEqual({
+      ...joinedRow,
+      joinedAt: '2026-01-01T00:00:00.000Z',
+      lastActiveAt: null,
+    });
+  });
+
+  it('throws NotFound when the permissions target member does not exist', async () => {
+    const updateSet = vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([]),
+      }),
+    });
+    const update = vi.fn().mockReturnValue({ set: updateSet });
+    const db = {
+      transaction: async (
+        handler: (tx: { select: unknown; update: unknown }) => unknown,
+      ) => handler({ select: vi.fn(), update }),
+    };
+    const service = new MembersService(db as never);
+
+    await expect(
+      service.updateMemberPermissions('workspace-1', 'missing', {
+        canViewInvoices: true,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(updateSet).toHaveBeenCalledWith({ canViewInvoices: true });
   });
 });

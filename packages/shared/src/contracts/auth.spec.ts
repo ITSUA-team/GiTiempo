@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   githubSessionRequestSchema,
+  loginRequestSchema,
   registerRequestSchema,
   registrationErrorCodeSchema,
   switchWorkspaceRequestSchema,
@@ -14,6 +15,44 @@ const validRegisterRequest = {
   password: "password123",
   ownerAcknowledgement: true,
 };
+
+describe("loginRequestSchema", () => {
+  it("keeps the Google proof optional and accepts its maximum length", () => {
+    expect(
+      loginRequestSchema.parse({ firebaseIdToken: "firebase-id-token" }),
+    ).toEqual({ firebaseIdToken: "firebase-id-token" });
+    expect(
+      loginRequestSchema.parse({
+        firebaseIdToken: "firebase-id-token",
+        googleIdToken: "g".repeat(16_384),
+      }),
+    ).toEqual({
+      firebaseIdToken: "firebase-id-token",
+      googleIdToken: "g".repeat(16_384),
+    });
+  });
+
+  it("rejects blank, overlong, and unknown login fields", () => {
+    expect(
+      loginRequestSchema.safeParse({
+        firebaseIdToken: "firebase-id-token",
+        googleIdToken: "",
+      }).success,
+    ).toBe(false);
+    expect(
+      loginRequestSchema.safeParse({
+        firebaseIdToken: "firebase-id-token",
+        googleIdToken: "g".repeat(16_385),
+      }).success,
+    ).toBe(false);
+    expect(
+      loginRequestSchema.safeParse({
+        firebaseIdToken: "firebase-id-token",
+        unexpected: true,
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("registerRequestSchema", () => {
   it("accepts a valid first-owner registration payload", () => {
@@ -88,9 +127,6 @@ describe("registrationErrorCodeSchema", () => {
     expect(
       registrationErrorCodeSchema.parse("invalid_workspace_name"),
     ).toBe("invalid_workspace_name");
-    expect(
-      registrationErrorCodeSchema.parse("workspace_name_unavailable"),
-    ).toBe("workspace_name_unavailable");
     expect(registrationErrorCodeSchema.parse("rate_limited")).toBe(
       "rate_limited",
     );
@@ -103,6 +139,12 @@ describe("registrationErrorCodeSchema", () => {
     const result = registrationErrorCodeSchema.safeParse("firebase/email-taken");
 
     expect(result.success).toBe(false);
+  });
+
+  it("rejects the retired workspace-name availability error", () => {
+    expect(
+      registrationErrorCodeSchema.safeParse("workspace_name_unavailable").success,
+    ).toBe(false);
   });
 });
 

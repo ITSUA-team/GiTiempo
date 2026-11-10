@@ -33,6 +33,7 @@ function expectAuthenticatedQueryCacheCleared(): void {
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
+    canViewInvoices: false,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Alexey Tsukanov",
     email: "alexey@example.com",
@@ -79,6 +80,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "user@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -299,6 +303,7 @@ describe("useAuthStore", () => {
   it("switches workspace, reloads memberships, and resets switching state", async () => {
     const currentUser: UserResponse = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",
@@ -342,6 +347,7 @@ describe("useAuthStore", () => {
     seedAuthenticatedQueryCache();
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",
@@ -377,6 +383,7 @@ describe("useAuthStore", () => {
   it("keeps the switched session when membership reload fails after switching", async () => {
     const currentUser: UserResponse = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",
@@ -399,6 +406,7 @@ describe("useAuthStore", () => {
     seedAuthenticatedQueryCache();
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",
@@ -446,6 +454,7 @@ describe("useAuthStore", () => {
     authStore.accessToken = "current-access-token";
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",
@@ -483,6 +492,7 @@ describe("useAuthStore", () => {
     authStore.accessToken = "current-access-token";
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",
@@ -549,6 +559,7 @@ describe("useAuthStore", () => {
     authStore.accessToken = "stale-access-token";
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Stale User",
       email: "stale@example.com",
@@ -611,6 +622,7 @@ describe("useAuthStore", () => {
     authStore.accessToken = "stale-access-token";
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Stale User",
       email: "stale@example.com",
@@ -690,6 +702,7 @@ describe("useAuthStore", () => {
     authStore.accessToken = "current-access-token";
     authStore.profile = {
       avatarUrl: null,
+      canViewInvoices: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",

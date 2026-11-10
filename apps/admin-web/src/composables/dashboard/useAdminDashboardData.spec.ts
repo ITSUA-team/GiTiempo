@@ -26,6 +26,7 @@ function createMember(
 ): WorkspaceMemberResponse {
   return {
     avatarUrl: null,
+    canViewInvoices: false,
     displayName,
     email: `${id}@example.com`,
     id,
@@ -72,6 +73,7 @@ function createProject(
     name,
     source: 'manual',
     referenceProvenance: null,
+    timeRoundingStepMinutes: null,
     trackingMode: 'managed',
     totalSeconds: 43200,
     updatedAt,

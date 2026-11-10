@@ -4,6 +4,7 @@ import {
   createInvoiceSchema,
   eligibleEntriesQuerySchema,
   eligibleEntriesResponseSchema,
+  invoiceDefaultsResponseSchema,
   invoiceListQuerySchema,
   invoiceListResponseSchema,
   invoiceResponseSchema,
@@ -29,6 +30,7 @@ const validInvoiceResponse = {
   createdBy: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
   createdByName: "Alex T.",
   timeEntryCount: 1,
+  roundingStepMinutes: 1,
   timeEntries: [
     {
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9020",
@@ -39,6 +41,7 @@ const validInvoiceResponse = {
       startedAt: "2026-04-21T09:00:00.000Z",
       endedAt: "2026-04-21T11:00:00.000Z",
       durationSeconds: 7200,
+      roundedDurationSeconds: 7200,
       isBillable: true,
       description: null,
     },
@@ -173,6 +176,36 @@ describe("invoiceResponseSchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["currency"]);
+  });
+
+  it("rejects null roundingStepMinutes", () => {
+    const result = invoiceResponseSchema.safeParse({
+      ...validInvoiceResponse,
+      roundingStepMinutes: null,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("rejects roundingStepMinutes of 0", () => {
+    const result = invoiceResponseSchema.safeParse({
+      ...validInvoiceResponse,
+      roundingStepMinutes: 0,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("rejects roundingStepMinutes of 61", () => {
+    const result = invoiceResponseSchema.safeParse({
+      ...validInvoiceResponse,
+      roundingStepMinutes: 61,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
   });
 });
 
@@ -511,6 +544,64 @@ describe("createInvoiceSchema", () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["dateFrom"]);
   });
+
+  it("accepts a valid roundingStepMinutes of 1", () => {
+    const result = createInvoiceSchema.parse({
+      ...validCreate,
+      roundingStepMinutes: 1,
+    });
+
+    expect(result.roundingStepMinutes).toBe(1);
+  });
+
+  it("accepts a valid roundingStepMinutes of 60", () => {
+    const result = createInvoiceSchema.parse({
+      ...validCreate,
+      roundingStepMinutes: 60,
+    });
+
+    expect(result.roundingStepMinutes).toBe(60);
+  });
+
+  it("rejects roundingStepMinutes of 0", () => {
+    const result = createInvoiceSchema.safeParse({
+      ...validCreate,
+      roundingStepMinutes: 0,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("rejects roundingStepMinutes over 60", () => {
+    const result = createInvoiceSchema.safeParse({
+      ...validCreate,
+      roundingStepMinutes: 61,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("rejects a non-integer roundingStepMinutes", () => {
+    const result = createInvoiceSchema.safeParse({
+      ...validCreate,
+      roundingStepMinutes: 1.5,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("rejects null roundingStepMinutes", () => {
+    const result = createInvoiceSchema.safeParse({
+      ...validCreate,
+      roundingStepMinutes: null,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
 });
 
 describe("updateInvoiceSchema", () => {
@@ -593,6 +684,13 @@ describe("updateInvoiceSchema", () => {
 
   it("rejects discountPercent edits after creation", () => {
     const result = updateInvoiceSchema.safeParse({ discountPercent: 10 });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+  });
+
+  it("rejects roundingStepMinutes as a snapshot field", () => {
+    const result = updateInvoiceSchema.safeParse({ roundingStepMinutes: 15 });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
@@ -771,6 +869,82 @@ describe("eligibleEntriesQuerySchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts an optional roundingStepMinutes query param", () => {
+    const result = eligibleEntriesQuerySchema.parse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: 5,
+    });
+    expect(result.roundingStepMinutes).toBe(5);
+  });
+
+  it("coerces a string roundingStepMinutes query param", () => {
+    const result = eligibleEntriesQuerySchema.parse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: "5",
+    });
+    expect(result.roundingStepMinutes).toBe(5);
+  });
+
+  it("rejects roundingStepMinutes of 0", () => {
+    const result = eligibleEntriesQuerySchema.safeParse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: 0,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("rejects roundingStepMinutes over 60", () => {
+    const result = eligibleEntriesQuerySchema.safeParse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: 61,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("accepts roundingStepMinutes boundary values 1 and 60", () => {
+    const min = eligibleEntriesQuerySchema.parse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: 1,
+    });
+    const max = eligibleEntriesQuerySchema.parse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: 60,
+    });
+
+    expect(min.roundingStepMinutes).toBe(1);
+    expect(max.roundingStepMinutes).toBe(60);
+  });
+
+  it("rejects a non-integer string roundingStepMinutes", () => {
+    const result = eligibleEntriesQuerySchema.safeParse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: "2.5",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
+
+  it("rejects a non-numeric string roundingStepMinutes", () => {
+    const result = eligibleEntriesQuerySchema.safeParse({
+      dateFrom: "2026-04-01",
+      dateTo: "2026-04-21",
+      roundingStepMinutes: "abc",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["roundingStepMinutes"]);
+  });
 });
 
 describe("eligibleEntriesResponseSchema", () => {
@@ -783,6 +957,7 @@ describe("eligibleEntriesResponseSchema", () => {
     startedAt: "2026-04-15T09:00:00.000Z",
     endedAt: "2026-04-15T11:30:00.000Z",
     durationSeconds: 9000,
+    roundedDurationSeconds: 9000,
     isBillable: true,
     description: "Backend API implementation",
   };
@@ -793,6 +968,7 @@ describe("eligibleEntriesResponseSchema", () => {
       totalHours: 2.5,
       entries: [validEntry],
       defaultHourlyRate: 120,
+      defaultRoundingStepMinutes: 1,
       defaultCurrency: "USD",
     });
     expect(result.count).toBe(1);
@@ -806,6 +982,7 @@ describe("eligibleEntriesResponseSchema", () => {
       totalHours: 0,
       entries: [],
       defaultHourlyRate: null,
+      defaultRoundingStepMinutes: 1,
       defaultCurrency: null,
     });
     expect(result.count).toBe(0);
@@ -829,6 +1006,36 @@ describe("eligibleEntriesResponseSchema", () => {
       entries: [],
     });
     expect(result.success).toBe(false);
+  });
+
+  it("rejects a null defaultRoundingStepMinutes", () => {
+    const result = eligibleEntriesResponseSchema.safeParse({
+      count: 1,
+      totalHours: 2.5,
+      entries: [validEntry],
+      defaultHourlyRate: 120,
+      defaultRoundingStepMinutes: null,
+      defaultCurrency: "USD",
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual([
+      "defaultRoundingStepMinutes",
+    ]);
+  });
+
+  it("rejects a defaultRoundingStepMinutes of 0", () => {
+    const result = eligibleEntriesResponseSchema.safeParse({
+      count: 0,
+      totalHours: 0,
+      entries: [],
+      defaultHourlyRate: null,
+      defaultRoundingStepMinutes: 0,
+      defaultCurrency: null,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual([
+      "defaultRoundingStepMinutes",
+    ]);
   });
 });
 
@@ -897,5 +1104,80 @@ describe("invoiceStatsResponseSchema", () => {
       },
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("invoiceDefaultsResponseSchema", () => {
+  const validDefaults = {
+    currency: "USD",
+    defaultHourlyRate: 150,
+    timeRoundingStepMinutes: 15,
+  };
+
+  it("accepts valid defaults with non-null currency and rate", () => {
+    const result = invoiceDefaultsResponseSchema.parse(validDefaults);
+
+    expect(result.currency).toBe("USD");
+    expect(result.defaultHourlyRate).toBe(150);
+    expect(result.timeRoundingStepMinutes).toBe(15);
+  });
+
+  it("accepts nullable currency and rate", () => {
+    const result = invoiceDefaultsResponseSchema.parse({
+      currency: null,
+      defaultHourlyRate: null,
+      timeRoundingStepMinutes: 5,
+    });
+
+    expect(result.currency).toBeNull();
+    expect(result.defaultHourlyRate).toBeNull();
+    expect(result.timeRoundingStepMinutes).toBe(5);
+  });
+
+  it("accepts rounding steps at the 1 and 60 boundaries", () => {
+    const min = invoiceDefaultsResponseSchema.parse({
+      ...validDefaults,
+      timeRoundingStepMinutes: 1,
+    });
+    const max = invoiceDefaultsResponseSchema.parse({
+      ...validDefaults,
+      timeRoundingStepMinutes: 60,
+    });
+
+    expect(min.timeRoundingStepMinutes).toBe(1);
+    expect(max.timeRoundingStepMinutes).toBe(60);
+  });
+
+  it("strips unknown keys from the parsed payload", () => {
+    const result = invoiceDefaultsResponseSchema.parse({
+      ...validDefaults,
+      unknown: "extraneous",
+    });
+
+    expect(result).toEqual(validDefaults);
+    expect(result).not.toHaveProperty("unknown");
+  });
+
+  it("rejects a currency with the wrong length", () => {
+    const result = invoiceDefaultsResponseSchema.safeParse({
+      ...validDefaults,
+      currency: "US",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a rounding step below 1 and above 60", () => {
+    const belowMin = invoiceDefaultsResponseSchema.safeParse({
+      ...validDefaults,
+      timeRoundingStepMinutes: 0,
+    });
+    const overMax = invoiceDefaultsResponseSchema.safeParse({
+      ...validDefaults,
+      timeRoundingStepMinutes: 61,
+    });
+
+    expect(belowMin.success).toBe(false);
+    expect(overMax.success).toBe(false);
   });
 });

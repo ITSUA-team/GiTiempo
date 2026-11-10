@@ -15,6 +15,7 @@ import { FakeFirebaseAdminService } from './services/firebase-admin.fake';
 import { FIREBASE_ADMIN } from './services/firebase-admin.interface';
 import { RefreshTokenRepository } from './repositories/refresh-token.repository';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleIdTokenVerifier } from './services/google-id-token-verifier.service';
 
 /**
  * Global auth wiring.
@@ -36,6 +37,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     AuthGithubService,
     TokenService,
     RefreshTokenRepository,
+    GoogleIdTokenVerifier,
     {
       provide: FIREBASE_ADMIN,
       inject: [ConfigService],

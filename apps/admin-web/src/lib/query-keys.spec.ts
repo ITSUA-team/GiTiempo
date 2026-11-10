@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   adminDashboardKeys,
+  adminInvoicesKeys,
   adminMutationInvalidationKeys,
   adminProjectsKeys,
   adminSettingsKeys,
+  normalizeEligibleEntriesQuery,
+  normalizeInvoiceListQuery,
   normalizeTimeReportQuery,
   reportsKeys,
   type AdminServerStateScope,
@@ -50,6 +53,8 @@ describe('admin-web query keys', () => {
       'admin-web',
       { role: 'admin', userId: 'user-1', workspaceId: 'workspace-1' },
       'reports',
+      'visibility',
+      [],
       'time',
       {
         dateFrom: null,
@@ -64,6 +69,17 @@ describe('admin-web query keys', () => {
         userId: null,
       },
     ]);
+  });
+
+  it('separates retained report rows when the allowed project scope changes', () => {
+    const query = { groupBy: ['project'] as 'project'[], page: 1 };
+
+    expect(reportsKeys.time(scope, query, ['project-b', 'project-a'])).not.toEqual(
+      reportsKeys.time(scope, query, ['project-a']),
+    );
+    expect(reportsKeys.time(scope, query, ['project-b', 'project-a'])).toEqual(
+      reportsKeys.time(scope, query, ['project-a', 'project-b']),
+    );
   });
 
   it('provides dashboard and settings keys', () => {
@@ -104,6 +120,107 @@ describe('admin-web query keys', () => {
     ]);
     expect(adminMutationInvalidationKeys.afterSettingsSave(scope)).toEqual([
       adminSettingsKeys.all(scope),
+    ]);
+  });
+
+  it('normalizes invoice list and eligible-entries queries', () => {
+    expect(
+      normalizeInvoiceListQuery({
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+        limit: 50,
+        page: 2,
+        projectId: 'project-1',
+        search: 'april',
+        status: 'draft',
+      }),
+    ).toEqual({
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      limit: 50,
+      page: 2,
+      projectId: 'project-1',
+      search: 'april',
+      status: 'draft',
+    });
+    expect(
+      normalizeEligibleEntriesQuery({
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+        projectId: 'project-1',
+        roundingStepMinutes: 15,
+      }),
+    ).toEqual({
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      projectId: 'project-1',
+      roundingStepMinutes: 15,
+    });
+    expect(normalizeEligibleEntriesQuery()).toEqual({
+      dateFrom: null,
+      dateTo: null,
+      projectId: null,
+      roundingStepMinutes: null,
+    });
+  });
+
+  it('provides invoice keys with normalized queries and ids', () => {
+    const scopedKeys = [
+      'admin-web',
+      { role: 'admin', userId: 'user-1', workspaceId: 'workspace-1' },
+      'invoices',
+    ];
+
+    expect(adminInvoicesKeys.all(scope)).toEqual(scopedKeys);
+    expect(
+      adminInvoicesKeys.list(scope, { page: 2, status: 'sent' }),
+    ).toEqual([
+      ...scopedKeys,
+      'list',
+      {
+        dateFrom: null,
+        dateTo: null,
+        limit: null,
+        page: 2,
+        projectId: null,
+        search: null,
+        status: 'sent',
+      },
+    ]);
+    expect(adminInvoicesKeys.detail(scope, 'invoice-1')).toEqual([
+      ...scopedKeys,
+      'detail',
+      'invoice-1',
+    ]);
+    expect(adminInvoicesKeys.defaults(scope)).toEqual([
+      ...scopedKeys,
+      'defaults',
+    ]);
+    expect(adminInvoicesKeys.stats(scope)).toEqual([
+      ...scopedKeys,
+      'stats',
+    ]);
+    expect(
+      adminInvoicesKeys.eligibleEntries(scope, {
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+        roundingStepMinutes: 5,
+      }),
+    ).toEqual([
+      ...scopedKeys,
+      'eligible-entries',
+      {
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-30',
+        projectId: null,
+        roundingStepMinutes: 5,
+      },
+    ]);
+  });
+
+  it('invalidates invoice queries after invoice mutations', () => {
+    expect(adminMutationInvalidationKeys.afterInvoiceMutation(scope)).toEqual([
+      adminInvoicesKeys.all(scope),
     ]);
   });
 });

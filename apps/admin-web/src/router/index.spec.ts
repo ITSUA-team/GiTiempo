@@ -19,8 +19,10 @@ import {
   type AuthRuntime,
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
+import ForgotPasswordView from "@/views/ForgotPasswordView.vue";
 import ForbiddenView from "@/views/ForbiddenView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
+import ResetPasswordView from "@/views/ResetPasswordView.vue";
 
 type LazyRouteComponent = () => Promise<{ default: unknown }>;
 
@@ -37,9 +39,11 @@ async function expectLazyRouteComponent(
 
 function createUserResponse(
   role: WorkspaceRole = WorkspaceRoles.Admin,
+  canViewInvoices = true,
 ): UserResponse {
   return {
     avatarUrl: null,
+    canViewInvoices,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Admin User",
     email: "admin@example.com",
@@ -91,6 +95,9 @@ function createRuntimeMock(
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "admin@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -118,11 +125,12 @@ function setRestorableSession(role: WorkspaceRole): void {
 function setAuthenticatedUser(
   pinia: ReturnType<typeof createPinia>,
   role: WorkspaceRole = WorkspaceRoles.Admin,
+  canViewInvoices = true,
 ): ReturnType<typeof useAuthStore> {
   const authStore = useAuthStore(pinia);
   authStore.accessToken = `${role}-access-token`;
   authStore.bootstrapComplete = true;
-  authStore.profile = createUserResponse(role);
+  authStore.profile = createUserResponse(role, canViewInvoices);
 
   return authStore;
 }
@@ -143,6 +151,7 @@ describe("admin router", () => {
     expect(router.hasRoute(routeNames.login)).toBe(true);
     expect(router.hasRoute(routeNames.dashboard)).toBe(true);
     expect(router.hasRoute(routeNames.reports)).toBe(true);
+    expect(router.hasRoute(routeNames.invoiceDetail)).toBe(true);
     expect(router.hasRoute(routeNames.invoices)).toBe(true);
     expect(router.hasRoute(routeNames.members)).toBe(true);
     expect(router.hasRoute(routeNames.addProject)).toBe(true);
@@ -150,6 +159,8 @@ describe("admin router", () => {
     expect(router.hasRoute(routeNames.notFound)).toBe(true);
     expect(router.hasRoute(routeNames.projects)).toBe(true);
     expect(router.hasRoute(routeNames.settings)).toBe(true);
+    expect(router.hasRoute(routeNames.forgotPassword)).toBe(true);
+    expect(router.hasRoute(routeNames.resetPassword)).toBe(true);
   });
 
   it("mounts documented admin product pages inside the shell while keeping standalone error routes outside it", async () => {
@@ -173,6 +184,11 @@ describe("admin router", () => {
         allowedRoles: [WorkspaceRoles.Admin, WorkspaceRoles.PM],
         path: "/invoices",
         name: routeNames.invoices,
+      },
+      {
+        allowedRoles: [WorkspaceRoles.Admin, WorkspaceRoles.PM],
+        path: "/invoices/inv-1",
+        name: routeNames.invoiceDetail,
       },
       {
         allowedRoles: [WorkspaceRoles.Admin],
@@ -393,6 +409,74 @@ describe("admin router", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
+  it("defines the public recovery routes as standalone guest-flow pages", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const forgotRoute = router.resolve("/auth/forgot-password");
+
+    expect(forgotRoute.name).toBe(routeNames.forgotPassword);
+    expect(forgotRoute.meta.guestOnly).toBe(true);
+    expect(forgotRoute.meta.requiresAuth).toBeUndefined();
+    expect(forgotRoute.meta.allowedRoles).toBeUndefined();
+    expect(forgotRoute.matched).toHaveLength(1);
+    expect(forgotRoute.matched[0]?.path).toBe("/auth/forgot-password");
+    expect(forgotRoute.matched[0]?.components?.default).toBeTypeOf("function");
+    await expectLazyRouteComponent(
+      forgotRoute.matched[0]?.components?.default,
+      ForgotPasswordView,
+    );
+
+    const resetRoute = router.resolve("/auth/reset-password");
+
+    expect(resetRoute.name).toBe(routeNames.resetPassword);
+    expect(resetRoute.meta.allowAuthenticatedGuestFlow).toBe(true);
+    expect(resetRoute.meta.guestOnly).toBeUndefined();
+    expect(resetRoute.meta.requiresAuth).toBeUndefined();
+    expect(resetRoute.meta.allowedRoles).toBeUndefined();
+    expect(resetRoute.matched).toHaveLength(1);
+    expect(resetRoute.matched[0]?.path).toBe("/auth/reset-password");
+    expect(resetRoute.matched[0]?.components?.default).toBeTypeOf("function");
+    await expectLazyRouteComponent(
+      resetRoute.matched[0]?.components?.default,
+      ResetPasswordView,
+    );
+  });
+
+  it("redirects authenticated users away from the guest-only recovery request route", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthenticatedUser(pinia);
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/auth/forgot-password");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("lets authenticated users land on the reset route from an action-code email", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthenticatedUser(pinia);
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/auth/reset-password?mode=resetPassword&oobCode=valid-code");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.resetPassword);
+  });
+
   it("resumes a valid preserved redirect for authenticated login visits", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -468,6 +552,61 @@ describe("admin router", () => {
     await router.isReady();
 
     expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+  });
+
+  it("redirects PM users without invoice view permission from invoice pages", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthenticatedUser(pinia, WorkspaceRoles.PM, false);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/invoices");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+
+    await router.push("/invoices/3d9f2f0e-1111-4111-8111-000000000001");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+  });
+
+  it("allows PM users with invoice view permission to open invoice pages", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthenticatedUser(pinia, WorkspaceRoles.PM, true);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/invoices");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.invoices);
+
+    await router.push("/invoices/3d9f2f0e-1111-4111-8111-000000000001");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.invoiceDetail);
+  });
+
+  it("allows admins to open invoice pages regardless of invoice view permission", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthenticatedUser(pinia, WorkspaceRoles.Admin, false);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/invoices");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.invoices);
   });
 
   it("allows admin users to open admin-only pages", async () => {

@@ -3,10 +3,12 @@ import { z } from "zod";
 export const dateSchema = z.iso.date();
 export const dateTimeSchema = z.iso.datetime();
 
+export const MAX_SEARCH_LENGTH = 200;
+
 export const optionalSearchSchema = z
   .string()
   .trim()
-  .max(200)
+  .max(MAX_SEARCH_LENGTH)
   .transform((value) => (value === "" ? undefined : value))
   .optional();
 
@@ -16,3 +18,5 @@ export const paginatedListMetaSchema = z.object({
   total: z.number().int().min(0),
   totalPages: z.number().int().min(0),
 });
+
+export const roundingStepMinutesSchema = z.number().int().min(1).max(60);

@@ -23,6 +23,7 @@ const baseProject = {
   source: 'manual',
   trackingMode: 'managed',
   referenceProvenance: null,
+  timeRoundingStepMinutes: null,
   accessScope: 'project',
   capabilities: { canManageTasks: true },
   totalSeconds: 43200,
@@ -87,6 +88,29 @@ describe('projectListResponseSchema', () => {
       expect.objectContaining({ path: ['members'] }),
     );
   });
+
+  it.each([0, 61, 5.5])(
+    'rejects invalid timeRoundingStepMinutes values on project response',
+    (step) => {
+      const result = projectResponseSchema.safeParse({
+        ...baseProject,
+        timeRoundingStepMinutes: step,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+    },
+  );
+
+  it('requires timeRoundingStepMinutes key on project response', () => {
+    const result = projectResponseSchema.safeParse({
+      ...baseProject,
+      timeRoundingStepMinutes: undefined,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
 });
 
 describe('createProjectSchema', () => {
@@ -108,6 +132,60 @@ describe('createProjectSchema', () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(['defaultBillableForTasks']);
   });
+
+  it('accepts a valid timeRoundingStepMinutes of 5', () => {
+    const result = createProjectSchema.parse({
+      name: 'Project Orion',
+      timeRoundingStepMinutes: 5,
+    });
+
+    expect(result.timeRoundingStepMinutes).toBe(5);
+  });
+
+  it('accepts null timeRoundingStepMinutes for inherit', () => {
+    const result = createProjectSchema.parse({
+      name: 'Project Orion',
+      timeRoundingStepMinutes: null,
+    });
+
+    expect(result.timeRoundingStepMinutes).toBeNull();
+  });
+
+  it('defaults timeRoundingStepMinutes to undefined when omitted', () => {
+    const result = createProjectSchema.parse({ name: 'Project Orion' });
+
+    expect(result.timeRoundingStepMinutes).toBeUndefined();
+  });
+
+  it('rejects timeRoundingStepMinutes of 0', () => {
+    const result = createProjectSchema.safeParse({
+      name: 'Project Orion',
+      timeRoundingStepMinutes: 0,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
+
+  it('rejects timeRoundingStepMinutes over 60', () => {
+    const result = createProjectSchema.safeParse({
+      name: 'Project Orion',
+      timeRoundingStepMinutes: 61,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
+
+  it('rejects a non-integer timeRoundingStepMinutes', () => {
+    const result = createProjectSchema.safeParse({
+      name: 'Project Orion',
+      timeRoundingStepMinutes: 5.5,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
 });
 
 describe('updateProjectSchema', () => {
@@ -117,6 +195,49 @@ describe('updateProjectSchema', () => {
     });
 
     expect(result.defaultBillableForTasks).toBe(false);
+  });
+
+  it('accepts null timeRoundingStepMinutes to restore inheritance', () => {
+    const result = updateProjectSchema.parse({
+      timeRoundingStepMinutes: null,
+    });
+
+    expect(result.timeRoundingStepMinutes).toBeNull();
+  });
+
+  it('accepts a valid timeRoundingStepMinutes update', () => {
+    const result = updateProjectSchema.parse({
+      timeRoundingStepMinutes: 15,
+    });
+
+    expect(result.timeRoundingStepMinutes).toBe(15);
+  });
+
+  it('rejects timeRoundingStepMinutes of 0 on update', () => {
+    const result = updateProjectSchema.safeParse({
+      timeRoundingStepMinutes: 0,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
+
+  it('rejects timeRoundingStepMinutes over 60 on update', () => {
+    const result = updateProjectSchema.safeParse({
+      timeRoundingStepMinutes: 61,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
+  });
+
+  it('rejects a non-integer timeRoundingStepMinutes on update', () => {
+    const result = updateProjectSchema.safeParse({
+      timeRoundingStepMinutes: 5.5,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['timeRoundingStepMinutes']);
   });
 });
 

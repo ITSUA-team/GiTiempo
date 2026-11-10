@@ -5,6 +5,8 @@ import InputText from "primevue/inputtext";
 import Message from "primevue/message";
 import Password from "primevue/password";
 import { EnvelopeIcon, LockClosedIcon } from "@heroicons/vue/24/outline";
+import { RouterLink } from "vue-router";
+import type { RouteLocationRaw } from "vue-router";
 
 import AuthDivider from "./AuthDivider.vue";
 import GithubMark from "./GithubMark.vue";
@@ -21,6 +23,7 @@ const props = withDefaults(
     errorHelpHref?: string | null;
     errorHelpLabel?: string | null;
     errorMessage?: string | null;
+    forgotPasswordTo?: RouteLocationRaw | null;
     githubEnabled?: boolean;
     isSubmitting: boolean;
     title: string;
@@ -29,6 +32,7 @@ const props = withDefaults(
     errorHelpHref: null,
     errorHelpLabel: null,
     errorMessage: null,
+    forgotPasswordTo: null,
     githubEnabled: true,
   },
 );
@@ -117,12 +121,26 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
         </div>
 
         <div class="flex flex-col gap-1">
-          <label
-            for="sign-in-password"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            Password
-          </label>
+          <div class="flex items-center justify-between gap-2">
+            <label
+              for="sign-in-password"
+              class="text-text-dark text-[13px] font-medium"
+            >
+              Password
+            </label>
+            <RouterLink
+              v-if="props.forgotPasswordTo"
+              :to="props.forgotPasswordTo"
+              class="focus-visible:outline-brand text-brand shrink-0 text-[13px] font-semibold whitespace-nowrap transition hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+              data-testid="sign-in-forgot-password"
+            >
+              Forgot?
+            </RouterLink>
+            <slot
+              v-else
+              name="forgot-password"
+            />
+          </div>
           <div class="relative">
             <LockClosedIcon
               class="text-text-muted pointer-events-none absolute top-1/2 left-3 z-10 size-4.5 -translate-y-1/2"
@@ -190,7 +208,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
 
           <button
             type="button"
-            class="border-divider focus-visible:outline-brand enabled:hover:bg-app-bg flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm border bg-white px-4 text-[15px] font-semibold text-google-text transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            class="border-divider focus-visible:outline-brand enabled:hover:bg-app-bg text-google-text flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm border bg-white px-4 text-[15px] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="props.isSubmitting"
             data-testid="sign-in-google"
             @click="emit('submitGoogle')"
@@ -202,7 +220,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
           <button
             v-if="props.githubEnabled"
             type="button"
-            class="focus-visible:outline-brand flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm bg-github px-4 text-[15px] font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 enabled:hover:bg-github-hover disabled:cursor-not-allowed disabled:opacity-60"
+            class="focus-visible:outline-brand bg-github enabled:hover:bg-github-hover flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-sm px-4 text-[15px] font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="props.isSubmitting"
             data-testid="sign-in-github"
             @click="emit('submitGithub')"

@@ -99,6 +99,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   );
 
   const dialogFlow = useTopBarTimerDialogFlow({
+    hasRunningTimerChanges: viewModel.hasRunningTimerChanges,
     isNewTaskSelected: viewModel.isNewTaskSelected,
     isTimerRunning,
     picker,

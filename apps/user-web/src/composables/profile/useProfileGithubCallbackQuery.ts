@@ -14,8 +14,7 @@ interface UseProfileGithubCallbackQueryOptions {
 
 interface ProfileGithubCallbackToast {
   detail: string;
-  life?: number;
-  severity: "error" | "success";
+  severity: "error";
   summary: string;
 }
 
@@ -36,15 +35,6 @@ function getCallbackToast(
 ): ProfileGithubCallbackToast | null {
   const github = route.query.github;
   const code = route.query.code;
-
-  if (github === "connected") {
-    return {
-      detail: "Your GitHub account is now connected.",
-      life: 4000,
-      severity: "success",
-      summary: "GitHub connected",
-    };
-  }
 
   if (github === "error") {
     const detail =
@@ -79,13 +69,15 @@ export function useProfileGithubCallbackQuery({
   toast,
 }: UseProfileGithubCallbackQueryOptions) {
   async function handleCallbackQuery(): Promise<void> {
-    const callbackToast = getCallbackToast(route);
-
-    if (!callbackToast) {
+    if (route.query.github !== "connected" && route.query.github !== "error") {
       return;
     }
 
-    toast.add(callbackToast);
+    const callbackToast = getCallbackToast(route);
+
+    if (callbackToast) {
+      toast.add(callbackToast);
+    }
     await router.replace({ query: getCleanQuery(route) });
   }
 

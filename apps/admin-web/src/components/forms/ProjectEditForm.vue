@@ -22,10 +22,19 @@ import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 
+import type { RoundingStepOption } from '@/lib/rounding-step-options';
+import {
+  getInheritRoundingStepOption,
+  getRoundingStepOptions,
+  toApiRoundingStepMinutes,
+  toFormRoundingStepMinutes,
+} from '@/lib/rounding-step-options';
+
 const props = defineProps<{
   project: ProjectResponse;
   allMembers: WorkspaceMemberListResponse;
   saving?: boolean;
+  workspaceRoundingStepMinutes: number;
 }>();
 
 const emit = defineEmits<{
@@ -48,6 +57,10 @@ const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
   { label: 'Private', value: 'private' as const },
 ];
+const roundingStepOptions = computed<RoundingStepOption[]>(() => [
+  getInheritRoundingStepOption(props.workspaceRoundingStepMinutes),
+  ...getRoundingStepOptions(),
+]);
 const isExternalProject = computed(
   () => props.project.trackingMode === 'external-reference',
 );
@@ -75,6 +88,7 @@ function handleMemberComplete(event: AutoCompleteCompleteEvent): void {
 
 const initialValues: ProjectEditFormInput = {
   defaultBillableForTasks: props.project.defaultBillableForTasks,
+  timeRoundingStepMinutes: toFormRoundingStepMinutes(props.project.timeRoundingStepMinutes),
   managerUserId:
     props.project.members.find((m) => m.role === WorkspaceRoles.PM)?.userId ??
     null,
@@ -95,7 +109,11 @@ function handleSave({
     return;
   }
 
-  emit('save', values as ProjectEditFormInput);
+  const formInput = values as ProjectEditFormInput;
+  emit('save', {
+    ...formInput,
+    timeRoundingStepMinutes: toApiRoundingStepMinutes(formInput.timeRoundingStepMinutes),
+  });
 }
 </script>
 
@@ -189,6 +207,24 @@ function handleSave({
               name="defaultBillableForTasks"
               root-class="border-divider bg-surface-primary flex h-[42px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
               :disabled="saving"
+            />
+          </div>
+
+          <div class="flex min-w-0 flex-col gap-1.5 sm:w-[250px] sm:shrink-0">
+            <label
+              for="edit-rounding-step"
+              class="text-text-dark font-sans text-[13px] leading-none font-medium"
+            >Time rounding step</label>
+            <Select
+              input-id="edit-rounding-step"
+              name="timeRoundingStepMinutes"
+              :options="roundingStepOptions"
+              option-label="label"
+              option-value="value"
+              :invalid="$form.timeRoundingStepMinutes?.invalid"
+              :disabled="saving"
+              :pt="giTiempoSelectPt"
+              fluid
             />
           </div>
         </div>

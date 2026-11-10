@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { WorkspaceRoles } from "@gitiempo/shared";
 import { hasAllowedRole } from "@gitiempo/web-shared/router";
 import ConfirmDialog from "primevue/confirmdialog";
 import Toast from "primevue/toast";
@@ -31,12 +32,20 @@ async function refreshAuthorizationOnFocus(): Promise<void> {
 
   if (
     authorizationChanged &&
-    !hasAllowedRole(
-      route.meta.allowedRoles,
-      authStore.profile?.role,
-    )
+    !hasAllowedRole(route.meta.allowedRoles, authStore.profile?.role)
   ) {
     await router.replace({ name: routeNames.forbidden });
+    return;
+  }
+
+  if (
+    authorizationChanged &&
+    route.meta.requiresInvoiceViewPermission &&
+    authStore.profile?.role === WorkspaceRoles.PM &&
+    !authStore.profile?.canViewInvoices
+  ) {
+    await router.replace({ name: routeNames.forbidden });
+    return;
   }
 }
 

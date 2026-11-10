@@ -401,11 +401,13 @@ async function main(): Promise<void> {
           workspaceId: DEFAULT_WORKSPACE_ID,
           userId: row.id,
           role: user.role,
+          canViewInvoices: user.role === 'pm',
         })
         .onConflictDoUpdate({
           target: [workspaceMembers.workspaceId, workspaceMembers.userId],
           set: {
             role: user.role,
+            canViewInvoices: user.role === 'pm',
           },
         });
     }

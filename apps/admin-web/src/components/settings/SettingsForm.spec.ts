@@ -61,7 +61,7 @@ const SelectStub = {
 			:aria-invalid="invalid ? 'true' : undefined"
 			:class="$attrs.class"
 			:value="modelValue"
-			@change="$emit('update:modelValue', $event.target.value)"
+			@change="$emit('update:modelValue', options[$event.target.selectedIndex]?.[optionValue] ?? $event.target.value)"
 		>
 			<option
 				v-for="option in options"
@@ -132,6 +132,7 @@ function createProps(overrides: Record<string, unknown> = {}) {
 		fieldErrors: {},
 		isDirty: true,
 		saving: false,
+		timeRoundingStepMinutes: 1,
 		timeZone: 'UTC',
 		timeZoneOptions: [
 			{ label: 'UTC', value: 'UTC' },
@@ -193,6 +194,65 @@ describe('SettingsForm', () => {
 			'true',
 		);
 		expect(wrapper.text()).toContain('Invalid time zone');
+	});
+
+	it('renders the rounding step selector below the rate and currency row', () => {
+		const wrapper = mount(SettingsForm, {
+			global: { stubs },
+			props: createProps(),
+		});
+
+		const sectionLabels = wrapper
+			.findAll('label')
+			.map((label) => label.text());
+		const currencyIndex = sectionLabels.indexOf('Currency');
+		const roundingStepIndex = sectionLabels.indexOf(
+			'Time rounding step (minutes)',
+		);
+		const timeZoneIndex = sectionLabels.indexOf('Time zone');
+		const roundingStep = wrapper.get<HTMLSelectElement>(
+			'#settings-time-rounding-step-minutes',
+		);
+
+		expect(roundingStepIndex).toBeGreaterThan(currencyIndex);
+		expect(timeZoneIndex).toBeGreaterThan(roundingStepIndex);
+		expect(roundingStep.element.value).toBe('1');
+		expect(roundingStep.findAll('option').map((option) => option.text()))
+			.toEqual([
+				'1 min',
+				'5 min',
+				'10 min',
+				'15 min',
+				'30 min',
+				'60 min',
+			]);
+	});
+
+	it('emits typed rounding step updates from the selector', async () => {
+		const wrapper = mount(SettingsForm, {
+			global: { stubs },
+			props: createProps(),
+		});
+
+		await wrapper.get('#settings-time-rounding-step-minutes').setValue('30');
+
+		expect(wrapper.emitted('update:timeRoundingStepMinutes')).toEqual([[30]]);
+	});
+
+	it('renders rounding step validation feedback through the existing error pattern', () => {
+		const wrapper = mount(SettingsForm, {
+			global: { stubs },
+			props: createProps({
+				fieldErrors: { timeRoundingStepMinutes: 'Time rounding step is invalid.' },
+			}),
+		});
+
+		expect(
+			wrapper.get('#settings-time-rounding-step-minutes').attributes(
+				'aria-invalid',
+			),
+		).toBe('true');
+		expect(wrapper.text()).toContain('Time rounding step is invalid.');
 	});
 
 	it('keeps save and cancel controlled by dirty and save state', async () => {

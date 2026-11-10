@@ -90,6 +90,7 @@ const settingsResponse = {
   currency: 'USD',
   defaultHourlyRate: 120,
   id: '22222222-2222-4222-8222-222222222222',
+  timeRoundingStepMinutes: 1,
   timeZone: 'UTC',
   updatedAt: '2026-05-01T10:00:00.000Z',
   workspaceId: '11111111-1111-4111-8111-111111111111',
@@ -233,7 +234,7 @@ const SelectStub = {
       :id="inputId"
       :aria-invalid="invalid ? 'true' : undefined"
       :value="modelValue"
-      @change="$emit('update:modelValue', $event.target.value)"
+      @change="$emit('update:modelValue', options[$event.target.selectedIndex]?.[optionValue] ?? $event.target.value)"
     >
       <option
         v-for="option in options"
@@ -438,6 +439,7 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('Workspace name');
     expect(wrapper.text()).toContain('Default hourly rate');
     expect(wrapper.text()).toContain('Currency');
+    expect(wrapper.text()).toContain('Time rounding step (minutes)');
     expect(wrapper.text()).toContain('Time zone');
     expect(wrapper.text()).toContain('Billing Defaults');
     expect(wrapper.text()).toContain('Invoice prefix');
@@ -454,6 +456,22 @@ describe('SettingsView', () => {
     expect(
       wrapper.get<HTMLInputElement>('#settings-time-zone').element.value,
     ).toBe('UTC');
+    expect(
+      wrapper.get<HTMLSelectElement>('#settings-time-rounding-step-minutes')
+        .element.value,
+    ).toBe('1');
+
+    const sectionLabels = wrapper
+      .findAll('label')
+      .map((label) => label.text());
+    const currencyIndex = sectionLabels.indexOf('Currency');
+    const roundingStepIndex = sectionLabels.indexOf(
+      'Time rounding step (minutes)',
+    );
+    const timeZoneIndex = sectionLabels.indexOf('Time zone');
+
+    expect(roundingStepIndex).toBeGreaterThan(currencyIndex);
+    expect(timeZoneIndex).toBeGreaterThan(roundingStepIndex);
     expect(
       wrapper.get('#settings-workspace-name').element.closest('form'),
     ).not.toBeNull();
@@ -750,7 +768,7 @@ describe('SettingsView', () => {
       name: 'Updated Workspace',
     });
     expect(testMocks.updateWorkspaceSettings).not.toHaveBeenCalled();
-    expect(testMocks.successToast).toHaveBeenCalledWith('Settings saved.');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('submits changed time zone through the existing workspace settings save action', async () => {
@@ -776,7 +794,76 @@ describe('SettingsView', () => {
     expect(testMocks.updateWorkspaceSettings).toHaveBeenCalledWith({
       timeZone: 'Europe/Kyiv',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith('Settings saved.');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+  });
+
+  it('initializes the rounding step selector from loaded settings', async () => {
+    testMocks.getWorkspaceSettings.mockResolvedValueOnce({
+      ...settingsResponse,
+      timeRoundingStepMinutes: 15,
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(
+      wrapper.get('label[for="settings-time-rounding-step-minutes"]').text(),
+    ).toBe('Time rounding step (minutes)');
+    expect(
+      wrapper.get<HTMLSelectElement>('#settings-time-rounding-step-minutes')
+        .element.value,
+    ).toBe('15');
+    expect(wrapper.text()).toContain('1 min');
+    expect(wrapper.text()).toContain('5 min');
+    expect(wrapper.text()).toContain('10 min');
+    expect(wrapper.text()).toContain('15 min');
+    expect(wrapper.text()).toContain('30 min');
+    expect(wrapper.text()).toContain('60 min');
+  });
+
+  it('submits changed rounding step through the existing workspace settings save action', async () => {
+    testMocks.updateWorkspaceSettings.mockResolvedValueOnce({
+      ...settingsResponse,
+      timeRoundingStepMinutes: 30,
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    await wrapper.get('#settings-time-rounding-step-minutes').setValue('30');
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Save Settings')
+      ?.trigger('click');
+    await flushPromises();
+
+    expect(testMocks.updateWorkspace).not.toHaveBeenCalled();
+    expect(testMocks.updateWorkspaceSettings).toHaveBeenCalledWith({
+      timeRoundingStepMinutes: 30,
+    });
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+    expect(
+      wrapper.get<HTMLSelectElement>('#settings-time-rounding-step-minutes')
+        .element.value,
+    ).toBe('30');
+  });
+
+  it('restores the persisted rounding step on cancel without saving', async () => {
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    await wrapper.get('#settings-time-rounding-step-minutes').setValue('30');
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Cancel')
+      ?.trigger('click');
+
+    expect(
+      wrapper.get<HTMLSelectElement>('#settings-time-rounding-step-minutes')
+        .element.value,
+    ).toBe('1');
+    expect(testMocks.updateWorkspace).not.toHaveBeenCalled();
+    expect(testMocks.updateWorkspaceSettings).not.toHaveBeenCalled();
   });
 
   it('keeps initial request failures distinct and retryable', async () => {
@@ -864,9 +951,7 @@ describe('SettingsView', () => {
     expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
       organizationLogin: 'Octo-Org',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'GitHub organization added.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('Octo-Org');
   });
 
@@ -891,9 +976,7 @@ describe('SettingsView', () => {
     expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
       organizationLogin: 'Hidden-Org',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'GitHub organization added.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('Hidden-Org');
   });
 
@@ -917,9 +1000,7 @@ describe('SettingsView', () => {
     expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
       organizationLogin: 'Hidden-Org',
     });
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'GitHub organization added.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
       true,
     );
@@ -992,9 +1073,7 @@ describe('SettingsView', () => {
     expect(testMocks.removeWorkspaceGitHubOrganization).toHaveBeenCalledWith(
       '33333333-3333-4333-8333-333333333333',
     );
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'GitHub organization removed.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain(
       'No GitHub organizations are allowed for this workspace yet.',
     );
@@ -1217,9 +1296,7 @@ describe('SettingsView', () => {
     );
     expect(wrapper.text()).not.toContain('GitHub organization access');
     expect(wrapper.text()).toContain('My-test-org-for-clock');
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'GitHub organization added.',
-    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('keeps the checklist visible when retry stays blocked', async () => {
@@ -1266,6 +1343,21 @@ describe('SettingsView', () => {
     expect(wrapper.text()).not.toContain('Blocked');
   });
 
+  it('automatically completes discovered App access quietly and rereads the authoritative card', async () => {
+    testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({ items: [workspaceGitHubOrganizationResponse] });
+    testMocks.setupWorkspaceGitHubInstallation.mockResolvedValue({ existingInstallationId: '123456', state: 'a'.repeat(32) });
+    testMocks.listWorkspaceGitHubInstallations
+      .mockResolvedValueOnce({ items: [] })
+      .mockResolvedValue({ items: [{ organizationLogin: 'Octo-Org', status: 'verified', installationId: '123456' }] });
+    const wrapper = mountSettingsView();
+    await flushPromises();
+    await flushPromises();
+    expect(testMocks.completeWorkspaceGitHubInstallation).toHaveBeenCalledOnce();
+    expect(testMocks.listWorkspaceGitHubInstallations).toHaveBeenCalledTimes(3);
+    expect(wrapper.text()).toContain('Octo-Org');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+  });
+
   it('submits only complete installation callback data and removes it from the URL', async () => {
     window.history.replaceState(
       {},
@@ -1281,6 +1373,41 @@ describe('SettingsView', () => {
       state: 'a'.repeat(32),
     });
     expect(window.location.search).toBe('?keep=value');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+  });
+
+  it('retries failed callback follow-up reads in the card without repeating completion', async () => {
+    window.history.replaceState({}, '', '/settings?state=' + 'a'.repeat(32) + '&installation_id=123456&keep=value');
+    testMocks.listWorkspaceGitHubInstallations
+      .mockResolvedValueOnce({ items: [] })
+      .mockRejectedValue(new Error('Installation status unavailable'));
+    const wrapper = mountSettingsView();
+    await flushPromises();
+    await vi.waitFor(() => expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Installation status unavailable',
+      expect.objectContaining({ logContext: { action: 'load-workspace-github-installations', feature: 'settings-github-installations' } }),
+    ));
+    expect(window.location.search).toBe('?keep=value');
+    expect(testMocks.listWorkspaceGitHubInstallations).toHaveBeenCalledTimes(3);
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+    expect(wrapper.text()).not.toContain('GitHub App access confirmed');
+    const errorBlock = wrapper.get('[data-testid="settings-github-installations-error"]');
+    expect(errorBlock.text()).toContain('Installation status unavailable');
+    expect(wrapper.find('[data-testid="settings-github-organizations-error"]').exists()).toBe(false);
+    const recovered = createDeferred<{ items: [] }>();
+    testMocks.listWorkspaceGitHubInstallations.mockReturnValueOnce(recovered.promise);
+    await errorBlock.get('button').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="settings-github-installations-error"]').attributes('aria-busy')).toBe('true');
+    await errorBlock.get('button').trigger('click');
+    expect(testMocks.listWorkspaceGitHubInstallations).toHaveBeenCalledTimes(4);
+    recovered.resolve({ items: [] });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="settings-github-installations-error"]').exists()).toBe(false);
+    expect(testMocks.completeWorkspaceGitHubInstallation).toHaveBeenCalledOnce();
+    expect(testMocks.setupWorkspaceGitHubInstallation).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('?keep=value');
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('does not complete an installation callback when GitHub returns only one value', async () => {

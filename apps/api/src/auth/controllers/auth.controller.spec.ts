@@ -32,7 +32,28 @@ describe('AuthController', () => {
     await expect(
       controller.login({ firebaseIdToken: 'test:u:e@x.com' } as never),
     ).resolves.toBe(pair);
-    expect(authService.login).toHaveBeenCalledWith('test:u:e@x.com');
+    expect(authService.login).toHaveBeenCalledWith('test:u:e@x.com', undefined);
+  });
+
+  it('POST /auth/login forwards the optional Google proof to AuthService.login', async () => {
+    const pair = {
+      accessToken: 'a',
+      refreshToken: 'r',
+      accessTokenExpiresIn: 900,
+    };
+    authService.login.mockResolvedValue(pair);
+
+    await expect(
+      controller.login({
+        firebaseIdToken: 'test:u:e@x.com',
+        googleIdToken: 'google-proof',
+      } as never),
+    ).resolves.toBe(pair);
+
+    expect(authService.login).toHaveBeenCalledWith(
+      'test:u:e@x.com',
+      'google-proof',
+    );
   });
 
   it('POST /auth/refresh delegates to AuthService.refresh', async () => {

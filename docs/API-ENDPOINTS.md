@@ -16,18 +16,26 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | POST   | `/auth/switch-workspace` | JWT | Any | Switch the authenticated session to another workspace membership and issue a fresh token pair |
 | POST   | `/auth/logout`  | JWT  | Any  | Invalidate current refresh token                         |
 
-**POST /auth/login** body: `{ firebaseIdToken: string }`
+**POST /auth/login** body: `{ firebaseIdToken: string, googleIdToken?: string }`
 **POST /auth/register** body: `{ email: string, fullName: string, workspaceName: string, password: string, ownerAcknowledgement: true }`
 **POST /auth/refresh** body: `{ refreshToken: string }`
 **POST /auth/switch-workspace** body: `{ refreshToken: string, workspaceId: string }`
 
-`POST /auth/register` is the only public first-workspace-owner registration path. It creates the Firebase identity, local user, workspace, owner membership, and returns the normal token pair. Existing-workspace member onboarding remains invite-only; the User SPA `/register` flow must not reuse `/auth/login` or `/invites/accept` for first-workspace-owner creation.
+`POST /auth/login` accepts only a verified Firebase identity. A first successful Google sign-in (`firebase.sign_in_provider = google.com` and a verified email) creates one personal foundation atomically when that local user has no workspace memberships: local user if needed, a workspace named exactly `Workspace`, its default settings, and an `admin` membership, followed by the normal token pair. It does not infer marketing or workspace-email consent. Repeating the login, including concurrent requests, reuses that same foundation. A user with memberships receives a session for the earliest `joined_at` membership (then workspace ID); refresh never provisions another workspace. The narrow exception for another provider without membership is authenticated recovery of its original manual-registration reservation by the exact reserved Firebase UID; ordinary password login does not provision a workspace.
+
+Email-only account adoption requires proof that the incoming identity and the existing account own the same normalized verified email. A local email value, pending invitation, or creation reservation is insufficient. An unverified password account cannot be adopted by a different Google/GitHub identity merely presenting that email: the API returns `identity_proof_required` without an application session or identity binding. Existing immutable subject/provider ownership and conflicting-owner rejection remain in force.
+
+If a verified Firebase token authenticates through Google but lacks verified email, the optional `googleIdToken` can supply the incoming email proof. The API independently verifies its Google signature, issuer, configured `GOOGLE_OAUTH_CLIENT_IDS` audience/authorized party, expiry, issued-at and verified-email claims, and requires its Google subject to match the signed Firebase Google identity. A conflicting present email is rejected. The live Firebase identity must remain enabled and retain that provider subject; a missing live top-level email is allowed only with this paired proof. An empty audience allowlist disables the fallback. Client profile email and OAuth access tokens are not email-ownership proof. Neither ID token is logged or persisted. Existing-account proof, canonical claims and token-pair responses remain unchanged; Firebase-only callers remain supported.
+
+`POST /auth/register` remains the manual first-workspace-owner path. It creates the Firebase identity, local user, workspace, owner membership, and returns the normal token pair. Existing-workspace member onboarding remains invite-only; the User SPA `/register` flow must not reuse `/invites/accept` for first-workspace-owner creation. Workspace display names are not unique: `Workspace` and any manually entered name may be used by multiple workspaces, and rename keeps the workspace ID stable.
+
+Manual registration commits a reservation containing the exact Firebase UID and original validated non-secret foundation data before requesting Firebase creation. It never stores the password. A provider timeout or unknown outcome returns `503` with `registration_service_unavailable` and retains the attempt without granting a session. Later backend-verified authentication of that exact UID can finish the original foundation, preserving its names and explicit manual acknowledgement, or reuse a compatible committed foundation. Matching email on another UID cannot recover it. Background reconciliation updates only reservation state, and temporarily not finding the UID does not prove that late creation cannot finish. Cleanup is limited to the attempt's own unadopted identity after known failure; uncertain deletion retains provenance.
 
 Successful registration returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`.
 
 Successful workspace switching rotates the current refresh-token session into the selected workspace and returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`. The backend must reject target workspaces where the caller does not have an existing membership with `403 Forbidden`.
 
-Expected frontend-visible registration error codes: `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, and `registration_service_unavailable`. These are returned in the standard error response `code` field; `error` remains the HTTP-category label.
+Expected frontend-visible registration error codes: `duplicate_email`, `weak_password`, `invalid_workspace_name`, `rate_limited`, and `registration_service_unavailable`. These are returned in the standard error response `code` field; `error` remains the HTTP-category label. `workspace_name_unavailable` is retired because display names are intentionally reusable.
 
 ---
 
@@ -61,7 +69,7 @@ Expected frontend-visible registration error codes: `duplicate_email`, `weak_pas
 
 `GET /github/connection` keeps `status: connected | disconnected` and safe `account` metadata. `oauth.status` is `not_authorized | authorized | reauthorization_required`; `missingScopes` contains known requested scopes only. `capabilities.organizationDiscovery` and `capabilities.personalData` independently report `ready | authorization_required | permission_required`. `disconnect` is `allowed | alternative_signin_required | verification_unavailable`. Workspace installations use their existing workspace endpoints.
 
-Account-link clients include credentials on the auth-URL request: the API sets an encrypted, HttpOnly, SameSite=Lax session-binding cookie scoped to `/auth/github` for ten minutes. The callback validates the initiating session and active membership; logout invalidates pending authorization generations. Sign-in keeps browser nonce and extension challenge/verifier behavior, configured destinations, existing member resolution and no provisioning. Linked immutable ID resolves first; verified-email resolution applies only to unlinked IDs.
+Account-link clients include credentials on the auth-URL request: the API sets an encrypted, HttpOnly, SameSite=Lax session-binding cookie scoped to `/auth/github` for ten minutes. The callback validates the initiating session and active membership; logout invalidates pending authorization generations. GitHub sign-in keeps browser nonce and extension challenge/verifier behavior and configured destinations, but the callback only stages an encrypted candidate: it never creates a local user, workspace, membership, OAuth link, grant, or session. `POST /auth/github/session` performs the single-use proof exchange and atomically persists the selected identity/OAuth grant, provisions a personal foundation when the resolved user has no memberships, and issues the token pair. A linked immutable GitHub ID resolves first; otherwise only GitHub-verified emails may resolve an existing user or form a new candidate. Invalid, replayed, stale-generation, disconnected, or failed proof exchanges leave no durable candidate account or partial OAuth/session state.
 
 The Profile callback uses `github=connected` or `github=error&code=<safe-code>`. Ownership conflict and identity mismatch do not expose another person's details. Disconnect checks an enabled Firebase account with supported password or Google sign-in on the server, including a fresh check on DELETE. Failure to verify prevents mutation. Successful unlink preserves current GiTiempo sessions, workspace/history data and installations. `unconfirmed` warns that local unlink succeeded but provider revocation could not be confirmed.
 
@@ -232,17 +240,25 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 | Method | Path            | Auth | Role     | Description                                |
 | ------ | --------------- | ---- | -------- | ------------------------------------------ |
-| GET    | `/invoices`     | JWT  | Admin/PM | List invoices (PM: assigned projects only) |
-| POST   | `/invoices`     | JWT  | Admin/PM | Create invoice from eligible time entries  |
-| GET    | `/invoices/eligible-entries` | JWT  | Admin/PM | Preview eligible time entries for a potential invoice |
-| GET    | `/invoices/stats`            | JWT  | Admin/PM | Get invoice stats (counts by status, this month summary) |
-| GET    | `/invoices/:id` | JWT  | Admin/PM | Get invoice details                        |
-| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, title)      |
+| GET    | `/invoices`     | JWT  | Admin/PM | List invoices (PM: assigned projects only, requires `canViewInvoices`) |
+| POST   | `/invoices`     | JWT  | Admin/PM | Create invoice from eligible time entries (PM: requires `canViewInvoices`)  |
+| GET    | `/invoices/defaults` | JWT  | Admin/PM | Get invoice defaults (currency, default hourly rate, rounding step) |
+| GET    | `/invoices/eligible-entries` | JWT  | Admin/PM | Preview eligible time entries for a potential invoice (PM: requires `canViewInvoices`) |
+| GET    | `/invoices/stats`            | JWT  | Admin/PM | Get invoice stats (counts by status, this month summary, PM: requires `canViewInvoices`) |
+| GET    | `/invoices/:id` | JWT  | Admin/PM | Get invoice details (PM: requires `canViewInvoices`)                        |
+| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, title, PM: requires `canViewInvoices`)      |
 | DELETE | `/invoices/:id` | JWT  | Admin    | Delete invoice                             |
 
 **GET /invoices** query: `page?`, `limit?`, `projectId?`, `status?`, `dateFrom?`, `dateTo?`, `search?`
 
 - PMs see only invoices scoped to active public projects or private projects assigned to them. Workspace-wide invoices (no project scope) are admin-only.
+- PMs must have `canViewInvoices = true` (set by an admin on the Members page); otherwise the endpoint returns `403`.
+
+**GET /invoices/defaults**
+
+- Returns workspace-level defaults for invoice creation: currency, default hourly rate, and time rounding step.
+- Accessible to both admins and PMs (including PMs without `canViewInvoices`) so the invoices page can load defaults without calling the admin-only `GET /workspace/settings` endpoint.
+- Response: `{ currency: string, defaultHourlyRate: number | null, timeRoundingStepMinutes: number }`
 
 **POST /invoices** body: `{ title: string, dateFrom: string (YYYY-MM-DD), dateTo: string (YYYY-MM-DD), projectId?: string, hourlyRate?: number, currency?: string, discountPercent?: number (0–100, step 0.01, default 0), notes?: string | null }`
 
@@ -297,7 +313,15 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 | ------ | ------------------- | ---- | ----- | ---------------------------- |
 | GET    | `/members`          | JWT  | Admin | List workspace members       |
 | PATCH  | `/members/:id/role` | JWT  | Admin | Update member role           |
+| PATCH  | `/members/:id/permissions` | JWT | Admin | Update member permissions (`canViewInvoices`) |
 | DELETE | `/members/:id`      | JWT  | Admin | Remove member from workspace |
+
+**PATCH /members/:id/permissions** body: `{ canViewInvoices: boolean }`
+
+- Admin-only. Toggles whether a PM member can view and manage invoices for their assigned projects.
+- When `canViewInvoices` is `false`, the PM is denied access to all invoice endpoints (`/invoices`, `/invoices/:id`, `/invoices/stats`, `/invoices/eligible-entries`) with `403`.
+- On the frontend, the PM's invoices nav item is hidden and the `/invoices` and `/invoices/:id` routes redirect to the forbidden page.
+- The updated `canViewInvoices` value is reflected in `GET /users/me` and `GET /members` responses.
 
 ---
 
@@ -309,9 +333,9 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 | POST   | `/invites`             | JWT  | Admin | Create invite (send email)                                           |
 | POST   | `/invites/:id/resend`  | JWT  | Admin | Resend pending invite delivery without changing token or expiration  |
 | DELETE | `/invites/:id`         | JWT  | Admin | Cancel pending invite                                                |
-| POST   | `/invites/accept`      | None | —     | Accept invite by token: `{ token: string, firebaseIdToken: string }` |
+| POST   | `/invites/accept`      | None | —     | Accept invite by token: `{ token: string, firebaseIdToken: string, googleIdToken?: string }` |
 
-`POST /invites/accept` returns `204 No Content` on success. Expected frontend-visible failure messages include `Invite not found` (`404`), `Invite has expired` (`410`), `Invite cannot be accepted` (`409`), `Invite email does not match identity` (`403`), and `User is already a workspace member` (`409`). The User SPA invite accept page must call this endpoint after Firebase sign-in and before calling normal app login for a first-time invited user. Email/password account creation is not performed by the browser; invite delivery is responsible for backend Firebase Admin SDK provisioning plus Firebase password setup/reset link delivery. The API must not receive raw passwords.
+`POST /invites/accept` returns `204 No Content` on success. Expected frontend-visible failure messages include `Invite not found` (`404`), `Invite has expired` (`410`), `Invite cannot be accepted` (`409`), `Invite email does not match identity` (`403`), and `User is already a workspace member` (`409`). The User SPA invite accept page must call this endpoint after Firebase sign-in and before calling normal app login for a first-time invited user. The optional bounded `googleIdToken` uses the same paired proof verifier as login before comparing the invited email. The live Google subject is rechecked under identity locks; its alias, membership and invite acceptance commit together. Rejected proof leaves them unchanged, and invitation-first acceptance creates no personal workspace. Neither identity credential is logged or persisted. Email/password account creation is not performed by the browser; invite delivery reserves/provisions the Firebase identity and sends Firebase password setup/reset link delivery. A pending invite never blocks a verified social user from receiving their own personal `Workspace`, and normal login never accepts that invitation implicitly; explicit acceptance later adds the invited membership. The API must not receive raw passwords.
 
 `POST /invites/:id/resend` is admin-only and accepts no body. It returns the existing invite response on success after redelivering invite email content for the same pending invite token and expiration. It must reject missing, accepted, canceled, or cross-workspace invites with `404 Pending invite not found`, reject expired pending invites with `410 Invite has expired`, and return `503` with the delivery/Firebase failure message when resend cannot complete after the pending invite is found. Resend generates fresh Firebase password setup/reset link content for delivery, but it must not create a new invite row, extend expiration, or create workspace membership.
 
@@ -332,6 +356,8 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 **GET /workspace/settings** response includes `{ id, workspaceId, currency, defaultHourlyRate, timeZone, createdAt, updatedAt }`.
 
 `GET /workspace` always returns the currently active workspace bound to the caller's active JWT session. It does not list alternate workspace memberships.
+
+`PATCH /workspace` changes only the current workspace's display name. The name can duplicate another workspace name and the workspace ID does not change. The endpoint remains admin-only.
 
 **PATCH /workspace/settings** body: `{ currency?: string, defaultHourlyRate?: number | null, timeZone?: string }`
 

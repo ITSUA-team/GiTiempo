@@ -44,6 +44,27 @@ describe("createWorkspaceInvitesClient", () => {
     );
   });
 
+  it("forwards an optional Google proof to the accept endpoint", async () => {
+    let requestBody: unknown;
+    const fetchFn = vi.fn(async (_input: unknown, init?: { body?: unknown }) => {
+      requestBody = JSON.parse(String(init?.body));
+      return noContentResponse();
+    });
+    const client = createWorkspaceInvitesClient({ fetchFn });
+
+    await client.acceptInvite({
+      firebaseIdToken: "firebase-id-token",
+      googleIdToken: "google-id-token",
+      token: "invite-token",
+    });
+
+    expect(requestBody).toEqual({
+      firebaseIdToken: "firebase-id-token",
+      googleIdToken: "google-id-token",
+      token: "invite-token",
+    });
+  });
+
   it("surfaces backend error messages for failed acceptance", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({ message: "Invite has expired" }, { status: 410 }),

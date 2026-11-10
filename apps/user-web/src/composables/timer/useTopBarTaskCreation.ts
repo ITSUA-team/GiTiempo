@@ -62,10 +62,6 @@ export function useTopBarTaskCreation({
       picker.setTasks(nextTasks);
       picker.setSelectedTaskId(task.id);
       picker.setCreateTaskTitle("");
-      appToast.showSuccessToast(
-        "Task created",
-        "The new task is ready to use for tracking time.",
-      );
     } catch (error) {
       picker.setCreateTaskError(getErrorMessage(error));
       appToast.showErrorToast({

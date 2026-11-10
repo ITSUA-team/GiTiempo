@@ -11,7 +11,6 @@ interface UseMemberRemovalActionOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminMembersClient, 'removeMember'>;
   onError: (message: string, error: unknown, action: string) => void;
-  onSuccess: (message: string) => void;
   refreshMembers: () => Promise<void>;
   requireConfirmation: (
     message: string,
@@ -29,7 +28,6 @@ export function useMemberRemovalAction({
   accessToken,
   client = adminMembersClient,
   onError,
-  onSuccess,
   refreshMembers,
   requireConfirmation,
 }: UseMemberRemovalActionOptions) {
@@ -47,7 +45,6 @@ export function useMemberRemovalAction({
 
         try {
           await client.removeMember(member.id);
-          onSuccess(`${memberName} has been removed.`);
           await refreshMembers();
         } catch (error) {
           onError(getErrorMessage(error), error, 'remove-member');

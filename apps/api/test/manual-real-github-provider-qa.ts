@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
+import { assertE2eDatabase } from '../src/db/e2e-database';
 import type { DrizzleDB } from '../src/db/db.types';
 import {
   projectExternalRefs,
@@ -37,6 +38,7 @@ async function run(): Promise<void> {
   let userId: string | undefined;
 
   try {
+    await assertE2eDatabase();
     const module = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();

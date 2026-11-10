@@ -5,14 +5,13 @@ import Button from "primevue/button";
 import Message from "primevue/message";
 import Password from "primevue/password";
 import { useToast } from "primevue/usetoast";
-import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
-import { createAppToast, getErrorMessage } from "@gitiempo/web-shared";
+import { createAppToast, getFirebaseAuthErrorMessage, PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE } from "@gitiempo/web-shared";
 
-import { getFirebaseAuth } from "@/lib/firebase";
-import { getFirebaseErrorCode } from "@/lib/firebase-errors";
 import { routeNames } from "@/router";
+import { useAuthStore } from "@/stores/auth";
 import InviteOnboardingShell from "@/components/invite/InviteOnboardingShell.vue";
 
+const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
@@ -159,7 +158,7 @@ async function verifyLink(): Promise<void> {
   }
 
   try {
-    verifiedEmail.value = await verifyPasswordResetCode(getFirebaseAuth(), oobCode.value);
+    verifiedEmail.value = await authStore.verifyPasswordResetCode(oobCode.value);
   } catch (error) {
     appToast.showErrorToast({
       detail: "This password setup link is invalid, expired, or already used.",
@@ -179,6 +178,8 @@ function validatePasswordSetup(): boolean {
 
   if (!newPassword.value) {
     passwordErrorMessage.value = "Enter a new password.";
+  } else if (newPassword.value.length < PASSWORD_MIN_LENGTH) {
+    passwordErrorMessage.value = PASSWORD_TOO_SHORT_MESSAGE;
   }
 
   if (!confirmPassword.value) {
@@ -198,31 +199,6 @@ function validatePasswordSetup(): boolean {
   return true;
 }
 
-function mapPasswordResetErrorMessage(error: unknown): string {
-  const code = getFirebaseErrorCode(error);
-
-  if (
-    code === "auth/expired-action-code" ||
-    code === "auth/invalid-action-code"
-  ) {
-    return "This password setup link is invalid, expired, or already used. Go back to your invite and ask an admin for a fresh link if needed.";
-  }
-
-  if (code === "auth/weak-password") {
-    return "Choose a stronger password and try again.";
-  }
-
-  if (code === "auth/too-many-requests") {
-    return "Too many attempts. Wait a moment, then try again.";
-  }
-
-  if (code === "auth/network-request-failed") {
-    return "Network error. Check your connection and try again.";
-  }
-
-  return getErrorMessage(error, "Could not save your password.");
-}
-
 async function handleSavePassword(): Promise<void> {
   if (!verifiedEmail.value || !oobCode.value || !validatePasswordSetup()) {
     return;
@@ -231,16 +207,16 @@ async function handleSavePassword(): Promise<void> {
   isSubmitting.value = true;
 
   try {
-    await confirmPasswordReset(getFirebaseAuth(), oobCode.value, newPassword.value);
+    await authStore.confirmPasswordReset(oobCode.value, newPassword.value);
     isSuccess.value = true;
     newPassword.value = "";
     confirmPassword.value = "";
-    appToast.showSuccessToast(
-      "Password saved",
-      "Return to your invite to sign in and accept access.",
-    );
   } catch (error) {
-    inlineErrorMessage.value = mapPasswordResetErrorMessage(error);
+    inlineErrorMessage.value = getFirebaseAuthErrorMessage(
+      error,
+      "Could not save your password.",
+      "invite-setup",
+    );
     appToast.showErrorToast({
       detail: inlineErrorMessage.value,
       error,
@@ -280,8 +256,8 @@ async function handleSavePassword(): Promise<void> {
           Set your password
         </h2>
         <p class="text-text-muted text-sm leading-6">
-          Choose a Firebase password for the invited email. GiTiempo never
-          receives or stores this password.
+          Choose a Firebase password (at least 8 characters) for the invited
+          email. GiTiempo never receives or stores this password.
         </p>
       </div>
 

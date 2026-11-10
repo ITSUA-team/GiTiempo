@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from './../../common/zod-dto.js';
 import { githubSessionRequestSchema } from '@gitiempo/shared';
 
 /**

@@ -22,6 +22,12 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
 
+const toastAdd = vi.fn();
+
+vi.mock("primevue/usetoast", () => ({
+  useToast: () => ({ add: toastAdd }),
+}));
+
 function createFirebaseError(code: string, message = code): Error & { code: string } {
   return Object.assign(new Error(message), { code });
 }
@@ -29,6 +35,7 @@ function createFirebaseError(code: string, message = code): Error & { code: stri
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
+    canViewInvoices: false,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Alexey Tsukanov",
     email: "alexey@example.com",
@@ -75,6 +82,9 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithGoogle: async () => "firebase-google-token",
     exchangeGithubSession: async () => ({ accessToken: "github-access-token", accessTokenExpiresIn: 900, refreshToken: "github-refresh-token" }),
     signOutIdentityProvider: async () => undefined,
+    requestPasswordReset: async () => undefined,
+    verifyPasswordResetCode: async () => "user@example.com",
+    confirmPasswordReset: async () => undefined,
     updateCurrentUser: async (_accessToken, input) => ({
       ...currentUser,
       ...input,
@@ -122,6 +132,7 @@ async function mountInviteAcceptView(
 
 describe("InviteAcceptView", () => {
   beforeEach(() => {
+    toastAdd.mockReset();
     clearRefreshToken();
     resetAuthRuntimeForTesting();
     resetWorkspaceInvitesClientForTesting();
@@ -223,7 +234,10 @@ describe("InviteAcceptView", () => {
   });
 
   it("accepts the invite with Google and redirects to the dashboard", async () => {
-    const signInWithGoogle = vi.fn(async () => "firebase-google-token");
+    const signInWithGoogle = vi.fn(async () => ({
+      firebaseIdToken: "firebase-google-token",
+      googleIdToken: "google-provider-id-token",
+    }));
     const acceptInvite = vi.fn(async () => undefined);
     setAuthRuntimeForTesting(
       createRuntimeMock({ signInWithGoogle }),
@@ -237,9 +251,9 @@ describe("InviteAcceptView", () => {
     const originalLoginWithFirebaseToken = authStore.loginWithFirebaseToken.bind(authStore);
     const loginWithFirebaseToken = vi
       .spyOn(authStore, "loginWithFirebaseToken")
-      .mockImplementation(async (firebaseIdToken: string) => {
+      .mockImplementation(async (firebaseIdToken: string, googleIdToken?: string) => {
         expect(acceptInviteCompleted).toBe(true);
-        return originalLoginWithFirebaseToken(firebaseIdToken);
+        return originalLoginWithFirebaseToken(firebaseIdToken, googleIdToken);
       });
     acceptInvite.mockImplementation(async () => {
       acceptInviteCompleted = true;
@@ -255,9 +269,44 @@ describe("InviteAcceptView", () => {
     expect(signInWithGoogle).toHaveBeenCalled();
     expect(acceptInvite).toHaveBeenCalledWith({
       firebaseIdToken: "firebase-google-token",
+      googleIdToken: "google-provider-id-token",
       token: "invite-token",
     });
-    expect(loginWithFirebaseToken).toHaveBeenCalledWith("firebase-google-token");
+    expect(loginWithFirebaseToken).toHaveBeenCalledWith(
+      "firebase-google-token",
+      "google-provider-id-token",
+    );
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+    expect(toastAdd).not.toHaveBeenCalled();
+    expect(wrapper.text()).not.toContain("Workspace access created. Redirecting to dashboard.");
+  });
+
+  it("keeps acceptance busy without a transient success notice while app sign-in is pending", async () => {
+    let finishLogin!: () => void;
+    setAuthRuntimeForTesting(createRuntimeMock({
+      loginWithFirebaseToken: () => new Promise((resolve) => {
+        finishLogin = () => resolve({
+          accessToken: "access-token",
+          accessTokenExpiresIn: 900,
+          refreshToken: "refresh-token-next",
+        });
+      }),
+    }));
+    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
+    const { router, wrapper } = await mountInviteAcceptView();
+
+    await wrapper.get('[data-testid="invite-accept-email"]').setValue("alexey@example.com");
+    await wrapper.get('[data-testid="invite-accept-password"]').setValue("password123");
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="invite-accept-submit"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.text()).not.toContain("Workspace access created. Redirecting to dashboard.");
+    expect(toastAdd).not.toHaveBeenCalled();
+
+    const routeReady = waitForRoute(router, () => router.currentRoute.value.name === routeNames.dashboard);
+    finishLogin();
+    await routeReady;
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
@@ -272,15 +321,20 @@ describe("InviteAcceptView", () => {
     );
   });
 
-  it("shows invalid credentials guidance inline", async () => {
+  it("keeps invalid credentials inline without a duplicate toast and allows retry", async () => {
+    const signInError = createFirebaseError("auth/invalid-credential");
+    const logError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const acceptInvite = vi.fn(async () => undefined);
     setAuthRuntimeForTesting(
       createRuntimeMock({
         signInWithEmailPassword: async () => {
-          throw createFirebaseError("auth/invalid-credential");
+          throw signInError;
         },
       }),
     );
-    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
+    setWorkspaceInvitesClientForTesting(
+      createWorkspaceInvitesClientMock({ acceptInvite }),
+    );
     const { wrapper } = await mountInviteAcceptView();
 
     await wrapper.get('[data-testid="invite-accept-email"]').setValue(
@@ -295,6 +349,13 @@ describe("InviteAcceptView", () => {
     expect(wrapper.text()).toContain(
       "Could not sign in with that email and password.",
     );
+    expect(toastAdd).not.toHaveBeenCalled();
+    expect(logError).toHaveBeenCalledWith("Could not sign in", {
+      context: { action: "sign-in", feature: "invite-accept" },
+      error: signInError,
+    });
+    expect(acceptInvite).not.toHaveBeenCalled();
+    expect(wrapper.get('[data-testid="invite-accept-submit"]').attributes("disabled")).toBeUndefined();
   });
 
   it("shows password setup guidance when Firebase has no password sign-in yet", async () => {
@@ -470,6 +531,8 @@ describe("InviteAcceptView", () => {
     expect(wrapper.text()).toContain("Your account already has workspace access.");
     expect(wrapper.find('[data-testid="invite-accept-sign-in"]').exists()).toBe(true);
     expect(router.currentRoute.value.fullPath).toBe("/invites/accept");
+    expect(toastAdd).not.toHaveBeenCalled();
+    expect(wrapper.text()).not.toContain("Workspace access created. Redirecting to dashboard.");
   });
 
   it("keeps a recovery state when Firebase sign-in succeeded but invite acceptance failed", async () => {

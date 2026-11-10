@@ -1,0 +1,96 @@
+{
+  "date": "2026-10-27",
+  "database": "gitiempo_476_social_test",
+  "testEmail": "tsukanovmfs@gmail.com",
+  "client": "admin-web; normal Chrome and incognito user-operated sessions",
+  "testedCode": "51a0ac57 plus recorded working-tree fixes",
+  "precondition": {
+    "userId": "9d25c96b-582f-4fa4-a584-dacdd27e522f",
+    "canonicalFirebaseUid": "HT9I1Ue0zNRexKrtmrQ0xIvBEIB2",
+    "originalWorkspaceId": "b9d4ffdc-7103-4c9d-83be-ad39eed5f425",
+    "originalMembershipId": "931a11da-b60e-4b0f-aca2-8aac10ad8a9e",
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 88
+    },
+    "domainEmptyGuardPassed": true,
+    "originalRefreshRowsRemoved": 4
+  },
+  "synchronization": {
+    "status": "success",
+    "barrierPid": 53270,
+    "waiters": [
+      {
+        "pid": 53761,
+        "waitEventType": "Lock",
+        "waitEvent": "advisory",
+        "blockingPids": [
+          53270,
+          53533
+        ]
+      },
+      {
+        "pid": 53533,
+        "waitEventType": "Lock",
+        "waitEvent": "advisory",
+        "blockingPids": [
+          53270
+        ]
+      }
+    ],
+    "timestamp": "2026-10-27T10:28:59.491Z",
+    "readyAt": "2026-10-27T10:28:05.415Z",
+    "method": "Production identity email/UID advisory locks held by read-only guarded barrier; automatically released with two blocked transactions.",
+    "perWaiterProviderAttributionCaptured": false
+  },
+  "userReported": {
+    "googleAndGithubCompletedInSeparateWindows": true,
+    "bothAdminDashboardsOpened": true,
+    "bothReloadsStayedAuthenticated": true
+  },
+  "after": {
+    "checkedAt": "2026-10-27T10:29:57.314Z",
+    "userCount": 1,
+    "workspaceId": "0b7095af-4819-48da-aa41-73fa2b0c6e95",
+    "membershipId": "7e1a34d1-57b1-4893-8f11-4cfac56b4e80",
+    "role": "admin",
+    "name": "Workspace",
+    "settings": [
+      {
+        "currency": "USD",
+        "defaultHourlyRate": null,
+        "timeZone": "UTC"
+      }
+    ],
+    "activeRefreshRows": 3,
+    "allSessionsTargetSameFoundation": true,
+    "counts": {
+      "users": 88,
+      "workspaces": 58,
+      "memberships": 88
+    }
+  },
+  "afterReload": {
+    "checkedAt": "2026-10-27T10:31:53.887Z",
+    "activeRefreshRows": 3,
+    "revokedRefreshRows": 2,
+    "allSessionsTargetSameFoundation": true
+  },
+  "cleanup": {
+    "checkedAt": "2026-10-27T10:32:46.597Z",
+    "removedOnlyEmptyFixtureWorkspaceId": "0b7095af-4819-48da-aa41-73fa2b0c6e95",
+    "restoredOriginalMemberId": "931a11da-b60e-4b0f-aca2-8aac10ad8a9e",
+    "originalJoinedAtPreserved": true,
+    "counts": {
+      "users": 88,
+      "workspaces": 57,
+      "memberships": 88
+    },
+    "sessionsRestored": false,
+    "remainingUserRefreshRows": 0,
+    "firebaseIdentityDeleted": false
+  },
+  "review": "Independent static safety review approved both temporary helpers and snapshot-field correction before restore.",
+  "coverage": "One-foundation and successful-session reuse across user-reported provider flows, with two concurrent identity-locked transactions. Individual waiters were not attributed to providers. Invite-acceptance race remains pending; task8.7 remains open."
+}

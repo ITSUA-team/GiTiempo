@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
@@ -18,6 +18,8 @@ import { useAuthStore } from "@/stores/auth";
 
 const testMocks = vi.hoisted(() => ({
   navigateToExternalHref: vi.fn(),
+  errorToast: vi.fn(),
+  infoToast: vi.fn(),
 }));
 
 vi.mock("@/services/external-navigation", () => ({
@@ -26,8 +28,8 @@ vi.mock("@/services/external-navigation", () => ({
 
 vi.mock("@/composables/feedback/useToasts", () => ({
   useToasts: () => ({
-    errorToast: vi.fn(),
-    infoToast: vi.fn(),
+    errorToast: testMocks.errorToast,
+    infoToast: testMocks.infoToast,
   }),
 }));
 
@@ -82,6 +84,7 @@ const WorkspaceSwitchDialogStub = {
 function createAuthProfile(role: WorkspaceRole): UserResponse {
   return {
     avatarUrl: null,
+    canViewInvoices: true,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Admin User",
     email: `${role}@example.com`,
@@ -128,6 +131,8 @@ describe("ForbiddenView", () => {
   beforeEach(() => {
     clearRefreshToken();
     testMocks.navigateToExternalHref.mockReset();
+    testMocks.errorToast.mockReset();
+    testMocks.infoToast.mockReset();
     vi.stubEnv("VITE_USER_APP_URL", "https://user.example.test/login");
   });
 
@@ -166,7 +171,7 @@ describe("ForbiddenView", () => {
     );
   });
 
-  it("opens the workspace switcher and returns to the dashboard for admin-accessible workspaces", async () => {
+  it.each([true, false])("opens the workspace switcher and returns to the dashboard for admin-accessible workspaces (memberships reloaded: %s)", async (membershipsReloaded) => {
     const { router, wrapper } = await mountForbiddenView(WorkspaceRoles.Admin, [
       {
         isCurrent: true,
@@ -189,8 +194,9 @@ describe("ForbiddenView", () => {
         return {
           profileReloaded: true,
           profileReloadError: null,
-          membershipsReloaded: true,
-          reloadError: null,
+          ...(membershipsReloaded
+            ? { membershipsReloaded: true as const, reloadError: null }
+            : { membershipsReloaded: false as const, reloadError: new Error("Membership refresh failed") }),
         };
       });
 
@@ -212,6 +218,22 @@ describe("ForbiddenView", () => {
     );
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
     expect(testMocks.navigateToExternalHref).not.toHaveBeenCalled();
+    await flushPromises();
+    expect(authStore.profile?.role).toBe(WorkspaceRoles.PM);
+    expect(testMocks.errorToast).not.toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        logContext: { action: "switch-workspace", feature: "admin-403" },
+      }),
+    );
+    if (membershipsReloaded) {
+      expect(testMocks.infoToast).not.toHaveBeenCalled();
+    } else {
+      expect(testMocks.infoToast).toHaveBeenCalledExactlyOnceWith(
+        "Workspace switched. The workspace list could not be refreshed yet.",
+      );
+    }
+
   });
 
   it("redirects to user-web after switching to a non-admin workspace", async () => {

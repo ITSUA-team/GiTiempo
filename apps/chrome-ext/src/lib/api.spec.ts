@@ -270,6 +270,34 @@ describe("createExtensionApiClient", () => {
     });
   });
 
+  it("posts the Google ID token with a Firebase login only when supplied", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      }),
+    );
+    const { storage } = createStorage();
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn,
+      storage,
+    });
+
+    await client.loginWithFirebaseToken("firebase-id-token", "google-id-token");
+
+    expect(fetchFn).toHaveBeenCalledWith("http://localhost:3000/auth/login", {
+      body: JSON.stringify({
+        firebaseIdToken: "firebase-id-token",
+        googleIdToken: "google-id-token",
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+      signal: expect.any(AbortSignal),
+    });
+  });
+
   it("posts the GitHub handoff code and stores the returned session", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({

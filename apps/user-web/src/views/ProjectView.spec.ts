@@ -1,5 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { focusManager } from "@tanstack/vue-query";
 import { readonly, shallowRef } from "vue";
 import type {
   ProjectResponse,
@@ -61,6 +62,7 @@ function createProject(
     name,
     source: "manual",
     referenceProvenance: null,
+    timeRoundingStepMinutes: null,
     trackingMode: "managed",
     totalSeconds: 43200,
     updatedAt: "2026-04-20T12:00:00.000Z",
@@ -351,6 +353,8 @@ describe("ProjectView", () => {
   });
 
   afterEach(() => {
+    focusManager.setFocused(undefined);
+
     while (mountedWrappers.length > 0) {
       mountedWrappers.pop()?.unmount();
     }
@@ -486,7 +490,7 @@ describe("ProjectView", () => {
     const { wrapper: loadingWrapper } = await mountView(loadingClient);
 
     expect(loadingWrapper.findAll('[data-testid="projects-skeleton"]').length).toBeGreaterThan(0);
-    expect(loadingWrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(false);
+    expect(loadingWrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(true);
 
     const errorClient = createClientMock();
 
@@ -505,6 +509,108 @@ describe("ProjectView", () => {
 
     expect(emptyWrapper.text()).toContain("No projects or tasks match this view");
     expect(emptyWrapper.text()).not.toContain("Could not load projects");
+  });
+
+  it("keeps project groups mounted through a failed refresh and delayed retry", async () => {
+    const client = createClientMock();
+    let resolveRetry!: (projects: ProjectResponse[]) => void;
+
+    client.listVisibleProjects
+      .mockResolvedValueOnce([createProject("project-1", "Project Orion")])
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockImplementationOnce(
+        () => new Promise<ProjectResponse[]>((resolve) => { resolveRetry = resolve; }),
+      );
+    client.listProjectTasks.mockResolvedValue([
+      createTask("task-1", "project-1", "Improve reports filters"),
+    ]);
+
+    const { wrapper } = await mountView(client);
+
+    await waitForProjectsReady(wrapper);
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="projects-refresh-error"]').exists()).toBe(true);
+    });
+
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain("Project Orion");
+    expect(wrapper.text()).toContain("Improve reports filters");
+
+    await wrapper.get('[data-testid="projects-refresh-error"] button').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+    expect(wrapper.attributes("aria-busy")).toBe("true");
+    expect(wrapper.text()).not.toContain("Refreshing projects");
+    resolveRetry([createProject("project-1", "Project Orion")]);
+    await flushPromises();
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="projects-refresh-error"]').exists()).toBe(false);
+    });
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+  });
+
+  it("keeps loaded groups mounted while a newly visible project's tasks are pending", async () => {
+    const client = createClientMock();
+    let resolveNewProjectTasks!: (tasks: TaskResponse[]) => void;
+    const projectA = createProject("project-1", "Project Orion");
+    const projectB = createProject("project-2", "Billing API");
+
+    client.listVisibleProjects
+      .mockResolvedValueOnce([projectA])
+      .mockResolvedValueOnce([projectA, projectB]);
+    client.listProjectTasks
+      .mockResolvedValueOnce([
+        createTask("task-1", "project-1", "Improve reports filters"),
+      ])
+      .mockImplementationOnce(
+        () => new Promise<TaskResponse[]>((resolve) => { resolveNewProjectTasks = resolve; }),
+      );
+
+    const { wrapper } = await mountView(client);
+    await waitForProjectsReady(wrapper);
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await vi.waitFor(() => expect(client.listProjectTasks).toHaveBeenCalledTimes(2));
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="projects-skeleton"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain("Project Orion");
+    resolveNewProjectTasks([]);
+  });
+
+  it("keeps loaded groups mounted when a newly visible project's task request fails", async () => {
+    const client = createClientMock();
+    const projectA = createProject("project-1", "Project Orion");
+    const projectB = createProject("project-2", "Billing API");
+
+    client.listVisibleProjects
+      .mockResolvedValueOnce([projectA])
+      .mockResolvedValueOnce([projectA, projectB]);
+    client.listProjectTasks
+      .mockResolvedValueOnce([
+        createTask("task-1", "project-1", "Improve reports filters"),
+      ])
+      .mockRejectedValueOnce(new Error("Billing tasks unavailable"));
+
+    const { wrapper } = await mountView(client);
+    await waitForProjectsReady(wrapper);
+
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="projects-refresh-error"]').exists()).toBe(true);
+    });
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="projects-skeleton"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain("Project Orion");
   });
 
   it("opens the top-bar timer dialog when a project task start is blocked", async () => {
@@ -553,6 +659,9 @@ describe("ProjectView", () => {
       expect(client.stopTimer).toHaveBeenCalledWith({ expectedTimerId: "entry-1" });
     });
     expect(client.startTimer).not.toHaveBeenCalled();
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Timer stopped" }),
+    );
   });
 
   it("keeps filtered project tasks visible after a direct timer request failure", async () => {
@@ -610,6 +719,9 @@ describe("ProjectView", () => {
     });
     expect(wrapper.text()).toContain("Write release checklist");
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Task created" }),
+    );
   });
 
   it("updates existing entries only after an edited task default changes and the follow-up is submitted", async () => {
@@ -659,6 +771,9 @@ describe("ProjectView", () => {
     expect(client.backfillTaskBillableDefault).toHaveBeenCalledWith("task-1", {
       updateTimeEntries: true,
     });
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ severity: "success", summary: "Task updated" }),
+    );
     expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(false);
     expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -726,6 +841,9 @@ describe("ProjectView", () => {
 
     expect(client.listProjectTimeEntries).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Task updated" }),
+    );
   });
 
   it("dismisses the task backfill follow-up without updating existing entries", async () => {
@@ -821,6 +939,9 @@ describe("ProjectView", () => {
     await flushPromises();
 
     expect(wrapper.text()).not.toContain("Improve reports filters");
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Task deleted" }),
+    );
   });
 
   it("keeps tasks visible after delete conflicts and surfaces the backend message", async () => {

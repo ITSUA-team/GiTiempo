@@ -1,0 +1,41 @@
+{
+  "testedAt": "2026-10-27T20:57:49.235Z",
+  "version": "0.1.2",
+  "browser": "separate Chrome for Testing via CDP",
+  "realProviderCredentialsEntered": false,
+  "apiRunning": false,
+  "manifest": {
+    "version": "0.1.2",
+    "id": "hbbfpikijbehdncoibkpkhlckmjmkblc",
+    "redirectUri": "https://hbbfpikijbehdncoibkpkhlckmjmkblc.chromiumapp.org/oauth2",
+    "hostPermissions": [
+      "http://localhost:3000/*",
+      "https://github.com/*"
+    ]
+  },
+  "googleWindowOpened": true,
+  "duplicateGoogleErrorRendered": true,
+  "duplicateGithubErrorRendered": true,
+  "authWindowCount": 1,
+  "cancellationErrorRendered": true,
+  "retryAfterCloseOpenedGoogle": true,
+  "emailForm": {
+    "email": true,
+    "password": true
+  },
+  "snapshot": {
+    "authenticated": false
+  },
+  "storage": {
+    "keys": [],
+    "sessionStored": false
+  },
+  "runtimeExceptionCount": 0,
+  "consoleErrorCount": 0,
+  "localApiRequestCount": 0,
+  "limitations": [
+    "Current installed Chrome unavailable: native Computer Use permission missing and no CDP port",
+    "No complete provider sign-in or authenticated workspace bootstrap: local API not running and no credentials entered",
+    "No GitHub provider flow completion or timer writes"
+  ]
+}

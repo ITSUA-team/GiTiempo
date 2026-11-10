@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import ManagementPageSkeleton from './ManagementPageSkeleton.vue';
 
-function mountSkeleton(variant: 'members' | 'projects' | 'reports') {
+function mountSkeleton(
+  variant: 'members' | 'projects' | 'reports' | 'invoices',
+) {
   return mount(ManagementPageSkeleton, {
     props: { variant },
     global: {
@@ -43,6 +45,20 @@ describe('ManagementPageSkeleton', () => {
     const wrapper = mountSkeleton('projects');
 
     expect(wrapper.findAll('article')).toHaveLength(4);
+    expect(wrapper.find('.hidden.sm\\:block').exists()).toBe(true);
+  });
+
+  it('renders three stat card skeletons for invoices loading state', () => {
+    const wrapper = mountSkeleton('invoices');
+
+    expect(wrapper.get('.grid.gap-4').findAll('.skeleton-stub')).toHaveLength(3);
+  });
+
+  it('uses mobile card skeletons and a desktop table for invoices loading state', () => {
+    const wrapper = mountSkeleton('invoices');
+    const mobileCards = wrapper.get('.sm\\:hidden').findAll('article');
+
+    expect(mobileCards).toHaveLength(4);
     expect(wrapper.find('.hidden.sm\\:block').exists()).toBe(true);
   });
 });

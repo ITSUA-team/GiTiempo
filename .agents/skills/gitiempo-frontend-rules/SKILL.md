@@ -1,6 +1,6 @@
 ---
 name: gitiempo-frontend-rules
-description: Project-specific frontend rules for GiTiempo web apps. Use when building or refactoring UI in apps/user-web, apps/admin-web, or shared frontend theme code in packages/web-config.
+description: Project-specific frontend implementation, review, and acceptance-QA rules for GiTiempo web apps. Use for UI work in apps/user-web, apps/admin-web, or shared frontend theme code in packages/web-config.
 license: MIT
 metadata:
   author: OpenCode
@@ -15,6 +15,7 @@ Use this skill when:
 
 - building or refactoring UI in `apps/user-web`
 - building or refactoring UI in `apps/admin-web`
+- reviewing UI behavior or performing acceptance QA in either SPA
 - changing shared frontend theme/bootstrap code in `packages/web-config`
 - extracting or refactoring shared frontend code across `apps/user-web` and `apps/admin-web`
 - implementing PrimeVue theming, Tailwind tokens, layout, dialogs, forms, tables, or accessibility behavior
@@ -58,6 +59,18 @@ Use this skill when:
 - Treat the approved `.pen` as an implementation checklist, not just visual inspiration.
 - Before marking a UI task complete, perform a final design parity review against the approved `.pen` and identify any remaining deltas explicitly.
 - Mobile can adapt layout for breakpoint constraints, but the same state model, information hierarchy, and design-token language must still hold.
+
+## Real-Page Acceptance Checks
+
+- Apply this workflow to behavior-changing UI implementation or acceptance-QA work. It complements focused tests; it does not turn an explicitly static code review into a browser-testing task.
+- For a static review scope, do not run browser actions. Report real-page acceptance as `NOT PERFORMED — static review scope`; this does not make the static review fail or establish behavioral acceptance.
+- Before choosing a harness, inspect the available browser session, saved-account chooser, and supported sign-in methods. Map the changed component's affected usages and exercise the real consuming pages with materially different integrations; a shared leaf does not require blindly testing every route.
+- If no browser-capable environment can exercise a behavior-changing scenario, report it as `BLOCKED` with the reason. Do not declare acceptance complete, and do not treat a harness or static page inspection as equivalent to real-page behavior.
+- Exercise each selected page on the current revision. Cover the interactions relevant to the change: confirm, cancel, clear/reset, keyboard behavior, loading or refetch transitions, and both empty and populated data states.
+- When the changed contract affects URL query state, browser storage, or route defaults, also navigate or reload and verify the restored or reset state.
+- When a component has desktop and mobile DOM branches, exercise both applicable branches. A component rendered in one viewport is not evidence for the other.
+- Treat production, staging, and real-provider flows as separate environments. Do not create, delete, or alter real data without the authority required for that environment; report that scenario as `BLOCKED` when it cannot be safely exercised.
+- Record each acceptance scenario as `PASS`, `FAIL`, or `BLOCKED` with: revision and dirty-diff state; environment/page; expected and actual result; and a durable evidence link or stated evidence gap. Passing component or transport tests alone is not a real-page acceptance result.
 
 ## Responsive Record-List Workflow
 
@@ -111,7 +124,7 @@ Use this skill when:
 - New or changed frontend fetch-boundary helpers must have focused tests for request path, auth headers, payload shape, response parsing, and API error propagation. Composable or page tests do not replace boundary-level coverage.
 - When a frontend surface promises full-scope summaries, aggregates, focus cards, or export/table data over a paginated backend dataset, load every required page in that accepted scope before deriving the user-visible result. Do not compute week-level, filtered-scope, or all-project summaries from the first page unless the docs/spec explicitly limit the surface to preview data.
 - If a backend endpoint is documented or implemented as no-content, use a no-content response shape in boundary tests instead of a convenience JSON body so mocks keep the real contract visible.
-- For frontend API calls that load, mutate, or reconcile user-visible feature state, provide user-visible toast feedback for the outcome. Use success toasts for completed mutations and error toasts for failed reads or writes; inline empty/error UI can complement this but must not be the only feedback channel.
+- Follow the notification policy in `docs/ui/patterns.md`: routine visible mutation success and background reconciliation stay quiet; failed reads/writes retain actionable error toasts, logging, and applicable inline retry/error state. Invitation email/password authentication failures use the existing inline error and diagnostic logging without a duplicate toast; acceptance and post-acceptance session failures retain their separate feedback. Preserve meaningful exceptions, persistent instructions/status, focus/busy semantics, confirmations, navigation, and request budgets. Remove selected emissions at their owners, never through a global success/info filter.
 - Do not treat disabled placeholder controls as satisfying a documented interactive surface. If docs, spec, or tasks say a surface is editable, saveable, confirmable, or otherwise interactive, the shipped UI must perform that behavior or the task must remain explicitly incomplete.
 - When a feature has documented loading, empty, request-error, connected/disconnected, or redirecting states, tests should exercise each user-visible state explicitly instead of inferring coverage from internal refs or a single happy-path flow.
 - When a component renders different desktop and mobile DOM branches, tests must cover both viewport modes explicitly. Assert which branch renders, not just shared text content.
@@ -128,7 +141,7 @@ Use this skill when:
 - When a running or locked feature state invalidates upstream selectors or filters, enforce that invariant in both places: disable the UI control and block the underlying state mutation in the composable/store action. Do not rely on the template alone to protect feature invariants.
 - When the backend returns authoritative feature state such as a running timer, active assignment, or persisted selection owner, resync the dependent local selectors from that server state after initial load and after successful mutations. Do not leave stale local selection values pointing at an idle or superseded context.
 - When an API rejects a user action because it conflicts with current authoritative state, surface that exact failure to the user, refresh or reload the authoritative state, keep that state rendered, and avoid clearing or mutating local form inputs as if the action had succeeded.
-- Keep error state scoped to the UI/action that produced it. Do not copy one failure into multiple unrelated page-level error refs or render duplicate inline error blocks for the same failed API action; use one local inline state plus toast feedback.
+- Keep error state scoped to the UI/action that produced it. Do not copy one failure into multiple unrelated page-level error refs or render duplicate inline error blocks for the same failed API action; use one local inline state plus toast feedback, except the invitation email/password authentication branch documented in `docs/ui/patterns.md`, which uses inline feedback and logging only.
 - New Vue UI files should not add fresh lint warning debt. If lint reports auto-fixable class ordering, attribute ordering, or formatting warnings for newly added/rewritten Vue markup, fix them before marking the task complete.
 - Do not mark a UI task complete unless design parity review, PrimeVue exception review, and reusable-pattern review have all been completed in addition to the usual verification.
 - Do not mark a spec-driven frontend change complete when any behavior required by the active spec remains a static or disabled placeholder. Narrow the spec/task first or keep the task unchecked until the behavior ships.

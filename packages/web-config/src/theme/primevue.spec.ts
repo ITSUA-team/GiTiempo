@@ -91,6 +91,13 @@ describe("giTiempoPrimeVueOptions", () => {
     expect(giTiempoSelectPt.root.class).toContain("h-[38px]");
     expect(giTiempoSelectPt.root.class).toContain("border-divider");
     expect(giTiempoSelectPt.label.class).toContain("text-[14px]");
+    // The label must keep PrimeVue's block ellipsis treatment; see the
+    // rationale on giTiempoDropdownControlLabelClass.
+    expect(giTiempoSelectPt.label.class).toContain("min-w-0");
+    expect(giTiempoSelectPt.label.class).toContain("truncate");
+    expect(giTiempoSelectPt.label.class).not.toContain("flex");
+    expect(giTiempoSelectPt.label.class).not.toContain("items-center");
+    expect(giTiempoSelectPt.label.class).not.toContain("h-full");
     expect(giTiempoSelectPt.dropdown.class).toContain("w-9");
     expect(giTiempoSelectPt.dropdown.class).toContain("bg-transparent");
     expect(giTiempoDatePickerPt.pcInputText.root.class).toBe(
@@ -100,7 +107,7 @@ describe("giTiempoPrimeVueOptions", () => {
     expect(giTiempoDatePickerInputClass).not.toContain("px-3");
     expect(giTiempoDropdownControlInputClass).toContain("px-3");
     expect(giTiempoDatePickerPt.clearIcon.class).toContain("bg-surface-primary");
-    expect(giTiempoDatePickerPt.clearIcon.class).toContain("end-10");
+    expect(giTiempoDatePickerPt.clearIcon.class).toContain("end-[38px]");
     expect(giTiempoAutoCompleteDropdownPt.root?.class).toContain("border-divider");
     expect(giTiempoAutoCompleteDropdownPt.pcInputText?.root?.class).toContain(
       "border-0",

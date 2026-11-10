@@ -1,4 +1,8 @@
-import type { TimeReportRequest } from '@gitiempo/shared';
+import type {
+  EligibleEntriesQuery,
+  InvoiceListQuery,
+  TimeReportRequest,
+} from '@gitiempo/shared';
 
 export interface AdminServerStateScope {
   role?: string | null;
@@ -48,6 +52,31 @@ export function normalizeTimeReportQuery(query: Partial<TimeReportRequest> = {})
   };
 }
 
+export function normalizeInvoiceListQuery(
+  query: Partial<InvoiceListQuery> = {},
+) {
+  return {
+    dateFrom: query.dateFrom ?? null,
+    dateTo: query.dateTo ?? null,
+    limit: query.limit ?? null,
+    page: query.page ?? null,
+    projectId: query.projectId ?? null,
+    search: query.search ?? null,
+    status: query.status ?? null,
+  };
+}
+
+export function normalizeEligibleEntriesQuery(
+  query: Partial<EligibleEntriesQuery> = {},
+) {
+  return {
+    dateFrom: query.dateFrom ?? null,
+    dateTo: query.dateTo ?? null,
+    projectId: query.projectId ?? null,
+    roundingStepMinutes: query.roundingStepMinutes ?? null,
+  };
+}
+
 export const adminDashboardKeys = {
   all: (scope?: AdminServerStateScope) =>
     ['admin-web', normalizeScope(scope), 'dashboard'] as const,
@@ -62,9 +91,15 @@ export const adminDashboardKeys = {
 export const reportsKeys = {
   all: (scope?: AdminServerStateScope) =>
     ['admin-web', normalizeScope(scope), 'reports'] as const,
-  time: (scope: AdminServerStateScope, query?: Partial<TimeReportRequest>) =>
+  visibility: (scope: AdminServerStateScope, allowedProjectIds: readonly string[] = []) =>
+    [...reportsKeys.all(scope), 'visibility', [...allowedProjectIds].sort()] as const,
+  time: (
+    scope: AdminServerStateScope,
+    query?: Partial<TimeReportRequest>,
+    allowedProjectIds: readonly string[] = [],
+  ) =>
     [
-      ...reportsKeys.all(scope),
+      ...reportsKeys.visibility(scope, allowedProjectIds),
       'time',
       normalizeTimeReportQuery(query),
     ] as const,
@@ -105,7 +140,36 @@ export const adminMembersKeys = {
     [...adminMembersKeys.all(scope), 'list'] as const,
 };
 
+export const adminInvoicesKeys = {
+  all: (scope?: AdminServerStateScope) =>
+    ['admin-web', normalizeScope(scope), 'invoices'] as const,
+  list: (scope: AdminServerStateScope, query?: Partial<InvoiceListQuery>) =>
+    [
+      ...adminInvoicesKeys.all(scope),
+      'list',
+      normalizeInvoiceListQuery(query),
+    ] as const,
+  detail: (scope: AdminServerStateScope, invoiceId: string) =>
+    [...adminInvoicesKeys.all(scope), 'detail', invoiceId] as const,
+  defaults: (scope: AdminServerStateScope) =>
+    [...adminInvoicesKeys.all(scope), 'defaults'] as const,
+  stats: (scope: AdminServerStateScope) =>
+    [...adminInvoicesKeys.all(scope), 'stats'] as const,
+  eligibleEntries: (
+    scope: AdminServerStateScope,
+    query?: Partial<EligibleEntriesQuery>,
+  ) =>
+    [
+      ...adminInvoicesKeys.all(scope),
+      'eligible-entries',
+      normalizeEligibleEntriesQuery(query),
+    ] as const,
+};
+
 export const adminMutationInvalidationKeys = {
+  afterInvoiceMutation(scope: AdminServerStateScope): QueryKey[] {
+    return [adminInvoicesKeys.all(scope)];
+  },
   afterProjectMutation(scope: AdminServerStateScope): QueryKey[] {
     return [
       adminProjectsKeys.all(scope),

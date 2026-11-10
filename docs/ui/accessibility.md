@@ -32,6 +32,6 @@ Do not re-implement these when using the corresponding PrimeVue component:
 | Dropdown keyboard nav | `<Select>`, `<MultiSelect>` | Arrow keys, Enter, Escape |
 | Date picker keyboard nav | `<DatePicker>` | Arrow keys and Enter |
 | Toast live region | `<Toast>` | `role="alert"` / `aria-live="assertive"` |
-| Confirm dialog focus | `<ConfirmDialog>` | Auto-focuses the safe action |
+| Confirm dialog focus | `<ConfirmDialog>` | Shared destructive confirmations set `defaultFocus: 'reject'` to focus the safe Cancel action |
 
 When using `pt`, never remove or override PrimeVue-generated `role`, `aria-*`, `tabindex`, or `id` attributes.

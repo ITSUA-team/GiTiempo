@@ -4,6 +4,8 @@ import PrimeVue from 'primevue/config';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
+import { Form } from '@primevue/forms';
+
 import { useAuthStore } from '@/stores/auth';
 
 const testMocks = vi.hoisted(() => ({
@@ -34,11 +36,12 @@ const DialogStub = {
     dismissableMask: { type: Boolean, default: false },
     header: { type: String, default: '' },
     modal: { type: Boolean, default: false },
+    pt: { type: Object, default: () => ({}) },
     style: { type: Object, default: () => ({}) },
     visible: { type: Boolean, default: false },
   },
   template:
-    '<div v-if="visible" data-testid="invite-dialog" :data-closable="String(closable)" :data-dismissable-mask="String(dismissableMask)"><button data-testid="dialog-close" type="button" @click="$emit(\'update:visible\', false)">Close</button><slot /></div>',
+    '<div v-if="visible" data-testid="invite-dialog" :data-closable="String(closable)" :data-dismissable-mask="String(dismissableMask)" :data-pt-root="pt && pt.root ? pt.root : \'\'"><button data-testid="dialog-close" type="button" @click="$emit(\'update:visible\', false)">Close</button><slot /></div>',
 };
 
 describe('MemberInviteDialog', () => {
@@ -92,6 +95,30 @@ describe('MemberInviteDialog', () => {
     expect(wrapper.text()).toContain('Select a role.');
   });
 
+  it('closes and resets a successful invite without duplicate success feedback', async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useAuthStore(pinia).accessToken = 'access-token';
+    const wrapper = mount(MemberInviteDialog, {
+      props: { visible: true },
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: { Dialog: DialogStub },
+      },
+    });
+    const reset = vi.fn();
+    const values = { email: 'new-member@example.com', role: 'member' };
+    wrapper.getComponent(Form).vm.$emit('submit', { valid: true, values, reset });
+    await flushPromises();
+
+    expect(testMocks.createInvite).toHaveBeenCalledExactlyOnceWith(values);
+    expect(reset).toHaveBeenCalledOnce();
+    expect(wrapper.emitted('update:visible')).toEqual([[false]]);
+    expect(wrapper.emitted('created')).toEqual([[]]);
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
+  });
+
   it('shows only the primary invite action in the popup form', () => {
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -113,6 +140,9 @@ describe('MemberInviteDialog', () => {
     expect(wrapper.text()).not.toContain('Cancel');
     expect(dialog.attributes('data-closable')).toBe('true');
     expect(dialog.attributes('data-dismissable-mask')).toBe('true');
+    expect(dialog.attributes('data-pt-root')).toBe(
+      'w-[min(480px,calc(100vw-2rem))]',
+    );
   });
 
   it('resets the invite form when dismissed through dialog close', async () => {

@@ -8,7 +8,13 @@ import { AppModule } from '../src/app.module';
 import { FIREBASE_ADMIN } from '../src/auth/services/firebase-admin.interface';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
-import { invites, users, workspaceMembers, workspaces } from '../src/db/schema';
+import {
+  firebaseIdentityReservations,
+  invites,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../src/db/schema';
 import { InviteDeliveryService } from '../src/invites/services/invite-delivery.service';
 import { bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
@@ -30,13 +36,17 @@ async function createResendTestApp(options?: {
       name: 'Admin',
       email_verified: true,
     }),
-    getOrCreateInvitedUserByEmail: options?.firebaseProvisioningError
+    createUnclaimedUser: options?.firebaseProvisioningError
       ? vi.fn().mockRejectedValue(options.firebaseProvisioningError)
-      : vi.fn().mockResolvedValue({
-          uid: 'firebase-invitee',
-          email: 'invitee@example.com',
-          isExistingUser: false,
-        }),
+      : vi
+          .fn()
+          .mockImplementation(
+            async (input: { uid: string; email: string }) => ({
+              ...input,
+              isExistingUser: false,
+            }),
+          ),
+    assertActiveUserByUid: vi.fn().mockResolvedValue(undefined),
     generatePasswordSetupLink: options?.firebasePasswordSetupLinkError
       ? vi.fn().mockRejectedValue(options.firebasePasswordSetupLinkError)
       : vi.fn().mockResolvedValue('https://firebase.test/reset'),
@@ -143,6 +153,64 @@ describe('Invite negative paths (e2e)', () => {
     });
   });
 
+  describe('POST /invites — pending registration reservation', () => {
+    it('rejects the invite, preserves the reservation, and expires its compensation row', async () => {
+      const email = `reserved-registration-${randomUUID()}@example.com`;
+      const [reservation] = await db
+        .insert(firebaseIdentityReservations)
+        .values({
+          normalizedEmail: email,
+          firebaseUid: randomUUID(),
+          purpose: 'registration',
+          state: 'reserved',
+          registrationDisplayName: 'Reserved Registration',
+          registrationWorkspaceName: 'Reserved Workspace',
+          registrationOwnerAcknowledgement: true,
+        })
+        .returning();
+      if (!reservation) throw new Error('Expected registration reservation');
+
+      try {
+        const response = await request(app.getHttpServer())
+          .post('/invites')
+          .set('Authorization', bearer(adminToken))
+          .send({ email, role: 'member' });
+
+        expect(response.status).toBe(401);
+        expect(response.body.code).toBe('identity_proof_required');
+        expect(
+          await db
+            .select({
+              purpose: firebaseIdentityReservations.purpose,
+              state: firebaseIdentityReservations.state,
+            })
+            .from(firebaseIdentityReservations)
+            .where(eq(firebaseIdentityReservations.id, reservation.id)),
+        ).toEqual([{ purpose: 'registration', state: 'reserved' }]);
+        expect(
+          await db
+            .select({ status: invites.status })
+            .from(invites)
+            .where(
+              and(
+                eq(invites.workspaceId, workspaceId),
+                eq(invites.email, email),
+              ),
+            ),
+        ).toEqual([{ status: 'expired' }]);
+      } finally {
+        await db
+          .delete(invites)
+          .where(
+            and(eq(invites.workspaceId, workspaceId), eq(invites.email, email)),
+          );
+        await db
+          .delete(firebaseIdentityReservations)
+          .where(eq(firebaseIdentityReservations.id, reservation.id));
+      }
+    });
+  });
+
   describe('POST /invites — validation', () => {
     it('rejects invalid email → 400', async () => {
       const res = await request(app.getHttpServer())
@@ -236,9 +304,9 @@ describe('Invite negative paths (e2e)', () => {
           .from(workspaceMembers)
           .where(eq(workspaceMembers.workspaceId, resendApp.workspace.id));
 
-        expect(
-          resendApp.firebase.getOrCreateInvitedUserByEmail,
-        ).toHaveBeenCalledWith(row!.email);
+        expect(resendApp.firebase.createUnclaimedUser).toHaveBeenCalledWith(
+          expect.objectContaining({ email: row!.email }),
+        );
         expect(
           resendApp.firebase.generatePasswordSetupLink,
         ).toHaveBeenCalledWith(

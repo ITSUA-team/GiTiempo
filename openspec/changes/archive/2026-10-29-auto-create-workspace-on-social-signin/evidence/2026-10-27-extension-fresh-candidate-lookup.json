@@ -1,0 +1,61 @@
+{
+  "checkedAt": "2026-10-27T13:37:45.350Z",
+  "projectId": "gitiempo",
+  "database": "gitiempo_476_social_test",
+  "email": "tsukanovoleksii@gmail.com",
+  "firebase": {
+    "foundByExactEmail": true,
+    "uid": "d5d9cdec-7724-4719-a7d2-26d90eee83eb",
+    "email": "tsukanovoleksii@gmail.com",
+    "emailVerified": true,
+    "disabled": false,
+    "providers": [
+      {
+        "providerId": "google.com",
+        "subject": "106017166065941641917",
+        "email": "tsukanovoleksii@gmail.com"
+      }
+    ],
+    "createdAt": "Mon, 26 Oct 2026 14:43:27 GMT",
+    "lastSignInAt": "Mon, 26 Oct 2026 14:48:31 GMT"
+  },
+  "local": {
+    "users": [
+      {
+        "id": "ac30309f-2282-408f-a5b3-a7765036886d",
+        "firebase_uid": "d5d9cdec-7724-4719-a7d2-26d90eee83eb",
+        "email": "tsukanovoleksii@gmail.com",
+        "display_name": "Oleksii Tsukanov",
+        "created_at": "2026-10-26T14:43:27.753Z"
+      }
+    ],
+    "bindings": [
+      {
+        "id": "ad19dca3-0861-4c95-a363-8ea7f1993d3e",
+        "user_id": "ac30309f-2282-408f-a5b3-a7765036886d",
+        "firebase_uid": "d5d9cdec-7724-4719-a7d2-26d90eee83eb",
+        "provider_id": "github",
+        "verified_email": "tsukanovoleksii@gmail.com",
+        "created_at": "2026-10-26T14:43:27.753Z"
+      }
+    ],
+    "reservations": [
+      {
+        "id": "f18f9527-4e70-432f-8979-5842306d6b4d",
+        "normalized_email": "tsukanovoleksii@gmail.com",
+        "firebase_uid": "d5d9cdec-7724-4719-a7d2-26d90eee83eb",
+        "purpose": "github-signin",
+        "state": "bound",
+        "user_id": "ac30309f-2282-408f-a5b3-a7765036886d"
+      }
+    ],
+    "counts": {
+      "users": 89,
+      "workspaces": 58,
+      "memberships": 89
+    }
+  },
+  "reason": "Existing Firebase Google identity and existing local test account/binding/reservation; this lookup makes no account changes.",
+  "freshInExistingSocialTestDatabase": false,
+  "scopeClarification": "Existing in gitiempo_476_social_test. Existing Firebase identity does not itself prevent fresh local provisioning in a new isolated application database."
+}

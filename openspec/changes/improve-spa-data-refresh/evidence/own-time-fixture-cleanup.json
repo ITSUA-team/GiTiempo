@@ -1,0 +1,14 @@
+{
+  "fixture": {
+    "workspaceId": "9f989b60-883f-4473-9a03-735fd325553c",
+    "userId": "90d0e2da-9ef3-466a-aa4c-da3eb8820a34",
+    "projectA": "7aac4180-2976-411e-bf8c-1e13de5c95f1",
+    "projectB": "cb7c9c1f-43c0-4699-a9ef-f0f77c8a9abd",
+    "taskA": "245c9bf3-42b3-48cf-8ab6-d2a87fc33a44",
+    "taskHidden": "ed2dd25a-b759-4ca7-80b1-acff91b04cb4",
+    "taskB": "f8a81aef-1861-42d8-938e-e3258d18dda9",
+    "tag": "SPA own-time QA 20261029"
+  },
+  "projects": [],
+  "entries": []
+}

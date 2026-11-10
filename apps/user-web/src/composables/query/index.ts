@@ -14,18 +14,31 @@ import type {
   UpdateTaskInput,
   UpdateTimeEntryInput,
 } from "@gitiempo/shared";
-import { computed, toValue, type MaybeRefOrGetter } from "vue";
+import { computed, ref, toValue, watch, type MaybeRefOrGetter } from "vue";
 
 import {
   timeEntriesKeys,
   timerKeys,
   userMutationInvalidationKeys,
   userProjectsKeys,
+  getScopeKey,
+  type EligibleLastEntryRefreshWave,
   type UserServerStateScope,
 } from "@/lib/query-keys";
+import { USER_LIST_QUERY_POLICY } from "@/lib/query-policy";
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
+import type { SelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 
 type QueryKey = readonly unknown[];
+
+interface UserMutationContext {
+  scope: UserServerStateScope;
+}
+
+interface TimeEntryMutationContext extends UserMutationContext {
+  hasUnknownSource: boolean;
+  previousEntry: TimeEntryResponse | null;
+}
 
 interface CreateManualTimeEntryClient {
   createManualEntry(
@@ -34,14 +47,13 @@ interface CreateManualTimeEntryClient {
 }
 
 interface CreateTaskClient {
-  createTask(
-    projectId: string,
-    input: CreateTaskInput,
-  ): Promise<TaskResponse>;
+  createTask(projectId: string, input: CreateTaskInput): Promise<TaskResponse>;
 }
 
 interface CurrentTimerClient {
-  getCurrentTimer(options?: { signal?: AbortSignal }): Promise<CurrentTimeEntryResponse>;
+  getCurrentTimer(options?: {
+    signal?: AbortSignal;
+  }): Promise<CurrentTimeEntryResponse>;
 }
 
 interface DeleteTaskClient {
@@ -74,10 +86,7 @@ interface StopTimerClient {
 }
 
 interface UpdateTaskClient {
-  updateTask(
-    taskId: string,
-    input: UpdateTaskInput,
-  ): Promise<TaskResponse>;
+  updateTask(taskId: string, input: UpdateTaskInput): Promise<TaskResponse>;
 }
 
 interface UpdateTimeEntryClient {
@@ -136,8 +145,7 @@ interface UseStartTimerMutationOptions extends UserScopedMutationOptions {
   client: StartTimerClient;
 }
 
-interface UseStartTimerFromGitHubMutationOptions
-  extends UserScopedMutationOptions {
+interface UseStartTimerFromGitHubMutationOptions extends UserScopedMutationOptions {
   client: StartTimerFromGitHubClient;
 }
 
@@ -168,12 +176,254 @@ function isEntryInWorkspaceScope(
   return !workspaceId || entry.workspaceId === workspaceId;
 }
 
+function belongsToScope(
+  queryKey: QueryKey,
+  scope: UserServerStateScope,
+): boolean {
+  return JSON.stringify(queryKey[1]) === getScopeKey(scope);
+}
+
+function isSameScope(
+  first: UserServerStateScope,
+  second: UserServerStateScope,
+): boolean {
+  return getScopeKey(first) === getScopeKey(second);
+}
+
+function readCachedEntry(
+  queryClient: ReturnType<typeof useQueryClient>,
+  scope: UserServerStateScope,
+  entryId: string,
+): TimeEntryResponse | null {
+  for (const query of queryClient.getQueryCache().findAll({
+    queryKey: timeEntriesKeys.all(scope),
+  })) {
+    const data = query.state.data;
+    const entries = Array.isArray(data)
+      ? data
+      : data &&
+          typeof data === "object" &&
+          "items" in data &&
+          Array.isArray(data.items)
+        ? data.items
+        : [];
+    const entry = entries.find(
+      (item): item is TimeEntryResponse =>
+        typeof item === "object" &&
+        item !== null &&
+        "id" in item &&
+        item.id === entryId,
+    );
+
+    if (entry) {
+      return entry;
+    }
+  }
+
+  return null;
+}
+
+function getAffectedProjectIds(
+  previousEntry: TimeEntryResponse | null,
+  entry: TimeEntryResponse | null,
+): string[] {
+  return [previousEntry?.projectId, entry?.projectId].filter(
+    (projectId): projectId is string => Boolean(projectId),
+  );
+}
+
+function hasUnknownAffectedProject(
+  context: TimeEntryMutationContext,
+  entry: TimeEntryResponse | null,
+): boolean {
+  return (
+    context.hasUnknownSource &&
+    getAffectedProjectIds(context.previousEntry, entry).length === 0
+  );
+}
+
+function updateEntryTask(
+  entry: TimeEntryResponse | null,
+  task: TaskResponse,
+): TimeEntryResponse | null {
+  if (!entry || entry.taskId !== task.id) {
+    return entry;
+  }
+
+  return {
+    ...entry,
+    task: {
+      ...entry.task,
+      title: task.title,
+    },
+  };
+}
+
+function updateSelectedTaskContext(
+  context: SelectedTaskContext | null,
+  task: TaskResponse,
+): SelectedTaskContext | null {
+  if (!context || context.source !== "local" || context.taskId !== task.id) {
+    return context;
+  }
+
+  if (!task.isActive || task.status !== "open") {
+    return null;
+  }
+
+  return {
+    ...context,
+    githubIssue: task.githubIssue,
+    taskTitle: task.title,
+  };
+}
+
+function reconcileTimerTaskCachesAfterTaskMutation(
+  queryClient: ReturnType<typeof useQueryClient>,
+  scope: UserServerStateScope,
+  task: TaskResponse,
+): void {
+  queryClient.setQueryData<CurrentTimeEntryResponse>(
+    timerKeys.currentRaw(scope),
+    (current) => {
+      if (!current) {
+        return current;
+      }
+
+      const timeEntry = updateEntryTask(current.timeEntry, task);
+
+      return timeEntry === current.timeEntry
+        ? current
+        : { ...current, timeEntry };
+    },
+  );
+  queryClient.setQueriesData<SelectedTaskContext | null>(
+    { queryKey: timerKeys.eligibleLastEntryAll(scope) },
+    (current) => updateSelectedTaskContext(current ?? null, task),
+  );
+}
+
 async function invalidateQueryKeys(
   queryClient: ReturnType<typeof useQueryClient>,
   keys: QueryKey[],
 ): Promise<void> {
   await Promise.all(
     keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+  );
+}
+
+function createEligibleLastEntryRefreshWave(
+  queryClient: ReturnType<typeof useQueryClient>,
+  scope: UserServerStateScope,
+  keys: QueryKey[],
+): EligibleLastEntryRefreshWave | null {
+  const currentQuery = queryClient.getQueryCache().find({
+    exact: true,
+    queryKey: timerKeys.currentRaw(scope),
+  });
+
+  if (!currentQuery || currentQuery.getObserversCount() === 0) {
+    return null;
+  }
+
+  const queryVersions: Record<string, number> = {};
+
+  for (const queryKey of keys) {
+    for (const query of queryClient.getQueryCache().findAll({ queryKey })) {
+      queryVersions[query.queryHash] = query.state.dataUpdateCount;
+    }
+  }
+
+  // The consumer accepts exactly one subsequent currentRaw update. This is
+  // the authoritative post-mutation read for this invalidation wave.
+  return {
+    currentRawDataUpdateCount: currentQuery.state.dataUpdateCount,
+    queryVersions,
+  };
+}
+
+async function invalidateEligibilityDependencies(
+  queryClient: ReturnType<typeof useQueryClient>,
+  scope: UserServerStateScope,
+  keys: QueryKey[],
+  createRefreshWave = false,
+  deferEligibleRefresh = false,
+): Promise<void> {
+  await Promise.all(
+    keys.map((queryKey) =>
+      queryClient.cancelQueries({ queryKey }, { silent: true }),
+    ),
+  );
+
+  const wave = createRefreshWave
+    ? createEligibleLastEntryRefreshWave(queryClient, scope, keys)
+    : null;
+
+  if (wave) {
+    queryClient.setQueryData(timerKeys.eligibleLastEntryWave(scope), wave);
+  } else {
+    queryClient.removeQueries({
+      exact: true,
+      queryKey: timerKeys.eligibleLastEntryWave(scope),
+    });
+  }
+
+  await Promise.all(
+    keys.map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey, refetchType: "none" }),
+    ),
+  );
+  await Promise.all(
+    keys
+      .filter(
+        (queryKey) =>
+          !deferEligibleRefresh ||
+          JSON.stringify(queryKey) !==
+            JSON.stringify(timerKeys.eligibleLastEntryAll(scope)),
+      )
+      .map((queryKey) =>
+        queryClient.refetchQueries(
+          {
+            queryKey,
+            type: "active",
+          },
+          { cancelRefetch: false },
+        ),
+      ),
+  );
+}
+
+async function invalidateTimeEntryMutation(
+  queryClient: ReturnType<typeof useQueryClient>,
+  context: TimeEntryMutationContext,
+  entry: TimeEntryResponse | null,
+): Promise<void> {
+  await invalidateEligibilityDependencies(
+    queryClient,
+    context.scope,
+    userMutationInvalidationKeys.afterTimeEntryMutation(
+      context.scope,
+      getAffectedProjectIds(context.previousEntry, entry),
+      context.hasUnknownSource,
+    ),
+  );
+}
+
+async function invalidateTimerMutation(
+  queryClient: ReturnType<typeof useQueryClient>,
+  context: TimeEntryMutationContext,
+  entry: TimeEntryResponse,
+): Promise<void> {
+  await invalidateEligibilityDependencies(
+    queryClient,
+    context.scope,
+    userMutationInvalidationKeys.afterTimerMutation(
+      context.scope,
+      getAffectedProjectIds(context.previousEntry, entry),
+      hasUnknownAffectedProject(context, entry),
+    ),
+    entry.endedAt !== null,
+    entry.endedAt === null,
   );
 }
 
@@ -194,51 +444,124 @@ async function reconcileTimeEntryCachesAfterTimeEntryMutation(
   try {
     reconcileTimeEntryListCaches(queryClient, scope, entry);
   } catch (error) {
-    console.error("Could not reconcile time-entry caches after time-entry mutation", {
-      entryId: entry.id,
-      error,
-    });
+    console.error(
+      "Could not reconcile time-entry caches after time-entry mutation",
+      {
+        entryId: entry.id,
+        error,
+      },
+    );
   }
 }
 
 export const useCurrentTimerQuery = (options: UseCurrentTimerQueryOptions) =>
   useQuery({
-    queryKey: computed(() =>
-      toValue(options.queryKey) ?? timerKeys.currentRaw(toValue(options.scope)),
+    queryKey: computed(
+      () =>
+        toValue(options.queryKey) ??
+        timerKeys.currentRaw(toValue(options.scope)),
     ),
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: ({ signal }) => options.client.getCurrentTimer({ signal }),
-  });
-
-export const useOwnTimeEntriesQuery = (options: UseOwnTimeEntriesQueryOptions) =>
-  useQuery({
-    queryKey: computed(() =>
-      toValue(options.queryKey) ??
-      timeEntriesKeys.list(toValue(options.scope), toValue(options.query)),
-    ),
-    enabled: computed(() => isQueryEnabled(options)),
-    queryFn: ({ signal }) =>
-      options.client.listOwnEntries(toValue(options.query), { signal }),
     refetchOnWindowFocus: true,
   });
+
+export const useOwnTimeEntriesQuery = (
+  options: UseOwnTimeEntriesQueryOptions,
+) => {
+  const scopeGeneration = ref(0);
+  const scopeKey = computed(() => getScopeKey(toValue(options.scope)));
+  const fulfilledScopeKey = ref<string | null>(null);
+
+  watch(
+    () => scopeKey.value,
+    () => {
+      scopeGeneration.value += 1;
+    },
+    { flush: "sync" },
+  );
+  const queryKey = computed(
+    () =>
+      [
+        ...(toValue(options.queryKey) ??
+          timeEntriesKeys.list(toValue(options.scope), toValue(options.query))),
+        "scope-generation",
+        scopeGeneration.value,
+      ] as const,
+  );
+
+  const query = useQuery({
+    queryKey,
+    enabled: computed(() => isQueryEnabled(options)),
+    queryFn: async ({ signal }) => {
+      const requestScope = toValue(options.scope);
+      const requestQuery = toValue(options.query);
+      const requestGeneration = scopeGeneration.value;
+      const result = await options.client.listOwnEntries(requestQuery, {
+        signal,
+      });
+
+      if (
+        requestGeneration !== scopeGeneration.value ||
+        !isSameScope(requestScope, toValue(options.scope))
+      ) {
+        throw new DOMException("The request scope changed", "AbortError");
+      }
+
+      fulfilledScopeKey.value = getScopeKey(requestScope);
+      return result;
+    },
+    refetchOnWindowFocus: true,
+    ...USER_LIST_QUERY_POLICY,
+    placeholderData: (previousData, previousQuery) => {
+      const matches =
+        previousQuery &&
+        belongsToScope(previousQuery.queryKey, toValue(options.scope));
+      return matches ? previousData : undefined;
+    },
+  });
+
+  watch(
+    () => query.data.value,
+    (data) => {
+      if (data && fulfilledScopeKey.value === null) {
+        fulfilledScopeKey.value = scopeKey.value;
+      }
+    },
+    { immediate: true },
+  );
+
+  return {
+    ...query,
+    isDataForCurrentScope: computed(
+      () => fulfilledScopeKey.value === scopeKey.value,
+    ),
+  };
+};
 
 export const useRecentOwnTimeEntriesQuery = (
   options: Omit<UseOwnTimeEntriesQueryOptions, "query">,
 ) =>
   useQuery({
-    queryKey: computed(() =>
-      toValue(options.queryKey) ??
-      timeEntriesKeys.list(toValue(options.scope), recentOwnTimeEntriesQuery),
+    queryKey: computed(
+      () =>
+        toValue(options.queryKey) ??
+        timeEntriesKeys.list(toValue(options.scope), recentOwnTimeEntriesQuery),
     ),
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: ({ signal }) =>
       options.client.listOwnEntries(recentOwnTimeEntriesQuery, { signal }),
+    ...USER_LIST_QUERY_POLICY,
   });
 
-export const useVisibleProjectsQuery = (options: UseVisibleProjectsQueryOptions) =>
+export const useVisibleProjectsQuery = (
+  options: UseVisibleProjectsQueryOptions,
+) =>
   useQuery({
-    queryKey: computed(() =>
-      toValue(options.queryKey) ?? userProjectsKeys.visibleProjects(toValue(options.scope)),
+    queryKey: computed(
+      () =>
+        toValue(options.queryKey) ??
+        userProjectsKeys.visibleProjects(toValue(options.scope)),
     ),
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () => options.client.listVisibleProjects(),
@@ -253,41 +576,60 @@ export const useCreateManualTimeEntryMutation = (
   return useMutation({
     mutationFn: (input: CreateManualTimeEntryInput) =>
       options.client.createManualEntry(input),
-    onSuccess: async () => {
-      await invalidateQueryKeys(
-        queryClient,
-        userMutationInvalidationKeys.afterTimeEntryMutation(toValue(options.scope)),
-      );
+    onMutate: (): TimeEntryMutationContext => ({
+      hasUnknownSource: false,
+      previousEntry: null,
+      scope: toValue(options.scope),
+    }),
+    onSuccess: async (entry, _input, context) => {
+      await invalidateTimeEntryMutation(queryClient, context, entry);
     },
   });
 };
 
-export const useCreateTaskMutation = (options: UseCreateTaskMutationOptions) => {
+export const useCreateTaskMutation = (
+  options: UseCreateTaskMutationOptions,
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ projectId, input }: { projectId: string; input: CreateTaskInput }) =>
-      options.client.createTask(projectId, input),
-    onSuccess: async () => {
-      await invalidateQueryKeys(
-        queryClient,
-        userMutationInvalidationKeys.afterTaskMutation(toValue(options.scope)),
-      );
+    mutationFn: ({
+      projectId,
+      input,
+    }: {
+      projectId: string;
+      input: CreateTaskInput;
+    }) => options.client.createTask(projectId, input),
+    onMutate: (): UserMutationContext => ({ scope: toValue(options.scope) }),
+    onSuccess: async (_task, variables, context) => {
+      await invalidateEligibilityDependencies(queryClient, context.scope, [
+        ...userMutationInvalidationKeys.afterTaskMutation(
+          context.scope,
+          variables.projectId,
+        ),
+        timerKeys.eligibleLastEntryAll(context.scope),
+      ]);
     },
   });
 };
 
-export const useDeleteTaskMutation = (options: UseDeleteTaskMutationOptions) => {
+export const useDeleteTaskMutation = (
+  options: UseDeleteTaskMutationOptions,
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ taskId }: { projectId: string; taskId: string }) =>
       options.client.deleteTask(taskId),
-    onSuccess: async () => {
-      await invalidateQueryKeys(
-        queryClient,
-        userMutationInvalidationKeys.afterTaskMutation(toValue(options.scope)),
-      );
+    onMutate: (): UserMutationContext => ({ scope: toValue(options.scope) }),
+    onSuccess: async (_result, variables, context) => {
+      await invalidateEligibilityDependencies(queryClient, context.scope, [
+        ...userMutationInvalidationKeys.afterTaskMutation(
+          context.scope,
+          variables.projectId,
+        ),
+        timerKeys.eligibleLastEntryAll(context.scope),
+      ]);
     },
   });
 };
@@ -298,33 +640,39 @@ export const useDeleteTimeEntryMutation = (
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (entryId: string) =>
-      options.client.deleteEntry(entryId),
-    onSuccess: async () => {
-      await invalidateQueryKeys(
-        queryClient,
-        userMutationInvalidationKeys.afterTimeEntryMutation(toValue(options.scope)),
-      );
+    mutationFn: (entryId: string) => options.client.deleteEntry(entryId),
+    onMutate: (entryId): TimeEntryMutationContext => {
+      const scope = toValue(options.scope);
+
+      const previousEntry = readCachedEntry(queryClient, scope, entryId);
+
+      return { hasUnknownSource: previousEntry === null, previousEntry, scope };
+    },
+    onSuccess: async (_result, _entryId, context) => {
+      await invalidateTimeEntryMutation(queryClient, context, null);
     },
   });
 };
 
-export const useStartTimerMutation = (options: UseStartTimerMutationOptions) => {
+export const useStartTimerMutation = (
+  options: UseStartTimerMutationOptions,
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: StartTimerInput) =>
-      options.client.startTimer(input),
-    onSuccess: async (timer) => {
+    mutationFn: (input: StartTimerInput) => options.client.startTimer(input),
+    onMutate: (): TimeEntryMutationContext => ({
+      hasUnknownSource: false,
+      previousEntry: null,
+      scope: toValue(options.scope),
+    }),
+    onSuccess: async (timer, _input, context) => {
       await reconcileTimeEntryCachesAfterTimeEntryMutation(
         queryClient,
-        toValue(options.scope),
+        context.scope,
         timer,
       );
-      await invalidateQueryKeys(
-        queryClient,
-        userMutationInvalidationKeys.afterTimerMutation(toValue(options.scope)),
-      );
+      await invalidateTimerMutation(queryClient, context, timer);
     },
   });
 };
@@ -337,16 +685,18 @@ export const useStartTimerFromGitHubMutation = (
   return useMutation({
     mutationFn: (input: StartTimerFromGitHubInput) =>
       options.client.startTimerFromGitHub(input),
-    onSuccess: async (timer) => {
+    onMutate: (): TimeEntryMutationContext => ({
+      hasUnknownSource: false,
+      previousEntry: null,
+      scope: toValue(options.scope),
+    }),
+    onSuccess: async (timer, _input, context) => {
       await reconcileTimeEntryCachesAfterTimeEntryMutation(
         queryClient,
-        toValue(options.scope),
+        context.scope,
         timer,
       );
-      await invalidateQueryKeys(
-        queryClient,
-        userMutationInvalidationKeys.afterTimerMutation(toValue(options.scope)),
-      );
+      await invalidateTimerMutation(queryClient, context, timer);
     },
   });
 };
@@ -355,31 +705,62 @@ export const useStopTimerMutation = (options: UseStopTimerMutationOptions) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: ConditionalStopTimerInput) => options.client.stopTimer(input),
-    onSuccess: async (timer) => {
+    mutationFn: (input: ConditionalStopTimerInput) =>
+      options.client.stopTimer(input),
+    onMutate: (input): TimeEntryMutationContext => {
+      const scope = toValue(options.scope);
+
+      const previousEntry = readCachedEntry(
+        queryClient,
+        scope,
+        input.expectedTimerId,
+      );
+
+      return {
+        hasUnknownSource: previousEntry === null,
+        previousEntry,
+        scope,
+      };
+    },
+    onSuccess: async (timer, _input, context) => {
       await reconcileTimeEntryCachesAfterTimeEntryMutation(
         queryClient,
-        toValue(options.scope),
+        context.scope,
         timer,
       );
-      await invalidateQueryKeys(
-        queryClient,
-        userMutationInvalidationKeys.afterTimerMutation(toValue(options.scope)),
-      );
+      await invalidateTimerMutation(queryClient, context, timer);
     },
   });
 };
 
-export const useUpdateTaskMutation = (options: UseUpdateTaskMutationOptions) => {
+export const useUpdateTaskMutation = (
+  options: UseUpdateTaskMutationOptions,
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, input }: { projectId: string; taskId: string; input: UpdateTaskInput }) =>
-      options.client.updateTask(taskId, input),
-    onSuccess: async () => {
+    mutationFn: ({
+      taskId,
+      input,
+    }: {
+      projectId: string;
+      taskId: string;
+      input: UpdateTaskInput;
+    }) => options.client.updateTask(taskId, input),
+    onMutate: (): UserMutationContext => ({ scope: toValue(options.scope) }),
+    onSuccess: async (task, variables, context) => {
+      reconcileTimerTaskCachesAfterTaskMutation(
+        queryClient,
+        context.scope,
+        task,
+      );
       await invalidateQueryKeys(
         queryClient,
-        userMutationInvalidationKeys.afterTaskMutation(toValue(options.scope)),
+        userMutationInvalidationKeys.afterTaskMutation(
+          context.scope,
+          variables.projectId,
+          false,
+        ),
       );
     },
   });
@@ -391,18 +772,35 @@ export const useUpdateTimeEntryMutation = (
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ entryId, input }: { entryId: string; input: UpdateTimeEntryInput }) =>
-      options.client.updateEntry(entryId, input),
-    onSuccess: async (timer) => {
+    mutationFn: ({
+      entryId,
+      input,
+    }: {
+      entryId: string;
+      input: UpdateTimeEntryInput;
+    }) => options.client.updateEntry(entryId, input),
+    onMutate: (variables): TimeEntryMutationContext => {
+      const scope = toValue(options.scope);
+
+      const previousEntry = readCachedEntry(
+        queryClient,
+        scope,
+        variables.entryId,
+      );
+
+      return {
+        hasUnknownSource: previousEntry === null,
+        previousEntry,
+        scope,
+      };
+    },
+    onSuccess: async (timer, _input, context) => {
       await reconcileTimeEntryCachesAfterTimeEntryMutation(
         queryClient,
-        toValue(options.scope),
+        context.scope,
         timer,
       );
-      await invalidateQueryKeys(
-        queryClient,
-        userMutationInvalidationKeys.afterTimeEntryMutation(toValue(options.scope)),
-      );
+      await invalidateTimeEntryMutation(queryClient, context, timer);
     },
   });
 };
