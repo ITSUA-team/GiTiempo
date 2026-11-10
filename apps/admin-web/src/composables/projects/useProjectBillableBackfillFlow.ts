@@ -16,6 +16,7 @@ interface ProjectBackfillDialogState {
 }
 
 interface UseProjectBillableBackfillFlowOptions {
+  getVisit?: () => number;
   client?: Pick<
     AdminProjectsClient,
     | 'backfillProjectBillableDefault'
@@ -32,6 +33,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 export function useProjectBillableBackfillFlow({
+  getVisit = () => 0,
   client = adminProjectsClient,
   onError,
   onSuccess,
@@ -43,11 +45,13 @@ export function useProjectBillableBackfillFlow({
   async function openProjectBackfillDialogIfNeeded(
     project: ProjectResponse,
   ): Promise<void> {
+    const visit = getVisit();
     try {
       const [tasksData, timeEntriesData] = await Promise.all([
         client.listProjectTasks(project.id, { includeInactive: true }),
         client.listProjectTimeEntries(project.id, { limit: 1 }),
       ]);
+      if (visit !== getVisit()) return;
       const hasTasks = tasksData.length > 0;
       const hasTimeEntries = timeEntriesData.meta.total > 0;
 
@@ -64,6 +68,7 @@ export function useProjectBillableBackfillFlow({
         updateTimeEntries: hasTimeEntries,
       };
     } catch (error) {
+      if (visit !== getVisit()) return;
       onError(
         getErrorMessage(error, 'Failed to check existing project records'),
         error,
@@ -81,6 +86,7 @@ export function useProjectBillableBackfillFlow({
   }
 
   async function handleProjectBackfillSubmitted(): Promise<void> {
+    const visit = getVisit();
     const dialog = projectBackfillDialog.value;
 
     if (!dialog) {
@@ -97,6 +103,7 @@ export function useProjectBillableBackfillFlow({
           updateTimeEntries: dialog.updateTimeEntries,
         },
       );
+      if (visit !== getVisit()) return;
       const updatedCount = result.tasksUpdated + result.timeEntriesUpdated;
 
       onSuccess(
@@ -104,14 +111,16 @@ export function useProjectBillableBackfillFlow({
       );
       projectBackfillDialog.value = null;
       await refreshProjects();
+      if (visit !== getVisit()) return;
     } catch (error) {
+      if (visit !== getVisit()) return;
       onError(
         getErrorMessage(error, 'Failed to update existing records'),
         error,
         'backfill-project-default',
       );
     } finally {
-      submittingProjectBackfill.value = false;
+      if (visit === getVisit()) submittingProjectBackfill.value = false;
     }
   }
 

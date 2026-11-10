@@ -8,6 +8,7 @@ import {
 import { getMemberDisplayName } from '@/lib/member-management';
 
 interface UseMemberRemovalActionOptions {
+  getVisit?: () => number;
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminMembersClient, 'removeMember'>;
   onError: (message: string, error: unknown, action: string) => void;
@@ -26,12 +27,14 @@ function getErrorMessage(error: unknown): string {
 
 export function useMemberRemovalAction({
   accessToken,
+  getVisit = () => 0,
   client = adminMembersClient,
   onError,
   refreshMembers,
   requireConfirmation,
 }: UseMemberRemovalActionOptions) {
   function handleRemoveMember(member: WorkspaceMemberResponse): void {
+    const visit = getVisit();
     const memberName = getMemberDisplayName(member);
 
     requireConfirmation(
@@ -39,14 +42,17 @@ export function useMemberRemovalAction({
       'Remove member?',
       'Remove',
       async () => {
-        if (!accessToken.value) {
+        if (visit !== getVisit() || !accessToken.value) {
           return;
         }
 
         try {
           await client.removeMember(member.id);
+          if (visit !== getVisit()) return;
           await refreshMembers();
+          if (visit !== getVisit()) return;
         } catch (error) {
+          if (visit !== getVisit()) return;
           onError(getErrorMessage(error), error, 'remove-member');
         }
       },

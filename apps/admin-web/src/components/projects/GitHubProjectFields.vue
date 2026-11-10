@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { GitHubProject } from '@gitiempo/shared';
 import {
   composeGiTiempoSelfAppendedAutoCompleteDropdownPt,
@@ -26,6 +26,15 @@ import {
   type ImportedBoard,
   type RepositoryOwner,
 } from './github-project-import';
+
+let disposed = false;
+const requests = new AbortController();
+function retire(): void {
+  disposed = true;
+  requests.abort();
+}
+onBeforeUnmount(retire);
+defineExpose({ retire });
 
 const props = defineProps<{ disabled: boolean }>();
 
@@ -108,6 +117,7 @@ const projectHint = computed(() => {
 });
 
 function handleOrganizationUpdate(value: string | null): void {
+  if (disposed) return;
   selectedOrganization.value = value;
   selection.value = null;
   typedProjectQuery.value = null;
@@ -115,6 +125,7 @@ function handleOrganizationUpdate(value: string | null): void {
 }
 
 function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
+  if (disposed) return;
   projectSuggestions.value = filterAutocompleteOptions(
     boardOptions.value,
     event.query ?? '',
@@ -125,6 +136,7 @@ function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
 async function handleProjectUpdate(
   value: BoardOption | string | null,
 ): Promise<void> {
+  if (disposed) return;
   if (typeof value === 'string') {
     typedProjectQuery.value = value;
     selection.value = null;
@@ -144,18 +156,20 @@ async function handleProjectUpdate(
   isScanningBoard.value = true;
 
   try {
-    summaries.value = {
-      ...summaries.value,
-      ...(await adminGithubBrowsingClient.listBoardRepositories([boardId])),
-    };
+    const scanned = await adminGithubBrowsingClient.listBoardRepositories([boardId], requests.signal);
+    if (disposed) return;
+    summaries.value = { ...summaries.value, ...scanned };
 
     if (selection.value?.board.id === boardId) {
       selection.value =
         boardOptions.value.find((option) => option.id === boardId) ?? null;
     }
+  } catch (error) {
+    if (disposed) return;
+    loadError.value = error instanceof Error ? error.message : 'Could not scan this GitHub project.';
   } finally {
     pendingScans -= 1;
-    isScanningBoard.value = pendingScans > 0;
+    if (!disposed) isScanningBoard.value = pendingScans > 0;
   }
 }
 
@@ -167,6 +181,7 @@ async function load(): Promise<void> {
     const connection =
       await getAdminSettingsClient().getGitHubConnectionStatus();
 
+    if (disposed) return;
     if (
       connection.status !== 'connected' ||
       connection.capabilities.personalData !== 'ready'
@@ -178,6 +193,7 @@ async function load(): Promise<void> {
     const workspaceOrganizations =
       await getAdminSettingsClient().listWorkspaceGitHubOrganizations();
 
+    if (disposed) return;
     if (workspaceOrganizations.items.length === 0) {
       availability.value = 'no-organization';
       return;
@@ -191,11 +207,12 @@ async function load(): Promise<void> {
 
     const [listedBoards, importedProjects, importedRepositories] =
       await Promise.all([
-        adminGithubBrowsingClient.listOrganizationProjects(organizations.value),
+        adminGithubBrowsingClient.listOrganizationProjects(organizations.value, requests.signal),
         adminProjectsClient.listImportedGitHubProjects(),
         adminProjectsClient.listImportedGitHubRepositories(),
       ]);
 
+    if (disposed) return;
     boards.value = listedBoards.items;
     boardsTruncated.value = listedBoards.hasMore;
     importedByBoardId.value = new Map(
@@ -220,11 +237,15 @@ async function load(): Promise<void> {
       return;
     }
 
-    summaries.value = await adminGithubBrowsingClient.listBoardRepositories(
+    const scanned = await adminGithubBrowsingClient.listBoardRepositories(
       listedBoards.items.map((board) => board.id),
+      requests.signal,
     );
+    if (disposed) return;
+    summaries.value = scanned;
     availability.value = 'available';
   } catch (error) {
+    if (disposed) return;
     availability.value = 'error';
     loadError.value =
       error instanceof Error

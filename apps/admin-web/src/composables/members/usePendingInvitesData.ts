@@ -32,6 +32,15 @@ export function usePendingInvitesData({
   const invitesLoadError = ref<string | null>(null);
   const pendingInviteRows = computed(() => getPendingInviteRows(invites.value));
 
+  let requestId = 0;
+
+  function resetInvitesData(): void {
+    requestId += 1;
+    invites.value = [];
+    invitesLoadError.value = null;
+    invitesLoading.value = false;
+  }
+
   async function loadInvites({
     errorAction,
     setErrorState = false,
@@ -45,17 +54,21 @@ export function usePendingInvitesData({
       invitesLoadError.value = null;
     }
 
+    const currentRequest = ++requestId;
     try {
-      invites.value = await client.listInvites();
+      const result = await client.listInvites();
+      if (currentRequest !== requestId) return;
+      invites.value = result;
       invitesLoadError.value = null;
     } catch (error) {
+      if (currentRequest !== requestId) return;
       const message = getErrorMessage(error);
       if (setErrorState && invites.value.length === 0) {
         invitesLoadError.value = message;
       }
       onError?.(message, error, errorAction);
     } finally {
-      invitesLoading.value = false;
+      if (currentRequest === requestId) invitesLoading.value = false;
     }
   }
 
@@ -64,6 +77,7 @@ export function usePendingInvitesData({
   }
 
   return {
+    resetInvitesData,
     invites,
     invitesLoadError,
     invitesLoading,

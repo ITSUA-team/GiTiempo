@@ -445,3 +445,53 @@ describe('useSavedReports failure handling', () => {
     expect(saved.presets.value).toHaveLength(1);
   });
 });
+
+
+describe('useSavedReports workspace lifetime', () => {
+  it('clears the active preset and ignores a previous visit mutation', async () => {
+    const { saved, client, current } = setup();
+    await saved.refresh();
+    saved.selectPreset('preset-1');
+    current.value = makeConfig({ grouping: ['user'] });
+    expect(saved.isDirty.value).toBe(true);
+    const pending = createDeferred<SavedReport>();
+    client.updateSavedReport.mockImplementationOnce(() => pending.promise);
+    const write = saved.save();
+    saved.reset();
+    expect(saved.activeId.value).toBeNull();
+    expect(saved.isDirty.value).toBe(false);
+    expect(saved.canSave.value).toBe(false);
+    expect(saved.presets.value).toEqual([]);
+    const destination = makePreset({ id: 'destination' });
+    client.listSavedReports.mockResolvedValueOnce([destination]);
+    await saved.refresh();
+    pending.resolve(makePreset());
+    expect(await write).toBeNull();
+    expect(saved.presets.value).toEqual([destination]);
+    expect(saved.activeId.value).toBeNull();
+  });
+
+  it('ignores stale list and failed mutation finalizers after resetting', async () => {
+    const { saved, client } = setup();
+    const oldList = createDeferred<SavedReport[]>();
+    const oldWrite = createDeferred<SavedReport>();
+    client.listSavedReports.mockImplementationOnce(() => oldList.promise);
+    client.createSavedReport.mockImplementationOnce(() => oldWrite.promise);
+    const read = saved.refresh();
+    const write = saved.saveAsNew('Old');
+    saved.reset();
+    saved.reset();
+    const currentWrite = createDeferred<SavedReport>();
+    client.createSavedReport.mockImplementationOnce(() => currentWrite.promise);
+    const writing = saved.saveAsNew('Current');
+    oldList.resolve([makePreset()]);
+    oldWrite.reject(new Error('Old failure'));
+    await Promise.all([read, write]);
+    expect(saved.presets.value).toEqual([]);
+    expect(saved.error.value).toBeNull();
+    expect(saved.isSaving.value).toBe(true);
+    currentWrite.resolve(makePreset({ id: 'current' }));
+    await writing;
+    expect(saved.activeId.value).toBe('current');
+  });
+});
