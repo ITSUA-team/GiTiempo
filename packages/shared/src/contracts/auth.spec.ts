@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   githubSessionRequestSchema,
+  identityRecoveryAssessResponseSchema,
+  identityRecoveryResolveRequestSchema,
   loginRequestSchema,
   registerRequestSchema,
   registrationErrorCodeSchema,
@@ -230,5 +232,127 @@ describe("switchWorkspaceRequestSchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.code).toBe("unrecognized_keys");
+  });
+});
+
+describe("identityRecoveryAssessResponseSchema", () => {
+  const assessRow = {
+    reservationId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    normalizedEmail: "aged@example.com",
+    firebaseUid: "firebase-aged-1",
+    purpose: "registration",
+    state: "reserved",
+    registrationDisplayName: "Aged Owner",
+    registrationWorkspaceName: "Acme Studio",
+    createdAt: "2026-11-08T00:00:00.000Z",
+  };
+
+  it("parses a redacted aged-reservation row", () => {
+    expect(identityRecoveryAssessResponseSchema.parse(assessRow)).toEqual(
+      assessRow,
+    );
+  });
+
+  it("accepts null registration names", () => {
+    expect(
+      identityRecoveryAssessResponseSchema.parse({
+        ...assessRow,
+        registrationDisplayName: null,
+        registrationWorkspaceName: null,
+      }),
+    ).toEqual({
+      ...assessRow,
+      registrationDisplayName: null,
+      registrationWorkspaceName: null,
+    });
+  });
+
+  it("never accepts registration secrets or unknown keys", () => {
+    const result = identityRecoveryAssessResponseSchema.safeParse({
+      ...assessRow,
+      password: "password123",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.code).toBe("unrecognized_keys");
+  });
+
+  it("rejects a non-registration purpose and a non-reserved state", () => {
+    expect(
+      identityRecoveryAssessResponseSchema.safeParse({
+        ...assessRow,
+        purpose: "invitation",
+      }).success,
+    ).toBe(false);
+    expect(
+      identityRecoveryAssessResponseSchema.safeParse({
+        ...assessRow,
+        state: "bound",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects invalid identifiers and timestamps", () => {
+    expect(
+      identityRecoveryAssessResponseSchema.safeParse({
+        ...assessRow,
+        reservationId: "reservation-aged",
+      }).success,
+    ).toBe(false);
+    expect(
+      identityRecoveryAssessResponseSchema.safeParse({
+        ...assessRow,
+        createdAt: "2026-11-08T00:00:00",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("identityRecoveryResolveRequestSchema", () => {
+  const resolveRequest = {
+    reservationId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    operatorDecision: "Confirmed the Firebase UID no longer exists",
+  };
+
+  it("accepts a resolve payload", () => {
+    expect(identityRecoveryResolveRequestSchema.parse(resolveRequest)).toEqual(
+      resolveRequest,
+    );
+  });
+
+  it("rejects a blank or overlong operator decision", () => {
+    expect(
+      identityRecoveryResolveRequestSchema.safeParse({
+        ...resolveRequest,
+        operatorDecision: "",
+      }).success,
+    ).toBe(false);
+    expect(
+      identityRecoveryResolveRequestSchema.parse({
+        ...resolveRequest,
+        operatorDecision: "r".repeat(255),
+      }).operatorDecision,
+    ).toHaveLength(255);
+    expect(
+      identityRecoveryResolveRequestSchema.safeParse({
+        ...resolveRequest,
+        operatorDecision: "r".repeat(256),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects invalid reservation identifiers and unknown keys", () => {
+    expect(
+      identityRecoveryResolveRequestSchema.safeParse({
+        ...resolveRequest,
+        reservationId: "reservation-aged",
+      }).success,
+    ).toBe(false);
+    expect(
+      identityRecoveryResolveRequestSchema.safeParse({
+        ...resolveRequest,
+        operatorIdentity: "operator-1",
+      }).success,
+    ).toBe(false);
   });
 });

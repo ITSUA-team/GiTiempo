@@ -25,11 +25,7 @@ import {
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { UsersService } from '../../users/services/users.service';
 import { userRowSelection, users } from '../../users/schemas/users.schema';
-import { refreshTokens } from '../schemas/refresh-tokens.schema';
-import {
-  firebaseIdentityReservationRowSelection,
-  firebaseIdentityReservations,
-} from '../schemas/firebase-identity-reservations.schema';
+import { firebaseIdentityReservations } from '../schemas/firebase-identity-reservations.schema';
 import { firebaseSubjectBindings } from '../schemas/firebase-subject-bindings.schema';
 import { workspaceSettings } from '../../workspaces/schemas/workspace-settings.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
@@ -43,7 +39,17 @@ import {
   FirebaseAdminAuthError,
   type FirebaseAdminService,
 } from './firebase-admin.interface';
-import { REGISTRATION_ERROR_MESSAGES } from '../registration-errors';
+import {
+  createIdentityProofRequired,
+  createRegistrationBadRequest,
+  createRegistrationConflict,
+  createRegistrationUnavailable,
+} from './registration-error-factories';
+import { IdentityReservationCoordinator } from './identity-reservation-coordinator';
+import type {
+  AgedUnboundRegistrationReservation,
+  ResolveRegistrationInput,
+} from './identity-reservation-coordinator';
 import { TokenService } from './token.service';
 import { GoogleIdTokenVerifier } from './google-id-token-verifier.service';
 import type { AuthUser } from '../types/auth-user';
@@ -94,42 +100,6 @@ export type SocialProvisionPersistence = (
 
 function normalizeWorkspaceName(name: string): string {
   return name.trim().replace(/\s+/g, ' ');
-}
-
-function createRegistrationBadRequest(
-  code: 'invalid_workspace_name' | 'weak_password',
-): BadRequestException {
-  return new BadRequestException({
-    code,
-    error: 'BadRequest',
-    message: REGISTRATION_ERROR_MESSAGES[code],
-  });
-}
-
-function createRegistrationConflict(
-  code: 'duplicate_email',
-): ConflictException {
-  return new ConflictException({
-    code,
-    error: 'Conflict',
-    message: REGISTRATION_ERROR_MESSAGES[code],
-  });
-}
-
-function createRegistrationUnavailable(): ServiceUnavailableException {
-  return new ServiceUnavailableException({
-    code: 'registration_service_unavailable',
-    error: 'ServiceUnavailable',
-    message: REGISTRATION_ERROR_MESSAGES.registration_service_unavailable,
-  });
-}
-
-function createIdentityProofRequired(): UnauthorizedException {
-  return new UnauthorizedException({
-    code: 'identity_proof_required',
-    error: 'Unauthorized',
-    message: 'Authenticate with the identity already linked to this account.',
-  });
 }
 
 function isKnownNonCreatingRegistrationError(
@@ -214,6 +184,8 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private readonly refreshTtlMs: number;
   private readonly accessTtlMs: number;
+  private readonly reservations: IdentityReservationCoordinator;
+  private readonly agedReservationThresholdMs: number;
   /** Mutable only for deterministic tests; deliberately not an environment setting. */
   private registrationFirebaseCreationTimeoutMs = 10_000;
 
@@ -234,6 +206,18 @@ export class AuthService {
     );
     this.accessTtlMs = parseDurationMs(
       config.get('JWT_ACCESS_TTL', { infer: true }),
+    );
+    this.agedReservationThresholdMs = parseDurationMs(
+      config.get('AUTH_AGED_RESERVATION_THRESHOLD', { infer: true }),
+    );
+    this.reservations = new IdentityReservationCoordinator(
+      this.db,
+      this.firebase,
+      {
+        findUserByEmail: (email, db) => this.findUserByEmail(email, db),
+        findUserByFirebaseSubject: (firebaseUid, db) =>
+          this.findUserByFirebaseSubject(firebaseUid, db),
+      },
     );
   }
 
@@ -426,7 +410,10 @@ export class AuthService {
   async prepareInvitationIdentity(email: string): Promise<void> {
     const normalizedEmail = normalizeEmail(email);
     if (await this.findUserByEmail(normalizedEmail)) return;
-    await this.reserveFirebaseIdentity(normalizedEmail, 'invitation');
+    await this.reservations.reserveFirebaseIdentity(
+      normalizedEmail,
+      'invitation',
+    );
   }
 
   /** Resolves an invitee's proved Firebase subject while the invite mutation is locked. */
@@ -440,13 +427,13 @@ export class AuthService {
     const existingSubject = await this.findUserByFirebaseSubject(decoded.uid);
     const existingEmail = await this.findUserByEmail(email);
     await this.db.transaction(async (tx) => {
-      await this.lockIdentityKeys(tx, [
+      await this.reservations.lockIdentityReservationKeys(tx, [
         `email:${email}`,
         `uid:${decoded.uid}`,
         ...(existingSubject ? [`uid:${existingSubject.firebaseUid}`] : []),
         ...(existingEmail ? [`uid:${existingEmail.firebaseUid}`] : []),
       ]);
-      await this.rejectPendingRegistrationReservation(tx, email);
+      await this.reservations.rejectPendingRegistrationReservation(tx, email);
       await this.firebase.assertActiveUserByUid(
         decoded.uid,
         email,
@@ -464,7 +451,11 @@ export class AuthService {
         avatarUrl: decoded.picture ?? null,
       });
       await persist(tx, user);
-      await this.bindSocialIdentityReservation(tx, decoded.uid, user.id);
+      await this.reservations.bindSocialIdentityReservation(
+        tx,
+        decoded.uid,
+        user.id,
+      );
     });
   }
 
@@ -477,6 +468,10 @@ export class AuthService {
     input: ProvisionSocialSessionInput,
     persist?: SocialProvisionPersistence,
   ): Promise<TokenPair> {
+    // The GitHub OAuth profile carries `name`/`picture`; normalize the aliases
+    // once here so resolution only ever sees the canonical fields.
+    const displayName = input.displayName ?? input.name ?? null;
+    const avatarUrl = input.avatarUrl ?? input.picture ?? null;
     const candidateEmail = input.email ? normalizeEmail(input.email) : null;
     const verifiedEmails = [
       ...new Set(
@@ -499,31 +494,31 @@ export class AuthService {
         const existing = await this.findUserByEmail(candidateEmail!);
         firebaseUid =
           existing?.firebaseUid ??
-          (await this.reserveFirebaseIdentity(
+          (await this.reservations.reserveFirebaseIdentity(
             candidateEmail!,
             'github-signin',
           ));
       }
     }
 
-    const token = this.tokens.generateRefreshToken();
     const familyId = randomUUID();
-    const expiresAt = new Date(Date.now() + this.refreshTtlMs);
-    const accessTokenExpiresIn = Math.floor(this.accessTtlMs / 1_000);
     const existingSubject = await this.findUserByFirebaseSubject(firebaseUid);
     const existingCandidate = input.userId
       ? await this.users.findRowById(input.userId)
       : await this.findUserByVerifiedEmails(verifiedEmails);
 
     return this.db.transaction(async (tx) => {
-      await this.lockIdentityKeys(tx, [
+      await this.reservations.lockIdentityReservationKeys(tx, [
         ...verifiedEmails.map((email) => `email:${email}`),
         `uid:${firebaseUid}`,
         ...(input.userId ? [`user:${input.userId}`] : []),
         ...(existingSubject ? [`uid:${existingSubject.firebaseUid}`] : []),
         ...(existingCandidate ? [`uid:${existingCandidate.firebaseUid}`] : []),
       ]);
-      await this.rejectPendingRegistrationReservation(tx, candidateEmail);
+      await this.reservations.rejectPendingRegistrationReservation(
+        tx,
+        candidateEmail,
+      );
       if (
         input.provider === 'google' ||
         (!input.userId && input.provider === 'github')
@@ -537,6 +532,8 @@ export class AuthService {
 
       const user = await this.resolveSocialUserInTransaction(tx, {
         ...input,
+        displayName,
+        avatarUrl,
         firebaseUid,
         verifiedEmails,
       });
@@ -544,27 +541,24 @@ export class AuthService {
 
       if (persist) await persist(tx, user);
 
-      await tx.insert(refreshTokens).values({
-        expiresAt,
-        familyId,
-        tokenHash: token.hash,
-        userId: user.id,
-        workspaceMemberId: membership.id,
-        workspaceId: membership.workspaceId,
-      });
-      await this.bindSocialIdentityReservation(tx, firebaseUid, user.id);
-
-      return {
-        accessToken: this.tokens.signAccess({
+      const pair = await this.issueSession(
+        tx,
+        {
           sub: user.id,
           email: user.email,
           firebaseUid: user.firebaseUid,
           workspaceId: membership.workspaceId,
           role: membership.role,
-        }),
-        refreshToken: token.token,
-        accessTokenExpiresIn,
-      };
+        },
+        membership.id,
+        familyId,
+      );
+      await this.reservations.bindSocialIdentityReservation(
+        tx,
+        firebaseUid,
+        user.id,
+      );
+      return pair;
     });
   }
 
@@ -576,48 +570,6 @@ export class AuthService {
     if (!user || !membership) throw new UnauthorizedException('Unauthorized');
   }
 
-  async createSessionForMember(
-    memberId: string,
-    executor?: Pick<DrizzleDB, 'insert'>,
-  ): Promise<TokenPair> {
-    const existingUser = await this.users.findRowById(memberId);
-    if (!existingUser) {
-      this.logger.warn({
-        event: 'auth.github_login.no_user',
-      });
-      throw new UnauthorizedException('Unauthorized');
-    }
-
-    const membership = await this.members.resolveActiveMembershipForUser(
-      existingUser.id,
-    );
-    if (!membership) {
-      this.logger.warn({
-        event: 'auth.github_login.no_membership',
-        userId: existingUser.id,
-      });
-      throw new UnauthorizedException('Unauthorized');
-    }
-
-    const pair = await this.issueTokenPair(
-      {
-        sub: existingUser.id,
-        email: existingUser.email,
-        firebaseUid: existingUser.firebaseUid,
-        workspaceId: membership.workspaceId,
-        role: membership.role,
-      },
-      membership.id,
-      randomUUID(),
-      executor,
-    );
-    this.logger.log({
-      event: 'auth.github_login.success',
-      userId: existingUser.id,
-    });
-    return pair;
-  }
-
   async register(input: RegisterRequest): Promise<TokenPair> {
     const email = normalizeEmail(input.email);
     const displayName = input.fullName.trim();
@@ -627,7 +579,7 @@ export class AuthService {
       throw createRegistrationBadRequest('invalid_workspace_name');
     }
 
-    const reservation = await this.reserveRegistrationIdentity({
+    const reservation = await this.reservations.reserveRegistrationIdentity({
       displayName,
       email,
       ownerAcknowledgement: input.ownerAcknowledgement,
@@ -637,11 +589,11 @@ export class AuthService {
     let firebaseUid: string | null = null;
     try {
       return await this.db.transaction(async (tx) => {
-        await this.lockIdentityKeys(tx, [
+        await this.reservations.lockIdentityReservationKeys(tx, [
           `email:${email}`,
           `uid:${reservation.firebaseUid}`,
         ]);
-        const currentReservation = await this.findReservationByUid(
+        const currentReservation = await this.reservations.findReservationByUid(
           reservation.firebaseUid,
           tx,
         );
@@ -674,7 +626,10 @@ export class AuthService {
           throw createRegistrationUnavailable();
         }
         firebaseUid = firebaseUser.uid;
-        await this.confirmIdentityReservationInTransaction(tx, reservation.id);
+        await this.reservations.confirmIdentityReservationInTransaction(
+          tx,
+          reservation.id,
+        );
         const pair = await this.createRegisteredSessionInTransaction(tx, {
           displayName,
           email,
@@ -687,17 +642,20 @@ export class AuthService {
     } catch (error) {
       if (firebaseUid) {
         try {
-          const compensated = await this.compensateKnownRegistrationFailure(
-            reservation,
-            firebaseUid,
-          );
+          const compensated =
+            await this.reservations.compensateKnownRegistrationFailure(
+              reservation,
+              firebaseUid,
+            );
           if (!compensated) throw createRegistrationUnavailable();
         } catch {
           throw createRegistrationUnavailable();
         }
       } else if (error instanceof FirebaseAdminAuthError) {
         if (isKnownNonCreatingRegistrationError(error)) {
-          await this.deleteUnboundRegistrationReservation(reservation);
+          await this.reservations.deleteUnboundRegistrationReservation(
+            reservation,
+          );
         }
         this.throwRegistrationFirebaseError(error);
       }
@@ -707,6 +665,41 @@ export class AuthService {
       }
       throw createRegistrationUnavailable();
     }
+  }
+
+  /** Observability-only snapshot of stranded manual registrations. */
+  async listAgedUnboundRegistrationReservations(): Promise<
+    AgedUnboundRegistrationReservation[]
+  > {
+    return this.reservations.findAgedUnboundRegistrationReservations(
+      this.agedReservationThresholdMs,
+    );
+  }
+
+  /** Emits one redacted warn event per aged reservation; never mutates state. */
+  reportAgedUnboundRegistrationReservations(
+    aged: AgedUnboundRegistrationReservation[],
+  ): void {
+    const nowMs = Date.now();
+    for (const reservation of aged) {
+      this.logger.warn({
+        event: 'auth.identity.aged_unbound_reservation',
+        reservationId: reservation.id,
+        normalizedEmail: reservation.normalizedEmail,
+        firebaseUid: reservation.firebaseUid,
+        ageMs: nowMs - reservation.createdAt.getTime(),
+      });
+    }
+  }
+
+  /** Operator recovery entry point; see the coordinator for the guarantees. */
+  async resolveConclusivelyAbandonedRegistration(
+    input: Omit<ResolveRegistrationInput, 'minAgeMs'>,
+  ): Promise<void> {
+    await this.reservations.resolveConclusivelyAbandonedRegistration({
+      ...input,
+      minAgeMs: this.agedReservationThresholdMs,
+    });
   }
 
   async refresh(refreshToken: string): Promise<TokenPair> {
@@ -809,6 +802,16 @@ export class AuthService {
     };
   }
 
+  /** Consolidated transactional issuance: token pair + refresh-row insert. */
+  private async issueSession(
+    tx: DbTransaction,
+    user: AuthUser,
+    membershipId: string,
+    familyId: string,
+  ): Promise<TokenPair> {
+    return this.issueTokenPair(user, membershipId, familyId, tx);
+  }
+
   private async requireRotatableRefreshToken(
     refreshToken: string,
   ): Promise<RefreshTokenRow> {
@@ -877,22 +880,13 @@ export class AuthService {
     };
   }
 
-  private async createRegisteredSession(input: {
-    displayName: string;
-    email: string;
-    firebaseUid: string;
-    workspaceName: string;
-  }): Promise<TokenPair> {
-    return this.db.transaction((tx) =>
-      this.createRegisteredSessionInTransaction(tx, input),
-    );
-  }
-
   private async recoverPendingRegistration(
     decoded: DecodedFirebaseToken,
     googleSubject?: string,
   ): Promise<TokenPair | null> {
-    const reservation = await this.findReservationByUid(decoded.uid);
+    const reservation = await this.reservations.findReservationByUid(
+      decoded.uid,
+    );
     if (
       !reservation ||
       reservation.purpose !== 'registration' ||
@@ -914,8 +908,14 @@ export class AuthService {
       throw new UnauthorizedException('Unauthorized');
     }
     return this.db.transaction(async (tx) => {
-      await this.lockIdentityKeys(tx, [`email:${email}`, `uid:${decoded.uid}`]);
-      const current = await this.findReservationByUid(decoded.uid, tx);
+      await this.reservations.lockIdentityReservationKeys(tx, [
+        `email:${email}`,
+        `uid:${decoded.uid}`,
+      ]);
+      const current = await this.reservations.findReservationByUid(
+        decoded.uid,
+        tx,
+      );
       if (
         !current ||
         current.id !== reservation.id ||
@@ -952,7 +952,10 @@ export class AuthService {
       ) {
         throw new UnauthorizedException('Unauthorized');
       }
-      await this.confirmIdentityReservationInTransaction(tx, current.id);
+      await this.reservations.confirmIdentityReservationInTransaction(
+        tx,
+        current.id,
+      );
       const existingUser = await this.findUserByEmail(email, tx);
       if (existingUser) {
         if (existingUser.firebaseUid !== decoded.uid) {
@@ -991,11 +994,6 @@ export class AuthService {
       workspaceName: string;
     },
   ): Promise<TokenPair> {
-    const { token, hash } = this.tokens.generateRefreshToken();
-    const familyId = randomUUID();
-    const expiresAt = new Date(Date.now() + this.refreshTtlMs);
-    const accessTokenExpiresIn = Math.floor(this.accessTtlMs / 1_000);
-
     const existingUser = await this.findUserByEmail(input.email, tx);
     if (existingUser) {
       throw createRegistrationConflict('duplicate_email');
@@ -1020,30 +1018,24 @@ export class AuthService {
       input.workspaceName,
     );
 
-    await tx.insert(refreshTokens).values({
-      expiresAt,
-      familyId,
-      tokenHash: hash,
-      userId: userRow.id,
-      workspaceMemberId: membershipRow.id,
-      workspaceId: membershipRow.workspaceId,
-    });
+    const pair = await this.issueSession(
+      tx,
+      {
+        sub: userRow.id,
+        email: userRow.email,
+        firebaseUid: userRow.firebaseUid,
+        workspaceId: membershipRow.workspaceId,
+        role: 'admin',
+      },
+      membershipRow.id,
+      randomUUID(),
+    );
     await tx
       .update(firebaseIdentityReservations)
       .set({ state: 'bound', userId: userRow.id, updatedAt: new Date() })
       .where(eq(firebaseIdentityReservations.firebaseUid, input.firebaseUid));
 
-    return {
-      accessToken: this.tokens.signAccess({
-        email: userRow.email,
-        firebaseUid: userRow.firebaseUid,
-        role: 'admin',
-        sub: userRow.id,
-        workspaceId: membershipRow.workspaceId,
-      }),
-      accessTokenExpiresIn,
-      refreshToken: token,
-    };
+    return pair;
   }
 
   private async issueRegisteredSessionForExistingUser(
@@ -1076,7 +1068,8 @@ export class AuthService {
         'admin',
         workspaceName,
       ));
-    return this.issueTokenPair(
+    return this.issueSession(
+      tx,
       {
         sub: user.id,
         email: user.email,
@@ -1086,75 +1079,7 @@ export class AuthService {
       },
       activeMembership.id,
       randomUUID(),
-      tx,
     );
-  }
-
-  private async reserveFirebaseIdentity(
-    email: string,
-    purpose: 'github-signin' | 'invitation',
-  ): Promise<string> {
-    const reservation = await this.reserveIdentity(email, purpose);
-
-    if (reservation.state !== 'bound') {
-      try {
-        await this.firebase.createUnclaimedUser({
-          uid: reservation.firebaseUid,
-          email: reservation.normalizedEmail,
-        });
-      } catch (error) {
-        if (
-          error instanceof FirebaseAdminAuthError &&
-          error.code === 'auth/email-already-exists'
-        ) {
-          throw new UnauthorizedException({
-            code: 'identity_proof_required',
-            error: 'Unauthorized',
-            message:
-              'Authenticate with the identity already linked to this account.',
-          });
-        }
-        throw createRegistrationUnavailable();
-      }
-      if (reservation.state === 'reserved') {
-        await this.confirmIdentityReservation(reservation.id);
-      }
-    }
-    return reservation.firebaseUid;
-  }
-
-  private async reserveRegistrationIdentity(input: {
-    email: string;
-    displayName: string;
-    workspaceName: string;
-    ownerAcknowledgement: true;
-  }) {
-    return this.db.transaction(async (tx) => {
-      await this.lockIdentityKeys(tx, [`email:${input.email}`]);
-      if (await this.findUserByEmail(input.email, tx)) {
-        throw createRegistrationConflict('duplicate_email');
-      }
-      const existing = await this.findReservationByEmail(input.email, tx);
-      if (existing) {
-        if (existing.purpose === 'registration') {
-          throw createRegistrationUnavailable();
-        }
-        throw createRegistrationConflict('duplicate_email');
-      }
-      return (
-        await tx
-          .insert(firebaseIdentityReservations)
-          .values({
-            normalizedEmail: input.email,
-            firebaseUid: randomUUID(),
-            purpose: 'registration',
-            registrationDisplayName: input.displayName,
-            registrationWorkspaceName: input.workspaceName,
-            registrationOwnerAcknowledgement: input.ownerAcknowledgement,
-          })
-          .returning(firebaseIdentityReservationRowSelection)
-      )[0]!;
-    });
   }
 
   private async waitForRegistrationFirebaseCreation<T>(
@@ -1181,8 +1106,10 @@ export class AuthService {
     void creation
       .then(async (firebaseUser) => {
         await this.db.transaction(async (tx) => {
-          await this.lockIdentityKeys(tx, [`uid:${firebaseUser.uid}`]);
-          const reservation = await this.findReservationByUid(
+          await this.reservations.lockIdentityReservationKeys(tx, [
+            `uid:${firebaseUser.uid}`,
+          ]);
+          const reservation = await this.reservations.findReservationByUid(
             firebaseUser.uid,
             tx,
           );
@@ -1191,7 +1118,7 @@ export class AuthService {
             reservation.state === 'reserved' &&
             reservation.purpose === 'registration'
           ) {
-            await this.confirmIdentityReservationInTransaction(
+            await this.reservations.confirmIdentityReservationInTransaction(
               tx,
               reservationId,
             );
@@ -1204,196 +1131,6 @@ export class AuthService {
           reason: error instanceof Error ? error.message : 'unknown_error',
         });
       });
-  }
-
-  private async deleteUnboundRegistrationReservation(reservation: {
-    id: string;
-    firebaseUid: string;
-    normalizedEmail: string;
-  }): Promise<void> {
-    await this.db.transaction(async (tx) => {
-      await this.lockIdentityKeys(tx, [
-        `email:${reservation.normalizedEmail}`,
-        `uid:${reservation.firebaseUid}`,
-      ]);
-      await tx
-        .delete(firebaseIdentityReservations)
-        .where(
-          and(
-            eq(firebaseIdentityReservations.id, reservation.id),
-            eq(firebaseIdentityReservations.state, 'reserved'),
-          ),
-        );
-    });
-  }
-
-  /**
-   * A provider call succeeded but the SQL foundation did not. The Firebase
-   * subject may only be deleted while the exact reservation remains unbound
-   * and no local canonical or additional binding has adopted it.
-   */
-  private async compensateKnownRegistrationFailure(
-    reservation: {
-      id: string;
-      firebaseUid: string;
-      normalizedEmail: string;
-    },
-    firebaseUid: string,
-  ): Promise<boolean> {
-    return this.db.transaction(async (tx) => {
-      await this.lockIdentityKeys(tx, [
-        `email:${reservation.normalizedEmail}`,
-        `uid:${firebaseUid}`,
-      ]);
-      const current = await this.findReservationByUid(firebaseUid, tx);
-      if (
-        !current ||
-        current.id !== reservation.id ||
-        current.purpose !== 'registration' ||
-        current.state !== 'reserved'
-      ) {
-        return false;
-      }
-      if (await this.findUserByFirebaseSubject(firebaseUid, tx)) {
-        return false;
-      }
-      await this.firebase.deleteUser(firebaseUid);
-      await tx
-        .delete(firebaseIdentityReservations)
-        .where(
-          and(
-            eq(firebaseIdentityReservations.id, reservation.id),
-            eq(firebaseIdentityReservations.state, 'reserved'),
-          ),
-        );
-      return true;
-    });
-  }
-
-  private async reserveIdentity(
-    email: string,
-    purpose: 'github-signin' | 'invitation' | 'registration',
-  ) {
-    return this.db.transaction(async (tx) => {
-      await this.lockIdentityKeys(tx, [`email:${email}`]);
-      return this.reserveIdentityInTransaction(tx, email, purpose);
-    });
-  }
-
-  private async reserveIdentityInTransaction(
-    tx: DbTransaction,
-    email: string,
-    purpose: 'github-signin' | 'invitation' | 'registration',
-  ) {
-    const [existing] = await tx
-      .select(firebaseIdentityReservationRowSelection)
-      .from(firebaseIdentityReservations)
-      .where(
-        sql`lower(btrim(${firebaseIdentityReservations.normalizedEmail})) = ${email}`,
-      )
-      .limit(1);
-    if (existing) {
-      if (
-        existing.purpose === 'registration' &&
-        existing.state !== 'bound' &&
-        purpose !== 'registration'
-      ) {
-        throw createIdentityProofRequired();
-      }
-      return existing;
-    }
-
-    const firebaseUid = randomUUID();
-    return (
-      await tx
-        .insert(firebaseIdentityReservations)
-        .values({ normalizedEmail: email, firebaseUid, purpose })
-        .returning()
-    )[0]!;
-  }
-
-  private async findReservationByEmail(
-    email: string,
-    db: Pick<DrizzleDB, 'select'> = this.db,
-  ) {
-    const [reservation] = await db
-      .select(firebaseIdentityReservationRowSelection)
-      .from(firebaseIdentityReservations)
-      .where(
-        sql`lower(btrim(${firebaseIdentityReservations.normalizedEmail})) = ${email}`,
-      )
-      .limit(1);
-    return reservation ?? null;
-  }
-
-  private async findReservationByUid(
-    firebaseUid: string,
-    db: Pick<DrizzleDB, 'select'> = this.db,
-  ) {
-    const [reservation] = await db
-      .select(firebaseIdentityReservationRowSelection)
-      .from(firebaseIdentityReservations)
-      .where(eq(firebaseIdentityReservations.firebaseUid, firebaseUid))
-      .limit(1);
-    return reservation ?? null;
-  }
-
-  private async confirmIdentityReservation(
-    reservationId: string,
-  ): Promise<void> {
-    await this.db.transaction((tx) =>
-      this.confirmIdentityReservationInTransaction(tx, reservationId),
-    );
-  }
-
-  private async confirmIdentityReservationInTransaction(
-    tx: Pick<DrizzleDB, 'update'>,
-    reservationId: string,
-  ): Promise<void> {
-    await tx
-      .update(firebaseIdentityReservations)
-      .set({ state: 'confirmed', updatedAt: new Date() })
-      .where(
-        and(
-          eq(firebaseIdentityReservations.id, reservationId),
-          eq(firebaseIdentityReservations.state, 'reserved'),
-        ),
-      );
-  }
-
-  /** A social flow must not adopt an unfinished manual-registration foundation. */
-  private async rejectPendingRegistrationReservation(
-    tx: DbTransaction,
-    email: string | null,
-  ): Promise<void> {
-    if (!email) return;
-    const reservation = await this.findReservationByEmail(email, tx);
-    if (
-      reservation?.purpose === 'registration' &&
-      reservation.state !== 'bound'
-    ) {
-      throw createIdentityProofRequired();
-    }
-  }
-
-  /** Only reservations created for social provisioning may become social bindings. */
-  private async bindSocialIdentityReservation(
-    tx: Pick<DrizzleDB, 'update'>,
-    firebaseUid: string,
-    userId: string,
-  ): Promise<void> {
-    await tx
-      .update(firebaseIdentityReservations)
-      .set({ state: 'bound', userId, updatedAt: new Date() })
-      .where(
-        and(
-          eq(firebaseIdentityReservations.firebaseUid, firebaseUid),
-          inArray(firebaseIdentityReservations.purpose, [
-            'github-signin',
-            'invitation',
-          ]),
-        ),
-      );
   }
 
   private async resolveSocialUserInTransaction(
@@ -1456,8 +1193,8 @@ export class AuthService {
           .values({
             email,
             firebaseUid: input.firebaseUid,
-            displayName: input.displayName ?? input.name ?? null,
-            avatarUrl: input.avatarUrl ?? input.picture ?? null,
+            displayName: input.displayName ?? null,
+            avatarUrl: input.avatarUrl ?? null,
           })
           .returning(userRowSelection)
       )[0]!;
@@ -1467,10 +1204,10 @@ export class AuthService {
         .update(users)
         .set({
           email,
-          displayName: input.displayName ?? input.name ?? row.displayName,
+          displayName: input.displayName ?? row.displayName,
           avatarUrl:
             row.avatarSource === 'provider'
-              ? (input.avatarUrl ?? input.picture ?? row.avatarUrl)
+              ? (input.avatarUrl ?? row.avatarUrl)
               : row.avatarUrl,
           updatedAt: new Date(),
         })
@@ -1555,17 +1292,6 @@ export class AuthService {
           role: workspaceMembers.role,
         })
     )[0]!;
-  }
-
-  private async lockIdentityKeys(
-    tx: Pick<DrizzleDB, 'execute'>,
-    keys: string[],
-  ): Promise<void> {
-    for (const key of [...new Set(keys)].sort()) {
-      await tx.execute(
-        sql`SELECT pg_advisory_xact_lock(hashtext(${`identity:${key}`}))`,
-      );
-    }
   }
 
   private async findUserByEmail(

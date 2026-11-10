@@ -85,6 +85,40 @@ export const registrationErrorCodeSchema = z.enum([
 ]);
 
 /**
+ * Item of `GET /auth/identity-recovery/assess`: one aged, unbound registration
+ * reservation as visible to a platform operator.
+ *
+ * Redacted by construction — never carries the registration password or other
+ * foundation secrets, so assessors can inspect identity state safely.
+ */
+export const identityRecoveryAssessResponseSchema = z
+  .object({
+    reservationId: z.uuid(),
+    normalizedEmail: z.string(),
+    firebaseUid: z.string(),
+    purpose: z.literal("registration"),
+    state: z.literal("reserved"),
+    registrationDisplayName: z.string().nullable(),
+    registrationWorkspaceName: z.string().nullable(),
+    createdAt: z.iso.datetime(),
+  })
+  .strict();
+
+/**
+ * Body for `POST /auth/identity-recovery/resolve`.
+ *
+ * `operatorDecision` records why the operator concluded the registration is
+ * abandoned; the acting operator identity is taken from the access token,
+ * never from the body.
+ */
+export const identityRecoveryResolveRequestSchema = z
+  .object({
+    reservationId: z.uuid(),
+    operatorDecision: z.string().min(1).max(255),
+  })
+  .strict();
+
+/**
  * Response shape for `/auth/login` and `/auth/refresh`.
  *
  * `accessTokenExpiresIn` is seconds-until-expiry for the access token,
@@ -104,3 +138,9 @@ export type SwitchWorkspaceRequest = z.infer<typeof switchWorkspaceRequestSchema
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
 export type RegistrationErrorCode = z.infer<typeof registrationErrorCodeSchema>;
 export type TokenPairResponse = z.infer<typeof tokenPairResponseSchema>;
+export type IdentityRecoveryAssessResponse = z.infer<
+  typeof identityRecoveryAssessResponseSchema
+>;
+export type IdentityRecoveryResolveRequest = z.infer<
+  typeof identityRecoveryResolveRequestSchema
+>;
