@@ -13,6 +13,7 @@ import type { MembersTableRow } from '@/lib/members-table';
 import { diffMemberProjectAssignments } from '@/lib/member-management';
 
 interface UseMemberAssignmentActionsOptions {
+  getVisit?: () => number;
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminProjectsClient, 'assignMember' | 'removeAssignment'>;
   collapseMemberRow: (member: WorkspaceMemberResponse) => void;
@@ -27,6 +28,7 @@ function getErrorMessage(error: unknown): string {
 
 export function useMemberAssignmentActions({
   accessToken,
+  getVisit = () => 0,
   client = adminProjectsClient,
   collapseMemberRow,
   onError,
@@ -50,22 +52,27 @@ export function useMemberAssignmentActions({
       projects: projects.value,
     });
 
+    const visit = getVisit();
     savingMemberAssignmentId.value = member.id;
 
     try {
       for (const projectId of projectIdsToAdd) {
         await client.assignMember(projectId, member.userId);
+        if (visit !== getVisit()) return;
       }
       for (const projectId of projectIdsToRemove) {
         await client.removeAssignment(projectId, member.userId);
+        if (visit !== getVisit()) return;
       }
 
       collapseMemberRow(member);
       await refreshMembers();
+      if (visit !== getVisit()) return;
     } catch (error) {
+      if (visit !== getVisit()) return;
       onError(getErrorMessage(error), error, 'save-project-assignments');
     } finally {
-      savingMemberAssignmentId.value = null;
+      if (visit === getVisit()) savingMemberAssignmentId.value = null;
     }
   }
 

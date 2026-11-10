@@ -522,3 +522,42 @@ describe('GitHubProjectFields', () => {
 		expect(wrapper.text()).toContain('GitHub is down');
 	});
 });
+
+
+describe('workspace lifetime', () => {
+  it('does not continue loading the old workspace after its form unmounts', async () => {
+    let resolveConnection!: (value: unknown) => void;
+    getGitHubConnectionStatus.mockReturnValueOnce(new Promise((resolve) => { resolveConnection = resolve; }));
+    const wrapper = mountFields();
+    wrapper.unmount();
+    resolveConnection({ status: 'connected', capabilities: { personalData: 'ready' } });
+    await flushPromises();
+    expect(listWorkspaceGitHubOrganizations).not.toHaveBeenCalled();
+  });
+
+  it('does not emit availability from an obsolete workspace scan', async () => {
+    let resolveScan!: (value: unknown) => void;
+    listBoardRepositories.mockReturnValueOnce(new Promise((resolve) => { resolveScan = resolve; }));
+    const wrapper = mountFields();
+    await flushPromises();
+    const eventsBefore = wrapper.emitted('update:availability')?.length ?? 0;
+    wrapper.unmount();
+    resolveScan({ PVT_GiTimpo: summary() });
+    await flushPromises();
+    expect(wrapper.emitted('update:availability')?.length ?? 0).toBe(eventsBefore);
+  });
+});
+
+
+it('ignores an already queued scan result when the workspace retires synchronously', async () => {
+  let resolveScan!: (value: unknown) => void;
+  listBoardRepositories.mockReturnValueOnce(new Promise((resolve) => { resolveScan = resolve; }));
+  const wrapper = mountFields();
+  await flushPromises();
+  const eventsBefore = wrapper.emitted('update:availability')?.length ?? 0;
+  resolveScan({ PVT_GiTimpo: summary() });
+  wrapper.vm.retire();
+  await flushPromises();
+  expect(wrapper.emitted('update:availability')?.length ?? 0).toBe(eventsBefore);
+  wrapper.unmount();
+});

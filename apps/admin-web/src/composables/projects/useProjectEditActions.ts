@@ -9,6 +9,7 @@ import {
 import { diffProjectMemberAssignments } from '@/lib/project-management';
 
 interface UseProjectEditActionsOptions {
+  getVisit?: () => number;
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<
     AdminProjectsClient,
@@ -25,6 +26,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export function useProjectEditActions({
+  getVisit = () => 0,
   accessToken,
   client = adminProjectsClient,
   collapseProjectRow,
@@ -38,6 +40,7 @@ export function useProjectEditActions({
     project: ProjectResponse,
     input: ProjectEditFormInput,
   ): Promise<void> {
+    const visit = getVisit();
     if (!accessToken.value) {
       return;
     }
@@ -75,28 +78,36 @@ export function useProjectEditActions({
         timeRoundingStepMinutes: input.timeRoundingStepMinutes,
         visibility: input.visibility,
       });
+      if (visit !== getVisit()) return;
 
       for (const userId of memberIdsToAdd) {
         await client.assignMember(project.id, userId);
+        if (visit !== getVisit()) return;
       }
       for (const userId of memberIdsToRemove) {
         await client.removeAssignment(project.id, userId);
+        if (visit !== getVisit()) return;
       }
 
       if (managerToAdd) {
         await client.assignMember(project.id, managerToAdd);
+        if (visit !== getVisit()) return;
       }
       if (managerToRemove) {
         await client.removeAssignment(project.id, managerToRemove);
+        if (visit !== getVisit()) return;
       }
 
       collapseProjectRow(project);
       await refreshProjects();
+      if (visit !== getVisit()) return;
 
       if (savedProject.defaultBillableForTasks !== project.defaultBillableForTasks) {
         await openProjectBackfillDialogIfNeeded(savedProject);
+        if (visit !== getVisit()) return;
       }
     } catch (error) {
+      if (visit !== getVisit()) return;
       onError(getErrorMessage(error), error, 'update-project');
 
       if (
@@ -104,9 +115,10 @@ export function useProjectEditActions({
         savedProject.defaultBillableForTasks !== project.defaultBillableForTasks
       ) {
         await openProjectBackfillDialogIfNeeded(savedProject);
+        if (visit !== getVisit()) return;
       }
     } finally {
-      savingProjectEditId.value = null;
+      if (visit === getVisit()) savingProjectEditId.value = null;
     }
   }
 

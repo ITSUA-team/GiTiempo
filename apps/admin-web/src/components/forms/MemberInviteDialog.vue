@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
 import type { WorkspaceRole } from '@gitiempo/shared';
 import { AppDialog, WORKSPACE_ROLE_OPTIONS, workspaceInviteFormSchema } from '@gitiempo/web-shared';
 import type { WorkspaceInviteFormInput } from '@gitiempo/web-shared';
@@ -12,6 +12,7 @@ import Message from 'primevue/message';
 import Select from 'primevue/select';
 
 import { adminMembersClient } from '@/services/admin-members-client';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 import { useToasts } from '@/composables/feedback/useToasts';
 
@@ -26,6 +27,14 @@ const { errorToast } = useToasts();
 
 const formKey = ref(0);
 const submitting = ref(false);
+let active = true;
+onScopeDispose(() => { active = false; });
+const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
+watch(
+  [() => scope.value.workspaceId, () => scope.value.userId, () => scope.value.role, () => Boolean(authStore.accessToken)],
+  () => { active = false; },
+  { flush: 'sync' },
+);
 
 const initialValues: { email: string; role: WorkspaceRole | '' } = {
   email: '',
@@ -43,7 +52,7 @@ async function handleSubmit({
   values: Record<string, unknown>;
   reset: () => void;
 }): Promise<void> {
-  if (!valid) return;
+  if (!valid || !active) return;
 
   const token = authStore.accessToken;
   if (!token) return;
@@ -53,16 +62,18 @@ async function handleSubmit({
   try {
     await adminMembersClient.createInvite(values as WorkspaceInviteFormInput);
 
+    if (!active) return;
     reset();
     visible.value = false;
     emit('created');
   } catch (err) {
+    if (!active) return;
     errorToast(err instanceof Error ? err.message : 'Failed to send invite', {
       error: err,
       logContext: { action: 'create-invite', feature: 'members' },
     });
   } finally {
-    submitting.value = false;
+    if (active) submitting.value = false;
   }
 }
 

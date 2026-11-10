@@ -235,12 +235,16 @@ const SkeletonStub = {
   template: '<div data-testid="skeleton" />',
 };
 
-function mountProjectsView() {
+function workspaceToken(workspaceId: string, nonce = 0): string {
+  return `header.${btoa(JSON.stringify({ sub: "admin", role: "admin", workspaceId, nonce }))}.signature`;
+}
+
+function mountProjectsView(token = 'access-token') {
   const pinia = createPinia();
   setActivePinia(pinia);
 
   const authStore = useAuthStore(pinia);
-  authStore.accessToken = 'access-token';
+  authStore.accessToken = token;
 
   return mount(ProjectsView, {
     global: {
@@ -382,6 +386,83 @@ describe('ProjectsView', () => {
     expect(wrapper.get('[data-testid="projects-table"]').text()).toContain(
       '1 rows | 1 member filters | loading=false | search= | empty=No projects match the current filters.',
     );
+  });
+
+  it('refreshes on switch, clears editing and preserves a same-workspace token refresh', async () => {
+    testMocks.listProjects.mockResolvedValue([createProject()]);
+    const wrapper = mountProjectsView(workspaceToken('A'));
+    await flushPromises();
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    expect(wrapper.find('[data-testid="project-edit-form"]').exists()).toBe(true);
+    useAuthStore().accessToken = workspaceToken('B');
+    await flushPromises();
+    expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
+    expect(testMocks.getManagementSummary).toHaveBeenCalledTimes(2);
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-testid="project-edit-form"]').exists()).toBe(false);
+    useAuthStore().accessToken = workspaceToken('B', 1);
+    await flushPromises();
+    expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
+  it('ignores a response from the first visit after A-B-A', async () => {
+    const initial = createDeferred<ReturnType<typeof createProject>[]>();
+    testMocks.listProjects.mockReturnValueOnce(initial.promise).mockResolvedValue([]);
+    const wrapper = mountProjectsView(workspaceToken('A'));
+    useAuthStore().accessToken = workspaceToken('B');
+    await flushPromises();
+    useAuthStore().accessToken = workspaceToken('A');
+    await flushPromises();
+    initial.resolve([createProject()]);
+    await flushPromises();
+    expect(wrapper.get('[data-testid="projects-table"]').text()).toContain('0 rows');
+    expect(testMocks.listProjects).toHaveBeenCalledTimes(3);
+    wrapper.unmount();
+  });
+
+  it('rejects a source confirmation after workspace changes', async () => {
+    testMocks.listProjects.mockResolvedValue([createProject()]);
+    const wrapper = mountProjectsView(workspaceToken('A'));
+    await flushPromises();
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.get('[data-testid="project-edit-archive"]').trigger('click');
+    const accept = testMocks.requireConfirmation.mock.calls[0]?.[3] as () => void;
+    useAuthStore().accessToken = workspaceToken('B');
+    await flushPromises();
+    accept();
+    await flushPromises();
+    expect(testMocks.updateProject).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('does not continue assignment changes after an old edit completes', async () => {
+    testMocks.listProjects.mockResolvedValue([createProject()]);
+    const update = createDeferred<ReturnType<typeof createProject>>();
+    testMocks.updateProject.mockReturnValueOnce(update.promise);
+    const wrapper = mountProjectsView(workspaceToken('A'));
+    await flushPromises();
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.get('[data-testid="project-edit-save"]').trigger('click');
+    useAuthStore().accessToken = workspaceToken('B');
+    await flushPromises();
+    update.resolve(createProject());
+    await flushPromises();
+    expect(testMocks.assignMember).not.toHaveBeenCalled();
+    expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
+    expect(testMocks.listProjectTasks).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('shows destination failure without exposing source rows', async () => {
+    testMocks.listProjects.mockResolvedValueOnce([createProject()]).mockRejectedValueOnce(new Error('Destination unavailable'));
+    const wrapper = mountProjectsView(workspaceToken('A'));
+    await flushPromises();
+    useAuthStore().accessToken = workspaceToken('B');
+    await flushPromises();
+    expect(wrapper.text()).toContain('Destination unavailable');
+    expect(wrapper.find('[data-testid="projects-table"]').exists()).toBe(false);
+    wrapper.unmount();
   });
 
   it('applies filter updates emitted by the projects table', async () => {

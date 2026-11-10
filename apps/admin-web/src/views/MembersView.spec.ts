@@ -195,12 +195,16 @@ const membersViewStubs = {
   Skeleton: SkeletonStub,
 };
 
-function mountMembersView() {
+function workspaceToken(workspaceId: string, expires = 1): string {
+  return `header.${btoa(JSON.stringify({ sub: 'admin', role: 'admin', workspaceId, exp: expires }))}.signature`;
+}
+
+function mountMembersView(token = 'access-token') {
   const pinia = createPinia();
   setActivePinia(pinia);
 
   const authStore = useAuthStore(pinia);
-  authStore.accessToken = 'access-token';
+  authStore.accessToken = token;
   authStore.profile = {
     avatarUrl: null,
     canViewInvoices: true,
@@ -237,6 +241,101 @@ describe('MembersView', () => {
 
     testMocks.assignMember.mockResolvedValue(undefined);
     testMocks.removeAssignment.mockResolvedValue(undefined);
+  });
+
+  it('keeps current members across an A to B to A switch with a late first response', async () => {
+    const oldMembers = createDeferred<ReturnType<typeof createMember>[]>();
+    const currentMember = { ...createMember(), email: 'current-a@example.com' };
+    const bMember = { ...createMember(), email: 'workspace-b@example.com' };
+    testMocks.listMembers
+      .mockReturnValueOnce(oldMembers.promise)
+      .mockResolvedValueOnce([bMember])
+      .mockResolvedValueOnce([currentMember]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    const wrapper = mountMembersView(workspaceToken('A'));
+    expect(testMocks.listMembers).toHaveBeenCalledOnce();
+    useAuthStore().accessToken = workspaceToken('B');
+    await flushPromises();
+    const table = () => wrapper.getComponent({ name: 'MembersTable' });
+    expect(table().props('rows')[0].member.email).toBe('workspace-b@example.com');
+    useAuthStore().accessToken = workspaceToken('A');
+    await flushPromises();
+    expect(table().props('rows')[0].member.email).toBe('current-a@example.com');
+    oldMembers.resolve([{ ...createMember(), email: 'obsolete-a@example.com' }]);
+    await flushPromises();
+    expect(table().props('rows')[0].member.email).toBe('current-a@example.com');
+    expect(table().props('loading')).toBe(false);
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(3);
+    expect(testMocks.listProjects).toHaveBeenCalledTimes(3);
+    expect(testMocks.listInvites).toHaveBeenCalledTimes(3);
+    wrapper.unmount();
+  });
+
+  it('keeps destination members usable when invitations fail and preserves them on token renewal', async () => {
+    testMocks.listMembers
+      .mockResolvedValueOnce([createMember()])
+      .mockResolvedValueOnce([{ ...createMember(), email: 'workspace-b@example.com' }]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('B invitations unavailable'));
+    const wrapper = mountMembersView(workspaceToken('A'));
+    await flushPromises();
+    useAuthStore().accessToken = workspaceToken('B');
+    await flushPromises();
+    expect(wrapper.getComponent({ name: 'MembersTable' }).props('rows')[0].member.email).toBe('workspace-b@example.com');
+    expect(wrapper.get('[data-testid="pending-invitations-card"]').text()).toContain('error=B invitations unavailable');
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(true);
+    useAuthStore().accessToken = workspaceToken('B', 2);
+    await flushPromises();
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
+    expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
+    expect(testMocks.listInvites).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(true);
+    expect(wrapper.getComponent({ name: 'MembersTable' }).props('rows')[0].member.email).toBe('workspace-b@example.com');
+    wrapper.unmount();
+  });
+
+  it('rejects a confirmation from a previous workspace visit', async () => {
+    testMocks.listMembers.mockResolvedValue([createMember()]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    const wrapper = mountMembersView();
+    await flushPromises();
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    await wrapper.get('[data-testid="member-edit-remove"]').trigger('click');
+    const accept = testMocks.requireConfirmation.mock.calls[0]![3] as () => Promise<void>;
+    useAuthStore().accessToken = `header.${btoa(JSON.stringify({ sub: 'admin', role: 'admin', workspaceId: 'destination' }))}.signature`;
+    await flushPromises();
+    await accept();
+    expect(testMocks.removeMember).not.toHaveBeenCalled();
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('ignores an old resend completion after the destination has loaded', async () => {
+    testMocks.listMembers.mockResolvedValue([createMember()]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([{
+      createdAt: '2026-05-01T10:00:00.000Z',
+      email: 'source@example.com', expiresAt: '2026-05-08T10:00:00.000Z',
+      id: 'old-invite', invitedBy: 'admin', role: 'member', status: 'pending',
+      workspaceId: 'source',
+    }]);
+    const resend = createDeferred<void>();
+    testMocks.resendInvite.mockReturnValueOnce(resend.promise);
+    const wrapper = mountMembersView();
+    await flushPromises();
+    await wrapper.get('[data-testid="pending-invite-resend"]').trigger('click');
+    testMocks.listInvites.mockResolvedValue([]);
+    useAuthStore().accessToken = `header.${btoa(JSON.stringify({ sub: 'admin', role: 'admin', workspaceId: 'destination' }))}.signature`;
+    await flushPromises();
+    resend.resolve();
+    await flushPromises();
+    expect(testMocks.listInvites).toHaveBeenCalledTimes(2);
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+    expect(wrapper.get('[data-testid="pending-invitations-card"]').text()).toContain('0 invites');
+    wrapper.unmount();
   });
 
   it('shows the dedicated skeleton state before the first members load resolves, then renders loaded stats', async () => {

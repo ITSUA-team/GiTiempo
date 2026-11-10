@@ -56,6 +56,18 @@ export function useAdminProjectsData({
   const loadError = ref<string | null>(null);
   const initialLoaded = ref(false);
 
+  let requestId = 0;
+
+  function reset(): void {
+    requestId += 1;
+    projects.value = [];
+    summary.value = createEmptySummary();
+    members.value = [];
+    loading.value = true;
+    loadError.value = null;
+    initialLoaded.value = false;
+  }
+
   async function loadProjectsData({
     errorAction,
     setError = false,
@@ -65,6 +77,7 @@ export function useAdminProjectsData({
       return;
     }
 
+    const currentRequest = ++requestId;
     loading.value = true;
     if (setError) {
       loadError.value = null;
@@ -77,6 +90,7 @@ export function useAdminProjectsData({
         membersClient.listMembers(),
       ]);
 
+      if (currentRequest !== requestId) return;
       projects.value = sortActiveProjectsFirst(projectsData);
       summary.value = summaryData;
       members.value = membersData;
@@ -84,13 +98,14 @@ export function useAdminProjectsData({
         initialLoaded.value = true;
       }
     } catch (error) {
+      if (currentRequest !== requestId) return;
       const message = getErrorMessage(error);
       if (setError) {
         loadError.value = message;
       }
       onError?.(message, error, errorAction);
     } finally {
-      loading.value = false;
+      if (currentRequest === requestId) loading.value = false;
     }
   }
 
@@ -99,6 +114,7 @@ export function useAdminProjectsData({
   }
 
   return {
+    reset,
     initialLoaded,
     loadError,
     loading,

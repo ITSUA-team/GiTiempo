@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   WorkspaceRoles,
@@ -62,6 +62,16 @@ const { workspaceRoundingStepMinutes } = useWorkspaceRoundingSettings({
   fallback: 1,
   feature: 'projects',
   scope,
+});
+
+const canAccessProjectCreation = computed(() =>
+  Boolean(authStore.accessToken) && (!scope.value.role || scope.value.role === WorkspaceRoles.Admin),
+);
+const githubFields = ref<{ retire?: () => void } | null>(null);
+const workspaceVisit = ref(0);
+onBeforeUnmount(() => {
+  githubFields.value?.retire?.();
+  workspaceVisit.value += 1;
 });
 
 const members = ref<WorkspaceMemberListResponse>([]);
@@ -200,8 +210,9 @@ function handleSourceUpdate(value: 'manual' | 'github'): void {
 }
 
 async function loadMembers(): Promise<void> {
+  const visit = workspaceVisit.value;
   const token = authStore.accessToken;
-  if (!token) {
+  if (!token || !canAccessProjectCreation.value) {
     return;
   }
 
@@ -209,16 +220,20 @@ async function loadMembers(): Promise<void> {
   membersError.value = null;
 
   try {
-    members.value = await adminMembersClient.listMembers();
+    const loadedMembers = await adminMembersClient.listMembers();
+    if (visit !== workspaceVisit.value) return;
+    members.value = loadedMembers;
   } catch (err) {
+    if (visit !== workspaceVisit.value) return;
     membersError.value = err instanceof Error ? err.message : 'Failed to load members';
   } finally {
-    membersLoading.value = false;
+    if (visit === workspaceVisit.value) membersLoading.value = false;
   }
 }
 
 async function importSelectedProject(
   values: CreateProjectFormInput,
+  visit: number,
 ): Promise<string | null> {
   const option = githubSelection.value;
 
@@ -236,6 +251,7 @@ async function importSelectedProject(
       },
     ],
   });
+  if (visit !== workspaceVisit.value) return null;
   const result = response.results[0];
 
   if (!result || result.status === 'failed') {
@@ -277,10 +293,11 @@ async function handleSubmit({
   }
 
   const token = authStore.accessToken;
-  if (!token) {
+  if (!token || !canAccessProjectCreation.value) {
     return;
   }
 
+  const visit = workspaceVisit.value;
   const formValues = values as CreateProjectFormInput;
   const trimmedName = isGitHub.value
     ? (derivedName.value ?? '')
@@ -292,7 +309,7 @@ async function handleSubmit({
 
   try {
     const projectId = isGitHub.value
-      ? await importSelectedProject(formValues)
+      ? await importSelectedProject(formValues, visit)
       : (
           await adminProjectsClient.createProject({
             defaultBillableForTasks: formValues.defaultBillableForTasks,
@@ -302,7 +319,7 @@ async function handleSubmit({
           })
         ).id;
 
-    if (projectId === null) {
+    if (visit !== workspaceVisit.value || projectId === null) {
       return;
     }
 
@@ -313,8 +330,10 @@ async function handleSubmit({
       );
     }
 
+    if (visit !== workspaceVisit.value) return;
     await router.push({ name: routeNames.projects });
   } catch (err) {
+    if (visit !== workspaceVisit.value) return;
     if (isNameConflict(err)) {
       nameError.value =
         err instanceof Error
@@ -328,7 +347,7 @@ async function handleSubmit({
       logContext: { action: 'create-project', feature: 'projects' },
     });
   } finally {
-    isSubmitting.value = false;
+    if (visit === workspaceVisit.value) isSubmitting.value = false;
   }
 }
 
@@ -340,7 +359,26 @@ function handleBack(): void {
   router.push({ name: routeNames.projects });
 }
 
-onMounted(loadMembers);
+watch(
+  [() => scope.value.workspaceId, () => scope.value.userId, () => scope.value.role, () => Boolean(authStore.accessToken)],
+  () => {
+    githubFields.value?.retire?.();
+    workspaceVisit.value += 1;
+    members.value = [];
+    membersError.value = null;
+    membersLoading.value = false;
+    projectForm.value?.setFieldValue('managerUserId', null);
+    githubSelection.value = null;
+    githubAvailability.value = 'loading';
+    isScanningBoard.value = false;
+    isSubmitting.value = false;
+    importError.value = null;
+    nameError.value = null;
+    if (sourceMode.value === 'github') projectForm.value?.setFieldValue('name', '');
+    if (canAccessProjectCreation.value) void loadMembers();
+  },
+  { immediate: true, flush: 'sync' },
+);
 </script>
 
 <template>
@@ -393,7 +431,9 @@ onMounted(loadMembers);
             </div>
 
             <GitHubProjectFields
-              v-if="isGitHub"
+              v-if="isGitHub && canAccessProjectCreation"
+              :key="workspaceVisit"
+              ref="githubFields"
               v-model="githubSelection"
               v-model:availability="githubAvailability"
               v-model:scanning="isScanningBoard"

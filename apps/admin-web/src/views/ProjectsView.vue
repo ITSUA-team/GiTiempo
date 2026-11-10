@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onScopeDispose, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
@@ -27,11 +27,13 @@ import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { requireConfirmation } = useConfirmation();
+const { requireConfirmation, dismissConfirmation } = useConfirmation();
 const { errorToast, successToast } = useToasts();
 const isMobileViewport = useIsMobileViewport();
 
 const accessToken = computed(() => authStore.accessToken);
+let visit = 0;
+const getVisit = () => visit;
 const scope = computed(() => getAdminServerStateScope(accessToken.value));
 
 function notifyProjectsError(
@@ -46,6 +48,7 @@ function notifyProjectsError(
 }
 
 const {
+  reset: resetProjectsData,
   initialLoaded,
   loadError,
   loading,
@@ -91,6 +94,7 @@ const {
   projectBackfillDialog,
   submittingProjectBackfill,
 } = useProjectBillableBackfillFlow({
+  getVisit,
   onError: notifyProjectsError,
   onSuccess: successToast,
   refreshProjects,
@@ -98,6 +102,7 @@ const {
 
 const { handleProjectEditSubmitted, savingProjectEditId } =
   useProjectEditActions({
+    getVisit,
     accessToken,
     collapseProjectRow,
     onError: notifyProjectsError,
@@ -106,6 +111,7 @@ const { handleProjectEditSubmitted, savingProjectEditId } =
   });
 
 const { handleArchive, handleUnarchive } = useProjectArchiveActions({
+  getVisit,
   accessToken,
   collapseProjectRow,
   onError: notifyProjectsError,
@@ -130,7 +136,26 @@ function handleEditProject(project: ProjectResponse): void {
   toggleProjectExpansion(project);
 }
 
-onMounted(fetchAll);
+watch(
+  [() => scope.value.workspaceId, () => scope.value.userId, () => scope.value.role, () => Boolean(accessToken.value)],
+  () => {
+    visit += 1;
+    dismissConfirmation?.();
+    resetProjectsData();
+    projectTableFilters.memberIds = [];
+    setProjectTableExpandedRows({});
+    projectBackfillDialog.value = null;
+    submittingProjectBackfill.value = false;
+    savingProjectEditId.value = null;
+    if (accessToken.value && (!scope.value.role || scope.value.role === 'admin')) void fetchAll();
+  },
+  { immediate: true, flush: 'sync' },
+);
+
+onScopeDispose(() => {
+  visit += 1;
+  resetProjectsData();
+});
 </script>
 
 <template>

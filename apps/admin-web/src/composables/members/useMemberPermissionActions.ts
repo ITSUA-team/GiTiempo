@@ -9,6 +9,7 @@ import {
 import type { MembersTableRow } from '@/lib/members-table';
 
 interface UseMemberPermissionActionsOptions {
+  getVisit?: () => number;
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminMembersClient, 'updateMemberPermissions'>;
   onError: (message: string, error: unknown, action: string) => void;
@@ -17,6 +18,7 @@ interface UseMemberPermissionActionsOptions {
 
 export function useMemberPermissionActions({
   accessToken,
+  getVisit = () => 0,
   client = adminMembersClient,
   onError,
   refreshMembers,
@@ -31,15 +33,19 @@ export function useMemberPermissionActions({
       return;
     }
 
+    const visit = getVisit();
     updatingPermissionMemberId.value = row.member.id;
 
     try {
       await client.updateMemberPermissions(row.member.id, {
         canViewInvoices: value,
       });
+      if (visit !== getVisit()) return;
 
       await refreshMembers();
+      if (visit !== getVisit()) return;
     } catch (error) {
+      if (visit !== getVisit()) return;
       onError(
         getErrorMessage(error, 'Failed to update invoice permission'),
         error,
@@ -48,8 +54,9 @@ export function useMemberPermissionActions({
       // The refresh restores the authoritative permission state, which also
       // reverts the toggle the user just flipped.
       await refreshMembers();
+      if (visit !== getVisit()) return;
     } finally {
-      updatingPermissionMemberId.value = null;
+      if (visit === getVisit()) updatingPermissionMemberId.value = null;
     }
   }
 

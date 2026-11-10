@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
 import type { TimeReportExportFormat } from '@gitiempo/shared';
 import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
@@ -100,9 +100,24 @@ const savedReports = useSavedReports({
   }),
 });
 
-onMounted(() => {
-  void savedReports.refresh();
-});
+const presetVisit = ref(0);
+watch(
+  [
+    isAuthenticated,
+    () => scope.value.workspaceId,
+    () => scope.value.userId,
+    () => scope.value.role,
+  ],
+  () => {
+    presetVisit.value += 1;
+    savedReports.reset();
+    if (isAuthenticated.value && (!scope.value.role || ['admin', 'pm'].includes(scope.value.role))) {
+      void savedReports.refresh();
+    }
+  },
+  { immediate: true, flush: 'sync' },
+);
+onScopeDispose(savedReports.reset);
 
 /**
  * Clears the loaded preset and resets grouping, scope, and column filters.
@@ -303,6 +318,7 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
         />
       </Message>
       <SavedReportsBar
+        :key="presetVisit"
         :active-id="savedReports.activeId.value"
         :error="savedReports.error.value"
         :is-dirty="savedReports.isDirty.value"

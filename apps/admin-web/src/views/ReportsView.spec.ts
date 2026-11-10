@@ -227,6 +227,32 @@ describe('ReportsView', () => {
     reportMocks.deleteSavedReport.mockReset().mockResolvedValue(undefined);
   });
 
+  it('reloads presets and clears active actions when switching workspaces', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+    const oldBar = wrapper.getComponent({ name: 'SavedReportsBar' });
+    oldBar.vm.$emit('saveAsNew', 'Workspace A');
+    await flushPromises();
+    expect(oldBar.props('activeId')).toBe('preset-1');
+    const destination = { id: 'preset-b', name: 'Workspace B' };
+    reportMocks.listSavedReports.mockResolvedValueOnce([destination]);
+    const token = (workspaceId: string, exp = 1) =>
+      `header.${btoa(JSON.stringify({ sub: 'admin', role: 'admin', workspaceId, exp }))}.signature`;
+    useAuthStore().accessToken = token('workspace-b');
+    await flushPromises();
+    const bar = wrapper.getComponent({ name: 'SavedReportsBar' });
+    expect(bar.vm).not.toBe(oldBar.vm);
+    expect(bar.props('presets')).toEqual([destination]);
+    expect(bar.props('activeId')).toBeNull();
+    expect(bar.props('isDirty')).toBe(false);
+    expect(reportMocks.listSavedReports).toHaveBeenCalledTimes(2);
+    useAuthStore().accessToken = token('workspace-b', 2);
+    await flushPromises();
+    expect(reportMocks.listSavedReports).toHaveBeenCalledTimes(2);
+    expect(reportMocks.refresh).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it('updates preset state quietly without replacement collection reads', async () => {
     const wrapper = mountReportsView();
     await flushPromises();
