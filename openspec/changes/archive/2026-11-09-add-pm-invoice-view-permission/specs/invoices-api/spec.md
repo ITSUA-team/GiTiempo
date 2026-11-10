@@ -84,7 +84,7 @@ The backend MUST expose a protected `GET /invoices` endpoint for `admin` and `pm
 
 ### Requirement: Invoice Can Be Created From Eligible Time Entries
 
-The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `pm` users that creates an invoice from a validated body containing a title, billing date range, optional project scope, hourly rate, optional discount, and optional notes. PMs must also have `canViewInvoices = true` to access the endpoint.
+The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `pm` users that creates an invoice from a validated body containing a title, billing date range, optional project scope, hourly rate, optional discount, optional notes, and an optional `roundingStepMinutes` (positive integer between 1 and 60). Rounding is always active — there is no no-rounding option — so the invoice's `roundingStepMinutes` snapshot MUST always be a positive integer between 1 and 60 and MUST never be null. When `roundingStepMinutes` is supplied, the backend MUST use that value as the snapshot. When it is omitted, the backend MUST resolve the snapshot from the scoped project's effective rounding step — the project's own `timeRoundingStepMinutes` when set, otherwise the workspace's `timeRoundingStepMinutes` — and for workspace-wide invoices from the workspace's `timeRoundingStepMinutes`. PMs must also have `canViewInvoices = true` to access the endpoint.
 
 #### Scenario: Admin creates an invoice across a project and date range
 
@@ -139,6 +139,43 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 - **WHEN** the shared schema validates the body
 - **THEN** the request is rejected
 
+#### Scenario: Rounding step defaults from the project's effective step when omitted
+
+- **GIVEN** the create body omits `roundingStepMinutes`
+- **AND** the invoice is scoped to a project whose `timeRoundingStepMinutes` is set to 5
+- **WHEN** the backend creates the invoice
+- **THEN** the stored `roundingStepMinutes` snapshot is 5
+
+#### Scenario: Rounding step defaults from the workspace setting when the project inherits
+
+- **GIVEN** the create body omits `roundingStepMinutes`
+- **AND** the invoice is scoped to a project whose `timeRoundingStepMinutes` is null
+- **AND** the workspace's `timeRoundingStepMinutes` is 15
+- **WHEN** the backend creates the invoice
+- **THEN** the stored `roundingStepMinutes` snapshot is 15
+
+#### Scenario: Rounding step defaults from the workspace setting for workspace-wide invoices
+
+- **GIVEN** the create body omits `roundingStepMinutes`
+- **AND** the create body has no `projectId`
+- **AND** the workspace's `timeRoundingStepMinutes` is 10
+- **WHEN** the backend creates the invoice
+- **THEN** the stored `roundingStepMinutes` snapshot is 10
+
+#### Scenario: Explicit rounding step overrides the project default
+
+- **GIVEN** the create body carries `roundingStepMinutes: 15`
+- **AND** the invoice is scoped to a project whose effective rounding step is 5
+- **WHEN** the backend creates the invoice
+- **THEN** the stored `roundingStepMinutes` snapshot is 15
+- **AND** the project's `timeRoundingStepMinutes` is not changed
+
+#### Scenario: Invalid rounding step is rejected
+
+- **GIVEN** a create request carries `roundingStepMinutes` with a value of 0, a non-integer, or a value greater than 60
+- **WHEN** the shared schema validates the body
+- **THEN** the request is rejected
+
 #### Scenario: PM without invoice permission is denied creation
 
 - **GIVEN** the requester is a PM with `canViewInvoices = false`
@@ -147,12 +184,21 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 
 ### Requirement: Invoice Details Can Be Read
 
-The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and `pm` users that returns a single invoice with its snapshot fields, status, and the set of linked time entries. PMs must also have `canViewInvoices = true` to access the endpoint.
+The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and `pm` users that returns a single invoice with its snapshot fields (including the non-null `roundingStepMinutes` snapshot), status, and the set of linked time entries. Each linked time-entry summary MUST include both the original raw `durationSeconds` and a `roundedDurationSeconds` value computed by applying per-entry ceiling rounding with the invoice's `roundingStepMinutes` snapshot, so the detail surface can display the rounded billed duration per entry without recomputing it client-side. PMs must also have `canViewInvoices = true` to access the endpoint.
 
 #### Scenario: Admin reads any workspace invoice
 
 - **WHEN** an admin requests `GET /invoices/:id` for an invoice in their workspace
-- **THEN** the backend returns the invoice detail including snapshot totals and linked entries
+- **THEN** the backend returns the invoice detail including snapshot totals, the non-null `roundingStepMinutes` snapshot, and linked entries
+- **AND** each linked entry includes `durationSeconds` (raw) and `roundedDurationSeconds` (ceiling-rounded using the invoice snapshot step)
+
+#### Scenario: Linked entry rounded duration reflects the invoice snapshot step
+
+- **GIVEN** an invoice was created with `roundingStepMinutes: 5`
+- **AND** a linked time entry has a raw `durationSeconds` of 360 (6 minutes)
+- **WHEN** the backend returns the invoice detail
+- **THEN** that entry's `roundedDurationSeconds` is 600 (10 minutes)
+- **AND** that entry's `durationSeconds` remains 360
 
 #### Scenario: PM cannot read an unassigned private-project invoice
 
@@ -177,7 +223,7 @@ The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and
 
 ### Requirement: Invoice Can Be Updated
 
-The backend MUST expose a protected `PATCH /invoices/:id` endpoint for `admin` and `pm` users that updates editable fields — status, notes, and other fields allowed by the shared update contract — without recalculating snapshot totals or changing the linked time-entry set. PMs must also have `canViewInvoices = true` to access the endpoint.
+The backend MUST expose a protected `PATCH /invoices/:id` endpoint for `admin` and `pm` users that updates editable fields — status, notes, and other fields allowed by the shared update contract — without recalculating snapshot totals, changing the non-null `roundingStepMinutes` snapshot, or changing the linked time-entry set. The `roundingStepMinutes` snapshot is immutable after creation and cannot be changed by an update. PMs must also have `canViewInvoices = true` to access the endpoint.
 
 The `sent` status is a semantic marker: the backend does not send an email, generate a PDF, or notify external systems when an invoice transitions to `sent`. Email delivery and PDF generation are deferred to a future milestone. The UI labels this action "Mark as sent" to make the manual nature of the transition clear.
 
@@ -213,9 +259,16 @@ The allowed forward transitions are: `draft → sent`, `draft → paid`, and `se
 
 #### Scenario: Update does not recompute totals
 
-- **GIVEN** an invoice was created with snapshot totals
+- **GIVEN** an invoice was created with snapshot totals and a `roundingStepMinutes` of 5
 - **WHEN** an update request changes a non-total field
-- **THEN** the stored `total_hours` and `total_amount` remain as originally captured
+- **THEN** the stored `total_hours`, `total_amount`, and `roundingStepMinutes` remain as originally captured
+
+#### Scenario: Rounding step snapshot is not mutable via update
+
+- **GIVEN** an invoice exists with a `roundingStepMinutes` snapshot of 5
+- **WHEN** an update request carries `roundingStepMinutes: 15`
+- **THEN** the backend rejects the request
+- **AND** the stored `roundingStepMinutes` snapshot remains 5
 
 #### Scenario: PM updates only assigned-project invoices
 
@@ -276,13 +329,14 @@ The backend MUST expose a protected `GET /invoices/stats` endpoint for `admin` a
 
 ### Requirement: Eligible Time Entries Can Be Previewed Before Invoice Creation
 
-The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint for `admin` and `pm` users that returns the set of completed, billable, not-yet-invoiced time entries matching a given date range and optional project scope, along with the computed total hours — without creating an invoice or modifying any data. PMs must also have `canViewInvoices = true` to access the endpoint.
+The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint for `admin` and `pm` users that returns the set of completed, billable, not-yet-invoiced time entries matching a given date range and optional project scope, along with the computed total hours — without creating an invoice or modifying any data. Rounding is always active: the endpoint MUST accept an optional `roundingStepMinutes` query parameter (positive integer between 1 and 60); when supplied, the computed total hours MUST reflect per-entry ceiling rounding using that step. When `roundingStepMinutes` is omitted, the total hours MUST reflect per-entry ceiling rounding with the effective default step: for project-scoped previews the project's `timeRoundingStepMinutes` when set, otherwise the workspace's `timeRoundingStepMinutes`; for workspace-wide previews the workspace's `timeRoundingStepMinutes`. The response MUST always include a non-null `defaultRoundingStepMinutes` — the effective default step — alongside the existing `defaultHourlyRate` and `defaultCurrency`. Each returned entry MUST include both the original raw `durationSeconds` and a `roundedDurationSeconds` value computed by applying per-entry ceiling rounding with the effective rounding step, so the preview surface can display the rounded billed duration per entry. PMs must also have `canViewInvoices = true` to access the endpoint.
 
 #### Scenario: Admin previews eligible entries across a date range
 
 - **WHEN** an admin requests `GET /invoices/eligible-entries?dateFrom=2026-04-01&dateTo=2026-04-21` with the workspace JWT claim
 - **THEN** the backend returns all completed, billable, not-yet-invoiced time entries in that workspace and date range
 - **AND** includes the total count and total hours computed from the selected entries
+- **AND** each entry includes `durationSeconds` (raw) and `roundedDurationSeconds` (ceiling-rounded with the effective step)
 - **AND** does not create an invoice or link any time entries
 
 #### Scenario: Admin previews eligible entries scoped to a project
@@ -310,6 +364,7 @@ The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint fo
 
 - **WHEN** no time entries match the eligibility rules for the requested scope
 - **THEN** the backend returns `{ count: 0, totalHours: 0, entries: [] }`
+- **AND** the response still includes a non-null `defaultRoundingStepMinutes`
 
 #### Scenario: Preview does not modify data
 
@@ -323,6 +378,37 @@ The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint fo
 
 - **WHEN** a request carries `dateTo` earlier than `dateFrom`
 - **THEN** the backend rejects with a validation error
+
+#### Scenario: Preview returns the project's effective rounding step
+
+- **GIVEN** the preview is scoped to a project with `timeRoundingStepMinutes` set to 10
+- **WHEN** the request omits `roundingStepMinutes`
+- **THEN** the response includes `defaultRoundingStepMinutes: 10`
+- **AND** the `totalHours` reflect per-entry rounding with a 10-minute step
+
+#### Scenario: Preview returns the workspace default when the project inherits
+
+- **GIVEN** the preview is scoped to a project whose `timeRoundingStepMinutes` is null
+- **AND** the workspace's `timeRoundingStepMinutes` is 5
+- **WHEN** the request omits `roundingStepMinutes`
+- **THEN** the response includes `defaultRoundingStepMinutes: 5`
+- **AND** the `totalHours` reflect per-entry rounding with a 5-minute step
+
+#### Scenario: Preview returns the workspace step for workspace-wide previews
+
+- **GIVEN** an admin requests a workspace-wide preview without a `projectId`
+- **AND** the workspace's `timeRoundingStepMinutes` is 10
+- **WHEN** the request omits `roundingStepMinutes`
+- **THEN** the response includes `defaultRoundingStepMinutes: 10`
+- **AND** the `totalHours` reflect per-entry rounding with a 10-minute step
+
+#### Scenario: Preview applies explicit rounding step override
+
+- **GIVEN** the preview is scoped to a project with an effective rounding step of 10
+- **WHEN** the request carries `roundingStepMinutes=15`
+- **THEN** the `totalHours` reflect per-entry rounding with a 15-minute step
+- **AND** each entry's `roundedDurationSeconds` is computed with a 15-minute step
+- **AND** the response still includes `defaultRoundingStepMinutes: 10`
 
 #### Scenario: PM without invoice permission is denied preview
 
