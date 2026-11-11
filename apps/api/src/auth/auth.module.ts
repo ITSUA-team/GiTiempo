@@ -9,6 +9,7 @@ import { AuthService } from './services/auth.service';
 import { AuthGithubService } from './services/auth-github.service';
 import { AuthController } from './controllers/auth.controller';
 import { AuthGithubController } from './controllers/auth-github.controller';
+import { IdentityRecoveryController } from './controllers/identity-recovery.controller';
 import { TokenService } from './services/token.service';
 import { RealFirebaseAdminService } from './services/firebase-admin.service';
 import { FakeFirebaseAdminService } from './services/firebase-admin.fake';
@@ -51,7 +52,11 @@ import { GoogleIdTokenVerifier } from './services/google-id-token-verifier.servi
     },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
-  controllers: [AuthController, AuthGithubController],
+  controllers: [
+    AuthController,
+    AuthGithubController,
+    IdentityRecoveryController,
+  ],
   exports: [TokenService, AuthService, FIREBASE_ADMIN],
 })
 export class AuthModule {}

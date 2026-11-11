@@ -90,4 +90,49 @@ describe('validate', () => {
       'chrome-extension://jecefpocaddielfbclbfgnepokjlabed',
     ]);
   });
+
+  it('splits a comma-separated operator allowlist into an array of user IDs', () => {
+    expect(
+      validate(makeBaseEnv({ PLATFORM_OPERATOR_USER_IDS: 'a,b,c' }))
+        .PLATFORM_OPERATOR_USER_IDS,
+    ).toEqual(['a', 'b', 'c']);
+  });
+
+  it('trims whitespace around operator allowlist entries', () => {
+    expect(
+      validate(makeBaseEnv({ PLATFORM_OPERATOR_USER_IDS: ' a , b ' }))
+        .PLATFORM_OPERATOR_USER_IDS,
+    ).toEqual(['a', 'b']);
+  });
+
+  it('defaults an empty operator allowlist to an empty array', () => {
+    expect(
+      validate(makeBaseEnv({ PLATFORM_OPERATOR_USER_IDS: '' }))
+        .PLATFORM_OPERATOR_USER_IDS,
+    ).toEqual([]);
+  });
+
+  it('defaults a missing operator allowlist to an empty array', () => {
+    expect(validate(makeBaseEnv()).PLATFORM_OPERATOR_USER_IDS).toEqual([]);
+  });
+
+  it('accepts duration strings for the aged reservation threshold', () => {
+    const thresholds = ['24h', '3600s', '7d'] as const;
+    for (const threshold of thresholds) {
+      expect(
+        validate(makeBaseEnv({ AUTH_AGED_RESERVATION_THRESHOLD: threshold }))
+          .AUTH_AGED_RESERVATION_THRESHOLD,
+      ).toBe(threshold);
+    }
+  });
+
+  it('defaults the aged reservation threshold to 24h when missing', () => {
+    expect(validate(makeBaseEnv()).AUTH_AGED_RESERVATION_THRESHOLD).toBe('24h');
+  });
+
+  it('rejects an empty aged reservation threshold', () => {
+    expect(() =>
+      validate(makeBaseEnv({ AUTH_AGED_RESERVATION_THRESHOLD: '' })),
+    ).toThrow(/AUTH_AGED_RESERVATION_THRESHOLD/);
+  });
 });

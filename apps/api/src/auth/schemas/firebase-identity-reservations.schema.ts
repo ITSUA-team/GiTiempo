@@ -21,6 +21,7 @@ export const FIREBASE_IDENTITY_RESERVATION_STATES = [
   'reserved',
   'confirmed',
   'bound',
+  'resolved',
 ] as const;
 export type FirebaseIdentityReservationState =
   (typeof FIREBASE_IDENTITY_RESERVATION_STATES)[number];
@@ -51,6 +52,7 @@ export const firebaseIdentityReservations = pgTable(
     registrationOwnerAcknowledgement: boolean(
       'registration_owner_acknowledgement',
     ),
+    creationOutcomePending: boolean('creation_outcome_pending').default(true),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -59,9 +61,9 @@ export const firebaseIdentityReservations = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('firebase_identity_reservations_email_unique').on(
-      sql`lower(btrim(${table.normalizedEmail}))`,
-    ),
+    uniqueIndex('firebase_identity_reservations_email_unique')
+      .on(sql`lower(btrim(${table.normalizedEmail}))`)
+      .where(sql`${table.state} != 'resolved'`),
     uniqueIndex('firebase_identity_reservations_uid_unique').on(
       table.firebaseUid,
     ),

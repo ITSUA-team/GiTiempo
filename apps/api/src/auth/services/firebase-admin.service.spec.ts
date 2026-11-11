@@ -285,6 +285,111 @@ describe('RealFirebaseAdminService', () => {
     );
   });
 
+  it('confirms absence only from two consecutive user-not-found provider codes', async () => {
+    getUser.mockRejectedValueOnce({ code: 'auth/user-not-found' });
+    getUser.mockRejectedValueOnce({ code: 'auth/user-not-found' });
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(service.confirmUidAbsent('missing')).resolves.toEqual({
+      absent: true,
+      evidence: 'auth/user-not-found (confirmed by two consecutive lookups)',
+    });
+    expect(getUser).toHaveBeenCalledTimes(2);
+    expect(getUser).toHaveBeenNthCalledWith(1, 'missing');
+    expect(getUser).toHaveBeenNthCalledWith(2, 'missing');
+  });
+
+  it('refuses absence when a late creation appears between the two lookups', async () => {
+    getUser.mockRejectedValueOnce({ code: 'auth/user-not-found' });
+    getUser.mockResolvedValueOnce({
+      uid: 'late',
+      email: 'late@example.test',
+      emailVerified: true,
+      disabled: false,
+    });
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(service.confirmUidAbsent('late')).resolves.toEqual({
+      absent: false,
+      evidence: 'user-present-after-recheck',
+    });
+  });
+
+  it('refuses absence when the second confirmation lookup fails', async () => {
+    getUser.mockRejectedValueOnce({ code: 'auth/user-not-found' });
+    getUser.mockRejectedValueOnce(new Error('transient outage'));
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(service.confirmUidAbsent('flaky')).resolves.toEqual({
+      absent: false,
+      evidence: 'provider-lookup-failed-on-recheck',
+    });
+  });
+
+  it('refuses to confirm absence while the provider user exists', async () => {
+    getUser.mockResolvedValueOnce({
+      uid: 'member',
+      email: 'member@example.test',
+      emailVerified: true,
+      disabled: false,
+    });
+    const service = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(service.confirmUidAbsent('member')).resolves.toEqual({
+      absent: false,
+      evidence: 'user-present',
+    });
+  });
+
+  it.each([
+    {
+      label: 'an internal provider error',
+      rejection: { code: 'auth/internal-error' },
+    },
+    { label: 'a network failure', rejection: new Error('network down') },
+  ])(
+    'reports uncertainty instead of absence on $label',
+    async ({ rejection }) => {
+      getUser.mockRejectedValueOnce(rejection);
+      const service = new RealFirebaseAdminService(
+        makeConfig({
+          FIREBASE_PROJECT_ID: 'p',
+          FIREBASE_CLIENT_EMAIL: 'x@y.z',
+          FIREBASE_PRIVATE_KEY: 'KEY',
+        }),
+      );
+
+      await expect(service.confirmUidAbsent('member')).resolves.toEqual({
+        absent: false,
+        evidence: expect.stringContaining('provider-lookup-failed'),
+      });
+    },
+  );
+
   it.each([
     {
       providerId: 'password',

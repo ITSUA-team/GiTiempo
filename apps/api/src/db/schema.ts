@@ -8,6 +8,7 @@
 export * from '../users/schemas/users.schema';
 export * from '../auth/schemas/refresh-tokens.schema';
 export * from '../auth/schemas/firebase-identity-reservations.schema';
+export * from '../auth/schemas/identity-recovery-audit.schema';
 export * from '../auth/schemas/firebase-subject-bindings.schema';
 export * from '../workspaces/schemas/workspaces.schema';
 export * from '../workspaces/schemas/workspace-settings.schema';
