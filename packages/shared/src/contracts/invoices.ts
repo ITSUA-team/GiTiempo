@@ -106,6 +106,10 @@ export const invoiceResponseSchema = z.object({
 
 export const invoiceListItemSchema = invoiceResponseSchema.omit({
   timeEntries: true,
+  sender: true,
+  payment: true,
+  services: true,
+  logo: true,
 });
 
 export const invoiceListMetaSchema = paginatedListMetaSchema;
@@ -285,3 +289,8 @@ export const invoiceDocumentIncompleteErrorSchema = z.object({
   details: z.object({ missingFields: z.array(z.enum(["sender", "recipient", "services", "payment"])).min(1) }),
 });
 export type InvoiceDocumentIncompleteError = z.infer<typeof invoiceDocumentIncompleteErrorSchema>;
+
+export const invoiceLogoInvalidErrorSchema = z.object({
+  code: z.literal("invoice_logo_invalid"),
+  message: z.string(),
+});

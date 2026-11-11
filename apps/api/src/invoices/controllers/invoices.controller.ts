@@ -3,6 +3,11 @@ import {
   PreviewInvoiceDto,
   InvoiceGroupDto,
   MoveInvoicesDto,
+  PreviewInvoiceResponseDto,
+  InvoiceGroupResponseDto,
+  InvoiceGroupsResponseDto,
+  InvoiceDocumentIncompleteDto,
+  InvoiceLogoInvalidDto,
 } from '../dto/invoice-management.dto';
 import {
   Body,
@@ -21,12 +26,15 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
+  ApiExtraModels,
+  getSchemaPath,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
@@ -121,21 +129,29 @@ export class InvoicesController {
   }
 
   @Post('preview')
+  @ApiCreatedResponse({ type: PreviewInvoiceResponseDto })
+  @ZodSerializerDto(PreviewInvoiceResponseDto)
   preview(@CurrentUser() user: AuthUser, @Body() body: PreviewInvoiceDto) {
     return this.invoices.previewInvoice(user, body);
   }
 
   @Get('groups')
+  @ApiOkResponse({ type: InvoiceGroupsResponseDto })
+  @ZodSerializerDto(InvoiceGroupsResponseDto)
   groups(@CurrentUser() user: AuthUser) {
     return this.invoices.listGroups(user);
   }
 
   @Post('groups')
+  @ApiCreatedResponse({ type: InvoiceGroupResponseDto })
+  @ZodSerializerDto(InvoiceGroupResponseDto)
   createGroup(@CurrentUser() user: AuthUser, @Body() body: InvoiceGroupDto) {
     return this.invoices.saveGroup(user, body.name);
   }
 
   @Patch('groups/:id')
+  @ApiOkResponse({ type: InvoiceGroupResponseDto })
+  @ZodSerializerDto(InvoiceGroupResponseDto)
   renameGroup(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -157,6 +173,27 @@ export class InvoicesController {
   }
 
   @Get(':id/pdf')
+  @ApiOkResponse({
+    content: {
+      'application/pdf': { schema: { type: 'string', format: 'binary' } },
+    },
+    headers: {
+      'Content-Disposition': {
+        schema: { type: 'string' },
+        description: 'Attachment filename containing the invoice reference',
+      },
+    },
+  })
+  @ApiExtraModels(InvoiceDocumentIncompleteDto, InvoiceLogoInvalidDto)
+  @ApiUnprocessableEntityResponse({
+    description:
+      'Required billing sections are missing or the saved logo needs replacement.',
+    schema: {
+      oneOf: [InvoiceDocumentIncompleteDto, InvoiceLogoInvalidDto].map(
+        (dto) => ({ $ref: getSchemaPath(dto) }),
+      ),
+    },
+  })
   async pdf(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,

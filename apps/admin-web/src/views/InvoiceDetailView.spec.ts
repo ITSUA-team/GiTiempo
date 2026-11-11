@@ -75,6 +75,7 @@ vi.mock('@/composables/feedback/useToasts', () => ({
 }));
 
 import InvoiceDetailView from './InvoiceDetailView.vue';
+import { reconcileInvoiceDraft, savedDraft } from '@/lib/invoice-edit';
 
 const invoiceId = testMocks.invoiceId;
 const workspaceId = '44444444-4444-4444-8444-444444444444';
@@ -718,6 +719,20 @@ describe('InvoiceDetailView', () => {
     expect(testMocks.updateInvoice).not.toHaveBeenCalled();
     expect(wrapper.findComponent(InvoiceCreateDialog).props('source')?.revision).toBe(7);
   });
+  it('retains concurrent sender details and includes only explicitly changed membership', () => {
+    const sender = { name: 'Studio', email: 'old@example.com', address: '', taxId: '' };
+    const base = createInvoice({ sender, groupId: null });
+    const latest = createInvoice({ sender: { ...sender, email: 'new@example.com' }, groupId: 'remote-group' });
+    const local = { ...savedDraft(base), sender: { ...sender, name: 'Edited studio' } };
+    const reviewed = reconcileInvoiceDraft(base, local, latest);
+    const mergedSender = { ...latest.sender, name: 'Edited studio' };
+    expect(reviewed.patch).toEqual({ sender: mergedSender });
+    expect(reviewed.draft.groupId).toBe('remote-group');
+    expect(reviewed.conflicts).toEqual([]);
+    expect(reconcileInvoiceDraft(latest, { ...reviewed.draft, groupId: null }, latest).patch)
+      .toEqual({ sender: mergedSender, groupId: null });
+  });
+
   it('preserves the saved membership when a move fails',async()=>{
     testMocks.moveInvoices.mockRejectedValueOnce(new Error('Move failed'));
     testMocks.getInvoice.mockResolvedValue(createInvoice({groupId:null}));
@@ -735,13 +750,34 @@ describe('InvoiceDetailView', () => {
     const editor=wrapper.findComponent(InvoiceCreateDialog);
     expect(editor.findAllComponents(InputText)[0]!.props('modelValue')).toBe('April 2026 — Backend');
     await editor.findComponent('#invoice-create-title').setValue('Unsaved title');
-    testMocks.getInvoice.mockResolvedValue(createInvoice({revision:8,status:'sent'}));
+    testMocks.getInvoice.mockResolvedValue(createInvoice({revision:8,status:'sent',title:'Remote title',notes:'Saved remotely',groupId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'}));
     await editor.find('[data-testid="invoice-create-submit"]').trigger('click');await flushPromises();
     expect(editor.findAllComponents(InputText)[0]!.props('modelValue')).toBe('Unsaved title');
     await editor.findAll('button').find(button=>button.text()==='Refresh latest revision')!.trigger('click');await flushPromises();
+    expect(editor.text()).toContain('Saved: Remote title');
+    expect(editor.text()).toContain('Your edit: Unsaved title');
     await editor.find('[data-testid="invoice-create-submit"]').trigger('click');await flushPromises();
-    expect(testMocks.updateInvoice).toHaveBeenLastCalledWith(invoiceId,expect.objectContaining({title:'Unsaved title',expectedRevision:8}));
+    expect(testMocks.updateInvoice).toHaveBeenLastCalledWith(invoiceId,{title:'Unsaved title',expectedRevision:8});
   });
+  it('keeps the editor and its draft through token rotation but closes it when the workspace changes', async () => {
+    const wrapper = mountInvoiceDetailView('pm', true);
+    const auth = useAuthStore();
+    const token = (workspaceId: string, exp: number) =>
+      'header.' + btoa(JSON.stringify({ sub: 'user-a', role: 'pm', workspaceId, exp })) + '.signature';
+    auth.accessToken = token('workspace-a', 1);
+    await flushPromises();
+    await wrapper.findAll('button').find(button => button.text() === 'Edit invoice')!.trigger('click');
+    const editor = wrapper.getComponent(InvoiceCreateDialog);
+    await editor.getComponent('#invoice-create-title').setValue('Local edit');
+    auth.accessToken = token('workspace-a', 2);
+    await flushPromises();
+    expect(editor.props('visible')).toBe(true);
+    expect(editor.findAllComponents(InputText)[0]!.props('modelValue')).toBe('Local edit');
+    auth.accessToken = token('workspace-b', 3);
+    await flushPromises();
+    expect(wrapper.getComponent(InvoiceCreateDialog).props('visible')).toBe(false);
+  });
+
   it('closes a draft on route changes and prevents submitting it into the next invoice',async()=>{
     const wrapper=mountInvoiceDetailView();await flushPromises();
     await wrapper.findAll('button').find(button=>button.text()==='Edit invoice')!.trigger('click');

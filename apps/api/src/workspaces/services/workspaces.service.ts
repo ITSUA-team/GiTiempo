@@ -1,3 +1,4 @@
+import { prepareInvoiceLogo } from '../../invoices/services/invoice-logo';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import type {
@@ -54,6 +55,7 @@ export class WorkspacesService {
     workspaceId: string,
     input: UpdateWorkspaceSettingsInput,
   ): Promise<WorkspaceSettingsResponse> {
+    await prepareInvoiceLogo(input.billingProfile?.logo);
     const [row] = await this.db
       .update(workspaceSettings)
       .set({

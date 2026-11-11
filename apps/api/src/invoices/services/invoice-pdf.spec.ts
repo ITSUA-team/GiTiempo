@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+import sharp from 'sharp';
 import PdfPrinter from 'pdfmake';
 import type { InvoiceResponse } from '@gitiempo/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -144,6 +146,67 @@ describe('invoice PDF pagination', () => {
       pages.forEach((page, i) =>
         expect(page).toContain(`Page ${i + 1} of ${pages.length}`),
       );
+    },
+  );
+});
+
+describe('invoice PNG logos', () => {
+  it('rejects a saved logo with corrupt IDAT without crashing the exporting process', () => {
+    const child = spawnSync(
+      process.execPath,
+      [
+        '--require',
+        'tsx/cjs',
+        '-e',
+        `
+      const { renderInvoicePdf } = require('./src/invoices/services/invoice-pdf.ts');
+      const invoice = JSON.parse(process.argv[1]);
+      renderInvoicePdf(invoice).then(() => { process.exitCode = 1; }).catch(error => {
+        console.log(JSON.stringify({status: error.getStatus(), code: error.getResponse().code}));
+      });
+    `,
+        JSON.stringify({
+          ...invoice,
+          logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAA0lEQVRiYWSEoK5LAAAAAElFTkSuQmCC',
+        }),
+      ],
+      {
+        encoding: 'utf8',
+        timeout: 15000,
+      },
+    );
+    expect(child.status, child.stderr).toBe(0);
+    expect(JSON.parse(child.stdout)).toEqual({
+      status: 422,
+      code: 'invoice_logo_invalid',
+    });
+  }, 20000);
+
+  it.each([32, 2100])(
+    'bounds decoded PNG size for a %ipx square',
+    async (size) => {
+      const bytes = await sharp({
+        create: {
+          width: size,
+          height: size,
+          channels: 4,
+          background: '#12345680',
+        },
+      })
+        .png()
+        .toBuffer();
+      const pdf = renderInvoicePdf({
+        ...invoice,
+        logo: 'data:image/png;base64,' + bytes.toString('base64'),
+      });
+      if (size === 32) {
+        expect((await pdf).subarray(0, 5).toString()).toBe('%PDF-');
+      } else {
+        await expect(pdf).rejects.toMatchObject({
+          status: 422,
+          response: { code: 'invoice_logo_invalid' },
+        });
+      }
     },
   );
 });

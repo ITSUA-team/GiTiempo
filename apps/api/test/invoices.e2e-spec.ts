@@ -3,7 +3,11 @@ import { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { and, eq, gte, inArray, lt } from 'drizzle-orm';
 import { previewInvoiceResponseSchema } from '@gitiempo/shared';
-import type { Pool } from 'pg';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import * as schema from '../src/db/schema';
+import { InvoicesService } from '../src/invoices/services/invoices.service';
+import { MembersService } from '../src/members/services/members.service';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE, PG_POOL } from '../src/db/db.constants';
@@ -18,7 +22,7 @@ import {
   workspaces,
   invoiceGroups,
 } from '../src/db/schema';
-import { bearer, login } from './helpers/auth';
+import { ADMIN_EMAIL, ADMIN_UID, bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
 const DATE_FROM = '2027-06-01';
@@ -2895,11 +2899,43 @@ describe('Invoices (e2e)', () => {
       .send({ name: 'Acceptance retainers' });
     expect(group.status).toBe(201);
     try {
-      const move = await request(app.getHttpServer())
-        .post('/invoices/groups/move')
-        .set('Authorization', bearer(adminToken))
-        .send({ invoiceIds: [id], groupId: group.body.id });
-      expect(move.status).toBe(204);
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        max: 1,
+        connectionTimeoutMillis: 1000,
+      });
+      try {
+        const queries: string[] = [];
+        const service = new InvoicesService(
+          drizzle(pool, {
+            schema,
+            logger: {
+              logQuery(query) {
+                queries.push(query);
+              },
+            },
+          }),
+          app.get(MembersService),
+        );
+        const { admin } = await getSeededAdminWorkspace(db);
+        const user = {
+          sub: admin.id,
+          firebaseUid: ADMIN_UID,
+          email: ADMIN_EMAIL,
+          role: 'admin' as const,
+          workspaceId,
+        };
+        await service.moveInvoices(user, [id], group.body.id);
+        expect(queries.some((query) => query.includes('for key share'))).toBe(
+          true,
+        );
+        queries.length = 0;
+        const groups = await service.listGroups(user);
+        expect(groups.groups).toContainEqual({ ...group.body, count: 1 });
+        expect(queries.length).toBeLessThanOrEqual(2);
+      } finally {
+        await pool.end();
+      }
       const admin = await request(app.getHttpServer())
         .get('/invoices/' + id)
         .set('Authorization', bearer(adminToken));
@@ -2916,18 +2952,33 @@ describe('Invoices (e2e)', () => {
           .query({ search: 'Revision acceptance' })
           .set('Authorization', bearer(token));
         expect(listed.status).toBe(200);
-        expect(listed.body.items).toContainEqual(
-          expect.objectContaining({ id, groupId: expectedGroup }),
+        const item = listed.body.items.find(
+          (item: { id: string }) => item.id === id,
         );
+        expect(item).toMatchObject({
+          id,
+          groupId: expectedGroup,
+          recipient: create.body.recipient,
+        });
+        for (const field of [
+          'sender',
+          'services',
+          'payment',
+          'logo',
+          'timeEntries',
+        ])
+          expect(item).not.toHaveProperty(field);
       }
-      expect(
-        (
-          await request(app.getHttpServer())
-            .patch('/invoices/groups/' + group.body.id)
-            .set('Authorization', bearer(adminToken))
-            .send({ name: 'Renamed acceptance group' })
-        ).status,
-      ).toBe(200);
+      const renamed = await request(app.getHttpServer())
+        .patch('/invoices/groups/' + group.body.id)
+        .set('Authorization', bearer(adminToken))
+        .send({ name: 'Renamed acceptance group' });
+      expect(renamed.status).toBe(200);
+      expect(renamed.body).toEqual({
+        id: group.body.id,
+        name: 'Renamed acceptance group',
+        count: 1,
+      });
       expect(
         (
           await request(app.getHttpServer())
@@ -3171,7 +3222,12 @@ describe('Invoices (e2e)', () => {
 
       await db
         .update(timeEntries)
-        .set({ description: 'Changed description' })
+        .set({
+          description: 'Changed description',
+          isBillable: false,
+          endedAt: new Date('2097-01-03T10:20:00Z'),
+          durationSeconds: 1200,
+        })
         .where(eq(timeEntries.id, entryId));
       const saved = await request(app.getHttpServer())
         .get('/invoices/' + invoiceId)
@@ -3190,10 +3246,60 @@ describe('Invoices (e2e)', () => {
         .get('/invoices/' + invoiceId)
         .set('Authorization', bearer(adminToken));
       expect(unchanged.body.totalAmount).toBe(100);
+      const fullEdit = {
+        projectId: probeProjectId,
+        dateFrom: '2097-01-01',
+        dateTo: '2097-01-31',
+        hourlyRate: 100,
+        currency: create.body.currency,
+        discountPercent: create.body.discountPercent,
+        roundingStepMinutes: create.body.roundingStepMinutes,
+        timeEntryIds: [entryId],
+        notes: 'Send with receipt',
+        payment: {
+          method: '',
+          terms: '',
+          beneficiary: '',
+          provider: '',
+          account: '',
+          instructions: 'Use {{invoiceReference}}',
+        },
+      };
+      const edited = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({ ...fullEdit, expectedRevision: create.body.revision });
+      expect(edited.status).toBe(200);
+      expect(edited.body.timeEntries).toEqual(create.body.timeEntries);
+      expect(edited.body.payment.instructions).toBe(
+        'Use ' + create.body.reference,
+      );
+      const pricedPreview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          projectId: probeProjectId,
+          invoiceId,
+          dateFrom: fullEdit.dateFrom,
+          dateTo: fullEdit.dateTo,
+          title: 'Reprice',
+          hourlyRate: 200,
+          currency: create.body.currency,
+          timeEntryIds: [entryId],
+        });
+      expect(pricedPreview.status).toBe(201);
+      expect(pricedPreview.body.totalAmount).toBe(200);
+      const repriced = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({ hourlyRate: 200, expectedRevision: edited.body.revision });
+      expect(repriced.status).toBe(200);
+      expect(repriced.body.timeEntries).toEqual(create.body.timeEntries);
+      expect(repriced.body.totalAmount).toBe(200);
       const clear = await request(app.getHttpServer())
         .patch('/invoices/' + invoiceId)
         .set('Authorization', bearer(adminToken))
-        .send({ timeEntryIds: [], expectedRevision: create.body.revision });
+        .send({ timeEntryIds: [], expectedRevision: repriced.body.revision });
       expect(clear.status).toBe(200);
       expect(clear.body.totalAmount).toBe(0);
       const [entry] = await db
@@ -3209,6 +3315,84 @@ describe('Invoices (e2e)', () => {
       if (invoiceId)
         await db.delete(invoices).where(eq(invoices.id, invoiceId));
       await db.delete(timeEntries).where(eq(timeEntries.id, entryId));
+    }
+  });
+  it('keeps deleted source entries in the invoice snapshot and enforces a revised period', async () => {
+    const [entry] = await db
+      .insert(timeEntries)
+      .values({
+        workspaceId,
+        taskId: probeTaskId,
+        userId: bobUserId,
+        source: 'manual',
+        isBillable: true,
+        startedAt: new Date('2092-01-07T10:00:00Z'),
+        endedAt: new Date('2092-01-07T11:00:00Z'),
+        durationSeconds: 3600,
+      })
+      .returning({ id: timeEntries.id });
+    let invoiceId: string | undefined;
+    try {
+      const scope = {
+        title: 'Removed source snapshot',
+        projectId: probeProjectId,
+        dateFrom: '2092-01-01',
+        dateTo: '2092-01-31',
+      };
+      const created = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          ...scope,
+          hourlyRate: 10,
+          currency: 'USD',
+          timeEntryIds: [entry.id],
+        });
+      expect(created.status).toBe(201);
+      invoiceId = created.body.id;
+      await db.delete(timeEntries).where(eq(timeEntries.id, entry.id));
+      const preview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          ...scope,
+          invoiceId,
+          hourlyRate: 20,
+          currency: 'USD',
+          timeEntryIds: [entry.id],
+        });
+      expect(preview.status).toBe(201);
+      expect(preview.body).toMatchObject({
+        count: 1,
+        totalAmount: 20,
+        entries: created.body.timeEntries,
+      });
+      const outside = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({ dateFrom: '2092-01-08' });
+      expect(outside.status).toBe(409);
+      const updated = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({ hourlyRate: 20 });
+      expect(updated.status).toBe(200);
+      expect(updated.body).toMatchObject({
+        timeEntryCount: 1,
+        totalAmount: 20,
+        timeEntries: created.body.timeEntries,
+      });
+      const list = await request(app.getHttpServer())
+        .get('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .query({ search: scope.title });
+      expect(list.body.items).toContainEqual(
+        expect.objectContaining({ id: invoiceId, timeEntryCount: 1 }),
+      );
+    } finally {
+      if (invoiceId)
+        await db.delete(invoices).where(eq(invoices.id, invoiceId));
+      await db.delete(timeEntries).where(eq(timeEntries.id, entry.id));
     }
   });
   it('limits defaults access and preserves historical billing identity after Admin replacement', async () => {
@@ -3282,6 +3466,20 @@ describe('Invoices (e2e)', () => {
             })
         ).status,
       ).toBe(400);
+      const corruptPng = Buffer.from(
+        '89504e470d0a1a0a0000000d494844520000000100000001',
+        'hex',
+      );
+      const invalidPng = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          billingProfile: {
+            ...profile,
+            logo: 'data:image/png;base64,' + corruptPng.toString('base64'),
+          },
+        });
+      expect(invalidPng.status).toBe(422);
       const created = await request(app.getHttpServer())
         .post('/invoices')
         .set('Authorization', bearer(pmToken))

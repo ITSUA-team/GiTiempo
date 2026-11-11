@@ -72,6 +72,22 @@ describe('invoice billing defaults', () => {
     expect(wrapper.find('[role="alert"]').exists()).toBe(true);
   });
 
+  it('accepts a valid logo while another field in the draft still needs correction', async () => {
+    const logo = 'data:image/svg+xml;base64,' + btoa('<svg width="12" height="12"><rect width="12" height="12"/></svg>');
+    vi.stubGlobal('FileReader', class {
+      result = logo;
+      onload: (() => void) | null = null;
+      readAsDataURL() { this.onload?.(); }
+    });
+    const wrapper = render();
+    await wrapper.get('#invoice-prefix').setValue('');
+    wrapper.findComponent({name:'FileUpload'}).vm.$emit('uploader', {files:[new File(['svg'], 'logo.svg')]});
+    await flushPromises();
+    expect(wrapper.get('img').attributes('src')).toBe(logo);
+    await wrapper.get('form').trigger('submit');
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+
   it('ignores logo reads completed after switching workspace', async () => {
     let finish!: () => void;
     vi.stubGlobal('FileReader', class {

@@ -228,16 +228,15 @@ describe("invoiceListResponseSchema", () => {
     expect(Object.hasOwn(result.items[0] ?? {}, "timeEntries")).toBe(false);
   });
 
-  // invoiceListItemSchema is a non-strict omit shape: a supplied timeEntries
-  // key is stripped rather than rejected.
-  it("strips a provided timeEntries array from list items", () => {
-    const result = invoiceListResponseSchema.parse({
-      items: [{ ...validInvoiceResponse, timeEntries: [] }],
+  it("strips detail-only billing fields from list responses", () => {
+    const { items } = invoiceListResponseSchema.parse({
+      items: [{ ...validInvoiceResponse, timeEntries: [], logo: "logo", sender: {}, payment: {}, services: "Consulting" }],
       meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
     });
 
-    expect(result.items).toHaveLength(1);
-    expect(Object.hasOwn(result.items[0] ?? {}, "timeEntries")).toBe(false);
+    for (const field of ["timeEntries", "logo", "sender", "payment", "services"]) {
+      expect(items[0]).not.toHaveProperty(field);
+    }
   });
 
   it("accepts an empty items array", () => {

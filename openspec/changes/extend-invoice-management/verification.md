@@ -1,5 +1,29 @@
 # #527 implementation verification
 
+## Review corrections verified on 2026-11-11
+
+Reviewed and corrected all 13 P0/P1 findings against working changes above `3a5a7974` on `feat/527-invoice-enhancements`.
+
+- PDF image validation fully decodes PNGs before embedding, rejects corrupt stored images with a controlled 422 and bounds decoded image size. The crash regression runs in a child process and asserts its successful exit and structured error. The existing locked sharp version is now an explicit API runtime dependency. OpenAPI covers PDF binary content, attachment headers, both validation errors, groups and preview responses.
+- Business revisions preserve saved entry labels and durations. Preview, recalculation and list counts also retain historical rows after mutation or deletion of their source time entries. Explicit exclusion and period/project changes remain validated. Payment reference templates resolve during create and edit.
+- Group moves authorize the complete batch through their transaction, including a regression using a one-connection database pool. Target groups remain locked until the operation completes. Group counts use scoped aggregation, rename returns its actual count, and invoice list queries avoid loading full documents and logos.
+- The editor submits changed fields only and merges against the latest revision while showing conflicting saved/local values. Independent group moves survive unrelated business saves. Logical session identity controls reset behavior, so token rotation retains the draft.
+- Defaults loading, explicit Use settings, logo uploads and calculation errors have independent state. Late defaults preserve user edits, failed uploads preserve untouched default logos, and both logo forms reuse the shared validator.
+
+Final automated results
+
+- `pnpm test` passed all 11 Turbo tasks, 3,746 tests plus 5 CI target-detector tests. Earlier concurrent runs encountered a router timeout and a test being edited during execution. The new subprocess regression also exceeded the default 5-second test deadline under concurrent load. Its test deadline now allows the existing bounded 15-second child timeout, and the final complete run passed.
+- `pnpm test:e2e` passed in Docker, 36 files and 458 tests, including the final deleted-source regression. The preceding Docker run passed 457 tests. The disposable Docker database was removed by the runner.
+- Root `pnpm typecheck` and `pnpm lint` passed all 11 tasks. Existing lint warnings remain. The final subprocess-test adjustment also passed targeted ESLint.
+- OpenAPI export and strict validation of `extend-invoice-management` passed. All review-regression tasks are checked. `git diff --check` passed.
+- Independent cross-review of the final API and UI corrections found no remaining P0/P1 in these scenarios.
+
+Browser acceptance used headless Chrome 152 with the local Admin SPA on port 5184 and test-mode API on port 3011 against `gitiempo_manual_527`. The test session used the existing fake Firebase token exchange, then normal API authentication. Desktop was 1280 × 900 and mobile 375 × 812.
+
+On desktop, refreshing the access token kept the open editor and typed note. A concurrent API update changed the payment account. Saving the stale editor produced a conflict, Refresh latest revision retained the local note and loaded the remote account, and retry saved both. On mobile, concurrent changes to the same note showed both values for review. The retry saved the local note and preserved the remote payment account. Document width remained 375 px. Original test payment and note values were restored afterward.
+
+Checked editor/detail structure and responsive actions against the approved #527 frames and existing design parity checklist. Conflict feedback uses the existing Message component. No PrimeVue conflict required a design deviation. Browser evidence is available in `/private/tmp/527-review-conflict-mobile.png` and `/private/tmp/527-review-detail-desktop.png`. Browser acceptance covered the assembled conflict and token-refresh flows, while the defaults/upload failure permutations are covered by focused automated regressions.
+
 ## Tested source and environment
 
 - Date: 2026-11-11.

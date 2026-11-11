@@ -32,3 +32,11 @@
 - [x] 4.2 Run pnpm typecheck, pnpm lint, pnpm test, pnpm test:e2e and strict OpenSpec validation. Record results and reconcile the overlapping admin-invoices-page notification delta before syncing the completed change.
 - [x] 4.3 Manually create, rename and delete personal groups on desktop and mobile. Move one invoice, then several, between groups. Check counts and Ungrouped after deletion. Open the same invoice as the second user and verify their grouping is independent. Trigger a stale edit from two sessions and verify the editor preserves inputs for retry.
 - [x] 4.4 Record the tested build, roles, viewports and pass/fail result for each manual scenario in #527 or its PR. Record defects with reproduction steps, fix them and record a passing manual retest before accepting the change.
+
+## 5. Review regressions
+
+- [x] 5.1 Reject malformed or oversized decoded logos safely, including persisted images at PDF export. Describe PDF media, attachment and validation errors in OpenAPI and add regression coverage.
+- [x] 5.2 Preserve historical entry labels through unrelated edits and retained selections, resolve payment reference templates on edit, authorize bulk moves within their transaction, and use scoped aggregate group counts and lightweight list responses. Add API regressions.
+- [x] 5.3 Submit changed editor fields only, review concurrent field conflicts explicitly, preserve independent group moves and drafts across token refresh, and preserve workspace defaults during asynchronous loading. Add editor/view regressions.
+- [x] 5.4 Keep calculation failures separate from other editor errors and validate logo uploads consistently in both editors. Add regressions for failed defaults/groups requests and unrelated invalid settings fields.
+- [x] 5.5 Repeat targeted and repository checks, isolated API integration tests, desktop/mobile browser acceptance, strict OpenSpec validation and an independent review of the fixes. Record results and remaining limitations.

@@ -1655,6 +1655,36 @@ describe('InvoiceCreateDialog', () => {
     expect(included()[0]!.props('modelValue')).toEqual(entries.map(entry => entry.id));
   });
 
+  it('keeps a defaults error visible after successful calculation and lets the server supply untouched defaults', async () => {
+    testMocks.getInvoiceDefaults.mockRejectedValue(new Error('Unavailable'));
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({createInvoice});
+    await wrapper.getComponent('#invoice-create-title').setValue('Fallback');
+    await enterDateRange(wrapper);
+    await flushPromises();
+    expect(bodyText()).toContain('Could not load billing settings');
+    await submitInvoice(wrapper);
+    const submitted = createInvoice.mock.calls[0]![0];
+    for (const key of ['sender', 'payment', 'logo']) expect(submitted).not.toHaveProperty(key);
+  });
+
+  it('rejects unsafe logo content even when the file uses an accepted MIME type', async () => {
+    testMocks.getInvoiceDefaults.mockRejectedValue(new Error('Unavailable'));
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({createInvoice});
+    const input = document.querySelector<HTMLInputElement>('input[aria-label="Upload invoice logo"]')!;
+    const unsafe = new File(['<svg><script>alert(1)</script></svg>'], 'logo.svg', {type:'image/svg+xml'});
+    Object.defineProperty(input, 'files', {value:[unsafe]});
+    input.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(bodyText()).toContain('Choose a valid PNG or static SVG logo'));
+    await wrapper.getComponent('#invoice-create-title').setValue('Preserve saved logo');
+    await enterDateRange(wrapper);
+    await submitInvoice(wrapper);
+    expect(createInvoice.mock.calls[0]![0]).not.toHaveProperty('logo');
+  });
+
   it('shows the settings logo in a new invoice and includes it when saving', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const logo = 'data:image/png;base64,aGVsbG8=';
@@ -1819,16 +1849,62 @@ describe('InvoiceCreateDialog', () => {
     expect(createInvoice).toHaveBeenLastCalledWith(expect.objectContaining({timeEntryIds: [], title: 'Reviewed draft'}));
   });
 
+  it('keeps sender edits made after explicitly requesting current settings', async () => {
+    const wrapper = await mountDialog();
+    let finish!: (value: unknown) => void;
+    testMocks.getInvoiceDefaults.mockReturnValueOnce(new Promise(resolve => {finish = resolve;}));
+    const useSettings = Array.from(document.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Use settings')!;
+    useSettings.click();
+    await flushPromises();
+    const field = wrapper.findAllComponents(InputText).find(input => input.element.closest('label')?.textContent?.includes('Sender / legal name'))!;
+    await field.setValue('New local edit');
+    finish({ billingProfile: { sender: { name: 'Remote', address: 'Saved address', email:'', taxId:'' }, payment: {method:'',terms:'',beneficiary:'',provider:'',account:'',instructions:''}, logo:null } });
+    await flushPromises();
+    expect(field.props('modelValue')).toBe('New local edit');
+  });
+
+  it('keeps the reviewed entry subset when reloading eligibility for the merged period', async () => {
+    const entries = [createTimeEntry(), createTimeEntry({id:'88888888-8888-4888-8888-888888888888'})];
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse({entries,count:2}));
+    const wrapper = await mountDialog({source:createInvoiceResponse(), editing:true});
+    const savedLogo = 'data:image/svg+xml;base64,' + btoa('<svg width="20" height="20"></svg>');
+    await wrapper.setProps({
+      revisionConflict:true,
+      reviewRevision: async getDraft => ({
+        draft: {...getDraft(), dateFrom:'2026-06-01', dateTo:'2026-06-30', timeEntryIds:[entries[1]!.id]},
+        conflicts:[], savedLogo,
+      }),
+    });
+    const review = Array.from(document.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Refresh latest revision')!;
+    review.click();
+    await flushPromises();
+    const checkbox = wrapper.findAllComponents(Checkbox).find(field => !field.props('binary'))!;
+    expect(checkbox.props('modelValue')).toEqual([entries[1]!.id]);
+    expect(document.querySelector('img[alt="Latest saved invoice logo"]')?.getAttribute('src')).toBe(savedLogo);
+    const chooseLogo = Array.from(document.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Use saved logo')!;
+    chooseLogo.click();
+    await flushPromises();
+    expect(document.querySelector('img[alt="Invoice sender logo"]')?.getAttribute('src')).toBe(savedLogo);
+  });
+
   it('preserves sender and payment typed while initial defaults are loading',async()=>{
     let resolveDefaults!:(value:unknown)=>void;
     testMocks.getInvoiceDefaults.mockReturnValueOnce(new Promise(resolve=>{resolveDefaults=resolve;}));
-    const wrapper=await mountDialog();
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper=await mountDialog({ createInvoice });
+    await wrapper.getComponent('#invoice-create-title').setValue('Pending defaults');
+    await enterDateRange(wrapper);
+    await submitInvoice(wrapper);
+    expect(createInvoice).not.toHaveBeenCalled();
     const senderField=wrapper.findAllComponents(InputText).find(field=>field.element.closest('label')?.textContent?.includes('Sender / legal name'))!;
     const paymentField=getSelectByInputId(wrapper,'invoice-payment-method');
     await senderField.setValue('Typed sender');await paymentField.vm.$emit('update:modelValue','Typed payment');await flushPromises();
     resolveDefaults({billingProfile:{sender:{name:'Settings sender',address:'Address',email:'',taxId:''},payment:{method:'Settings payment',terms:'',beneficiary:'',provider:'',account:'',instructions:''},logo:null}});await flushPromises();
     expect(senderField.props('modelValue')).toBe('Typed sender');
     expect(paymentField.props('modelValue')).toBe('Typed payment');
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({sender: expect.objectContaining({name:'Typed sender', address:'Address'})}));
   });
   it('refreshes eligibility and retries a failed calculation without losing the draft',async()=>{
     let fail=true;

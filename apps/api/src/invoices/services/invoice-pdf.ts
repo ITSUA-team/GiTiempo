@@ -1,3 +1,4 @@
+import { prepareInvoiceLogo } from './invoice-logo';
 import PdfPrinter from 'pdfmake';
 import fonts from 'pdfmake/build/vfs_fonts';
 import { computeInvoiceAmount, type InvoiceResponse } from '@gitiempo/shared';
@@ -107,12 +108,13 @@ export async function renderInvoicePdf(
         .map((text) => ({ text, margin: [0, 5, 0, 0] })),
     ],
   });
+  const preparedLogo = await prepareInvoiceLogo(invoice.logo);
   let logo;
-  if (invoice.logo?.startsWith('data:image/png;base64,')) {
-    logo = { image: invoice.logo, fit: [36, 36], width: 36 };
-  } else if (invoice.logo?.startsWith('data:image/svg+xml;base64,')) {
+  if (preparedLogo?.startsWith('data:image/png;base64,')) {
+    logo = { image: preparedLogo, fit: [36, 36], width: 36 };
+  } else if (preparedLogo?.startsWith('data:image/svg+xml;base64,')) {
     logo = {
-      svg: Buffer.from(invoice.logo.split(',')[1], 'base64').toString(),
+      svg: Buffer.from(preparedLogo.split(',')[1], 'base64').toString(),
       fit: [36, 36],
       width: 36,
     };

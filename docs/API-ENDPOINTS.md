@@ -417,3 +417,9 @@ Invoice create accepts explicit `timeEntryIds`, parties (`sender`, `recipient`),
 - `POST /invoices/groups/move` accepts `invoiceIds` and nullable `groupId` and commits one personal move. List queries support `groupId` as a UUID or `ungrouped`.
 
 Workspace settings accept a `billingProfile` with sender, payment, optional logo and invoice prefix. Authorized PMs read these through `GET /invoices/defaults`. Existing saved invoices retain their applied details.
+
+PNG logos are fully decoded at API writes and PDF export with a 4-megapixel limit, then normalized within 512 × 512 pixels. Invalid image content returns `422` with `invoice_logo_invalid`, including when an older saved invoice contains an invalid logo. The existing 250 KB upload limit applies to PNG and static SVG inputs.
+
+Invoice list responses include recipient summaries for display. Sender, payment instructions, services, logos and saved time-entry rows are returned by the detail endpoint. List entry counts use saved document rows. Editing an invoice preserves retained historical rows even when their source time entries have subsequently changed or been deleted. A deliberately revised period or project must still contain the retained rows.
+
+Editors submit changed fields with `expectedRevision`. After a revision conflict they compare their original values, local edits and the latest saved invoice before retrying. Personal group moves use their dedicated endpoint and retain their independence from business revisions.

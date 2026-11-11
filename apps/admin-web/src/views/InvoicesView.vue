@@ -32,7 +32,7 @@ import {
   type InvoicesTableFilterUpdate,
   type InvoicesTableFilters,
 } from '@/lib/invoices-table';
-import { getAdminServerStateScope } from '@/lib/server-state-scope';
+import { useInvoiceServerScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const ROWS_PER_PAGE = 20;
@@ -44,7 +44,7 @@ const { errorToast } = useToasts();
 const isMobileViewport = useIsMobileViewport();
 
 const accessToken = computed(() => authStore.accessToken);
-const scope = computed(() => getAdminServerStateScope(accessToken.value));
+const scope = useInvoiceServerScope(accessToken);
 const isAdmin = computed(
   () => authStore.profile?.role === WorkspaceRoles.Admin,
 );

@@ -6,6 +6,8 @@ import {
   invoiceDocumentIncompleteErrorSchema,
   WorkspaceRoles,
   type UpdateInvoiceInput,
+  type InvoiceResponse,
+  type CreateInvoiceInput,
 } from '@gitiempo/shared';
 import { AppDialog, DatePickerButtonBar, getErrorMessage, SurfaceCard, useDatePickerConfirmCancel } from '@gitiempo/web-shared';
 import { giTiempoDatePickerPt } from '@gitiempo/web-config/theme';
@@ -27,6 +29,7 @@ import { adminProjectsClient } from '@/services/admin-projects-client';
 import { adminInvoicesClient } from '@/services/admin-invoices-client';
 import Skeleton from 'primevue/skeleton';
 
+import { reconcileInvoiceDraft } from '@/lib/invoice-edit';
 import InvoiceStatusBadge from '@/components/invoices/InvoiceStatusBadge.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
@@ -37,7 +40,7 @@ import {
   LOAD_ACTION,
 } from '@/composables/invoices/useInvoiceDetail';
 import { useInvoiceUpdate } from '@/composables/invoices/useInvoiceUpdate';
-import { getAdminServerStateScope } from '@/lib/server-state-scope';
+import { useInvoiceServerScope } from '@/lib/server-state-scope';
 import { routeNames } from '@/constants/routes';
 import { useAuthStore } from '@/stores/auth';
 
@@ -62,7 +65,7 @@ const { errorToast } = useToasts();
 const { requireConfirmation } = useConfirmation();
 
 const accessToken = computed(() => authStore.accessToken);
-const scope = computed(() => getAdminServerStateScope(accessToken.value));
+const scope = useInvoiceServerScope(accessToken);
 const isAdmin = computed(
   () => authStore.profile?.role === WorkspaceRoles.Admin,
 );
@@ -225,7 +228,7 @@ const copySource = computed(() =>
     : invoice.value,
 );
 const editing = ref(true);
-const openedRevision = ref<number>();
+let openedInvoice: InvoiceResponse | undefined;
 const createMutation = useInvoiceCreate({
   scope,
   onError: notifyInvoiceActionError,
@@ -251,14 +254,15 @@ const editorMutation = {
       (editing.value && !invoice.value)
     )
       throw new Error('The invoice changed. Reopen its editor.');
-    if (editing.value && invoice.value) {
+    if (editing.value && openedInvoice && invoice.value) {
+      const { patch } = reconcileInvoiceDraft(openedInvoice, input, openedInvoice);
+      if (!Object.keys(patch).length) return invoice.value;
       try {
         return await updateMutation.updateInvoice({
           invoiceId: editorInvoiceId.value,
           data: {
-            ...input,
-            projectId: input.projectId ?? null,
-            expectedRevision: openedRevision.value,
+            ...patch,
+            expectedRevision: openedInvoice.revision,
           },
         });
       } catch (error) {
@@ -317,7 +321,7 @@ async function downloadPdf() {
       exportBusy.value = false;
   }
 }
-async function reviewInvoiceRevision() {
+async function reviewInvoiceRevision(getDraft: () => CreateInvoiceInput) {
   const sourceId = editorInvoiceId.value;
   const requestGeneration = editorGeneration;
   const result = await refetch();
@@ -329,15 +333,18 @@ async function reviewInvoiceRevision() {
     throw new Error('The invoice changed. Reopen its editor.');
   if (result.error || !result.data)
     throw result.error ?? new Error('Could not load the invoice.');
-  openedRevision.value = result.data.revision;
+  if (!openedInvoice) throw new Error('Reopen the invoice editor.');
+  const reviewed = reconcileInvoiceDraft(openedInvoice, getDraft(), result.data);
+  openedInvoice = result.data;
   revisionConflict.value = false;
+  return reviewed;
 }
 function openEditor(isEdit: boolean) {
   editorGeneration++;
   editorInvoiceId.value = invoiceId.value;
   revisionConflict.value = false;
   editing.value = isEdit;
-  openedRevision.value = invoice.value?.revision;
+  openedInvoice = invoice.value ?? undefined;
   if (isEdit) editorOpen.value = true;
   else {
     copyPeriod.value = null;

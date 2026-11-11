@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch, type Ref } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
+import { invoiceLogoSchema } from '@gitiempo/shared';
+import { adminInvoicesKeys } from '@/lib/query-keys';
 import type {
   PreviewInvoiceResponse,
   CreateInvoiceInput,
@@ -69,7 +72,7 @@ const props = defineProps<{
   /** Rounding step from workspace Settings; resolves project "inherit" values. */
   workspaceRoundingStepMinutes: number | null;
   revisionConflict?: boolean;
-  reviewRevision?: () => Promise<void>;
+  reviewRevision?: (getDraft: () => CreateInvoiceInput) => Promise<{draft: CreateInvoiceInput; conflicts: string[]; savedLogo?: string | null}>;
   scope: AdminServerStateScope;
   createMutation: InvoiceCreateMutation;
 }>();
@@ -92,48 +95,94 @@ const selectedEntries = ref<string[]>([]);
 const selectedEntriesScope = ref<string | null>(null);
 const defaultSelectedEntryIds = ref<Set<string> | null>(null);
 const saveError = ref('');
+const defaultsError = ref('');
+const groupsError = ref('');
+const logoError = ref('');
+const calculationError = ref('');
+const reviewMessage = ref('');
+const reviewedSavedLogo = ref<string | null>();
+const defaultsPending = ref(false);
+const logoPending = ref(false);
+const reviewPending = ref(false);
+const queryClient = useQueryClient();
+let defaultsRequest = 0;
 const calculatedPreview = ref<PreviewInvoiceResponse | null>(null);
 const calculating = ref(false);
 const calculationFailed = ref(false);
 let calculationGeneration = 0;
 let lifecycleGeneration = 0;
 let logoReadGeneration = 0;
+let logoVersion = 0;
 const group = ref<string | null>(null);
 const groupOptions = ref<Array<{id:string | null;name:string}>>([{id:null,name:'Ungrouped'}]);
 async function loadGroups() {
  const generation = lifecycleGeneration;
  let result;
  try {result = await adminInvoicesClient.listGroups();}
- catch {if (generation === lifecycleGeneration && props.visible) saveError.value='Could not load groups. Retry opening the dialog.';return;}
+ catch {if (generation === lifecycleGeneration && props.visible) groupsError.value='Could not load groups. Retry opening the dialog.';return;}
  if (generation !== lifecycleGeneration || !props.visible) return;
+ groupsError.value = '';
  groupOptions.value=[{id:null,name:'Ungrouped'},...result.groups];
 }
 function uploadLogo(event: {files: File | File[]}) {
  const file = Array.isArray(event.files) ? event.files[0] : event.files;
  if (!file) return;
- if (file.size > 256000 || !['image/png','image/svg+xml'].includes(file.type)) {
-   saveError.value = 'Choose a PNG or SVG logo up to 250 KB.';return;
- }
  const generation = lifecycleGeneration;
- const readGeneration=++logoReadGeneration;
+ const read = ++logoReadGeneration;
+ logoPending.value = false;
+ logoError.value = '';
+ if (file.size > 256000) {
+   logoError.value = 'Choose a PNG or SVG logo up to 250 KB.';
+   return;
+ }
+ const current = () => generation === lifecycleGeneration && read === logoReadGeneration && props.visible;
  const reader = new FileReader();
- reader.onload = () => {if (generation === lifecycleGeneration && readGeneration === logoReadGeneration && props.visible) logo.value=String(reader.result);};
- reader.onerror = () => {if(generation === lifecycleGeneration && readGeneration === logoReadGeneration && props.visible) saveError.value='Could not read the logo. Choose the file again.';};
+ logoPending.value = true;
+ reader.onload = () => {
+   if (!current()) return;
+   const result = invoiceLogoSchema.safeParse(reader.result);
+   if (result.success) {
+     logo.value = result.data;
+     logoVersion++;
+   } else logoError.value = 'Choose a valid PNG or static SVG logo up to 250 KB.';
+   logoPending.value = false;
+ };
+ reader.onerror = () => {
+   if (!current()) return;
+   logoError.value = 'Could not read the logo. Choose the file again.';
+   logoPending.value = false;
+ };
  reader.readAsDataURL(file);
 }
-async function useSettings(preserveEdits=false) {
+
+async function useSettings() {
   const generation = lifecycleGeneration;
-  const initialSender=JSON.stringify(sender.value);
-  const initialPayment=JSON.stringify(payment.value);
-  const initialLogo=logo.value;
-  const initialLogoRead=logoReadGeneration;
-  let defaults;
-  try {defaults = await adminInvoicesClient.getInvoiceDefaults();}
-  catch {if(generation === lifecycleGeneration && props.visible) saveError.value='Could not load billing settings. Try again.';return;}
-  if (generation === lifecycleGeneration && props.visible && defaults.billingProfile) {
-    if(!preserveEdits || JSON.stringify(sender.value)===initialSender) sender.value = {...defaults.billingProfile.sender};
-    if(!preserveEdits || JSON.stringify(payment.value)===initialPayment) payment.value = {...defaults.billingProfile.payment};
-    if(!preserveEdits || (logo.value===initialLogo && logoReadGeneration===initialLogoRead)) logo.value = defaults.billingProfile.logo;
+  const request = ++defaultsRequest;
+  const current = () => request === defaultsRequest && generation === lifecycleGeneration && props.visible;
+  const initialSender = { ...sender.value };
+  const initialPayment = { ...payment.value };
+  const initialLogoVersion = logoVersion;
+  defaultsPending.value = true;
+  defaultsError.value = '';
+  try {
+    const defaults = await queryClient.fetchQuery({
+      queryKey: adminInvoicesKeys.defaults(props.scope),
+      queryFn: () => adminInvoicesClient.getInvoiceDefaults(),
+      staleTime: 0,
+    });
+    if (!current() || !defaults.billingProfile) return;
+    const profile = defaults.billingProfile;
+    for (const key of Object.keys(initialSender) as Array<keyof typeof initialSender>) {
+      if (sender.value[key] === initialSender[key]) sender.value[key] = profile.sender[key];
+    }
+    for (const key of Object.keys(initialPayment) as Array<keyof typeof initialPayment>) {
+      if (payment.value[key] === initialPayment[key]) payment.value[key] = profile.payment[key];
+    }
+    if (logoVersion === initialLogoVersion) logo.value = profile.logo;
+  } catch {
+    if (current()) defaultsError.value = 'Could not load billing settings. Try again.';
+  } finally {
+    if (current()) defaultsPending.value = false;
   }
 }
 const title = ref('');
@@ -161,7 +210,7 @@ const seenEntries = ref(new Map<string, InvoiceTimeEntrySummary>());
 const logoFile = ref<HTMLInputElement>();
 const logoActions = computed(() => [
   { label: 'Upload logo', command: () => logoFile.value?.click() },
-  { label: 'Remove logo', disabled: !logo.value, command: () => { logoReadGeneration++; logo.value = null; } },
+  { label: 'Remove logo', disabled: !logo.value, command: () => { logoReadGeneration++; logoVersion++; logoPending.value = false; logoError.value = ''; logo.value = null; } },
 ]);
 function selectLogo(event: Event) {
   const input = event.target as HTMLInputElement;
@@ -226,9 +275,12 @@ watch([preview, entriesScope], ([value, scope]) => {
 // Reset on any visibility change, before the pre-fill watcher below so a
 // reopened dialog starts blank and then receives the preview defaults again.
 watch(
-  [() => props.visible, () => props.scope],
+  [() => props.visible, () => JSON.stringify(props.scope)],
   () => {
     lifecycleGeneration++;
+    logoVersion = 0;
+    reviewPending.value = false;
+    reviewedSavedLogo.value = undefined;
     calculationGeneration++;
     calculatedPreview.value = null;
     calculating.value = false;
@@ -245,6 +297,8 @@ watch(
     roundingStepMinutes.value = 1;
     notes.value = '';
     saveError.value = '';
+    defaultsError.value = groupsError.value = logoError.value = calculationError.value = reviewMessage.value = '';
+    defaultsPending.value = logoPending.value = false;
     calculationFailed.value=false;
     selectedEntries.value = [];
     selectedEntriesScope.value = null;
@@ -277,8 +331,7 @@ watch(
         selectedEntries.value = props.editing ? source.timeEntries.map(e=>e.id) : [];
         if (props.editing) selectedEntriesScope.value = entriesScope.value;
       } else {
-        const generation = lifecycleGeneration;
-        void useSettings(true).catch(() => {if (generation === lifecycleGeneration && props.visible) saveError.value = 'Could not load invoice defaults. Retry Use settings.';});
+        void useSettings();
       }
     }
 
@@ -473,10 +526,10 @@ async function calculatePreview() {
   calculatedPreview.value = null;
   try {
     const result = await adminInvoicesClient.previewInvoice({...query,title:title.value || 'Preview',hourlyRate:hourlyRate.value ?? undefined,currency:currency.value || undefined,discountPercent:discountPercent.value ?? 0,roundingStepMinutes:roundingStepMinutes.value,timeEntryIds:selectedEntries.value});
-    if (generation === calculationGeneration) {calculatedPreview.value = result;calculationFailed.value=false;saveError.value='';}
+    if (generation === calculationGeneration) {calculatedPreview.value = result;calculationFailed.value=false;calculationError.value='';}
   } catch (error) {if (generation === calculationGeneration) {
     calculationFailed.value = true;
-    saveError.value = error instanceof Error ? error.message : 'Could not calculate invoice. Retry.';
+    calculationError.value = error instanceof Error ? error.message : 'Could not calculate invoice. Retry.';
     if (error instanceof ApiError && error.code === 'invoice_entry_conflict') void refreshEligibility();
   }}
   finally {if (generation === calculationGeneration) calculating.value=false;}
@@ -510,28 +563,13 @@ function handleVisibleChange(nextVisible: boolean): void {
   emit('update:visible', nextVisible);
 }
 
-async function reviewLatestRevision() {
- const generation=lifecycleGeneration;
- try {await props.reviewRevision?.();if(generation!==lifecycleGeneration || !props.visible)return;saveError.value='Latest saved revision loaded. Your edits are preserved; review them before saving.';}
- catch(error) {if(generation===lifecycleGeneration && props.visible)saveError.value=error instanceof Error ? error.message : 'Could not refresh the saved revision. Retry.';}
-}
-
-async function handleCreate(): Promise<void> {
-  validationTriggered.value = true;
-  if (!canSubmit.value || calculating.value || !calculatedPreview.value || unavailable.value.length || !preview.value || previewError.value) return;
-
-  const startDate = dateRange.value?.[0];
-  const endDate = dateRange.value?.[1];
-  if (!startDate || !endDate) return;
-
-  const generation=lifecycleGeneration;
-  try {
-    const invoice = await props.createMutation.createInvoice({
+function currentDraft(): CreateInvoiceInput {
+    return {
       sender: sender.value, recipient: recipient.value, payment: payment.value, services: services.value,
       logo: logo.value, timeEntryIds: selectedEntries.value, groupId: group.value,
       title: title.value.trim(),
-      dateFrom: getLocalDateKey(startDate),
-      dateTo: getLocalDateKey(endDate),
+      dateFrom: getLocalDateKey(dateRange.value![0]!),
+      dateTo: getLocalDateKey(dateRange.value![1]!),
       projectId: selectedProjectId.value || undefined,
       hourlyRate: hourlyRate.value ?? (props.editing ? preview.value?.defaultHourlyRate ?? undefined : undefined),
       currency: currency.value.trim().toUpperCase() || (props.editing ? preview.value?.defaultCurrency ?? undefined : undefined),
@@ -540,7 +578,66 @@ async function handleCreate(): Promise<void> {
       ...(roundingStepTouched.value
         ? { roundingStepMinutes: roundingStepMinutes.value }
         : {}),
-    });
+    };
+}
+
+async function reviewLatestRevision() {
+  if (!props.reviewRevision || !hasDateRange.value || reviewPending.value) return;
+  reviewPending.value = true;
+  const generation = lifecycleGeneration;
+  try {
+    const {draft, conflicts, savedLogo} = await props.reviewRevision(currentDraft);
+    if (generation !== lifecycleGeneration || !props.visible) return;
+    title.value = draft.title;
+    dateRange.value = [new Date(draft.dateFrom + 'T12:00:00'), new Date(draft.dateTo + 'T12:00:00')];
+    selectedProjectId.value = draft.projectId ?? null;
+    group.value = draft.groupId ?? null;
+    hourlyRate.value = draft.hourlyRate ?? null;
+    currency.value = draft.currency ?? '';
+    discountPercent.value = draft.discountPercent ?? 0;
+    roundingStepMinutes.value = draft.roundingStepMinutes ?? 1;
+    notes.value = draft.notes ?? '';
+    services.value = draft.services ?? '';
+    if (draft.sender) sender.value = {...draft.sender};
+    if (draft.payment) payment.value = {...draft.payment};
+    if (draft.recipient) recipient.value = {...draft.recipient};
+    logo.value = draft.logo ?? null;
+    selectedEntries.value = draft.timeEntryIds ?? [];
+    selectedEntriesScope.value = entriesScope.value;
+    defaultSelectedEntryIds.value = null;
+    saveError.value = '';
+    reviewedSavedLogo.value = savedLogo;
+    reviewMessage.value = ['Latest saved revision loaded. Review before saving.', ...conflicts].join('\n');
+  } catch (error) {
+    if (generation === lifecycleGeneration) saveError.value = error instanceof Error ? error.message : 'Could not refresh the saved revision.';
+  } finally {
+    if (generation === lifecycleGeneration) reviewPending.value = false;
+  }
+}
+
+function useReviewedLogo() {
+  if (reviewedSavedLogo.value === undefined) return;
+  logoReadGeneration++;
+  logoVersion++;
+  logoPending.value = false;
+  logoError.value = '';
+  logo.value = reviewedSavedLogo.value;
+  reviewedSavedLogo.value = undefined;
+}
+
+async function handleCreate(): Promise<void> {
+  validationTriggered.value = true;
+  if (!canSubmit.value || props.revisionConflict || defaultsPending.value || logoPending.value || calculating.value || !calculatedPreview.value || unavailable.value.length || !preview.value || previewError.value) return;
+  const generation = lifecycleGeneration;
+  const draft = currentDraft();
+  if (!props.source && defaultsError.value) {
+    if (!Object.values(sender.value).some(Boolean)) delete draft.sender;
+    if (!Object.values(payment.value).some(Boolean)) delete draft.payment;
+    if (logo.value === null && !logoVersion) delete draft.logo;
+  }
+  try {
+    const invoice = await props.createMutation.createInvoice(draft);
+
     if(generation!==lifecycleGeneration || !props.visible)return;
     emit('created', invoice);
     emit('update:visible', false);
@@ -798,13 +895,14 @@ async function handleCreate(): Promise<void> {
         />
       </SurfaceCard>
       <Message
-        v-else-if="saveError || revisionConflict"
+        v-if="saveError || calculationError || revisionConflict"
         severity="error"
       >
-        {{ revisionConflict ? 'This invoice changed. Refresh the latest revision, review your edits, and retry.' : saveError }}
+        {{ [revisionConflict && 'This invoice changed. Refresh the latest revision, review your edits, and retry.', saveError, calculationError].filter(Boolean).join(' ') }}
         <Button
           v-if="revisionConflict"
           label="Refresh latest revision"
+          :loading="reviewPending"
           variant="text"
           @click="reviewLatestRevision"
         />
@@ -815,6 +913,37 @@ async function handleCreate(): Promise<void> {
           :loading="calculating"
           @click="retryCalculation"
         />
+      </Message>
+      <Message
+        v-for="message in [defaultsError, groupsError, logoError].filter(Boolean)"
+        :key="message"
+        severity="error"
+      >
+        {{ message }}
+      </Message>
+      <Message
+        v-if="reviewMessage"
+        severity="info"
+        class="whitespace-pre-line"
+      >
+        {{ reviewMessage }}
+        <div
+          v-if="reviewedSavedLogo !== undefined"
+          class="mt-2 flex flex-wrap items-center gap-2"
+        >
+          <span>{{ reviewedSavedLogo ? 'Latest saved logo' : 'The latest saved revision has no logo.' }}</span>
+          <img
+            v-if="reviewedSavedLogo"
+            :src="reviewedSavedLogo"
+            alt="Latest saved invoice logo"
+            class="max-h-12 max-w-32 object-contain"
+          >
+          <Button
+            label="Use saved logo"
+            variant="text"
+            @click="useReviewedLogo"
+          />
+        </div>
       </Message>
       <div class="grid items-start gap-4 sm:grid-cols-2">
         <SurfaceCard
@@ -965,6 +1094,7 @@ async function handleCreate(): Promise<void> {
           data-testid="invoice-create-submit"
           class="h-[38px] w-full sm:w-auto"
           :loading="isCreating"
+          :disabled="defaultsPending || logoPending || revisionConflict"
           @click="handleCreate"
         />
       </div>

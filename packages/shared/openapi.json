@@ -4001,7 +4001,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewInvoiceResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4020,7 +4027,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceGroupsResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4047,7 +4061,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceGroupResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4085,7 +4106,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceGroupResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4168,7 +4196,40 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Attachment filename containing the invoice reference"
+              }
+            },
             "description": ""
+          },
+          "422": {
+            "description": "Required billing sections are missing or the saved logo needs replacement.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/InvoiceDocumentIncompleteDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvoiceLogoInvalidDto"
+                    }
+                  ]
+                }
+              }
+            }
           }
         },
         "security": [
@@ -9684,46 +9745,6 @@
                   "format": "uuid",
                   "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                 },
-                "sender": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string",
-                      "maxLength": 5000
-                    },
-                    "address": {
-                      "type": "string",
-                      "maxLength": 5000
-                    },
-                    "email": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "format": "email",
-                          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            ""
-                          ]
-                        }
-                      ]
-                    },
-                    "taxId": {
-                      "type": "string",
-                      "maxLength": 5000
-                    }
-                  },
-                  "required": [
-                    "name",
-                    "address",
-                    "email",
-                    "taxId"
-                  ],
-                  "additionalProperties": false,
-                  "nullable": true
-                },
                 "recipient": {
                   "type": "object",
                   "properties": {
@@ -9762,56 +9783,6 @@
                     "taxId"
                   ],
                   "additionalProperties": false,
-                  "nullable": true
-                },
-                "payment": {
-                  "type": "object",
-                  "properties": {
-                    "method": {
-                      "type": "string",
-                      "maxLength": 5000
-                    },
-                    "terms": {
-                      "type": "string",
-                      "maxLength": 5000
-                    },
-                    "beneficiary": {
-                      "type": "string",
-                      "maxLength": 5000
-                    },
-                    "provider": {
-                      "type": "string",
-                      "maxLength": 5000
-                    },
-                    "account": {
-                      "type": "string",
-                      "maxLength": 5000
-                    },
-                    "instructions": {
-                      "type": "string",
-                      "maxLength": 5000
-                    }
-                  },
-                  "required": [
-                    "method",
-                    "terms",
-                    "beneficiary",
-                    "provider",
-                    "account",
-                    "instructions"
-                  ],
-                  "additionalProperties": false,
-                  "nullable": true
-                },
-                "services": {
-                  "type": "string",
-                  "maxLength": 5000,
-                  "nullable": true
-                },
-                "logo": {
-                  "type": "string",
-                  "maxLength": 341362,
-                  "pattern": "^data:image\\/(png|svg\\+xml);base64,[A-Za-z0-9+/=]+$",
                   "nullable": true
                 },
                 "reference": {
@@ -11102,6 +11073,171 @@
         ],
         "additionalProperties": false
       },
+      "PreviewInvoiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "taskId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "userId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "userName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "taskName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "startedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "endedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "durationSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "roundedDurationSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "isBillable": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "taskId",
+                "userId",
+                "userName",
+                "taskName",
+                "startedAt",
+                "endedAt",
+                "durationSeconds",
+                "roundedDurationSeconds",
+                "isBillable",
+                "description"
+              ]
+            }
+          },
+          "totalHours": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 99999999.99,
+            "multipleOf": 0.01
+          },
+          "subtotal": {
+            "type": "number",
+            "minimum": 0
+          },
+          "discountAmount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "totalAmount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "entries",
+          "totalHours",
+          "subtotal",
+          "discountAmount",
+          "totalAmount",
+          "currency"
+        ]
+      },
+      "InvoiceGroupsResponseDto": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "count"
+              ]
+            }
+          },
+          "allCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "ungroupedCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "groups",
+          "allCount",
+          "ungroupedCount"
+        ]
+      },
       "InvoiceGroupDto": {
         "type": "object",
         "properties": {
@@ -11115,6 +11251,29 @@
           "name"
         ],
         "additionalProperties": false
+      },
+      "InvoiceGroupResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "count"
+        ]
       },
       "MoveInvoicesDto": {
         "type": "object",
@@ -11140,6 +11299,64 @@
           "groupId"
         ],
         "additionalProperties": false
+      },
+      "InvoiceDocumentIncompleteDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "invoice_document_incomplete"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "missingFields": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "sender",
+                    "recipient",
+                    "services",
+                    "payment"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "missingFields"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "details"
+        ]
+      },
+      "InvoiceLogoInvalidDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "invoice_logo_invalid"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
       },
       "UpdateInvoiceRequestDto": {
         "type": "object",

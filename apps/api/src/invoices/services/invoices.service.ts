@@ -1,4 +1,5 @@
 import { computeInvoiceAmount } from '@gitiempo/shared';
+import { prepareInvoiceLogo } from './invoice-logo';
 import { renderInvoicePdf } from './invoice-pdf';
 import {
   ForbiddenException,
@@ -16,6 +17,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  notInArray,
   lte,
   or,
   sql,
@@ -50,6 +52,10 @@ import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
 import { workspaceSettings } from '../../workspaces/schemas/workspace-settings.schema';
+import {
+  invoiceGroups,
+  invoiceGroupMemberships,
+} from '../schemas/invoice-groups.schema';
 import { invoiceRowSelection, invoices } from '../schemas/invoices.schema';
 
 interface InvoiceDetailRow {
@@ -92,10 +98,9 @@ interface LinkedTimeEntryRow {
 
 // Shared column selections so list, detail, and transaction reads stay in
 // sync with the response mapping in one place.
-const invoiceDetailSelection = {
+const invoiceSummarySelection = {
   reference: invoices.reference,
   revision: invoices.revision,
-  document: invoices.document,
   id: invoices.id,
   workspaceId: invoices.workspaceId,
   projectId: invoices.projectId,
@@ -116,6 +121,11 @@ const invoiceDetailSelection = {
   updatedAt: invoices.updatedAt,
   projectName: projects.name,
 } as const;
+
+const invoiceDetailSelection = {
+  ...invoiceSummarySelection,
+  document: invoices.document,
+};
 
 const linkedTimeEntrySelection = {
   id: timeEntries.id,
@@ -195,6 +205,19 @@ export class InvoicesService {
     };
   }
 
+  private resolvePayment(
+    payment: InvoiceResponse['payment'],
+    reference: string,
+  ) {
+    if (!payment) return payment;
+    return {
+      ...payment,
+      instructions: payment.instructions
+        .split('{{invoiceReference}}')
+        .join(reference),
+    };
+  }
+
   private async authorizeGroups(user: AuthUser) {
     const membership = await this.members.requireRole(
       user.sub,
@@ -202,57 +225,126 @@ export class InvoicesService {
       ['admin', 'pm'],
     );
     this.assertInvoiceViewAccess(membership);
+    return membership;
   }
 
   private async requireGroup(
     user: AuthUser,
     groupId: string,
-    db: DrizzleDB | DbTransaction = this.db,
+    tx?: DbTransaction,
   ) {
-    const result = await db.execute(
-      sql`select id from invoice_groups where id=${groupId}::uuid and owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid`,
+    const result = await (tx ?? this.db).execute(
+      sql`select id from invoice_groups where id=${groupId}::uuid and owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid ${tx ? sql`for key share` : sql``}`,
     );
     if (!result.rows.length) throw new NotFoundException('Group not found');
   }
 
+  private groupOwner(user: AuthUser) {
+    return and(
+      eq(invoiceGroups.workspaceId, user.workspaceId),
+      eq(invoiceGroups.ownerId, user.sub),
+    );
+  }
+
+  private visibleProject(user: AuthUser, db: DrizzleDB | DbTransaction) {
+    return inArray(
+      invoices.projectId,
+      db
+        .select({ id: projects.id })
+        .from(projects)
+        .leftJoin(
+          projectAssignments,
+          and(
+            eq(projectAssignments.projectId, projects.id),
+            eq(projectAssignments.userId, user.sub),
+          ),
+        )
+        .where(
+          and(
+            eq(projects.workspaceId, user.workspaceId),
+            eq(projects.isActive, true),
+            or(
+              eq(projects.visibility, 'public'),
+              eq(projectAssignments.userId, user.sub),
+            ),
+          ),
+        ),
+    );
+  }
+
+  private groupCounts(
+    user: AuthUser,
+    membership: ActiveMembership,
+    db: DrizzleDB | DbTransaction,
+    groupId?: string,
+  ) {
+    return db
+      .select({ groupId: invoiceGroupMemberships.groupId, count: count() })
+      .from(invoices)
+      .leftJoin(
+        invoiceGroupMemberships,
+        and(
+          eq(invoiceGroupMemberships.invoiceId, invoices.id),
+          eq(invoiceGroupMemberships.ownerId, user.sub),
+          eq(invoiceGroupMemberships.workspaceId, user.workspaceId),
+        ),
+      )
+      .where(
+        and(
+          eq(invoices.workspaceId, user.workspaceId),
+          membership.role === 'pm' ? this.visibleProject(user, db) : undefined,
+          groupId ? eq(invoiceGroupMemberships.groupId, groupId) : undefined,
+        ),
+      )
+      .groupBy(invoiceGroupMemberships.groupId);
+  }
+
   async listGroups(user: AuthUser) {
-    await this.authorizeGroups(user);
-    const result = await this.db.execute(
-      sql`select id,name from invoice_groups where owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid order by name`,
-    );
-    const allCount = (await this.listInvoices(user, { page: 1, limit: 1 })).meta
-      .total;
-    const ungroupedCount = (
-      await this.listInvoices(user, { page: 1, limit: 1, groupId: 'ungrouped' })
-    ).meta.total;
-    const groups = await Promise.all(
-      result.rows.map(async (row) => ({
-        id: String(row.id),
-        name: String(row.name),
-        count: (
-          await this.listInvoices(user, {
-            page: 1,
-            limit: 1,
-            groupId: String(row.id),
-          })
-        ).meta.total,
+    const membership = await this.authorizeGroups(user);
+    const [groups, counts] = await Promise.all([
+      this.db
+        .select({ id: invoiceGroups.id, name: invoiceGroups.name })
+        .from(invoiceGroups)
+        .where(this.groupOwner(user))
+        .orderBy(invoiceGroups.name),
+      this.groupCounts(user, membership, this.db),
+    ]);
+    const byGroup = new Map(counts.map((row) => [row.groupId, row.count]));
+    return {
+      groups: groups.map((group) => ({
+        ...group,
+        count: byGroup.get(group.id) ?? 0,
       })),
-    );
-    return { groups, allCount, ungroupedCount };
+      allCount: counts.reduce((sum, row) => sum + row.count, 0),
+      ungroupedCount: byGroup.get(null) ?? 0,
+    };
   }
 
   async saveGroup(user: AuthUser, name: string, id?: string) {
-    await this.authorizeGroups(user);
-    if (id) await this.requireGroup(user, id);
+    const membership = await this.authorizeGroups(user);
+    const selection = { id: invoiceGroups.id, name: invoiceGroups.name };
     try {
-      const result = id
-        ? await this.db.execute(
-            sql`update invoice_groups set name=${name.trim()} where id=${id}::uuid and owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid returning id,name`,
-          )
-        : await this.db.execute(
-            sql`insert into invoice_groups(workspace_id,owner_id,name) values(${user.workspaceId}::uuid,${user.sub}::uuid,${name.trim()}) returning id,name`,
-          );
-      return { ...result.rows[0], count: 0 };
+      if (!id) {
+        const [group] = await this.db
+          .insert(invoiceGroups)
+          .values({
+            workspaceId: user.workspaceId,
+            ownerId: user.sub,
+            name: name.trim(),
+          })
+          .returning(selection);
+        return { ...group, count: 0 };
+      }
+      return await this.db.transaction(async (tx) => {
+        const [group] = await tx
+          .update(invoiceGroups)
+          .set({ name: name.trim() })
+          .where(and(this.groupOwner(user), eq(invoiceGroups.id, id)))
+          .returning(selection);
+        if (!group) throw new NotFoundException('Group not found');
+        const [counted] = await this.groupCounts(user, membership, tx, id);
+        return { ...group, count: counted?.count ?? 0 };
+      });
     } catch (error) {
       if (
         (error as { code?: string; cause?: { code?: string } }).code ===
@@ -281,11 +373,13 @@ export class InvoicesService {
     invoiceIds: string[],
     groupId: string | null,
   ) {
-    await this.authorizeGroups(user);
+    const membership = await this.authorizeGroups(user);
     await this.db.transaction(async (tx) => {
       if (groupId) await this.requireGroup(user, groupId, tx);
-      await tx
-        .select({ id: invoices.id })
+      const visible =
+        membership.role === 'pm' ? this.visibleProject(user, tx) : sql`true`;
+      const rows = await tx
+        .select({ id: invoices.id, visible: sql<boolean>`${visible}` })
         .from(invoices)
         .where(
           and(
@@ -295,15 +389,28 @@ export class InvoicesService {
         )
         .orderBy(invoices.id)
         .for('update');
-      for (const id of invoiceIds) await this.getInvoice(user, id);
-      for (const id of invoiceIds) {
-        await tx.execute(
-          sql`delete from invoice_group_memberships where invoice_id=${id}::uuid and owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid`,
+      if (rows.length !== invoiceIds.length)
+        throw new NotFoundException('Invoice not found');
+      if (rows.some((row) => !row.visible))
+        throw new ForbiddenException('Forbidden');
+      await tx
+        .delete(invoiceGroupMemberships)
+        .where(
+          and(
+            eq(invoiceGroupMemberships.ownerId, user.sub),
+            eq(invoiceGroupMemberships.workspaceId, user.workspaceId),
+            inArray(invoiceGroupMemberships.invoiceId, invoiceIds),
+          ),
         );
-        if (groupId)
-          await tx.execute(
-            sql`insert into invoice_group_memberships(workspace_id,owner_id,invoice_id,group_id) values(${user.workspaceId}::uuid,${user.sub}::uuid,${id}::uuid,${groupId}::uuid)`,
-          );
+      if (groupId) {
+        await tx.insert(invoiceGroupMemberships).values(
+          invoiceIds.map((invoiceId) => ({
+            workspaceId: user.workspaceId,
+            ownerId: user.sub,
+            invoiceId,
+            groupId,
+          })),
+        );
       }
     });
   }
@@ -403,7 +510,13 @@ export class InvoicesService {
 
     let listQuery = this.db
       .select({
-        ...invoiceDetailSelection,
+        ...invoiceSummarySelection,
+        snapshotEntryCount: sql<
+          number | null
+        >`jsonb_array_length(${invoices.document}->'timeEntries')`,
+        recipient: sql<
+          InvoiceListItem['recipient']
+        >`${invoices.document}->'recipient'`,
         personalGroupId: sql<string | null>`(
           select m.group_id from invoice_group_memberships m
           where m.invoice_id = ${invoices.id}
@@ -446,7 +559,9 @@ export class InvoicesService {
       .offset(offset);
 
     // Fetch time-entry counts per invoice in one query.
-    const invoiceIds = rows.map((r) => r.id);
+    const invoiceIds = rows
+      .filter((r) => r.snapshotEntryCount == null)
+      .map((r) => r.id);
     const countRows = invoiceIds.length
       ? await this.db
           .select({
@@ -464,7 +579,10 @@ export class InvoicesService {
     }
 
     const items = rows.map((row) => ({
-      ...this.toInvoiceListItem(row, countByInvoice.get(row.id) ?? 0),
+      ...this.toInvoiceListItem(
+        row,
+        row.snapshotEntryCount ?? countByInvoice.get(row.id) ?? 0,
+      ),
       groupId: row.personalGroupId ?? null,
     }));
 
@@ -654,6 +772,44 @@ export class InvoicesService {
 
   // ── Preview eligible entries ────────────────────────────────────────
 
+  private async retainedLinesInScope(
+    db: DrizzleDB | DbTransaction,
+    saved: Pick<InvoiceResponse, 'projectId' | 'dateFrom' | 'dateTo'>,
+    lines: InvoiceTimeEntrySummary[],
+    scope: Pick<InvoiceResponse, 'projectId' | 'dateFrom' | 'dateTo'>,
+    timeZone: string,
+    step: number,
+  ) {
+    const { projectId, dateFrom, dateTo } = scope;
+    if (dateFrom !== saved.dateFrom || dateTo !== saved.dateTo) {
+      const format = new Intl.DateTimeFormat('sv-SE', { timeZone });
+      lines = lines.filter((line) => {
+        const day = format.format(new Date(line.startedAt));
+        return day >= dateFrom && day <= dateTo;
+      });
+    }
+    if (lines.length && projectId && projectId !== saved.projectId) {
+      const rows = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.projectId, projectId),
+            inArray(tasks.id, [...new Set(lines.map((line) => line.taskId))]),
+          ),
+        );
+      const taskIds = new Set(rows.map((row) => row.id));
+      lines = lines.filter((line) => taskIds.has(line.taskId));
+    }
+    return lines.map((line) => ({
+      ...line,
+      roundedDurationSeconds: InvoicesService.roundEntrySeconds(
+        line.durationSeconds,
+        step,
+      ),
+    }));
+  }
+
   /**
    * Returns the time entries that would be billed if an invoice is created
    * with the given project scope and date range. Mirrors the eligibility
@@ -711,18 +867,29 @@ export class InvoicesService {
     const effectiveRoundingStepMinutes =
       query.roundingStepMinutes ?? defaultRoundingStepMinutes;
 
-    if (query.invoiceId) await this.getInvoice(user, query.invoiceId);
+    const currentInvoice = query.invoiceId
+      ? await this.getInvoice(user, query.invoiceId)
+      : null;
+    const retained = currentInvoice
+      ? await this.retainedLinesInScope(
+          this.db,
+          currentInvoice,
+          currentInvoice.timeEntries,
+          {
+            projectId: query.projectId ?? null,
+            dateFrom: query.dateFrom,
+            dateTo: query.dateTo,
+          },
+          timeZone,
+          effectiveRoundingStepMinutes,
+        )
+      : [];
     const conditions = [
       eq(timeEntries.workspaceId, user.workspaceId),
       isNotNull(timeEntries.endedAt),
       isNotNull(timeEntries.durationSeconds),
       eq(timeEntries.isBillable, true),
-      query.invoiceId
-        ? or(
-            isNull(timeEntries.invoiceId),
-            eq(timeEntries.invoiceId, query.invoiceId),
-          )!
-        : isNull(timeEntries.invoiceId),
+      isNull(timeEntries.invoiceId),
       gte(
         timeEntries.startedAt,
         sql`${query.dateFrom}::date::timestamp AT TIME ZONE ${timeZone}`,
@@ -759,16 +926,6 @@ export class InvoicesService {
       .where(and(...conditions))
       .orderBy(timeEntries.startedAt);
 
-    const totalSeconds = rows.reduce(
-      (sum, e) =>
-        sum +
-        InvoicesService.roundEntrySeconds(
-          e.durationSeconds ?? 0,
-          effectiveRoundingStepMinutes,
-        ),
-      0,
-    );
-    const totalHours = InvoicesService.secondsToCentihours(totalSeconds) / 100;
     const entries: InvoiceTimeEntrySummary[] = rows.map((e) => ({
       id: e.id,
       taskId: e.taskId,
@@ -785,9 +942,16 @@ export class InvoicesService {
       isBillable: e.isBillable,
       description: e.description,
     }));
+    entries.push(...retained);
+    entries.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+    const seconds = entries.reduce(
+      (sum, line) => sum + line.roundedDurationSeconds,
+      0,
+    );
+    const totalHours = InvoicesService.secondsToCentihours(seconds) / 100;
 
     return {
-      count: rows.length,
+      count: entries.length,
       totalHours,
       entries,
       defaultHourlyRate: settings?.defaultHourlyRate ?? null,
@@ -844,6 +1008,9 @@ export class InvoicesService {
       .where(eq(workspaceSettings.workspaceId, user.workspaceId))
       .limit(1);
 
+    await prepareInvoiceLogo(
+      input.logo === undefined ? settings?.billingProfile?.logo : input.logo,
+    );
     const hourlyRate = input.hourlyRate ?? settings?.defaultHourlyRate ?? null;
     if (hourlyRate === null) {
       throw new DomainError(
@@ -1026,15 +1193,10 @@ export class InvoicesService {
       const document = {
         sender: saved.sender,
         recipient: saved.recipient,
-        payment: saved.payment
-          ? {
-              ...saved.payment,
-              instructions: saved.payment.instructions?.replaceAll(
-                '{{invoiceReference}}',
-                saved.reference ?? saved.id,
-              ),
-            }
-          : saved.payment,
+        payment: this.resolvePayment(
+          saved.payment,
+          saved.reference ?? saved.id,
+        ),
         services: saved.services,
         logo: saved.logo,
         timeEntries: saved.timeEntries,
@@ -1118,6 +1280,7 @@ export class InvoicesService {
           user.sub,
           user.workspaceId,
           invoice.projectId,
+          tx,
         );
       }
       if (
@@ -1137,7 +1300,17 @@ export class InvoicesService {
         input.status === invoice.status
       )
         return this.readInvoiceDetail(tx, id, user.workspaceId);
-      const billingChanged = [
+      await prepareInvoiceLogo(input.logo);
+      const snapshot = invoice.document?.timeEntries as
+        | InvoiceTimeEntrySummary[]
+        | undefined;
+      const retained = new Map(snapshot?.map((line) => [line.id, line]));
+      const selectionChanged =
+        input.timeEntryIds !== undefined &&
+        (!snapshot ||
+          input.timeEntryIds.length !== retained.size ||
+          input.timeEntryIds.some((id) => !retained.has(id)));
+      const billingFields = [
         'projectId',
         'dateFrom',
         'dateTo',
@@ -1145,8 +1318,13 @@ export class InvoicesService {
         'currency',
         'discountPercent',
         'roundingStepMinutes',
-        'timeEntryIds',
-      ].some((k) => k in input);
+      ] as const;
+      const billingChanged =
+        selectionChanged ||
+        billingFields.some(
+          (field) =>
+            input[field] !== undefined && input[field] !== invoice[field],
+        );
       const updates: Partial<typeof invoices.$inferInsert> = {};
       for (const key of [
         'title',
@@ -1164,23 +1342,30 @@ export class InvoicesService {
           Object.assign(updates, { [key]: input[key] });
       }
       const document = { ...invoice.document };
-      for (const key of [
-        'sender',
-        'recipient',
-        'payment',
-        'services',
-        'logo',
-      ] as const) {
+      for (const key of ['sender', 'recipient', 'services', 'logo'] as const) {
         if (input[key] !== undefined) document[key] = input[key];
       }
+      if (input.payment !== undefined)
+        document.payment = this.resolvePayment(
+          input.payment,
+          invoice.reference,
+        );
       updates.document = document;
-      if (billingChanged) delete document.timeEntries;
+      let selectedSnapshots: InvoiceTimeEntrySummary[] = [];
       if (billingChanged) {
-        const linked = await tx
-          .select({ id: timeEntries.id })
-          .from(timeEntries)
-          .where(eq(timeEntries.invoiceId, id));
-        const ids = input.timeEntryIds ?? linked.map((e) => e.id);
+        delete document.timeEntries;
+        const linked =
+          !snapshot && !input.timeEntryIds
+            ? await tx
+                .select({ id: timeEntries.id })
+                .from(timeEntries)
+                .where(eq(timeEntries.invoiceId, id))
+            : [];
+        const ids =
+          input.timeEntryIds ??
+          (snapshot ? [...retained.keys()] : linked.map((e) => e.id));
+        const newIds = ids.filter((entryId) => !retained.has(entryId));
+        const selectedIds = new Set(ids);
         const dateFrom = input.dateFrom ?? invoice.dateFrom;
         const dateTo = input.dateTo ?? invoice.dateTo;
         if (dateTo < dateFrom)
@@ -1194,9 +1379,18 @@ export class InvoicesService {
           .from(workspaceSettings)
           .where(eq(workspaceSettings.workspaceId, user.workspaceId));
         const zone = settings?.timeZone ?? 'UTC';
+        const step = input.roundingStepMinutes ?? invoice.roundingStepMinutes;
+        selectedSnapshots = await this.retainedLinesInScope(
+          tx,
+          invoice,
+          (snapshot ?? []).filter((line) => selectedIds.has(line.id)),
+          { projectId, dateFrom, dateTo },
+          zone,
+          step,
+        );
         const conditions = [
           eq(timeEntries.workspaceId, user.workspaceId),
-          ids.length ? inArray(timeEntries.id, ids) : sql`false`,
+          inArray(timeEntries.id, newIds),
           or(isNull(timeEntries.invoiceId), eq(timeEntries.invoiceId, id)),
           eq(timeEntries.isBillable, true),
           isNotNull(timeEntries.endedAt),
@@ -1219,13 +1413,15 @@ export class InvoicesService {
                 .where(eq(tasks.projectId, projectId)),
             ),
           );
-        const selected = await tx
-          .select(eligibleEntrySelection)
-          .from(timeEntries)
-          .where(and(...conditions))
-          .orderBy(timeEntries.id)
-          .for('update');
-        if (selected.length !== ids.length)
+        const selected = newIds.length
+          ? await tx
+              .select(eligibleEntrySelection)
+              .from(timeEntries)
+              .where(and(...conditions))
+              .orderBy(timeEntries.id)
+              .for('update')
+          : [];
+        if (selected.length + selectedSnapshots.length !== ids.length)
           throw new DomainError(
             'invoice_entry_conflict',
             'Review unavailable entries',
@@ -1234,11 +1430,11 @@ export class InvoicesService {
         const seconds = selected.reduce(
           (sum, e) =>
             sum +
-            InvoicesService.roundEntrySeconds(
-              e.durationSeconds ?? 0,
-              input.roundingStepMinutes ?? invoice.roundingStepMinutes,
-            ),
-          0,
+            InvoicesService.roundEntrySeconds(e.durationSeconds ?? 0, step),
+          selectedSnapshots.reduce(
+            (total, line) => total + line.roundedDurationSeconds,
+            0,
+          ),
         );
         Object.assign(
           updates,
@@ -1257,12 +1453,17 @@ export class InvoicesService {
         await tx
           .update(timeEntries)
           .set({ invoiceId: null })
-          .where(eq(timeEntries.invoiceId, id));
-        if (ids.length)
+          .where(
+            and(
+              eq(timeEntries.invoiceId, id),
+              ids.length ? notInArray(timeEntries.id, ids) : undefined,
+            ),
+          );
+        if (newIds.length)
           await tx
             .update(timeEntries)
             .set({ invoiceId: id })
-            .where(inArray(timeEntries.id, ids));
+            .where(inArray(timeEntries.id, newIds));
       }
       if (input.groupId !== undefined) {
         if (input.groupId) await this.requireGroup(user, input.groupId, tx);
@@ -1278,11 +1479,17 @@ export class InvoicesService {
       updates.updatedAt = new Date();
       await tx.update(invoices).set(updates).where(eq(invoices.id, id));
       const saved = await this.readInvoiceDetail(tx, id, user.workspaceId);
-      if (billingChanged)
+      if (billingChanged) {
+        saved.timeEntries = [
+          ...selectedSnapshots,
+          ...saved.timeEntries.filter((line) => !retained.has(line.id)),
+        ].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+        saved.timeEntryCount = saved.timeEntries.length;
         await tx
           .update(invoices)
           .set({ document: { ...document, timeEntries: saved.timeEntries } })
           .where(eq(invoices.id, id));
+      }
       return saved;
     });
   }
@@ -1446,8 +1653,9 @@ export class InvoicesService {
     userId: string,
     workspaceId: string,
     projectId: string,
+    cx: DrizzleDB | DbTransaction = this.db,
   ): Promise<number | null> {
-    const [row] = await this.db
+    const [row] = await cx
       .select({ timeRoundingStepMinutes: projects.timeRoundingStepMinutes })
       .from(projects)
       .leftJoin(
@@ -1563,11 +1771,12 @@ export class InvoicesService {
   }
 
   private toInvoiceListItem(
-    row: InvoiceDetailRow,
+    row: Omit<InvoiceDetailRow, 'document'> &
+      Pick<InvoiceListItem, 'recipient'>,
     entryCount: number,
   ): InvoiceListItem {
     return {
-      ...(row.document ?? {}),
+      recipient: row.recipient,
       reference: row.reference,
       revision: row.revision,
       id: row.id,

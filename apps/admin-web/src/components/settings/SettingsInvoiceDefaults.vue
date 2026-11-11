@@ -3,7 +3,7 @@ import { useIsMobileViewport } from '@gitiempo/web-shared';
 import { computed, ref, toRaw, watch } from 'vue';
 import { useUpdateWorkspaceSettingsMutation } from '@/composables/query';
 import type { AdminServerStateScope } from '@/lib/query-keys';
-import { invoiceBillingProfileSchema, type InvoiceBillingProfile } from '@gitiempo/shared';
+import { invoiceBillingProfileSchema, invoiceLogoSchema, type InvoiceBillingProfile } from '@gitiempo/shared';
 import Button from 'primevue/button';
 import FileUpload, { type FileUploadUploaderEvent } from 'primevue/fileupload';
 import InputText from 'primevue/inputtext';
@@ -78,12 +78,12 @@ async function readLogo(event: FileUploadUploaderEvent): Promise<void> {
       reader.readAsDataURL(file);
     });
     if (read !== logoRead) return;
-    const result = invoiceBillingProfileSchema.safeParse({ ...draft.value, logo: data });
+    const result = invoiceLogoSchema.safeParse(data);
     if (!result.success) {
       error.value = result.error.issues.map((issue) => issue.message).join(' ');
       return;
     }
-    draft.value.logo = data;
+    draft.value.logo = result.data;
   } catch (cause) {
     if (read === logoRead) error.value = cause instanceof Error ? cause.message : 'Could not read the logo.';
   }
