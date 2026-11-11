@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import type * as VueRouter from 'vue-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   CreateInvoiceInput,
   InvoiceDefaultsResponse,
@@ -34,6 +34,8 @@ const testMocks = vi.hoisted(() => ({
   createInvoice: vi.fn(),
   errorToast: vi.fn(),
   getInvoiceDefaults: vi.fn(),
+  listGroups: vi.fn(),
+  moveInvoices: vi.fn(),
   refetch: vi.fn(),
   routerPush: vi.fn(),
   successToast: vi.fn(),
@@ -44,6 +46,8 @@ const testMocks = vi.hoisted(() => ({
 vi.mock('@/services/admin-invoices-client', () => ({
   adminInvoicesClient: {
     getInvoiceDefaults: testMocks.getInvoiceDefaults,
+    listGroups: testMocks.listGroups,
+    moveInvoices: testMocks.moveInvoices,
   },
 }));
 
@@ -447,7 +451,11 @@ function mountInvoicesView(
 }
 
 describe('InvoicesView', () => {
+  afterEach(() => vi.unstubAllGlobals());
   beforeEach(() => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn(), addListener: vi.fn(), removeListener: vi.fn() })));
+    testMocks.listGroups.mockResolvedValue({ groups: [], allCount: 0, ungroupedCount: 0 });
+    testMocks.moveInvoices.mockResolvedValue(undefined);
     testMocks.createInvoice.mockReset();
     testMocks.errorToast.mockReset();
     testMocks.getInvoiceDefaults.mockReset();

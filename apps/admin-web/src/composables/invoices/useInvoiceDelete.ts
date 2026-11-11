@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
-import { computed, toValue, type MaybeRefOrGetter } from 'vue';
+import { computed, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue';
 
 import { getErrorMessage } from '@gitiempo/web-shared';
 
@@ -30,12 +30,15 @@ export function useInvoiceDelete({
 }: UseInvoiceDeleteOptions) {
   const queryClient = useQueryClient();
 
+  const generation = shallowRef(0);
+  watch(() => JSON.stringify(toValue(scope)), () => { generation.value++; }, { flush: 'sync' });
+
   const mutation = useMutation({
-    mutationFn: (invoiceId: string) => client.deleteInvoice(invoiceId),
-    onSuccess: async () => {
+    mutationFn: ({ invoiceId }: { invoiceId: string; requestScope: AdminServerStateScope; generation: number }) => client.deleteInvoice(invoiceId),
+    onSuccess: async (_result, variables) => {
       await invalidateQueryKeys(
         queryClient,
-        adminMutationInvalidationKeys.afterInvoiceMutation(toValue(scope)),
+        adminMutationInvalidationKeys.afterInvoiceMutation(variables.requestScope),
       );
     },
   });
@@ -43,17 +46,19 @@ export function useInvoiceDelete({
   // Conflicts are rethrown so the caller can swallow the already-reported error;
   // conflict reload happens in onError, confirmation stays with the view.
   async function deleteInvoice(invoiceId: string): Promise<void> {
+    const requestGeneration = generation.value;
+    const requestScope = { ...toValue(scope) };
     try {
-      await mutation.mutateAsync(invoiceId);
-      onSuccess?.();
+      await mutation.mutateAsync({ invoiceId, requestScope, generation: requestGeneration });
+      if (requestGeneration === generation.value) onSuccess?.();
     } catch (error) {
-      onError?.(getErrorMessage(error), error, DELETE_ACTION);
+      if (requestGeneration === generation.value) onError?.(getErrorMessage(error), error, DELETE_ACTION);
       throw error;
     }
   }
 
   return {
     deleteInvoice,
-    isDeleting: computed(() => mutation.isPending.value),
+    isDeleting: computed(() => mutation.isPending.value && mutation.variables.value?.generation === generation.value),
   };
 }

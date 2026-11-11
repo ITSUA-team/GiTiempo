@@ -52,7 +52,7 @@ Scope cached groups, counts and list queries to the signed-in user, active works
 
 - A concurrent editor or another invoice can claim a selected entry between preview and save. Return a conflict without partial writes and refresh eligibility while preserving draft values.
 - Migrating historical lines can only capture descriptions still available. Preserve original financial totals and existing links, record unknown historical fields as missing, and require explicit review before changing them.
-- The active change `reduce-redundant-spa-notifications` replaces several of the same Admin UI requirements. Reconcile their full text at sync/archive time and retain quiet successes, actionable failures and the #527 editor whichever change lands first.
+- The active change `reduce-redundant-spa-notifications` replaces several of the same Admin UI requirements. The overlapping create/detail requirements have been reconciled to the #527 editor and reversible statuses in both deltas. Both retain quiet successes and actionable failures. Recheck these identical replacements at sync/archive time whichever change lands first.
 
 ## Migration Plan
 

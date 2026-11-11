@@ -12,11 +12,16 @@ declare module 'pdfmake' {
   }
 
   class PdfPrinter {
-    constructor(fonts: Record<string, Record<string, string>>);
+    constructor(fonts: Record<string, Record<string, string | Buffer>>);
     createPdfKitDocument(
       documentDefinition: Record<string, unknown>,
     ): PdfKitDocumentLike;
   }
 
   export = PdfPrinter;
+}
+
+declare module 'pdfmake/build/vfs_fonts' {
+  const fonts: Record<string, string>;
+  export default fonts;
 }

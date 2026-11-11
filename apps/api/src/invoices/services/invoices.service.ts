@@ -1,3 +1,4 @@
+import { renderInvoicePdf } from './invoice-pdf';
 import {
   ForbiddenException,
   Inject,
@@ -48,9 +49,12 @@ import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
 import { workspaceSettings } from '../../workspaces/schemas/workspace-settings.schema';
-import { invoices } from '../schemas/invoices.schema';
+import { invoiceRowSelection, invoices } from '../schemas/invoices.schema';
 
 interface InvoiceDetailRow {
+  reference: string;
+  revision: number;
+  document: Record<string, unknown> | null;
   id: string;
   workspaceId: string;
   projectId: string | null;
@@ -88,6 +92,9 @@ interface LinkedTimeEntryRow {
 // Shared column selections so list, detail, and transaction reads stay in
 // sync with the response mapping in one place.
 const invoiceDetailSelection = {
+  reference: invoices.reference,
+  revision: invoices.revision,
+  document: invoices.document,
   id: invoices.id,
   workspaceId: invoices.workspaceId,
   projectId: invoices.projectId,
@@ -163,6 +170,7 @@ export class InvoicesService {
     const [settings] = await this.db
       .select({
         currency: workspaceSettings.currency,
+        billingProfile: workspaceSettings.billingProfile,
         defaultHourlyRate: workspaceSettings.defaultHourlyRate,
         timeRoundingStepMinutes: workspaceSettings.timeRoundingStepMinutes,
       })
@@ -171,9 +179,183 @@ export class InvoicesService {
       .limit(1);
 
     return {
+      billingProfile: settings?.billingProfile ?? null,
       currency: settings?.currency ?? null,
       defaultHourlyRate: settings?.defaultHourlyRate ?? null,
       timeRoundingStepMinutes: settings?.timeRoundingStepMinutes ?? 1,
+    };
+  }
+
+  async downloadPdf(user: AuthUser, id: string) {
+    const invoice = await this.getInvoice(user, id);
+    return {
+      reference: invoice.reference ?? invoice.id,
+      bytes: await renderInvoicePdf(invoice),
+    };
+  }
+
+  private async authorizeGroups(user: AuthUser) {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+    this.assertInvoiceViewAccess(membership);
+  }
+
+  private async requireGroup(
+    user: AuthUser,
+    groupId: string,
+    db: DrizzleDB | DbTransaction = this.db,
+  ) {
+    const result = await db.execute(
+      sql`select id from invoice_groups where id=${groupId}::uuid and owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid`,
+    );
+    if (!result.rows.length) throw new NotFoundException('Group not found');
+  }
+
+  async listGroups(user: AuthUser) {
+    await this.authorizeGroups(user);
+    const result = await this.db.execute(
+      sql`select id,name from invoice_groups where owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid order by name`,
+    );
+    const allCount = (await this.listInvoices(user, { page: 1, limit: 1 })).meta
+      .total;
+    const ungroupedCount = (
+      await this.listInvoices(user, { page: 1, limit: 1, groupId: 'ungrouped' })
+    ).meta.total;
+    const groups = await Promise.all(
+      result.rows.map(async (row) => ({
+        id: String(row.id),
+        name: String(row.name),
+        count: (
+          await this.listInvoices(user, {
+            page: 1,
+            limit: 1,
+            groupId: String(row.id),
+          })
+        ).meta.total,
+      })),
+    );
+    return { groups, allCount, ungroupedCount };
+  }
+
+  async saveGroup(user: AuthUser, name: string, id?: string) {
+    await this.authorizeGroups(user);
+    if (id) await this.requireGroup(user, id);
+    try {
+      const result = id
+        ? await this.db.execute(
+            sql`update invoice_groups set name=${name.trim()} where id=${id}::uuid and owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid returning id,name`,
+          )
+        : await this.db.execute(
+            sql`insert into invoice_groups(workspace_id,owner_id,name) values(${user.workspaceId}::uuid,${user.sub}::uuid,${name.trim()}) returning id,name`,
+          );
+      return { ...result.rows[0], count: 0 };
+    } catch (error) {
+      if (
+        (error as { code?: string; cause?: { code?: string } }).code ===
+          '23505' ||
+        (error as { cause?: { code?: string } }).cause?.code === '23505'
+      )
+        throw new DomainError(
+          'invoice_group_name_exists',
+          'A group with this name already exists',
+          409,
+        );
+      throw error;
+    }
+  }
+
+  async deleteGroup(user: AuthUser, id: string) {
+    await this.authorizeGroups(user);
+    await this.requireGroup(user, id);
+    await this.db.execute(
+      sql`delete from invoice_groups where id=${id}::uuid and owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid`,
+    );
+  }
+
+  async moveInvoices(
+    user: AuthUser,
+    invoiceIds: string[],
+    groupId: string | null,
+  ) {
+    await this.authorizeGroups(user);
+    await this.db.transaction(async (tx) => {
+      if (groupId) await this.requireGroup(user, groupId, tx);
+      await tx
+        .select({ id: invoices.id })
+        .from(invoices)
+        .where(
+          and(
+            inArray(invoices.id, invoiceIds),
+            eq(invoices.workspaceId, user.workspaceId),
+          ),
+        )
+        .orderBy(invoices.id)
+        .for('update');
+      for (const id of invoiceIds) await this.getInvoice(user, id);
+      for (const id of invoiceIds) {
+        await tx.execute(
+          sql`delete from invoice_group_memberships where invoice_id=${id}::uuid and owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid`,
+        );
+        if (groupId)
+          await tx.execute(
+            sql`insert into invoice_group_memberships(workspace_id,owner_id,invoice_id,group_id) values(${user.workspaceId}::uuid,${user.sub}::uuid,${id}::uuid,${groupId}::uuid)`,
+          );
+      }
+    });
+  }
+
+  async previewInvoice(
+    user: AuthUser,
+    input: import('@gitiempo/shared').PreviewInvoiceInput,
+  ) {
+    const preview = await this.previewEligibleEntries(user, input);
+    const entries =
+      input.timeEntryIds === undefined
+        ? preview.entries
+        : preview.entries.filter((e) => input.timeEntryIds!.includes(e.id));
+    if (input.timeEntryIds && entries.length !== input.timeEntryIds.length)
+      throw new DomainError(
+        'invoice_entry_conflict',
+        'Review unavailable entries',
+        409,
+      );
+    const seconds = entries.reduce(
+      (sum, e) => sum + e.roundedDurationSeconds,
+      0,
+    );
+    const rate = input.hourlyRate ?? preview.defaultHourlyRate;
+    if (rate === null)
+      throw new DomainError(
+        'invoice_rate_required',
+        'Hourly rate required',
+        422,
+      );
+    const currency = input.currency ?? preview.defaultCurrency;
+    if (!currency)
+      throw new DomainError(
+        'invoice_currency_required',
+        'Currency required',
+        422,
+      );
+    const discount = input.discountPercent ?? 0;
+    const totals = this.computeInvoiceTotals(seconds, rate, discount);
+    if (totals.totalAmount > MAX_TOTAL_AMOUNT)
+      throw new DomainError(
+        'invoice_total_overflow',
+        'Invoice total overflow',
+        422,
+      );
+    const subtotal = this.computeInvoiceTotals(seconds, rate, 0).totalAmount;
+    return {
+      entries,
+      count: entries.length,
+      ...totals,
+      subtotal,
+      discountAmount: subtotal - totals.totalAmount,
+      currency,
     };
   }
 
@@ -190,9 +372,17 @@ export class InvoicesService {
     );
     this.assertInvoiceViewAccess(membership);
 
+    if (query.groupId && query.groupId !== 'ungrouped')
+      await this.requireGroup(user, query.groupId);
     const isPm = membership.role === 'pm';
     const conditions: SQL[] = [eq(invoices.workspaceId, user.workspaceId)];
 
+    if (query.groupId) {
+      const match = sql`exists(select 1 from invoice_group_memberships m where m.invoice_id=${invoices.id} and m.owner_id=${user.sub}::uuid and m.workspace_id=${user.workspaceId}::uuid ${query.groupId === 'ungrouped' ? sql`` : sql`and m.group_id=${query.groupId}::uuid`})`;
+      conditions.push(
+        query.groupId === 'ungrouped' ? sql`not ${match}` : match,
+      );
+    }
     if (query.projectId !== undefined) {
       conditions.push(eq(invoices.projectId, query.projectId));
     }
@@ -322,6 +512,7 @@ export class InvoicesService {
       ['admin', 'pm'],
     );
     this.assertInvoiceViewAccess(membership);
+
     const isPm = membership.role === 'pm';
 
     // Resolve workspace default currency for display.
@@ -492,6 +683,7 @@ export class InvoicesService {
 
     const [settings] = await this.db
       .select({
+        billingProfile: workspaceSettings.billingProfile,
         defaultHourlyRate: workspaceSettings.defaultHourlyRate,
         currency: workspaceSettings.currency,
         timeZone: workspaceSettings.timeZone,
@@ -509,12 +701,18 @@ export class InvoicesService {
     const effectiveRoundingStepMinutes =
       query.roundingStepMinutes ?? defaultRoundingStepMinutes;
 
+    if (query.invoiceId) await this.getInvoice(user, query.invoiceId);
     const conditions = [
       eq(timeEntries.workspaceId, user.workspaceId),
       isNotNull(timeEntries.endedAt),
       isNotNull(timeEntries.durationSeconds),
       eq(timeEntries.isBillable, true),
-      isNull(timeEntries.invoiceId),
+      query.invoiceId
+        ? or(
+            isNull(timeEntries.invoiceId),
+            eq(timeEntries.invoiceId, query.invoiceId),
+          )!
+        : isNull(timeEntries.invoiceId),
       gte(
         timeEntries.startedAt,
         sql`${query.dateFrom}::date::timestamp AT TIME ZONE ${timeZone}`,
@@ -626,6 +824,7 @@ export class InvoicesService {
     // Resolve snapshot rate and currency from workspace settings when omitted.
     const [settings] = await this.db
       .select({
+        billingProfile: workspaceSettings.billingProfile,
         defaultHourlyRate: workspaceSettings.defaultHourlyRate,
         currency: workspaceSettings.currency,
         timeZone: workspaceSettings.timeZone,
@@ -699,12 +898,30 @@ export class InvoicesService {
         );
       }
 
+      if (input.timeEntryIds !== undefined) {
+        eligibilityConditions.push(
+          input.timeEntryIds.length
+            ? inArray(timeEntries.id, input.timeEntryIds)
+            : sql`false`,
+        );
+      }
       const eligibleEntries = await tx
         .select(eligibleEntrySelection)
         .from(timeEntries)
         .where(and(...eligibilityConditions))
+        .orderBy(timeEntries.id)
         .for('update');
 
+      if (
+        input.timeEntryIds &&
+        eligibleEntries.length !== input.timeEntryIds.length
+      ) {
+        throw new DomainError(
+          'invoice_entry_conflict',
+          'Review unavailable entries',
+          409,
+        );
+      }
       // Compute snapshot totals with per-entry rounding.
       const totalSeconds = eligibleEntries.reduce(
         (sum, e) =>
@@ -737,7 +954,18 @@ export class InvoicesService {
           workspaceId: user.workspaceId,
           projectId: input.projectId ?? null,
           title: input.title,
+          reference: sql`${settings?.billingProfile?.invoicePrefix ?? 'INV'} || '-' || nextval('invoice_reference_sequence')::text`,
           status: 'draft',
+          document: {
+            sender: input.sender ?? settings?.billingProfile?.sender,
+            recipient: input.recipient,
+            payment: input.payment ?? settings?.billingProfile?.payment,
+            services: input.services,
+            logo:
+              input.logo === undefined
+                ? settings?.billingProfile?.logo
+                : input.logo,
+          },
           dateFrom: input.dateFrom,
           dateTo: input.dateTo,
           hourlyRate,
@@ -774,8 +1002,38 @@ export class InvoicesService {
           );
       }
 
-      // Re-read the full invoice detail with linked entries.
-      return this.readInvoiceDetail(tx, invoice.id, user.workspaceId);
+      if (input.groupId) {
+        await this.requireGroup(user, input.groupId, tx);
+        await tx.execute(
+          sql`insert into invoice_group_memberships(workspace_id,owner_id,invoice_id,group_id) values(${user.workspaceId}::uuid,${user.sub}::uuid,${invoice.id}::uuid,${input.groupId}::uuid)`,
+        );
+      }
+      const saved = await this.readInvoiceDetail(
+        tx,
+        invoice.id,
+        user.workspaceId,
+      );
+      const document = {
+        sender: saved.sender,
+        recipient: saved.recipient,
+        payment: saved.payment
+          ? {
+              ...saved.payment,
+              instructions: saved.payment.instructions?.replaceAll(
+                '{{invoiceReference}}',
+                saved.reference ?? saved.id,
+              ),
+            }
+          : saved.payment,
+        services: saved.services,
+        logo: saved.logo,
+        timeEntries: saved.timeEntries,
+      };
+      await tx
+        .update(invoices)
+        .set({ document })
+        .where(eq(invoices.id, invoice.id));
+      return { ...saved, payment: document.payment };
     });
   }
 
@@ -797,7 +1055,13 @@ export class InvoicesService {
 
     const entryRows = await this.loadLinkedEntries(this.db, id);
 
-    return this.toInvoiceResponse(invoice, entryRows);
+    const group = await this.db.execute(
+      sql`select group_id from invoice_group_memberships where invoice_id=${id}::uuid and owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid`,
+    );
+    return {
+      ...this.toInvoiceResponse(invoice, entryRows),
+      groupId: group.rows[0]?.group_id ? String(group.rows[0].group_id) : null,
+    };
   }
 
   // ── Update ────────────────────────────────────────────────────────────
@@ -814,50 +1078,202 @@ export class InvoicesService {
     );
     this.assertInvoiceViewAccess(membership);
 
+    const existing = await this.getInvoice(user, id);
+    const projectId =
+      input.projectId === undefined ? existing.projectId : input.projectId;
+    if (projectId) {
+      if (membership.role === 'pm')
+        await this.requirePmProjectAccess(
+          user.sub,
+          user.workspaceId,
+          projectId,
+        );
+      else await this.requireWorkspaceProject(user.workspaceId, projectId);
+    } else if (membership.role === 'pm')
+      throw new ForbiddenException('Project required');
     return this.db.transaction(async (tx) => {
-      const invoice = await this.loadInvoiceDetail(tx, user.workspaceId, id);
+      const [invoice] = await tx
+        .select(invoiceRowSelection)
+        .from(invoices)
+        .where(
+          and(eq(invoices.id, id), eq(invoices.workspaceId, user.workspaceId)),
+        )
+        .for('update');
       if (!invoice) throw new NotFoundException('Invoice not found');
-
+      const projectId =
+        input.projectId === undefined ? invoice.projectId : input.projectId;
       if (membership.role === 'pm') {
-        await this.requirePmInvoiceAccess(user.sub, invoice);
+        if (!invoice.projectId) throw new ForbiddenException('Forbidden');
+        await this.requirePmProjectAccess(
+          user.sub,
+          user.workspaceId,
+          invoice.projectId,
+        );
       }
-
+      if (
+        input.expectedRevision !== undefined &&
+        input.expectedRevision !== invoice.revision
+      ) {
+        throw new DomainError(
+          'invoice_update_conflict',
+          'Invoice changed; review and retry',
+          409,
+        );
+      }
+      if (
+        Object.keys(input).every((key) =>
+          ['status', 'expectedRevision'].includes(key),
+        ) &&
+        input.status === invoice.status
+      )
+        return this.readInvoiceDetail(tx, id, user.workspaceId);
+      const billingChanged = [
+        'projectId',
+        'dateFrom',
+        'dateTo',
+        'hourlyRate',
+        'currency',
+        'discountPercent',
+        'roundingStepMinutes',
+        'timeEntryIds',
+      ].some((k) => k in input);
       const updates: Partial<typeof invoices.$inferInsert> = {};
-      if (input.title !== undefined) updates.title = input.title;
-      if (input.status !== undefined) {
-        this.assertValidStatusTransition(invoice.status, input.status);
-        updates.status = input.status;
+      for (const key of [
+        'title',
+        'status',
+        'notes',
+        'dateFrom',
+        'dateTo',
+        'hourlyRate',
+        'currency',
+        'discountPercent',
+        'roundingStepMinutes',
+        'projectId',
+      ] as const) {
+        if (input[key] !== undefined)
+          Object.assign(updates, { [key]: input[key] });
       }
-      if (input.notes !== undefined) updates.notes = input.notes;
-
-      if (Object.keys(updates).length > 0) {
-        updates.updatedAt = new Date();
-        const updated = await tx
-          .update(invoices)
-          .set(updates)
-          .where(
-            and(
-              eq(invoices.id, id),
-              eq(invoices.workspaceId, user.workspaceId),
-              eq(invoices.status, invoice.status),
-            ),
-          )
-          .returning({ id: invoices.id });
-
-        if (updated.length === 0) {
+      const document = { ...invoice.document };
+      for (const key of [
+        'sender',
+        'recipient',
+        'payment',
+        'services',
+        'logo',
+      ] as const) {
+        if (input[key] !== undefined) document[key] = input[key];
+      }
+      updates.document = document;
+      if (billingChanged) delete document.timeEntries;
+      if (billingChanged) {
+        const linked = await tx
+          .select({ id: timeEntries.id })
+          .from(timeEntries)
+          .where(eq(timeEntries.invoiceId, id));
+        const ids = input.timeEntryIds ?? linked.map((e) => e.id);
+        const dateFrom = input.dateFrom ?? invoice.dateFrom;
+        const dateTo = input.dateTo ?? invoice.dateTo;
+        if (dateTo < dateFrom)
           throw new DomainError(
-            'invoice_update_conflict',
-            'Invoice changed concurrently; retry the update',
+            'invoice_invalid_period',
+            'Invalid billing period',
+            400,
+          );
+        const [settings] = await tx
+          .select({ timeZone: workspaceSettings.timeZone })
+          .from(workspaceSettings)
+          .where(eq(workspaceSettings.workspaceId, user.workspaceId));
+        const zone = settings?.timeZone ?? 'UTC';
+        const conditions = [
+          eq(timeEntries.workspaceId, user.workspaceId),
+          ids.length ? inArray(timeEntries.id, ids) : sql`false`,
+          or(isNull(timeEntries.invoiceId), eq(timeEntries.invoiceId, id)),
+          eq(timeEntries.isBillable, true),
+          isNotNull(timeEntries.endedAt),
+          gte(
+            timeEntries.startedAt,
+            sql`${dateFrom}::date::timestamp AT TIME ZONE ${zone}`,
+          ),
+          lt(
+            timeEntries.startedAt,
+            sql`(${dateTo}::date + 1)::timestamp AT TIME ZONE ${zone}`,
+          ),
+        ];
+        if (projectId)
+          conditions.push(
+            inArray(
+              timeEntries.taskId,
+              tx
+                .select({ id: tasks.id })
+                .from(tasks)
+                .where(eq(tasks.projectId, projectId)),
+            ),
+          );
+        const selected = await tx
+          .select(eligibleEntrySelection)
+          .from(timeEntries)
+          .where(and(...conditions))
+          .orderBy(timeEntries.id)
+          .for('update');
+        if (selected.length !== ids.length)
+          throw new DomainError(
+            'invoice_entry_conflict',
+            'Review unavailable entries',
             409,
           );
-        }
+        const seconds = selected.reduce(
+          (sum, e) =>
+            sum +
+            InvoicesService.roundEntrySeconds(
+              e.durationSeconds ?? 0,
+              input.roundingStepMinutes ?? invoice.roundingStepMinutes,
+            ),
+          0,
+        );
+        Object.assign(
+          updates,
+          this.computeInvoiceTotals(
+            seconds,
+            input.hourlyRate ?? invoice.hourlyRate,
+            input.discountPercent ?? invoice.discountPercent,
+          ),
+        );
+        if (updates.totalAmount! > MAX_TOTAL_AMOUNT)
+          throw new DomainError(
+            'invoice_total_overflow',
+            'Invoice total overflow',
+            422,
+          );
+        await tx
+          .update(timeEntries)
+          .set({ invoiceId: null })
+          .where(eq(timeEntries.invoiceId, id));
+        if (ids.length)
+          await tx
+            .update(timeEntries)
+            .set({ invoiceId: id })
+            .where(inArray(timeEntries.id, ids));
       }
-
-      const refreshed = await this.loadInvoiceDetail(tx, user.workspaceId, id);
-      if (!refreshed) throw new NotFoundException('Invoice not found');
-
-      const entryRows = await this.loadLinkedEntries(tx, id);
-      return this.toInvoiceResponse(refreshed, entryRows);
+      if (input.groupId !== undefined) {
+        if (input.groupId) await this.requireGroup(user, input.groupId, tx);
+        await tx.execute(
+          sql`delete from invoice_group_memberships where invoice_id=${id}::uuid and owner_id=${user.sub}::uuid and workspace_id=${user.workspaceId}::uuid`,
+        );
+        if (input.groupId)
+          await tx.execute(
+            sql`insert into invoice_group_memberships(workspace_id,owner_id,invoice_id,group_id) values(${user.workspaceId}::uuid,${user.sub}::uuid,${id}::uuid,${input.groupId}::uuid)`,
+          );
+      }
+      updates.revision = invoice.revision + 1;
+      updates.updatedAt = new Date();
+      await tx.update(invoices).set(updates).where(eq(invoices.id, id));
+      const saved = await this.readInvoiceDetail(tx, id, user.workspaceId);
+      if (billingChanged)
+        await tx
+          .update(invoices)
+          .set({ document: { ...document, timeEntries: saved.timeEntries } })
+          .where(eq(invoices.id, id));
+      return saved;
     });
   }
 
@@ -892,25 +1308,6 @@ export class InvoicesService {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────
-
-  private static readonly FORWARD_TRANSITIONS: Record<string, Set<string>> = {
-    draft: new Set(['sent', 'paid']),
-    sent: new Set(['paid']),
-    paid: new Set(),
-  };
-
-  private assertValidStatusTransition(current: string, next: string): void {
-    if (current === next) return;
-    const allowed =
-      InvoicesService.FORWARD_TRANSITIONS[current] ?? new Set<string>();
-    if (!allowed.has(next)) {
-      throw new DomainError(
-        'invoice_invalid_status_transition',
-        `Invoice status cannot transition from ${current} to ${next}`,
-        409,
-      );
-    }
-  }
 
   private assertInvoiceViewAccess(membership: ActiveMembership): void {
     if (membership.role === 'pm' && !membership.canViewInvoices) {
@@ -1132,6 +1529,9 @@ export class InvoicesService {
     }));
 
     return {
+      ...(row.document ?? {}),
+      reference: row.reference,
+      revision: row.revision,
       id: row.id,
       workspaceId: row.workspaceId,
       projectId: row.projectId,
@@ -1148,8 +1548,12 @@ export class InvoicesService {
       notes: row.notes,
       createdBy: row.createdBy,
       createdByName: row.createdByName,
-      timeEntryCount: entries.length,
-      timeEntries: entrySummaries,
+      timeEntryCount:
+        (row.document?.timeEntries as InvoiceTimeEntrySummary[] | undefined)
+          ?.length ?? entries.length,
+      timeEntries:
+        (row.document?.timeEntries as InvoiceTimeEntrySummary[] | undefined) ??
+        entrySummaries,
       project:
         row.projectId !== null && row.projectName !== null
           ? { id: row.projectId, name: row.projectName }
@@ -1164,6 +1568,9 @@ export class InvoicesService {
     entryCount: number,
   ): InvoiceListItem {
     return {
+      ...(row.document ?? {}),
+      reference: row.reference,
+      revision: row.revision,
       id: row.id,
       workspaceId: row.workspaceId,
       projectId: row.projectId,

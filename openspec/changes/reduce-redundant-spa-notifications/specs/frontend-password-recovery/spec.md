@@ -52,7 +52,7 @@ The recovery flow SHALL use the shared createAppToast helper for toasts and inli
 - **WHEN** the Firebase call resolves successfully
 - **THEN** the persistent account-safe check-your-email panel remains visible without a duplicate success toast
 
-#### Scenario: Password confirmation retains completion feedback
+#### Scenario: Successes use success toast
 
 - **GIVEN** the new password is confirmed successfully
 - **WHEN** the Firebase call resolves successfully

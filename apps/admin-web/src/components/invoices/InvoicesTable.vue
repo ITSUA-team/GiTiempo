@@ -20,6 +20,7 @@ import {
 } from '@gitiempo/web-config/theme';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
+import Checkbox from 'primevue/checkbox';
 import DatePicker from 'primevue/datepicker';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -77,13 +78,16 @@ const emit = defineEmits<{
   'update:page': [page: number];
 }>();
 
+const selection = defineModel<string[]>('selection', {default:()=>[]});
+
 const columns: ManagementTableColumn[] = [
-  { key: 'title', label: 'Title', width: 'fill' },
-  { key: 'project', label: 'Project', width: 200 },
-  { key: 'period', label: 'Period', width: 200 },
-  { key: 'hours', label: 'Hours', width: 100 },
-  { align: 'end', key: 'amount', label: 'Amount', width: 120 },
-  { key: 'status', label: 'Status', width: 160 },
+  {key:'selection',label:'',width:56},
+  { key: 'title', label: 'Invoice / recipient', width: 'fill' },
+  { key: 'project', label: 'Project', width: 136 },
+  { key: 'period', label: 'Period', width: 160 },
+  { key: 'hours', label: 'Hours', width: 70 },
+  { align: 'end', key: 'amount', label: 'Amount', width: 100 },
+  { key: 'status', label: 'Status', width: 110 },
 ];
 
 // Local mirror of the period picker value. PrimeVue DatePicker with
@@ -337,6 +341,11 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
         data-testid="invoice-mobile-card"
       >
         <div class="flex items-start justify-between gap-3">
+          <Checkbox
+            v-model="selection"
+            :value="row.id"
+            :aria-label="`Select invoice ${row.title}`"
+          />
           <h3 class="min-w-0">
             <Button
               type="button"
@@ -346,12 +355,18 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
               :pt="{ root: { class: mobileTitleRootClass } }"
               @click="emit('row-click', row.id)"
             >
-              <span class="truncate">{{ row.title }}</span>
+              <span class="truncate">{{ row.reference ?? row.title }}</span>
             </Button>
           </h3>
           <InvoiceStatusBadge :status="row.status" />
         </div>
 
+        <p
+          v-if="row.recipient?.name"
+          class="text-text-muted text-sm"
+        >
+          {{ row.recipient.name }}
+        </p>
         <MobileRecordMetadataList :items="getMobileMetadataItems(row)" />
       </MobileRecordCard>
     </template>
@@ -392,9 +407,10 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
           class="flex flex-1 items-center"
           :class="adminTableMinWidthClass"
         >
+          <div class="w-[56px] shrink-0" />
           <div class="min-w-0 flex-1 px-3" />
 
-          <div class="w-[200px] pr-3">
+          <div class="w-[136px] shrink-0 pr-3">
             <Select
               :model-value="filters.projectId"
               :options="filterOptions.projects"
@@ -410,7 +426,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
             />
           </div>
 
-          <div class="w-[200px] pr-3">
+          <div class="w-[160px] shrink-0 pr-3">
             <DatePicker
               :ref="desktopPeriodPicker.datePickerRef"
               :model-value="localDateRange"
@@ -439,11 +455,11 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
             </DatePicker>
           </div>
 
-          <div class="w-[100px] pr-3" />
+          <div class="w-[70px] shrink-0 pr-3" />
 
-          <div class="w-[120px] pr-3" />
+          <div class="w-[100px] shrink-0 pr-3" />
 
-          <div class="w-[160px] pr-3">
+          <div class="w-[110px] shrink-0 pr-3">
             <Select
               :model-value="filters.status"
               :options="filterOptions.statuses"
@@ -460,7 +476,21 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
         </div>
       </template>
 
-      <Column :pt="adminTableColumnPt">
+      <Column
+        style="width:56px"
+        :pt="adminTableColumnPt"
+      >
+        <template #body="{data}">
+          <Checkbox
+            v-model="selection"
+            :value="data.id"
+            :aria-label="`Select invoice ${data.title}`"
+          />
+        </template>
+      </Column>
+      <Column
+        :pt="adminTableColumnPt"
+      >
         <template #body="{ data }">
           <Button
             type="button"
@@ -470,13 +500,19 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
             :pt="{ root: { class: desktopTitleRootClass } }"
             @click="emit('row-click', data.id)"
           >
-            <span class="truncate">{{ data.title }}</span>
+            <span class="flex min-w-0 flex-col gap-1">
+              <span class="truncate">{{ data.reference ?? data.title }}</span>
+              <span
+                v-if="data.recipient?.name"
+                class="text-text-muted truncate text-xs font-normal"
+              >{{ data.recipient.name }}</span>
+            </span>
           </Button>
         </template>
       </Column>
 
       <Column
-        style="width: 200px"
+        style="width: 136px"
         :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
@@ -490,7 +526,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
       </Column>
 
       <Column
-        style="width: 200px"
+        style="width: 160px"
         :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
@@ -504,7 +540,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
       </Column>
 
       <Column
-        style="width: 100px"
+        style="width: 70px"
         :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
@@ -515,7 +551,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
       </Column>
 
       <Column
-        style="width: 120px"
+        style="width: 100px"
         :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
@@ -526,7 +562,7 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
       </Column>
 
       <Column
-        style="width: 160px"
+        style="width: 110px"
         :pt="adminTableColumnPt"
       >
         <template #body="{ data }">

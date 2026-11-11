@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
+import { adminMutationInvalidationKeys } from '@/lib/query-keys';
 import { useRouter } from 'vue-router';
 import { WorkspaceRoles } from '@gitiempo/shared';
 import {
@@ -10,11 +12,13 @@ import {
 } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
+import InvoiceMoveToolbar from '@/components/invoices/InvoiceMoveToolbar.vue';
+import InvoiceGroups from '@/components/invoices/InvoiceGroups.vue';
 import InvoicesTable from '@/components/invoices/InvoicesTable.vue';
 import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import { useAdminProjectsQuery } from '@/composables/query';
+import { invalidateQueryKeys, useAdminProjectsQuery } from '@/composables/query';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useInvoiceDefaults } from '@/composables/invoices/useInvoiceDefaults';
@@ -33,6 +37,7 @@ import { useAuthStore } from '@/stores/auth';
 
 const ROWS_PER_PAGE = 20;
 
+const queryClient = useQueryClient();
 const router = useRouter();
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
@@ -63,8 +68,13 @@ const filters = ref<InvoicesTableFilters>({
   status: null,
 });
 const currentPage = ref(1);
+const selectedGroup = ref<string | null>(null);
+const selectedInvoices = ref<string[]>([]);
+const groupsRefreshToken = ref(0);
+const personalGroups = ref<Array<{id:string;name:string;count:number}>>([]);
 
 const listQuery = computed(() => ({
+  groupId: selectedGroup.value ?? undefined,
   dateFrom: filters.value.dateFrom ?? undefined,
   dateTo: filters.value.dateTo ?? undefined,
   limit: ROWS_PER_PAGE,
@@ -87,6 +97,9 @@ const {
   query: listQuery,
   scope,
 });
+
+watch([listQuery, scope], () => {selectedInvoices.value=[];});
+watch(scope,()=>{selectedGroup.value=null;personalGroups.value=[];});
 
 // initialLoaded flips back to false while a changed query key refetches; track
 // the first successful load so filter/page changes don't re-show the page
@@ -220,6 +233,11 @@ const statsCards = computed(() => {
   ];
 });
 
+async function refreshGroups(): Promise<void> {
+  groupsRefreshToken.value++;
+  await invalidateQueryKeys(queryClient, adminMutationInvalidationKeys.afterInvoiceGroupMutation(scope.value));
+}
+
 async function fetchAll(): Promise<void> {
   await refetch();
 }
@@ -269,9 +287,18 @@ function handleCreateSuccess(): void {
 
 <template>
   <div
-    class="flex flex-col gap-6"
+    class="grid min-w-0 grid-cols-1 gap-6 sm:grid-cols-[220px_minmax(0,1fr)]"
     data-testid="invoices-view"
   >
+    <InvoiceGroups
+      class="sm:row-span-5 sm:self-start"
+      :scope="scope"
+      :invoices="invoices?.items ?? []"
+      :refresh-token="groupsRefreshToken"
+      @loaded="personalGroups=$event"
+      @select="value => {selectedGroup=value;currentPage=1}"
+      @moved="refreshGroups"
+    />
     <ManagementPageSkeleton
       v-if="isInitialLoading"
       variant="invoices"
@@ -303,7 +330,7 @@ function handleCreateSuccess(): void {
 
     <template v-else>
       <div
-        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        class="order-first grid min-w-0 gap-4 sm:col-span-2 sm:grid-cols-2 xl:grid-cols-3"
         data-testid="invoices-stats"
       >
         <StatCard
@@ -323,8 +350,19 @@ function handleCreateSuccess(): void {
         @retry="refetchProjects"
       />
 
-      <SurfaceCard padding-class="p-6">
+      <SurfaceCard
+        class="min-w-0"
+        padding-class="p-6"
+      >
+        <InvoiceMoveToolbar
+          v-model:selection="selectedInvoices"
+          :scope="scope"
+          :current-group="selectedGroup"
+          :groups="personalGroups"
+          @moved="refreshGroups"
+        />
         <InvoicesTable
+          v-model:selection="selectedInvoices"
           :empty-description="emptyStateDescription"
           :filter-options="filterOptions"
           :filters="filters"
@@ -345,6 +383,7 @@ function handleCreateSuccess(): void {
     <InvoiceCreateDialog
       v-model:visible="createDialogVisible"
       :create-mutation="createMutation"
+      :group-id="selectedGroup === 'ungrouped' ? null : selectedGroup"
       :is-admin="isAdmin"
       :projects="dialogProjects"
       :scope="scope"

@@ -1,0 +1,24 @@
+meta {
+  name: Preview invoice revision
+  type: http
+  seq: 1
+}
+post {
+  url: {{baseUrl}}/invoices/preview
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  {
+    "title": "November development",
+    "dateFrom": "2026-11-01",
+    "dateTo": "2026-11-30",
+    "hourlyRate": 100,
+    "currency": "USD",
+    "discountPercent": 10,
+    "timeEntryIds": []
+  }
+}

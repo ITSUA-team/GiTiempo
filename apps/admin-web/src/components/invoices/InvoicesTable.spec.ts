@@ -9,6 +9,7 @@ import {
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import PrimeVue from 'primevue/config';
 import DatePicker from 'primevue/datepicker';
+import Checkbox from 'primevue/checkbox';
 import Paginator from 'primevue/paginator';
 import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -170,7 +171,7 @@ describe('InvoicesTable', () => {
     mockMatchMedia();
   });
 
-  it('renders all six invoice columns with docs headers', () => {
+  it('renders invoice selection and document columns with docs headers', () => {
     const wrapper = mountInvoicesTable();
 
     const headerLabels = wrapper
@@ -178,7 +179,8 @@ describe('InvoicesTable', () => {
       .map((header) => header.text());
 
     expect(headerLabels).toEqual([
-      'Title',
+      '',
+      'Invoice / recipient',
       'Project',
       'Period',
       'Hours',
@@ -188,6 +190,22 @@ describe('InvoicesTable', () => {
     expect(
       wrapper.get('[data-testid="management-table-header-amount"]').classes(),
     ).toContain('text-right');
+  });
+
+  it('stacks the reference and recipient in one invoice column within the approved table width',()=>{
+    const wrapper=mountInvoicesTable({rows:[makeInvoice({reference:'INV-527',recipient:{name:'Client name',address:'',email:'',taxId:''}})]});
+    const invoiceLink=wrapper.get('[data-testid="invoice-title-invoice-1"]');
+    expect(invoiceLink.text()).toContain('INV-527');expect(invoiceLink.text()).toContain('Client name');
+    expect(wrapper.get('table').classes()).toContain('min-w-[860px]');
+    expect(wrapper.find('[data-testid="management-table-header-recipient"]').exists()).toBe(false);
+  });
+
+  it.each([false,true])('selects invoices directly from rows/cards (mobile=%s)',async(isMobileViewport)=>{
+    const wrapper=mountInvoicesTable({isMobileViewport});
+    wrapper.findComponent(Checkbox).vm.$emit('update:modelValue',['invoice-1']);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('update:selection')?.[0]).toEqual([['invoice-1']]);
+    expect(wrapper.emitted('row-click')).toBeUndefined();
   });
 
   it('renders row content with API currency formatting and the workspace-wide fallback', () => {
@@ -203,7 +221,7 @@ describe('InvoicesTable', () => {
 
     // The Amount column cells are the 120px body tds of the shared table;
     // each holds exactly one right-aligned formatted span.
-    const amountCells = wrapper.findAll('td[style*="120px"]');
+    const amountCells = wrapper.findAll('td[style*="100px"]');
     expect(amountCells.map((cell) => cell.text())).toEqual([
       '$12,800.00',
       '€8,500.00',

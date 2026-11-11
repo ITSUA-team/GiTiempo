@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, type Ref } from 'vue';
 import type {
+  PreviewInvoiceResponse,
   CreateInvoiceInput,
   EligibleEntriesQuery,
   InvoiceResponse,
@@ -29,10 +30,12 @@ import Message from 'primevue/message';
 import Select from 'primevue/select';
 import Textarea from 'primevue/textarea';
 
+import Checkbox from 'primevue/checkbox';
+import FileUpload from 'primevue/fileupload';
+import { adminInvoicesClient } from '@/services/admin-invoices-client';
 import { useEligibleEntriesPreview } from '@/composables/invoices/useEligibleEntriesPreview';
 import { getSettingsCurrencyOptions } from '@/lib/currencies';
 import { formatCurrency } from '@/lib/format-currency';
-import { computeInvoiceAmount } from '@/lib/invoice-amount';
 import { formatDuration } from '@/lib/format-duration';
 import type { AdminServerStateScope } from '@/lib/query-keys';
 import { getRoundingStepOptions } from '@/lib/rounding-step-options';
@@ -51,6 +54,9 @@ interface InvoiceCreateMutation {
 
 const props = defineProps<{
   visible: boolean;
+  source?: InvoiceResponse;
+  editing?: boolean;
+  groupId?: string | null;
   /** Admin may submit without a project (workspace-wide); PM must select one. */
   isAdmin: boolean;
   projects: Array<{
@@ -64,6 +70,8 @@ const props = defineProps<{
   workspaceHourlyRate: number | null;
   /** Rounding step from workspace Settings; resolves project "inherit" values. */
   workspaceRoundingStepMinutes: number | null;
+  revisionConflict?: boolean;
+  reviewRevision?: () => Promise<void>;
   scope: AdminServerStateScope;
   createMutation: InvoiceCreateMutation;
 }>();
@@ -77,6 +85,58 @@ const WORKSPACE_WIDE_PROJECT_VALUE = '';
 
 const ROUNDING_STEP_OPTIONS = getRoundingStepOptions();
 
+const sender = ref({name:'',address:'',email:'',taxId:''});
+const recipient = ref({name:'',address:'',email:'',taxId:''});
+const payment = ref({method:'',terms:'',beneficiary:'',provider:'',account:'',instructions:''});
+const services = ref('');
+const logo = ref<string | null>(null);
+const selectedEntries = ref<string[]>([]);
+const selectionInitialized = ref(false);
+const saveError = ref('');
+const calculatedPreview = ref<PreviewInvoiceResponse | null>(null);
+const calculating = ref(false);
+const calculationFailed = ref(false);
+let calculationGeneration = 0;
+let lifecycleGeneration = 0;
+let logoReadGeneration = 0;
+const group = ref<string | null>(null);
+const groupOptions = ref<Array<{id:string | null;name:string}>>([{id:null,name:'Ungrouped'}]);
+async function loadGroups() {
+ const generation = lifecycleGeneration;
+ let result;
+ try {result = await adminInvoicesClient.listGroups();}
+ catch {if (generation === lifecycleGeneration && props.visible) saveError.value='Could not load groups. Retry opening the dialog.';return;}
+ if (generation !== lifecycleGeneration || !props.visible) return;
+ groupOptions.value=[{id:null,name:'Ungrouped'},...result.groups];
+}
+function uploadLogo(event: {files: File | File[]}) {
+ const file = Array.isArray(event.files) ? event.files[0] : event.files;
+ if (!file) return;
+ if (file.size > 256000 || !['image/png','image/svg+xml'].includes(file.type)) {
+   saveError.value = 'Choose a PNG or SVG logo up to 250 KB.';return;
+ }
+ const generation = lifecycleGeneration;
+ const readGeneration=++logoReadGeneration;
+ const reader = new FileReader();
+ reader.onload = () => {if (generation === lifecycleGeneration && readGeneration === logoReadGeneration && props.visible) logo.value=String(reader.result);};
+ reader.onerror = () => {if(generation === lifecycleGeneration && readGeneration === logoReadGeneration && props.visible) saveError.value='Could not read the logo. Choose the file again.';};
+ reader.readAsDataURL(file);
+}
+async function useSettings(preserveEdits=false) {
+  const generation = lifecycleGeneration;
+  const initialSender=JSON.stringify(sender.value);
+  const initialPayment=JSON.stringify(payment.value);
+  const initialLogo=logo.value;
+  const initialLogoRead=logoReadGeneration;
+  let defaults;
+  try {defaults = await adminInvoicesClient.getInvoiceDefaults();}
+  catch {if(generation === lifecycleGeneration && props.visible) saveError.value='Could not load billing settings. Try again.';return;}
+  if (generation === lifecycleGeneration && props.visible && defaults.billingProfile) {
+    if(!preserveEdits || JSON.stringify(sender.value)===initialSender) sender.value = {...defaults.billingProfile.sender};
+    if(!preserveEdits || JSON.stringify(payment.value)===initialPayment) payment.value = {...defaults.billingProfile.payment};
+    if(!preserveEdits || (logo.value===initialLogo && logoReadGeneration===initialLogoRead)) logo.value = defaults.billingProfile.logo;
+  }
+}
 const title = ref('');
 const selectedProjectId = ref<string | null>(null);
 const dateRange = ref<Date[] | null>(null);
@@ -102,6 +162,7 @@ const previewQuery = computed<EligibleEntriesQuery | null>(() => {
   return {
     dateFrom: getLocalDateKey(dates[0]),
     dateTo: getLocalDateKey(dates[1]),
+    invoiceId: props.editing ? props.source?.id : undefined,
     projectId: selectedProjectId.value || undefined,
     ...(roundingStepTouched.value
       ? { roundingStepMinutes: roundingStepMinutes.value }
@@ -111,6 +172,7 @@ const previewQuery = computed<EligibleEntriesQuery | null>(() => {
 
 const {
   preview,
+  refetch: refreshEligibility,
   isLoading: previewLoading,
   isEmpty: previewEmpty,
   isError: previewError,
@@ -121,11 +183,23 @@ const {
   query: previewQuery,
 });
 
+watch(preview, (value) => {
+  if (!value) return;
+  if (!props.editing && !selectionInitialized.value) {selectedEntries.value = value.entries.map(e=>e.id);selectionInitialized.value=true;}
+});
 // Reset on any visibility change, before the pre-fill watcher below so a
 // reopened dialog starts blank and then receives the preview defaults again.
 watch(
-  () => props.visible,
+  [() => props.visible, () => props.scope],
   () => {
+    lifecycleGeneration++;
+    calculationGeneration++;
+    calculatedPreview.value = null;
+    calculating.value = false;
+    logo.value = null;
+    rateTouched.value = false;
+    currencyTouched.value = false;
+    roundingStepTouched.value = false;
     title.value = '';
     selectedProjectId.value = null;
     dateRange.value = null;
@@ -134,14 +208,48 @@ watch(
     discountPercent.value = 0;
     roundingStepMinutes.value = 1;
     notes.value = '';
-    rateTouched.value = false;
-    currencyTouched.value = false;
-    roundingStepTouched.value = false;
+    saveError.value = '';
+    calculationFailed.value=false;
+    selectedEntries.value = [];
+    selectionInitialized.value = false;
+    sender.value = {name:'',address:'',email:'',taxId:''};
+    recipient.value = {name:'',address:'',email:'',taxId:''};
+    payment.value = {method:'',terms:'',beneficiary:'',provider:'',account:'',instructions:''};
+    services.value = '';
+    if (props.visible) {
+      group.value = props.source?.groupId ?? props.groupId ?? null;
+      void loadGroups();
+      const source = props.source;
+      if (source) {
+        rateTouched.value = true;
+        currencyTouched.value = true;
+        title.value = source.title;
+        selectedProjectId.value = source.projectId;
+        dateRange.value = [new Date(source.dateFrom+'T12:00:00'),new Date(source.dateTo+'T12:00:00')];
+        hourlyRate.value = source.hourlyRate;
+        currency.value = source.currency;
+        discountPercent.value = source.discountPercent;
+        roundingStepMinutes.value = source.roundingStepMinutes;
+        roundingStepTouched.value = true;
+        services.value = source.services ?? '';
+        if (source.sender) sender.value = {...source.sender};
+        if (source.recipient) recipient.value = {...source.recipient};
+        if (source.payment) payment.value = {...source.payment, instructions: !props.editing && source.reference ? source.payment.instructions.replaceAll(source.reference, '{{invoiceReference}}') : source.payment.instructions};
+        logo.value = source.logo ?? null;
+        notes.value = source.notes ?? '';
+        selectedEntries.value = props.editing ? source.timeEntries.map(e=>e.id) : [];
+      } else {
+        const generation = lifecycleGeneration;
+        void useSettings(true).catch(() => {if (generation === lifecycleGeneration && props.visible) saveError.value = 'Could not load invoice defaults. Retry Use settings.';});
+      }
+    }
+
     validationTriggered.value = false;
     previewExpanded.value = false;
     workspaceRateKnown.value = false;
     workspaceCurrencyKnown.value = false;
   },
+  {immediate:true},
 );
 
 // Pre-fill the workspace Settings hourly rate as soon as the dialog opens, and
@@ -300,13 +408,27 @@ const previewCurrencyCode = computed<string | null>(() => {
 });
 
 // Display-only estimate; the authoritative total is computed server-side.
-const computedTotalAmount = computed<number | null>(() => {
-  const data = preview.value;
-  if (!data) return null;
-  const rate = hourlyRate.value ?? data.defaultHourlyRate ?? 0;
-  return computeInvoiceAmount(data.totalHours, rate, discountPercent.value ?? 0);
-});
+const selectedHours = computed(() => Math.ceil((preview.value?.entries.filter(e => selectedEntries.value.includes(e.id)).reduce((sum,e)=>sum+e.roundedDurationSeconds,0) ?? 0)/36)/100);
+const computedTotalAmount = computed(() => calculatedPreview.value?.totalAmount ?? null);
 
+async function calculatePreview() {
+  const query = previewQuery.value;
+  if (!query || !props.visible) return;
+  const generation = ++calculationGeneration;
+  calculating.value = true;
+  calculatedPreview.value = null;
+  try {
+    const result = await adminInvoicesClient.previewInvoice({...query,title:title.value || 'Preview',hourlyRate:hourlyRate.value ?? undefined,currency:currency.value || undefined,discountPercent:discountPercent.value ?? 0,roundingStepMinutes:roundingStepMinutes.value,timeEntryIds:selectedEntries.value});
+    if (generation === calculationGeneration) {calculatedPreview.value = result;calculationFailed.value=false;saveError.value='';}
+  } catch (error) {if (generation === calculationGeneration) {calculationFailed.value=true;saveError.value=error instanceof Error ? error.message : 'Could not calculate invoice. Retry.';}}
+  finally {if (generation === calculationGeneration) calculating.value=false;}
+}
+watch([previewQuery,hourlyRate,currency,discountPercent,roundingStepMinutes,selectedEntries],()=>void calculatePreview(),{deep:true});
+async function retryCalculation() {
+ const generation=lifecycleGeneration;
+ await refreshEligibility();
+ if(generation===lifecycleGeneration && props.visible) await calculatePreview();
+}
 const previewSummary = computed<string | null>(() => {
   const data = preview.value;
   if (!data || !hasEntries.value) return null;
@@ -314,8 +436,8 @@ const previewSummary = computed<string | null>(() => {
   const currencyCode = previewCurrencyCode.value;
   const amount = computedTotalAmount.value;
   const parts = [
-    data.count === 1 ? '1 entry' : `${data.count} entries`,
-    `${data.totalHours}h`,
+    selectedEntries.value.length === 1 ? '1 entry' : `${selectedEntries.value.length} entries`,
+    `${selectedHours.value}h`,
   ];
 
   if (currencyCode !== null && amount !== null) {
@@ -352,31 +474,44 @@ function handleVisibleChange(nextVisible: boolean): void {
   emit('update:visible', nextVisible);
 }
 
+async function reviewLatestRevision() {
+ const generation=lifecycleGeneration;
+ try {await props.reviewRevision?.();if(generation!==lifecycleGeneration || !props.visible)return;saveError.value='Latest saved revision loaded. Your edits are preserved; review them before saving.';}
+ catch(error) {if(generation===lifecycleGeneration && props.visible)saveError.value=error instanceof Error ? error.message : 'Could not refresh the saved revision. Retry.';}
+}
+
 async function handleCreate(): Promise<void> {
   validationTriggered.value = true;
-  if (!canSubmit.value) return;
+  if (!canSubmit.value || calculating.value || !calculatedPreview.value) return;
 
   const startDate = dateRange.value?.[0];
   const endDate = dateRange.value?.[1];
   if (!startDate || !endDate) return;
 
+  const generation=lifecycleGeneration;
   try {
     const invoice = await props.createMutation.createInvoice({
+      sender: sender.value, recipient: recipient.value, payment: payment.value, services: services.value,
+      logo: logo.value, timeEntryIds: selectedEntries.value, groupId: group.value,
       title: title.value.trim(),
       dateFrom: getLocalDateKey(startDate),
       dateTo: getLocalDateKey(endDate),
       projectId: selectedProjectId.value || undefined,
-      hourlyRate: hourlyRate.value ?? undefined,
-      currency: currency.value.trim().toUpperCase() || undefined,
+      hourlyRate: hourlyRate.value ?? (props.editing ? preview.value?.defaultHourlyRate ?? undefined : undefined),
+      currency: currency.value.trim().toUpperCase() || (props.editing ? preview.value?.defaultCurrency ?? undefined : undefined),
       discountPercent: discountPercent.value ?? 0,
-      notes: notes.value.trim() || undefined,
+      notes: notes.value.trim() || null,
       ...(roundingStepTouched.value
         ? { roundingStepMinutes: roundingStepMinutes.value }
         : {}),
     });
+    if(generation!==lifecycleGeneration || !props.visible)return;
     emit('created', invoice);
     emit('update:visible', false);
-  } catch {
+  } catch (error) {
+    if(generation!==lifecycleGeneration || !props.visible)return;
+    void refreshEligibility();
+    saveError.value = error instanceof Error ? error.message : 'Changes were not saved. Review entries and retry.';
     // The parent view owns error toasts for create failures; the dialog
     // stays open with the entered values preserved.
   }
@@ -385,15 +520,18 @@ async function handleCreate(): Promise<void> {
 
 <template>
   <AppDialog
-    header="Create Invoice"
+    :header="editing ? 'Edit invoice' : source ? 'Create from invoice' : 'Create invoice'"
     modal
     :closable="!isCreating"
     :dismissable-mask="!isCreating"
-    :pt="{ root: 'w-[min(480px,calc(100vw-2rem))]' }"
+    :pt="{ root: 'w-[min(1000px,calc(100vw-2rem))]' }"
     :visible="visible"
     @update:visible="handleVisibleChange"
   >
     <div class="flex flex-col gap-4">
+      <h2 class="font-semibold">
+        Invoice information
+      </h2>
       <div class="flex flex-col gap-1">
         <label
           for="invoice-create-title"
@@ -417,6 +555,16 @@ async function handleCreate(): Promise<void> {
         </Message>
       </div>
 
+      <div class="flex flex-col gap-2">
+        <label for="invoice-group">Personal group</label><Select
+          v-model="group"
+          input-id="invoice-group"
+          placeholder="Ungrouped"
+          :options="groupOptions"
+          option-label="name"
+          option-value="id"
+        />
+      </div>
       <div class="flex flex-col gap-1">
         <label
           for="invoice-create-project"
@@ -484,6 +632,19 @@ async function handleCreate(): Promise<void> {
             Date range is required.
           </Message>
         </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label for="invoice-services">Services / what is being billed</label>
+        <InputText
+          id="invoice-services"
+          v-model="services"
+        />
+      </div>
+      <div
+        data-testid="invoice-create-row-pricing"
+        class="flex flex-col gap-4 sm:flex-row sm:gap-3"
+      >
         <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
           <label
             for="invoice-create-hourly-rate"
@@ -501,12 +662,6 @@ async function handleCreate(): Promise<void> {
             @update:model-value="handleRateUpdate"
           />
         </div>
-      </div>
-
-      <div
-        data-testid="invoice-create-row-pricing"
-        class="flex flex-col gap-4 sm:flex-row sm:gap-3"
-      >
         <div class="flex w-full flex-col gap-1 sm:flex-1">
           <label
             for="invoice-create-currency"
@@ -560,6 +715,91 @@ async function handleCreate(): Promise<void> {
         </div>
       </div>
 
+      <Message
+        v-if="saveError || revisionConflict"
+        severity="error"
+      >
+        {{ revisionConflict ? 'This invoice changed. Refresh the latest revision, review your edits, and retry.' : saveError }}
+        <Button
+          v-if="revisionConflict"
+          label="Refresh latest revision"
+          variant="text"
+          @click="reviewLatestRevision"
+        />
+        <Button
+          v-if="calculationFailed"
+          label="Refresh entries and retry"
+          variant="text"
+          :loading="calculating"
+          @click="retryCalculation"
+        />
+      </Message>
+      <div class="grid gap-6 sm:grid-cols-2">
+        <section
+          v-for="(party, label) in {From: sender, 'Bill to': recipient}"
+          :key="label"
+          class="flex flex-col gap-2"
+        >
+          <h2 class="font-semibold">
+            {{ label }}
+          </h2>
+          <label
+            v-for="(_, key) in party"
+            :key="key"
+            class="flex flex-col gap-1 text-sm"
+          >{{ ({name:'Legal / company name',address:'Address',email:'Email',taxId:'Tax ID (optional)',method:'Payment method',terms:'Payment terms',beneficiary:'Beneficiary',provider:'Bank / payment provider',account:'Account / payment details',instructions:'Payment instructions'})[key] }}<InputText v-model="party[key]" /></label>
+        </section>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <FileUpload
+          mode="basic"
+          name="invoice-logo"
+          accept="image/png,image/svg+xml"
+          choose-label="Upload logo"
+          :auto="true"
+          custom-upload
+          @uploader="uploadLogo"
+        />
+        <Button
+          v-if="logo"
+          label="Remove logo"
+          severity="secondary"
+          @click="logoReadGeneration++;logo=null"
+        />
+      </div>
+      <Button
+        label="Use settings"
+        severity="secondary"
+        variant="text"
+        @click="useSettings()"
+      />
+      <section class="grid gap-3 sm:grid-cols-2">
+        <h2 class="font-semibold sm:col-span-2">
+          How to pay
+        </h2>
+        <label
+          v-for="(_, key) in payment"
+          :key="key"
+          class="flex flex-col gap-1 text-sm"
+        >{{ ({name:'Legal / company name',address:'Address',email:'Email',taxId:'Tax ID (optional)',method:'Payment method',terms:'Payment terms',beneficiary:'Beneficiary',provider:'Bank / payment provider',account:'Account / payment details',instructions:'Payment instructions'})[key] }}<InputText v-model="payment[key]" /></label>
+      </section>
+      <Message
+        v-if="selectedEntries.some(id => !preview?.entries.some(entry => entry.id===id))"
+        severity="warn"
+      >
+        Some selected entries are outside this scope or unavailable. Review them before saving.
+        <Button
+          label="Keep only available entries"
+          variant="text"
+          @click="selectedEntries=selectedEntries.filter(id=>preview?.entries.some(entry=>entry.id===id))"
+        />
+      </Message>
+      <p
+        v-if="calculating"
+        role="status"
+      >
+        Calculating totals…
+      </p>
       <div class="flex flex-col gap-1">
         <label
           for="invoice-create-notes"
@@ -650,6 +890,15 @@ async function handleCreate(): Promise<void> {
               bodyCell: 'text-text-dark px-2 py-1.5 text-[13px]',
             }"
           >
+            <Column header="Included">
+              <template #body="{data}">
+                <Checkbox
+                  v-model="selectedEntries"
+                  :value="data.id"
+                  :aria-label="'Include '+data.description"
+                />
+              </template>
+            </Column>
             <Column
               field="startedAt"
               header="Date"
@@ -688,6 +937,22 @@ async function handleCreate(): Promise<void> {
           </DataTable>
         </div>
       </div>
+      <dl
+        v-if="calculatedPreview"
+        class="border-divider ml-auto grid w-full max-w-sm grid-cols-2 gap-2 border-t pt-4"
+      >
+        <dt>Subtotal</dt><dd class="text-right">
+          {{ formatCurrency(calculatedPreview.subtotal,calculatedPreview.currency) }}
+        </dd>
+        <dt>Discount</dt><dd class="text-right">
+          −{{ formatCurrency(calculatedPreview.discountAmount,calculatedPreview.currency) }}
+        </dd>
+        <dt class="font-semibold">
+          Total
+        </dt><dd class="text-right font-semibold">
+          {{ formatCurrency(calculatedPreview.totalAmount,calculatedPreview.currency) }}
+        </dd>
+      </dl>
     </div>
 
     <template #footer>
@@ -701,7 +966,7 @@ async function handleCreate(): Promise<void> {
           @click="handleCancel"
         />
         <Button
-          label="Create invoice"
+          :label="editing ? 'Save changes' : 'Create invoice'"
           data-testid="invoice-create-submit"
           :loading="isCreating"
           @click="handleCreate"

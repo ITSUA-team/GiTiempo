@@ -1,3 +1,5 @@
+import { createTestQueryClient } from '@/test/query-client';
+import { invalidateQueryKeys } from '@/composables/query';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -135,6 +137,7 @@ describe('admin-web query keys', () => {
         status: 'draft',
       }),
     ).toEqual({
+      groupId:null,
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
       limit: 50,
@@ -151,12 +154,14 @@ describe('admin-web query keys', () => {
         roundingStepMinutes: 15,
       }),
     ).toEqual({
+      invoiceId:null,
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
       projectId: 'project-1',
       roundingStepMinutes: 15,
     });
     expect(normalizeEligibleEntriesQuery()).toEqual({
+      invoiceId:null,
       dateFrom: null,
       dateTo: null,
       projectId: null,
@@ -178,6 +183,7 @@ describe('admin-web query keys', () => {
       ...scopedKeys,
       'list',
       {
+        groupId:null,
         dateFrom: null,
         dateTo: null,
         limit: null,
@@ -210,6 +216,7 @@ describe('admin-web query keys', () => {
       ...scopedKeys,
       'eligible-entries',
       {
+        invoiceId:null,
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
         projectId: null,
@@ -223,4 +230,20 @@ describe('admin-web query keys', () => {
       adminInvoicesKeys.all(scope),
     ]);
   });
+});
+
+it('separates personal invoice group views and create/edit eligibility', () => {
+ expect(adminInvoicesKeys.list({}, {groupId:'ungrouped'})).not.toEqual(adminInvoicesKeys.list({}, {}));
+ expect(adminInvoicesKeys.eligibleEntries({}, {invoiceId:'invoice-a'})).not.toEqual(adminInvoicesKeys.eligibleEntries({}, {}));
+});
+
+
+it('group moves refresh every list/detail view but preserve business calculation caches and other users', async () => {
+  const client = createTestQueryClient();
+  const changed = [adminInvoicesKeys.list(scope), adminInvoicesKeys.list(scope, {groupId:'ungrouped'}), adminInvoicesKeys.detail(scope, 'invoice')];
+  const unchanged = [adminInvoicesKeys.stats(scope), adminInvoicesKeys.defaults(scope), adminInvoicesKeys.eligibleEntries(scope), adminInvoicesKeys.list({...scope,userId:'another-user'})];
+  for (const key of [...changed,...unchanged]) client.setQueryData(key, {});
+  await invalidateQueryKeys(client, adminMutationInvalidationKeys.afterInvoiceGroupMutation(scope));
+  for (const key of changed) expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+  for (const key of unchanged) expect(client.getQueryState(key)?.isInvalidated).toBe(false);
 });

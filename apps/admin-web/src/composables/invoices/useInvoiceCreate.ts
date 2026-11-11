@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
-import { computed, toValue, type MaybeRefOrGetter } from 'vue';
+import { computed, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue';
 
 import type { CreateInvoiceInput, InvoiceResponse } from '@gitiempo/shared';
 import { getErrorMessage } from '@gitiempo/web-shared';
@@ -31,12 +31,15 @@ export function useInvoiceCreate({
 }: UseInvoiceCreateOptions) {
   const queryClient = useQueryClient();
 
+  const generation = shallowRef(0);
+  watch(() => JSON.stringify(toValue(scope)), () => { generation.value++; }, { flush: 'sync' });
+
   const mutation = useMutation({
-    mutationFn: (input: CreateInvoiceInput) => client.createInvoice(input),
-    onSuccess: async () => {
+    mutationFn: ({ input }: { input: CreateInvoiceInput; requestScope: AdminServerStateScope; generation: number }) => client.createInvoice(input),
+    onSuccess: async (_result, variables) => {
       await invalidateQueryKeys(
         queryClient,
-        adminMutationInvalidationKeys.afterInvoiceMutation(toValue(scope)),
+        adminMutationInvalidationKeys.afterInvoiceMutation(variables.requestScope),
       );
     },
   });
@@ -44,18 +47,20 @@ export function useInvoiceCreate({
   async function createInvoice(
     input: CreateInvoiceInput,
   ): Promise<InvoiceResponse> {
+    const requestGeneration = generation.value;
+    const requestScope = { ...toValue(scope) };
     try {
-      const invoice = await mutation.mutateAsync(input);
-      onSuccess?.();
+      const invoice = await mutation.mutateAsync({ input, requestScope, generation: requestGeneration });
+      if (requestGeneration === generation.value) onSuccess?.();
       return invoice;
     } catch (error) {
-      onError?.(getErrorMessage(error), error, CREATE_ACTION);
+      if (requestGeneration === generation.value) onError?.(getErrorMessage(error), error, CREATE_ACTION);
       throw error;
     }
   }
 
   return {
     createInvoice,
-    isCreating: computed(() => mutation.isPending.value),
+    isCreating: computed(() => mutation.isPending.value && mutation.variables.value?.generation === generation.value),
   };
 }

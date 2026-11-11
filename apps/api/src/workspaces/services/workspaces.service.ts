@@ -57,6 +57,9 @@ export class WorkspacesService {
     const [row] = await this.db
       .update(workspaceSettings)
       .set({
+        ...(input.billingProfile !== undefined
+          ? { billingProfile: input.billingProfile }
+          : {}),
         ...(input.currency !== undefined ? { currency: input.currency } : {}),
         ...(input.defaultHourlyRate !== undefined
           ? { defaultHourlyRate: input.defaultHourlyRate }
@@ -111,6 +114,7 @@ export class WorkspacesService {
       id: row.id,
       workspaceId: row.workspaceId,
       currency: row.currency,
+      billingProfile: row.billingProfile ?? null,
       defaultHourlyRate: row.defaultHourlyRate,
       timeZone: row.timeZone,
       timeRoundingStepMinutes: row.timeRoundingStepMinutes,

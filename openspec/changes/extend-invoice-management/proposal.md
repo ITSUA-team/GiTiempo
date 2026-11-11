@@ -32,4 +32,4 @@ Affects the NestJS API and PostgreSQL schema, shared Zod and OpenAPI contracts, 
 
 ## Acceptance criteria
 
-- [ ] Manual acceptance testing passes in the running Admin SPA on desktop and mobile (below 640 px), using an Admin and an authorized PM. Record the build, roles, viewport and result for each workflow in #527 or its PR. Fix and manually retest failed scenarios before acceptance. Use the manual scenarios in section 4 of [tasks.md](tasks.md).
+- [x] Manual acceptance testing passes in the running Admin SPA on desktop and mobile (below 640 px), using an Admin and an authorized PM. Record the build, roles, viewport and result for each workflow in #527 or its PR. Fix and manually retest failed scenarios before acceptance. Use the manual scenarios in section 4 of [tasks.md](tasks.md).

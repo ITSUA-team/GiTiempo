@@ -375,14 +375,17 @@ The core record. Represents a period of tracked time.
 
 ### Invoice (`invoices`)
 
-Billing record generated from time entries. MVP: data only, no document generation.
+Billing record generated from reviewed time entries, with a saved document revision used for PDF export.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | `id` | UUID | PK, default `gen_random_uuid()` | |
 | `workspace_id` | UUID | FK → `workspaces.id`, NOT NULL | |
 | `project_id` | UUID | FK → `projects.id`, nullable | Optional project scope |
-| `title` | VARCHAR(255) | NOT NULL | Invoice title/reference |
+| `title` | VARCHAR(255) | NOT NULL | Invoice title |
+| `reference` | TEXT | NOT NULL, unique per workspace | Stable allocated document reference |
+| `revision` | INTEGER | NOT NULL, default 1 | Optimistic edit precondition |
+| `document` | JSONB | nullable for historical rows | Saved parties, payment, logo and line descriptions |
 | `status` | VARCHAR(20) | NOT NULL, default `'draft'` | `'draft'`, `'sent'`, `'paid'` |
 | `date_from` | DATE | NOT NULL | Start of billing period |
 | `date_to` | DATE | NOT NULL | End of billing period |
@@ -400,7 +403,7 @@ Billing record generated from time entries. MVP: data only, no document generati
 - `invoices_workspace_id_idx` on `workspace_id`
 - `invoices_workspace_status_idx` on `(workspace_id, status)` — optimizes filtered list queries by workspace and status.
 
-**Note:** Invoice stores `hourly_rate`, `currency`, `total_hours`, and `total_amount` as snapshot values at creation time. Individual time entries are linked back to the invoice via `time_entries.invoice_id`. If time entries are edited after invoice creation, the invoice totals are **not** automatically recalculated — this is an explicit MVP limitation.
+**Note:** Invoice stores financial values and line display data as a saved revision. Individual time entries are linked via `time_entries.invoice_id`. Underlying work edits do not alter the saved document; an explicit invoice billing revision recalculates reviewed entries and totals atomically.
 
 ---
 
@@ -489,3 +492,11 @@ All subsequent users are added exclusively via the invite flow.
 Migration `0022_external_reference_project_policy.sql` adds mode/provenance defaults and the case-insensitive GitHub repository identity constraint. Run `pnpm --filter @gitiempo/api github:repository-reference-preflight` read-only against the intended database first. Conflicts identify workspace/project/reference IDs; migration raises an error rather than merge or delete history. Resolve collisions deliberately before retrying. Writers acquire the same namespace lock and recheck authoritative mappings. Task reference uniqueness remains unchanged.
 
 Deploy the migration and access-safe API with compatible SPA consumers before distributing the reference-start extension. A rollback must retain mode enforcement, owned stop, and history. Do not downgrade to code that interprets external rows as ordinary full-access projects or drop the mode/provenance columns while they contain data. Use a compatible forward fix for rollback. Rename/transfer/conversion are deferred; no automatic mapping rebinding is performed.
+
+### Invoice document revisions and personal organization (#527)
+
+Migrations 0032–0034 add nullable workspace billing profiles and invoice document snapshots, a stable reference and integer revision. Existing invoices retain amounts and entry associations. New reference allocation uses a database sequence and the configured prefix. Missing historical parties and payment information remain unset for explicit review.
+
+`invoice_groups` belongs to one workspace and user. Names are unique after trimmed case-insensitive comparison. `invoice_group_memberships` permits one assignment per workspace, user and invoice, with composite foreign keys enforcing matching owner/workspace. Deleting a group removes only assignments. The invoice document contains saved parties, services, payment, logo and line summaries. Personal organization has no effect on the document or business revision.
+
+Migration 0035 freezes available historical line descriptions, people, task labels and billed durations using each invoice's saved rounding step. It preserves financial totals and keeps unknown issuer/recipient/payment information unset. A rehearsal on an isolated `gitiempo_e2e` legacy fixture passed with unchanged invoice ID, status, reference, totals and entry association. Logo content is stored as a validated immutable data URI value inside each invoice snapshot, so replacing workspace defaults cannot remove a historical logo.

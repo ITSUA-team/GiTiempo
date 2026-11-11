@@ -2,6 +2,7 @@
 import { computed, shallowRef, watch } from 'vue';
 
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
+import SettingsInvoiceDefaults from '@/components/settings/SettingsInvoiceDefaults.vue';
 import SettingsForm from '@/components/settings/SettingsForm.vue';
 import SettingsGitHubAccountCard from '@/components/settings/SettingsGitHubAccountCard.vue';
 import SettingsGitHubWorkspaceAccessCard from '@/components/settings/SettingsGitHubWorkspaceAccessCard.vue';
@@ -259,6 +260,11 @@ watch(
         @save="saveSettings"
       >
         <template #after-card>
+          <SettingsInvoiceDefaults
+            v-if="settingsData.settings.value"
+            :profile="settingsData.settings.value.billingProfile"
+            :scope="scope"
+          />
           <SettingsGitHubAccountCard
             :connection="githubConnection.connection.value"
             :is-initial-loading="githubConnection.isInitialLoading.value"

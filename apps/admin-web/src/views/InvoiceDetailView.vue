@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
 import { WorkspaceRoles, type UpdateInvoiceInput } from '@gitiempo/shared';
 import {
@@ -7,11 +8,19 @@ import {
   SectionHeader,
   SurfaceCard,
 } from '@gitiempo/web-shared';
+import { getLocalDateKey } from '@gitiempo/web-shared/time';
 import { ApiError } from '@gitiempo/web-shared/http';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
+import Select from 'primevue/select';
+import DatePicker from 'primevue/datepicker';
+import { AppDialog } from '@gitiempo/web-shared';
+import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
+import { useInvoiceCreate } from '@/composables/invoices/useInvoiceCreate';
+import { invalidateQueryKeys, useAdminProjectsQuery } from '@/composables/query';
+import { adminMutationInvalidationKeys } from '@/lib/query-keys';
+import { adminProjectsClient } from '@/services/admin-projects-client';
+import { adminInvoicesClient } from '@/services/admin-invoices-client';
 import Skeleton from 'primevue/skeleton';
-import Textarea from 'primevue/textarea';
 
 import InvoiceStatusBadge from '@/components/invoices/InvoiceStatusBadge.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
@@ -41,6 +50,7 @@ type InvoiceConflictCode = keyof typeof CONFLICT_TOAST_BY_CODE;
 
 const route = useRoute();
 const router = useRouter();
+const queryClient = useQueryClient();
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
 const { requireConfirmation } = useConfirmation();
@@ -71,15 +81,6 @@ const {
 
 const updateMutation = useInvoiceUpdate({
   onError: notifyInvoiceActionError,
-  onSuccess: () => {
-    // Only clearing the dirty flags when the in-flight update actually saved
-    // title/notes keeps unsaved edits intact across status-only updates.
-    if (pendingUpdateIncludesEdits) {
-      titleDirty.value = false;
-      notesDirty.value = false;
-      pendingUpdateIncludesEdits = false;
-    }
-  },
   scope,
 });
 
@@ -90,52 +91,6 @@ const deleteMutation = useInvoiceDelete({
   },
   scope,
 });
-
-const editNotes = ref('');
-const editTitle = ref('');
-const titleDirty = ref(false);
-const notesDirty = ref(false);
-
-// `let` is sufficient: one component instance owns this setup scope, and the
-// flag is only read/written synchronously around the invoice watcher and the
-// update mutation lifecycle.
-let syncingFromServer = false;
-let pendingUpdateIncludesEdits = false;
-
-watch(
-  invoice,
-  (currentInvoice) => {
-    if (!currentInvoice) return;
-    syncingFromServer = true;
-    if (!titleDirty.value) {
-      editTitle.value = currentInvoice.title;
-    }
-    if (!notesDirty.value) {
-      editNotes.value = currentInvoice.notes ?? '';
-    }
-    syncingFromServer = false;
-  },
-  { immediate: true },
-);
-
-// Sync watchers fire synchronously when the edit refs change, so the
-// `syncingFromServer` guard reliably distinguishes server-driven syncs from
-// user input and avoids marking the fields dirty during a server refresh.
-watch(
-  editTitle,
-  () => {
-    if (!syncingFromServer) titleDirty.value = true;
-  },
-  { flush: 'sync' },
-);
-
-watch(
-  editNotes,
-  () => {
-    if (!syncingFromServer) notesDirty.value = true;
-  },
-  { flush: 'sync' },
-);
 
 function isInvoiceConflictCode(code: string): code is InvoiceConflictCode {
   return code in CONFLICT_TOAST_BY_CODE;
@@ -190,23 +145,80 @@ function swallowReportedError(): void {
   // notifyInvoiceActionError; the rethrown promise only needs to be silenced.
 }
 
-function markAsSent(): void {
-  pendingUpdateIncludesEdits = false;
-  runUpdate({ status: 'sent' });
+const editorOpen = ref(false);
+const revisionConflict=ref(false);
+const editorInvoiceId=ref('');
+let editorGeneration=0;
+watch([scope,invoiceId],()=>{editorGeneration++;editorOpen.value=false;copyOpen.value=false;revisionConflict.value=false;},{flush:'sync'});
+const copyOpen = ref(false);
+const copyPeriod = ref<Date[] | null>(null);
+const copyGroup = ref<string|null>(null);
+const detailGroups = ref<Array<{id:string;name:string}>>([]);
+watch(scope,async()=>{const currentScope=scope.value;try {const result=await adminInvoicesClient.listGroups();if(scope.value===currentScope) detailGroups.value=result.groups;}catch{detailGroups.value=[];}},{immediate:true});
+const groupMoveBusy = ref(false);
+const groupMoveError = ref('');
+let groupMoveGeneration=0;
+watch([scope,invoiceId],()=>{groupMoveGeneration++;groupMoveBusy.value=false;groupMoveError.value='';},{flush:'sync'});
+async function moveToGroup(groupId:string|null) {
+ if(!invoice.value || groupMoveBusy.value || (invoice.value.groupId ?? null)===groupId)return;
+ const requestScope={...scope.value};
+ const requestGeneration=groupMoveGeneration;
+ const sourceId=invoice.value.id;
+ groupMoveBusy.value=true;groupMoveError.value='';
+ try {
+  await adminInvoicesClient.moveInvoices({invoiceIds:[sourceId],groupId});
+  await invalidateQueryKeys(queryClient,adminMutationInvalidationKeys.afterInvoiceGroupMutation(requestScope));
+ } catch(error) {if(requestGeneration===groupMoveGeneration) groupMoveError.value=getErrorMessage(error);}
+ finally {if(requestGeneration===groupMoveGeneration)groupMoveBusy.value=false;}
 }
+const copySource = computed(()=> invoice.value && !editing.value && copyPeriod.value?.[1] ? {...invoice.value,groupId:copyGroup.value,dateFrom:getLocalDateKey(copyPeriod.value[0]!),dateTo:getLocalDateKey(copyPeriod.value[1])} : invoice.value);
+const editing = ref(true);
+const openedRevision = ref<number>();
+const createMutation = useInvoiceCreate({scope,onError:notifyInvoiceActionError});
+const projectsQuery = useAdminProjectsQuery({client:adminProjectsClient,enabled:computed(()=>Boolean(accessToken.value)),scope});
+const editorMutation = {
+  isCreating: computed(()=>editing.value ? updateMutation.isUpdating.value : createMutation.isCreating.value),
+  createInvoice: async (input: Parameters<typeof adminInvoicesClient.createInvoice>[0]) => {
+    const requestGeneration=editorGeneration;
+    if(!editorOpen.value || editorInvoiceId.value!==invoiceId.value || (editing.value && !invoice.value)) throw new Error('The invoice changed. Reopen its editor.');
+    if (editing.value && invoice.value) {
+      try {return await updateMutation.updateInvoice({invoiceId:editorInvoiceId.value,data:{...input,projectId:input.projectId ?? null,expectedRevision:openedRevision.value}});}
+      catch(error) {if(requestGeneration===editorGeneration && editorOpen.value && error instanceof ApiError && error.code==='invoice_update_conflict') revisionConflict.value=true;throw error;}
+    }
+    return createMutation.createInvoice(input);
+  }
+};
+const exportBusy = ref(false);
+const exportError = ref('');
+async function downloadPdf() {
+  if (!invoice.value) return;
+  const sourceId=invoice.value.id;
+  const sourceScope=scope.value;
+  const filename=`${invoice.value.reference ?? sourceId}.pdf`;
+  exportBusy.value = true;
+  exportError.value = '';
+  try {
+    const response = await adminInvoicesClient.downloadInvoicePdf(sourceId);
+    if(invoice.value?.id!==sourceId || scope.value!==sourceScope) return;
+    const url = URL.createObjectURL(response);
+    const link = document.createElement('a');
+    link.href = url; link.download = filename;link.click();
+    URL.revokeObjectURL(url);
+  } catch (error) {if(invoice.value?.id===sourceId && scope.value===sourceScope) exportError.value = getErrorMessage(error); }
+  finally {if(invoice.value?.id===sourceId && scope.value===sourceScope) exportBusy.value = false;}
+}
+async function reviewInvoiceRevision() {
+ const sourceId=editorInvoiceId.value;
+ const requestGeneration=editorGeneration;
+ const result=await refetch();
+ if(requestGeneration!==editorGeneration || sourceId!==invoiceId.value || !editorOpen.value)throw new Error('The invoice changed. Reopen its editor.');
+ if(result.error || !result.data)throw result.error ?? new Error('Could not load the invoice.');
+ openedRevision.value=result.data.revision;revisionConflict.value=false;
+}
+function openEditor(isEdit: boolean) { editorGeneration++;editorInvoiceId.value=invoiceId.value;revisionConflict.value=false;editing.value=isEdit;openedRevision.value=invoice.value?.revision;if (isEdit) editorOpen.value=true;else {copyPeriod.value=null;copyGroup.value=invoice.value?.groupId??null;copyOpen.value=true;}}
 
-function markAsPaid(): void {
-  pendingUpdateIncludesEdits = false;
-  runUpdate({ status: 'paid' });
-}
 
-function saveEdits(): void {
-  pendingUpdateIncludesEdits = true;
-  runUpdate({
-    notes: editNotes.value || null,
-    title: editTitle.value,
-  });
-}
+
 
 function runUpdate(data: UpdateInvoiceInput): void {
   updateMutation
@@ -314,22 +326,35 @@ function formatInstant(dateInput: string): string {
             @click="goBack"
           />
           <h1 class="text-text-dark min-w-0 truncate text-lg font-semibold">
-            {{ invoice.title }}
+            {{ invoice.reference ? `${invoice.reference} · ` : '' }}{{ invoice.title }}
           </h1>
           <InvoiceStatusBadge :status="invoice.status" />
         </div>
         <div
-          class="flex shrink-0 gap-2"
+          class="flex flex-wrap gap-2"
           data-testid="invoice-status-actions"
         >
+          <Select
+            aria-label="Invoice status"
+            :model-value="invoice.status"
+            :options="['draft','sent','paid']"
+            :disabled="updateMutation.isUpdating.value"
+            @update:model-value="status => runUpdate({status,expectedRevision:invoice?.revision})"
+          />
           <Button
-            v-if="invoice.status === 'draft'"
-            label="Mark as sent"
+            label="Edit invoice"
+            @click="openEditor(true)"
+          />
+          <Button
+            label="Create from this invoice"
             severity="secondary"
-            variant="outlined"
-            :loading="updateMutation.isUpdating.value"
-            data-testid="invoice-mark-as-sent"
-            @click="markAsSent"
+            @click="openEditor(false)"
+          />
+          <Button
+            :label="exportBusy ? 'Preparing PDF…' : 'Download PDF'"
+            :loading="exportBusy"
+            severity="secondary"
+            @click="downloadPdf"
           />
           <Button
             v-if="invoice.status === 'draft' && isAdmin"
@@ -340,23 +365,108 @@ function formatInstant(dateInput: string): string {
             data-testid="invoice-delete"
             @click="confirmDelete"
           />
-          <Button
-            v-if="invoice.status === 'sent'"
-            label="Mark as paid"
-            severity="secondary"
-            variant="outlined"
-            :loading="updateMutation.isUpdating.value"
-            data-testid="invoice-mark-as-paid"
-            @click="markAsPaid"
-          />
         </div>
       </div>
 
+      <p
+        v-if="exportError"
+        role="alert"
+        class="text-destructive"
+      >
+        {{ exportError }}
+        <Button
+          label="Retry download"
+          variant="text"
+          @click="downloadPdf"
+        />
+        <Button
+          label="Edit billing information"
+          variant="text"
+          @click="openEditor(true)"
+        />
+      </p>
+      <SurfaceCard padding-class="p-6">
+        <div class="grid gap-6 sm:grid-cols-2">
+          <section
+            v-for="(party,label) in {From:invoice.sender,'Bill to':invoice.recipient}"
+            :key="label"
+          >
+            <h2 class="font-semibold">
+              {{ label }}
+            </h2>
+            <p>{{ party?.name }}</p><p>{{ party?.address }}</p><p>{{ party?.email }}</p><p>{{ party?.taxId }}</p>
+          </section>
+        </div>
+        <h2 class="mt-6 font-semibold">
+          {{ invoice.services }}
+        </h2>
+      </SurfaceCard>
+      <AppDialog
+        v-model:visible="copyOpen"
+        header="Create from this invoice"
+        modal
+      >
+        <p>Review the new billing period. Previously billed entries are unavailable.</p>
+        <label for="copy-period">New billing period</label>
+        <DatePicker
+          v-model="copyPeriod"
+          input-id="copy-period"
+          selection-mode="range"
+          show-icon
+        />
+        <label for="copy-group">Personal group</label>
+        <Select
+          v-model="copyGroup"
+          input-id="copy-group"
+          placeholder="Ungrouped"
+          :options="[{id:null,name:'Ungrouped'},...detailGroups]"
+          option-label="name"
+          option-value="id"
+        />
+        <Button
+          label="Continue to new draft"
+          :disabled="!copyPeriod?.[1]"
+          @click="copyOpen=false;editorOpen=true"
+        />
+      </AppDialog>
+      <InvoiceCreateDialog
+        v-model:visible="editorOpen"
+        :source="copySource"
+        :editing="editing"
+        :revision-conflict="revisionConflict"
+        :review-revision="reviewInvoiceRevision"
+        :is-admin="isAdmin"
+        :projects="projectsQuery.data.value ?? []"
+        :scope="scope"
+        :workspace-currency="invoice.currency"
+        :workspace-hourly-rate="invoice.hourlyRate"
+        :workspace-rounding-step-minutes="invoice.roundingStepMinutes"
+        :create-mutation="editorMutation"
+        @created="refetch()"
+      />
       <SurfaceCard
         padding-class="p-6"
         data-testid="invoice-summary"
       >
         <SectionHeader title="Summary" />
+        <label for="detail-group">Personal group</label>
+        <Select
+          input-id="detail-group"
+          placeholder="Ungrouped"
+          :model-value="invoice.groupId ?? null"
+          :options="[{id:null,name:'Ungrouped'},...detailGroups]"
+          option-label="name"
+          option-value="id"
+          :disabled="groupMoveBusy"
+          @update:model-value="moveToGroup"
+        />
+        <p
+          v-if="groupMoveError"
+          role="alert"
+          class="text-destructive"
+        >
+          {{ groupMoveError }}
+        </p>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div class="flex flex-col gap-1">
             <span class="text-text-muted text-sm">Project</span>
@@ -396,6 +506,12 @@ function formatInstant(dateInput: string): string {
             </p>
           </div>
           <div class="flex flex-col gap-1">
+            <span class="text-text-muted text-sm">Subtotal</span><p>{{ formatCurrency(invoice.hourlyRate * invoice.totalHours,invoice.currency) }}</p>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-text-muted text-sm">Discount amount</span><p>{{ formatCurrency(invoice.hourlyRate * invoice.totalHours - invoice.totalAmount,invoice.currency) }}</p>
+          </div>
+          <div class="flex flex-col gap-1">
             <span class="text-text-muted text-sm">Total amount</span>
             <p class="font-medium">
               {{ formatCurrency(invoice.totalAmount, invoice.currency) }}
@@ -422,48 +538,7 @@ function formatInstant(dateInput: string): string {
         </div>
       </SurfaceCard>
 
-      <SurfaceCard
-        padding-class="p-6"
-        data-testid="invoice-edit-details"
-      >
-        <SectionHeader title="Edit details" />
-        <div class="flex flex-col gap-4">
-          <div class="flex flex-col gap-1">
-            <label
-              class="text-text-dark text-[13px] font-medium"
-              for="invoice-title"
-            >
-              Title
-            </label>
-            <InputText
-              id="invoice-title"
-              v-model="editTitle"
-              class="h-[38px]"
-            />
-          </div>
-          <div class="flex flex-col gap-1">
-            <label
-              class="text-text-dark text-[13px] font-medium"
-              for="invoice-notes"
-            >
-              Notes
-            </label>
-            <Textarea
-              id="invoice-notes"
-              v-model="editNotes"
-              rows="4"
-            />
-          </div>
-          <div class="flex justify-end">
-            <Button
-              label="Save changes"
-              :loading="updateMutation.isUpdating.value"
-              data-testid="invoice-save"
-              @click="saveEdits"
-            />
-          </div>
-        </div>
-      </SurfaceCard>
+
 
       <SurfaceCard
         padding-class="p-6"
@@ -530,6 +605,24 @@ function formatInstant(dateInput: string): string {
             </tbody>
           </table>
         </div>
+      </SurfaceCard>
+      <SurfaceCard padding-class="p-6">
+        <SectionHeader title="How to pay" />
+        <p class="whitespace-pre-wrap">
+          {{ invoice.payment?.method }} · {{ invoice.payment?.terms }}
+        </p>
+        <p>{{ invoice.payment?.beneficiary }} · {{ invoice.payment?.provider }}</p>
+        <p>{{ invoice.payment?.account }}</p><p>{{ invoice.payment?.instructions }}</p>
+        <section
+          v-if="invoice.notes"
+          class="mt-6"
+        >
+          <h2 class="font-semibold">
+            Notes
+          </h2><p class="whitespace-pre-wrap">
+            {{ invoice.notes }}
+          </p>
+        </section>
       </SurfaceCard>
     </template>
   </div>

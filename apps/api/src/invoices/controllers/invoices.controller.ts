@@ -1,3 +1,9 @@
+import type { Response } from 'express';
+import {
+  PreviewInvoiceDto,
+  InvoiceGroupDto,
+  MoveInvoicesDto,
+} from '../dto/invoice-management.dto';
 import {
   Body,
   Controller,
@@ -9,6 +15,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -111,6 +118,57 @@ export class InvoicesController {
     @CurrentUser() user: AuthUser,
   ): Promise<InvoiceDefaultsResponseDto> {
     return this.invoices.getInvoiceDefaults(user);
+  }
+
+  @Post('preview')
+  preview(@CurrentUser() user: AuthUser, @Body() body: PreviewInvoiceDto) {
+    return this.invoices.previewInvoice(user, body);
+  }
+
+  @Get('groups')
+  groups(@CurrentUser() user: AuthUser) {
+    return this.invoices.listGroups(user);
+  }
+
+  @Post('groups')
+  createGroup(@CurrentUser() user: AuthUser, @Body() body: InvoiceGroupDto) {
+    return this.invoices.saveGroup(user, body.name);
+  }
+
+  @Patch('groups/:id')
+  renameGroup(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: InvoiceGroupDto,
+  ) {
+    return this.invoices.saveGroup(user, body.name, id);
+  }
+
+  @Delete('groups/:id')
+  @HttpCode(204)
+  deleteGroup(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.invoices.deleteGroup(user, id);
+  }
+
+  @Post('groups/move')
+  @HttpCode(204)
+  move(@CurrentUser() user: AuthUser, @Body() body: MoveInvoicesDto) {
+    return this.invoices.moveInvoices(user, body.invoiceIds, body.groupId);
+  }
+
+  @Get(':id/pdf')
+  async pdf(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Res() response: Response,
+  ) {
+    const result = await this.invoices.downloadPdf(user, id);
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.reference}.pdf"`,
+    );
+    response.send(result.bytes);
   }
 
   @Get(':id')

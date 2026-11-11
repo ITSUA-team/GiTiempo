@@ -1,5 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { reactive } from 'vue';
+import Select from 'primevue/select';
+import InputText from 'primevue/inputtext';
+import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
 import PrimeVue from 'primevue/config';
 import type * as VueRouter from 'vue-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,9 +20,15 @@ import { useAuthStore } from '@/stores/auth';
 
 const testMocks = vi.hoisted(() => ({
   deleteInvoice: vi.fn(),
+  moveInvoices: vi.fn(),
+  listGroups: vi.fn(),
+  listEligibleEntries:vi.fn(),
+  previewInvoice:vi.fn(),
+  request: vi.fn(),
   errorToast: vi.fn(),
   getInvoice: vi.fn(),
   invoiceId: '22222222-2222-4222-8222-222222222222',
+  routeParams:{id:'22222222-2222-4222-8222-222222222222'},
   requireConfirmation: vi.fn(),
   routerPush: vi.fn(),
   successToast: vi.fn(),
@@ -30,7 +40,7 @@ vi.mock('vue-router', async (importOriginal) => {
 
   return {
     ...actual,
-    useRoute: () => ({ params: { id: testMocks.invoiceId } }),
+    useRoute: () => ({ params: testMocks.routeParams }),
     useRouter: () => ({ push: testMocks.routerPush }),
   };
 });
@@ -38,11 +48,18 @@ vi.mock('vue-router', async (importOriginal) => {
 vi.mock('@/services/admin-invoices-client', () => ({
   adminInvoicesClient: {
     deleteInvoice: testMocks.deleteInvoice,
+    moveInvoices:testMocks.moveInvoices,
+    listGroups:testMocks.listGroups,
+    listEligibleEntries:testMocks.listEligibleEntries,
+    previewInvoice:testMocks.previewInvoice,
+    downloadInvoicePdf: testMocks.request,
     getInvoice: testMocks.getInvoice,
     updateInvoice: testMocks.updateInvoice,
   },
 }));
 
+vi.mock('@/services/api-client', () => ({getAuthenticatedAppApiClient:()=>({request:testMocks.request})}));
+vi.mock('@/services/admin-projects-client',()=>({adminProjectsClient:{listProjects:vi.fn().mockResolvedValue([])}}));
 vi.mock('@/composables/feedback/useConfirmation', () => ({
   useConfirmation: () => ({
     requireConfirmation: testMocks.requireConfirmation,
@@ -146,7 +163,7 @@ const SkeletonStub = {
   template: '<div data-testid="skeleton" />',
 };
 
-function mountInvoiceDetailView(role: WorkspaceRoleFixture = 'admin') {
+function mountInvoiceDetailView(role: WorkspaceRoleFixture = 'admin',actualEditor=false) {
   const pinia = createPinia();
   setActivePinia(pinia);
 
@@ -163,6 +180,8 @@ function mountInvoiceDetailView(role: WorkspaceRoleFixture = 'admin') {
       ],
       stubs: {
         Skeleton: SkeletonStub,
+        Teleport: true,
+        InvoiceCreateDialog: !actualEditor,
       },
     },
   });
@@ -178,6 +197,10 @@ function getConfirmAccept(): () => void {
 
 describe('InvoiceDetailView', () => {
   beforeEach(() => {
+    testMocks.routeParams=reactive({id:invoiceId});
+    vi.stubGlobal('matchMedia',vi.fn(()=>({matches:false,addEventListener:vi.fn(),removeEventListener:vi.fn()})));
+    testMocks.request.mockResolvedValue({blob:()=>Promise.resolve(new Blob(['pdf']))});
+    vi.stubGlobal('URL', {createObjectURL:vi.fn(()=> 'blob:invoice'),revokeObjectURL:vi.fn()});
     testMocks.deleteInvoice.mockReset();
     testMocks.errorToast.mockReset();
     testMocks.getInvoice.mockReset();
@@ -188,7 +211,11 @@ describe('InvoiceDetailView', () => {
 
     testMocks.getInvoice.mockResolvedValue(createInvoice());
     testMocks.updateInvoice.mockResolvedValue(createInvoice());
+    testMocks.listEligibleEntries.mockResolvedValue({entries:[createTimeEntrySummary()],count:1,totalHours:2.5,defaultHourlyRate:80,defaultCurrency:'USD',defaultRoundingStepMinutes:1});
+    testMocks.previewInvoice.mockResolvedValue({entries:[createTimeEntrySummary()],count:1,totalHours:2.5,subtotal:200,discountAmount:0,totalAmount:200,currency:'USD'});
     testMocks.deleteInvoice.mockResolvedValue(undefined);
+    testMocks.moveInvoices.mockResolvedValue(undefined);
+    testMocks.listGroups.mockResolvedValue({groups:[{id:'group-a',name:'Retainers',count:1}],allCount:1,ungroupedCount:0});
   });
 
   it('keeps the skeleton mounted until the detail request settles', async () => {
@@ -397,71 +424,11 @@ describe('InvoiceDetailView', () => {
     ).toBe(false);
   });
 
-  it('shows Mark as sent and Delete for admin users on draft invoices', async () => {
-    const wrapper = mountInvoiceDetailView('admin');
-    await flushPromises();
-
-    expect(wrapper.find('[data-testid="invoice-mark-as-sent"]').exists()).toBe(
-      true,
-    );
-    expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="invoice-mark-as-paid"]').exists()).toBe(
-      false,
-    );
-  });
-
   it('hides the Delete action from project managers', async () => {
     const wrapper = mountInvoiceDetailView('pm');
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="invoice-mark-as-sent"]').exists()).toBe(
-      true,
-    );
-    expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(false);
-  });
-
-  it('shows only Mark as paid for project managers on sent invoices', async () => {
-    testMocks.getInvoice.mockResolvedValue(createInvoice({ status: 'sent' }));
-
-    const wrapper = mountInvoiceDetailView('pm');
-    await flushPromises();
-
-    expect(wrapper.find('[data-testid="invoice-mark-as-paid"]').exists()).toBe(
-      true,
-    );
-    expect(wrapper.find('[data-testid="invoice-mark-as-sent"]').exists()).toBe(
-      false,
-    );
-    expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(false);
-  });
-
-  it('shows only Mark as paid on sent invoices', async () => {
-    testMocks.getInvoice.mockResolvedValue(createInvoice({ status: 'sent' }));
-
-    const wrapper = mountInvoiceDetailView('admin');
-    await flushPromises();
-
-    expect(wrapper.find('[data-testid="invoice-mark-as-paid"]').exists()).toBe(
-      true,
-    );
-    expect(wrapper.find('[data-testid="invoice-mark-as-sent"]').exists()).toBe(
-      false,
-    );
-    expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(false);
-  });
-
-  it('renders no status action buttons on paid invoices', async () => {
-    testMocks.getInvoice.mockResolvedValue(createInvoice({ status: 'paid' }));
-
-    const wrapper = mountInvoiceDetailView('admin');
-    await flushPromises();
-
-    expect(wrapper.find('[data-testid="invoice-mark-as-sent"]').exists()).toBe(
-      false,
-    );
-    expect(wrapper.find('[data-testid="invoice-mark-as-paid"]').exists()).toBe(
-      false,
-    );
+    expect(wrapper.findComponent(Select).exists()).toBe(true);
     expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(false);
   });
 
@@ -492,336 +459,14 @@ describe('InvoiceDetailView', () => {
 
     const actionsGroup = header.get('[data-testid="invoice-status-actions"]');
     expect(actionsGroup.classes()).toEqual(
-      expect.arrayContaining(['shrink-0']),
+      expect.arrayContaining(['flex-wrap']),
     );
     expect(
-      actionsGroup.find('[data-testid="invoice-mark-as-sent"]').exists(),
+      actionsGroup.findComponent(Select).exists(),
     ).toBe(true);
     expect(
       actionsGroup.find('[data-testid="invoice-delete"]').exists(),
     ).toBe(true);
-  });
-
-  it('prefills the edit fields from the loaded invoice', async () => {
-    testMocks.getInvoice.mockResolvedValue(
-      createInvoice({
-        notes: 'Approved by finance',
-        title: 'April 2026 — Backend (final)',
-      }),
-    );
-
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
-    const notesInput = wrapper.find<HTMLInputElement>('#invoice-notes');
-
-    expect(titleInput.element.value).toBe('April 2026 — Backend (final)');
-    expect(notesInput.element.value).toBe('Approved by finance');
-  });
-
-  it('saves title and notes, shows success feedback, and refreshes the detail', async () => {
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper
-      .find<HTMLInputElement>('#invoice-title')
-      .setValue('April 2026 — Backend (final)');
-    await wrapper
-      .find<HTMLInputElement>('#invoice-notes')
-      .setValue('Approved by finance');
-    await wrapper.find('[data-testid="invoice-save"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
-      notes: 'Approved by finance',
-      title: 'April 2026 — Backend (final)',
-    });
-    expect(testMocks.successToast).not.toHaveBeenCalled();
-    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
-  });
-
-  it('sends null notes when the notes field is cleared', async () => {
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper.find<HTMLInputElement>('#invoice-notes').setValue('');
-    await wrapper.find('[data-testid="invoice-save"]').trigger('click');
-    await flushPromises();
-
-    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
-      notes: null,
-      title: 'April 2026 — Backend',
-    });
-  });
-
-  it('surfaces save failures without treating the request as successful', async () => {
-    testMocks.updateInvoice.mockRejectedValue(
-      new ApiError('Title must not be empty', { status: 422 }),
-    );
-
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper.find('[data-testid="invoice-save"]').trigger('click');
-    await flushPromises();
-
-    expect(testMocks.errorToast).toHaveBeenCalledWith(
-      'Title must not be empty',
-      expect.objectContaining({
-        logContext: { action: 'update-invoice', feature: 'invoices' },
-      }),
-    );
-    expect(testMocks.successToast).not.toHaveBeenCalled();
-    expect(testMocks.getInvoice).toHaveBeenCalledTimes(1);
-    expect(wrapper.find('[data-testid="invoice-detail-header"]').exists()).toBe(
-      true,
-    );
-  });
-
-  it('marks draft invoices as sent quietly with detail refresh', async () => {
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
-      status: 'sent',
-    });
-    expect(testMocks.successToast).not.toHaveBeenCalled();
-    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
-  });
-
-  it('marks sent invoices as paid quietly with detail refresh', async () => {
-    testMocks.getInvoice.mockResolvedValue(createInvoice({ status: 'sent' }));
-
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper.find('[data-testid="invoice-mark-as-paid"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
-      status: 'paid',
-    });
-    expect(testMocks.successToast).not.toHaveBeenCalled();
-    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
-  });
-
-  it('preserves unsaved title and notes edits when Mark as sent is clicked', async () => {
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper
-      .find<HTMLInputElement>('#invoice-title')
-      .setValue('April 2026 — Backend (final)');
-    await wrapper
-      .find<HTMLInputElement>('#invoice-notes')
-      .setValue('Approved by finance');
-    await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
-      status: 'sent',
-    });
-    expect(testMocks.successToast).not.toHaveBeenCalled();
-    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
-
-    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
-    const notesInput = wrapper.find<HTMLInputElement>('#invoice-notes');
-    expect(titleInput.element.value).toBe('April 2026 — Backend (final)');
-    expect(notesInput.element.value).toBe('Approved by finance');
-  });
-
-  it('preserves unsaved title and notes edits when Mark as paid is clicked', async () => {
-    testMocks.getInvoice.mockResolvedValue(createInvoice({ status: 'sent' }));
-
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper
-      .find<HTMLInputElement>('#invoice-title')
-      .setValue('April 2026 — Backend (final)');
-    await wrapper
-      .find<HTMLInputElement>('#invoice-notes')
-      .setValue('Approved by finance');
-    await wrapper.find('[data-testid="invoice-mark-as-paid"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, {
-      status: 'paid',
-    });
-
-    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
-    const notesInput = wrapper.find<HTMLInputElement>('#invoice-notes');
-    expect(titleInput.element.value).toBe('April 2026 — Backend (final)');
-    expect(notesInput.element.value).toBe('Approved by finance');
-  });
-
-  it('preserves unsaved edits when a status update conflicts and reloads the detail', async () => {
-    const reloadedInvoice = createInvoice({
-      notes: 'Server-side note after conflict',
-      title: 'April 2026 — Backend (revised)',
-    });
-    testMocks.getInvoice
-      .mockResolvedValueOnce(createInvoice())
-      .mockResolvedValueOnce(reloadedInvoice);
-    testMocks.updateInvoice.mockRejectedValue(
-      new ApiError(
-        'Invoice was modified after it was loaded. Reload to see the latest version.',
-        { code: 'invoice_update_conflict', status: 409 },
-      ),
-    );
-
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper
-      .find<HTMLInputElement>('#invoice-title')
-      .setValue('April 2026 — Backend (final)');
-    await wrapper
-      .find<HTMLInputElement>('#invoice-notes')
-      .setValue('Approved by finance');
-    await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.errorToast).toHaveBeenCalledWith(
-      'This invoice was modified by another user. Please review and try again',
-      expect.objectContaining({
-        logContext: { action: 'update-invoice', feature: 'invoices' },
-      }),
-    );
-    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
-
-    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
-    const notesInput = wrapper.find<HTMLInputElement>('#invoice-notes');
-    expect(titleInput.element.value).toBe('April 2026 — Backend (final)');
-    expect(notesInput.element.value).toBe('Approved by finance');
-  });
-
-  it('clears the dirty state after Save changes succeeds so later status updates sync from the server', async () => {
-    const savedInvoice = createInvoice({
-      notes: 'Approved by finance',
-      title: 'April 2026 — Backend (final)',
-    });
-    const revisedInvoice = createInvoice({
-      notes: 'Revised by finance after save',
-      title: 'April 2026 — Backend (revised)',
-    });
-    testMocks.getInvoice
-      .mockResolvedValueOnce(createInvoice())
-      .mockResolvedValueOnce(savedInvoice)
-      .mockResolvedValueOnce(revisedInvoice);
-
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper
-      .find<HTMLInputElement>('#invoice-title')
-      .setValue('April 2026 — Backend (final)');
-    await wrapper
-      .find<HTMLInputElement>('#invoice-notes')
-      .setValue('Approved by finance');
-    await wrapper.find('[data-testid="invoice-save"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.updateInvoice).toHaveBeenNthCalledWith(1, invoiceId, {
-      notes: 'Approved by finance',
-      title: 'April 2026 — Backend (final)',
-    });
-    expect(testMocks.successToast).not.toHaveBeenCalled();
-
-    await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.updateInvoice).toHaveBeenNthCalledWith(2, invoiceId, {
-      status: 'sent',
-    });
-
-    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
-    const notesInput = wrapper.find<HTMLInputElement>('#invoice-notes');
-    expect(titleInput.element.value).toBe(revisedInvoice.title);
-    expect(notesInput.element.value).toBe(revisedInvoice.notes);
-  });
-
-  it('reports update conflicts, reloads the detail, and keeps the invoice rendered', async () => {
-    const reloadedInvoice = createInvoice({
-      title: 'April 2026 — Backend (revised)',
-    });
-    testMocks.getInvoice
-      .mockResolvedValueOnce(createInvoice())
-      .mockResolvedValueOnce(reloadedInvoice);
-    testMocks.updateInvoice.mockRejectedValue(
-      new ApiError(
-        'Invoice was modified after it was loaded. Reload to see the latest version.',
-        { code: 'invoice_update_conflict', status: 409 },
-      ),
-    );
-
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.errorToast).toHaveBeenCalledWith(
-      'This invoice was modified by another user. Please review and try again',
-      expect.objectContaining({
-        logContext: { action: 'update-invoice', feature: 'invoices' },
-      }),
-    );
-    expect(testMocks.successToast).not.toHaveBeenCalled();
-    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
-    expect(wrapper.find('[data-testid="invoice-detail-header"]').exists()).toBe(
-      true,
-    );
-
-    const titleInput = wrapper.find<HTMLInputElement>('#invoice-title');
-    expect(titleInput.attributes('value') ?? titleInput.element.value).toBe(
-      reloadedInvoice.title,
-    );
-  });
-
-  it('reports invalid status transitions, reloads, and keeps the current status shown', async () => {
-    testMocks.getInvoice.mockResolvedValue(createInvoice({ status: 'sent' }));
-    testMocks.updateInvoice.mockRejectedValue(
-      new ApiError('Cannot change the status of a sent invoice.', {
-        code: 'invoice_invalid_status_transition',
-        status: 409,
-      }),
-    );
-
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper.find('[data-testid="invoice-mark-as-paid"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.errorToast).toHaveBeenCalledWith(
-      'This status change is not allowed',
-      expect.objectContaining({
-        logContext: { action: 'update-invoice', feature: 'invoices' },
-      }),
-    );
-    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
-    expect(wrapper.find('[data-testid="invoice-detail-header"]').exists()).toBe(
-      true,
-    );
-    expect(wrapper.find('[data-testid="invoice-status-badge"]').exists()).toBe(
-      true,
-    );
-    expect(wrapper.text()).toContain('Sent');
   });
 
   it('confirms the delete with the documented copy, then deletes quietly and navigates back', async () => {
@@ -911,80 +556,6 @@ describe('InvoiceDetailView', () => {
     );
   });
 
-  it('reports a 404 from a status update, reloads, and renders the not-found state', async () => {
-    testMocks.getInvoice
-      .mockResolvedValueOnce(createInvoice())
-      .mockRejectedValueOnce(
-        new ApiError('Invoice not found', {
-          code: 'invoice_not_found',
-          status: 404,
-        }),
-      );
-    testMocks.updateInvoice.mockRejectedValue(
-      new ApiError('Invoice not found', {
-        code: 'invoice_not_found',
-        status: 404,
-      }),
-    );
-
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper.find('[data-testid="invoice-mark-as-sent"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.errorToast).toHaveBeenCalledWith(
-      'Invoice not found',
-      expect.objectContaining({
-        logContext: { action: 'update-invoice', feature: 'invoices' },
-      }),
-    );
-    expect(testMocks.successToast).not.toHaveBeenCalled();
-    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
-    expect(wrapper.find('[data-testid="invoice-not-found"]').exists()).toBe(
-      true,
-    );
-    expect(wrapper.find('[data-testid="invoice-detail-header"]').exists()).toBe(
-      false,
-    );
-  });
-
-  it('reports a 404 from a save-edits update, reloads, and renders the not-found state', async () => {
-    testMocks.getInvoice
-      .mockResolvedValueOnce(createInvoice())
-      .mockRejectedValueOnce(
-        new ApiError('Invoice not found', {
-          code: 'invoice_not_found',
-          status: 404,
-        }),
-      );
-    testMocks.updateInvoice.mockRejectedValue(
-      new ApiError('Invoice not found', {
-        code: 'invoice_not_found',
-        status: 404,
-      }),
-    );
-
-    const wrapper = mountInvoiceDetailView();
-    await flushPromises();
-
-    await wrapper.find('[data-testid="invoice-save"]').trigger('click');
-    await flushPromises();
-    await flushPromises();
-
-    expect(testMocks.errorToast).toHaveBeenCalledWith(
-      'Invoice not found',
-      expect.objectContaining({
-        logContext: { action: 'update-invoice', feature: 'invoices' },
-      }),
-    );
-    expect(testMocks.getInvoice).toHaveBeenCalledTimes(2);
-    expect(wrapper.find('[data-testid="invoice-not-found"]').exists()).toBe(
-      true,
-    );
-  });
-
   it('reports a 404 from a confirmed delete, reloads, and renders the not-found state', async () => {
     testMocks.getInvoice
       .mockResolvedValueOnce(createInvoice())
@@ -1038,4 +609,88 @@ describe('InvoiceDetailView', () => {
       name: routeNames.invoices,
     });
   });
+  it('allows a Sent invoice to return to Draft with its saved revision',async()=>{
+    testMocks.getInvoice.mockResolvedValue(createInvoice({status:'sent',revision:4}));
+    const wrapper=mountInvoiceDetailView();
+    await flushPromises();
+    wrapper.findComponent(Select).vm.$emit('update:modelValue','draft');
+    await flushPromises();
+    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId,{status:'draft',expectedRevision:4});
+  });
+  it('opens the full editor and submits its captured revision',async()=>{
+    testMocks.getInvoice.mockResolvedValue(createInvoice({revision:3}));
+    const wrapper=mountInvoiceDetailView();await flushPromises();
+    await wrapper.findAll('button').find(b=>b.text()==='Edit invoice')!.trigger('click');
+    const editor=wrapper.findComponent(InvoiceCreateDialog);
+    expect(editor.props('editing')).toBe(true);
+    await editor.props('createMutation').createInvoice({title:'Updated',dateFrom:'2026-04-01',dateTo:'2026-04-30',discountPercent:0,timeEntryIds:[]});
+    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId,expect.objectContaining({expectedRevision:3,timeEntryIds:[]}));
+  });
+  it('moves membership through the dedicated endpoint without a business revision update',async()=>{
+    testMocks.getInvoice.mockResolvedValue(createInvoice({revision:7,groupId:null}));
+    const wrapper=mountInvoiceDetailView();await flushPromises();
+    wrapper.findAllComponents(Select).find(select=>select.props('inputId')==='detail-group')!.vm.$emit('update:modelValue','group-a');await flushPromises();
+    expect(testMocks.moveInvoices).toHaveBeenCalledWith({invoiceIds:[invoiceId],groupId:'group-a'});
+    expect(testMocks.updateInvoice).not.toHaveBeenCalled();
+    expect(wrapper.findComponent(InvoiceCreateDialog).props('source')?.revision).toBe(7);
+  });
+  it('preserves the saved membership when a move fails',async()=>{
+    testMocks.moveInvoices.mockRejectedValueOnce(new Error('Move failed'));
+    testMocks.getInvoice.mockResolvedValue(createInvoice({groupId:null}));
+    const wrapper=mountInvoiceDetailView();await flushPromises();
+    const picker=wrapper.findAllComponents(Select).find(select=>select.props('inputId')==='detail-group')!;
+    picker.vm.$emit('update:modelValue','group-a');await flushPromises();
+    expect(picker.props('modelValue')).toBeNull();
+    expect(wrapper.text()).toContain('Move failed');
+  });
+  it('preserves edited fields across revision conflict and explicitly reviews a new revision before retry',async()=>{
+    testMocks.getInvoice.mockResolvedValue(createInvoice({revision:7,status:'sent'}));
+    testMocks.updateInvoice.mockRejectedValueOnce(new ApiError('Invoice changed',{status:409,code:'invoice_update_conflict'}));
+    const wrapper=mountInvoiceDetailView('pm',true);await flushPromises();
+    await wrapper.findAll('button').find(button=>button.text()==='Edit invoice')!.trigger('click');await flushPromises();
+    const editor=wrapper.findComponent(InvoiceCreateDialog);
+    expect(editor.findAllComponents(InputText)[0]!.props('modelValue')).toBe('April 2026 — Backend');
+    await editor.findComponent('#invoice-create-title').setValue('Unsaved title');
+    testMocks.getInvoice.mockResolvedValue(createInvoice({revision:8,status:'sent'}));
+    await editor.find('[data-testid="invoice-create-submit"]').trigger('click');await flushPromises();
+    expect(editor.findAllComponents(InputText)[0]!.props('modelValue')).toBe('Unsaved title');
+    await editor.findAll('button').find(button=>button.text()==='Refresh latest revision')!.trigger('click');await flushPromises();
+    await editor.find('[data-testid="invoice-create-submit"]').trigger('click');await flushPromises();
+    expect(testMocks.updateInvoice).toHaveBeenLastCalledWith(invoiceId,expect.objectContaining({title:'Unsaved title',expectedRevision:8}));
+  });
+  it('closes a draft on route changes and prevents submitting it into the next invoice',async()=>{
+    const wrapper=mountInvoiceDetailView();await flushPromises();
+    await wrapper.findAll('button').find(button=>button.text()==='Edit invoice')!.trigger('click');
+    const submit=wrapper.findComponent(InvoiceCreateDialog).props('createMutation').createInvoice;
+    testMocks.routeParams.id='88888888-8888-4888-8888-888888888888';await flushPromises();
+    expect(wrapper.findComponent(InvoiceCreateDialog).props('visible')).toBe(false);
+    await expect(submit({title:'Old draft',dateFrom:'2026-04-01',dateTo:'2026-04-30',discountPercent:0})).rejects.toThrow('invoice changed');
+    expect(testMocks.updateInvoice).not.toHaveBeenCalled();
+  });
+  it('ignores a delayed old revision conflict after another invoice editor opens',async()=>{
+    let rejectUpdate!:(error:Error)=>void;
+    testMocks.updateInvoice.mockReturnValueOnce(new Promise((_resolve,reject)=>{rejectUpdate=reject;}));
+    const wrapper=mountInvoiceDetailView();await flushPromises();
+    await wrapper.findAll('button').find(button=>button.text()==='Edit invoice')!.trigger('click');
+    const pending=wrapper.findComponent(InvoiceCreateDialog).props('createMutation').createInvoice({title:'Old edit',dateFrom:'2026-04-01',dateTo:'2026-04-30',discountPercent:0}).catch(()=>undefined);
+    const nextId='88888888-8888-4888-8888-888888888888';
+    testMocks.getInvoice.mockResolvedValue(createInvoice({id:nextId}));
+    testMocks.routeParams.id=nextId;await flushPromises();
+    await wrapper.findAll('button').find(button=>button.text()==='Edit invoice')!.trigger('click');
+    rejectUpdate(new ApiError('Old conflict',{status:409,code:'invoice_update_conflict'}));await pending;await flushPromises();
+    expect(wrapper.findComponent(InvoiceCreateDialog).props('revisionConflict')).toBe(false);
+  });
+  it('reviews a new period before creating a copy',async()=>{
+    const wrapper=mountInvoiceDetailView();await flushPromises();
+    await wrapper.findAll('button').find(b=>b.text()==='Create from this invoice')!.trigger('click');
+    expect(wrapper.text()).toContain('Previously billed entries are unavailable');
+    expect(wrapper.findComponent(InvoiceCreateDialog).props('visible')).toBe(false);
+  });
+  it('offers PDF download in every invoice status',async()=>{
+    testMocks.getInvoice.mockResolvedValue(createInvoice({status:'paid'}));
+    const wrapper=mountInvoiceDetailView();await flushPromises();
+    expect(wrapper.findAll('button').some(b=>b.text()==='Download PDF')).toBe(true);
+    expect(wrapper.findComponent(Select).props('options')).toEqual(['draft','sent','paid']);
+  });
+
 });
