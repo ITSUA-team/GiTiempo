@@ -303,6 +303,20 @@ describe('InvoiceDetailView', () => {
     });
   });
 
+  it.each(['data:image/png;base64,YQ==', 'data:image/svg+xml;base64,PHN2Zy8+'])('renders the saved sender logo (%s)', async (logo) => {
+    testMocks.getInvoice.mockResolvedValue(createInvoice({ logo }));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    expect(wrapper.get('img[alt="Invoice sender logo"]').attributes('src')).toBe(logo);
+    expect(wrapper.findAll('img[alt="Invoice sender logo"]')).toHaveLength(1);
+  });
+
+  it('omits the sender logo when the invoice has none', async () => {
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    expect(wrapper.find('img[alt="Invoice sender logo"]').exists()).toBe(false);
+  });
+
   it('renders every summary field of the invoice', async () => {
     const wrapper = mountInvoiceDetailView();
     await flushPromises();

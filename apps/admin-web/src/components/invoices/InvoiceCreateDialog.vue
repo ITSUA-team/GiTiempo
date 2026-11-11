@@ -89,7 +89,8 @@ const payment = ref({method:'',terms:'',beneficiary:'',provider:'',account:'',in
 const services = ref('');
 const logo = ref<string | null>(null);
 const selectedEntries = ref<string[]>([]);
-const selectionInitialized = ref(false);
+const selectedEntriesScope = ref<string | null>(null);
+const defaultSelectedEntryIds = ref<Set<string> | null>(null);
 const saveError = ref('');
 const calculatedPreview = ref<PreviewInvoiceResponse | null>(null);
 const calculating = ref(false);
@@ -203,10 +204,24 @@ const {
   query: previewQuery,
 });
 
-watch(preview, (value) => {
+const entriesScope = computed(() => previewQuery.value
+  ? JSON.stringify([previewQuery.value.dateFrom, previewQuery.value.dateTo, previewQuery.value.projectId])
+  : null);
+
+watch([preview, entriesScope], ([value, scope]) => {
   if (!value) return;
   for (const entry of value.entries) seenEntries.value.set(entry.id, entry);
-  if (!props.editing && !selectionInitialized.value) {selectedEntries.value = value.entries.map(e=>e.id);selectionInitialized.value=true;}
+  if (scope !== selectedEntriesScope.value) {
+    selectedEntries.value = value.entries.map(entry => entry.id);
+    selectedEntriesScope.value = scope;
+    defaultSelectedEntryIds.value = new Set(selectedEntries.value);
+  } else if (defaultSelectedEntryIds.value) {
+    const additions = value.entries.filter(entry => !defaultSelectedEntryIds.value!.has(entry.id));
+    if (additions.length) {
+      selectedEntries.value = [...selectedEntries.value, ...additions.map(entry => entry.id)];
+      for (const entry of additions) defaultSelectedEntryIds.value.add(entry.id);
+    }
+  }
 });
 // Reset on any visibility change, before the pre-fill watcher below so a
 // reopened dialog starts blank and then receives the preview defaults again.
@@ -232,7 +247,8 @@ watch(
     saveError.value = '';
     calculationFailed.value=false;
     selectedEntries.value = [];
-    selectionInitialized.value = false;
+    selectedEntriesScope.value = null;
+    defaultSelectedEntryIds.value = null;
     sender.value = {name:'',address:'',email:'',taxId:''};
     recipient.value = {name:'',address:'',email:'',taxId:''};
     payment.value = {method:'',terms:'',beneficiary:'',provider:'',account:'',instructions:''};
@@ -259,6 +275,7 @@ watch(
         logo.value = source.logo ?? null;
         notes.value = source.notes ?? '';
         selectedEntries.value = props.editing ? source.timeEntries.map(e=>e.id) : [];
+        if (props.editing) selectedEntriesScope.value = entriesScope.value;
       } else {
         const generation = lifecycleGeneration;
         void useSettings(true).catch(() => {if (generation === lifecycleGeneration && props.visible) saveError.value = 'Could not load invoice defaults. Retry Use settings.';});
@@ -828,6 +845,12 @@ async function handleCreate(): Promise<void> {
           >
             Prefilled from Admin Settings. Changes apply to this invoice only.
           </p>
+          <img
+            v-if="label === 'From' && logo"
+            :src="logo"
+            alt="Invoice sender logo"
+            class="max-h-16 max-w-full self-start object-contain"
+          >
           <label
             v-for="key in (['name','address','email','taxId'] as const)"
             :key="key"

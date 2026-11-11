@@ -1595,6 +1595,84 @@ describe('InvoiceCreateDialog', () => {
 
     expect(getRoundingStepLabelElement().textContent).toBe('10 min');
   });
+  it('selects every eligible entry when the period changes, including a cached period', async () => {
+    const april = createTimeEntry();
+    const may = createTimeEntry({ id: '88888888-8888-4888-8888-888888888888' });
+    testMocks.listEligibleEntries.mockImplementation(async query => createEntriesResponse({
+      entries: query.dateFrom === '2026-05-01' ? [may] : [april],
+    }));
+    const wrapper = await mountDialog();
+    await enterDateRange(wrapper);
+    await flushPromises();
+    const included = () => wrapper.findAllComponents(Checkbox).filter(field => !field.props('binary'));
+    expect(included()[0]!.props('modelValue')).toEqual([april.id]);
+    included()[0]!.vm.$emit('update:modelValue', []);
+    await flushPromises();
+    wrapper.getComponent(DatePicker).vm.$emit('update:modelValue', [new Date(2026, 4, 1), new Date(2026, 4, 31)]);
+    await flushPromises();
+    expect(included()[0]!.props('modelValue')).toEqual([may.id]);
+    await enterDateRange(wrapper);
+    await flushPromises();
+    expect(included()[0]!.props('modelValue')).toEqual([april.id]);
+  });
+
+  it('includes newly discovered entries after a cached period refresh without restoring manual exclusions', async () => {
+    const first = createTimeEntry();
+    const added = createTimeEntry({ id: '88888888-8888-4888-8888-888888888888' });
+    let finish!: (value: EligibleEntriesResponse) => void;
+    let aprilRequests = 0;
+    testMocks.listEligibleEntries.mockImplementation(async query => {
+      if (query.dateFrom === '2026-05-01') return createEntriesResponse({ entries: [], count: 0 });
+      aprilRequests++;
+      if (aprilRequests === 1) return createEntriesResponse();
+      return new Promise<EligibleEntriesResponse>(resolve => { finish = resolve; });
+    });
+    const wrapper = await mountDialog();
+    await enterDateRange(wrapper);
+    await flushPromises();
+    wrapper.getComponent(DatePicker).vm.$emit('update:modelValue', [new Date(2026, 4, 1), new Date(2026, 4, 31)]);
+    await flushPromises();
+    await enterDateRange(wrapper);
+    await flushPromises();
+    const included = () => wrapper.findAllComponents(Checkbox).filter(field => !field.props('binary'));
+    expect(included()[0]!.props('modelValue')).toEqual([first.id]);
+    included()[0]!.vm.$emit('update:modelValue', []);
+    await flushPromises();
+    finish(createEntriesResponse({ entries: [first, added], count: 2 }));
+    await flushPromises();
+    expect(included()[0]!.props('modelValue')).toEqual([added.id]);
+  });
+
+  it('preserves saved exclusions on edit until a different period is chosen', async () => {
+    const extra = createTimeEntry({ id: '88888888-8888-4888-8888-888888888888' });
+    const entries = [createTimeEntry(), extra];
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse({ entries, count: 2 }));
+    const wrapper = await mountDialog({ source: createInvoiceResponse(), editing: true });
+    const included = () => wrapper.findAllComponents(Checkbox).filter(field => !field.props('binary'));
+    expect(included()[0]!.props('modelValue')).toEqual([entries[0]!.id]);
+    wrapper.getComponent(DatePicker).vm.$emit('update:modelValue', [new Date(2026, 4, 1), new Date(2026, 4, 31)]);
+    await flushPromises();
+    expect(included()[0]!.props('modelValue')).toEqual(entries.map(entry => entry.id));
+  });
+
+  it('shows the settings logo in a new invoice and includes it when saving', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const logo = 'data:image/png;base64,aGVsbG8=';
+    testMocks.getInvoiceDefaults.mockResolvedValue({ billingProfile: {
+      sender: { name: 'Sender', address: '', email: '', taxId: '' },
+      payment: { method: 'Bank transfer', terms: '', beneficiary: '', provider: '', account: '', instructions: '' },
+      logo,
+    } });
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({ createInvoice });
+    expect(document.querySelector('img[alt="Invoice sender logo"]')?.getAttribute('src')).toBe(logo);
+    await wrapper.getComponent('#invoice-create-title').setValue('Invoice with logo');
+    await enterDateRange(wrapper);
+    await flushPromises();
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({ logo }));
+  });
+
   it('saves only checked entries and supports explicitly excluding every entry', async () => {
     const entries = [createTimeEntry(), createTimeEntry({ id: '88888888-8888-4888-8888-888888888888' })];
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse({ entries, count: 2 }));

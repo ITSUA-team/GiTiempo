@@ -159,6 +159,38 @@ describe('Personal invoice groups', () => {
     await flushPromises();
     expect(api.requestJson.mock.calls.length).toBe(calls + 1);
   });
+  it('switches both group controls to the newly created personal group', async () => {
+    const wrapper = render();
+    await flushPromises();
+    api.request.mockResolvedValueOnce({ id: 'group-new', name: 'Monthly' });
+    api.requestJson.mockResolvedValueOnce({
+      groups: [{ id: 'group-new', name: 'Monthly', count: 0 }],
+      allCount: 3,
+      ungroupedCount: 1,
+    });
+    await wrapper.get('button[aria-label="Create group"]').trigger('click');
+    await wrapper.get('#group-name').setValue('Monthly');
+    await wrapper.get('#invoice-group-form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.emitted('select')).toEqual([['group-new']]);
+    expect(wrapper.getComponent(Select).props('modelValue')).toBe('group-new');
+    expect(wrapper.findAll('button').find(button => button.text().includes('Monthly'))!
+      .attributes('aria-pressed')).toBe('true');
+  });
+  it('does not select a created group after the account scope changes', async () => {
+    let finish!: (value: unknown) => void;
+    api.request.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    const wrapper = render();
+    await flushPromises();
+    await wrapper.get('button[aria-label="Create group"]').trigger('click');
+    await wrapper.get('#group-name').setValue('Monthly');
+    await wrapper.get('#invoice-group-form').trigger('submit');
+    await wrapper.setProps({ scope: 'user-b' });
+    finish({ id: 'group-old', name: 'Monthly' });
+    await flushPromises();
+    expect(wrapper.emitted('select')).toBeUndefined();
+    expect(wrapper.getComponent(Select).props('modelValue')).toBe(null);
+  });
   it('shows duplicate-name failures inside the still-open group dialog', async () => {
     api.request.mockRejectedValueOnce(
       new Error('A group with this name already exists'),
@@ -173,6 +205,7 @@ describe('Personal invoice groups', () => {
       .trigger('click');
     await flushPromises();
     const dialog = wrapper.get('[role="dialog"]');
+    expect(wrapper.emitted('select')).toBeUndefined();
     expect(dialog.get('[role="alert"]').text()).toContain(
       'already have a group',
     );

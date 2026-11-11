@@ -80,6 +80,8 @@
 
 - Create and Edit use the same business form. Include title, personal group, project, billing period, services, hourly rate, currency, discount, rounding, sender/legal name and address/email/tax ID, recipient details, payment method/terms/beneficiary/provider/account/instructions and notes. Admins can choose workspace-wide scope. PMs choose a project allowed by their existing access.
 - Creation starts in Draft and receives a fresh reference on save. New invoices prefill sender and payment fields from `GET /invoices/defaults`. Editing starts from saved invoice snapshots. The explicit Use settings action replaces local draft defaults, applied only after Save.
+- When a billing period or project scope is chosen, select all eligible entries by default. Preserve manual exclusions during refreshes of the same scope. Opening an existing invoice retains its saved selection until its period or project changes.
+- Show the applied optional sender logo in the editor and invoice details; absence leaves no placeholder.
 - Present eligible entries as selectable rows. Retain entries belonging to the edited invoice and allow adding eligible unbilled entries. Excluding an entry releases its association on save while preserving tracked work.
 - Show included count, per-entry rounded billed duration, hours, subtotal, discount and final amount for the reviewed selection. Use authoritative preview calculation with the same billing inputs and rounding rules as save. A successful zero-entry preview permits a zero-total draft.
 - Save business fields, selected entries, totals and a changed personal group together. A conflict or failed save preserves typed values and choices, refreshes eligibility and identifies unavailable entries.
@@ -98,6 +100,7 @@
 ### Personal groups
 
 - Provide All invoices, Ungrouped and flat personal groups with accessible-invoice counts. Groups and assignments belong to one user in one workspace. A group never grants invoice access.
+- After successful group creation, switch to that group in both desktop navigation and the mobile picker. Failed creation preserves the current group.
 - Create, rename and delete groups with inline name validation and preserved input on request failure. Deleting a group preserves invoices and returns them to Ungrouped for its owner.
 - Create inside a group preselects that destination. Allow moving a single invoice or multiple selected invoices to a group or Ungrouped. A bulk failure preserves selection and all prior assignments.
 - Keep search, project, period and status filters usable inside the selected view. Distinguish empty groups, filtered zero results, loading and request errors. Desktop uses group navigation alongside the list; mobile provides the same choices and operations.

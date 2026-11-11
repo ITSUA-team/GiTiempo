@@ -89,6 +89,12 @@ const paymentLines = computed(() => {
       <h2 class="text-text-muted text-xs font-medium sm:text-[13px]">
         {{ title }}
       </h2>
+      <img
+        v-if="title === 'From' && invoice.logo"
+        :src="invoice.logo"
+        alt="Invoice sender logo"
+        class="max-h-12 max-w-full self-start object-contain"
+      >
       <p class="text-base font-semibold sm:text-lg">
         {{ party?.name || '—' }}
       </p>

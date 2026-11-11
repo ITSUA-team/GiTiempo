@@ -98,11 +98,13 @@ async function submit() {
   busy.value = true;
   error.value = '';
   try {
+    let createdGroupId: string | undefined;
     if (deleting && group) await adminInvoicesClient.deleteGroup(group.id);
     else if (mode.value === 'rename' && group) await adminInvoicesClient.updateGroup(group.id, { name: trimmed });
-    else await adminInvoicesClient.createGroup({ name: trimmed });
+    else createdGroupId = (await adminInvoicesClient.createGroup({ name: trimmed })).id;
     if (requestGeneration !== generation) return;
     dialog.value = false;
+    if (createdGroupId) select(createdGroupId);
     if (deleting) {
       if (group?.id === current.value) select(null);
       emit('moved');
