@@ -92,24 +92,24 @@
 
 ## 13. Manual Testing
 
-- [ ] 13.1 Open Admin Panel → Settings, change `Time rounding step` to 5, save, and reload. Verify: the Select shows 5 after reload.
-- [ ] 13.2 Open Admin Panel → Projects, expand a project's inline settings row. Verify: the `Time rounding step` Select shows "Inherit from workspace (5 min)" by default. Change it to 10, save, and reload. Verify: the Select shows 10 after reload.
-- [ ] 13.3 Change the same project's `Time rounding step` back to "Inherit from workspace", save, and reload. Verify: the Select shows "Inherit from workspace (5 min)" after reload.
-- [ ] 13.4 Open the Add Project page. Verify: the `Time rounding step` Select defaults to "Inherit from workspace (5 min)". Create a project with the default. Expand its settings. Verify: it shows "Inherit from workspace (5 min)".
-- [ ] 13.5 Change the workspace `Time rounding step` from 5 to 15 in Settings. Go back to the project from step 13.4 (which was set to inherit). Expand its settings. Verify: the Select now shows "Inherit from workspace (15 min)".
-- [ ] 13.6 Create a project with `Time rounding step: 5` and add several short completed billable time entries (e.g. two entries of 1 min each). Open the invoice create dialog, select the project and date range, and wait for the preview. Verify: the `Rounding step` field auto-fills with 5 and the previewed total hours show 10 min (0.17h), not 2 min.
-- [ ] 13.7 In the same create dialog, change `Rounding step` from 5 to 15. Verify: the preview re-fetches and the total hours update to reflect 15-min rounding per entry (e.g. two 1-min entries → 30 min).
-- [ ] 13.8 In the same create dialog, change the project selection to a different project with `Time rounding step: 1`. Verify: the `Rounding step` field dynamically updates to 1 and the preview re-fetches with 1-min rounding.
-- [ ] 13.9 Create the invoice with `Rounding step: 5`. Open the invoice detail page. Verify: the detail page shows the rounded total hours but does NOT display the rounding step value anywhere.
-- [ ] 13.10 After creating the invoice, go back to the project settings and change `Time rounding step` to 15. Reopen the invoice detail page. Verify: the invoice total hours remain unchanged (snapshot).
-- [ ] 13.11 Create a workspace-wide invoice (no project). Verify: the `Rounding step` field defaults to the workspace setting (e.g. 15) and the total hours reflect that rounding.
-- [ ] 13.12 Attempt to create a project with `timeRoundingStepMinutes: 0` or `61` via API (e.g. Bruno). Verify: the request is rejected with a validation error.
-- [ ] 13.13 Attempt to create an invoice with `roundingStepMinutes: 0` via API. Verify: the request is rejected with a validation error.
-- [ ] 13.14 Attempt to update an existing invoice's `roundingStepMinutes` via `PATCH /invoices/:id`. Verify: the request is rejected (snapshot field is not mutable).
-- [ ] 13.15 Verify original time entries are not modified: after creating an invoice with rounding step 5, check the time entries linked to that invoice via the API or DB. Verify: their `durationSeconds` values remain the original raw values, not the rounded ones.
-- [ ] 13.16 Open an invoice detail page for an invoice created with rounding step 5 that links a 6-minute (360s) entry. Verify: the time-entries table Duration column shows 10 minutes (the rounded duration), not 6 minutes; the rounding step value (5) is not displayed anywhere on the page.
-- [ ] 13.17 Open the invoice create dialog, select a project with rounding step 5 and a date range that includes a 6-minute entry, and expand the eligible-entries preview. Verify: the preview Duration column shows 10 minutes for that entry.
-- [ ] 13.18 In the same create dialog preview, change the `Rounding step` dropdown from 5 to 30. Verify: the preview Duration column for the 6-minute entry immediately recalculates and shows 30 minutes (not 10).
+- [x] 13.1 Open Admin Panel → Settings, change `Time rounding step` to 5, save, and reload. Verify: the Select shows 5 after reload.
+- [x] 13.2 Open Admin Panel → Projects, expand a project's inline settings row. Verify: the `Time rounding step` Select shows "Inherit from workspace (5 min)" by default. Change it to 10, save, and reload. Verify: the Select shows 10 after reload.
+- [x] 13.3 Change the same project's `Time rounding step` back to "Inherit from workspace", save, and reload. Verify: the Select shows "Inherit from workspace (5 min)" after reload.
+- [x] 13.4 Open the Add Project page. Verify: the `Time rounding step` Select defaults to "Inherit from workspace (5 min)". Create a project with the default. Expand its settings. Verify: it shows "Inherit from workspace (5 min)".
+- [x] 13.5 Change the workspace `Time rounding step` from 5 to 15 in Settings. Go back to the project from step 13.4 (which was set to inherit). Expand its settings. Verify: the Select now shows "Inherit from workspace (15 min)".
+- [x] 13.6 Create a project with `Time rounding step: 5` and add several short completed billable time entries (e.g. two entries of 1 min each). Open the invoice create dialog, select the project and date range, and wait for the preview. Verify: the `Rounding step` field auto-fills with 5 and the previewed total hours show 10 min (0.17h), not 2 min.
+- [x] 13.7 In the same create dialog, change `Rounding step` from 5 to 15. Verify: the preview re-fetches and the total hours update to reflect 15-min rounding per entry (e.g. two 1-min entries → 30 min).
+- [x] 13.8 In the same create dialog, change the project selection to a different project with `Time rounding step: 1`. Verify: the `Rounding step` field dynamically updates to 1 and the preview re-fetches with 1-min rounding.
+- [x] 13.9 Create the invoice with `Rounding step: 5`. Open the invoice detail page. Verify: the detail page shows the rounded total hours but does NOT display the rounding step value anywhere.
+- [x] 13.10 After creating the invoice, go back to the project settings and change `Time rounding step` to 15. Reopen the invoice detail page. Verify: the invoice total hours remain unchanged (snapshot).
+- [x] 13.11 Create a workspace-wide invoice (no project). Verify: the `Rounding step` field defaults to the workspace setting (e.g. 15) and the total hours reflect that rounding.
+- [x] 13.12 Attempt to create a project with `timeRoundingStepMinutes: 0` or `61` via API (e.g. Bruno). Verify: the request is rejected with a validation error.
+- [x] 13.13 Attempt to create an invoice with `roundingStepMinutes: 0` via API. Verify: the request is rejected with a validation error.
+- [x] 13.14 Attempt to update an existing invoice's `roundingStepMinutes` via `PATCH /invoices/:id`. Verify: the request is rejected (snapshot field is not mutable).
+- [x] 13.15 Verify original time entries are not modified: after creating an invoice with rounding step 5, check the time entries linked to that invoice via the API or DB. Verify: their `durationSeconds` values remain the original raw values, not the rounded ones.
+- [x] 13.16 Open an invoice detail page for an invoice created with rounding step 5 that links a 6-minute (360s) entry. Verify: the time-entries table Duration column shows 10 minutes (the rounded duration), not 6 minutes; the rounding step value (5) is not displayed anywhere on the page.
+- [x] 13.17 Open the invoice create dialog, select a project with rounding step 5 and a date range that includes a 6-minute entry, and expand the eligible-entries preview. Verify: the preview Duration column shows 10 minutes for that entry.
+- [x] 13.18 In the same create dialog preview, change the `Rounding step` dropdown from 5 to 30. Verify: the preview Duration column for the 6-minute entry immediately recalculates and shows 30 minutes (not 10).
 
 ## 14. Integration Verification
 
@@ -132,4 +132,4 @@
 - [x] 16.3 Add `apps/admin-web/src/lib/invoice-amount.ts` with a `computeInvoiceAmount(totalHours, hourlyRate, discountPercent)` helper that mirrors the backend fixed-point BigInt ceiling, so the create dialog estimate matches the authoritative server total. Verify: unit test covers exact-cent, sub-cent ceiling, half-cent, and zero cases.
 - [x] 16.4 Use `computeInvoiceAmount` in `InvoiceCreateDialog.vue` `computedTotalAmount` instead of the raw `totalHours * rate * discount` product. Verify: the estimate displays the ceiling-to-cents amount and existing estimate tests ($170.00, $200.00) still pass.
 - [x] 16.5 Update the `invoices-api` spec rounding scenarios and add an `admin-invoices-page` scenario for the estimate ceiling. Verify: `openspec validate --strict` passes.
-- [ ] 16.6 Manual: create an invoice whose raw amount has a sub-cent fraction (e.g. 3.33h x $10.01 x 90%) and verify the detail page Total amount shows $3.34, and the create dialog estimate shows $3.34 before submitting. Verify: both surfaces show the ceiled value, never a truncated one.
+- [x] 16.6 Manual: create an invoice whose raw amount has a sub-cent fraction (e.g. 3.33h x $10.01 x 90%) and verify the detail page Total amount shows $3.34, and the create dialog estimate shows $3.34 before submitting. Verify: both surfaces show the ceiled value, never a truncated one.

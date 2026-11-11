@@ -58,8 +58,8 @@
 - [x] 9.4 Run `pnpm --filter @gitiempo/api test` — all API tests pass including new permission enforcement tests.
 - [x] 9.5 Run `pnpm --filter admin-web test` — all admin-web tests pass including new defaults endpoint, route guard, nav hiding, focus refresh, and member checkbox tests.
 - [x] 9.6 Run `openspec validate --strict` for the `add-pm-invoice-view-permission` change — passes with no warnings.
-- [ ] 9.7 Manual test: log in as admin, enable `canViewInvoices` for alice (PM), log in as alice, navigate to `/invoices` — no 403 toast, page loads, create dialog pre-fills currency/rate from `GET /invoices/defaults`.
-- [ ] 9.8 Manual test: as admin, revoke `canViewInvoices` for alice while alice is on `/invoices`; alice switches back to the admin-web tab — she is redirected to the forbidden page.
+- [x] 9.7 Manual test: log in as admin, enable `canViewInvoices` for alice (PM), log in as alice, navigate to `/invoices` — no 403 toast, page loads, create dialog pre-fills currency/rate from `GET /invoices/defaults`.
+- [x] 9.8 Manual test: as admin, revoke `canViewInvoices` for alice while alice is on `/invoices`; alice switches back to the admin-web tab — she is redirected to the forbidden page.
 
 ## 10. OpenAPI Nullable Type Fix
 

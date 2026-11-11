@@ -613,6 +613,84 @@
         ]
       }
     },
+    "/auth/identity-recovery/assess": {
+      "get": {
+        "operationId": "IdentityRecoveryController_assess",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IdentityRecoveryAssessResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Platform operator role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List aged unbound registration reservations",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/identity-recovery/resolve": {
+      "post": {
+        "operationId": "IdentityRecoveryController_resolve",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentityRecoveryResolveRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid operator input"
+          },
+          "403": {
+            "description": "Platform operator role required"
+          },
+          "404": {
+            "description": "Registration reservation not found"
+          },
+          "409": {
+            "description": "Reservation is not resolvable (state, age, or adoption check)"
+          },
+          "503": {
+            "description": "Outcome is uncertain; the reservation stays retained"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolve a conclusively abandoned registration reservation",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/github/connection": {
       "get": {
         "operationId": "GithubController_connectionStatus",
@@ -4442,6 +4520,78 @@
         },
         "required": [
           "code"
+        ],
+        "additionalProperties": false
+      },
+      "IdentityRecoveryAssessResponseDto": {
+        "type": "object",
+        "properties": {
+          "reservationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "normalizedEmail": {
+            "type": "string"
+          },
+          "firebaseUid": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "registration"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "reserved"
+            ]
+          },
+          "registrationDisplayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "registrationWorkspaceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "reservationId",
+          "normalizedEmail",
+          "firebaseUid",
+          "purpose",
+          "state",
+          "registrationDisplayName",
+          "registrationWorkspaceName",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "IdentityRecoveryResolveRequestDto": {
+        "type": "object",
+        "properties": {
+          "reservationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "operatorDecision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "reservationId",
+          "operatorDecision"
         ],
         "additionalProperties": false
       },
