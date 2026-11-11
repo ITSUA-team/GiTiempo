@@ -164,7 +164,7 @@ The detail page MUST display the saved invoice and let an authorized user edit i
 
 - **GIVEN** an authorized user opens a Draft invoice
 - **WHEN** the actions render
-- **THEN** Draft is selected and the user can choose Sent or Paid. Only an Admin can delete the draft.
+- **THEN** Draft is selected and the user can choose Sent or Paid. Only an Admin sees Delete invoice alongside the other header actions for the draft.
 
 #### Scenario: Sent status actions
 
@@ -343,6 +343,8 @@ The detail MUST offer Create from this invoice in every status.
 - **GIVEN** the user opens the action on an accessible invoice
 - **WHEN** they choose the new period and personal group and continue
 - **THEN** an editable draft form opens with source business values, a fresh eligible-entry preview and no copied billed entries. Cancel discards the draft and preserves the source; submission creates a separate draft with its own reference
+- **AND** the draft starts with the source logo if present, otherwise with the current workspace logo if configured. The user can replace or remove the logo before saving.
+- **AND** successful submission opens the newly created invoice's detail page.
 
 ### Requirement: Invoice PDF download
 

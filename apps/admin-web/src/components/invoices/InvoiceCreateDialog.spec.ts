@@ -1792,6 +1792,73 @@ describe('InvoiceCreateDialog', () => {
     expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({ logo }));
   });
 
+  describe('logo when creating from a saved invoice', () => {
+    const workspaceLogo = 'data:image/png;base64,d29ya3NwYWNl';
+    const originalLogo = 'data:image/png;base64,c291cmNl';
+    const sender = { name: 'Original sender', email: '', address: '', taxId: '' };
+    const payment = { method: 'Original method', terms: '', beneficiary: '', provider: '', account: '', instructions: '' };
+    const source = { ...createInvoiceResponse(), logo: null, sender, payment };
+    const billingProfile = {
+      logo: workspaceLogo,
+      sender: { ...sender, name: 'Current sender' },
+      payment: { ...payment, method: 'Current method' },
+    };
+
+    beforeEach(() => {
+      testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+      testMocks.getInvoiceDefaults.mockResolvedValue({ billingProfile });
+    });
+
+    it('prefills the workspace logo without replacing the source billing fields', async () => {
+      const createInvoice = createCreateInvoiceSpy();
+      const wrapper = await mountDialog({ source, createInvoice });
+      expect(document.querySelector('img[alt="Invoice sender logo"]')?.getAttribute('src')).toBe(workspaceLogo);
+      await submitInvoice(wrapper);
+      expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({ logo: workspaceLogo, sender, payment }));
+    });
+
+    it('keeps the saved source logo when the workspace has a different logo', async () => {
+      const createInvoice = createCreateInvoiceSpy();
+      const wrapper = await mountDialog({ source: { ...source, logo: originalLogo }, createInvoice });
+      expect(testMocks.getInvoiceDefaults).not.toHaveBeenCalled();
+      await submitInvoice(wrapper);
+      expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({ logo: originalLogo }));
+    });
+
+    it('keeps an uploaded logo preference when workspace defaults arrive after removal', async () => {
+      let finish!: (value: { billingProfile: typeof billingProfile }) => void;
+      testMocks.getInvoiceDefaults.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+      const createInvoice = createCreateInvoiceSpy();
+      const wrapper = await mountDialog({ source, createInvoice });
+      const upload = document.querySelector<HTMLInputElement>('input[aria-label="Upload invoice logo"]')!;
+      const file = new File(['<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><rect width="12" height="12"/></svg>'], 'custom.svg', { type: 'image/svg+xml' });
+      Object.defineProperty(upload, 'files', { value: [file] });
+      upload.dispatchEvent(new Event('change'));
+      await vi.waitFor(() => expect(document.querySelector('img[alt="Invoice sender logo"]')).not.toBeNull());
+      document.querySelector<HTMLButtonElement>('button[aria-label="Invoice logo options"]')!.click();
+      await flushPromises();
+      const remove = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+        .find(item => item.textContent?.includes('Remove logo'))!;
+      remove.querySelector<HTMLElement>('a')!.click();
+      await flushPromises();
+      finish({ billingProfile });
+      await flushPromises();
+      expect(document.querySelector('img[alt="Invoice sender logo"]')).toBeNull();
+      await submitInvoice(wrapper);
+      expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({ logo: null }));
+    });
+
+    it('lets the server resolve only the missing logo when the defaults request fails', async () => {
+      testMocks.getInvoiceDefaults.mockRejectedValue(new Error('Unavailable'));
+      const createInvoice = createCreateInvoiceSpy();
+      const wrapper = await mountDialog({ source, createInvoice });
+      await submitInvoice(wrapper);
+      const submitted = createInvoice.mock.calls[0]![0];
+      expect(submitted).not.toHaveProperty('logo');
+      expect(submitted).toMatchObject({ sender, payment });
+    });
+  });
+
   it('saves only checked entries and supports explicitly excluding every entry', async () => {
     const entries = [createTimeEntry(), createTimeEntry({ id: '88888888-8888-4888-8888-888888888888' })];
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse({ entries, count: 2 }));

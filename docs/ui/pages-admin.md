@@ -92,8 +92,8 @@
 - The header shows the saved invoice reference and actions Download PDF, Create from this invoice and Edit invoice. A status Select allows Draft, Sent and Paid in either direction, including Sent to Draft and Paid to earlier states.
 - Status selection is manual bookkeeping. Disable repeated submissions while pending and restore authoritative state on failure while retaining unsaved business edits.
 - Display saved From, Bill to, services, scope, period, rate, currency, rounding, included entries, subtotal, discount, total, payment instructions, notes and audit details.
-- Only Admins viewing a Draft invoice see Delete. Confirm deletion and explain that linked entries become eligible for future invoices.
-- Create from this invoice first reviews a new period and personal group, then opens an independent draft with reusable source business fields. The source reference, status and billed entries are not reused. Cancellation writes nothing.
+- Show Delete invoice alongside the other header actions only for Admins viewing a Draft invoice. Confirm deletion and explain that linked entries become eligible for future invoices.
+- Create from this invoice first reviews a new period and personal group, then opens an independent draft with reusable source business fields. The draft uses the source logo when available and otherwise starts with the workspace logo. The user can replace or remove it. The source reference, status and billed entries are not reused. Cancellation writes nothing. Saving opens the new invoice's detail page.
 - PDF export uses the saved revision. Include reference, issue date, period, parties, services, selected charges and payment details. Optional logo absence leaves no blank block. Wrap long descriptions, repeat item headings and page footers, and show the grand total on the final page.
 - Show Preparing PDF while generating and offer a local retry on rendering failure. For older invoices missing required billing sections, identify those fields for completion before export.
 

@@ -49193,7 +49193,7 @@
                         }
                       ],
                       "layout": "vertical",
-                      "context": "Status Select supports draft, sent and paid including sent→draft and paid→earlier status. A manual bookkeeping change only. Group is personal. Edit opens full business form for every status; Download PDF exports saved data, not unsaved drafts. Copy starts an independent draft. Draft-only Delete invoice remains Admin-only."
+                      "context": "Status Select supports draft, sent and paid including sent→draft and paid→earlier status. A manual bookkeeping change only. Group is personal. Edit opens full business form for every status; Download PDF exports saved data, not unsaved drafts. Copy starts an independent draft. For an Admin viewing a Draft, Delete invoice follows Edit invoice in the header action row."
                     },
                     {
                       "type": "frame",
@@ -61714,7 +61714,7 @@
           "layout": "vertical",
           "fill": "$color-app-bg",
           "cornerRadius": 12,
-          "context": "Status Select supports reverse transitions. PDF download uses saved invoice data. Mobile detail and full edit modal retain every meaningful desktop field and action. Body is scrollable within the app viewport.",
+          "context": "Status Select supports reverse transitions. PDF download uses saved invoice data. For an Admin viewing a Draft, Delete invoice follows Create from this invoice in the header. Mobile detail and full edit modal retain every meaningful desktop field and action. Body is scrollable within the app viewport.",
           "x": 2631,
           "y": 1770
         },
@@ -62484,58 +62484,132 @@
         {
           "type": "frame",
           "id": "i527_1283",
-          "name": "Draft invoice actions — Admin only",
+          "name": "Draft invoice header actions — Admin only",
           "width": 375,
           "gap": 16,
           "padding": 20,
           "children": [
             {
               "type": "frame",
-              "id": "i527_1278",
-              "name": "Draft invoice",
+              "id": "draft_i527_1164",
+              "name": "Edit invoice",
               "width": "fill_container",
-              "gap": 12,
-              "padding": 0,
+              "gap": 8,
+              "padding": [
+                0,
+                12
+              ],
               "children": [
                 {
-                  "type": "text",
-                  "id": "i527_1275",
-                  "content": "INV-2026-033",
-                  "fontFamily": "Inter",
-                  "fontSize": 16,
-                  "fontWeight": "600",
-                  "fill": "$color-text-dark",
-                  "width": "fill_container",
-                  "textGrowth": "fixed-width-height",
-                  "height": 23
+                  "type": "icon",
+                  "id": "draft_i527_1162",
+                  "name": "pencil",
+                  "icon": "pencil",
+                  "library": "lucide",
+                  "width": 16,
+                  "height": 16,
+                  "fill": "#FFFFFF"
                 },
                 {
-                  "type": "frame",
-                  "id": "i527_1277",
-                  "name": "Draft badge",
-                  "gap": 12,
-                  "padding": [
-                    0,
-                    10
-                  ],
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "i527_1276",
-                      "content": "Draft",
-                      "fontFamily": "Inter",
-                      "fontSize": 12,
-                      "fontWeight": "500",
-                      "fill": "$color-brand"
-                    }
-                  ],
-                  "height": 26,
-                  "fill": "$color-accent-tint",
-                  "cornerRadius": 6,
-                  "justifyContent": "center",
-                  "alignItems": "center"
+                  "type": "text",
+                  "id": "draft_i527_1163",
+                  "content": "Edit invoice",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500",
+                  "fill": "#FFFFFF"
                 }
               ],
+              "height": 38,
+              "fill": "$color-brand",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-brand",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "justifyContent": "center",
+              "context": "Action: Edit invoice. Use the matching accessible name/tooltip for icon-only controls.",
+              "alignItems": "center"
+            },
+            {
+              "type": "frame",
+              "id": "draft_i527_1167",
+              "name": "Download PDF",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                0,
+                12
+              ],
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "draft_i527_1165",
+                  "name": "download",
+                  "icon": "download",
+                  "library": "lucide",
+                  "width": 16,
+                  "height": 16,
+                  "fill": "$color-brand"
+                },
+                {
+                  "type": "text",
+                  "id": "draft_i527_1166",
+                  "content": "Download PDF",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500",
+                  "fill": "$color-brand"
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "justifyContent": "center",
+              "context": "Action: Download PDF. Use the matching accessible name/tooltip for icon-only controls.",
+              "alignItems": "center"
+            },
+            {
+              "type": "frame",
+              "id": "draft_i527_1170",
+              "name": "Create from this invoice",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                0,
+                12
+              ],
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "draft_i527_1168",
+                  "name": "copy",
+                  "icon": "copy",
+                  "library": "lucide",
+                  "width": 16,
+                  "height": 16,
+                  "fill": "$color-brand"
+                },
+                {
+                  "type": "text",
+                  "id": "draft_i527_1169",
+                  "content": "Create from this invoice",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500",
+                  "fill": "$color-brand"
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "justifyContent": "center",
+              "context": "Action: Create from this invoice. Use the matching accessible name/tooltip for icon-only controls.",
               "alignItems": "center"
             },
             {
@@ -62576,28 +62650,13 @@
               "strokeAlignment": "inner",
               "justifyContent": "center",
               "context": "Action: Delete invoice. Use the matching accessible name/tooltip for icon-only controls.",
-              "alignItems": "center"
-            },
-            {
-              "type": "text",
-              "id": "i527_1282",
-              "content": "Only Admins can delete a Draft invoice.",
-              "fontFamily": "Inter",
-              "fontSize": 12,
-              "fontWeight": "normal",
-              "fill": "$color-text-muted",
-              "width": "fill_container",
-              "textGrowth": "fixed-width-height",
-              "height": 36
+              "alignItems": "center",
+              "width": "fill_container"
             }
           ],
           "layout": "vertical",
-          "fill": "$color-surface",
-          "cornerRadius": "$radius-lg",
-          "stroke": "$color-divider",
-          "strokeWidth": 1,
-          "strokeAlignment": "inner",
-          "context": "Delete invoice is separate from Delete group. Render only for Admin and Draft status; Sent/Paid invoices cannot be deleted. Open the invoice deletion confirmation. No change to existing deletion eligibility.",
+          "fill": "$color-app-bg",
+          "context": "Header actions for an Admin viewing a Draft invoice. Delete invoice opens the deletion confirmation. On desktop it follows Edit invoice in the header action row.",
           "x": 3530,
           "y": 2150
         },

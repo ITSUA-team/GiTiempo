@@ -151,7 +151,7 @@ function uploadLogo(event: {files: File | File[]}) {
  reader.readAsDataURL(file);
 }
 
-async function useSettings() {
+async function useSettings(fields: 'billing' | 'logo' = 'billing') {
   const generation = lifecycleGeneration;
   const request = ++defaultsRequest;
   const current = () => request === defaultsRequest && generation === lifecycleGeneration && props.visible;
@@ -168,13 +168,14 @@ async function useSettings() {
     });
     if (!current() || !defaults.billingProfile) return;
     const profile = defaults.billingProfile;
+    if (logoVersion === initialLogoVersion) logo.value = profile.logo;
+    if (fields === 'logo') return;
     for (const key of Object.keys(initialSender) as Array<keyof typeof initialSender>) {
       if (sender.value[key] === initialSender[key]) sender.value[key] = profile.sender[key];
     }
     for (const key of Object.keys(initialPayment) as Array<keyof typeof initialPayment>) {
       if (payment.value[key] === initialPayment[key]) payment.value[key] = profile.payment[key];
     }
-    if (logoVersion === initialLogoVersion) logo.value = profile.logo;
   } catch {
     if (current()) defaultsError.value = 'Could not load billing settings. Try again.';
   } finally {
@@ -323,6 +324,7 @@ watch(
         if (source.recipient) recipient.value = {...source.recipient};
         if (source.payment) payment.value = {...source.payment, instructions: !props.editing && source.reference ? source.payment.instructions.replaceAll(source.reference, '{{invoiceReference}}') : source.payment.instructions};
         logo.value = source.logo ?? null;
+        if (!props.editing && logo.value === null) void useSettings('logo');
         notes.value = source.notes ?? '';
         selectedEntries.value = props.editing ? source.timeEntries.map(e=>e.id) : [];
         if (props.editing) selectedEntriesScope.value = entriesScope.value;
@@ -637,7 +639,9 @@ async function handleCreate(): Promise<void> {
   if (!props.source && defaultsError.value) {
     if (!Object.values(sender.value).some(Boolean)) delete draft.sender;
     if (!Object.values(payment.value).some(Boolean)) delete draft.payment;
-    if (logo.value === null && !logoVersion) delete draft.logo;
+  }
+  if (!props.editing && defaultsError.value && !props.source?.logo && logo.value === null && !logoVersion) {
+    delete draft.logo;
   }
   submitting.value = true;
   try {

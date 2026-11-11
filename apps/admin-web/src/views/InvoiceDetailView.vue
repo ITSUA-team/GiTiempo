@@ -31,7 +31,6 @@ import { adminInvoicesClient } from '@/services/admin-invoices-client';
 import Skeleton from 'primevue/skeleton';
 
 import { reconcileInvoiceDraft } from '@/lib/invoice-edit';
-import InvoiceStatusBadge from '@/components/invoices/InvoiceStatusBadge.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
@@ -352,6 +351,15 @@ function openEditor(isEdit: boolean) {
   }
 }
 
+async function handleInvoiceSaved(saved: InvoiceResponse) {
+  if (!editorOpen.value || editorInvoiceId.value !== invoiceId.value) return;
+  if (editing.value) {
+    await refetch();
+    return;
+  }
+  await router.push({ name: routeNames.invoiceDetail, params: { id: saved.id } });
+}
+
 function runUpdate(data: UpdateInvoiceInput): void {
   updateMutation
     .updateInvoice({ data, invoiceId: invoiceId.value })
@@ -430,10 +438,13 @@ function goBack(): void {
         :move-error="groupMoveError"
         :updating="updateMutation.isUpdating.value"
         :exporting="exportBusy"
+        :can-delete="isAdmin && invoice.status === 'draft'"
+        :deleting="deleteMutation.isDeleting.value"
         @back="goBack"
         @copy="openEditor(false)"
         @edit="openEditor(true)"
         @download="downloadPdf"
+        @delete="confirmDelete"
         @move="moveToGroup"
         @retry-groups="groupsQuery.refetch()"
         @status="
@@ -469,32 +480,6 @@ function goBack(): void {
         />
       </SurfaceCard>
       <InvoiceDetailDocument :invoice="invoice" />
-      <SurfaceCard
-        v-if="invoice.status === 'draft' && isAdmin"
-        border
-        padding-class="p-5"
-        body-class="flex flex-col items-start gap-4"
-      >
-        <div class="flex w-full items-center justify-between gap-3">
-          <span class="font-semibold break-words">{{
-            invoice.reference || invoice.title
-          }}</span>
-          <InvoiceStatusBadge status="draft" />
-        </div>
-        <Button
-          label="Delete invoice"
-          icon="pi pi-trash"
-          severity="danger"
-          outlined
-          class="h-[38px]"
-          :loading="deleteMutation.isDeleting.value"
-          data-testid="invoice-delete"
-          @click="confirmDelete"
-        />
-        <p class="text-text-muted text-xs">
-          Only Admins can delete a Draft invoice.
-        </p>
-      </SurfaceCard>
       <AppDialog
         v-model:visible="copyOpen"
         :header="`Create from ${invoice.reference || invoice.title}`"
@@ -580,7 +565,7 @@ function goBack(): void {
         :workspace-hourly-rate="invoice.hourlyRate"
         :workspace-rounding-step-minutes="invoice.roundingStepMinutes"
         :create-mutation="editorMutation"
-        @created="refetch()"
+        @created="handleInvoiceSaved"
       />
     </template>
   </div>

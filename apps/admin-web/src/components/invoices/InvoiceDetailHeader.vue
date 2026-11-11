@@ -15,6 +15,8 @@ const props = defineProps<{
   moveError: string;
   updating: boolean;
   exporting: boolean;
+  canDelete: boolean;
+  deleting: boolean;
 }>();
 const emit = defineEmits<{
   retryGroups: [];
@@ -22,6 +24,7 @@ const emit = defineEmits<{
   edit: [];
   copy: [];
   download: [];
+  delete: [];
   move: [groupId: string | null];
   status: [status: InvoiceStatus];
 }>();
@@ -64,7 +67,7 @@ const actions = computed(() => {
 
 <template>
   <header
-    class="flex flex-col gap-4 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-3 sm:gap-y-6"
+    class="flex flex-col gap-4 sm:grid sm:grid-cols-[minmax(8rem,1fr)_minmax(0,auto)] sm:gap-x-3 sm:gap-y-6"
     data-testid="invoice-detail-header"
   >
     <div class="flex min-w-0 items-center gap-3">
@@ -131,7 +134,7 @@ const actions = computed(() => {
       >Updated {{ dateFormat.format(new Date(invoice.updatedAt)) }}</span>
     </div>
     <div
-      class="flex flex-col gap-4 sm:col-start-2 sm:row-start-1 sm:flex-row sm:items-center sm:gap-3"
+      class="flex flex-col gap-4 sm:col-start-2 sm:row-start-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3"
     >
       <Button
         v-for="action in actions"
@@ -143,6 +146,17 @@ const actions = computed(() => {
         :severity="action.primary ? undefined : 'secondary'"
         class="h-[38px]"
         @click="action.handler"
+      />
+      <Button
+        v-if="canDelete"
+        label="Delete invoice"
+        icon="pi pi-trash"
+        severity="danger"
+        outlined
+        class="h-[38px]"
+        :loading="deleting"
+        data-testid="invoice-delete"
+        @click="emit('delete')"
       />
     </div>
     <p

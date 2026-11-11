@@ -20,6 +20,7 @@ import { createTestQueryPlugin } from '@/test/query-client';
 import { useAuthStore } from '@/stores/auth';
 
 const testMocks = vi.hoisted(() => ({
+  createInvoice: vi.fn(),
   deleteInvoice: vi.fn(),
   moveInvoices: vi.fn(),
   listGroups: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock('vue-router', async (importOriginal) => {
 
 vi.mock('@/services/admin-invoices-client', () => ({
   adminInvoicesClient: {
+    createInvoice: testMocks.createInvoice,
     deleteInvoice: testMocks.deleteInvoice,
     moveInvoices:testMocks.moveInvoices,
     listGroups:testMocks.listGroups,
@@ -204,6 +206,7 @@ describe('InvoiceDetailView', () => {
     testMocks.request.mockResolvedValue({blob:()=>Promise.resolve(new Blob(['pdf']))});
     vi.stubGlobal('URL', {createObjectURL:vi.fn(()=> 'blob:invoice'),revokeObjectURL:vi.fn()});
     testMocks.deleteInvoice.mockReset();
+    testMocks.createInvoice.mockReset();
     testMocks.errorToast.mockReset();
     testMocks.getInvoice.mockReset();
     testMocks.requireConfirmation.mockReset();
@@ -452,6 +455,15 @@ describe('InvoiceDetailView', () => {
     expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(false);
   });
 
+  it.each(['sent', 'paid'] as const)('hides Delete for an admin viewing a %s invoice', async (status) => {
+    testMocks.getInvoice.mockResolvedValue(createInvoice({ status }));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="invoice-detail-header"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(false);
+  });
+
   it('shows the reference in the header and preserves the full invoice title in its history', async () => {
     const title = 'Invoice April 2026'.repeat(10);
     testMocks.getInvoice.mockResolvedValue(
@@ -469,9 +481,6 @@ describe('InvoiceDetailView', () => {
     expect(
       wrapper.get('[data-testid="invoice-detail-header"]').text(),
     ).toContain('Updated 10 May 2026');
-    expect(wrapper.get('[data-testid="invoice-delete"]').text()).toBe(
-      'Delete invoice',
-    );
   });
 
   it('uses the saved-invoice ceiling for a fractional cent without displaying a negative discount at 0%', async () => {
@@ -562,7 +571,8 @@ describe('InvoiceDetailView', () => {
     const wrapper = mountInvoiceDetailView('admin');
     await flushPromises();
 
-    await wrapper.find('[data-testid="invoice-delete"]').trigger('click');
+    const header = wrapper.get('[data-testid="invoice-detail-header"]');
+    await header.get('[data-testid="invoice-delete"]').trigger('click');
     await flushPromises();
 
     expect(testMocks.deleteInvoice).not.toHaveBeenCalled();
@@ -828,6 +838,7 @@ describe('InvoiceDetailView', () => {
     expect(editor.text()).toContain('Your edit: Unsaved title');
     await editor.find('[data-testid="invoice-create-submit"]').trigger('click');await flushPromises();
     expect(testMocks.updateInvoice).toHaveBeenLastCalledWith(invoiceId,{title:'Unsaved title',expectedRevision:8});
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
   });
   it('keeps the editor and its draft through token rotation but closes it when the workspace changes', async () => {
     const wrapper = mountInvoiceDetailView('pm', true);
@@ -883,6 +894,36 @@ describe('InvoiceDetailView', () => {
     expect(wrapper.findComponent(InvoiceCreateDialog).props('visible')).toBe(
       false,
     );
+  });
+
+  it('stays on the source after a failed copy and opens the returned invoice on a successful retry', async () => {
+    const copy = createInvoice({ id: '77777777-7777-4777-8777-777777777777', reference: 'INV-2' });
+    testMocks.createInvoice.mockRejectedValueOnce(new Error('Save failed')).mockResolvedValueOnce(copy);
+    testMocks.getInvoice.mockResolvedValue(createInvoice({ logo: 'data:image/png;base64,AAAA' }));
+    const wrapper = mountInvoiceDetailView('admin', true);
+    await flushPromises();
+    await wrapper.findAll('button').find(button => button.text() === 'Create from this invoice')!.trigger('click');
+    const picker = wrapper.getComponent(DatePicker);
+    picker.vm.$emit('update:modelValue', [new Date(2026, 11, 1), new Date(2026, 11, 31)]);
+    await flushPromises();
+    await wrapper.findAll('button').find(button => button.text() === 'Continue to new draft')!.trigger('click');
+    await flushPromises();
+    const editor = wrapper.getComponent(InvoiceCreateDialog);
+    const submit = editor.get('[data-testid="invoice-create-submit"]');
+    await submit.trigger('click');
+    await flushPromises();
+    expect(testMocks.createInvoice).toHaveBeenCalledTimes(1);
+    expect(editor.props('visible')).toBe(true);
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
+
+    await submit.trigger('click');
+    await flushPromises();
+    expect(testMocks.routerPush).toHaveBeenCalledExactlyOnceWith({
+      name: routeNames.invoiceDetail,
+      params: { id: copy.id },
+    });
+    expect(editor.props('visible')).toBe(false);
+    expect(testMocks.updateInvoice).not.toHaveBeenCalled();
   });
   it('cancels or confirms the copy period before continuing to an independent draft', async () => {
     const wrapper = mountInvoiceDetailView();

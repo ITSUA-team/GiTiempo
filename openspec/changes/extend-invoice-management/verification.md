@@ -1,5 +1,9 @@
 # #527 implementation verification
 
+## Copy logo and destination retest, 2026-11-11
+
+PASS in Chrome for Testing 149 at 1280 × 900 and 375 × 812, with the local Admin SPA and test API on the isolated manual database. On the working tree above `1c09a858`, a saved source without a logo was copied into a new period. Both editors displayed the configured workspace PNG. Saving opened the detail URL for the ID returned by the create request. Reloading that URL displayed the same image, and the saved source still had no logo. The disposable invoices were removed and the test workspace's original settings were restored.
+
 ## Frontend DOM review retest, 2026-11-11
 
 Tested the working changes above `defbc3d3` with Google Chrome for Testing 149.0.7827.55 at 1280 × 900 and 375 × 812. The local Admin SPA used the test API and the isolated `gitiempo_manual_527` database. The list, detail, editor, copy, settings and group confirmation were compared with their desktop and mobile frames in `GITiempo.pen`. The captures show selected acceptance states. [Desktop](parity-retest/dom-review-1280.webp) · [Mobile](parity-retest/dom-review-375.webp)
