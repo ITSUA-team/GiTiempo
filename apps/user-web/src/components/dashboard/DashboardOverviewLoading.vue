@@ -119,29 +119,10 @@ import { SurfaceCard } from "@gitiempo/web-shared";
       </div>
 
       <div class="border-divider overflow-hidden rounded-md border">
-        <div class="bg-app-bg grid grid-cols-[minmax(0,1fr)_11rem_8rem_8rem] gap-2 px-3 py-3">
-          <Skeleton
-            width="4rem"
-            height="0.875rem"
-          />
-          <Skeleton
-            width="4.5rem"
-            height="0.875rem"
-          />
-          <Skeleton
-            width="3.5rem"
-            height="0.875rem"
-          />
-          <Skeleton
-            width="4rem"
-            height="0.875rem"
-          />
-        </div>
-
         <div
           v-for="index in 4"
           :key="index"
-          class="border-divider grid grid-cols-[minmax(0,1fr)_11rem_8rem_8rem] gap-2 border-t px-3 py-4"
+          class="border-divider grid h-[52px] grid-cols-[minmax(0,1fr)_10.625rem_8.125rem_6.875rem] items-center gap-2 border-t px-3 first:border-t-0"
         >
           <Skeleton
             width="11rem"

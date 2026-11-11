@@ -26,15 +26,10 @@ export type {
   DashboardWeeklyFocus,
 } from "@/lib/dashboard-overview-helpers";
 
-type DashboardOverviewClient = Pick<
-  TimeEntriesClient,
-  "getCurrentTimer" | "listOwnEntries" | "startTimer" | "stopTimer"
->;
-
 interface UseDashboardOverviewOptions {
   authStore?: ReturnType<typeof useAuthStore>;
   clearIntervalFn?: typeof clearInterval;
-  client?: DashboardOverviewClient;
+  client?: TimeEntriesClient;
   now?: () => number;
   setIntervalFn?: typeof setInterval;
   toast?: ToastLike;

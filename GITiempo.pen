@@ -860,107 +860,9 @@
                           "children": [
                             {
                               "type": "frame",
-                              "id": "4gr3Y",
-                              "width": "fill_container",
-                              "height": 44,
-                              "fill": "$color-app-bg",
-                              "children": [
-                                {
-                                  "type": "frame",
-                                  "id": "L7DvQ",
-                                  "width": "fill_container",
-                                  "height": "fill_container",
-                                  "padding": [
-                                    0,
-                                    12
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "m4J0a",
-                                      "fill": "$color-text-dark",
-                                      "content": "Task",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "600"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "s8aLR",
-                                  "width": 180,
-                                  "height": "fill_container",
-                                  "padding": [
-                                    0,
-                                    12
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "Zf7Gx",
-                                      "fill": "$color-text-dark",
-                                      "content": "Project",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "600"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "sWzae",
-                                  "width": 120,
-                                  "height": "fill_container",
-                                  "padding": [
-                                    0,
-                                    12
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "M6vt8",
-                                      "fill": "$color-text-dark",
-                                      "content": "Range",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "600"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "s2nFP",
-                                  "width": 120,
-                                  "height": "fill_container",
-                                  "padding": [
-                                    0,
-                                    12
-                                  ],
-                                  "justifyContent": "end",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "bGbwh",
-                                      "fill": "$color-text-dark",
-                                      "content": "Duration",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "600"
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
                               "id": "nt9v1",
                               "width": "fill_container",
-                              "height": 48,
+                              "height": 52,
                               "fill": "$color-accent-tint",
                               "children": [
                                 {
@@ -973,33 +875,52 @@
                                     0,
                                     12
                                   ],
-                                  "alignItems": "center",
+                                  "alignItems": "start",
                                   "children": [
                                     {
-                                      "type": "text",
-                                      "id": "o5tUb",
-                                      "fill": "$color-text-dark",
-                                      "content": "Fix export column order",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 14,
-                                      "fontWeight": "500"
+                                      "type": "frame",
+                                      "id": "mEbQyn",
+                                      "width": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "o5tUb",
+                                          "fill": "$color-brand",
+                                          "content": "Fix export column order",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "icon",
+                                          "id": "I2ArvL",
+                                          "name": "externalTaskLinkIcon",
+                                          "width": 14,
+                                          "height": 14,
+                                          "icon": "arrow-up-right",
+                                          "library": "lucide",
+                                          "fill": "#5D2B85"
+                                        }
+                                      ]
                                     },
                                     {
-                                      "type": "icon",
-                                      "id": "I2ArvL",
-                                      "name": "externalTaskLinkIcon",
-                                      "width": 14,
-                                      "height": 14,
-                                      "icon": "arrow-up-right",
-                                      "library": "lucide",
-                                      "fill": "#5D2B85"
+                                      "type": "text",
+                                      "id": "UL9miF",
+                                      "fill": "$color-text-muted",
+                                      "content": "Review query performance edge cases",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
                                     }
-                                  ]
+                                  ],
+                                  "layout": "vertical"
                                 },
                                 {
                                   "type": "frame",
                                   "id": "y4fBA",
-                                  "width": 180,
+                                  "width": 170,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -1021,7 +942,7 @@
                                 {
                                   "type": "frame",
                                   "id": "bcAvY",
-                                  "width": 120,
+                                  "width": 130,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -1043,7 +964,7 @@
                                 {
                                   "type": "frame",
                                   "id": "uaZO6",
-                                  "width": 120,
+                                  "width": 110,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -1069,7 +990,7 @@
                               "type": "frame",
                               "id": "6ApOz",
                               "width": "fill_container",
-                              "height": 48,
+                              "height": 52,
                               "stroke": "$color-divider",
                               "strokeWidth": {
                                 "top": 1
@@ -1087,33 +1008,52 @@
                                     0,
                                     12
                                   ],
-                                  "alignItems": "center",
+                                  "alignItems": "start",
                                   "children": [
                                     {
-                                      "type": "text",
-                                      "id": "TonAL",
-                                      "fill": "$color-text-dark",
-                                      "content": "Write PM scope rules",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 14,
-                                      "fontWeight": "500"
+                                      "type": "frame",
+                                      "id": "d6OrHU",
+                                      "width": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "TonAL",
+                                          "fill": "$color-brand",
+                                          "content": "Write PM scope rules",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "icon",
+                                          "id": "NJ3Pr",
+                                          "name": "externalTaskLinkIcon",
+                                          "width": 14,
+                                          "height": 14,
+                                          "icon": "arrow-up-right",
+                                          "library": "lucide",
+                                          "fill": "#5D2B85"
+                                        }
+                                      ]
                                     },
                                     {
-                                      "type": "icon",
-                                      "id": "NJ3Pr",
-                                      "name": "externalTaskLinkIcon",
-                                      "width": 14,
-                                      "height": 14,
-                                      "icon": "arrow-up-right",
-                                      "library": "lucide",
-                                      "fill": "#5D2B85"
+                                      "type": "text",
+                                      "id": "mOMaU3",
+                                      "fill": "$color-text-muted",
+                                      "content": "Draft initial scope and acceptance criteria",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
                                     }
-                                  ]
+                                  ],
+                                  "layout": "vertical"
                                 },
                                 {
                                   "type": "frame",
                                   "id": "DPcdN",
-                                  "width": 180,
+                                  "width": 170,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -1135,7 +1075,7 @@
                                 {
                                   "type": "frame",
                                   "id": "7XvXG",
-                                  "width": 120,
+                                  "width": 130,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -1157,7 +1097,7 @@
                                 {
                                   "type": "frame",
                                   "id": "P9Bkr",
-                                  "width": 120,
+                                  "width": 110,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -1177,13 +1117,14 @@
                                     }
                                   ]
                                 }
-                              ]
+                              ],
+                              "fill": "$color-surface-primary"
                             },
                             {
                               "type": "frame",
                               "id": "6FP2o",
                               "width": "fill_container",
-                              "height": 48,
+                              "height": 52,
                               "stroke": "$color-divider",
                               "strokeWidth": {
                                 "top": 1
@@ -1205,7 +1146,7 @@
                                     {
                                       "type": "text",
                                       "id": "clZH2",
-                                      "fill": "$color-text-dark",
+                                      "fill": "$color-brand",
                                       "content": "Project kickoff notes",
                                       "fontFamily": "Inter",
                                       "fontSize": 14,
@@ -1216,7 +1157,7 @@
                                 {
                                   "type": "frame",
                                   "id": "WnG0b",
-                                  "width": 180,
+                                  "width": 170,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -1238,7 +1179,7 @@
                                 {
                                   "type": "frame",
                                   "id": "esDUi",
-                                  "width": 120,
+                                  "width": 130,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -1260,7 +1201,7 @@
                                 {
                                   "type": "frame",
                                   "id": "EUgWw",
-                                  "width": 120,
+                                  "width": 110,
                                   "height": "fill_container",
                                   "padding": [
                                     0,
@@ -1280,7 +1221,8 @@
                                     }
                                   ]
                                 }
-                              ]
+                              ],
+                              "fill": "$color-surface-primary"
                             }
                           ]
                         }
@@ -4921,85 +4863,6 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "R0wF6J",
-                                  "name": "head",
-                                  "width": "fill_container",
-                                  "height": 44,
-                                  "fill": "$color-app-bg",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "SKDay",
-                                      "name": "cell11",
-                                      "width": "fill_container",
-                                      "height": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "KBnK4",
-                                          "fill": "$color-text-dark",
-                                          "content": "Task",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "poewT",
-                                      "name": "cell12",
-                                      "width": 130,
-                                      "height": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "y5Qda",
-                                          "fill": "$color-text-dark",
-                                          "content": "Status",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "n2JB5d",
-                                      "name": "cell13",
-                                      "width": 170,
-                                      "height": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "URw07",
-                                          "fill": "$color-text-dark",
-                                          "content": "Updated",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
                                   "id": "N6YNM",
                                   "name": "row1",
                                   "width": "fill_container",
@@ -5122,7 +4985,8 @@
                                         }
                                       ]
                                     }
-                                  ]
+                                  ],
+                                  "fill": "$color-accent-tint"
                                 },
                                 {
                                   "type": "frame",
@@ -6061,20 +5925,9 @@
                           "name": "Start task row",
                           "width": "fill_container",
                           "height": 32,
-                          "justifyContent": "space_between",
+                          "justifyContent": "start",
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "text",
-                              "id": "YgD8r",
-                              "name": "Start task title",
-                              "context": "Own-time: no shared task edit action.",
-                              "fill": "$color-text-dark",
-                              "content": "Improve reports filters",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            },
                             {
                               "type": "frame",
                               "id": "c0soWg",
@@ -6097,8 +5950,20 @@
                                   "fill": "#FFFFFF"
                                 }
                               ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "YgD8r",
+                              "name": "Start task title",
+                              "context": "Own-time: no shared task edit action.",
+                              "fill": "$color-text-dark",
+                              "content": "Improve reports filters",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
                             }
-                          ]
+                          ],
+                          "gap": 8
                         },
                         {
                           "type": "text",
@@ -6151,20 +6016,9 @@
                           "name": "Blocked task row",
                           "width": "fill_container",
                           "height": 32,
-                          "justifyContent": "space_between",
+                          "justifyContent": "start",
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "text",
-                              "id": "Wx4nF",
-                              "name": "Blocked task title",
-                              "context": "Own-time: no shared task edit action.",
-                              "fill": "$color-text-dark",
-                              "content": "Review PM scope rules",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            },
                             {
                               "type": "frame",
                               "id": "r3jIvb",
@@ -6189,8 +6043,20 @@
                                   "fill": "#A1A1AA"
                                 }
                               ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Wx4nF",
+                              "name": "Blocked task title",
+                              "context": "Own-time: no shared task edit action.",
+                              "fill": "$color-text-dark",
+                              "content": "Review PM scope rules",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
                             }
-                          ]
+                          ],
+                          "gap": 8
                         },
                         {
                           "type": "text",
@@ -6231,7 +6097,7 @@
                       "id": "A2mkG",
                       "name": "Task card — stop timer",
                       "width": "fill_container",
-                      "fill": "#FFFFFF",
+                      "fill": "$color-accent-tint",
                       "cornerRadius": 8,
                       "layout": "vertical",
                       "gap": 8,
@@ -6243,20 +6109,9 @@
                           "name": "Stop task row",
                           "width": "fill_container",
                           "height": 32,
-                          "justifyContent": "space_between",
+                          "justifyContent": "start",
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "text",
-                              "id": "FG4Uy",
-                              "name": "Stop task title",
-                              "context": "Own-time: no shared task edit action.",
-                              "fill": "$color-text-dark",
-                              "content": "Finalize invoice webhook",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            },
                             {
                               "type": "frame",
                               "id": "dpeeK",
@@ -6279,8 +6134,20 @@
                                   "fill": "#FFFFFF"
                                 }
                               ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "FG4Uy",
+                              "name": "Stop task title",
+                              "context": "Own-time: no shared task edit action.",
+                              "fill": "$color-text-dark",
+                              "content": "Finalize invoice webhook",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
                             }
-                          ]
+                          ],
+                          "gap": 8
                         },
                         {
                           "type": "text",
@@ -6333,20 +6200,9 @@
                           "name": "Pending task row",
                           "width": "fill_container",
                           "height": 32,
-                          "justifyContent": "space_between",
+                          "justifyContent": "start",
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "text",
-                              "id": "UKzKG",
-                              "name": "Pending task title",
-                              "context": "Own-time: no shared task edit action.",
-                              "fill": "$color-text-dark",
-                              "content": "Validate credit-note totals",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            },
                             {
                               "type": "frame",
                               "id": "zUUGn",
@@ -6369,8 +6225,20 @@
                                   "fill": "#FFFFFF"
                                 }
                               ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "UKzKG",
+                              "name": "Pending task title",
+                              "context": "Own-time: no shared task edit action.",
+                              "fill": "$color-text-dark",
+                              "content": "Validate credit-note totals",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
                             }
-                          ]
+                          ],
+                          "gap": 8
                         },
                         {
                           "type": "text",
