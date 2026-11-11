@@ -611,6 +611,7 @@ describe('IdentityReservationCoordinator', () => {
 
   describe('resolveConclusivelyAbandonedRegistration', () => {
     const abandonedRow = {
+      creationOutcomePending: false,
       id: 'reservation-1',
       firebaseUid: 'uid-1',
       normalizedEmail: 'user@example.com',
@@ -889,25 +890,30 @@ describe('IdentityReservationCoordinator', () => {
       expect(harness.attemptedUpdates).toEqual([]);
     });
 
-    it('retains the reservation when the creation outcome is still pending', async () => {
-      db.select = createSelectMock([[abandonedRow]]);
-      firebase.confirmUidAbsent.mockResolvedValue({
-        absent: true,
-        evidence: 'auth/user-not-found',
-      });
-      const harness = stubRecoveryDb({
-        reservationRows: [[{ ...abandonedRow, creationOutcomePending: true }]],
-        bindingRows: [[]],
-      });
+    it.each([true, null, undefined])(
+      'retains uncertain creation outcome %s',
+      async (pending) => {
+        db.select = createSelectMock([[abandonedRow]]);
+        firebase.confirmUidAbsent.mockResolvedValue({
+          absent: true,
+          evidence: 'auth/user-not-found',
+        });
+        const harness = stubRecoveryDb({
+          reservationRows: [
+            [{ ...abandonedRow, creationOutcomePending: pending }],
+          ],
+          bindingRows: [[]],
+        });
 
-      await expect(
-        coordinator.resolveConclusivelyAbandonedRegistration(resolveInput()),
-      ).rejects.toBeInstanceOf(ServiceUnavailableException);
-      expect(harness.isCommitted()).toBe(false);
-      expect(harness.attemptedUpdates).toEqual([]);
-      expect(harness.attemptedAuditValues).toEqual([]);
-      expect(firebase.confirmUidAbsent).not.toHaveBeenCalled();
-    });
+        await expect(
+          coordinator.resolveConclusivelyAbandonedRegistration(resolveInput()),
+        ).rejects.toBeInstanceOf(ServiceUnavailableException);
+        expect(harness.isCommitted()).toBe(false);
+        expect(harness.attemptedUpdates).toEqual([]);
+        expect(harness.attemptedAuditValues).toEqual([]);
+        expect(firebase.confirmUidAbsent).not.toHaveBeenCalled();
+      },
+    );
 
     it('keeps the reservation reserved when the audit write fails', async () => {
       db.select = createSelectMock([[abandonedRow]]);

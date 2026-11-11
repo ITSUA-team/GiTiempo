@@ -151,10 +151,11 @@ registration/social-login flows cannot race the operator:
 1. The reservation exists and is re-read as `purpose = 'registration' AND
    state = 'reserved'` under the lock (a single prior read is not trusted).
 2. The reservation is older than `AUTH_AGED_RESERVATION_THRESHOLD`.
-3. The reservation's `creation_outcome_pending` flag is `false`: the initial
-   Firebase creation attempt has a confirmed final result (success or
-   definitive failure). If the creation timed out and the late-outcome tracker
-   has not yet completed, the flag is `true` and the reservation is retained.
+3. The reservation's `creation_outcome_pending` flag is explicitly `false`,
+   backed by a definitive non-creation result. New registrations commit `true`
+   before dispatching the Firebase request. Timeouts, lost responses and process
+   interruptions retain `true`, including after a rejected creation promise.
+   Existing uncertain registration reservations are migrated to `true`.
 4. The UID is not adopted locally: no `users.firebase_uid` match and no row in
    `firebase_subject_bindings` for the UID.
 5. Firebase confirms the UID is absent **deterministically**: two consecutive
@@ -209,8 +210,11 @@ ORDER BY created_at DESC;
   attempt timed out and the late-outcome tracker has not yet completed
   (`creation_outcome_pending = true`), `resolve` → `503` and the reservation
   stays `reserved`. Two consecutive `user-not-found` lookups do not prove the
-  creation never started; the flag clears only when the creation promise
-  settles (success confirms the reservation, failure clears the flag).
+  creation never started. A generic rejection leaves the flag set. A late
+  success confirms the reservation. An explicitly known non-creating late
+  failure clears the pending flag under the shared identity locks, retaining
+  the reservation for aged, audited operator resolution. Immediate definitive
+  non-creating failures still use guarded reservation cleanup.
 - **Generic errors never authorize cleanup.** Internal/transport errors during
   recovery leave the reservation untouched; `resolve` never deletes the
   reservation row and never deletes a Firebase identity.
@@ -252,73 +256,56 @@ event pair is intentionally reusable) — see
   `firebase_identity_reservations` and `registration_owner_acknowledgement`
   (nullable boolean) to `identity_recovery_audit`. No existing column is
   altered.
+- **Migration `0031`** changes the pending-outcome default to `true` and marks
+  existing `reserved` registration attempts as uncertain. Their email remains
+  reserved until an authorized exact-UID recovery or definitive non-creation
+  evidence permits reconciliation.
 - **Platform-operator authorization** is deployment configuration only
   (`PLATFORM_OPERATOR_USER_IDS`); no DB-backed role is introduced.
 
 ### Deployment order
 
-1. Apply the migration (`pnpm --filter @gitiempo/api db:migrate`, or the
-   deployment pipeline's equivalent). Deploy the migration before or together
-   with the release; if the API ships before the migration exists, `assess`
-   keeps working but `resolve` fails at runtime when the audit row is written
-   (the table is required by the resolve path).
-2. Configure `AUTH_AGED_RESERVATION_THRESHOLD` (default `24h` is usually
-   correct) and `PLATFORM_OPERATOR_USER_IDS` in the deployment environment.
-3. Restart the API (both keys are read at boot).
-4. Smoke-check: `GET /auth/identity-recovery/assess` with an operator token
-   returns `200 []`, and with a non-operator token returns `403`.
+1. Drain traffic and stop every previous API process before migrating. In
+   particular, a process running migration `0030` code can still clear pending
+   flags from an old late-outcome callback after the new backfill. Stop those
+   processes and their trackers before applying `0031`; any unresolved upstream
+   Firebase operation remains conservatively pending in the database.
+2. Apply all migrations through the latest identity-recovery migration
+   (`pnpm --filter @gitiempo/api db:migrate`, or the deployment pipeline's
+   equivalent). Ordinary registration and identity lookups read the added
+   reservation columns, so migrations must finish before traffic resumes.
+3. Configure `AUTH_AGED_RESERVATION_THRESHOLD` (default `24h`) and
+   `PLATFORM_OPERATOR_USER_IDS` in the deployment environment.
+4. Start only the new API release and resume traffic.
+5. Smoke-check `GET /auth/identity-recovery/assess` with an operator token
+   returns `200` and a non-operator token returns `403`.
 
 ### Rollback
 
-- The **preferred way to disable the feature** is to set
-  `PLATFORM_OPERATOR_USER_IDS` empty and restart — both endpoints then refuse
-  every caller (403). This leaves all data intact and is reversible.
-- To roll back the **data model**, the steps below must be followed in order.
-  Each step has a precondition that must be verified before proceeding:
+The supported feature rollback disables operator recovery while preserving its
+identity history and the compatible API release:
 
-  1. **Check for duplicate emails before reverting `resolved` rows.**
-     The email unique index (migration `0029`) excludes `state = 'resolved'`,
-     so a `resolved` reservation and a later `bound` registration can co-exist
-     with the same normalized email. Reverting `resolved` back to `reserved`
-     without checking will violate that index.
+1. Set `PLATFORM_OPERATOR_USER_IDS` empty in the deployment environment.
+2. Restart the API with the current schema and a release that understands
+   `resolved` reservations and `creation_outcome_pending`.
+3. Verify both operator endpoints return `403` with the former operator token.
+4. Verify the reservation IDs, states and audit rows from before the restart
+   are still present. Re-registration continues to use a new UID while historical
+   `resolved` rows and their operator decisions remain queryable.
 
-     ```sql
-     SELECT lower(btrim(normalized_email)) AS email, count(*) AS n
-     FROM firebase_identity_reservations
-     WHERE state IN ('resolved', 'reserved', 'confirmed', 'bound')
-     GROUP BY lower(btrim(normalized_email))
-     HAVING count(*) > 1;
-     ```
+Retain migrations, the partial email index, the audit table and all reservation
+states during this rollback. Multiple historical `resolved` rows can share an
+email with each other and with a later active registration. Changing those rows
+to `reserved` violates active-email uniqueness. Deleting an audited reservation
+is blocked by the audit table's `ON DELETE RESTRICT` foreign key. Dropping the
+audit table removes the operator provenance.
 
-     If any rows are returned, **do not run the bulk UPDATE** — those emails
-     have been re-registered after resolution. Instead, delete the stale
-     `resolved` rows one by one (their audit rows will prevent deletion due to
-     the `ON DELETE RESTRICT` FK — see step 2).
-
-  2. **Preserve the audit trail.** The `identity_recovery_audit` table has a
-     `ON DELETE RESTRICT` FK to `firebase_identity_reservations(id)`
-     (migration `0029`). You **cannot** `DROP TABLE identity_recovery_audit`
-     while referenced reservation rows still exist, and you should **not** drop
-     it at all if you want to keep the operator-action provenance. If you truly
-     need to drop the table, first delete all `resolved` reservation rows that
-     have audit rows — but this permanently loses the audit history.
-
-     To keep the audit and simply re-strand the reservations (recommended):
-     ```sql
-     UPDATE firebase_identity_reservations
-     SET state = 'reserved', updated_at = now()
-     WHERE state = 'resolved'
-       AND lower(btrim(normalized_email)) NOT IN (
-         SELECT lower(btrim(normalized_email))
-         FROM firebase_identity_reservations
-         WHERE state != 'resolved'
-       );
-     ```
-     Any `resolved` rows whose email was re-registered stay `resolved` (their
-     email is already free for the new registration; reverting them would
-     break the unique index).
-
-  3. Roll the API release back to the previous version.
+A downgrade to an API predating identity recovery requires a separately tested
+compatibility backport that excludes `resolved` history from active-email
+lookups and retains uncertain provider outcomes. Before such a downgrade, test
+multiple resolved attempts for one email, a later successful re-registration,
+its login and the unchanged audit trail on a database copy. Keep the compatible
+release running until that backport is available.
 
 ## Deferred follow-ups
 

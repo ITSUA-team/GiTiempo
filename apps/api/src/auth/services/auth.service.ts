@@ -642,9 +642,8 @@ export class AuthService {
       });
     } catch (error) {
       if (timedOutCreation) {
-        await this.reservations.markCreationOutcomePending(reservation.id);
         this.trackLateRegistrationFirebaseOutcome(
-          reservation.id,
+          reservation,
           timedOutCreation,
         );
       }
@@ -1101,7 +1100,11 @@ export class AuthService {
   }
 
   private trackLateRegistrationFirebaseOutcome(
-    reservationId: string,
+    originalReservation: {
+      id: string;
+      firebaseUid: string;
+      normalizedEmail: string;
+    },
     creation: Promise<{ uid: string }>,
   ): void {
     void creation
@@ -1115,25 +1118,34 @@ export class AuthService {
             tx,
           );
           if (
-            reservation?.id === reservationId &&
+            reservation?.id === originalReservation.id &&
             reservation.state === 'reserved' &&
             reservation.purpose === 'registration'
           ) {
             await this.reservations.confirmIdentityReservationInTransaction(
               tx,
-              reservationId,
+              originalReservation.id,
+            );
+            await this.reservations.clearCreationOutcomePending(
+              originalReservation.id,
+              tx,
             );
           }
-          await this.reservations.clearCreationOutcomePending(
-            reservationId,
-            tx,
-          );
         });
       })
       .catch((error: unknown) => {
-        this.reservations
-          .clearCreationOutcomePending(reservationId)
-          .catch(() => undefined);
+        if (
+          error instanceof FirebaseAdminAuthError &&
+          isKnownNonCreatingRegistrationError(error)
+        ) {
+          void this.reservations
+            .confirmRegistrationNonCreation(originalReservation)
+            .catch(() => {
+              this.logger.warn({
+                event: 'auth.register.firebase_late_cleanup_failed',
+              });
+            });
+        }
         this.logger.warn({
           event: 'auth.register.firebase_late_failure',
           reason: error instanceof Error ? error.message : 'unknown_error',

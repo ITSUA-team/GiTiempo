@@ -58,5 +58,5 @@
 ## 9. Docs
 
 - [x] 9.1 Document the operator recovery runbook: age threshold env key, how to call the assess + resolve endpoints (with `bruno/` examples), the conclusive-abandonment criteria, and the audit trail; verify the documented `bruno` requests run as written
-- [x] 9.2 Document migration/deployment implications: the `identity_recovery_audit` table, the `resolved` state, the platform-operator role requirement, rollback steps (drop audit table, set `resolved` back to `reserved`); verify the rollback steps are reproducible
+- [x] 9.2 Document migration/deployment implications: the `identity_recovery_audit` table, the `resolved` state, the platform-operator role requirement, rollback steps (disable operator access, retain compatible API/schema and preserve all reservation/audit history); verify the rollback steps are reproducible
 - [x] 9.3 Note the deferred follow-ups in the change docs: admin-web UI page for operator recovery and scheduled emission of the aged-reservation signal

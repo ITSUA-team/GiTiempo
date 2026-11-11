@@ -218,6 +218,13 @@
       "when": 1794322950965,
       "tag": "0030_identity_recovery_audit_owner_ack_and_creation_outcome",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794384611653,
+      "tag": "0031_small_iron_fist",
+      "breakpoints": true
     }
   ]
 }

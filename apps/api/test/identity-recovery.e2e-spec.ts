@@ -3,8 +3,10 @@ import type { TestingModule } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Client } from 'pg';
+import { ConfigService } from '@nestjs/config';
+import { AuthService } from '../src/auth/services/auth.service';
 import request from 'supertest';
 import { ADMIN_FAKE_TOKEN, bearer, login } from './helpers/auth';
 import { DRIZZLE } from '../src/db/db.constants';
@@ -14,7 +16,10 @@ import { firebaseSubjectBindings } from '../src/auth/schemas/firebase-subject-bi
 import { identityRecoveryAudit } from '../src/auth/schemas/identity-recovery-audit.schema';
 import { users, workspaceMembers, workspaces } from '../src/db/schema';
 import type { FakeFirebaseAdminService } from '../src/auth/services/firebase-admin.fake';
-import { FIREBASE_ADMIN } from '../src/auth/services/firebase-admin.interface';
+import {
+  FIREBASE_ADMIN,
+  FirebaseAdminAuthError,
+} from '../src/auth/services/firebase-admin.interface';
 import { TokenService } from '../src/auth/services/token.service';
 
 const MEMBER_FAKE_TOKEN = 'test:seed-user-2:bob@gitiempo.dev:Bob';
@@ -87,6 +92,7 @@ async function seedRegistrationReservation(
       firebaseUid: `aged-uid-${randomUUID()}`,
       purpose: 'registration',
       state: 'reserved',
+      creationOutcomePending: false,
       registrationDisplayName: 'Aged Owner',
       registrationWorkspaceName: 'Aged Studio',
       registrationOwnerAcknowledgement: true,
@@ -200,6 +206,172 @@ describe('Identity recovery (e2e)', () => {
       const res = await getAssess(app);
       expect(res.status).toBe(401);
     });
+  });
+
+  describe('uncertain registration creation', () => {
+    it.each(['immediate', 'after-timeout'] as const)(
+      'retains the email and refuses operator resolution after %s response loss',
+      async (failureTiming) => {
+        const auth = app.get(AuthService);
+        const previousTimeout = Reflect.get(
+          auth,
+          'registrationFirebaseCreationTimeoutMs',
+        );
+        Reflect.set(
+          auth,
+          'registrationFirebaseCreationTimeoutMs',
+          failureTiming === 'immediate' ? 1000 : 50,
+        );
+        let rejectCreation!: (error: unknown) => void;
+        const creation = new Promise<never>((_resolve, reject) => {
+          rejectCreation = reject;
+        });
+        let committedPendingAtDispatch: boolean | null | undefined;
+        const create = vi
+          .spyOn(firebase, 'createEmailPasswordUser')
+          .mockImplementationOnce(async (input) => {
+            const [committed] = await db
+              .select()
+              .from(firebaseIdentityReservations)
+              .where(eq(firebaseIdentityReservations.firebaseUid, input.uid!));
+            committedPendingAtDispatch = committed?.creationOutcomePending;
+            if (failureTiming === 'immediate') {
+              throw new FirebaseAdminAuthError(
+                'auth/internal-error',
+                'response lost',
+              );
+            }
+            return creation;
+          });
+        const email = `lost-response.${randomUUID()}@example.com`;
+        const payload = {
+          email,
+          fullName: 'Retained Owner',
+          ownerAcknowledgement: true,
+          password: 'password123',
+          workspaceName: 'Retained Workspace',
+        };
+        try {
+          const registration = await postRegister(app, payload);
+          expect(registration.status).toBe(503);
+          await vi.waitFor(() => expect(committedPendingAtDispatch).toBe(true));
+          const [reservation] = await db
+            .select()
+            .from(firebaseIdentityReservations)
+            .where(eq(firebaseIdentityReservations.normalizedEmail, email));
+          expect(reservation.creationOutcomePending).toBe(true);
+          if (failureTiming === 'after-timeout') {
+            rejectCreation(
+              new FirebaseAdminAuthError(
+                'auth/internal-error',
+                'late response lost',
+              ),
+            );
+            await new Promise<void>((resolve) => setImmediate(resolve));
+          }
+          await db
+            .update(firebaseIdentityReservations)
+            .set({ createdAt: new Date(Date.now() - AGED_RESERVATION_AGE_MS) })
+            .where(eq(firebaseIdentityReservations.id, reservation.id));
+          expect(
+            await firebase.confirmUidAbsent(reservation.firebaseUid),
+          ).toMatchObject({ absent: true });
+          const resolved = await postResolve(app, operatorAccessToken, {
+            reservationId: reservation.id,
+            operatorDecision: 'Attempt to release an uncertain creation',
+          });
+          expect(resolved.status).toBe(503);
+          expect((await postRegister(app, payload)).status).toBe(503);
+          expect(create).toHaveBeenCalledTimes(1);
+          expect(await fetchReservation(db, reservation.id)).toMatchObject({
+            state: 'reserved',
+            creationOutcomePending: true,
+            firebaseUid: reservation.firebaseUid,
+          });
+          expect(await fetchAuditRows(db, reservation.id)).toEqual([]);
+        } finally {
+          create.mockRestore();
+          Reflect.set(
+            auth,
+            'registrationFirebaseCreationTimeoutMs',
+            previousTimeout,
+          );
+        }
+      },
+    );
+  });
+
+  it('resolves a timed-out registration after definitive non-creation and permits a new registration', async () => {
+    const auth = app.get(AuthService);
+    const previousTimeout = Reflect.get(
+      auth,
+      'registrationFirebaseCreationTimeoutMs',
+    );
+    Reflect.set(auth, 'registrationFirebaseCreationTimeoutMs', 5);
+    let rejectCreation!: (error: unknown) => void;
+    const creation = new Promise<never>((_resolve, reject) => {
+      rejectCreation = reject;
+    });
+    const create = vi
+      .spyOn(firebase, 'createEmailPasswordUser')
+      .mockImplementationOnce(() => creation);
+    const email = `definitive-failure.${randomUUID()}@example.com`;
+    const payload = {
+      email,
+      fullName: 'Retry Owner',
+      ownerAcknowledgement: true,
+      password: 'password123',
+      workspaceName: 'Retry Workspace',
+    };
+    try {
+      expect((await postRegister(app, payload)).status).toBe(503);
+      const [reservation] = await db
+        .select()
+        .from(firebaseIdentityReservations)
+        .where(eq(firebaseIdentityReservations.normalizedEmail, email));
+      expect(reservation.creationOutcomePending).toBe(true);
+      rejectCreation(
+        new FirebaseAdminAuthError(
+          'auth/operation-not-allowed',
+          'Creation disabled',
+        ),
+      );
+      await vi.waitFor(async () => {
+        expect(await fetchReservation(db, reservation.id)).toMatchObject({
+          state: 'reserved',
+          creationOutcomePending: false,
+        });
+      });
+      await db
+        .update(firebaseIdentityReservations)
+        .set({ createdAt: new Date(Date.now() - AGED_RESERVATION_AGE_MS) })
+        .where(eq(firebaseIdentityReservations.id, reservation.id));
+      expect(
+        (
+          await postResolve(app, operatorAccessToken, {
+            reservationId: reservation.id,
+            operatorDecision: 'Provider definitively refused creation',
+          })
+        ).status,
+      ).toBe(204);
+      expect(await fetchAuditRows(db, reservation.id)).toHaveLength(1);
+      expect((await fetchReservation(db, reservation.id)).state).toBe(
+        'resolved',
+      );
+      Reflect.set(
+        auth,
+        'registrationFirebaseCreationTimeoutMs',
+        previousTimeout,
+      );
+      expect((await postRegister(app, payload)).status).toBe(201);
+    } finally {
+      create.mockRestore();
+      Reflect.set(
+        auth,
+        'registrationFirebaseCreationTimeoutMs',
+        previousTimeout,
+      );
+    }
   });
 
   describe('POST /auth/identity-recovery/resolve', () => {
@@ -353,6 +525,77 @@ describe('Identity recovery (e2e)', () => {
         firebaseUid: claims.firebaseUid,
         userId: claims.sub,
       });
+    });
+
+    it('preserves repeated registration history and audit when operator recovery is disabled', async () => {
+      const email = `rollback.${randomUUID()}@example.com`;
+      const historical: Array<
+        typeof firebaseIdentityReservations.$inferSelect
+      > = [];
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const reservation = await seedRegistrationReservation(db, {
+          normalizedEmail: email,
+          creationOutcomePending: false,
+        });
+        expect(
+          (
+            await postResolve(app, operatorAccessToken, {
+              reservationId: reservation.id,
+              operatorDecision: `Abandoned attempt ${attempt + 1}`,
+            })
+          ).status,
+        ).toBe(204);
+        historical.push(reservation);
+      }
+      const registered = await postRegister(app, {
+        email,
+        fullName: 'New Owner',
+        ownerAcknowledgement: true,
+        password: 'password123',
+        workspaceName: 'New Workspace',
+      });
+      expect(registered.status).toBe(201);
+      const beforeReservations = await db
+        .select()
+        .from(firebaseIdentityReservations)
+        .where(eq(firebaseIdentityReservations.normalizedEmail, email));
+      const beforeAudits = await db
+        .select()
+        .from(identityRecoveryAudit)
+        .where(eq(identityRecoveryAudit.normalizedEmail, email));
+      expect(beforeReservations).toHaveLength(3);
+      expect(beforeAudits).toHaveLength(2);
+      const config = app.get(ConfigService);
+      const previousOperators = config.get('PLATFORM_OPERATOR_USER_IDS');
+      config.set('PLATFORM_OPERATOR_USER_IDS', []);
+      try {
+        expect((await getAssess(app, operatorAccessToken)).status).toBe(403);
+        expect(
+          (
+            await postResolve(app, operatorAccessToken, {
+              reservationId: historical[0].id,
+              operatorDecision: 'Disabled recovery attempt',
+            })
+          ).status,
+        ).toBe(403);
+        const claims = tokens.verifyAccess(String(registered.body.accessToken));
+        const relogin = await login(app, `test:${claims.firebaseUid}:${email}`);
+        expect(tokens.verifyAccess(relogin.accessToken).sub).toBe(claims.sub);
+        expect(
+          await db
+            .select()
+            .from(firebaseIdentityReservations)
+            .where(eq(firebaseIdentityReservations.normalizedEmail, email)),
+        ).toEqual(beforeReservations);
+        expect(
+          await db
+            .select()
+            .from(identityRecoveryAudit)
+            .where(eq(identityRecoveryAudit.normalizedEmail, email)),
+        ).toEqual(beforeAudits);
+      } finally {
+        config.set('PLATFORM_OPERATOR_USER_IDS', previousOperators);
+      }
     });
 
     it('retains the reservation and writes no audit when provider absence is uncertain', async () => {

@@ -142,6 +142,7 @@ export class IdentityReservationCoordinator {
             normalizedEmail: input.email,
             firebaseUid: randomUUID(),
             purpose: 'registration',
+            creationOutcomePending: true,
             registrationDisplayName: input.displayName,
             registrationWorkspaceName: input.workspaceName,
             registrationOwnerAcknowledgement: input.ownerAcknowledgement,
@@ -287,21 +288,33 @@ export class IdentityReservationCoordinator {
       );
   }
 
-  async markCreationOutcomePending(reservationId: string): Promise<void> {
-    await this.db
-      .update(firebaseIdentityReservations)
-      .set({ creationOutcomePending: true, updatedAt: new Date() })
-      .where(
-        and(
-          eq(firebaseIdentityReservations.id, reservationId),
-          eq(firebaseIdentityReservations.state, 'reserved'),
-        ),
+  async confirmRegistrationNonCreation(reservation: {
+    id: string;
+    firebaseUid: string;
+    normalizedEmail: string;
+  }): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await this.lockIdentityReservationKeys(tx, [
+        `email:${reservation.normalizedEmail}`,
+        `uid:${reservation.firebaseUid}`,
+      ]);
+      const current = await this.findReservationByUid(
+        reservation.firebaseUid,
+        tx,
       );
+      if (
+        current?.id === reservation.id &&
+        current.purpose === 'registration' &&
+        current.state === 'reserved'
+      ) {
+        await this.clearCreationOutcomePending(reservation.id, tx);
+      }
+    });
   }
 
   async clearCreationOutcomePending(
     reservationId: string,
-    db: Pick<DrizzleDB, 'update'> = this.db,
+    db: Pick<DrizzleDB, 'update'>,
   ): Promise<void> {
     await db
       .update(firebaseIdentityReservations)
@@ -447,7 +460,7 @@ export class IdentityReservationCoordinator {
           'Reservation is not old enough to be conclusively abandoned',
         );
       }
-      if (reservation.creationOutcomePending === true) {
+      if (reservation.creationOutcomePending !== false) {
         throw new ServiceUnavailableException(
           'Registration creation outcome is not yet determined',
         );
