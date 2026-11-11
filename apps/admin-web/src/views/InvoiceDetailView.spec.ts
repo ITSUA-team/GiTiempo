@@ -395,6 +395,10 @@ describe('InvoiceDetailView', () => {
     expect(table.exists()).toBe(true);
     expect(wrapper.text()).toContain('Included time entries');
     expect(wrapper.text()).toContain('2 entries · 12.5h');
+    expect(table.attributes('data-pc-name')).toBe('datatable');
+    expect(table.findAll('th').map(cell => cell.text())).toEqual([
+      'Date', 'User', 'Task / description', 'Billed duration',
+    ]);
     expect(table.text()).toContain('15 Apr 2026');
     expect(table.text()).toContain('Alex Admin');
     expect(table.text()).toContain('Backend API');
@@ -731,6 +735,72 @@ describe('InvoiceDetailView', () => {
     expect(reviewed.conflicts).toEqual([]);
     expect(reconcileInvoiceDraft(latest, { ...reviewed.draft, groupId: null }, latest).patch)
       .toEqual({ sender: mergedSender, groupId: null });
+  });
+
+  it('retries personal groups in the open copy dialog and preserves the chosen period', async () => {
+    testMocks.listGroups.mockRejectedValueOnce(new Error('Offline'));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    const header = wrapper.get('[data-testid="invoice-detail-header"]');
+    const detailGroup = header.get('#detail-group');
+    expect(detailGroup.attributes('aria-disabled')).toBe('true');
+    expect(header.get('#' + detailGroup.attributes('aria-labelledby')).text()).toBe('My group');
+    expect(header.get('[role="alert"]').text()).toContain('Could not load personal groups');
+
+    await header.findAll('button').find(button => button.text() === 'Create from this invoice')!.trigger('click');
+    const dialog = wrapper.get('[role="dialog"]');
+    const copyGroup = dialog.get('#copy-group');
+    expect(dialog.get('#' + copyGroup.attributes('aria-labelledby')).text()).toBe('Personal group');
+    const period = [new Date(2026, 11, 1), new Date(2026, 11, 31)];
+    wrapper.getComponent(DatePicker).vm.$emit('update:modelValue', period);
+    await wrapper.vm.$nextTick();
+
+    const retryResult = createDeferred<{ groups: Array<{ id: string; name: string }> }>();
+    testMocks.listGroups.mockReturnValueOnce(retryResult.promise);
+    await dialog.get('[role="alert"] button').trigger('click');
+    expect(copyGroup.attributes('aria-disabled')).toBe('true');
+    expect(copyGroup.text()).toContain('Loading groups');
+    retryResult.resolve({ groups: [{ id: 'recovered', name: 'Recovered group' }] });
+    await flushPromises();
+    expect(dialog.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.getComponent(DatePicker).props('modelValue')).toEqual(period);
+    const select = wrapper.findAllComponents(Select).find(field => field.props('inputId') === 'copy-group')!;
+    expect(select.props('options')).toContainEqual({id: 'recovered', name: 'Recovered group'});
+    expect(detailGroup.attributes('aria-disabled')).toBe('false');
+  });
+
+  it('ignores a failed request from a previous workspace after the new groups load', async () => {
+    let rejectOld!: (error: Error) => void;
+    testMocks.listGroups.mockReturnValueOnce(new Promise((_resolve, reject) => { rejectOld = reject; }));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    expect(wrapper.get('#detail-group').text()).toContain('Loading groups');
+    testMocks.listGroups.mockResolvedValueOnce({ groups: [{id: 'new-id', name: 'New workspace group'}] });
+    useAuthStore().accessToken = 'header.' + btoa(JSON.stringify({ sub: 'user-b', role: 'admin', workspaceId: 'workspace-b' })) + '.signature';
+    await flushPromises();
+    rejectOld(new Error('Old workspace failed'));
+    await flushPromises();
+    const select = wrapper.findAllComponents(Select).find(field => field.props('inputId') === 'detail-group')!;
+    expect(select.props('options')).toEqual([{ id: null, name: 'Ungrouped' }, { id: 'new-id', name: 'New workspace group' }]);
+    expect(wrapper.get('[data-testid="invoice-detail-header"]').find('[role="alert"]').exists()).toBe(false);
+  });
+
+  it('opens the editor with the saved invoice when a PDF export rejects its logo', async () => {
+    const message = 'Replace or remove the invalid invoice logo.';
+    testMocks.request.mockRejectedValueOnce(new ApiError(message, { status: 422, code: 'invoice_logo_invalid' }));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    await wrapper.findAll('button').find(button => button.text() === 'Download PDF')!.trigger('click');
+    await flushPromises();
+    const alert = wrapper.get('[role="alert"]');
+    expect(alert.text()).toContain(message);
+    expect(alert.text()).not.toContain('Retry download');
+    await alert.get('button').trigger('click');
+    const editor = wrapper.getComponent(InvoiceCreateDialog);
+    expect(editor.props('visible')).toBe(true);
+    expect(editor.props('editing')).toBe(true);
+    expect(editor.props('source')?.id).toBe(invoiceId);
   });
 
   it('preserves the saved membership when a move fails',async()=>{

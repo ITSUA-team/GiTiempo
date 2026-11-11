@@ -29,6 +29,7 @@ function emptyProfile(): InvoiceBillingProfile {
 const draft = ref(emptyProfile());
 const saved = ref('');
 const saving = ref(false);
+const readingLogo = ref(false);
 const error = ref('');
 const fieldErrors = ref<Record<string, string>>({});
 let generation = 0;
@@ -58,6 +59,7 @@ watch(() => props.profile, (profile) => {
 watch(() => JSON.stringify(props.scope), () => {
   generation++;
   logoRead++;
+  readingLogo.value = false;
   saving.value = false;
   draft.value = structuredClone(toRaw(props.profile ?? emptyProfile()));
   saved.value = JSON.stringify(draft.value);
@@ -70,6 +72,7 @@ async function readLogo(event: FileUploadUploaderEvent): Promise<void> {
   if (!file) return;
   error.value = '';
   const read = ++logoRead;
+  readingLogo.value = true;
   try {
     const data = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -86,10 +89,19 @@ async function readLogo(event: FileUploadUploaderEvent): Promise<void> {
     draft.value.logo = result.data;
   } catch (cause) {
     if (read === logoRead) error.value = cause instanceof Error ? cause.message : 'Could not read the logo.';
+  } finally {
+    if (read === logoRead) readingLogo.value = false;
   }
 }
 
+function removeLogo(): void {
+  logoRead++;
+  readingLogo.value = false;
+  draft.value.logo = null;
+}
+
 async function save(): Promise<void> {
+  if (readingLogo.value || saving.value) return;
   const result = invoiceBillingProfileSchema.safeParse(draft.value);
   fieldErrors.value = {};
   error.value = '';
@@ -129,6 +141,7 @@ async function save(): Promise<void> {
   >
     <form
       class="flex flex-col gap-4"
+      :aria-busy="readingLogo || saving"
       @submit.prevent="save"
     >
       <div class="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
@@ -202,7 +215,7 @@ async function save(): Promise<void> {
           outlined
           class="h-[38px] sm:w-[38px]"
           :disabled="saving"
-          @click="logoRead++; draft.logo = null"
+          @click="removeLogo"
         >
           <span v-if="isMobile">Remove</span>
           <i v-else class="pi pi-trash" aria-hidden="true" />
@@ -283,12 +296,13 @@ async function save(): Promise<void> {
             class="text-text-dark text-[13px] font-medium"
           >{{ field.label }}</label>
           <Textarea
-            v-if="field.key === 'instructions' || (field.key === 'account' && isMobile)"
+            v-if="field.key === 'instructions' || field.key === 'account'"
             :id="`invoice-payment-${field.key}`"
             v-model="draft.payment[field.key]"
             :disabled="saving"
-            rows="2"
-            class="h-[70px] w-full"
+            :rows="field.key === 'account' && !isMobile ? 1 : 2"
+            class="w-full"
+            :class="field.key === 'account' ? 'h-[70px] sm:h-[38px]' : 'h-[70px]'"
           />
           <InputText
             v-else
@@ -318,7 +332,7 @@ async function save(): Promise<void> {
           type="submit"
           label="Save invoice defaults"
           :loading="saving"
-          :disabled="!dirty || saving"
+          :disabled="!dirty || saving || readingLogo"
           class="h-[38px] w-full sm:w-auto"
         />
       </div>

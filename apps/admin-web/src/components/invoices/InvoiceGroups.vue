@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { InvoiceGroupsResponse } from '@gitiempo/shared';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import { AppDialog, getErrorMessage } from '@gitiempo/web-shared';
+import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { adminInvoicesClient } from '@/services/admin-invoices-client';
 
+const { dismissConfirmation, requireConfirmation } = useConfirmation();
 const props = defineProps<{
   scope: unknown;
   selectedGroup?: string | null;
@@ -14,7 +16,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   select: [value: string | null];
-  moved: [];
+  changed: [];
   loaded: [value: InvoiceGroupsResponse['groups']];
 }>();
 const emptyGroups = () => ({ groups: [], allCount: 0, ungroupedCount: 0 });
@@ -30,15 +32,15 @@ const options = computed(() => [
 ]);
 const active = computed(() => options.value.find(group => group.id === current.value) ?? options.value[0]!);
 const selectedPersonal = computed(() => groups.value.groups.find(group => group.id === current.value));
-type DialogMode = 'create' | 'rename' | 'delete' | 'manage';
+type DialogMode = 'create' | 'rename' | 'manage';
 const mode = ref<DialogMode>('create');
 const dialog = ref(false);
 const name = ref('');
 const target = ref<InvoiceGroupsResponse['groups'][number]>();
-const heading = computed(() => {
-  if (mode.value === 'delete') return `Delete “${target.value?.name}”?`;
-  return { create: 'Create group', rename: 'Rename group', manage: 'Manage personal groups' }[mode.value];
-});
+const heading = computed(() => ({
+  create: 'Create group', rename: 'Rename group', manage: 'Manage personal groups',
+})[mode.value]);
+const deleteError = ref('');
 const error = ref('');
 const loadError = ref('');
 const busy = ref(false);
@@ -61,17 +63,21 @@ async function load() {
     if (sequence === loadSequence) loading.value = false;
   }
 }
-watch(() => props.scope, () => {
+watch(() => props.scope, (_scope, _previous, onCleanup) => {
+  onCleanup(dismissConfirmation);
   generation++;
   dialog.value = false;
   current.value = null;
   groups.value = emptyGroups();
   loaded.value = false;
+  deleteError.value = '';
   loadError.value = '';
   busy.value = false;
   void load();
 }, { immediate: true, deep: true });
 watch(() => props.refreshToken, () => void load());
+
+onBeforeUnmount(() => { generation++; });
 
 function select(value: string | null) {
   current.value = value;
@@ -89,9 +95,8 @@ async function submit() {
   const requestGeneration = generation;
   const group = target.value;
   const trimmed = name.value.trim();
-  const deleting = mode.value === 'delete';
   if (mode.value !== 'create' && !group) return;
-  if (!deleting && !trimmed) {
+  if (!trimmed) {
     error.value = 'Group name is required.';
     return;
   }
@@ -99,18 +104,12 @@ async function submit() {
   error.value = '';
   try {
     let createdGroupId: string | undefined;
-    if (deleting && group) await adminInvoicesClient.deleteGroup(group.id);
-    else if (mode.value === 'rename' && group) await adminInvoicesClient.updateGroup(group.id, { name: trimmed });
+    if (mode.value === 'rename' && group) await adminInvoicesClient.updateGroup(group.id, { name: trimmed });
     else createdGroupId = (await adminInvoicesClient.createGroup({ name: trimmed })).id;
     if (requestGeneration !== generation) return;
     dialog.value = false;
     if (createdGroupId) select(createdGroupId);
-    if (deleting) {
-      if (group?.id === current.value) select(null);
-      emit('moved');
-    } else {
-      await load();
-    }
+    emit('changed');
   } catch (cause) {
     if (requestGeneration === generation) {
       const message = getErrorMessage(cause);
@@ -119,6 +118,32 @@ async function submit() {
   } finally {
     if (requestGeneration === generation) busy.value = false;
   }
+}
+
+function confirmDelete(group = selectedPersonal.value) {
+  if (!group || busy.value) return;
+  const requestGeneration = generation;
+  dialog.value = false;
+  deleteError.value = '';
+  requireConfirmation(
+    `The group will be deleted. Its ${group.count} ${group.count === 1 ? 'invoice will stay available' : 'invoices will stay available'} in All invoices and Ungrouped.`,
+    `Delete “${group.name}”?`,
+    'Delete group',
+    async () => {
+      if (requestGeneration !== generation || busy.value) return;
+      busy.value = true;
+      try {
+        await adminInvoicesClient.deleteGroup(group.id);
+        if (requestGeneration !== generation) return;
+        if (group.id === current.value) select(null);
+        emit('changed');
+      } catch (cause) {
+        if (requestGeneration === generation) deleteError.value = getErrorMessage(cause);
+      } finally {
+        if (requestGeneration === generation) busy.value = false;
+      }
+    },
+  );
 }
 </script>
 
@@ -206,7 +231,8 @@ async function submit() {
         icon="pi pi-trash"
         severity="danger"
         outlined
-        @click="open('delete')"
+        :disabled="busy"
+        @click="confirmDelete()"
       />
     </div>
     <p class="text-text-muted hidden text-xs leading-5 sm:block">
@@ -222,6 +248,13 @@ async function submit() {
         variant="text"
         @click="load"
       />
+    </p>
+    <p
+      v-if="deleteError"
+      role="alert"
+      class="text-destructive text-sm"
+    >
+      {{ deleteError }}
     </p>
     <AppDialog
       v-model:visible="dialog"
@@ -257,7 +290,8 @@ async function submit() {
             icon="pi pi-trash"
             severity="danger"
             outlined
-            @click="open('delete',group)"
+            :disabled="busy"
+            @click="confirmDelete(group)"
           />
         </div>
         <Button
@@ -272,30 +306,22 @@ async function submit() {
         class="flex flex-col gap-4"
         @submit.prevent="submit"
       >
-        <p
-          v-if="mode === 'delete'"
-          class="text-text-muted text-sm"
-        >
-          The group will be deleted. Its {{ target?.count }} {{ target?.count === 1 ? 'invoice will stay available' : 'invoices will stay available' }} in All invoices and Ungrouped.
+        <p class="text-text-muted text-sm">
+          {{ mode === 'rename' ? 'Only your group name changes.' : 'Your groups are only visible to you.' }}
         </p>
-        <template v-else>
-          <p class="text-text-muted text-sm">
-            {{ mode === 'rename' ? 'Only your group name changes.' : 'Your groups are only visible to you.' }}
-          </p>
-          <div class="flex flex-col gap-1.5">
-            <label
-              for="group-name"
-              class="text-sm font-medium"
-            >Group name</label>
-            <InputText
-              id="group-name"
-              v-model="name"
-              class="h-[38px]"
-              :invalid="Boolean(error)"
-              :aria-describedby="error ? 'group-error' : undefined"
-            />
-          </div>
-        </template>
+        <div class="flex flex-col gap-1.5">
+          <label
+            for="group-name"
+            class="text-sm font-medium"
+          >Group name</label>
+          <InputText
+            id="group-name"
+            v-model="name"
+            class="h-[38px]"
+            :invalid="Boolean(error)"
+            :aria-describedby="error ? 'group-error' : undefined"
+          />
+        </div>
         <p
           v-if="error"
           id="group-error"
@@ -310,19 +336,9 @@ async function submit() {
         #footer
       >
         <Button
-          :label="mode === 'delete' ? 'Delete group' : mode === 'rename' ? 'Save name' : 'Create group'"
-          :severity="mode === 'delete' ? 'danger' : undefined"
+          :label="mode === 'rename' ? 'Save name' : 'Create group'"
           :loading="busy"
           @click="submit"
-        />
-        <Button
-          v-if="mode === 'delete'"
-          label="Cancel"
-          autofocus
-          severity="secondary"
-          outlined
-          :disabled="busy"
-          @click="dialog=false"
         />
       </template>
     </AppDialog>

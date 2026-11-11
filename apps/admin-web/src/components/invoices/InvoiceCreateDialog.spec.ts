@@ -29,6 +29,7 @@ import { createTestQueryPlugin } from '@/test/query-client';
 const testMocks = vi.hoisted(() => ({
   listEligibleEntries: vi.fn(),
   getInvoiceDefaults: vi.fn(),
+  listGroups: vi.fn(),
   requestJson: vi.fn(),
 }));
 
@@ -36,7 +37,7 @@ vi.mock('@/services/admin-invoices-client', () => ({
   adminInvoicesClient: {
     listEligibleEntries: testMocks.listEligibleEntries,
     getInvoiceDefaults: testMocks.getInvoiceDefaults,
-    listGroups: () => testMocks.requestJson({ path: '/invoices/groups' }),
+    listGroups: testMocks.listGroups,
     previewInvoice: (body: unknown) => testMocks.requestJson({ path: '/invoices/preview', body }),
   },
 }));
@@ -298,9 +299,9 @@ enableAutoUnmount(afterEach);
 describe('InvoiceCreateDialog', () => {
   beforeEach(() => {
     testMocks.listEligibleEntries.mockReset();
+    testMocks.listGroups.mockReset().mockResolvedValue({ groups: [], allCount: 0, ungroupedCount: 0 });
     testMocks.getInvoiceDefaults.mockReset().mockResolvedValue({ billingProfile: null });
-    testMocks.requestJson.mockReset().mockImplementation(async ({ path, body }) => {
-      if (path === '/invoices/groups') return { groups: [] };
+    testMocks.requestJson.mockReset().mockImplementation(async ({ body }) => {
       const hours = body.timeEntryIds.length * 2.5;
       return { currency: body.currency || 'USD', subtotal: hours * (body.hourlyRate ?? 80), discountAmount: hours * (body.hourlyRate ?? 80) * body.discountPercent / 100, totalHours: hours, totalAmount: hours * (body.hourlyRate ?? 80) * (1 - body.discountPercent / 100), timeEntryCount: body.timeEntryIds.length, entries: [] };
     });
@@ -505,7 +506,8 @@ describe('InvoiceCreateDialog', () => {
 
 
     const table = wrapper.findComponent(DataTable);
-    expect(table.exists()).toBe(true);
+    expect(table.props('scrollable')).toBe(true);
+    expect(table.props('scrollHeight')).toBeTruthy();
     expect(bodyText()).toContain('15 Apr 2026');
     expect(bodyText()).toContain('Alex Admin');
     expect(bodyText()).toContain('2h 30m');
@@ -1045,6 +1047,80 @@ describe('InvoiceCreateDialog', () => {
     expect(titleInput?.value).toBe('Website redesign');
   });
 
+  it('freezes editable fields and entry choices until a pending save settles', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    let rejectSave!: (reason: Error) => void;
+    const pendingSave = new Promise<InvoiceResponse>((_, reject) => { rejectSave = reject; });
+    const createInvoice = vi.fn(() => pendingSave);
+    const wrapper = await mountDialog({ source: createInvoiceResponse(), editing: true, createInvoice });
+    await submitInvoice(wrapper);
+
+    const title = document.querySelector('#invoice-create-title')!;
+    const checkbox = document.querySelector('#invoice-editor-entries input[type="checkbox"]')!;
+    const lockedBody = title.closest('[inert]');
+    expect(lockedBody).not.toBeNull();
+    expect(lockedBody?.contains(checkbox)).toBe(true);
+    expect(getSubmitButton(wrapper).attributes('disabled')).toBeDefined();
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+
+    rejectSave(new Error('Save failed'));
+    await flushPromises();
+    expect(title.closest('[inert]')).toBeNull();
+    expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
+  });
+
+  it('preserves line breaks when editing imported addresses and payment account details', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    const source = createInvoiceResponse();
+    const party = { name: 'Company', email: '', taxId: '', address: 'Studio Lane\nKyiv' };
+    const payment = { method: '', terms: '', beneficiary: '', provider: '', instructions: '', account: 'Bank\nAccount' };
+    const wrapper = await mountDialog({ source: { ...source, sender: party, recipient: party, payment }, editing: true, createInvoice });
+
+    for (const caption of ['Address', 'Account / payment details']) {
+      const fields = [...document.querySelectorAll('label')].filter(label => label.textContent?.trim() === caption);
+      expect(fields).toHaveLength(caption === 'Address' ? 2 : 1);
+      for (const field of fields) {
+        const input = field.querySelector('textarea')!;
+        expect(input.value).toContain('\n');
+        input.value += '.';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({
+      sender: { ...party, address: 'Studio Lane\nKyiv.' },
+      recipient: { ...party, address: 'Studio Lane\nKyiv.' },
+      payment: { ...payment, account: 'Bank\nAccount.' },
+    }));
+  });
+
+  it('retries personal groups without losing the title or the chosen entries', async () => {
+    const entry = createTimeEntry();
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const groupId = '88888888-8888-4888-8888-888888888888';
+    testMocks.listGroups.mockRejectedValueOnce(new Error('Offline')).mockResolvedValueOnce({
+      allCount: 0, ungroupedCount: 0, groups: [{ id: groupId, name: 'Retainers', count: 0 }],
+    });
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({ createInvoice });
+    await wrapper.getComponent('#invoice-create-title').setValue('Keep my draft');
+    await enterDateRange(wrapper);
+    const checkbox = wrapper.findAllComponents(Checkbox).find(field => field.props('value') === entry.id)!;
+    checkbox.vm.$emit('update:modelValue', []);
+    await flushPromises();
+    expect(getSelectByInputId(wrapper, 'invoice-group').props('disabled')).toBe(true);
+    await wrapper.findAllComponents(Button).find(button => button.attributes('aria-label') === 'Retry groups')!.trigger('click');
+    await flushPromises();
+    const groupSelect = getSelectByInputId(wrapper, 'invoice-group');
+    expect(groupSelect.props('options')).toContainEqual(expect.objectContaining({ id: groupId, name: 'Retainers' }));
+    groupSelect.vm.$emit('update:modelValue', groupId);
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({ title: 'Keep my draft', groupId, timeEntryIds: [] }));
+  });
+
   it('shows the in-flight state and disables closing while creating', async () => {
     const wrapper = await mountDialog({ isCreating: true });
 
@@ -1526,17 +1602,29 @@ describe('InvoiceCreateDialog', () => {
     });
   });
 
+  it('disables Save while recalculating a changed rate and enables it for the new total', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const wrapper = await mountDialog({ source: createInvoiceResponse(), editing: true });
+    expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
+    let finish!: (result: unknown) => void;
+    testMocks.requestJson.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+
+    getRateField(wrapper).vm.$emit('update:modelValue', 100);
+    await flushPromises();
+    expect(bodyText()).toContain('Calculating totals');
+    expect(getSubmitButton(wrapper).attributes('disabled')).toBeDefined();
+
+    finish({ entries: [createTimeEntry()], timeEntryCount: 1, totalHours: 2.5, subtotal: 250, discountAmount: 0, totalAmount: 250, currency: 'USD' });
+    await flushPromises();
+    expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
+    expect(bodyText()).toContain('250.00 USD');
+  });
+
   it('does not save while the authoritative calculation is unresolved', async () => {
-    // Simulate a slow preview: the eligible-entries call never resolves
-    // before the user submits. The initial roundingStepMinutes ref is still
-    // the temporary 1-minute default, but the workspace setting is 15.
-    // The create payload must NOT send roundingStepMinutes so the server
-    // applies workspace/project inheritance instead of treating the
-    // stale 1-minute value as an explicit override.
     testMocks.listEligibleEntries.mockReturnValue(
       new Promise(() => {}),
     );
-    testMocks.requestJson.mockImplementation(({ path }) => path === '/invoices/groups' ? Promise.resolve({ groups: [] }) : new Promise(() => {}));
+    testMocks.requestJson.mockReturnValue(new Promise(() => {}));
     const createInvoice = createCreateInvoiceSpy();
     const wrapper = await mountDialog({
       isAdmin: true,
@@ -1553,6 +1641,7 @@ describe('InvoiceCreateDialog', () => {
     // The field still shows the temporary 1-minute default because the
     // preview has not arrived yet.
     expect(getRoundingStepLabelElement().textContent).toBe('1 min');
+    expect(getSubmitButton(wrapper).attributes('disabled')).toBeDefined();
 
     await submitInvoice(wrapper);
 
@@ -1726,7 +1815,7 @@ describe('InvoiceCreateDialog', () => {
   it('renders authoritative totals from the real calculation response without eligibility defaults',async()=>{
     const entry=createTimeEntry();
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
-    testMocks.requestJson.mockImplementation(async({path})=>path==='/invoices/groups'?{groups:[]}:previewInvoiceResponseSchema.parse({entries:[entry],count:1,totalHours:2.5,subtotal:200,discountAmount:20,totalAmount:180,currency:'USD'}));
+    testMocks.requestJson.mockImplementation(async()=>previewInvoiceResponseSchema.parse({entries:[entry],count:1,totalHours:2.5,subtotal:200,discountAmount:20,totalAmount:180,currency:'USD'}));
     const createInvoice=createCreateInvoiceSpy();
     const wrapper=await mountDialog({createInvoice});
     await wrapper.getComponent('#invoice-create-title').setValue('Reviewed invoice');
@@ -1840,6 +1929,7 @@ describe('InvoiceCreateDialog', () => {
     await enterDateRange(wrapper);
     await submitInvoice(wrapper);
     expect(bodyText()).toContain('Changes were not saved');
+    expect(getSubmitButton(wrapper).attributes('disabled')).toBeDefined();
     expect(bodyText()).toContain('Backend API · Backend API implementation · Unavailable');
     await wrapper.findAllComponents(Button).find(button => button.props('label') === 'Review entries')!.trigger('click');
     expect(document.activeElement?.id).toBe('invoice-editor-entries');
@@ -1909,14 +1999,14 @@ describe('InvoiceCreateDialog', () => {
   it('refreshes eligibility and retries a failed calculation without losing the draft',async()=>{
     let fail=true;
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
-    testMocks.requestJson.mockImplementation(async({path})=>{
-      if(path==='/invoices/groups')return {groups:[]};
+    testMocks.requestJson.mockImplementation(async()=>{
       if(fail)throw new Error('Entry was claimed. Review selection.');
       return previewInvoiceResponseSchema.parse({entries:[createTimeEntry()],count:1,totalHours:2.5,subtotal:200,discountAmount:0,totalAmount:200,currency:'USD'});
     });
     const wrapper=await mountDialog();
     await wrapper.getComponent('#invoice-create-title').setValue('Keep typed title');
     await enterDateRange(wrapper);await flushPromises();
+    expect(getSubmitButton(wrapper).attributes('disabled')).toBeDefined();
     const calls=testMocks.listEligibleEntries.mock.calls.length;
     fail=false;
     await wrapper.findAllComponents(Button).find(button=>button.props('label')==='Refresh entries and retry')!.trigger('click');await flushPromises();
@@ -1924,6 +2014,7 @@ describe('InvoiceCreateDialog', () => {
     expect(document.querySelector<HTMLInputElement>('#invoice-create-title')?.value).toBe('Keep typed title');
     expect(bodyText()).toContain('200.00 USD');
     expect(bodyText()).not.toContain('Entry was claimed');
+    expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
   });
 
   it('ignores defaults from a closed dialog when another workspace opens', async () => {

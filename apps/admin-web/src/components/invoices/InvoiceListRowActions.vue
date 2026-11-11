@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import Menu from 'primevue/menu';
 import Button from 'primevue/button';
 
-defineProps<{ reference: string; mobile?: boolean }>();
+const props = defineProps<{ reference: string; mobile?: boolean; disabled?: boolean }>();
 const emit = defineEmits<{ open: []; move: [] }>();
 const menu = ref<InstanceType<typeof Menu>>();
+watch(() => props.disabled, (disabled) => {
+  if (disabled) menu.value?.hide();
+});
 const items = [
   { label: 'Open invoice', icon: 'pi pi-file', command: () => emit('open') },
   { label: 'Move to group', icon: 'pi pi-folder-open', command: () => emit('move') },
@@ -16,6 +19,7 @@ const items = [
   <Button
     type="button"
     :aria-label="`Actions for ${reference}`"
+    :disabled="disabled"
     aria-haspopup="menu"
     icon="pi pi-ellipsis-h"
     severity="secondary"

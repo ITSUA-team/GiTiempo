@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils';
+import { createMemoryHistory, createRouter } from 'vue-router';
+import { routeNames } from '@/constants/routes';
 import type { InvoiceListItem } from '@gitiempo/shared';
 import { MobileRecordCard } from '@gitiempo/web-shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
@@ -131,7 +133,13 @@ function mountInvoicesTable(
           },
         },
       },
-      plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+      plugins: [[PrimeVue, giTiempoPrimeVueOptions], createRouter({
+        history: createMemoryHistory(),
+        routes: [
+          { path: '/', component: { template: '<div />' } },
+          { path: '/invoices/:id', name: routeNames.invoiceDetail, component: { template: '<div />' } },
+        ],
+      })],
     },
   });
 }
@@ -270,16 +278,43 @@ describe('InvoicesTable', () => {
     ]);
   });
 
-  it('emits row-click with the invoice id from the desktop title link', async () => {
-    const wrapper = mountInvoicesTable();
+  it.each([false, true])('links the visible reference to its detail URL (mobile=%s)', (isMobileViewport) => {
+    const wrapper = mountInvoicesTable({
+      isMobileViewport,
+      rows: [makeInvoice({ reference: 'INV-527', title: 'Different title' })],
+    });
+    const link = wrapper.get('a[href="/invoices/invoice-1"]');
+    expect(link.text()).toContain('INV-527');
+    expect(link.attributes('aria-label')).toBe('Open invoice INV-527');
+    expect(wrapper.find('input[aria-label="Select invoice INV-527"]').exists()).toBe(true);
+  });
 
-    const titleLink = wrapper.get('[data-testid="invoice-title-invoice-1"]');
-    expect(titleLink.attributes('aria-label')).toBe(
-      'Open invoice April 2026 Billing Run',
-    );
-    await titleLink.trigger('click');
+  it.each([false, true])('keeps filters and existing results visible during refresh (mobile=%s)', (isMobileViewport) => {
+    const wrapper = mountInvoicesTable({ loading: true, isMobileViewport });
+    expect(wrapper.get('[role="status"]').text()).toContain('Refreshing invoices');
+    expect(wrapper.find('input[aria-label="Search invoices"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain(rows[0]!.title);
+    expect(wrapper.findAllComponents(Skeleton)).toHaveLength(0);
+  });
 
-    expect(wrapper.emitted('row-click')).toEqual([['invoice-1']]);
+  it.each([false, true])('prevents selection and moves on previous filter results (mobile=%s)', async (isMobileViewport) => {
+    const wrapper = mountInvoicesTable({ loading: true, isMobileViewport });
+    await wrapper.setProps({ placeholderRows: true });
+    const checkboxes = wrapper.findAll<HTMLInputElement>('input[type=checkbox]');
+    expect(checkboxes.length).toBeGreaterThan(0);
+    expect(checkboxes.every(input => input.element.disabled)).toBe(true);
+    expect(wrapper.get<HTMLButtonElement>('button[aria-label^="Actions for"]').element.disabled).toBe(true);
+    if (isMobileViewport) expect(wrapper.findAll('button').find(button => button.text() === 'Move to group')!.element.disabled).toBe(true);
+    await wrapper.setProps({ placeholderRows: false });
+    expect(checkboxes.every(input => !input.element.disabled)).toBe(true);
+  });
+
+  it('offers to clear filters after a successful empty result', async () => {
+    const wrapper = mountInvoicesTable({ rows: [], filters: { ...defaultFilters, search: 'missing' } });
+    await wrapper.setProps({ hasActiveFilters: true });
+    expect(wrapper.text()).toContain('No matching invoices');
+    await wrapper.get('[data-testid="invoices-clear-filters"]').trigger('click');
+    expect(wrapper.emitted('clear-filters')).toEqual([[]]);
   });
 
   it('emits search filter updates from the header search control', async () => {
@@ -489,11 +524,7 @@ describe('InvoicesTable', () => {
     expect(firstCard.text()).toContain('12,800.00 USD');
     expect(firstCard.findAllComponents(InvoiceStatusBadge)).toHaveLength(1);
 
-    await firstCard
-      .get('[data-testid="invoice-mobile-title-invoice-1"]')
-      .trigger('click');
-
-    expect(wrapper.emitted('row-click')).toEqual([['invoice-1']]);
+    expect(firstCard.get('a').attributes('href')).toBe('/invoices/invoice-1');
   });
 
   it('keeps the desktop table branch when the viewport is not mobile', () => {

@@ -14,7 +14,8 @@ import { giTiempoDatePickerPt } from '@gitiempo/web-config/theme';
 import { getLocalDateKey } from '@gitiempo/web-shared/time';
 import { ApiError } from '@gitiempo/web-shared/http';
 import Button from 'primevue/button';
-import Select from 'primevue/select';
+import InvoiceGroupSelect from '@/components/invoices/InvoiceGroupSelect.vue';
+import { useInvoiceGroups } from '@/composables/invoices/useInvoiceGroups';
 import DatePicker from 'primevue/datepicker';
 import InvoiceDetailDocument from '@/components/invoices/InvoiceDetailDocument.vue';
 import InvoiceDetailHeader from '@/components/invoices/InvoiceDetailHeader.vue';
@@ -166,20 +167,12 @@ const copyOpen = ref(false);
 const copyPeriod = ref<Date[] | null>(null);
 const copyPeriodPicker = useDatePickerConfirmCancel<Date[] | null>();
 const copyGroup = ref<string | null>(null);
-const detailGroups = ref<Array<{ id: string; name: string }>>([]);
-watch(
+const groupsQuery = useInvoiceGroups({
   scope,
-  async () => {
-    const currentScope = scope.value;
-    try {
-      const result = await adminInvoicesClient.listGroups();
-      if (scope.value === currentScope) detailGroups.value = result.groups;
-    } catch {
-      detailGroups.value = [];
-    }
-  },
-  { immediate: true },
-);
+  enabled: computed(() => Boolean(accessToken.value)),
+});
+const detailGroups = computed(() => groupsQuery.data.value?.groups ?? []);
+const groupSelectionUnavailable = computed(() => groupsQuery.isPending.value || groupsQuery.isError.value);
 const groupMoveBusy = ref(false);
 const groupMoveError = ref('');
 let groupMoveGeneration = 0;
@@ -196,6 +189,7 @@ async function moveToGroup(groupId: string | null) {
   if (
     !invoice.value ||
     groupMoveBusy.value ||
+    groupSelectionUnavailable.value ||
     (invoice.value.groupId ?? null) === groupId
   )
     return;
@@ -280,14 +274,12 @@ const editorMutation = {
   },
 };
 const exportBusy = ref(false);
-const exportError = ref('');
-const missingBillingFields = ref<string[]>([]);
+const exportError = ref<{ message: string; editLabel?: string } | null>(null);
 watch(
   [scope, invoiceId],
   () => {
     exportBusy.value = false;
-    exportError.value = '';
-    missingBillingFields.value = [];
+    exportError.value = null;
   },
   { flush: 'sync' },
 );
@@ -297,8 +289,7 @@ async function downloadPdf() {
   const sourceScope = scope.value;
   const filename = `${invoice.value.reference ?? sourceId}.pdf`;
   exportBusy.value = true;
-  exportError.value = '';
-  missingBillingFields.value = [];
+  exportError.value = null;
   try {
     const response = await adminInvoicesClient.downloadInvoicePdf(sourceId);
     if (invoice.value?.id !== sourceId || scope.value !== sourceScope) return;
@@ -313,9 +304,17 @@ async function downloadPdf() {
     const incomplete = invoiceDocumentIncompleteErrorSchema.safeParse(
       error instanceof ApiError ? error.body : null,
     );
-    if (incomplete.success)
-      missingBillingFields.value = incomplete.data.details.missingFields;
-    exportError.value = getErrorMessage(error);
+    if (incomplete.success) {
+      exportError.value = {
+        message: 'The invoice is saved. Complete these billing sections before exporting: ' +
+          incomplete.data.details.missingFields.join(', ') + '.',
+        editLabel: 'Edit billing information',
+      };
+    } else if (error instanceof ApiError && error.code === 'invoice_logo_invalid') {
+      exportError.value = { message: error.message, editLabel: 'Edit invoice logo' };
+    } else {
+      exportError.value = { message: 'The invoice is saved. Retry the PDF download.' };
+    }
   } finally {
     if (invoice.value?.id === sourceId && scope.value === sourceScope)
       exportBusy.value = false;
@@ -425,6 +424,8 @@ function goBack(): void {
       <InvoiceDetailHeader
         :invoice="invoice"
         :groups="detailGroups"
+        :groups-loading="groupsQuery.isFetching.value && !groupsQuery.data.value"
+        :groups-failed="groupsQuery.isError.value"
         :moving="groupMoveBusy"
         :move-error="groupMoveError"
         :updating="updateMutation.isUpdating.value"
@@ -434,6 +435,7 @@ function goBack(): void {
         @edit="openEditor(true)"
         @download="downloadPdf"
         @move="moveToGroup"
+        @retry-groups="groupsQuery.refetch()"
         @status="
           (status) => runUpdate({ status, expectedRevision: invoice?.revision })
         "
@@ -448,28 +450,23 @@ function goBack(): void {
         <h2 class="text-lg font-semibold">
           Could not prepare PDF
         </h2>
-        <template v-if="missingBillingFields.length">
-          <p class="text-text-muted text-xs">
-            The invoice is saved. Complete these billing sections before
-            exporting: {{ missingBillingFields.join(', ') }}.
-          </p>
-          <Button
-            label="Edit billing information"
-            icon="pi pi-pencil"
-            @click="openEditor(true)"
-          />
-        </template>
-        <template v-else>
-          <p class="text-text-muted text-xs">
-            The invoice is saved. Retry the PDF download.
-          </p>
-          <Button
-            label="Retry download"
-            icon="pi pi-download"
-            class="h-[38px]"
-            @click="downloadPdf"
-          />
-        </template>
+        <p class="text-text-muted text-xs">
+          {{ exportError.message }}
+        </p>
+        <Button
+          v-if="exportError.editLabel"
+          :label="exportError.editLabel"
+          icon="pi pi-pencil"
+          class="h-[38px]"
+          @click="openEditor(true)"
+        />
+        <Button
+          v-else
+          label="Retry download"
+          icon="pi pi-download"
+          class="h-[38px]"
+          @click="downloadPdf"
+        />
       </SurfaceCard>
       <InvoiceDetailDocument :invoice="invoice" />
       <SurfaceCard
@@ -540,21 +537,15 @@ function goBack(): void {
               </template>
             </DatePicker>
           </div>
-          <div class="flex flex-col gap-1.5">
-            <label
-              for="copy-group"
-              class="text-[13px] font-medium"
-            >Personal group</label>
-            <Select
-              v-model="copyGroup"
-              input-id="copy-group"
-              placeholder="Ungrouped"
-              :options="[{ id: null, name: 'Ungrouped' }, ...detailGroups]"
-              option-label="name"
-              option-value="id"
-              class="h-[38px] w-full"
-            />
-          </div>
+          <InvoiceGroupSelect
+            v-model="copyGroup"
+            input-id="copy-group"
+            label="Personal group"
+            :groups="detailGroups"
+            :loading="groupsQuery.isFetching.value && !groupsQuery.data.value"
+            :failed="groupsQuery.isError.value"
+            @retry="groupsQuery.refetch()"
+          />
           <p class="text-text-muted text-xs">
             Sender, recipient, services and billing parameters will be
             prefilled. Review eligible entries in the new invoice.
@@ -568,7 +559,7 @@ function goBack(): void {
           <Button
             label="Continue to new draft"
             class="h-[38px] w-full sm:w-auto"
-            :disabled="!copyPeriod?.[1]"
+            :disabled="!copyPeriod?.[1] || groupSelectionUnavailable"
             @click="
               copyOpen = false;
               editorOpen = true;

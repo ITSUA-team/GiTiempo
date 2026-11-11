@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { RouterLink } from 'vue-router';
+import { routeNames } from '@/constants/routes';
 import { PlusIcon } from '@heroicons/vue/24/outline';
 import type { InvoiceStatus } from '@gitiempo/shared';
 import { MAX_SEARCH_LENGTH } from '@gitiempo/shared';
@@ -51,6 +53,7 @@ import {
 
 const props = defineProps<{
   emptyDescription: string;
+  hasActiveFilters?: boolean;
   groupName?: string;
   personalGroup?: boolean;
   emptyPersonalGroup?: boolean;
@@ -58,6 +61,7 @@ const props = defineProps<{
   filters: InvoicesTableFilters;
   isMobileViewport: boolean;
   loading: boolean;
+  placeholderRows?: boolean;
   page: number;
   rows: InvoicesTableRow[];
   rowsPerPage: number;
@@ -67,6 +71,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'create-invoice': [];
   'browse-all': [];
+  'clear-filters': [];
   'move-row': [invoiceId: string];
   'row-click': [invoiceId: string];
   'update:filters': [filters: InvoicesTableFilterUpdate];
@@ -125,12 +130,10 @@ const paginatorProps = computed(() => ({
   totalRecords: props.totalRecords,
 }));
 
-// Row titles keep the projects/members table link-button idiom; the 15px
-// variant matches the larger type used on mobile cards.
 const desktopTitleRootClass =
-  'flex w-full items-center justify-start rounded-none border-0 bg-transparent p-0 text-left text-[14px] leading-none font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
+  'text-brand flex w-full items-center justify-start rounded-none p-0 text-left text-[14px] leading-none font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
 const mobileTitleRootClass =
-  'flex w-full items-center justify-start rounded-none border-0 bg-transparent p-0 text-left text-[15px] leading-none font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
+  'text-brand flex w-full items-center justify-start rounded-none p-0 text-left text-[15px] leading-none font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
 
 function updateFilters(filters: InvoicesTableFilterUpdate): void {
   emit('update:filters', filters);
@@ -302,6 +305,13 @@ const selectedPeriodLabel = computed(() => {
   </div>
 
   <slot name="bulk-actions" />
+  <p
+    v-if="loading && rows.length && !$slots.error"
+    role="status"
+    class="text-text-muted mb-2 text-sm"
+  >
+    Refreshing invoices…
+  </p>
   <slot
     v-if="$slots.error"
     name="error"
@@ -338,11 +348,24 @@ const selectedPeriodLabel = computed(() => {
         @click="emit('browse-all')"
       />
     </div>
-    <EmptyStateBlock
+    <div
       v-else
-      title="No invoices found"
-      :description="emptyDescription"
-    />
+      class="flex flex-col items-center gap-3 py-10"
+    >
+      <EmptyStateBlock
+        :title="hasActiveFilters ? 'No matching invoices' : 'No invoices found'"
+        :description="emptyDescription"
+        padding-class="p-0"
+      />
+      <Button
+        v-if="hasActiveFilters"
+        label="Clear filters"
+        severity="secondary"
+        outlined
+        data-testid="invoices-clear-filters"
+        @click="emit('clear-filters')"
+      />
+    </div>
   </div>
 
   <div
@@ -358,20 +381,19 @@ const selectedPeriodLabel = computed(() => {
       <div class="flex items-center gap-3">
         <Checkbox
           v-model="selection"
+          :disabled="placeholderRows"
           :value="row.id"
-          :aria-label="`Select invoice ${row.title}`"
+          :aria-label="`Select invoice ${row.reference ?? row.title}`"
         />
         <h3 class="min-w-0 flex-1">
-          <Button
-            type="button"
-            variant="link"
-            :aria-label="`Open invoice ${row.title}`"
+          <RouterLink
+            :to="{ name: routeNames.invoiceDetail, params: { id: row.id } }"
+            :aria-label="`Open invoice ${row.reference ?? row.title}`"
             :data-testid="`invoice-mobile-title-${row.id}`"
-            :pt="{ root: { class: mobileTitleRootClass } }"
-            @click="emit('row-click', row.id)"
+            :class="mobileTitleRootClass"
           >
             <span class="truncate">{{ row.reference ?? row.title }}</span>
-          </Button>
+          </RouterLink>
         </h3>
         <InvoiceStatusBadge :status="row.status" />
       </div>
@@ -387,6 +409,7 @@ const selectedPeriodLabel = computed(() => {
       <div class="flex justify-end gap-3">
         <Button
           label="Move to group"
+          :disabled="placeholderRows"
           severity="secondary"
           outlined
           icon="pi pi-folder-open"
@@ -394,6 +417,7 @@ const selectedPeriodLabel = computed(() => {
         />
         <InvoiceListRowActions
           mobile
+          :disabled="placeholderRows"
           :reference="row.reference ?? row.title"
           @open="emit('row-click', row.id)"
           @move="emit('move-row', row.id)"
@@ -417,6 +441,7 @@ const selectedPeriodLabel = computed(() => {
       <template #header>
         <Checkbox
           :model-value="allSelected"
+          :disabled="placeholderRows"
           binary
           :indeterminate="partlySelected"
           aria-label="Select all invoices on this page"
@@ -426,8 +451,9 @@ const selectedPeriodLabel = computed(() => {
       <template #body="{ data }">
         <Checkbox
           v-model="selection"
+          :disabled="placeholderRows"
           :value="data.id"
-          :aria-label="`Select invoice ${data.title}`"
+          :aria-label="`Select invoice ${data.reference ?? data.title}`"
         />
       </template>
     </Column>
@@ -436,12 +462,11 @@ const selectedPeriodLabel = computed(() => {
       :pt="columnPt"
     >
       <template #body="{data}">
-        <Button
-          variant="link"
-          :aria-label="`Open invoice ${data.title}`"
+        <RouterLink
+          :to="{ name: routeNames.invoiceDetail, params: { id: data.id } }"
+          :aria-label="`Open invoice ${data.reference ?? data.title}`"
           :data-testid="`invoice-title-${data.id}`"
-          :pt="{ root: { class: desktopTitleRootClass } }"
-          @click="emit('row-click', data.id)"
+          :class="desktopTitleRootClass"
         >
           <span class="flex min-w-0 flex-col gap-1">
             <span class="truncate">{{ data.reference ?? data.title }}</span>
@@ -450,7 +475,7 @@ const selectedPeriodLabel = computed(() => {
               class="text-text-muted truncate text-xs font-normal"
             >{{ data.recipient.name }}</span>
           </span>
-        </Button>
+        </RouterLink>
       </template>
     </Column>
     <Column
@@ -510,6 +535,7 @@ const selectedPeriodLabel = computed(() => {
     >
       <template #body="{data}">
         <InvoiceListRowActions
+          :disabled="placeholderRows"
           :reference="data.reference ?? data.title"
           @open="emit('row-click',data.id)"
           @move="emit('move-row',data.id)"

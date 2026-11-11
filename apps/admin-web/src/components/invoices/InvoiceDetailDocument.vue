@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
 import { computeInvoiceAmount, type InvoiceResponse } from '@gitiempo/shared';
 import { SurfaceCard, useIsMobileViewport } from '@gitiempo/web-shared';
 import { formatCompactDuration } from '@gitiempo/web-shared/time';
@@ -7,6 +9,10 @@ import { formatInvoiceAmount } from '@/lib/format-currency';
 
 const props = defineProps<{ invoice: InvoiceResponse }>();
 const mobile = useIsMobileViewport();
+const entryColumnPt = {
+  headerCell: { class: 'h-8 bg-app-bg px-3 py-0 text-left text-xs font-semibold' },
+  bodyCell: { class: 'h-10 border-divider px-3 py-1 text-[13px] break-words whitespace-pre-line' },
+};
 const dateFormat = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit',
   month: 'short',
@@ -238,51 +244,50 @@ const paymentLines = computed(() => {
         </p>
       </li>
     </ul>
-    <table
+    <DataTable
       v-else
-      class="w-full table-fixed text-left text-[13px]"
+      :value="invoice.timeEntries"
+      data-key="id"
       data-testid="invoice-time-entries-table"
+      size="small"
+      table-style="width: 100%; table-layout: fixed"
     >
-      <thead class="bg-app-bg text-text-muted text-xs">
-        <tr>
-          <th class="h-8 w-28 px-3 font-medium">
-            Date
-          </th>
-          <th class="w-[150px] px-3 font-medium">
-            User
-          </th>
-          <th class="px-3 font-medium">
-            Task / description
-          </th>
-          <th class="w-[120px] px-3 font-medium">
-            Billed duration
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="entry in invoice.timeEntries"
-          :key="entry.id"
-          class="border-divider border-b last:border-0"
-        >
-          <td class="h-10 px-3">
-            {{ dateFormat.format(new Date(entry.startedAt)) }}
-          </td>
-          <td class="px-3 break-words">
-            {{ entry.userName || 'Unknown' }}
-          </td>
-          <td class="px-3 break-words whitespace-pre-line">
-            {{
-              [entry.taskName, entry.description].filter(Boolean).join(' · ') ||
-                '—'
-            }}
-          </td>
-          <td class="px-3">
-            {{ formatCompactDuration(entry.roundedDurationSeconds) }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+      <Column
+        header="Date"
+        style="width: 112px"
+        :pt="entryColumnPt"
+      >
+        <template #body="{ data }">
+          {{ dateFormat.format(new Date(data.startedAt)) }}
+        </template>
+      </Column>
+      <Column
+        header="User"
+        style="width: 150px"
+        :pt="entryColumnPt"
+      >
+        <template #body="{ data }">
+          {{ data.userName || 'Unknown' }}
+        </template>
+      </Column>
+      <Column
+        header="Task / description"
+        :pt="entryColumnPt"
+      >
+        <template #body="{ data }">
+          {{ [data.taskName, data.description].filter(Boolean).join(' · ') || '—' }}
+        </template>
+      </Column>
+      <Column
+        header="Billed duration"
+        style="width: 120px"
+        :pt="entryColumnPt"
+      >
+        <template #body="{ data }">
+          {{ formatCompactDuration(data.roundedDurationSeconds) }}
+        </template>
+      </Column>
+    </DataTable>
   </SurfaceCard>
 
   <SurfaceCard

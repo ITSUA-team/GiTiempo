@@ -1,5 +1,20 @@
 # #527 implementation verification
 
+## Frontend DOM review retest, 2026-11-11
+
+Tested the working changes above `defbc3d3` with Google Chrome for Testing 149.0.7827.55 at 1280 × 900 and 375 × 812. The local Admin SPA used the test API and the isolated `gitiempo_manual_527` database. The list, detail, editor, copy, settings and group confirmation were compared with their desktop and mobile frames in `GITiempo.pen`. The captures show selected acceptance states. [Desktop](parity-retest/dom-review-1280.webp) · [Mobile](parity-retest/dom-review-375.webp)
+
+| Surface | Observed in Chrome on both viewports |
+|---|---|
+| Invoice list | PASS. Filters stayed visible during initial loading. A delayed search kept previous rows visible with a refresh indicator and disabled their selection and move controls. Clear filters restored the selected group. References exposed detail URLs. |
+| Delete group | PASS. Cancel received focus. The destructive action appeared on the left and Cancel on the right. Cancel preserved the group. Browser Back closed the confirmation along with its originating page. |
+| Personal group pickers | PASS. Detail, copy and editor displayed the group error and recovered through an inline retry. The copy retained the billing period. The editor retained its title and time-entry selection. Detail and copy controls exposed the visible label as their accessible name. |
+| Editor | PASS. Multiline address and payment account values reached the save request with line breaks. A pending save locked the editor. A failed save retained the draft. Changing the rate disabled Save during recalculation and after failure. A successful retry enabled it again. The desktop entries table had bounded scrolling and mobile used selectable cards. |
+| Detail and PDF | PASS. The desktop table showed four columns and the two saved entries. Mobile showed entry cards. An invalid-logo PDF response offered an action that opened the editor. |
+| Settings | PASS. With another field already edited, Save remained disabled until the selected logo finished reading. The preview updated and Save became available. The component regression also verified the logo sent to the server. |
+
+Delayed, failed and invalid-logo responses were introduced at the browser network boundary. The Settings race used a deferred file read. Normal queries and retry successes went to the local API. The destructive and safe buttons needed layout on the actual PrimeVue confirmation host to match the approved frame. No PrimeVue-specific design exception was required.
+
 ## Review corrections verified on 2026-11-11
 
 Reviewed and corrected all 13 P0/P1 findings against working changes above `3a5a7974` on `feat/527-invoice-enhancements`.

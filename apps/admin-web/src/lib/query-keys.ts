@@ -157,6 +157,8 @@ export const adminInvoicesKeys = {
     [...adminInvoicesKeys.all(scope), 'defaults'] as const,
   stats: (scope: AdminServerStateScope) =>
     [...adminInvoicesKeys.all(scope), 'stats'] as const,
+  groups: (scope: AdminServerStateScope) =>
+    [...adminInvoicesKeys.all(scope), 'groups'] as const,
   eligibleEntries: (
     scope: AdminServerStateScope,
     query?: Partial<EligibleEntriesQuery>,
@@ -173,6 +175,7 @@ export const adminMutationInvalidationKeys = {
     return [
       [...adminInvoicesKeys.all(scope), 'list'],
       [...adminInvoicesKeys.all(scope), 'detail'],
+      adminInvoicesKeys.groups(scope),
     ];
   },
   afterInvoiceMutation(scope: AdminServerStateScope): QueryKey[] {

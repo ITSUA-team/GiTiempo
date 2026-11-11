@@ -154,6 +154,8 @@ function entryRowClass(entry: InvoiceTimeEntrySummary) {
           data-testid="invoice-create-preview-table"
           :row-class="entryRowClass"
           size="small"
+          scrollable
+          scroll-height="18rem"
           table-style="width:100%;table-layout:fixed"
         >
           <Column

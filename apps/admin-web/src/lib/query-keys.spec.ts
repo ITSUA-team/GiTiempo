@@ -240,8 +240,8 @@ it('separates personal invoice group views and create/edit eligibility', () => {
 
 it('group moves refresh every list/detail view but preserve business calculation caches and other users', async () => {
   const client = createTestQueryClient();
-  const changed = [adminInvoicesKeys.list(scope), adminInvoicesKeys.list(scope, {groupId:'ungrouped'}), adminInvoicesKeys.detail(scope, 'invoice')];
-  const unchanged = [adminInvoicesKeys.stats(scope), adminInvoicesKeys.defaults(scope), adminInvoicesKeys.eligibleEntries(scope), adminInvoicesKeys.list({...scope,userId:'another-user'})];
+  const changed = [adminInvoicesKeys.groups(scope), adminInvoicesKeys.list(scope), adminInvoicesKeys.list(scope, {groupId:'ungrouped'}), adminInvoicesKeys.detail(scope, 'invoice')];
+  const unchanged = [adminInvoicesKeys.groups({...scope,userId:'another-user'}), adminInvoicesKeys.stats(scope), adminInvoicesKeys.defaults(scope), adminInvoicesKeys.eligibleEntries(scope), adminInvoicesKeys.list({...scope,userId:'another-user'})];
   for (const key of [...changed,...unchanged]) client.setQueryData(key, {});
   await invalidateQueryKeys(client, adminMutationInvalidationKeys.afterInvoiceGroupMutation(scope));
   for (const key of changed) expect(client.getQueryState(key)?.isInvalidated).toBe(true);

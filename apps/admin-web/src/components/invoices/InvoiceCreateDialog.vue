@@ -35,6 +35,8 @@ import { adminInvoicesClient } from '@/services/admin-invoices-client';
 import { useEligibleEntriesPreview } from '@/composables/invoices/useEligibleEntriesPreview';
 import { getSettingsCurrencyOptions } from '@/lib/currencies';
 import InvoiceEditorEntries from './InvoiceEditorEntries.vue';
+import InvoiceGroupSelect from './InvoiceGroupSelect.vue';
+import { useInvoiceGroups } from '@/composables/invoices/useInvoiceGroups';
 import SplitButton from 'primevue/splitbutton';
 import { ApiError } from '@gitiempo/web-shared/http';
 import { formatInvoiceAmount } from '@/lib/format-currency';
@@ -96,7 +98,7 @@ const selectedEntriesScope = ref<string | null>(null);
 const defaultSelectedEntryIds = ref<Set<string> | null>(null);
 const saveError = ref('');
 const defaultsError = ref('');
-const groupsError = ref('');
+const submitting = ref(false);
 const logoError = ref('');
 const calculationError = ref('');
 const reviewMessage = ref('');
@@ -114,16 +116,10 @@ let lifecycleGeneration = 0;
 let logoReadGeneration = 0;
 let logoVersion = 0;
 const group = ref<string | null>(null);
-const groupOptions = ref<Array<{id:string | null;name:string}>>([{id:null,name:'Ungrouped'}]);
-async function loadGroups() {
- const generation = lifecycleGeneration;
- let result;
- try {result = await adminInvoicesClient.listGroups();}
- catch {if (generation === lifecycleGeneration && props.visible) groupsError.value='Could not load groups. Retry opening the dialog.';return;}
- if (generation !== lifecycleGeneration || !props.visible) return;
- groupsError.value = '';
- groupOptions.value=[{id:null,name:'Ungrouped'},...result.groups];
-}
+const groupsQuery = useInvoiceGroups({
+  scope: computed(() => props.scope),
+  enabled: computed(() => props.visible),
+});
 function uploadLogo(event: {files: File | File[]}) {
  const file = Array.isArray(event.files) ? event.files[0] : event.files;
  if (!file) return;
@@ -297,7 +293,8 @@ watch(
     roundingStepMinutes.value = 1;
     notes.value = '';
     saveError.value = '';
-    defaultsError.value = groupsError.value = logoError.value = calculationError.value = reviewMessage.value = '';
+    defaultsError.value = logoError.value = calculationError.value = reviewMessage.value = '';
+    submitting.value = false;
     defaultsPending.value = logoPending.value = false;
     calculationFailed.value=false;
     selectedEntries.value = [];
@@ -309,7 +306,6 @@ watch(
     services.value = '';
     if (props.visible) {
       group.value = props.source?.groupId ?? props.groupId ?? null;
-      void loadGroups();
       const source = props.source;
       if (source) {
         rateTouched.value = true;
@@ -446,7 +442,7 @@ watch(selectedProjectId, (newProjectId) => {
   }
 });
 
-const isCreating = computed(() => props.createMutation.isCreating.value);
+const isCreating = computed(() => submitting.value || props.createMutation.isCreating.value);
 
 const projectOptions = computed(() => {
   const options = props.projects.map((project) => ({
@@ -507,6 +503,14 @@ const unavailable = computed(() => {
     return { id, label: [entry?.taskName, entry?.description].filter(Boolean).join(' · ') || id };
   });
 });
+
+const submitBlocked = computed(() =>
+  isCreating.value || defaultsPending.value || logoPending.value || props.revisionConflict ||
+  (canSubmit.value && (
+    calculating.value || !calculatedPreview.value || !preview.value ||
+    previewError.value || unavailable.value.length > 0
+  )),
+);
 
 function reviewEntries() {
   const section = document.getElementById('invoice-editor-entries');
@@ -627,7 +631,7 @@ function useReviewedLogo() {
 
 async function handleCreate(): Promise<void> {
   validationTriggered.value = true;
-  if (!canSubmit.value || props.revisionConflict || defaultsPending.value || logoPending.value || calculating.value || !calculatedPreview.value || unavailable.value.length || !preview.value || previewError.value) return;
+  if (!canSubmit.value || submitBlocked.value) return;
   const generation = lifecycleGeneration;
   const draft = currentDraft();
   if (!props.source && defaultsError.value) {
@@ -635,6 +639,7 @@ async function handleCreate(): Promise<void> {
     if (!Object.values(payment.value).some(Boolean)) delete draft.payment;
     if (logo.value === null && !logoVersion) delete draft.logo;
   }
+  submitting.value = true;
   try {
     const invoice = await props.createMutation.createInvoice(draft);
 
@@ -645,8 +650,8 @@ async function handleCreate(): Promise<void> {
     if(generation!==lifecycleGeneration || !props.visible)return;
     void refreshEligibility();
     saveError.value = error instanceof Error ? error.message : 'Changes were not saved. Review entries and retry.';
-    // The parent view owns error toasts for create failures; the dialog
-    // stays open with the entered values preserved.
+  } finally {
+    if (generation === lifecycleGeneration) submitting.value = false;
   }
 }
 </script>
@@ -662,7 +667,11 @@ async function handleCreate(): Promise<void> {
     :visible="visible"
     @update:visible="handleVisibleChange"
   >
-    <div class="flex flex-col gap-4">
+    <div
+      class="flex flex-col gap-4"
+      :inert="isCreating || undefined"
+      :aria-busy="isCreating"
+    >
       <input
         ref="logoFile"
         type="file"
@@ -705,21 +714,15 @@ async function handleCreate(): Promise<void> {
           </Message>
         </div>
 
-        <div class="flex flex-col gap-1.5">
-          <label
-            for="invoice-group"
-            class="text-text-dark text-[13px] font-medium"
-          >Personal group</label>
-          <Select
-            v-model="group"
-            input-id="invoice-group"
-            :pt="giTiempoFieldWidthSelectPt"
-            placeholder="Ungrouped"
-            :options="groupOptions"
-            option-label="name"
-            option-value="id"
-          />
-        </div>
+        <InvoiceGroupSelect
+          v-model="group"
+          input-id="invoice-group"
+          label="Personal group"
+          :groups="groupsQuery.data.value?.groups ?? []"
+          :loading="groupsQuery.isLoading.value"
+          :failed="Boolean(groupsQuery.error.value)"
+          @retry="groupsQuery.refetch()"
+        />
         <div class="flex flex-col gap-1.5">
           <label
             for="invoice-create-project"
@@ -915,7 +918,7 @@ async function handleCreate(): Promise<void> {
         />
       </Message>
       <Message
-        v-for="message in [defaultsError, groupsError, logoError].filter(Boolean)"
+        v-for="message in [defaultsError, logoError].filter(Boolean)"
         :key="message"
         severity="error"
       >
@@ -986,7 +989,14 @@ async function handleCreate(): Promise<void> {
             class="flex flex-col gap-1.5 text-[13px] font-medium"
           >
             {{ {name: label === 'From' ? 'Sender / legal name' : 'Recipient / company', address: 'Address', email: 'Email', taxId: 'Tax ID (optional)'}[key] }}
+            <Textarea
+              v-if="key === 'address'"
+              v-model="party[key]"
+              rows="1"
+              class="field-sizing-content min-h-[38px] w-full"
+            />
             <InputText
+              v-else
               v-model="party[key]"
               class="h-[38px] w-full"
             />
@@ -1022,9 +1032,11 @@ async function handleCreate(): Promise<void> {
         >
           {{ label }}
           <Textarea
-            v-if="key === 'instructions'"
+            v-if="key === 'instructions' || key === 'account'"
             v-model="payment[key]"
-            class="h-[70px] w-full"
+            :rows="key === 'account' ? 1 : 2"
+            class="w-full"
+            :class="key === 'account' ? 'min-h-[38px] field-sizing-content' : 'h-[70px]'"
           />
           <InputText
             v-else
@@ -1089,12 +1101,17 @@ async function handleCreate(): Promise<void> {
     </div>
     <template #footer>
       <div class="flex w-full justify-end">
+        <span
+          v-if="isCreating"
+          class="sr-only"
+          role="status"
+        >Saving invoice…</span>
         <Button
           :label="editing ? 'Save changes' : 'Create invoice'"
           data-testid="invoice-create-submit"
           class="h-[38px] w-full sm:w-auto"
           :loading="isCreating"
-          :disabled="defaultsPending || logoPending || revisionConflict"
+          :disabled="submitBlocked"
           @click="handleCreate"
         />
       </div>

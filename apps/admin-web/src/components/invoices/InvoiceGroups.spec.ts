@@ -1,6 +1,8 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PrimeVue from 'primevue/config';
+import ConfirmationService from 'primevue/confirmationservice';
+import ConfirmDialog from 'primevue/confirmdialog';
 import RadioButton from 'primevue/radiobutton';
 import Select from 'primevue/select';
 import InvoiceGroups from './InvoiceGroups.vue';
@@ -40,7 +42,7 @@ describe('Personal invoice groups', () => {
       props: {
         scope: 'user-a',
       },
-      global: { plugins: [PrimeVue], stubs: { Teleport: true } },
+      global: { plugins: [PrimeVue, ConfirmationService], stubs: { Teleport: true } },
     });
   }
   it('selects a personal view and keeps All and Ungrouped available', async () => {
@@ -62,7 +64,7 @@ describe('Personal invoice groups', () => {
         groups: [{ id: 'group-a', name: 'Retainers' }],
         selection: ['invoice-a'],
       },
-      global: { plugins: [PrimeVue], stubs: { Teleport: true } },
+      global: { plugins: [PrimeVue, ConfirmationService], stubs: { Teleport: true } },
     });
   }
   it('searches destinations and submits one move', async () => {
@@ -173,6 +175,9 @@ describe('Personal invoice groups', () => {
     await wrapper.get('#invoice-group-form').trigger('submit');
     await flushPromises();
     expect(wrapper.emitted('select')).toEqual([['group-new']]);
+    expect(wrapper.emitted('changed')).toHaveLength(1);
+    await wrapper.setProps({ refreshToken: 1 });
+    await flushPromises();
     expect(wrapper.getComponent(Select).props('modelValue')).toBe('group-new');
     expect(wrapper.findAll('button').find(button => button.text().includes('Monthly'))!
       .attributes('aria-pressed')).toBe('true');
@@ -213,25 +218,64 @@ describe('Personal invoice groups', () => {
       'Retainers',
     );
   });
-  it('shows delete failures inside its confirmation dialog', async () => {
-    api.request.mockRejectedValueOnce(new Error('Delete unavailable'));
+  it('uses the shared confirmation with Cancel focused and preserves membership on deletion failure', async () => {
+    const confirm = mount(ConfirmDialog, {
+      global: { plugins: [PrimeVue, ConfirmationService], stubs: { Teleport: true } },
+    });
     const wrapper = render();
-    await flushPromises();
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('Retainers'))!
-      .trigger('click');
-    await wrapper.get('button[aria-label="Delete group"]').trigger('click');
-    await wrapper
-      .get('[role="dialog"]')
-      .findAll('button')
-      .find((button) => button.text() === 'Delete group')!
-      .trigger('click');
-    await flushPromises();
-    expect(
-      wrapper.get('[role="dialog"]').get('[role="alert"]').text(),
-    ).toContain('Delete unavailable');
+    try {
+      await flushPromises();
+      await wrapper.findAll('button').find(button => button.text().includes('Retainers'))!.trigger('click');
+      const openDelete = () => wrapper.get('button[aria-label="Delete group"]').trigger('click');
+      const action = (label: string) => confirm.findAll('button').find(button => button.text() === label)!;
+      await openDelete();
+      expect(confirm.text()).toContain('Delete “Retainers”?');
+      expect(action('Cancel').element.autofocus).toBe(true);
+      await action('Cancel').trigger('click');
+      expect(api.request).not.toHaveBeenCalled();
+      expect(wrapper.getComponent(Select).props('modelValue')).toBe('group-a');
+
+      api.request.mockRejectedValueOnce(new Error('Delete unavailable'));
+      await openDelete();
+      await action('Delete group').trigger('click');
+      await flushPromises();
+      expect(wrapper.get('[role="alert"]').text()).toContain('Delete unavailable');
+      expect(wrapper.getComponent(Select).props('modelValue')).toBe('group-a');
+      expect(wrapper.emitted('changed')).toBeUndefined();
+
+      await wrapper.get('button[aria-label="Manage personal groups"]').trigger('click');
+      await wrapper.get('button[aria-label="Delete Retainers"]').trigger('click');
+      expect(action('Cancel').element.autofocus).toBe(true);
+      await action('Delete group').trigger('click');
+      await flushPromises();
+      expect(wrapper.emitted('select')?.at(-1)).toEqual([null]);
+      expect(wrapper.emitted('changed')).toHaveLength(1);
+    } finally {
+      confirm.unmount();
+      wrapper.unmount();
+    }
   });
+  it.each(['scope', 'unmount'])('closes a pending group confirmation on %s', async (change) => {
+    const confirm = mount(ConfirmDialog, {
+      global: { plugins: [PrimeVue, ConfirmationService], stubs: { Teleport: true } },
+    });
+    const wrapper = render();
+    try {
+      await flushPromises();
+      await wrapper.get('button[aria-label="Manage personal groups"]').trigger('click');
+      await wrapper.get('button[aria-label="Delete Retainers"]').trigger('click');
+      expect(confirm.text()).toContain('Delete “Retainers”?');
+      if (change === 'scope') await wrapper.setProps({ scope: 'user-b' });
+      else wrapper.unmount();
+      await flushPromises();
+      expect(confirm.text()).not.toContain('Delete “Retainers”?');
+      expect(api.request).not.toHaveBeenCalled();
+    } finally {
+      if (change === 'scope') wrapper.unmount();
+      confirm.unmount();
+    }
+  });
+
   it('keeps the latest group load when an older request resolves afterward', async () => {
     let resolveOld!: (value: unknown) => void;
     api.requestJson.mockReturnValueOnce(

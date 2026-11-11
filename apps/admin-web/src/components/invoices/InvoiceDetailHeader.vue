@@ -4,16 +4,20 @@ import { useIsMobileViewport } from '@gitiempo/web-shared';
 import type { InvoiceResponse, InvoiceStatus } from '@gitiempo/shared';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
+import InvoiceGroupSelect from './InvoiceGroupSelect.vue';
 
 const props = defineProps<{
   invoice: InvoiceResponse;
   groups: Array<{ id: string; name: string }>;
+  groupsLoading: boolean;
+  groupsFailed: boolean;
   moving: boolean;
   moveError: string;
   updating: boolean;
   exporting: boolean;
 }>();
 const emit = defineEmits<{
+  retryGroups: [];
   back: [];
   edit: [];
   copy: [];
@@ -27,10 +31,6 @@ const statusOptions = [
   { value: 'sent', label: 'Sent' },
   { value: 'paid', label: 'Paid' },
 ];
-const groupOptions = computed(() => [
-  { id: null, name: 'Ungrouped' },
-  ...props.groups,
-]);
 const dateFormat = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit',
   month: 'short',
@@ -113,23 +113,18 @@ const actions = computed(() => {
           </template>
         </Select>
       </div>
-      <div class="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-        <label
-          for="detail-group"
-          class="text-[13px] font-medium"
-        >My group</label>
-        <Select
-          input-id="detail-group"
-          placeholder="Ungrouped"
-          :model-value="invoice.groupId ?? null"
-          :options="groupOptions"
-          option-label="name"
-          option-value="id"
-          class="h-[38px] sm:w-[190px]"
-          :disabled="moving"
-          @update:model-value="emit('move', $event)"
-        />
-      </div>
+      <InvoiceGroupSelect
+        input-id="detail-group"
+        label="My group"
+        inline
+        :model-value="invoice.groupId ?? null"
+        :groups="groups"
+        :loading="groupsLoading"
+        :failed="groupsFailed"
+        :disabled="moving"
+        @retry="emit('retryGroups')"
+        @update:model-value="emit('move', $event)"
+      />
       <span
         v-if="!mobile"
         class="text-text-muted text-xs"

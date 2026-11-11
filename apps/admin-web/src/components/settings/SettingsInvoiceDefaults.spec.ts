@@ -104,6 +104,35 @@ describe('invoice billing defaults', () => {
     expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined();
   });
 
+  it('waits for the latest logo before saving other edited defaults', async () => {
+    const reads: Array<(value: string) => void> = [];
+    vi.stubGlobal('FileReader', class {
+      result = '';
+      onload: (() => void) | null = null;
+      readAsDataURL() {
+        reads.push(value => { this.result = value; this.onload?.(); });
+      }
+    });
+    mocks.save.mockImplementation(async input => input);
+    const wrapper = render();
+    await wrapper.get('#invoice-sender-name').setValue('Studio');
+    const upload = wrapper.getComponent({ name: 'FileUpload' });
+    const logo = 'data:image/svg+xml;base64,' + btoa('<svg width="12" height="12"><rect width="12" height="12"/></svg>');
+    for (const filename of ['first.svg', 'replacement.svg']) {
+      upload.vm.$emit('uploader', { files: [new File(['svg'], filename)] });
+    }
+    reads[0](logo);
+    await flushPromises();
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined();
+    await wrapper.get('form').trigger('submit');
+    expect(mocks.save).not.toHaveBeenCalled();
+    reads[1](logo);
+    await flushPromises();
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeUndefined();
+    await wrapper.get('form').trigger('submit');
+    expect(mocks.save).toHaveBeenCalledWith({ billingProfile: expect.objectContaining({ logo }) });
+  });
+
   it('ignores a save after leaving and returning to the same workspace', async () => {
     let resolve!: (value: unknown) => void;
     mocks.save.mockReturnValue(new Promise(done => { resolve = done; }));

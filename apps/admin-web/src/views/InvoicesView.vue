@@ -16,7 +16,6 @@ import InvoiceMoveToolbar from '@/components/invoices/InvoiceMoveToolbar.vue';
 import InvoiceGroups from '@/components/invoices/InvoiceGroups.vue';
 import InvoicesTable from '@/components/invoices/InvoicesTable.vue';
 import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
-import InvoiceListLoading from '@/components/invoices/InvoiceListLoading.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { invalidateQueryKeys, useAdminProjectsQuery } from '@/composables/query';
 import { adminProjectsClient } from '@/services/admin-projects-client';
@@ -88,9 +87,9 @@ const listQuery = computed(() => ({
 }));
 
 const {
-  initialLoaded,
   invoices,
   invoicesLoading,
+  placeholderRows,
   loadError,
   refetch,
   stats,
@@ -105,25 +104,6 @@ const invoiceRows = computed(() => invoices.value?.items ?? []);
 
 watch([listQuery, scope], () => {selectedInvoices.value=[];});
 watch(scope,()=>{selectedGroup.value=null;personalGroups.value=[];});
-
-// initialLoaded flips back to false while a changed query key refetches; track
-// the first successful load so filter/page changes don't re-show the page
-// skeleton. Later fetches are surfaced through the table's loading state.
-const hasInitiallyLoaded = ref(false);
-
-watch(
-  initialLoaded,
-  (loaded) => {
-    if (loaded) {
-      hasInitiallyLoaded.value = true;
-    }
-  },
-  { immediate: true },
-);
-
-const isInitialLoading = computed(
-  () => !hasInitiallyLoaded.value && !loadError.value,
-);
 
 const projectsQuery = useAdminProjectsQuery({
   client: adminProjectsClient,
@@ -321,7 +301,7 @@ function handleCreateSuccess(): void {
         :selected-group="selectedGroup"
         @loaded="personalGroups=$event"
         @select="selectGroup"
-        @moved="refreshGroups"
+        @changed="refreshGroups"
       />
       <div class="flex min-w-0 flex-col gap-4">
         <RequestErrorCard
@@ -331,18 +311,14 @@ function handleCreateSuccess(): void {
           data-testid="invoices-projects-error"
           @retry="refetchProjects"
         />
-        <InvoiceListLoading
-          v-if="isInitialLoading"
-          data-testid="invoices-page-skeleton"
-        />
         <SurfaceCard
-          v-else
           class="invoice-list-panel min-w-0"
           padding-class="p-0 sm:p-4"
         >
           <InvoicesTable
             v-model:selection="selectedInvoices"
             :empty-description="emptyStateDescription"
+            :has-active-filters="hasActiveFilters"
             :group-name="groupName"
             :personal-group="Boolean(personalGroup)"
             :empty-personal-group="Boolean(personalGroup) && !hasActiveFilters"
@@ -350,6 +326,7 @@ function handleCreateSuccess(): void {
             :filters="filters"
             :is-mobile-viewport="isMobileViewport"
             :loading="invoicesLoading"
+            :placeholder-rows="placeholderRows"
             :page="currentPage"
             :rows="invoiceRows"
             :rows-per-page="ROWS_PER_PAGE"
@@ -357,6 +334,7 @@ function handleCreateSuccess(): void {
             @create-invoice="handleCreateInvoice"
             @row-click="handleRowClick"
             @browse-all="selectGroup(null)"
+            @clear-filters="clearFilters"
             @move-row="moveToolbar?.open([$event])"
             @update:filters="handleUpdateFilters"
             @update:page="handleUpdatePage"
