@@ -5,24 +5,22 @@ import type {
   CreateInvoiceInput,
   EligibleEntriesQuery,
   InvoiceResponse,
+  InvoiceTimeEntrySummary,
 } from '@gitiempo/shared';
 import {
   AppDialog,
+  SurfaceCard,
   DatePickerButtonBar,
   useDatePickerConfirmCancel,
 } from '@gitiempo/web-shared';
 import {
-  formatLocalCalendarDate,
   getLocalDateKey,
 } from '@gitiempo/web-shared/time';
 import {
   giTiempoDatePickerPt,
   giTiempoFieldWidthSelectPt,
 } from '@gitiempo/web-config/theme';
-import { ChevronRightIcon } from '@heroicons/vue/24/outline';
 import Button from 'primevue/button';
-import Column from 'primevue/column';
-import DataTable from 'primevue/datatable';
 import DatePicker from 'primevue/datepicker';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
@@ -30,13 +28,13 @@ import Message from 'primevue/message';
 import Select from 'primevue/select';
 import Textarea from 'primevue/textarea';
 
-import Checkbox from 'primevue/checkbox';
-import FileUpload from 'primevue/fileupload';
 import { adminInvoicesClient } from '@/services/admin-invoices-client';
 import { useEligibleEntriesPreview } from '@/composables/invoices/useEligibleEntriesPreview';
 import { getSettingsCurrencyOptions } from '@/lib/currencies';
-import { formatCurrency } from '@/lib/format-currency';
-import { formatDuration } from '@/lib/format-duration';
+import InvoiceEditorEntries from './InvoiceEditorEntries.vue';
+import SplitButton from 'primevue/splitbutton';
+import { ApiError } from '@gitiempo/web-shared/http';
+import { formatInvoiceAmount } from '@/lib/format-currency';
 import type { AdminServerStateScope } from '@/lib/query-keys';
 import { getRoundingStepOptions } from '@/lib/rounding-step-options';
 
@@ -147,11 +145,33 @@ const discountPercent = ref<number | null>(0);
 const roundingStepMinutes = ref<number>(1);
 const notes = ref('');
 
+const editorCaption = computed(() => {
+  const source = props.source;
+  if (!props.editing || !source) return 'New Draft · Reference assigned on creation · Review eligible entries.';
+  const status = source.status.charAt(0).toUpperCase() + source.status.slice(1);
+  return [source.reference, status, 'All business fields are editable.'].filter(Boolean).join(' · ');
+});
+
 const rateTouched = ref(false);
 const currencyTouched = ref(false);
 const roundingStepTouched = ref(false);
 const validationTriggered = ref(false);
-const previewExpanded = ref(false);
+const seenEntries = ref(new Map<string, InvoiceTimeEntrySummary>());
+const logoFile = ref<HTMLInputElement>();
+const logoActions = computed(() => [
+  { label: 'Upload logo', command: () => logoFile.value?.click() },
+  { label: 'Remove logo', disabled: !logo.value, command: () => { logoReadGeneration++; logo.value = null; } },
+]);
+function selectLogo(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files?.[0]) uploadLogo({files: input.files[0]});
+  input.value = '';
+}
+const paymentMethods = computed(() => [...new Set(['Bank transfer', 'Card', 'Other', payment.value.method].filter(Boolean))]);
+const paymentFields = [
+  ['terms', 'Payment terms'], ['beneficiary', 'Beneficiary'], ['provider', 'Bank / payment provider'],
+  ['account', 'Account / payment details'], ['instructions', 'Payment instructions'],
+] as const;
 const workspaceRateKnown = ref(false);
 const workspaceCurrencyKnown = ref(false);
 
@@ -176,7 +196,7 @@ const {
   isLoading: previewLoading,
   isEmpty: previewEmpty,
   isError: previewError,
-  hasEntries,
+
 } = useEligibleEntriesPreview({
   enabled: computed(() => props.visible),
   scope: computed(() => props.scope),
@@ -185,6 +205,7 @@ const {
 
 watch(preview, (value) => {
   if (!value) return;
+  for (const entry of value.entries) seenEntries.value.set(entry.id, entry);
   if (!props.editing && !selectionInitialized.value) {selectedEntries.value = value.entries.map(e=>e.id);selectionInitialized.value=true;}
 });
 // Reset on any visibility change, before the pre-fill watcher below so a
@@ -245,7 +266,7 @@ watch(
     }
 
     validationTriggered.value = false;
-    previewExpanded.value = false;
+    seenEntries.value = new Map(props.source?.timeEntries.map(entry => [entry.id, entry]));
     workspaceRateKnown.value = false;
     workspaceCurrencyKnown.value = false;
   },
@@ -401,26 +422,46 @@ const canSubmit = computed(
     (props.isAdmin || Boolean(selectedProjectId.value)),
 );
 
-const previewCurrencyCode = computed<string | null>(() => {
-  const entered = currency.value.trim().toUpperCase();
-  if (/^[A-Z]{3}$/.test(entered)) return entered;
-  return preview.value?.defaultCurrency ?? null;
+const entriesState = computed(() => {
+  if (!previewQuery.value) return 'initial';
+  if (previewError.value) return 'error';
+  if (previewLoading.value || !preview.value) return 'loading';
+  return previewEmpty.value ? 'empty' : 'ready';
 });
 
-// Display-only estimate; the authoritative total is computed server-side.
-const selectedHours = computed(() => Math.ceil((preview.value?.entries.filter(e => selectedEntries.value.includes(e.id)).reduce((sum,e)=>sum+e.roundedDurationSeconds,0) ?? 0)/36)/100);
-const computedTotalAmount = computed(() => calculatedPreview.value?.totalAmount ?? null);
+const unavailable = computed(() => {
+  if (!preview.value || !previewQuery.value || previewError.value) return [];
+  const available = new Set(preview.value.entries.map(entry => entry.id));
+  return selectedEntries.value.filter(id => !available.has(id)).map(id => {
+    const entry = seenEntries.value.get(id);
+    return { id, label: [entry?.taskName, entry?.description].filter(Boolean).join(' · ') || id };
+  });
+});
+
+function reviewEntries() {
+  const section = document.getElementById('invoice-editor-entries');
+  section?.focus();
+  section?.scrollIntoView?.({block: 'start'});
+}
 
 async function calculatePreview() {
   const query = previewQuery.value;
-  if (!query || !props.visible) return;
   const generation = ++calculationGeneration;
+  if (!query || !props.visible) {
+    calculatedPreview.value = null;
+    calculating.value = false;
+    return;
+  }
   calculating.value = true;
   calculatedPreview.value = null;
   try {
     const result = await adminInvoicesClient.previewInvoice({...query,title:title.value || 'Preview',hourlyRate:hourlyRate.value ?? undefined,currency:currency.value || undefined,discountPercent:discountPercent.value ?? 0,roundingStepMinutes:roundingStepMinutes.value,timeEntryIds:selectedEntries.value});
     if (generation === calculationGeneration) {calculatedPreview.value = result;calculationFailed.value=false;saveError.value='';}
-  } catch (error) {if (generation === calculationGeneration) {calculationFailed.value=true;saveError.value=error instanceof Error ? error.message : 'Could not calculate invoice. Retry.';}}
+  } catch (error) {if (generation === calculationGeneration) {
+    calculationFailed.value = true;
+    saveError.value = error instanceof Error ? error.message : 'Could not calculate invoice. Retry.';
+    if (error instanceof ApiError && error.code === 'invoice_entry_conflict') void refreshEligibility();
+  }}
   finally {if (generation === calculationGeneration) calculating.value=false;}
 }
 watch([previewQuery,hourlyRate,currency,discountPercent,roundingStepMinutes,selectedEntries],()=>void calculatePreview(),{deep:true});
@@ -429,24 +470,6 @@ async function retryCalculation() {
  await refreshEligibility();
  if(generation===lifecycleGeneration && props.visible) await calculatePreview();
 }
-const previewSummary = computed<string | null>(() => {
-  const data = preview.value;
-  if (!data || !hasEntries.value) return null;
-
-  const currencyCode = previewCurrencyCode.value;
-  const amount = computedTotalAmount.value;
-  const parts = [
-    selectedEntries.value.length === 1 ? '1 entry' : `${selectedEntries.value.length} entries`,
-    `${selectedHours.value}h`,
-  ];
-
-  if (currencyCode !== null && amount !== null) {
-    parts.push(formatCurrency(amount, currencyCode));
-  }
-
-  return parts.join(' · ');
-});
-
 function handleRateUpdate(value: number | null): void {
   hourlyRate.value = value ?? null;
   rateTouched.value = true;
@@ -466,10 +489,6 @@ function handleRoundingStepUpdate(value: number | undefined): void {
   roundingStepTouched.value = true;
 }
 
-function handleCancel(): void {
-  emit('update:visible', false);
-}
-
 function handleVisibleChange(nextVisible: boolean): void {
   emit('update:visible', nextVisible);
 }
@@ -482,7 +501,7 @@ async function reviewLatestRevision() {
 
 async function handleCreate(): Promise<void> {
   validationTriggered.value = true;
-  if (!canSubmit.value || calculating.value || !calculatedPreview.value) return;
+  if (!canSubmit.value || calculating.value || !calculatedPreview.value || unavailable.value.length || !preview.value || previewError.value) return;
 
   const startDate = dateRange.value?.[0];
   const endDate = dateRange.value?.[1];
@@ -524,199 +543,245 @@ async function handleCreate(): Promise<void> {
     modal
     :closable="!isCreating"
     :dismissable-mask="!isCreating"
-    :pt="{ root: 'w-[min(1000px,calc(100vw-2rem))]' }"
+    :close-on-escape="!isCreating"
+    :pt="{ root: 'w-screen max-w-[1000px] bg-app-bg', header: 'bg-app-bg px-4 pt-4 pb-0 sm:px-6 sm:pt-6', content: 'bg-app-bg px-4 pt-4 pb-4 sm:px-6', footer: 'bg-app-bg px-4 pb-4 pt-0 sm:px-6 sm:pb-6' }"
     :visible="visible"
     @update:visible="handleVisibleChange"
   >
     <div class="flex flex-col gap-4">
-      <h2 class="font-semibold">
-        Invoice information
-      </h2>
-      <div class="flex flex-col gap-1">
-        <label
-          for="invoice-create-title"
-          class="text-text-dark text-[13px] font-medium"
-        >Title</label>
-        <InputText
-          id="invoice-create-title"
-          v-model="title"
-          maxlength="255"
-          placeholder="Invoice title"
-          :invalid="titleError"
-          class="h-[38px] w-full"
-        />
-        <Message
-          v-if="titleError"
-          severity="error"
-          size="small"
-          variant="simple"
-        >
-          Title is required.
-        </Message>
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <label for="invoice-group">Personal group</label><Select
-          v-model="group"
-          input-id="invoice-group"
-          placeholder="Ungrouped"
-          :options="groupOptions"
-          option-label="name"
-          option-value="id"
-        />
-      </div>
-      <div class="flex flex-col gap-1">
-        <label
-          for="invoice-create-project"
-          class="text-text-dark text-[13px] font-medium"
-        >Project</label>
-        <Select
-          v-model="selectedProjectId"
-          input-id="invoice-create-project"
-          :options="projectOptions"
-          option-label="name"
-          option-value="id"
-          placeholder="Select a project"
-          show-clear
-          :invalid="projectError"
-          class="w-full"
-          :pt="giTiempoFieldWidthSelectPt"
-        />
-        <Message
-          v-if="projectError"
-          severity="error"
-          size="small"
-          variant="simple"
-        >
-          Select a project.
-        </Message>
-      </div>
-
-      <div
-        data-testid="invoice-create-row-dates"
-        class="flex flex-col gap-4 sm:flex-row sm:gap-3"
+      <input
+        ref="logoFile"
+        type="file"
+        hidden
+        accept="image/png,image/svg+xml"
+        aria-label="Upload invoice logo"
+        @change="selectLogo"
       >
-        <div class="flex min-w-0 flex-1 flex-col gap-1">
+      <p class="text-text-muted text-xs">
+        {{ editorCaption }}
+      </p>
+      <SurfaceCard
+        border
+        padding-class="p-4"
+        body-class="flex flex-col gap-3"
+      >
+        <h2 class="text-lg font-semibold">
+          Invoice information
+        </h2>
+        <div class="flex flex-col gap-1.5">
           <label
-            for="invoice-create-date-range"
+            for="invoice-create-title"
             class="text-text-dark text-[13px] font-medium"
-          >Date range</label>
-          <DatePicker
-            :ref="datePicker.datePickerRef"
-            v-model="dateRange"
-            input-id="invoice-create-date-range"
-            date-format="M d, yy"
-            icon-display="input"
-            :invalid="dateRangeError"
-            :manual-input="false"
-            selection-mode="range"
-            show-button-bar
-            show-icon
-            class="w-full"
-            :pt="giTiempoDatePickerPt"
-            @show="datePicker.handleShow"
-          >
-            <template #buttonbar>
-              <DatePickerButtonBar
-                @cancel="datePicker.handleCancel"
-                @confirm="datePicker.handleConfirm"
-              />
-            </template>
-          </DatePicker>
+          >Invoice title</label>
+          <InputText
+            id="invoice-create-title"
+            v-model="title"
+            maxlength="255"
+            placeholder="Invoice title"
+            :invalid="titleError"
+            class="h-[38px] w-full"
+          />
           <Message
-            v-if="dateRangeError"
+            v-if="titleError"
             severity="error"
             size="small"
             variant="simple"
           >
-            Date range is required.
+            Title is required.
           </Message>
         </div>
-      </div>
 
-      <div class="flex flex-col gap-2">
-        <label for="invoice-services">Services / what is being billed</label>
-        <InputText
-          id="invoice-services"
-          v-model="services"
-        />
-      </div>
-      <div
-        data-testid="invoice-create-row-pricing"
-        class="flex flex-col gap-4 sm:flex-row sm:gap-3"
-      >
-        <div class="flex w-full flex-col gap-1 sm:w-[150px] sm:shrink-0">
+        <div class="flex flex-col gap-1.5">
           <label
-            for="invoice-create-hourly-rate"
+            for="invoice-group"
             class="text-text-dark text-[13px] font-medium"
-          >Hourly rate</label>
-          <InputNumber
-            input-id="invoice-create-hourly-rate"
-            placeholder="From settings"
-            :max="99999999.99"
-            :max-fraction-digits="2"
-            :min="0"
-            :model-value="hourlyRate"
-            input-class="h-[38px] w-full"
-            class="w-full"
-            @update:model-value="handleRateUpdate"
+          >Personal group</label>
+          <Select
+            v-model="group"
+            input-id="invoice-group"
+            :pt="giTiempoFieldWidthSelectPt"
+            placeholder="Ungrouped"
+            :options="groupOptions"
+            option-label="name"
+            option-value="id"
           />
         </div>
-        <div class="flex w-full flex-col gap-1 sm:flex-1">
+        <div class="flex flex-col gap-1.5">
           <label
-            for="invoice-create-currency"
+            for="invoice-create-project"
             class="text-text-dark text-[13px] font-medium"
-          >Currency</label>
+          >Project</label>
           <Select
-            input-id="invoice-create-currency"
-            :model-value="currency"
-            :options="currencyOptions"
-            option-label="label"
-            option-value="value"
-            placeholder="Auto"
+            v-model="selectedProjectId"
+            input-id="invoice-create-project"
+            :options="projectOptions"
+            option-label="name"
+            option-value="id"
+            placeholder="Select a project"
             show-clear
+            :invalid="projectError"
             class="w-full"
             :pt="giTiempoFieldWidthSelectPt"
-            @update:model-value="handleCurrencyUpdate"
           />
+          <Message
+            v-if="projectError"
+            severity="error"
+            size="small"
+            variant="simple"
+          >
+            Select a project.
+          </Message>
         </div>
-        <div class="flex w-full flex-col gap-1 sm:flex-1">
-          <label
-            for="invoice-create-discount"
-            class="text-text-dark text-[13px] font-medium"
-          >Discount</label>
-          <InputNumber
-            input-id="invoice-create-discount"
-            suffix="%"
-            :max="100"
-            :max-fraction-digits="2"
-            :min="0"
-            :model-value="discountPercent"
-            input-class="h-[38px] w-full"
-            class="w-full"
-            @update:model-value="handleDiscountUpdate"
-          />
-        </div>
-        <div class="flex w-full flex-col gap-1 sm:flex-1">
-          <label
-            for="invoice-create-rounding-step"
-            class="text-text-dark text-[13px] font-medium"
-          >Rounding step</label>
-          <Select
-            input-id="invoice-create-rounding-step"
-            :model-value="roundingStepMinutes"
-            :options="ROUNDING_STEP_OPTIONS"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-            :pt="giTiempoFieldWidthSelectPt"
-            @update:model-value="handleRoundingStepUpdate"
-          />
-        </div>
-      </div>
 
+        <div
+          data-testid="invoice-create-row-dates"
+          class="flex flex-col gap-4 sm:flex-row sm:gap-3"
+        >
+          <div class="flex min-w-0 flex-1 flex-col gap-1">
+            <label
+              for="invoice-create-date-range"
+              class="text-text-dark text-[13px] font-medium"
+            >Billing period</label>
+            <DatePicker
+              :ref="datePicker.datePickerRef"
+              v-model="dateRange"
+              input-id="invoice-create-date-range"
+              date-format="dd M yy"
+              icon-display="input"
+              :invalid="dateRangeError"
+              :manual-input="false"
+              selection-mode="range"
+              show-button-bar
+              show-icon
+              class="w-full"
+              :pt="giTiempoDatePickerPt"
+              @show="datePicker.handleShow"
+            >
+              <template #buttonbar>
+                <DatePickerButtonBar
+                  @cancel="datePicker.handleCancel"
+                  @confirm="datePicker.handleConfirm"
+                />
+              </template>
+            </DatePicker>
+            <Message
+              v-if="dateRangeError"
+              severity="error"
+              size="small"
+              variant="simple"
+            >
+              Date range is required.
+            </Message>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label
+            for="invoice-services"
+            class="text-text-dark text-[13px] font-medium"
+          >Services / what is being billed</label>
+          <Textarea
+            id="invoice-services"
+            v-model="services"
+            class="h-[70px] w-full"
+          />
+        </div>
+        <div
+          data-testid="invoice-create-row-pricing"
+          class="flex flex-col gap-4 sm:flex-row sm:gap-3"
+        >
+          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
+            <label
+              for="invoice-create-hourly-rate"
+              class="text-text-dark text-[13px] font-medium"
+            >Hourly rate</label>
+            <InputNumber
+              input-id="invoice-create-hourly-rate"
+              placeholder="From settings"
+              :max="99999999.99"
+              :max-fraction-digits="2"
+              :min="0"
+              :model-value="hourlyRate"
+              input-class="h-[38px] w-full"
+              class="w-full"
+              @update:model-value="handleRateUpdate"
+            />
+          </div>
+          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
+            <label
+              for="invoice-create-currency"
+              class="text-text-dark text-[13px] font-medium"
+            >Currency</label>
+            <Select
+              input-id="invoice-create-currency"
+              :model-value="currency"
+              :options="currencyOptions"
+              option-label="label"
+              option-value="value"
+              placeholder="Auto"
+              show-clear
+              class="w-full"
+              :pt="giTiempoFieldWidthSelectPt"
+              @update:model-value="handleCurrencyUpdate"
+            />
+          </div>
+          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
+            <label
+              for="invoice-create-discount"
+              class="text-text-dark text-[13px] font-medium"
+            >Discount (%)</label>
+            <InputNumber
+              input-id="invoice-create-discount"
+              suffix="%"
+              :max="100"
+              :max-fraction-digits="2"
+              :min="0"
+              :model-value="discountPercent"
+              input-class="h-[38px] w-full"
+              class="w-full"
+              @update:model-value="handleDiscountUpdate"
+            />
+          </div>
+          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
+            <label
+              for="invoice-create-rounding-step"
+              class="text-text-dark text-[13px] font-medium"
+            >Rounding</label>
+            <Select
+              input-id="invoice-create-rounding-step"
+              :model-value="roundingStepMinutes"
+              :options="ROUNDING_STEP_OPTIONS"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+              :pt="giTiempoFieldWidthSelectPt"
+              @update:model-value="handleRoundingStepUpdate"
+            />
+          </div>
+        </div>
+      </SurfaceCard>
+      <SurfaceCard
+        v-if="unavailable.length"
+        role="alert"
+        border
+        padding-class="p-5"
+        body-class="flex flex-col items-start gap-4"
+      >
+        <h2 class="text-lg font-semibold">
+          Changes were not saved
+        </h2>
+        <p class="text-text-muted text-sm">
+          {{ unavailable.length === 1 ? 'One selected time entry is' : unavailable.length + ' selected time entries are' }} no longer available. Review the highlighted {{ unavailable.length === 1 ? 'entry' : 'entries' }} and retry.
+        </p>
+        <Button
+          label="Review entries"
+          icon="pi pi-list-check"
+          class="h-[38px]"
+          @click="reviewEntries"
+        />
+      </SurfaceCard>
       <Message
-        v-if="saveError || revisionConflict"
+        v-else-if="saveError || revisionConflict"
         severity="error"
       >
         {{ revisionConflict ? 'This invoice changed. Refresh the latest revision, review your edits, and retry.' : saveError }}
@@ -734,240 +799,148 @@ async function handleCreate(): Promise<void> {
           @click="retryCalculation"
         />
       </Message>
-      <div class="grid gap-6 sm:grid-cols-2">
-        <section
+      <div class="grid items-start gap-4 sm:grid-cols-2">
+        <SurfaceCard
           v-for="(party, label) in {From: sender, 'Bill to': recipient}"
           :key="label"
-          class="flex flex-col gap-2"
+          border
+          padding-class="p-4"
+          body-class="flex flex-col gap-3"
         >
-          <h2 class="font-semibold">
-            {{ label }}
-          </h2>
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-semibold">
+              {{ label }}
+            </h2>
+            <template v-if="label === 'From'">
+              <SplitButton
+                label="Use settings"
+                severity="secondary"
+                outlined
+                :model="logoActions"
+                :menu-button-props="{'aria-label': 'Invoice logo options'}"
+                @click="useSettings()"
+              />
+            </template>
+          </div>
+          <p
+            v-if="label === 'From'"
+            class="text-text-muted text-xs"
+          >
+            Prefilled from Admin Settings. Changes apply to this invoice only.
+          </p>
           <label
-            v-for="(_, key) in party"
+            v-for="key in (['name','address','email','taxId'] as const)"
             :key="key"
-            class="flex flex-col gap-1 text-sm"
-          >{{ ({name:'Legal / company name',address:'Address',email:'Email',taxId:'Tax ID (optional)',method:'Payment method',terms:'Payment terms',beneficiary:'Beneficiary',provider:'Bank / payment provider',account:'Account / payment details',instructions:'Payment instructions'})[key] }}<InputText v-model="party[key]" /></label>
-        </section>
+            class="flex flex-col gap-1.5 text-[13px] font-medium"
+          >
+            {{ {name: label === 'From' ? 'Sender / legal name' : 'Recipient / company', address: 'Address', email: 'Email', taxId: 'Tax ID (optional)'}[key] }}
+            <InputText
+              v-model="party[key]"
+              class="h-[38px] w-full"
+            />
+          </label>
+        </SurfaceCard>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <FileUpload
-          mode="basic"
-          name="invoice-logo"
-          accept="image/png,image/svg+xml"
-          choose-label="Upload logo"
-          :auto="true"
-          custom-upload
-          @uploader="uploadLogo"
-        />
-        <Button
-          v-if="logo"
-          label="Remove logo"
-          severity="secondary"
-          @click="logoReadGeneration++;logo=null"
-        />
-      </div>
-      <Button
-        label="Use settings"
-        severity="secondary"
-        variant="text"
-        @click="useSettings()"
-      />
-      <section class="grid gap-3 sm:grid-cols-2">
-        <h2 class="font-semibold sm:col-span-2">
+      <SurfaceCard
+        border
+        padding-class="p-4"
+        body-class="flex flex-col gap-3"
+      >
+        <h2 class="text-lg font-semibold">
           How to pay
         </h2>
         <label
-          v-for="(_, key) in payment"
+          for="invoice-payment-method"
+          class="flex flex-col gap-1.5 text-[13px] font-medium"
+        >
+          Payment method
+          <Select
+            v-model="payment.method"
+            input-id="invoice-payment-method"
+            :options="paymentMethods"
+            :pt="giTiempoFieldWidthSelectPt"
+            editable
+            class="w-full"
+          />
+        </label>
+        <label
+          v-for="[key,label] in paymentFields"
           :key="key"
-          class="flex flex-col gap-1 text-sm"
-        >{{ ({name:'Legal / company name',address:'Address',email:'Email',taxId:'Tax ID (optional)',method:'Payment method',terms:'Payment terms',beneficiary:'Beneficiary',provider:'Bank / payment provider',account:'Account / payment details',instructions:'Payment instructions'})[key] }}<InputText v-model="payment[key]" /></label>
-      </section>
-      <Message
-        v-if="selectedEntries.some(id => !preview?.entries.some(entry => entry.id===id))"
-        severity="warn"
-      >
-        Some selected entries are outside this scope or unavailable. Review them before saving.
-        <Button
-          label="Keep only available entries"
-          variant="text"
-          @click="selectedEntries=selectedEntries.filter(id=>preview?.entries.some(entry=>entry.id===id))"
-        />
-      </Message>
+          class="flex flex-col gap-1.5 text-[13px] font-medium"
+        >
+          {{ label }}
+          <Textarea
+            v-if="key === 'instructions'"
+            v-model="payment[key]"
+            class="h-[70px] w-full"
+          />
+          <InputText
+            v-else
+            v-model="payment[key]"
+            class="h-[38px] w-full"
+          />
+        </label>
+        <label
+          for="invoice-create-notes"
+          class="flex flex-col gap-1.5 text-[13px] font-medium"
+        >
+          Notes (optional)
+          <Textarea
+            id="invoice-create-notes"
+            v-model="notes"
+            maxlength="5000"
+            placeholder="Add notes..."
+            class="h-[70px] w-full"
+          />
+        </label>
+      </SurfaceCard>
+      <InvoiceEditorEntries
+        v-model="selectedEntries"
+        :state="entriesState"
+        :entries="preview?.entries ?? []"
+        :unavailable="unavailable"
+        :currency="calculatedPreview?.currency"
+        @retry="refreshEligibility()"
+      />
       <p
         v-if="calculating"
         role="status"
       >
         Calculating totals…
       </p>
-      <div class="flex flex-col gap-1">
-        <label
-          for="invoice-create-notes"
-          class="text-text-dark text-[13px] font-medium"
-        >Notes</label>
-        <Textarea
-          id="invoice-create-notes"
-          v-model="notes"
-          maxlength="5000"
-          placeholder="Add notes..."
-          class="h-20 w-full"
-        />
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <button
-          type="button"
-          class="flex w-full items-center gap-1.5 rounded-sm text-left"
-          data-testid="invoice-create-preview-toggle"
-          :aria-controls="hasEntries ? 'invoice-create-preview-entries' : undefined"
-          :aria-expanded="previewExpanded && hasEntries"
-          @click="previewExpanded = !previewExpanded"
-        >
-          <ChevronRightIcon
-            aria-hidden="true"
-            class="text-text-muted size-4 shrink-0 transition-transform duration-200"
-            :class="{ 'rotate-90': previewExpanded && hasEntries }"
-          />
-          <span class="text-text-dark text-[13px] font-medium">
-            Eligible time entries
-          </span>
-          <span
-            v-if="previewSummary"
-            class="text-text-muted text-[12px]"
-          >
-            {{ previewSummary }}
-          </span>
-        </button>
-        <div class="border-divider h-px w-full" />
-
-        <Message
-          v-if="previewError"
-          severity="error"
-          variant="simple"
-          data-testid="invoice-create-preview-error"
-        >
-          Failed to load eligible entries. Please try again.
-        </Message>
-        <Message
-          v-else-if="previewEmpty"
-          severity="warn"
-          variant="simple"
-          data-testid="invoice-create-preview-empty"
-        >
-          No billable entries found for this project and date range
-        </Message>
-        <p
-          v-else-if="previewLoading"
-          class="text-text-muted text-xs"
-          data-testid="invoice-create-preview-loading"
-        >
-          Loading preview…
-        </p>
-        <p
-          v-else-if="!previewQuery"
-          class="text-text-muted text-xs"
-          data-testid="invoice-create-preview-hint"
-        >
-          Select a date range to preview eligible time entries.
-        </p>
-
-        <div
-          v-if="hasEntries && previewExpanded"
-          id="invoice-create-preview-entries"
-        >
-          <DataTable
-            :value="preview?.entries ?? []"
-            data-testid="invoice-create-preview-table"
-            scrollable
-            scroll-height="240px"
-            size="small"
-            class="text-left"
-            :pt="{
-              headerCell:
-                'bg-app-bg text-text-dark px-2 py-1.5 text-[12px] font-semibold',
-              bodyRow:
-                'border-divider hover:bg-app-bg border-b last:border-b-0',
-              bodyCell: 'text-text-dark px-2 py-1.5 text-[13px]',
-            }"
-          >
-            <Column header="Included">
-              <template #body="{data}">
-                <Checkbox
-                  v-model="selectedEntries"
-                  :value="data.id"
-                  :aria-label="'Include '+data.description"
-                />
-              </template>
-            </Column>
-            <Column
-              field="startedAt"
-              header="Date"
-            >
-              <template #body="{ data }">
-                {{ formatLocalCalendarDate(data.startedAt) }}
-              </template>
-            </Column>
-            <Column
-              field="userName"
-              header="User"
-            >
-              <template #body="{ data }">
-                {{ data.userName ?? '—' }}
-              </template>
-            </Column>
-            <Column
-              header="Duration"
-              header-style="text-align: right"
-              body-style="text-align: right"
-            >
-              <template #body="{ data }">
-                {{ formatDuration(data.roundedDurationSeconds) }}
-              </template>
-            </Column>
-            <Column
-              field="description"
-              header="Description"
-            >
-              <template #body="{ data }">
-                <span class="block max-w-[160px] truncate">
-                  {{ data.description ?? '—' }}
-                </span>
-              </template>
-            </Column>
-          </DataTable>
-        </div>
-      </div>
-      <dl
-        v-if="calculatedPreview"
-        class="border-divider ml-auto grid w-full max-w-sm grid-cols-2 gap-2 border-t pt-4"
+      <SurfaceCard
+        v-if="calculatedPreview && entriesState === 'ready' && !unavailable.length"
+        border
+        padding-class="p-4"
       >
-        <dt>Subtotal</dt><dd class="text-right">
-          {{ formatCurrency(calculatedPreview.subtotal,calculatedPreview.currency) }}
-        </dd>
-        <dt>Discount</dt><dd class="text-right">
-          −{{ formatCurrency(calculatedPreview.discountAmount,calculatedPreview.currency) }}
-        </dd>
-        <dt class="font-semibold">
-          Total
-        </dt><dd class="text-right font-semibold">
-          {{ formatCurrency(calculatedPreview.totalAmount,calculatedPreview.currency) }}
-        </dd>
-      </dl>
+        <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2.5 text-sm">
+          <dt><span class="sr-only">Subtotal · </span>{{ selectedEntries.length }} {{ selectedEntries.length === 1 ? 'entry' : 'entries' }} · {{ calculatedPreview.totalHours }}h</dt>
+          <dd class="text-right">
+            {{ formatInvoiceAmount(calculatedPreview.subtotal,calculatedPreview.currency) }}
+          </dd>
+          <dt>Discount · {{ discountPercent ?? 0 }}%</dt>
+          <dd class="text-right">
+            {{ (calculatedPreview.discountAmount ? '−' : '') + formatInvoiceAmount(calculatedPreview.discountAmount, calculatedPreview.currency) }}
+          </dd>
+          <dt
+            class="border-divider col-span-2 border-t"
+            aria-hidden="true"
+          />
+          <dt class="text-base font-semibold">
+            Total
+          </dt>
+          <dd class="text-right text-base font-semibold">
+            {{ formatInvoiceAmount(calculatedPreview.totalAmount,calculatedPreview.currency) }}
+          </dd>
+        </dl>
+      </SurfaceCard>
     </div>
-
     <template #footer>
-      <div class="flex justify-end gap-2">
-        <Button
-          label="Cancel"
-          data-testid="invoice-create-cancel"
-          severity="secondary"
-          variant="outlined"
-          :disabled="isCreating"
-          @click="handleCancel"
-        />
+      <div class="flex w-full justify-end">
         <Button
           :label="editing ? 'Save changes' : 'Create invoice'"
           data-testid="invoice-create-submit"
+          class="h-[38px] w-full sm:w-auto"
           :loading="isCreating"
           @click="handleCreate"
         />

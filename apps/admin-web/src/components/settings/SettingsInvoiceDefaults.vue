@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useIsMobileViewport } from '@gitiempo/web-shared';
 import { computed, ref, toRaw, watch } from 'vue';
 import { useUpdateWorkspaceSettingsMutation } from '@/composables/query';
 import type { AdminServerStateScope } from '@/lib/query-keys';
@@ -14,6 +15,7 @@ import { getAdminSettingsClient } from '@/services/admin-settings-client';
 import SettingsCard from './SettingsCard.vue';
 
 const props = defineProps<{ profile?: InvoiceBillingProfile | null; scope: AdminServerStateScope }>();
+const isMobile = useIsMobileViewport();
 const scope = computed(() => props.scope);
 const saveMutation = useUpdateWorkspaceSettingsMutation({ client: getAdminSettingsClient(), scope });
 function emptyProfile(): InvoiceBillingProfile {
@@ -120,13 +122,16 @@ async function save(): Promise<void> {
 <template>
   <SettingsCard
     title="Invoice sender"
+    class="invoice-defaults"
+    padding-class="p-0 sm:p-5"
+    description-class="text-xs"
     description="Default details for new invoices. Existing invoices keep their saved details."
   >
     <form
-      class="flex flex-col gap-5"
+      class="flex flex-col gap-4"
       @submit.prevent="save"
     >
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
         <div
           v-for="field in senderFields"
           :key="field.key"
@@ -137,12 +142,22 @@ async function save(): Promise<void> {
             :for="`invoice-sender-${field.key}`"
             class="text-text-dark text-[13px] font-medium"
           >{{ field.label }}</label>
+          <Textarea
+            v-if="field.key === 'address'"
+            :id="`invoice-sender-${field.key}`"
+            v-model="draft.sender.address"
+            :disabled="saving"
+            :invalid="Boolean(fieldErrors['sender.address'])"
+            rows="2"
+            class="h-[70px] w-full"
+          />
           <InputText
+            v-else
             :id="`invoice-sender-${field.key}`"
             v-model="draft.sender[field.key]"
             :disabled="saving"
             :invalid="Boolean(fieldErrors[`sender.${field.key}`])"
-            class="w-full"
+            class="h-[38px] w-full"
           />
           <Message
             v-if="fieldErrors[`sender.${field.key}`]"
@@ -154,45 +169,52 @@ async function save(): Promise<void> {
           </Message>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
+      <div class="border-divider bg-surface-primary grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg border p-3 sm:flex sm:border-0 sm:p-0">
         <img
           v-if="draft.logo"
           :src="draft.logo"
           alt="Invoice logo"
-          class="h-14 w-14 rounded-lg object-contain"
+          class="h-12 w-12 rounded-lg object-contain"
         >
-        <div class="flex flex-col gap-2">
+        <div class="flex min-w-0 flex-col gap-1 sm:flex-1" :class="{'col-span-2': !draft.logo}">
           <span class="text-text-dark text-[13px] font-medium">Logo (optional)</span>
-          <span class="text-text-muted text-xs">PNG or SVG · shown on PDF</span>
-          <div class="flex flex-wrap gap-2">
-            <FileUpload
-              mode="basic"
-              custom-upload
-              auto
-              accept="image/png,image/svg+xml"
-              :max-file-size="256000"
-              choose-label="Upload logo"
-              :disabled="saving"
-              @uploader="readLogo"
-            />
-            <Button
-              v-if="draft.logo"
-              label="Remove logo"
-              severity="secondary"
-              outlined
-              :disabled="saving"
-              @click="logoRead++; draft.logo = null"
-            />
-          </div>
+          <span class="text-text-muted hidden text-xs sm:block">PNG or SVG · shown on PDF</span>
         </div>
+        <div class="order-last col-span-full sm:order-none">
+          <FileUpload
+            mode="basic"
+            custom-upload
+            auto
+            accept="image/png,image/svg+xml"
+            :max-file-size="256000"
+            choose-label="Upload logo"
+            choose-icon="pi pi-upload"
+            :pt="{ basicContent: { class: 'w-full' } }"
+            :choose-button-props="{ severity: 'secondary', outlined: true, class: 'h-[38px] w-full sm:w-auto' }"
+            :disabled="saving"
+            @uploader="readLogo"
+          />
+        </div>
+        <Button
+          v-if="draft.logo"
+          aria-label="Remove logo"
+          severity="danger"
+          outlined
+          class="h-[38px] sm:w-[38px]"
+          :disabled="saving"
+          @click="logoRead++; draft.logo = null"
+        >
+          <span v-if="isMobile">Remove</span>
+          <i v-else class="pi pi-trash" aria-hidden="true" />
+        </Button>
       </div>
-      <div class="border-divider border-t pt-5">
+      <div class="border-divider border-t pt-4">
         <h2 class="text-text-dark text-lg font-semibold">
           Payment defaults
         </h2>
       </div>
-      <div class="flex flex-col gap-5">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="flex flex-col gap-4">
+        <div class="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
           <div
             v-for="field in paymentFields.slice(0, 2)"
             :key="field.key"
@@ -210,7 +232,7 @@ async function save(): Promise<void> {
               editable
               :disabled="saving"
               :invalid="Boolean(fieldErrors['payment.method'])"
-              class="w-full"
+              class="h-[38px] w-full"
             />
             <InputText
               v-else
@@ -218,7 +240,7 @@ async function save(): Promise<void> {
               v-model="draft.payment[field.key]"
               :disabled="saving"
               :invalid="Boolean(fieldErrors[`payment.${field.key}`])"
-              class="w-full"
+              class="h-[38px] w-full"
             />
             <Message
               v-if="fieldErrors[`payment.${field.key}`]"
@@ -237,6 +259,7 @@ async function save(): Promise<void> {
           >Invoice prefix</label>
           <InputText
             id="invoice-prefix"
+            class="h-[38px] w-full"
             v-model="draft.invoicePrefix"
             :disabled="saving"
             :invalid="Boolean(fieldErrors.invoicePrefix)"
@@ -260,19 +283,19 @@ async function save(): Promise<void> {
             class="text-text-dark text-[13px] font-medium"
           >{{ field.label }}</label>
           <Textarea
-            v-if="field.key === 'instructions'"
+            v-if="field.key === 'instructions' || (field.key === 'account' && isMobile)"
             :id="`invoice-payment-${field.key}`"
             v-model="draft.payment[field.key]"
             :disabled="saving"
-            rows="3"
-            class="w-full"
+            rows="2"
+            class="h-[70px] w-full"
           />
           <InputText
             v-else
             :id="`invoice-payment-${field.key}`"
             v-model="draft.payment[field.key]"
             :disabled="saving"
-            class="w-full"
+            class="h-[38px] w-full"
           />
           <Message
             v-if="fieldErrors[`payment.${field.key}`]"
@@ -296,9 +319,19 @@ async function save(): Promise<void> {
           label="Save invoice defaults"
           :loading="saving"
           :disabled="!dirty || saving"
-          class="w-full sm:w-auto"
+          class="h-[38px] w-full sm:w-auto"
         />
       </div>
     </form>
   </SettingsCard>
 </template>
+
+<style scoped>
+@media (width < 640px) {
+  .invoice-defaults {
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+  }
+}
+</style>

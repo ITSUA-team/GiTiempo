@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { reactive } from 'vue';
 import Select from 'primevue/select';
+import DatePicker from 'primevue/datepicker';
 import InputText from 'primevue/inputtext';
 import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
 import PrimeVue from 'primevue/config';
@@ -310,25 +311,23 @@ describe('InvoiceDetailView', () => {
 
     expect(summary.exists()).toBe(true);
     expect(summary.text()).toContain('Project Orion');
-    expect(summary.text()).toContain('Apr 1, 2026');
-    expect(summary.text()).toContain('Apr 30, 2026');
-    expect(summary.text()).toContain('$80.00');
-    expect(summary.text()).toContain('USD');
+    expect(summary.text()).toMatch(/01.*30 Apr 2026/);
+    expect(summary.text()).toContain('80.00 USD');
     expect(summary.text()).toContain('0%');
     expect(summary.text()).toContain('12.5h');
-    expect(summary.text()).toContain('$1,000.00');
-    expect(summary.text()).toContain('May 1, 2026');
-    expect(summary.text()).toContain('May 10, 2026');
-    expect(summary.text()).toContain('Alex Admin');
-    // The rounding step only parameterizes the computation; the detail page
-    // must not surface it even though the response carries the snapshot value.
-    expect(wrapper.text()).not.toContain('Rounding step');
+    expect(summary.text()).toContain('1,000.00 USD');
+    expect(summary.text()).toContain('Rounding');
+    expect(summary.text()).toContain('1 min');
+    const history = wrapper.get('[data-testid="invoice-audit"]');
+    expect(history.text()).toContain('01 May 2026');
+    expect(history.text()).toContain('10 May 2026');
+    expect(history.text()).toContain('Alex Admin');
   });
 
   it('renders instant timestamps in the local timezone', async () => {
     const instantFixture = '2026-05-01T23:30:00.000Z';
-    const expectedLocalDate = new Intl.DateTimeFormat('en-US', {
-      day: 'numeric',
+    const expectedLocalDate = new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
       month: 'short',
       year: 'numeric',
     }).format(new Date(instantFixture));
@@ -344,7 +343,7 @@ describe('InvoiceDetailView', () => {
     const wrapper = mountInvoiceDetailView();
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="invoice-summary"]').text()).toContain(
+    expect(wrapper.find('[data-testid="invoice-audit"]').text()).toContain(
       expectedLocalDate,
     );
     expect(
@@ -367,7 +366,9 @@ describe('InvoiceDetailView', () => {
     const summary = wrapper.find('[data-testid="invoice-summary"]');
 
     expect(summary.text()).toContain('Workspace-wide');
-    expect(summary.text()).toContain('Unknown');
+    expect(wrapper.get('[data-testid="invoice-audit"]').text()).toContain(
+      'Unknown',
+    );
   });
 
   it('renders the linked time entries table with count and total hours', async () => {
@@ -377,9 +378,9 @@ describe('InvoiceDetailView', () => {
     const table = wrapper.find('[data-testid="invoice-time-entries-table"]');
 
     expect(table.exists()).toBe(true);
-    expect(wrapper.text()).toContain('Time entries (2)');
-    expect(wrapper.text()).toContain('12.5h total');
-    expect(table.text()).toContain('Apr 15, 2026');
+    expect(wrapper.text()).toContain('Included time entries');
+    expect(wrapper.text()).toContain('2 entries · 12.5h');
+    expect(table.text()).toContain('15 Apr 2026');
     expect(table.text()).toContain('Alex Admin');
     expect(table.text()).toContain('Backend API');
     expect(table.text()).toContain('2h 30m');
@@ -403,8 +404,8 @@ describe('InvoiceDetailView', () => {
     await flushPromises();
 
     const table = wrapper.find('[data-testid="invoice-time-entries-table"]');
-    expect(table.text()).toContain('0h 10m');
-    expect(table.text()).not.toContain('0h 6m');
+    expect(table.text()).toContain('10m');
+    expect(table.text()).not.toContain('6m');
   });
 
   it('renders an empty state instead of the table when no entries are linked', async () => {
@@ -432,41 +433,110 @@ describe('InvoiceDetailView', () => {
     expect(wrapper.find('[data-testid="invoice-delete"]').exists()).toBe(false);
   });
 
-  it('keeps the header title truncated and status actions visible for long unbreakable titles', async () => {
-    const longTitle = 'InvoiceApril2026'.repeat(15).slice(0, 223);
+  it('shows the reference in the header and preserves the full invoice title in its history', async () => {
+    const title = 'Invoice April 2026'.repeat(10);
     testMocks.getInvoice.mockResolvedValue(
-      createInvoice({ title: longTitle }),
+      createInvoice({ reference: 'INV-2', title }),
     );
-
     const wrapper = mountInvoiceDetailView();
     await flushPromises();
-
-    const header = wrapper.find('[data-testid="invoice-detail-header"]');
-
-    expect(header.exists()).toBe(true);
-    expect(
-      header.find('[data-testid="invoice-status-badge"]').exists(),
-    ).toBe(true);
-
-    const titleHeading = header.get('h1');
-    expect(titleHeading.classes()).toEqual(
-      expect.arrayContaining(['min-w-0', 'truncate']),
-    );
-    expect(titleHeading.text()).toBe(longTitle);
-
-    const titleGroup = titleHeading.element.parentElement;
-    expect(titleGroup?.classList.contains('min-w-0')).toBe(true);
-
-    const actionsGroup = header.get('[data-testid="invoice-status-actions"]');
-    expect(actionsGroup.classes()).toEqual(
-      expect.arrayContaining(['flex-wrap']),
+    expect(wrapper.get('h1').text()).toBe('INV-2');
+    expect(wrapper.get('[data-testid="invoice-audit"]').text()).toContain(
+      title,
     );
     expect(
-      actionsGroup.findComponent(Select).exists(),
-    ).toBe(true);
+      wrapper.get('[data-testid="invoice-detail-header"]').text(),
+    ).toContain('My group');
     expect(
-      actionsGroup.find('[data-testid="invoice-delete"]').exists(),
-    ).toBe(true);
+      wrapper.get('[data-testid="invoice-detail-header"]').text(),
+    ).toContain('Updated 10 May 2026');
+    expect(wrapper.get('[data-testid="invoice-delete"]').text()).toBe(
+      'Delete invoice',
+    );
+  });
+
+  it('uses the saved-invoice ceiling for a fractional cent without displaying a negative discount at 0%', async () => {
+    testMocks.getInvoice.mockResolvedValue(
+      createInvoice({
+        hourlyRate: 1.01,
+        totalHours: 0.25,
+        totalAmount: 0.26,
+        discountPercent: 0,
+      }),
+    );
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    expect(wrapper.get('[data-testid="invoice-subtotal"]').text()).toBe(
+      'Subtotal 0.26 USD',
+    );
+    expect(wrapper.get('[data-testid="invoice-discount"]').text()).toBe(
+      '0.00 USD',
+    );
+    expect(wrapper.get('[data-testid="invoice-total"]').text()).toBe(
+      '0.26 USD',
+    );
+  });
+
+  it('renders cards with task, billed duration, date, user and description on mobile', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    const cards = wrapper.get('[data-testid="invoice-time-entries-cards"]');
+    for (const field of [
+      'Backend API',
+      '2h 30m',
+      'Alex Admin',
+      '15 Apr 2026',
+      'API work',
+    ])
+      expect(cards.text()).toContain(field);
+    expect(
+      wrapper.find('[data-testid="invoice-time-entries-table"]').exists(),
+    ).toBe(false);
+  });
+
+  it('offers a retry on generation failure and an edit action for missing billing sections', async () => {
+    const body = {
+      code: 'invoice_document_incomplete',
+      message: 'Complete billing sections',
+      details: { missingFields: ['recipient', 'payment'] },
+    };
+    testMocks.request
+      .mockRejectedValueOnce(new Error('Failed to fetch'))
+      .mockRejectedValueOnce(
+        new ApiError(body.message, { status: 422, code: body.code, body }),
+      );
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Download PDF')!
+      .trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[role="alert"]').text()).toContain(
+      'The invoice is saved. Retry the PDF download.',
+    );
+    expect(wrapper.get('[role="alert"]').text()).not.toContain(
+      'Edit billing information',
+    );
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Retry download')!
+      .trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[role="alert"]').text()).toContain(
+      'recipient, payment',
+    );
+    expect(wrapper.get('[role="alert"]').text()).toContain(
+      'Edit billing information',
+    );
   });
 
   it('confirms the delete with the documented copy, then deletes quietly and navigates back', async () => {
@@ -483,10 +553,10 @@ describe('InvoiceDetailView', () => {
       | undefined;
     expect(confirmCall).toBeDefined();
     expect(confirmCall?.[0]).toBe(
-      'Delete this invoice? Linked time entries will be unlinked and become available for future invoices.',
+      'Linked time entries will be unlinked and become available for future invoices. The invoice will be deleted.',
     );
-    expect(confirmCall?.[1]).toBe('Delete invoice?');
-    expect(confirmCall?.[2]).toBe('Delete');
+    expect(confirmCall?.[1]).toBe('Delete this invoice?');
+    expect(confirmCall?.[2]).toBe('Delete invoice');
 
     getConfirmAccept()();
     await flushPromises();
@@ -680,17 +750,52 @@ describe('InvoiceDetailView', () => {
     rejectUpdate(new ApiError('Old conflict',{status:409,code:'invoice_update_conflict'}));await pending;await flushPromises();
     expect(wrapper.findComponent(InvoiceCreateDialog).props('revisionConflict')).toBe(false);
   });
-  it('reviews a new period before creating a copy',async()=>{
-    const wrapper=mountInvoiceDetailView();await flushPromises();
-    await wrapper.findAll('button').find(b=>b.text()==='Create from this invoice')!.trigger('click');
-    expect(wrapper.text()).toContain('Previously billed entries are unavailable');
-    expect(wrapper.findComponent(InvoiceCreateDialog).props('visible')).toBe(false);
+  it('reviews a new period before creating a copy', async () => {
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Create from this invoice')!
+      .trigger('click');
+    expect(wrapper.text()).toContain(
+      'Previously billed entries are not copied',
+    );
+    expect(wrapper.findComponent(InvoiceCreateDialog).props('visible')).toBe(
+      false,
+    );
   });
-  it('offers PDF download in every invoice status',async()=>{
-    testMocks.getInvoice.mockResolvedValue(createInvoice({status:'paid'}));
-    const wrapper=mountInvoiceDetailView();await flushPromises();
-    expect(wrapper.findAll('button').some(b=>b.text()==='Download PDF')).toBe(true);
-    expect(wrapper.findComponent(Select).props('options')).toEqual(['draft','sent','paid']);
+  it('cancels or confirms the copy period before continuing to an independent draft', async () => {
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    await wrapper.findAll('button').find(button => button.text() === 'Create from this invoice')!.trigger('click');
+    const picker = wrapper.getComponent(DatePicker);
+    const range = [new Date(2026, 11, 1), new Date(2026, 11, 31)];
+    await picker.get('input').trigger('click');
+    picker.vm.$emit('update:modelValue', range);
+    await wrapper.get('[data-testid="date-picker-cancel"]').trigger('click');
+    expect(picker.props('modelValue')).toBeNull();
+    expect(wrapper.find('[data-testid="date-picker-confirm"]').exists()).toBe(false);
+    await picker.get('input').trigger('click');
+    picker.vm.$emit('update:modelValue', range);
+    await wrapper.get('[data-testid="date-picker-confirm"]').trigger('click');
+    expect(picker.props('modelValue')).toEqual(range);
+    expect(wrapper.find('[data-testid="date-picker-confirm"]').exists()).toBe(false);
+    await wrapper.findAll('button').find(button => button.text() === 'Continue to new draft')!.trigger('click');
+    expect(wrapper.getComponent(InvoiceCreateDialog).props('source')).toMatchObject({dateFrom:'2026-12-01',dateTo:'2026-12-31'});
+    expect(wrapper.getComponent(InvoiceCreateDialog).props('visible')).toBe(true);
   });
 
+  it('offers PDF download in every invoice status', async () => {
+    testMocks.getInvoice.mockResolvedValue(createInvoice({ status: 'paid' }));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    expect(
+      wrapper.findAll('button').some((b) => b.text() === 'Download PDF'),
+    ).toBe(true);
+    expect(wrapper.findComponent(Select).props('options')).toEqual([
+      { label: 'Draft', value: 'draft' },
+      { label: 'Sent', value: 'sent' },
+      { label: 'Paid', value: 'paid' },
+    ]);
+  });
 });

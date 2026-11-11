@@ -325,6 +325,7 @@ const InvoicesTableStub = {
   },
   template: `
     <div data-testid="invoices-table">
+      <slot name="error" />
       {{ rows.length }} rows | page={{ page }} | loading={{ loading }} | search={{ filters.search }}
       <span
         v-if="isMobileViewport"
@@ -574,7 +575,7 @@ describe('InvoicesView', () => {
     expect(errorCard.text()).toContain('Failed to load invoices');
     expect(errorCard.text()).toContain('Invoice api unreachable');
     expect(wrapper.findComponent({ name: 'InvoicesTable' }).exists()).toBe(
-      false,
+      true,
     );
 
     await errorCard.get('button').trigger('click');
@@ -817,14 +818,14 @@ describe('InvoicesView', () => {
     const billedCard = statCards[1];
     const draftsCard = statCards[2];
 
-    expect(openCard.props('label')).toBe('Open Invoices');
+    expect(openCard.props('label')).toBe('Open invoices');
     expect(openCard.props('value')).toBe('3');
-    expect(openCard.props('description')).toBe('2 ready to send');
+    expect(openCard.props('description')).toBe('2 drafts · 1 sent');
 
-    expect(billedCard.props('label')).toBe('Billed This Month');
+    expect(billedCard.props('label')).toBe('Billed this month');
     expect(billedCard.props('value')).toBe('$2,500.00');
     expect(billedCard.props('description')).toBe(
-      '2 invoices · 2 projects',
+      'Workspace invoices · USD',
     );
 
     expect(draftsCard.props('label')).toBe('Drafts');

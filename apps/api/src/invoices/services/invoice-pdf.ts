@@ -1,7 +1,8 @@
 import PdfPrinter from 'pdfmake';
 import fonts from 'pdfmake/build/vfs_fonts';
-import type { InvoiceResponse } from '@gitiempo/shared';
+import { computeInvoiceAmount, type InvoiceResponse } from '@gitiempo/shared';
 import { HttpException } from '@nestjs/common';
+import { COLOR } from '../../reports/services/report-pdf-theme';
 
 export async function renderInvoicePdf(
   invoice: InvoiceResponse,
@@ -33,18 +34,11 @@ export async function renderInvoicePdf(
   const printer = new PdfPrinter({
     Roboto: { normal: font, bold, italics: font, bolditalics: bold },
   });
-  const party = (value: NonNullable<InvoiceResponse['sender']>) =>
-    [value.name, value.address, value.email, value.taxId]
-      .filter(Boolean)
-      .join('\n');
+  const sender = invoice.sender;
+  const services = invoice.services;
+  const recipient = invoice.recipient;
   const payment = invoice.payment;
-  const subtotal =
-    Number(
-      (BigInt(Math.round(invoice.totalHours * 100)) *
-        BigInt(Math.round(invoice.hourlyRate * 100)) +
-        99n) /
-        100n,
-    ) / 100;
+  const subtotal = computeInvoiceAmount(invoice.totalHours, invoice.hourlyRate);
   const seconds = invoice.timeEntries.reduce(
     (sum, e) => sum + e.roundedDurationSeconds,
     0,
@@ -60,100 +54,279 @@ export async function renderInvoicePdf(
     allocated = next;
     return (amount / 100).toFixed(2);
   });
-  const content: Record<string, unknown>[] = [
-    { text: 'INVOICE', fontSize: 22, bold: true, margin: [0, 0, 0, 12] },
-    {
-      text: `${invoice.reference}\nIssued ${invoice.createdAt.slice(0, 10)}\n${invoice.dateFrom} – ${invoice.dateTo}`,
-      margin: [0, 0, 0, 16],
-    },
-    {
-      columns: [
-        { text: 'FROM\n' + party(invoice.sender) },
-        { text: 'BILL TO\n' + party(invoice.recipient) },
-      ],
-      margin: [0, 0, 0, 20],
-    },
-    { text: invoice.services, bold: true, margin: [0, 0, 0, 12] },
-    {
-      table: {
-        headerRows: 1,
-        dontBreakRows: true,
-        widths: ['*', 'auto', 'auto', 'auto'],
-        body: [
-          ['Service / work description', 'Hours', 'Rate', 'Amount'],
-          ...invoice.timeEntries.map((e, index) => [
-            [e.taskName, e.description].filter(Boolean).join(' — '),
-            (e.roundedDurationSeconds / 3600).toFixed(2),
-            invoice.hourlyRate.toFixed(2),
-            amounts[index],
-          ]),
-        ],
+  const rule = () => ({
+    canvas: [
+      {
+        type: 'line',
+        x1: 0,
+        x2: 523,
+        y1: 0,
+        y2: 0,
+        lineWidth: 0.75,
+        lineColor: COLOR.divider,
       },
-      layout: 'lightHorizontalLines',
-      margin: [0, 0, 0, 16],
-    },
-    {
-      unbreakable:
-        [
-          payment.method,
-          payment.terms,
-          payment.beneficiary,
-          payment.provider,
-          payment.account,
-          payment.instructions,
-        ].join('').length < 1500,
+    ],
+  });
+  const amountFormat = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const money = (value: number) =>
+    amountFormat.format(value) + ' ' + invoice.currency;
+  const dateFormat = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  const firstDate = new Date(invoice.dateFrom);
+  const lastDate = new Date(invoice.dateTo);
+  const period = dateFormat.formatRange(firstDate, lastDate);
+  const periodLabel =
+    invoice.dateFrom.endsWith('-01') &&
+    invoice.dateFrom.slice(0, 7) === invoice.dateTo.slice(0, 7) &&
+    new Date(lastDate.getTime() + 86_400_000).getUTCDate() === 1
+      ? new Intl.DateTimeFormat('en-GB', {
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'UTC',
+        }).format(firstDate)
+      : period;
+  const identification = (label: string, value: string, fontSize = 10.5) => ({
+    stack: [
+      { text: label, style: 'caption' },
+      { text: value, bold: true, fontSize, margin: [0, 9, 0, 0] },
+    ],
+  });
+  const party = (heading: string, value: typeof sender) => ({
+    stack: [
+      { text: heading, style: 'section' },
+      { text: value.name, fontSize: 12, bold: true },
+      ...[value.address, value.email, value.taxId && 'Tax ID ' + value.taxId]
+        .filter(Boolean)
+        .map((text) => ({ text, margin: [0, 5, 0, 0] })),
+    ],
+  });
+  let logo;
+  if (invoice.logo?.startsWith('data:image/png;base64,')) {
+    logo = { image: invoice.logo, fit: [36, 36], width: 36 };
+  } else if (invoice.logo?.startsWith('data:image/svg+xml;base64,')) {
+    logo = {
+      svg: Buffer.from(invoice.logo.split(',')[1], 'base64').toString(),
+      fit: [36, 36],
+      width: 36,
+    };
+  }
+  const discount = Math.round((subtotal - invoice.totalAmount) * 100) / 100;
+  const paymentLines = [
+    [payment.method, payment.terms].filter(Boolean).join(' · '),
+    [payment.beneficiary, payment.provider].filter(Boolean).join(' · '),
+    payment.account && 'Account: ' + payment.account,
+    payment.instructions,
+  ].filter(Boolean);
+  function render(totalsLast: boolean): Promise<Buffer> {
+    const content = [
+      {
+        columns: [
+          ...(logo ? [{ ...logo }] : []),
+          { text: sender.name, bold: true, fontSize: 15, width: '*' },
+          {
+            text: 'INVOICE',
+            color: COLOR.brand,
+            bold: true,
+            fontSize: 21,
+            width: 'auto',
+          },
+        ],
+        columnGap: 9,
+        margin: [0, 0, 0, 18],
+      },
+      rule(),
+      {
+        columns: [
+          identification('Invoice number', invoice.reference ?? invoice.id, 12),
+          identification(
+            'Issued',
+            dateFormat.format(new Date(invoice.createdAt)),
+          ),
+          identification('Billing period', period),
+        ],
+        columnGap: 9,
+        margin: [0, 18, 0, 18],
+      },
+      {
+        columns: [party('FROM', sender), party('BILL TO', recipient)],
+        columnGap: 24,
+      },
+      {
+        text: services,
+        bold: true,
+        fontSize: 13.5,
+        margin: [0, 18, 0, 4],
+      },
+      {
+        text: [invoice.project?.name, periodLabel].filter(Boolean).join(' · '),
+        color: COLOR.textMuted,
+        margin: [0, 0, 0, 14],
+      },
+      {
+        table: {
+          headerRows: 1,
+          heights: (row: number) => (row === 0 ? 15.5 : 24.5),
+          widths: ['*', 40, 57, 67],
+          body: [
+            ['Service / work description', 'Hours', 'Rate', 'Amount'].map(
+              (text, i) => ({
+                text,
+                bold: true,
+                fontSize: 9,
+                alignment: i ? 'right' : 'left',
+                fillColor: COLOR.accentTint,
+              }),
+            ),
+            ...invoice.timeEntries.map((entry, i) => [
+              [entry.taskName, entry.description].filter(Boolean).join(' · '),
+              {
+                text: (entry.roundedDurationSeconds / 3600).toFixed(2),
+                alignment: 'right',
+              },
+              {
+                text: amountFormat.format(invoice.hourlyRate),
+                alignment: 'right',
+              },
+              {
+                text: amountFormat.format(Number(amounts[i])),
+                alignment: 'right',
+              },
+            ]),
+          ],
+        },
+        layout: {
+          vLineWidth: () => 0,
+          hLineWidth: (i: number) => (i > 1 ? 0.5 : 0),
+          hLineColor: () => COLOR.divider,
+          paddingLeft: () => 8,
+          paddingRight: () => 8,
+          paddingTop: () => 8,
+          paddingBottom: () => 8,
+        },
+      },
+    ];
+    const totals = {
+      id: 'invoice-totals',
+      unbreakable: true,
+      margin: [0, 15, 0, 16],
       stack: [
         {
-          text: `Billed hours ${invoice.totalHours}\nSubtotal ${subtotal.toFixed(2)} ${invoice.currency}\nDiscount ${invoice.discountPercent}% · ${(subtotal - invoice.totalAmount).toFixed(2)} ${invoice.currency}\nTOTAL ${invoice.totalAmount.toFixed(2)} ${invoice.currency}`,
-          alignment: 'right',
-          bold: true,
-          margin: [0, 0, 0, 20],
+          columns: [
+            'Subtotal · ' + invoice.totalHours + 'h',
+            { text: money(subtotal), alignment: 'right' },
+          ],
         },
-        { text: 'HOW TO PAY', bold: true },
         {
-          text: [
-            payment.method,
-            payment.terms,
-            payment.beneficiary,
-            payment.provider,
-            payment.account,
-            payment.instructions,
-          ]
-            .filter(Boolean)
-            .join('\n'),
+          columns: [
+            'Discount · ' + invoice.discountPercent + '%',
+            { text: money(-discount || 0), alignment: 'right' },
+          ],
+          margin: [0, 7, 0, 7],
+        },
+        rule(),
+        {
+          columns: [
+            { text: 'TOTAL DUE', bold: true },
+            {
+              text: money(invoice.totalAmount),
+              fontSize: 18,
+              bold: true,
+              color: COLOR.brand,
+              alignment: 'right',
+            },
+          ],
+          margin: [0, 7, 0, 0],
         },
       ],
-    },
-    { text: invoice.notes ?? '', margin: [0, 16, 0, 0] },
-  ];
-  if (invoice.logo?.startsWith('data:image/png;base64,'))
-    content.unshift({
-      image: invoice.logo,
-      fit: [80, 48],
-      margin: [0, 0, 0, 12],
+    };
+    const instructionsAndNotes = [
+      {
+        stack: [
+          { text: 'HOW TO PAY', style: 'section' },
+          ...paymentLines.map((text) => ({ text, margin: [0, 0, 0, 4] })),
+        ],
+      },
+      ...(invoice.notes
+        ? [
+            { text: 'Notes', bold: true, fontSize: 9, margin: [0, 12, 0, 4] },
+            { text: invoice.notes, color: COLOR.textMuted },
+          ]
+        : []),
+    ];
+    return new Promise((resolve, reject) => {
+      const doc = printer.createPdfKitDocument({
+        pageSize: 'A4',
+        pageMargins: [36, 36, 36, 48],
+        defaultStyle: { font: 'Roboto', fontSize: 10, color: COLOR.textDark },
+        styles: {
+          section: {
+            fontSize: 9,
+            bold: true,
+            color: COLOR.brand,
+            margin: [0, 0, 0, 6],
+          },
+          caption: { fontSize: 9, color: COLOR.textMuted },
+        },
+        content: [
+          ...content,
+          ...(totalsLast
+            ? [...instructionsAndNotes, totals]
+            : [totals, ...instructionsAndNotes]),
+        ],
+        ...(!totalsLast && {
+          pageBreakBefore: (node: {
+            id?: string;
+            pageNumbers: number[];
+            pages: number;
+          }) => {
+            if (node.id === 'invoice-totals')
+              moveTotalsToEnd = node.pageNumbers[0] !== node.pages;
+            return false;
+          },
+        }),
+        footer: (page: number, pages: number) => ({
+          margin: [36, 6, 36, 0],
+          fontSize: 8,
+          color: COLOR.textMuted,
+          stack: [
+            rule(),
+            {
+              columns: [
+                {
+                  text: [sender.name, sender.email].filter(Boolean).join(' · '),
+                  width: '*',
+                  maxHeight: 26,
+                },
+                {
+                  text: `Page ${page} of ${pages}`,
+                  noWrap: true,
+                  alignment: 'right',
+                  width: 'auto',
+                },
+              ],
+              columnGap: 12,
+              margin: [0, 6, 0, 0],
+            },
+          ],
+        }),
+      });
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('error', reject);
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.end();
     });
-  if (invoice.logo?.startsWith('data:image/svg+xml;base64,'))
-    content.unshift({
-      svg: Buffer.from(invoice.logo.split(',')[1], 'base64').toString(),
-      fit: [80, 48],
-      margin: [0, 0, 0, 12],
-    });
-  return new Promise((resolve, reject) => {
-    const doc = printer.createPdfKitDocument({
-      pageSize: 'A4',
-      pageMargins: [40, 40, 40, 50],
-      defaultStyle: { font: 'Roboto', fontSize: 10 },
-      content,
-      footer: (page: number, pages: number) => ({
-        text: `Page ${page} of ${pages}`,
-        alignment: 'right',
-        margin: [40, 10, 40, 0],
-      }),
-    });
-    const chunks: Buffer[] = [];
-    doc.on('data', (chunk) => chunks.push(chunk));
-    doc.on('error', reject);
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.end();
-  });
+  }
+  // Keep the designed section order when it fits. Long payment details or notes
+  // can flow beyond the totals, in which case the final page must close with them.
+  let moveTotalsToEnd = false;
+  const pdf = await render(false);
+  return moveTotalsToEnd ? render(true) : pdf;
 }

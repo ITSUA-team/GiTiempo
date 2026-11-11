@@ -2,21 +2,26 @@
 import { computed, ref, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
-import { WorkspaceRoles, type UpdateInvoiceInput } from '@gitiempo/shared';
 import {
-  getErrorMessage,
-  SectionHeader,
-  SurfaceCard,
-} from '@gitiempo/web-shared';
+  invoiceDocumentIncompleteErrorSchema,
+  WorkspaceRoles,
+  type UpdateInvoiceInput,
+} from '@gitiempo/shared';
+import { AppDialog, DatePickerButtonBar, getErrorMessage, SurfaceCard, useDatePickerConfirmCancel } from '@gitiempo/web-shared';
+import { giTiempoDatePickerPt } from '@gitiempo/web-config/theme';
 import { getLocalDateKey } from '@gitiempo/web-shared/time';
 import { ApiError } from '@gitiempo/web-shared/http';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
-import { AppDialog } from '@gitiempo/web-shared';
+import InvoiceDetailDocument from '@/components/invoices/InvoiceDetailDocument.vue';
+import InvoiceDetailHeader from '@/components/invoices/InvoiceDetailHeader.vue';
 import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
 import { useInvoiceCreate } from '@/composables/invoices/useInvoiceCreate';
-import { invalidateQueryKeys, useAdminProjectsQuery } from '@/composables/query';
+import {
+  invalidateQueryKeys,
+  useAdminProjectsQuery,
+} from '@/composables/query';
 import { adminMutationInvalidationKeys } from '@/lib/query-keys';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { adminInvoicesClient } from '@/services/admin-invoices-client';
@@ -27,16 +32,17 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useInvoiceDelete } from '@/composables/invoices/useInvoiceDelete';
-import { useInvoiceDetail, LOAD_ACTION } from '@/composables/invoices/useInvoiceDetail';
+import {
+  useInvoiceDetail,
+  LOAD_ACTION,
+} from '@/composables/invoices/useInvoiceDetail';
 import { useInvoiceUpdate } from '@/composables/invoices/useInvoiceUpdate';
-import { formatCurrency } from '@/lib/format-currency';
-import { formatDuration } from '@/lib/format-duration';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { routeNames } from '@/constants/routes';
 import { useAuthStore } from '@/stores/auth';
 
 const DELETE_CONFIRMATION_MESSAGE =
-  'Delete this invoice? Linked time entries will be unlinked and become available for future invoices.';
+  'Linked time entries will be unlinked and become available for future invoices. The invoice will be deleted.';
 
 const CONFLICT_TOAST_BY_CODE = {
   invoice_invalid_status_transition: 'This status change is not allowed',
@@ -66,13 +72,7 @@ const invoiceId = computed(() => {
   return Array.isArray(id) ? (id[0] ?? '') : (id ?? '');
 });
 
-const {
-  error,
-  invoice,
-  loading,
-  notFound,
-  refetch,
-} = useInvoiceDetail({
+const { error, invoice, loading, notFound, refetch } = useInvoiceDetail({
   enabled: computed(() => Boolean(accessToken.value)),
   invoiceId,
   onError: notifyInvoiceActionError,
@@ -146,79 +146,205 @@ function swallowReportedError(): void {
 }
 
 const editorOpen = ref(false);
-const revisionConflict=ref(false);
-const editorInvoiceId=ref('');
-let editorGeneration=0;
-watch([scope,invoiceId],()=>{editorGeneration++;editorOpen.value=false;copyOpen.value=false;revisionConflict.value=false;},{flush:'sync'});
+const revisionConflict = ref(false);
+const editorInvoiceId = ref('');
+let editorGeneration = 0;
+watch(
+  [scope, invoiceId],
+  () => {
+    editorGeneration++;
+    editorOpen.value = false;
+    copyOpen.value = false;
+    revisionConflict.value = false;
+  },
+  { flush: 'sync' },
+);
 const copyOpen = ref(false);
 const copyPeriod = ref<Date[] | null>(null);
-const copyGroup = ref<string|null>(null);
-const detailGroups = ref<Array<{id:string;name:string}>>([]);
-watch(scope,async()=>{const currentScope=scope.value;try {const result=await adminInvoicesClient.listGroups();if(scope.value===currentScope) detailGroups.value=result.groups;}catch{detailGroups.value=[];}},{immediate:true});
+const copyPeriodPicker = useDatePickerConfirmCancel<Date[] | null>();
+const copyGroup = ref<string | null>(null);
+const detailGroups = ref<Array<{ id: string; name: string }>>([]);
+watch(
+  scope,
+  async () => {
+    const currentScope = scope.value;
+    try {
+      const result = await adminInvoicesClient.listGroups();
+      if (scope.value === currentScope) detailGroups.value = result.groups;
+    } catch {
+      detailGroups.value = [];
+    }
+  },
+  { immediate: true },
+);
 const groupMoveBusy = ref(false);
 const groupMoveError = ref('');
-let groupMoveGeneration=0;
-watch([scope,invoiceId],()=>{groupMoveGeneration++;groupMoveBusy.value=false;groupMoveError.value='';},{flush:'sync'});
-async function moveToGroup(groupId:string|null) {
- if(!invoice.value || groupMoveBusy.value || (invoice.value.groupId ?? null)===groupId)return;
- const requestScope={...scope.value};
- const requestGeneration=groupMoveGeneration;
- const sourceId=invoice.value.id;
- groupMoveBusy.value=true;groupMoveError.value='';
- try {
-  await adminInvoicesClient.moveInvoices({invoiceIds:[sourceId],groupId});
-  await invalidateQueryKeys(queryClient,adminMutationInvalidationKeys.afterInvoiceGroupMutation(requestScope));
- } catch(error) {if(requestGeneration===groupMoveGeneration) groupMoveError.value=getErrorMessage(error);}
- finally {if(requestGeneration===groupMoveGeneration)groupMoveBusy.value=false;}
+let groupMoveGeneration = 0;
+watch(
+  [scope, invoiceId],
+  () => {
+    groupMoveGeneration++;
+    groupMoveBusy.value = false;
+    groupMoveError.value = '';
+  },
+  { flush: 'sync' },
+);
+async function moveToGroup(groupId: string | null) {
+  if (
+    !invoice.value ||
+    groupMoveBusy.value ||
+    (invoice.value.groupId ?? null) === groupId
+  )
+    return;
+  const requestScope = { ...scope.value };
+  const requestGeneration = groupMoveGeneration;
+  const sourceId = invoice.value.id;
+  groupMoveBusy.value = true;
+  groupMoveError.value = '';
+  try {
+    await adminInvoicesClient.moveInvoices({ invoiceIds: [sourceId], groupId });
+    await invalidateQueryKeys(
+      queryClient,
+      adminMutationInvalidationKeys.afterInvoiceGroupMutation(requestScope),
+    );
+  } catch (error) {
+    if (requestGeneration === groupMoveGeneration)
+      groupMoveError.value = getErrorMessage(error);
+  } finally {
+    if (requestGeneration === groupMoveGeneration) groupMoveBusy.value = false;
+  }
 }
-const copySource = computed(()=> invoice.value && !editing.value && copyPeriod.value?.[1] ? {...invoice.value,groupId:copyGroup.value,dateFrom:getLocalDateKey(copyPeriod.value[0]!),dateTo:getLocalDateKey(copyPeriod.value[1])} : invoice.value);
+const copySource = computed(() =>
+  invoice.value && !editing.value && copyPeriod.value?.[1]
+    ? {
+        ...invoice.value,
+        groupId: copyGroup.value,
+        dateFrom: getLocalDateKey(copyPeriod.value[0]!),
+        dateTo: getLocalDateKey(copyPeriod.value[1]),
+      }
+    : invoice.value,
+);
 const editing = ref(true);
 const openedRevision = ref<number>();
-const createMutation = useInvoiceCreate({scope,onError:notifyInvoiceActionError});
-const projectsQuery = useAdminProjectsQuery({client:adminProjectsClient,enabled:computed(()=>Boolean(accessToken.value)),scope});
+const createMutation = useInvoiceCreate({
+  scope,
+  onError: notifyInvoiceActionError,
+});
+const projectsQuery = useAdminProjectsQuery({
+  client: adminProjectsClient,
+  enabled: computed(() => Boolean(accessToken.value)),
+  scope,
+});
 const editorMutation = {
-  isCreating: computed(()=>editing.value ? updateMutation.isUpdating.value : createMutation.isCreating.value),
-  createInvoice: async (input: Parameters<typeof adminInvoicesClient.createInvoice>[0]) => {
-    const requestGeneration=editorGeneration;
-    if(!editorOpen.value || editorInvoiceId.value!==invoiceId.value || (editing.value && !invoice.value)) throw new Error('The invoice changed. Reopen its editor.');
+  isCreating: computed(() =>
+    editing.value
+      ? updateMutation.isUpdating.value
+      : createMutation.isCreating.value,
+  ),
+  createInvoice: async (
+    input: Parameters<typeof adminInvoicesClient.createInvoice>[0],
+  ) => {
+    const requestGeneration = editorGeneration;
+    if (
+      !editorOpen.value ||
+      editorInvoiceId.value !== invoiceId.value ||
+      (editing.value && !invoice.value)
+    )
+      throw new Error('The invoice changed. Reopen its editor.');
     if (editing.value && invoice.value) {
-      try {return await updateMutation.updateInvoice({invoiceId:editorInvoiceId.value,data:{...input,projectId:input.projectId ?? null,expectedRevision:openedRevision.value}});}
-      catch(error) {if(requestGeneration===editorGeneration && editorOpen.value && error instanceof ApiError && error.code==='invoice_update_conflict') revisionConflict.value=true;throw error;}
+      try {
+        return await updateMutation.updateInvoice({
+          invoiceId: editorInvoiceId.value,
+          data: {
+            ...input,
+            projectId: input.projectId ?? null,
+            expectedRevision: openedRevision.value,
+          },
+        });
+      } catch (error) {
+        if (
+          requestGeneration === editorGeneration &&
+          editorOpen.value &&
+          error instanceof ApiError &&
+          error.code === 'invoice_update_conflict'
+        )
+          revisionConflict.value = true;
+        throw error;
+      }
     }
     return createMutation.createInvoice(input);
-  }
+  },
 };
 const exportBusy = ref(false);
 const exportError = ref('');
+const missingBillingFields = ref<string[]>([]);
+watch(
+  [scope, invoiceId],
+  () => {
+    exportBusy.value = false;
+    exportError.value = '';
+    missingBillingFields.value = [];
+  },
+  { flush: 'sync' },
+);
 async function downloadPdf() {
-  if (!invoice.value) return;
-  const sourceId=invoice.value.id;
-  const sourceScope=scope.value;
-  const filename=`${invoice.value.reference ?? sourceId}.pdf`;
+  if (!invoice.value || exportBusy.value) return;
+  const sourceId = invoice.value.id;
+  const sourceScope = scope.value;
+  const filename = `${invoice.value.reference ?? sourceId}.pdf`;
   exportBusy.value = true;
   exportError.value = '';
+  missingBillingFields.value = [];
   try {
     const response = await adminInvoicesClient.downloadInvoicePdf(sourceId);
-    if(invoice.value?.id!==sourceId || scope.value!==sourceScope) return;
+    if (invoice.value?.id !== sourceId || scope.value !== sourceScope) return;
     const url = URL.createObjectURL(response);
     const link = document.createElement('a');
-    link.href = url; link.download = filename;link.click();
+    link.href = url;
+    link.download = filename;
+    link.click();
     URL.revokeObjectURL(url);
-  } catch (error) {if(invoice.value?.id===sourceId && scope.value===sourceScope) exportError.value = getErrorMessage(error); }
-  finally {if(invoice.value?.id===sourceId && scope.value===sourceScope) exportBusy.value = false;}
+  } catch (error) {
+    if (invoice.value?.id !== sourceId || scope.value !== sourceScope) return;
+    const incomplete = invoiceDocumentIncompleteErrorSchema.safeParse(
+      error instanceof ApiError ? error.body : null,
+    );
+    if (incomplete.success)
+      missingBillingFields.value = incomplete.data.details.missingFields;
+    exportError.value = getErrorMessage(error);
+  } finally {
+    if (invoice.value?.id === sourceId && scope.value === sourceScope)
+      exportBusy.value = false;
+  }
 }
 async function reviewInvoiceRevision() {
- const sourceId=editorInvoiceId.value;
- const requestGeneration=editorGeneration;
- const result=await refetch();
- if(requestGeneration!==editorGeneration || sourceId!==invoiceId.value || !editorOpen.value)throw new Error('The invoice changed. Reopen its editor.');
- if(result.error || !result.data)throw result.error ?? new Error('Could not load the invoice.');
- openedRevision.value=result.data.revision;revisionConflict.value=false;
+  const sourceId = editorInvoiceId.value;
+  const requestGeneration = editorGeneration;
+  const result = await refetch();
+  if (
+    requestGeneration !== editorGeneration ||
+    sourceId !== invoiceId.value ||
+    !editorOpen.value
+  )
+    throw new Error('The invoice changed. Reopen its editor.');
+  if (result.error || !result.data)
+    throw result.error ?? new Error('Could not load the invoice.');
+  openedRevision.value = result.data.revision;
+  revisionConflict.value = false;
 }
-function openEditor(isEdit: boolean) { editorGeneration++;editorInvoiceId.value=invoiceId.value;revisionConflict.value=false;editing.value=isEdit;openedRevision.value=invoice.value?.revision;if (isEdit) editorOpen.value=true;else {copyPeriod.value=null;copyGroup.value=invoice.value?.groupId??null;copyOpen.value=true;}}
-
-
-
+function openEditor(isEdit: boolean) {
+  editorGeneration++;
+  editorInvoiceId.value = invoiceId.value;
+  revisionConflict.value = false;
+  editing.value = isEdit;
+  openedRevision.value = invoice.value?.revision;
+  if (isEdit) editorOpen.value = true;
+  else {
+    copyPeriod.value = null;
+    copyGroup.value = invoice.value?.groupId ?? null;
+    copyOpen.value = true;
+  }
+}
 
 function runUpdate(data: UpdateInvoiceInput): void {
   updateMutation
@@ -229,8 +355,8 @@ function runUpdate(data: UpdateInvoiceInput): void {
 function confirmDelete(): void {
   requireConfirmation(
     DELETE_CONFIRMATION_MESSAGE,
-    'Delete invoice?',
-    'Delete',
+    'Delete this invoice?',
+    'Delete invoice',
     () => {
       deleteInvoice();
     },
@@ -238,39 +364,16 @@ function confirmDelete(): void {
 }
 
 function deleteInvoice(): void {
-  deleteMutation
-    .deleteInvoice(invoiceId.value)
-    .catch(swallowReportedError);
+  deleteMutation.deleteInvoice(invoiceId.value).catch(swallowReportedError);
 }
 
 function goBack(): void {
   router.push({ name: routeNames.invoices });
 }
-
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-  year: 'numeric',
-});
-
-const instantFormatter = new Intl.DateTimeFormat('en-US', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-});
-
-function formatDate(dateKey: string): string {
-  return dateFormatter.format(new Date(`${dateKey}T00:00:00Z`));
-}
-
-function formatInstant(dateInput: string): string {
-  return instantFormatter.format(new Date(dateInput));
-}
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div class="flex min-w-0 flex-col gap-4 sm:gap-6">
     <template v-if="loading && !invoice">
       <div class="flex flex-col gap-4">
         <Skeleton
@@ -312,122 +415,159 @@ function formatInstant(dateInput: string): string {
     </template>
 
     <template v-else-if="invoice">
-      <div
-        class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        data-testid="invoice-detail-header"
-      >
-        <div class="flex min-w-0 items-center gap-3">
-          <Button
-            icon="pi pi-arrow-left"
-            variant="text"
-            severity="secondary"
-            aria-label="Back to invoices"
-            data-testid="invoice-back-button"
-            @click="goBack"
-          />
-          <h1 class="text-text-dark min-w-0 truncate text-lg font-semibold">
-            {{ invoice.reference ? `${invoice.reference} · ` : '' }}{{ invoice.title }}
-          </h1>
-          <InvoiceStatusBadge :status="invoice.status" />
-        </div>
-        <div
-          class="flex flex-wrap gap-2"
-          data-testid="invoice-status-actions"
-        >
-          <Select
-            aria-label="Invoice status"
-            :model-value="invoice.status"
-            :options="['draft','sent','paid']"
-            :disabled="updateMutation.isUpdating.value"
-            @update:model-value="status => runUpdate({status,expectedRevision:invoice?.revision})"
-          />
-          <Button
-            label="Edit invoice"
-            @click="openEditor(true)"
-          />
-          <Button
-            label="Create from this invoice"
-            severity="secondary"
-            @click="openEditor(false)"
-          />
-          <Button
-            :label="exportBusy ? 'Preparing PDF…' : 'Download PDF'"
-            :loading="exportBusy"
-            severity="secondary"
-            @click="downloadPdf"
-          />
-          <Button
-            v-if="invoice.status === 'draft' && isAdmin"
-            label="Delete"
-            severity="danger"
-            variant="outlined"
-            :loading="deleteMutation.isDeleting.value"
-            data-testid="invoice-delete"
-            @click="confirmDelete"
-          />
-        </div>
-      </div>
-
-      <p
+      <InvoiceDetailHeader
+        :invoice="invoice"
+        :groups="detailGroups"
+        :moving="groupMoveBusy"
+        :move-error="groupMoveError"
+        :updating="updateMutation.isUpdating.value"
+        :exporting="exportBusy"
+        @back="goBack"
+        @copy="openEditor(false)"
+        @edit="openEditor(true)"
+        @download="downloadPdf"
+        @move="moveToGroup"
+        @status="
+          (status) => runUpdate({ status, expectedRevision: invoice?.revision })
+        "
+      />
+      <SurfaceCard
         v-if="exportError"
         role="alert"
-        class="text-destructive"
+        border
+        padding-class="p-5"
+        body-class="flex flex-col items-start gap-4"
       >
-        {{ exportError }}
-        <Button
-          label="Retry download"
-          variant="text"
-          @click="downloadPdf"
-        />
-        <Button
-          label="Edit billing information"
-          variant="text"
-          @click="openEditor(true)"
-        />
-      </p>
-      <SurfaceCard padding-class="p-6">
-        <div class="grid gap-6 sm:grid-cols-2">
-          <section
-            v-for="(party,label) in {From:invoice.sender,'Bill to':invoice.recipient}"
-            :key="label"
-          >
-            <h2 class="font-semibold">
-              {{ label }}
-            </h2>
-            <p>{{ party?.name }}</p><p>{{ party?.address }}</p><p>{{ party?.email }}</p><p>{{ party?.taxId }}</p>
-          </section>
-        </div>
-        <h2 class="mt-6 font-semibold">
-          {{ invoice.services }}
+        <h2 class="text-lg font-semibold">
+          Could not prepare PDF
         </h2>
+        <template v-if="missingBillingFields.length">
+          <p class="text-text-muted text-xs">
+            The invoice is saved. Complete these billing sections before
+            exporting: {{ missingBillingFields.join(', ') }}.
+          </p>
+          <Button
+            label="Edit billing information"
+            icon="pi pi-pencil"
+            @click="openEditor(true)"
+          />
+        </template>
+        <template v-else>
+          <p class="text-text-muted text-xs">
+            The invoice is saved. Retry the PDF download.
+          </p>
+          <Button
+            label="Retry download"
+            icon="pi pi-download"
+            class="h-[38px]"
+            @click="downloadPdf"
+          />
+        </template>
+      </SurfaceCard>
+      <InvoiceDetailDocument :invoice="invoice" />
+      <SurfaceCard
+        v-if="invoice.status === 'draft' && isAdmin"
+        border
+        padding-class="p-5"
+        body-class="flex flex-col items-start gap-4"
+      >
+        <div class="flex w-full items-center justify-between gap-3">
+          <span class="font-semibold break-words">{{
+            invoice.reference || invoice.title
+          }}</span>
+          <InvoiceStatusBadge status="draft" />
+        </div>
+        <Button
+          label="Delete invoice"
+          icon="pi pi-trash"
+          severity="danger"
+          outlined
+          class="h-[38px]"
+          :loading="deleteMutation.isDeleting.value"
+          data-testid="invoice-delete"
+          @click="confirmDelete"
+        />
+        <p class="text-text-muted text-xs">
+          Only Admins can delete a Draft invoice.
+        </p>
       </SurfaceCard>
       <AppDialog
         v-model:visible="copyOpen"
-        header="Create from this invoice"
+        :header="`Create from ${invoice.reference || invoice.title}`"
         modal
+        class="w-[420px]"
+        :pt="{
+          header: 'px-5 pt-5 pb-0',
+          content: 'px-5 py-4',
+          footer: 'px-5 pb-5 pt-0',
+        }"
       >
-        <p>Review the new billing period. Previously billed entries are unavailable.</p>
-        <label for="copy-period">New billing period</label>
-        <DatePicker
-          v-model="copyPeriod"
-          input-id="copy-period"
-          selection-mode="range"
-          show-icon
-        />
-        <label for="copy-group">Personal group</label>
-        <Select
-          v-model="copyGroup"
-          input-id="copy-group"
-          placeholder="Ungrouped"
-          :options="[{id:null,name:'Ungrouped'},...detailGroups]"
-          option-label="name"
-          option-value="id"
-        />
-        <Button
-          label="Continue to new draft"
-          :disabled="!copyPeriod?.[1]"
-          @click="copyOpen=false;editorOpen=true"
-        />
+        <div class="flex flex-col gap-4">
+          <p class="text-text-muted text-xs">
+            Reuse invoice details in a new draft. The original stays unchanged.
+          </p>
+          <div class="flex flex-col gap-1.5">
+            <label
+              for="copy-period"
+              class="text-[13px] font-medium"
+            >New billing period</label>
+            <DatePicker
+              :ref="copyPeriodPicker.datePickerRef"
+              v-model="copyPeriod"
+              input-id="copy-period"
+              selection-mode="range"
+              date-format="dd M yy"
+              icon-display="input"
+              :manual-input="false"
+              show-button-bar
+              show-icon
+              class="w-full"
+              :pt="giTiempoDatePickerPt"
+              @show="copyPeriodPicker.handleShow"
+            >
+              <template #buttonbar>
+                <DatePickerButtonBar
+                  @cancel="copyPeriodPicker.handleCancel"
+                  @confirm="copyPeriodPicker.handleConfirm"
+                />
+              </template>
+            </DatePicker>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label
+              for="copy-group"
+              class="text-[13px] font-medium"
+            >Personal group</label>
+            <Select
+              v-model="copyGroup"
+              input-id="copy-group"
+              placeholder="Ungrouped"
+              :options="[{ id: null, name: 'Ungrouped' }, ...detailGroups]"
+              option-label="name"
+              option-value="id"
+              class="h-[38px] w-full"
+            />
+          </div>
+          <p class="text-text-muted text-xs">
+            Sender, recipient, services and billing parameters will be
+            prefilled. Review eligible entries in the new invoice.
+          </p>
+          <p class="border-divider rounded-lg border p-3 text-xs">
+            Previously billed entries are not copied. The new invoice receives
+            its own reference and Draft status.
+          </p>
+        </div>
+        <template #footer>
+          <Button
+            label="Continue to new draft"
+            class="h-[38px] w-full sm:w-auto"
+            :disabled="!copyPeriod?.[1]"
+            @click="
+              copyOpen = false;
+              editorOpen = true;
+            "
+          />
+        </template>
       </AppDialog>
       <InvoiceCreateDialog
         v-model:visible="editorOpen"
@@ -444,186 +584,6 @@ function formatInstant(dateInput: string): string {
         :create-mutation="editorMutation"
         @created="refetch()"
       />
-      <SurfaceCard
-        padding-class="p-6"
-        data-testid="invoice-summary"
-      >
-        <SectionHeader title="Summary" />
-        <label for="detail-group">Personal group</label>
-        <Select
-          input-id="detail-group"
-          placeholder="Ungrouped"
-          :model-value="invoice.groupId ?? null"
-          :options="[{id:null,name:'Ungrouped'},...detailGroups]"
-          option-label="name"
-          option-value="id"
-          :disabled="groupMoveBusy"
-          @update:model-value="moveToGroup"
-        />
-        <p
-          v-if="groupMoveError"
-          role="alert"
-          class="text-destructive"
-        >
-          {{ groupMoveError }}
-        </p>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Project</span>
-            <p class="font-medium">
-              {{ invoice.project?.name ?? 'Workspace-wide' }}
-            </p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Date range</span>
-            <p class="font-medium">
-              {{ formatDate(invoice.dateFrom) }} –
-              {{ formatDate(invoice.dateTo) }}
-            </p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Hourly rate</span>
-            <p class="font-medium">
-              {{ formatCurrency(invoice.hourlyRate, invoice.currency) }}
-            </p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Currency</span>
-            <p class="font-medium">
-              {{ invoice.currency }}
-            </p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Discount</span>
-            <p class="font-medium">
-              {{ invoice.discountPercent }}%
-            </p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Total hours</span>
-            <p class="font-medium">
-              {{ invoice.totalHours }}h
-            </p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Subtotal</span><p>{{ formatCurrency(invoice.hourlyRate * invoice.totalHours,invoice.currency) }}</p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Discount amount</span><p>{{ formatCurrency(invoice.hourlyRate * invoice.totalHours - invoice.totalAmount,invoice.currency) }}</p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Total amount</span>
-            <p class="font-medium">
-              {{ formatCurrency(invoice.totalAmount, invoice.currency) }}
-            </p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Created</span>
-            <p class="font-medium">
-              {{ formatInstant(invoice.createdAt) }}
-            </p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Created by</span>
-            <p class="font-medium">
-              {{ invoice.createdByName ?? 'Unknown' }}
-            </p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-sm">Last updated</span>
-            <p class="font-medium">
-              {{ formatInstant(invoice.updatedAt) }}
-            </p>
-          </div>
-        </div>
-      </SurfaceCard>
-
-
-
-      <SurfaceCard
-        padding-class="p-6"
-        data-testid="invoice-time-entries"
-      >
-        <SectionHeader
-          :description="`${invoice.totalHours}h total`"
-          :title="`Time entries (${invoice.timeEntryCount})`"
-        />
-        <div
-          v-if="invoice.timeEntries.length === 0"
-          class="text-text-muted py-4 text-center text-sm"
-          data-testid="invoice-time-entries-empty"
-        >
-          No time entries linked to this invoice.
-        </div>
-        <div
-          v-else
-          class="overflow-x-auto"
-          data-testid="invoice-time-entries-table"
-        >
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-divider text-text-muted border-b">
-                <th class="px-3 py-2 text-left font-medium">
-                  Date
-                </th>
-                <th class="px-3 py-2 text-left font-medium">
-                  User
-                </th>
-                <th class="px-3 py-2 text-left font-medium">
-                  Task
-                </th>
-                <th class="px-3 py-2 text-right font-medium">
-                  Duration
-                </th>
-                <th class="px-3 py-2 text-left font-medium">
-                  Description
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="entry in invoice.timeEntries"
-                :key="entry.id"
-                class="border-divider border-b last:border-b-0"
-              >
-                <td class="px-3 py-2">
-                  {{ formatInstant(entry.startedAt) }}
-                </td>
-                <td class="px-3 py-2">
-                  {{ entry.userName ?? 'Unknown' }}
-                </td>
-                <td class="px-3 py-2">
-                  {{ entry.taskName ?? '—' }}
-                </td>
-                <td class="px-3 py-2 text-right">
-                  {{ formatDuration(entry.roundedDurationSeconds) }}
-                </td>
-                <td class="text-text-muted px-3 py-2">
-                  {{ entry.description ?? '—' }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </SurfaceCard>
-      <SurfaceCard padding-class="p-6">
-        <SectionHeader title="How to pay" />
-        <p class="whitespace-pre-wrap">
-          {{ invoice.payment?.method }} · {{ invoice.payment?.terms }}
-        </p>
-        <p>{{ invoice.payment?.beneficiary }} · {{ invoice.payment?.provider }}</p>
-        <p>{{ invoice.payment?.account }}</p><p>{{ invoice.payment?.instructions }}</p>
-        <section
-          v-if="invoice.notes"
-          class="mt-6"
-        >
-          <h2 class="font-semibold">
-            Notes
-          </h2><p class="whitespace-pre-wrap">
-            {{ invoice.notes }}
-          </p>
-        </section>
-      </SurfaceCard>
     </template>
   </div>
 </template>

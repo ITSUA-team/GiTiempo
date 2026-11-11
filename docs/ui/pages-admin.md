@@ -61,18 +61,19 @@
 ### List page (`/invoices`)
 
 - Searchable invoice table with columns: Invoice reference and recipient, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
+- Invoice status badges follow the invoice frames: Draft uses the accent tint, Sent uses the warning tint, and Paid uses the active tint.
 - Search filters by invoice title (API `search` param, case-insensitive ILIKE). The search input is capped at 200 characters to match the API contract; the filter row stays interactive so the user can always clear filters even when a load error replaces the table.
-- Filter row: Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
+- Filter row above the list: three equal-width controls — Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
 - Mobile filters (< 640px): the same three filters stack vertically — Project, Period, and Status all full-width and equal width, one under the other. Filter wrappers use `min-w-0` so long project names truncate inside the Select instead of expanding the container.
 - If the projects request fails, a separate inline error card with Retry is shown between the stats cards and the table. The invoice list stays usable for non-project filtering; the project dropdown shows no options until the retry succeeds. For PMs this explains why invoice creation is blocked (a project is required).
 - Pagination control below the table (API returns `meta.totalPages`).
 - Table header has a `Create invoice` action button (plus icon).
 - Clicking a row reference navigates to the detail page (`/invoices/:id`).
-- Stats cards show invoice counts using only `draft`, `sent`, `paid` statuses. No "pending" status. Data from `GET /invoices/stats`.
-  - "Open Invoices" = draft + sent count. Subtitle: "N ready to send" (draft count).
-  - "Billed This Month" = sum of `totalAmount` for invoices created this month. Subtitle: "N invoices · M projects" (invoice count + distinct project count). Currency from workspace default. Totals are approximate if multiple currencies are present.
+- On desktop, the 60 px invoice navigation rail sits beside the page. The three 108 px stats cards sit above the 208 px personal group rail and invoice list. Mobile starts directly with the group picker. Stats cards show invoice counts using only `draft`, `sent`, `paid` statuses. No "pending" status. Data from `GET /invoices/stats`.
+  - "Open invoices" = draft + sent count. The subtitle shows both draft and sent counts.
+  - "Billed this month" = sum of `totalAmount` for invoices created this month. The subtitle shows "Workspace invoices" and the currency. Currency from workspace default. Totals are approximate if multiple currencies are present.
   - "Drafts" = draft count. Subtitle: "Ready for review".
-- Mobile cards (< 640px): each invoice renders as a `MobileRecordCard` with a clickable invoice reference link, status badge, and a `MobileRecordMetadataList` grid (Project, Period, Hours, Amount). The metadata grid uses `min-w-0` on grid items and `break-words` on values so long unbroken strings (e.g., long project names without spaces) wrap instead of overflowing into the adjacent cell.
+- Mobile cards (< 640px): each invoice renders as a `MobileRecordCard` with a selection checkbox, clickable invoice reference, status badge, recipient and project on one wrapping line, period, hours and amount. Each card offers Move to group and a row actions menu.
 - Currency formatting: use `Intl.NumberFormat` with the `currency` field from the API response (e.g., `new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })`). Do not hardcode currency symbols — the workspace may use any 3-letter ISO 4217 currency code.
 
 ### Create and edit dialogs
@@ -82,7 +83,7 @@
 - Present eligible entries as selectable rows. Retain entries belonging to the edited invoice and allow adding eligible unbilled entries. Excluding an entry releases its association on save while preserving tracked work.
 - Show included count, per-entry rounded billed duration, hours, subtotal, discount and final amount for the reviewed selection. Use authoritative preview calculation with the same billing inputs and rounding rules as save. A successful zero-entry preview permits a zero-total draft.
 - Save business fields, selected entries, totals and a changed personal group together. A conflict or failed save preserves typed values and choices, refreshes eligibility and identifies unavailable entries.
-- Forms fit the viewport, with scrollable bodies and reachable close and primary actions. Below 640 px fields stack full width. Restore keyboard focus on dismissal.
+- Forms fit the viewport, with scrollable bodies and reachable close and primary actions. Below 640 px the invoice editor fills the viewport width with 16 px inner gutters, stacked fields, selectable time-entry cards and a full-width primary action. Restore keyboard focus on dismissal.
 
 ### Detail page (`/invoices/:id`)
 

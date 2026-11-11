@@ -7,11 +7,8 @@ import {
   DatePickerButtonBar,
   EmptyStateBlock,
   EntryActionButton,
-  ManagementTableShell,
   MobileRecordCard,
-  SectionHeader,
   useDatePickerConfirmCancel,
-  type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import {
   giTiempoDatePickerPt,
@@ -30,17 +27,10 @@ import Select from 'primevue/select';
 import type { PageState } from 'primevue/paginator';
 
 import InvoiceStatusBadge from '@/components/invoices/InvoiceStatusBadge.vue';
-import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
-import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
-import ManagementMobileCardSkeleton from '@/components/loading/ManagementMobileCardSkeleton.vue';
-import {
-  adminTableBodyRowClass,
-  adminTableClass,
-  adminTableColumnPt,
-  adminTableHeaderClass,
-  adminTableMinWidthClass,
-} from '@/lib/admin-table-classes';
-import { formatCurrency } from '@/lib/format-currency';
+import DataTable from 'primevue/datatable';
+import InvoiceListLoading from './InvoiceListLoading.vue';
+import InvoiceListRowActions from './InvoiceListRowActions.vue';
+import { formatCurrency, formatInvoiceAmount } from '@/lib/format-currency';
 import {
   formatInvoicePeriod,
   fromInvoicesDatePickerRange,
@@ -61,6 +51,9 @@ import {
 
 const props = defineProps<{
   emptyDescription: string;
+  groupName?: string;
+  personalGroup?: boolean;
+  emptyPersonalGroup?: boolean;
   filterOptions: InvoicesTableFilterOptions;
   filters: InvoicesTableFilters;
   isMobileViewport: boolean;
@@ -73,6 +66,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'create-invoice': [];
+  'browse-all': [];
+  'move-row': [invoiceId: string];
   'row-click': [invoiceId: string];
   'update:filters': [filters: InvoicesTableFilterUpdate];
   'update:page': [page: number];
@@ -80,16 +75,20 @@ const emit = defineEmits<{
 
 const selection = defineModel<string[]>('selection', {default:()=>[]});
 
-const columns: ManagementTableColumn[] = [
-  {key:'selection',label:'',width:56},
-  { key: 'title', label: 'Invoice / recipient', width: 'fill' },
-  { key: 'project', label: 'Project', width: 136 },
-  { key: 'period', label: 'Period', width: 160 },
-  { key: 'hours', label: 'Hours', width: 70 },
-  { align: 'end', key: 'amount', label: 'Amount', width: 100 },
-  { key: 'status', label: 'Status', width: 110 },
-];
-
+const allSelected = computed(() => props.rows.length > 0 && props.rows.every(row => selection.value.includes(row.id)));
+const partlySelected = computed(() => !allSelected.value && props.rows.some(row => selection.value.includes(row.id)));
+function selectPage(checked: boolean) {
+  const selected = new Set(selection.value);
+  for (const row of props.rows) {
+    if (checked) selected.add(row.id);
+    else selected.delete(row.id);
+  }
+  selection.value = [...selected];
+}
+const columnPt = {
+  headerCell: { class: 'h-[42px] bg-app-bg px-2 py-0 text-left text-[13px] font-semibold' },
+  bodyCell: { class: 'h-[66px] border-b border-divider px-2 text-[13px]' },
+};
 // Local mirror of the period picker value. PrimeVue DatePicker with
 // selectionMode="range" emits [start, null] after the first click; keeping that
 // partial selection local prevents the parent filter from clearing (which
@@ -110,20 +109,19 @@ watch(
   },
 );
 
-const mobilePeriodPicker =
+const periodPicker =
   useDatePickerConfirmCancel<InvoicesDatePickerRangeValue>();
-const desktopPeriodPicker =
-  useDatePickerConfirmCancel<InvoicesDatePickerRangeValue>();
+
 
 const paginatorProps = computed(() => ({
   currentPageReportTemplate:
-    'Showing {first} to {last} of {totalRecords} invoices',
+    'Showing {first}–{last} of {totalRecords}',
   first: (props.page - 1) * props.rowsPerPage,
   pageLinkSize: props.isMobileViewport ? 1 : 5,
   rows: props.rowsPerPage,
   template: props.isMobileViewport
     ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink'
-    : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport',
+    : props.totalRecords <= props.rowsPerPage ? 'CurrentPageReport PageLinks' : 'CurrentPageReport PrevPageLink PageLinks NextPageLink',
   totalRecords: props.totalRecords,
 }));
 
@@ -197,61 +195,44 @@ const selectedPeriodLabel = computed(() => {
   return formatInvoicePeriod(dateFrom, dateTo);
 });
 
-function getMobileMetadataItems(row: InvoicesTableRow): Array<{
-  label: string;
-  value: string;
-}> {
-  return [
-    { label: 'Project', value: getProjectName(row) },
-    { label: 'Period', value: formatInvoicePeriod(row.dateFrom, row.dateTo) },
-    { label: 'Hours', value: `${row.totalHours}h` },
-    {
-      label: 'Amount',
-      value: formatCurrency(row.totalAmount, row.currency),
-    },
-  ];
-}
 </script>
 
 <template>
-  <div class="mb-4">
-    <SectionHeader title="Invoice List">
-      <template #actions>
-        <div class="flex w-full items-center gap-3 sm:w-auto">
-          <IconField class="w-full sm:w-[280px]">
-            <InputIcon class="pi pi-search text-text-muted" />
-            <InputText
-              :model-value="filters.search"
-              aria-label="Search invoices"
-              class="h-[38px] w-full rounded-[6px] text-[14px]"
-              data-testid="invoices-table-search"
-              :maxlength="MAX_SEARCH_LENGTH"
-              placeholder="Search invoices"
-              @update:model-value="updateSearchFilter"
-            />
-          </IconField>
-          <EntryActionButton
-            data-testid="invoices-table-create"
-            :icon="PlusIcon"
-            label="Create invoice"
-            @click="emit('create-invoice')"
-          />
-        </div>
-      </template>
-    </SectionHeader>
+  <div class="mb-3 flex min-h-[38px] items-center gap-3 sm:mb-4">
+    <h2
+      v-if="!isMobileViewport"
+      class="min-w-0 flex-1 truncate text-lg font-semibold"
+    >
+      {{ groupName ?? 'All invoices' }}
+    </h2>
+    <IconField class="min-w-0 flex-1 sm:max-w-[220px]">
+      <InputIcon class="pi pi-search text-text-muted" />
+      <InputText
+        :model-value="filters.search"
+        aria-label="Search invoices"
+        class="h-[38px] w-full"
+        data-testid="invoices-table-search"
+        :maxlength="MAX_SEARCH_LENGTH"
+        placeholder="Search invoices"
+        @update:model-value="updateSearchFilter"
+      />
+    </IconField>
+    <EntryActionButton
+      data-testid="invoices-table-create"
+      :icon="PlusIcon"
+      label="Create invoice"
+      @click="emit('create-invoice')"
+    />
   </div>
 
-  <div
-    v-if="isMobileViewport"
-    class="mb-4 grid grid-cols-1 gap-3"
-  >
+  <div class="mb-3 grid min-w-0 grid-cols-1 gap-3 sm:mb-4 sm:grid-cols-3 sm:gap-2.5">
     <div class="flex min-w-0 flex-col gap-1.5">
       <label
-        for="mobile-invoice-project-filter"
-        class="text-text-muted text-[12px] font-medium"
+        for="invoice-project-filter"
+        class="text-text-dark text-[13px] font-medium sm:sr-only"
       >Project</label>
       <Select
-        id="mobile-invoice-project-filter"
+        id="invoice-project-filter"
         :model-value="filters.projectId"
         :options="filterOptions.projects"
         option-label="name"
@@ -268,12 +249,12 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
 
     <div class="flex min-w-0 flex-col gap-1.5">
       <label
-        for="mobile-invoice-period-filter"
-        class="text-text-muted text-[12px] font-medium"
+        for="invoice-period-filter"
+        class="text-text-dark text-[13px] font-medium sm:sr-only"
       >Period</label>
       <DatePicker
-        :ref="mobilePeriodPicker.datePickerRef"
-        input-id="mobile-invoice-period-filter"
+        :ref="periodPicker.datePickerRef"
+        input-id="invoice-period-filter"
         :model-value="localDateRange"
         aria-label="Filter invoices by period"
         date-format="M d"
@@ -287,13 +268,13 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
         show-clear
         show-icon
         :title="selectedPeriodLabel"
-        @show="mobilePeriodPicker.handleShow"
+        @show="periodPicker.handleShow"
         @update:model-value="updatePeriodFilter"
       >
         <template #buttonbar>
           <DatePickerButtonBar
-            @cancel="mobilePeriodPicker.handleCancel"
-            @confirm="mobilePeriodPicker.handleConfirm"
+            @cancel="periodPicker.handleCancel"
+            @confirm="periodPicker.handleConfirm"
           />
         </template>
       </DatePicker>
@@ -301,11 +282,11 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
 
     <div class="flex min-w-0 flex-col gap-1.5">
       <label
-        for="mobile-invoice-status-filter"
-        class="text-text-muted text-[12px] font-medium"
+        for="invoice-status-filter"
+        class="text-text-dark text-[13px] font-medium sm:sr-only"
       >Status</label>
       <Select
-        id="mobile-invoice-status-filter"
+        id="invoice-status-filter"
         :model-value="filters.status"
         :options="filterOptions.statuses"
         option-label="label"
@@ -320,285 +301,244 @@ function getMobileMetadataItems(row: InvoicesTableRow): Array<{
     </div>
   </div>
 
-  <div
-    v-if="isMobileViewport"
-    class="flex flex-col gap-3"
-  >
-    <template v-if="loading && rows.length === 0">
-      <ManagementMobileCardSkeleton
-        v-for="index in 3"
-        :key="index"
-        data-testid="invoices-mobile-loading-card"
-        variant="invoices"
-        :index="index"
+  <slot name="bulk-actions" />
+  <slot
+    v-if="$slots.error"
+    name="error"
+  />
+  <InvoiceListLoading
+    v-else-if="loading && !rows.length"
+    data-testid="invoices-list-loading"
+  />
+  <div v-else-if="!rows.length">
+    <div
+      v-if="emptyPersonalGroup"
+      class="border-divider flex flex-col items-center gap-4 rounded-lg border p-5 text-center"
+    >
+      <i
+        class="pi pi-folder-open text-text-muted text-3xl"
+        aria-hidden="true"
       />
-    </template>
-
-    <template v-else-if="rows.length > 0">
-      <MobileRecordCard
-        v-for="row in rows"
-        :key="row.id"
-        data-testid="invoice-mobile-card"
-      >
-        <div class="flex items-start justify-between gap-3">
-          <Checkbox
-            v-model="selection"
-            :value="row.id"
-            :aria-label="`Select invoice ${row.title}`"
-          />
-          <h3 class="min-w-0">
-            <Button
-              type="button"
-              variant="link"
-              :aria-label="`Open invoice ${row.title}`"
-              :data-testid="`invoice-mobile-title-${row.id}`"
-              :pt="{ root: { class: mobileTitleRootClass } }"
-              @click="emit('row-click', row.id)"
-            >
-              <span class="truncate">{{ row.reference ?? row.title }}</span>
-            </Button>
-          </h3>
-          <InvoiceStatusBadge :status="row.status" />
-        </div>
-
-        <p
-          v-if="row.recipient?.name"
-          class="text-text-muted text-sm"
-        >
-          {{ row.recipient.name }}
-        </p>
-        <MobileRecordMetadataList :items="getMobileMetadataItems(row)" />
-      </MobileRecordCard>
-    </template>
-
+      <h3 class="text-lg font-semibold">
+        No invoices in this group
+      </h3>
+      <p class="text-text-muted text-sm">
+        Move an existing invoice here or create a new one in this group.
+      </p>
+      <Button
+        label="Create invoice"
+        icon="pi pi-plus"
+        @click="emit('create-invoice')"
+      />
+      <Button
+        label="Browse all invoices"
+        icon="pi pi-copy"
+        severity="secondary"
+        outlined
+        @click="emit('browse-all')"
+      />
+    </div>
     <EmptyStateBlock
       v-else
       title="No invoices found"
       :description="emptyDescription"
     />
-
-    <Paginator
-      v-if="rows.length > 0"
-      class="w-full"
-      data-testid="invoices-table-paginator"
-      v-bind="paginatorProps"
-      @page="updatePage"
-    />
   </div>
 
   <div
-    v-else
-    class="border-divider overflow-x-auto rounded-[6px] border"
+    v-else-if="isMobileViewport"
+    class="flex flex-col gap-3"
   >
-    <ManagementTableShell
-      :columns="columns"
-      :value="rows"
-      :loading="false"
-      data-key="id"
-      :body-row-class="adminTableBodyRowClass"
-      :header-class="adminTableHeaderClass"
-      shell-class="bg-surface-primary w-full font-sans"
-      single-scroll
-      :table-class="adminTableClass"
-      table-container-class="overflow-visible rounded-none border-none"
+    <MobileRecordCard
+      v-for="row in rows"
+      :key="row.id"
+      data-testid="invoice-mobile-card"
+      class="invoice-mobile-card"
     >
-      <template #filters>
-        <div
-          class="flex flex-1 items-center"
-          :class="adminTableMinWidthClass"
-        >
-          <div class="w-[56px] shrink-0" />
-          <div class="min-w-0 flex-1 px-3" />
-
-          <div class="w-[136px] shrink-0 pr-3">
-            <Select
-              :model-value="filters.projectId"
-              :options="filterOptions.projects"
-              option-label="name"
-              option-value="id"
-              placeholder="All projects"
-              show-clear
-              :pt="giTiempoSelectPt"
-              aria-label="Filter invoices by project"
-              data-testid="invoices-table-project-filter"
-              :title="selectedProjectName"
-              @update:model-value="updateProjectFilter"
-            />
-          </div>
-
-          <div class="w-[160px] shrink-0 pr-3">
-            <DatePicker
-              :ref="desktopPeriodPicker.datePickerRef"
-              :model-value="localDateRange"
-              aria-label="Filter invoices by period"
-              class="w-full"
-              date-format="M d"
-              data-testid="invoices-table-period-filter"
-              icon-display="input"
-              :manual-input="false"
-              placeholder="Date range"
-              :pt="giTiempoDatePickerPt"
-              selection-mode="range"
-              show-button-bar
-              show-clear
-              show-icon
-              :title="selectedPeriodLabel"
-              @show="desktopPeriodPicker.handleShow"
-              @update:model-value="updatePeriodFilter"
-            >
-              <template #buttonbar>
-                <DatePickerButtonBar
-                  @cancel="desktopPeriodPicker.handleCancel"
-                  @confirm="desktopPeriodPicker.handleConfirm"
-                />
-              </template>
-            </DatePicker>
-          </div>
-
-          <div class="w-[70px] shrink-0 pr-3" />
-
-          <div class="w-[100px] shrink-0 pr-3" />
-
-          <div class="w-[110px] shrink-0 pr-3">
-            <Select
-              :model-value="filters.status"
-              :options="filterOptions.statuses"
-              option-label="label"
-              option-value="value"
-              placeholder="All statuses"
-              show-clear
-              :pt="giTiempoFieldWidthSelectPt"
-              aria-label="Filter invoices by status"
-              data-testid="invoices-table-status-filter"
-              @update:model-value="updateStatusFilter"
-            />
-          </div>
-        </div>
-      </template>
-
-      <Column
-        style="width:56px"
-        :pt="adminTableColumnPt"
-      >
-        <template #body="{data}">
-          <Checkbox
-            v-model="selection"
-            :value="data.id"
-            :aria-label="`Select invoice ${data.title}`"
-          />
-        </template>
-      </Column>
-      <Column
-        :pt="adminTableColumnPt"
-      >
-        <template #body="{ data }">
+      <div class="flex items-center gap-3">
+        <Checkbox
+          v-model="selection"
+          :value="row.id"
+          :aria-label="`Select invoice ${row.title}`"
+        />
+        <h3 class="min-w-0 flex-1">
           <Button
             type="button"
             variant="link"
-            :aria-label="`Open invoice ${data.title}`"
-            :data-testid="`invoice-title-${data.id}`"
-            :pt="{ root: { class: desktopTitleRootClass } }"
-            @click="emit('row-click', data.id)"
+            :aria-label="`Open invoice ${row.title}`"
+            :data-testid="`invoice-mobile-title-${row.id}`"
+            :pt="{ root: { class: mobileTitleRootClass } }"
+            @click="emit('row-click', row.id)"
           >
-            <span class="flex min-w-0 flex-col gap-1">
-              <span class="truncate">{{ data.reference ?? data.title }}</span>
-              <span
-                v-if="data.recipient?.name"
-                class="text-text-muted truncate text-xs font-normal"
-              >{{ data.recipient.name }}</span>
-            </span>
+            <span class="truncate">{{ row.reference ?? row.title }}</span>
           </Button>
-        </template>
-      </Column>
+        </h3>
+        <InvoiceStatusBadge :status="row.status" />
+      </div>
+      <p class="text-text-muted text-sm break-words">
+        {{ [row.recipient?.name, getProjectName(row)].filter(Boolean).join(' · ') }}
+      </p>
+      <div class="flex items-center justify-between gap-3 text-xs">
+        <span class="text-text-muted">Period</span><span>{{ formatInvoicePeriod(row.dateFrom, row.dateTo) }}</span>
+      </div>
+      <div class="flex items-center justify-between gap-3 text-sm">
+        <span>{{ row.totalHours }}h</span><strong>{{ formatInvoiceAmount(row.totalAmount, row.currency) }}</strong>
+      </div>
+      <div class="flex justify-end gap-3">
+        <Button
+          label="Move to group"
+          severity="secondary"
+          outlined
+          icon="pi pi-folder-open"
+          @click="emit('move-row', row.id)"
+        />
+        <InvoiceListRowActions
+          mobile
+          :reference="row.reference ?? row.title"
+          @open="emit('row-click', row.id)"
+          @move="emit('move-row', row.id)"
+        />
+      </div>
+    </MobileRecordCard>
+  </div>
 
-      <Column
-        style="width: 136px"
-        :pt="adminTableColumnPt"
-      >
-        <template #body="{ data }">
-          <span
-            class="text-text-muted block truncate text-[13px] font-normal"
-            :title="getProjectName(data)"
-          >{{
-            getProjectName(data)
-          }}</span>
-        </template>
-      </Column>
-
-      <Column
-        style="width: 160px"
-        :pt="adminTableColumnPt"
-      >
-        <template #body="{ data }">
-          <span
-            class="text-text-muted block truncate text-[13px] font-normal"
-            :title="formatInvoicePeriod(data.dateFrom, data.dateTo)"
-          >{{
-            formatInvoicePeriod(data.dateFrom, data.dateTo)
-          }}</span>
-        </template>
-      </Column>
-
-      <Column
-        style="width: 70px"
-        :pt="adminTableColumnPt"
-      >
-        <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{
-            data.totalHours
-          }}h</span>
-        </template>
-      </Column>
-
-      <Column
-        style="width: 100px"
-        :pt="adminTableColumnPt"
-      >
-        <template #body="{ data }">
-          <span class="text-text-dark block text-right text-[13px] font-semibold">{{
-            formatCurrency(data.totalAmount, data.currency)
-          }}</span>
-        </template>
-      </Column>
-
-      <Column
-        style="width: 110px"
-        :pt="adminTableColumnPt"
-      >
-        <template #body="{ data }">
-          <InvoiceStatusBadge :status="data.status" />
-        </template>
-      </Column>
-
-      <template #empty>
-        <template v-if="loading">
-          <ManagementDesktopRowSkeleton
-            v-for="index in 6"
-            :key="index"
-            data-testid="invoices-desktop-loading-row"
-            variant="invoices"
-          />
-        </template>
-
-        <EmptyStateBlock
-          v-else
-          title="No invoices found"
-          :description="emptyDescription"
+  <DataTable
+    v-else
+    :value="rows"
+    data-key="id"
+    :row-class="(row: InvoicesTableRow) => selection.includes(row.id) ? 'invoice-row-selected' : ''"
+    class="border-divider overflow-hidden rounded-sm border"
+    :pt="{ tableContainer: 'overflow-x-auto', table: 'w-full min-w-[660px] table-fixed border-collapse', bodyRow: { class: 'invoice-row' } }"
+  >
+    <Column
+      style="width: 34px"
+      :pt="columnPt"
+    >
+      <template #header>
+        <Checkbox
+          :model-value="allSelected"
+          binary
+          :indeterminate="partlySelected"
+          aria-label="Select all invoices on this page"
+          @update:model-value="selectPage"
         />
       </template>
-    </ManagementTableShell>
-
-    <div
-      v-if="rows.length > 0"
-      class="border-divider bg-surface-primary border-t"
-      :class="adminTableMinWidthClass"
+      <template #body="{ data }">
+        <Checkbox
+          v-model="selection"
+          :value="data.id"
+          :aria-label="`Select invoice ${data.title}`"
+        />
+      </template>
+    </Column>
+    <Column
+      header="Invoice / recipient"
+      :pt="columnPt"
     >
-      <Paginator
-        class="w-full"
-        data-testid="invoices-table-paginator"
-        v-bind="paginatorProps"
-        @page="updatePage"
-      />
-    </div>
-  </div>
+      <template #body="{data}">
+        <Button
+          variant="link"
+          :aria-label="`Open invoice ${data.title}`"
+          :data-testid="`invoice-title-${data.id}`"
+          :pt="{ root: { class: desktopTitleRootClass } }"
+          @click="emit('row-click', data.id)"
+        >
+          <span class="flex min-w-0 flex-col gap-1">
+            <span class="truncate">{{ data.reference ?? data.title }}</span>
+            <span
+              v-if="data.recipient?.name"
+              class="text-text-muted truncate text-xs font-normal"
+            >{{ data.recipient.name }}</span>
+          </span>
+        </Button>
+      </template>
+    </Column>
+    <Column
+      header="Project"
+      style="width: 106px"
+      :pt="columnPt"
+    >
+      <template #body="{data}">
+        <span
+          class="text-text-muted block truncate"
+          :title="getProjectName(data)"
+        >{{ getProjectName(data) }}</span>
+      </template>
+    </Column>
+    <Column
+      header="Period"
+      style="width: 134px"
+      :pt="columnPt"
+    >
+      <template #body="{data}">
+        <span
+          class="text-text-muted block truncate"
+          :title="formatInvoicePeriod(data.dateFrom, data.dateTo)"
+        >{{ formatInvoicePeriod(data.dateFrom, data.dateTo) }}</span>
+      </template>
+    </Column>
+    <Column
+      header="Hours"
+      style="width: 58px"
+      :pt="columnPt"
+    >
+      <template #body="{data}">
+        {{ data.totalHours }}h
+      </template>
+    </Column>
+    <Column
+      header="Amount"
+      style="width: 95px"
+      :pt="columnPt"
+    >
+      <template #body="{data}">
+        <span class="block text-right font-semibold">{{ formatCurrency(data.totalAmount,data.currency) }}</span>
+      </template>
+    </Column>
+    <Column
+      header="Status"
+      style="width: 78px"
+      :pt="columnPt"
+    >
+      <template #body="{data}">
+        <InvoiceStatusBadge :status="data.status" />
+      </template>
+    </Column>
+    <Column
+      style="width: 36px"
+      :pt="{ ...columnPt, bodyCell: {class: 'border-b border-divider p-0'} }"
+    >
+      <template #body="{data}">
+        <InvoiceListRowActions
+          :reference="data.reference ?? data.title"
+          @open="emit('row-click',data.id)"
+          @move="emit('move-row',data.id)"
+        />
+      </template>
+    </Column>
+  </DataTable>
+  <Paginator
+    v-if="rows.length && !$slots.error"
+    class="mt-3 w-full"
+    :pt="{ root: 'flex items-center', content: 'w-full', current: 'mr-auto text-xs text-text-muted', page: 'h-[38px] w-9 min-w-0 rounded-sm aria-[current=page]:bg-brand aria-[current=page]:text-text-inverse' }"
+    data-testid="invoices-table-paginator"
+    v-bind="paginatorProps"
+    @page="updatePage"
+  />
+  <p
+    v-if="personalGroup && !isMobileViewport"
+    class="text-text-muted mt-4 text-xs leading-5"
+  >
+    Personal group · Changes here affect only your organization.
+  </p>
 </template>
+
+<style scoped>
+:deep(.invoice-row.invoice-row-selected) {
+  background-color: var(--color-accent-tint);
+}
+.invoice-mobile-card {
+  padding: 12px;
+  gap: 10px;
+}
+</style>

@@ -81,3 +81,5 @@ Local visual evidence: `/private/tmp/527-acceptance/invoices-desktop.jpg`, `invo
 - `chrome-groups-mobile.png`, `chrome-group-error-mobile.png`, `chrome-groups-load-error-mobile.png`: mobile controls, preserved rename after network failure and separate list retry.
 
 All final Chrome artifacts are under `/private/tmp/527-acceptance/`. Temporary QA group was removed. All request interceptions were removed. No production data was accessed. Existing automated checks remain applicable because no implementation source changed during this retest; final strict OpenSpec validation and whitespace checks were rerun.
+
+The subsequent [component audit](design-parity.md) and [post-fix Chrome retest](design-retest.md) cover visual discrepancies and fractional-cent billing identified after this acceptance run.

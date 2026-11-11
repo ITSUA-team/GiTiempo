@@ -2907,6 +2907,19 @@ describe('Invoices (e2e)', () => {
         .get('/invoices/' + id)
         .set('Authorization', bearer(pmToken));
       expect(admin.body.groupId).toBe(group.body.id);
+      for (const [token, expectedGroup] of [
+        [adminToken, group.body.id],
+        [pmToken, null],
+      ]) {
+        const listed = await request(app.getHttpServer())
+          .get('/invoices')
+          .query({ search: 'Revision acceptance' })
+          .set('Authorization', bearer(token));
+        expect(listed.status).toBe(200);
+        expect(listed.body.items).toContainEqual(
+          expect.objectContaining({ id, groupId: expectedGroup }),
+        );
+      }
       expect(
         (
           await request(app.getHttpServer())

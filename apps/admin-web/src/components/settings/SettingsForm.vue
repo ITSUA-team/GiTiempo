@@ -79,7 +79,7 @@ function submitWorkspaceForm(): void {
 </script>
 
 <template>
-  <div class="flex w-full max-w-[620px] flex-col gap-2">
+  <div class="flex w-full max-w-[620px] flex-col gap-6">
     <Form
       ref="workspaceForm"
       @submit="emit('save')"

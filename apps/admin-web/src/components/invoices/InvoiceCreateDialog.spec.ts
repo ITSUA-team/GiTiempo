@@ -1,4 +1,4 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import DatePicker from 'primevue/datepicker';
 import Checkbox from 'primevue/checkbox';
@@ -293,6 +293,8 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
+enableAutoUnmount(afterEach);
+
 describe('InvoiceCreateDialog', () => {
   beforeEach(() => {
     testMocks.listEligibleEntries.mockReset();
@@ -323,18 +325,18 @@ describe('InvoiceCreateDialog', () => {
     const wrapper = await mountDialog();
 
     for (const label of [
-      'Title',
+      'Invoice title',
       'Project',
-      'Date range',
+      'Billing period',
       'Hourly rate',
       'Currency',
       'Discount',
-      'Rounding step',
+      'Rounding',
       'Notes',
     ]) {
       expect(bodyText()).toContain(label);
     }
-    expect(wrapper.findAllComponents(Select)).toHaveLength(4);
+    expect(wrapper.findAllComponents(Select)).toHaveLength(5);
     expect(wrapper.findComponent(DatePicker).exists()).toBe(true);
     expect(wrapper.findAllComponents(InputNumber)).toHaveLength(2);
     expect(wrapper.findComponent(Textarea).exists()).toBe(true);
@@ -383,11 +385,10 @@ describe('InvoiceCreateDialog', () => {
       { label: '60 min', value: 60 },
     ]);
 
-    expect(bodyText()).toContain('Cancel');
+    expect(bodyText()).toContain('New Draft · Reference assigned on creation');
     expect(bodyText()).toContain('Create invoice');
-    expect(
-      wrapper.findComponent('[data-testid="invoice-create-cancel"]').exists(),
-    ).toBe(true);
+    expect(wrapper.getComponent(Dialog).props('closable')).toBe(true);
+    expect(document.querySelectorAll('.p-dialog-footer button')).toHaveLength(1);
   });
 
   it('keeps the dialog and paired field rows responsive on narrow viewports', async () => {
@@ -407,7 +408,7 @@ describe('InvoiceCreateDialog', () => {
 
     const dialogRoot = document.querySelector('.p-dialog');
     expect(
-      dialogRoot?.classList.contains('w-[min(1000px,calc(100vw-2rem))]'),
+      dialogRoot?.classList.contains('max-w-[1000px]'),
     ).toBe(true);
 
     const rowFor = (rowTestId: string) => {
@@ -443,7 +444,7 @@ describe('InvoiceCreateDialog', () => {
 
     const hourlyRateColumn = columnFor('invoice-create-hourly-rate');
     expect(hourlyRateColumn.classList.contains('w-full')).toBe(true);
-    expect(hourlyRateColumn.classList.contains('sm:w-[150px]')).toBe(true);
+    expect(hourlyRateColumn.classList.contains('sm:flex-1')).toBe(true);
 
     for (const inputId of [
       'invoice-create-currency',
@@ -483,7 +484,7 @@ describe('InvoiceCreateDialog', () => {
     });
     expect(bodyText()).toContain('2 entries');
     expect(bodyText()).toContain('5h');
-    expect(bodyText()).toContain('$400.00');
+    expect(bodyText()).toContain('400.00 USD');
 
     const rateInput = document.querySelector<HTMLInputElement>(
       '#invoice-create-hourly-rate',
@@ -493,30 +494,22 @@ describe('InvoiceCreateDialog', () => {
     // prop is available yet (settings query failure fallback).
     expect(getCurrencyLabelElement().textContent).toBe('USD');
 
-    // The entries table stays collapsed until the header row is toggled.
-    expect(wrapper.findComponent(DataTable).exists()).toBe(false);
+    expect(wrapper.findComponent(DataTable).exists()).toBe(true);
   });
 
-  it('expands the preview table with entry date, user, duration, and description', async () => {
+  it('shows the open preview table with date, task, description, user and billed time', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
 
     const wrapper = await mountDialog();
     await enterDateRange(wrapper);
 
-    // The toggle is a raw teleported button, so it is driven from the DOM.
-    document
-      .querySelector<HTMLButtonElement>(
-        '[data-testid="invoice-create-preview-toggle"]',
-      )
-      ?.click();
-    await flushPromises();
 
     const table = wrapper.findComponent(DataTable);
     expect(table.exists()).toBe(true);
-    expect(bodyText()).toContain('Apr 15, 2026');
+    expect(bodyText()).toContain('15 Apr 2026');
     expect(bodyText()).toContain('Alex Admin');
     expect(bodyText()).toContain('2h 30m');
-    expect(bodyText()).toContain('Backend API implementation');
+    expect(bodyText()).toContain('Backend API · Backend API implementation');
   });
 
   it('warns and keeps create enabled when the preview has no entries', async () => {
@@ -534,7 +527,7 @@ describe('InvoiceCreateDialog', () => {
     await enterDateRange(wrapper);
 
     expect(bodyText()).toContain(
-      'No billable entries found for this project and date range',
+      'Change the project or billing period to look for entries. You can still create an empty draft.',
     );
     expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
   });
@@ -547,11 +540,10 @@ describe('InvoiceCreateDialog', () => {
     const wrapper = await mountDialog();
     await enterDateRange(wrapper);
 
-    const errorBanner = wrapper.findComponent(
+    const errorBanner = document.querySelector(
       '[data-testid="invoice-create-preview-error"]',
     );
-    expect(errorBanner.exists()).toBe(true);
-    expect(errorBanner.text()).toContain(
+    expect(errorBanner?.textContent).toContain(
       'Failed to load eligible entries. Please try again.',
     );
   });
@@ -1063,13 +1055,6 @@ describe('InvoiceCreateDialog', () => {
           button.attributes('data-testid') === 'invoice-create-submit',
       );
     expect(submitButton?.props('loading')).toBe(true);
-    // PrimeVue Button passes disabled through as an attribute, not a prop.
-    expect(
-      wrapper
-        .getComponent('[data-testid="invoice-create-cancel"]')
-        .attributes('disabled'),
-    ).toBeDefined();
-
     const dialog = wrapper.getComponent(Dialog);
     expect(dialog.props('closable')).toBe(false);
     expect(dialog.props('dismissableMask')).toBe(false);
@@ -1092,7 +1077,7 @@ describe('InvoiceCreateDialog', () => {
     await enterDateRange(wrapper);
 
     // The live estimate applies the discount: 2.5h at 80 − 15%.
-    expect(bodyText()).toContain('$170.00');
+    expect(bodyText()).toContain('170.00 USD');
 
     await submitInvoice(wrapper);
 
@@ -1127,7 +1112,7 @@ describe('InvoiceCreateDialog', () => {
     // The dropdown follows the preview's workspace default, so the estimate
     // renders the preview currency instead of an unselected empty value.
     expect(getCurrencyLabelElement().textContent).toBe('USD');
-    expect(bodyText()).toContain('$200.00');
+    expect(bodyText()).toContain('200.00 USD');
   });
 
   it('syncs rate and currency defaults from a fresh preview response after cache returns stale values', async () => {
@@ -1485,16 +1470,10 @@ describe('InvoiceCreateDialog', () => {
     await flushPromises();
     await flushPromises();
 
-    document
-      .querySelector<HTMLButtonElement>(
-        '[data-testid="invoice-create-preview-toggle"]',
-      )
-      ?.click();
-    await flushPromises();
 
     // Step 5: 360s (6 min) rounds up to 600s (10 min).
-    expect(bodyText()).toContain('0h 10m');
-    expect(bodyText()).not.toContain('0h 6m');
+    expect(bodyText()).toContain('10m');
+    expect(bodyText()).not.toContain('6m');
 
     await getSelectByInputId(
       wrapper,
@@ -1505,8 +1484,8 @@ describe('InvoiceCreateDialog', () => {
 
     // Step 30: 360s rounds up to 1800s (30 min). The Duration column
     // re-renders from the fresh preview response.
-    expect(bodyText()).toContain('0h 30m');
-    expect(bodyText()).not.toContain('0h 10m');
+    expect(bodyText()).toContain('30m');
+    expect(bodyText()).not.toContain('10m');
   });
 
   it('sends the selected rounding step in the create request', async () => {
@@ -1623,9 +1602,8 @@ describe('InvoiceCreateDialog', () => {
     const wrapper = await mountDialog({ createInvoice });
     await wrapper.getComponent('#invoice-create-title').setValue('Reviewed invoice');
     await enterDateRange(wrapper);
-    document.querySelector<HTMLButtonElement>('[data-testid="invoice-create-preview-toggle"]')?.click();
     await flushPromises();
-    const checkboxes = wrapper.findAllComponents(Checkbox);
+    const checkboxes = wrapper.findAllComponents(Checkbox).filter(field => !field.props('binary'));
     expect(checkboxes).toHaveLength(2);
     await checkboxes[0]!.vm.$emit('update:modelValue', [entries[1]!.id]);
     await flushPromises();
@@ -1646,11 +1624,10 @@ describe('InvoiceCreateDialog', () => {
     await wrapper.getComponent('#invoice-create-title').setValue('Reviewed invoice');
     await enterDateRange(wrapper);await flushPromises();
     expect(bodyText()).toContain('Subtotal');
-    expect(bodyText()).toContain('$200.00');
-    expect(bodyText()).toContain('$180.00');
+    expect(bodyText()).toContain('200.00 USD');
+    expect(bodyText()).toContain('180.00 USD');
     expect(bodyText()).not.toContain('defaultHourlyRate');
-    document.querySelector<HTMLButtonElement>('[data-testid="invoice-create-preview-toggle"]')?.click();await flushPromises();
-    expect(wrapper.findAllComponents(Checkbox)).toHaveLength(1);
+    expect(wrapper.findAllComponents(Checkbox).filter(field => !field.props('binary'))).toHaveLength(1);
     await submitInvoice(wrapper);
     expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({timeEntryIds:[entry.id]}));
   });
@@ -1659,7 +1636,7 @@ describe('InvoiceCreateDialog', () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const createInvoice=createCreateInvoiceSpy();
     const wrapper=await mountDialog({source:{...createInvoiceResponse(),notes:'Old note'},editing:true,createInvoice});
-    await wrapper.findComponent(Textarea).setValue('');
+    await wrapper.getComponent('#invoice-create-notes').setValue('');
     await submitInvoice(wrapper);
     expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({notes:null}));
   });
@@ -1717,26 +1694,60 @@ describe('InvoiceCreateDialog', () => {
     const wrapper = await mountDialog({ createInvoice });
     await wrapper.getComponent('#invoice-create-title').setValue('Keep my draft');
     await enterDateRange(wrapper);
-    document.querySelector<HTMLButtonElement>('[data-testid="invoice-create-preview-toggle"]')?.click();
     await flushPromises();
-    await wrapper.findComponent(Checkbox).vm.$emit('update:modelValue', []);
+    await wrapper.findAllComponents(Checkbox).find(field=>!field.props('binary'))!.vm.$emit('update:modelValue', []);
     await flushPromises();
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse({ entries: [entry], count: 1 }));
     await submitInvoice(wrapper);
     expect(document.querySelector<HTMLInputElement>('#invoice-create-title')?.value).toBe('Keep my draft');
     expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({ timeEntryIds: [] }));
-    expect(wrapper.findComponent(Checkbox).props('modelValue')).toEqual([]);
+    expect(wrapper.findAllComponents(Checkbox).find(field=>!field.props('binary'))!.props('modelValue')).toEqual([]);
     expect(bodyText()).toContain('Entry was claimed. Review selection.');
     expect(wrapper.emitted('update:visible')).toBeUndefined();
+  });
+
+  it('opens mobile entry cards with a selectable task and billed duration', async () => {
+    vi.mocked(window.matchMedia).mockImplementation(query => ({
+      matches: query === '(max-width: 639px)', media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+      addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(), onchange: null,
+    }));
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const wrapper = await mountDialog();
+    await enterDateRange(wrapper);
+    expect(wrapper.findComponent(DataTable).exists()).toBe(false);
+    const card = document.querySelector('#invoice-editor-entries article');
+    expect(card?.textContent).toContain('Backend API');
+    expect(card?.textContent).toContain('Backend API implementation');
+    expect(card?.textContent).toContain('Included · 2h 30m');
+    await wrapper.getComponent(Checkbox).vm.$emit('update:modelValue', []);
+    await flushPromises();
+    expect(card?.textContent).toContain('Excluded · 2h 30m');
+  });
+
+  it('names unavailable selected entries and allows reviewing and excluding them before retry', async () => {
+    testMocks.listEligibleEntries.mockResolvedValueOnce(createEntriesResponse()).mockResolvedValue(createEntriesResponse({count: 0, entries: [], totalHours: 0}));
+    const createInvoice = vi.fn().mockRejectedValueOnce(new ApiError('Review unavailable entries', {code: 'invoice_entry_conflict', status: 409})).mockResolvedValue(createInvoiceResponse());
+    const wrapper = await mountDialog({createInvoice});
+    await wrapper.getComponent('#invoice-create-title').setValue('Reviewed draft');
+    await enterDateRange(wrapper);
+    await submitInvoice(wrapper);
+    expect(bodyText()).toContain('Changes were not saved');
+    expect(bodyText()).toContain('Backend API · Backend API implementation · Unavailable');
+    await wrapper.findAllComponents(Button).find(button => button.props('label') === 'Review entries')!.trigger('click');
+    expect(document.activeElement?.id).toBe('invoice-editor-entries');
+    await wrapper.findAllComponents(Button).find(button => button.props('label') === 'Exclude entry')!.trigger('click');
+    await flushPromises();
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenLastCalledWith(expect.objectContaining({timeEntryIds: [], title: 'Reviewed draft'}));
   });
 
   it('preserves sender and payment typed while initial defaults are loading',async()=>{
     let resolveDefaults!:(value:unknown)=>void;
     testMocks.getInvoiceDefaults.mockReturnValueOnce(new Promise(resolve=>{resolveDefaults=resolve;}));
     const wrapper=await mountDialog();
-    const senderField=wrapper.findAllComponents(InputText).find(field=>field.element.closest('label')?.textContent?.includes('Legal / company name'))!;
-    const paymentField=wrapper.findAllComponents(InputText).find(field=>field.element.closest('label')?.textContent?.includes('Payment method'))!;
-    await senderField.setValue('Typed sender');await paymentField.setValue('Typed payment');
+    const senderField=wrapper.findAllComponents(InputText).find(field=>field.element.closest('label')?.textContent?.includes('Sender / legal name'))!;
+    const paymentField=getSelectByInputId(wrapper,'invoice-payment-method');
+    await senderField.setValue('Typed sender');await paymentField.vm.$emit('update:modelValue','Typed payment');await flushPromises();
     resolveDefaults({billingProfile:{sender:{name:'Settings sender',address:'Address',email:'',taxId:''},payment:{method:'Settings payment',terms:'',beneficiary:'',provider:'',account:'',instructions:''},logo:null}});await flushPromises();
     expect(senderField.props('modelValue')).toBe('Typed sender');
     expect(paymentField.props('modelValue')).toBe('Typed payment');
@@ -1757,7 +1768,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper.findAllComponents(Button).find(button=>button.props('label')==='Refresh entries and retry')!.trigger('click');await flushPromises();
     expect(testMocks.listEligibleEntries.mock.calls.length).toBeGreaterThan(calls);
     expect(document.querySelector<HTMLInputElement>('#invoice-create-title')?.value).toBe('Keep typed title');
-    expect(bodyText()).toContain('$200.00');
+    expect(bodyText()).toContain('200.00 USD');
     expect(bodyText()).not.toContain('Entry was claimed');
   });
 

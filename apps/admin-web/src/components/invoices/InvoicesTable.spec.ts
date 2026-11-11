@@ -2,12 +2,11 @@
 
 import { mount } from '@vue/test-utils';
 import type { InvoiceListItem } from '@gitiempo/shared';
-import {
-  ManagementTableShell,
-  MobileRecordCard,
-} from '@gitiempo/web-shared';
+import { MobileRecordCard } from '@gitiempo/web-shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import PrimeVue from 'primevue/config';
+import DataTable from 'primevue/datatable';
+import Skeleton from 'primevue/skeleton';
 import DatePicker from 'primevue/datepicker';
 import Checkbox from 'primevue/checkbox';
 import Paginator from 'primevue/paginator';
@@ -41,7 +40,9 @@ const defaultFilterOptions: InvoicesTableFilterOptions = {
   statuses: INVOICE_STATUS_OPTIONS,
 };
 
-function makeInvoice(overrides: Partial<InvoiceListItem> = {}): InvoiceListItem {
+function makeInvoice(
+  overrides: Partial<InvoiceListItem> = {},
+): InvoiceListItem {
   return {
     createdAt: '2026-04-01T10:00:00.000Z',
     createdBy: 'user-1',
@@ -96,16 +97,18 @@ const rows: InvoicesTableRow[] = [
   }),
 ];
 
-function mountInvoicesTable(options: {
-  filters?: InvoicesTableFilters;
-  filterOptions?: InvoicesTableFilterOptions;
-  isMobileViewport?: boolean;
-  loading?: boolean;
-  page?: number;
-  rows?: InvoicesTableRow[];
-  rowsPerPage?: number;
-  totalRecords?: number;
-} = {}) {
+function mountInvoicesTable(
+  options: {
+    filters?: InvoicesTableFilters;
+    filterOptions?: InvoicesTableFilterOptions;
+    isMobileViewport?: boolean;
+    loading?: boolean;
+    page?: number;
+    rows?: InvoicesTableRow[];
+    rowsPerPage?: number;
+    totalRecords?: number;
+  } = {},
+) {
   const tableRows = options.rows ?? rows;
 
   return mount(InvoicesTable, {
@@ -151,10 +154,7 @@ function mockMatchMedia(matches = false): void {
   });
 }
 
-function getFilterSelect(
-  wrapper: InvoicesTableWrapper,
-  optionValue: string,
-) {
+function getFilterSelect(wrapper: InvoicesTableWrapper, optionValue: string) {
   const filter = wrapper
     .findAllComponents(Select)
     .find((candidate) => candidate.props('optionValue') === optionValue);
@@ -174,9 +174,7 @@ describe('InvoicesTable', () => {
   it('renders invoice selection and document columns with docs headers', () => {
     const wrapper = mountInvoicesTable();
 
-    const headerLabels = wrapper
-      .findAll('[data-testid^="management-table-header-"]')
-      .map((header) => header.text());
+    const headerLabels = wrapper.findAll('th').map((header) => header.text());
 
     expect(headerLabels).toEqual([
       '',
@@ -186,26 +184,57 @@ describe('InvoicesTable', () => {
       'Hours',
       'Amount',
       'Status',
+      '',
     ]);
+  });
+
+  it('stacks the reference and recipient in one invoice column within the approved table width', () => {
+    const wrapper = mountInvoicesTable({
+      rows: [
+        makeInvoice({
+          reference: 'INV-527',
+          recipient: { name: 'Client name', address: '', email: '', taxId: '' },
+        }),
+      ],
+    });
+    const invoiceLink = wrapper.get('[data-testid="invoice-title-invoice-1"]');
+    expect(invoiceLink.text()).toContain('INV-527');
+    expect(invoiceLink.text()).toContain('Client name');
+    expect(wrapper.get('table').classes()).toContain('min-w-[660px]');
     expect(
-      wrapper.get('[data-testid="management-table-header-amount"]').classes(),
-    ).toContain('text-right');
+      wrapper
+        .find('[data-testid="management-table-header-recipient"]')
+        .exists(),
+    ).toBe(false);
   });
 
-  it('stacks the reference and recipient in one invoice column within the approved table width',()=>{
-    const wrapper=mountInvoicesTable({rows:[makeInvoice({reference:'INV-527',recipient:{name:'Client name',address:'',email:'',taxId:''}})]});
-    const invoiceLink=wrapper.get('[data-testid="invoice-title-invoice-1"]');
-    expect(invoiceLink.text()).toContain('INV-527');expect(invoiceLink.text()).toContain('Client name');
-    expect(wrapper.get('table').classes()).toContain('min-w-[860px]');
-    expect(wrapper.find('[data-testid="management-table-header-recipient"]').exists()).toBe(false);
-  });
+  it.each([false, true])(
+    'selects invoices directly from rows/cards (mobile=%s)',
+    async (isMobileViewport) => {
+      const wrapper = mountInvoicesTable({ isMobileViewport });
+      wrapper
+        .findAllComponents(Checkbox)
+        .find((box) => box.props('value') === 'invoice-1')!
+        .vm.$emit('update:modelValue', ['invoice-1']);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.emitted('update:selection')?.[0]).toEqual([['invoice-1']]);
+      expect(wrapper.emitted('row-click')).toBeUndefined();
+    },
+  );
 
-  it.each([false,true])('selects invoices directly from rows/cards (mobile=%s)',async(isMobileViewport)=>{
-    const wrapper=mountInvoicesTable({isMobileViewport});
-    wrapper.findComponent(Checkbox).vm.$emit('update:modelValue',['invoice-1']);
+  it('selects all visible invoices from the desktop heading and clears them', async () => {
+    const wrapper = mountInvoicesTable();
+    const header = () => wrapper.get<HTMLInputElement>('input[aria-label="Select all invoices on this page"]');
+    await header().setValue(true);
     await wrapper.vm.$nextTick();
-    expect(wrapper.emitted('update:selection')?.[0]).toEqual([['invoice-1']]);
-    expect(wrapper.emitted('row-click')).toBeUndefined();
+    expect(wrapper.emitted('update:selection')?.at(-1)).toEqual([
+      rows.map((row) => row.id),
+    ]);
+    await wrapper.setProps({ selection: rows.map((row) => row.id) });
+    expect(header().element.checked).toBe(true);
+    await header().setValue(false);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('update:selection')?.at(-1)).toEqual([[]]);
   });
 
   it('renders row content with API currency formatting and the workspace-wide fallback', () => {
@@ -214,14 +243,12 @@ describe('InvoicesTable', () => {
     expect(wrapper.text()).toContain('April 2026 Billing Run');
     expect(wrapper.text()).toContain('$12,800.00');
     expect(wrapper.text()).toContain('€8,500.00');
-    expect(wrapper.text()).toContain('Apr 1 – Apr 21');
-    expect(wrapper.text()).toContain('Mar 1 – Mar 31');
+    expect(wrapper.text()).toContain('01–21 Apr 2026');
+    expect(wrapper.text()).toContain('01–31 Mar 2026');
     expect(wrapper.text()).toContain('480h');
     expect(wrapper.text()).toContain('Workspace-wide');
 
-    // The Amount column cells are the 120px body tds of the shared table;
-    // each holds exactly one right-aligned formatted span.
-    const amountCells = wrapper.findAll('td[style*="100px"]');
+    const amountCells = wrapper.findAll('td[style*="95px"]');
     expect(amountCells.map((cell) => cell.text())).toEqual([
       '$12,800.00',
       '€8,500.00',
@@ -311,8 +338,7 @@ describe('InvoicesTable', () => {
       .findAllComponents(Select)
       .find(
         (select) =>
-          select.attributes('data-testid') ===
-          'invoices-table-project-filter',
+          select.attributes('data-testid') === 'invoices-table-project-filter',
       );
 
     if (!projectFilter) {
@@ -362,9 +388,9 @@ describe('InvoicesTable', () => {
 
     expect(wrapper.emitted('update:filters')).toBeUndefined();
 
-    const modelValue = periodFilter.props('modelValue') as
-      | Array<Date | null>
-      | null;
+    const modelValue = periodFilter.props(
+      'modelValue',
+    ) as Array<Date | null> | null;
     expect(modelValue?.[0]).toEqual(new Date('2026-04-01T00:00:00'));
     expect(modelValue?.[1]).toBeNull();
   });
@@ -399,9 +425,9 @@ describe('InvoicesTable', () => {
       },
     });
 
-    let modelValue = wrapper.getComponent(DatePicker).props('modelValue') as
-      | Array<Date | null>
-      | null;
+    let modelValue = wrapper
+      .getComponent(DatePicker)
+      .props('modelValue') as Array<Date | null> | null;
     expect(modelValue?.[0]).toEqual(new Date('2026-04-01T00:00:00'));
     expect(modelValue?.[1]).toEqual(new Date('2026-04-21T00:00:00'));
 
@@ -409,9 +435,9 @@ describe('InvoicesTable', () => {
       filters: { ...defaultFilters },
     });
 
-    modelValue = wrapper.getComponent(DatePicker).props('modelValue') as
-      | Array<Date | null>
-      | null;
+    modelValue = wrapper
+      .getComponent(DatePicker)
+      .props('modelValue') as Array<Date | null> | null;
     expect(modelValue).toBeNull();
   });
 
@@ -437,10 +463,10 @@ describe('InvoicesTable', () => {
     expect(paginator.props('rows')).toBe(20);
     expect(paginator.props('totalRecords')).toBe(45);
     expect(paginator.props('template')).toBe(
-      'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport',
+      'CurrentPageReport PrevPageLink PageLinks NextPageLink',
     );
     expect(paginator.props('currentPageReportTemplate')).toBe(
-      'Showing {first} to {last} of {totalRecords} invoices',
+      'Showing {first}–{last} of {totalRecords}',
     );
 
     await paginator.vm.$emit('page', { page: 1, first: 20, rows: 20 });
@@ -451,19 +477,17 @@ describe('InvoicesTable', () => {
   it('renders stacked mobile cards with the same fields instead of the desktop table', async () => {
     const wrapper = mountInvoicesTable({ isMobileViewport: true });
 
-    expect(wrapper.findComponent(ManagementTableShell).exists()).toBe(false);
+    expect(wrapper.findComponent(DataTable).exists()).toBe(false);
     const cards = wrapper.findAll('[data-testid="invoice-mobile-card"]');
     expect(cards).toHaveLength(3);
 
     const firstCard = cards[0]!;
     expect(firstCard.text()).toContain('April 2026 Billing Run');
     expect(firstCard.text()).toContain('Project Orion');
-    expect(firstCard.text()).toContain('Apr 1 – Apr 21');
+    expect(firstCard.text()).toContain('01–21 Apr 2026');
     expect(firstCard.text()).toContain('128h');
-    expect(firstCard.text()).toContain('$12,800.00');
-    expect(
-      firstCard.findAllComponents(InvoiceStatusBadge),
-    ).toHaveLength(1);
+    expect(firstCard.text()).toContain('12,800.00 USD');
+    expect(firstCard.findAllComponents(InvoiceStatusBadge)).toHaveLength(1);
 
     await firstCard
       .get('[data-testid="invoice-mobile-title-invoice-1"]')
@@ -475,7 +499,7 @@ describe('InvoicesTable', () => {
   it('keeps the desktop table branch when the viewport is not mobile', () => {
     const wrapper = mountInvoicesTable();
 
-    expect(wrapper.findComponent(ManagementTableShell).exists()).toBe(true);
+    expect(wrapper.findComponent(DataTable).exists()).toBe(true);
     expect(wrapper.findComponent(MobileRecordCard).exists()).toBe(false);
   });
 
@@ -486,9 +510,7 @@ describe('InvoicesTable', () => {
       rows: [],
     });
 
-    expect(
-      wrapper.findAll('[data-testid="invoices-mobile-loading-card"]'),
-    ).toHaveLength(3);
+    expect(wrapper.findAllComponents(Skeleton)).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="invoice-mobile-card"]')).toHaveLength(
       0,
     );
@@ -498,9 +520,7 @@ describe('InvoicesTable', () => {
   it('renders desktop skeleton rows while the initial load is pending', () => {
     const wrapper = mountInvoicesTable({ loading: true, rows: [] });
 
-    expect(
-      wrapper.findAll('[data-testid="invoices-desktop-loading-row"]'),
-    ).toHaveLength(6);
+    expect(wrapper.findAllComponents(Skeleton)).toHaveLength(3);
     expect(wrapper.text()).not.toContain('No invoices found');
   });
 
@@ -509,9 +529,7 @@ describe('InvoicesTable', () => {
     expect(desktop.text()).toContain(emptyDescription);
     expect(desktop.findComponent(MobileRecordCard).exists()).toBe(false);
     expect(
-      desktop
-        .find('[data-testid="invoices-table-paginator"]')
-        .exists(),
+      desktop.find('[data-testid="invoices-table-paginator"]').exists(),
     ).toBe(false);
 
     const mobile = mountInvoicesTable({
@@ -520,7 +538,7 @@ describe('InvoicesTable', () => {
       totalRecords: 0,
     });
     expect(mobile.text()).toContain(emptyDescription);
-    expect(mobile.findComponent(ManagementTableShell).exists()).toBe(false);
+    expect(mobile.findComponent(DataTable).exists()).toBe(false);
   });
 
   it('keeps the period picker and both selects bound to the supplied filter model', () => {
@@ -539,7 +557,9 @@ describe('InvoicesTable', () => {
     );
     expect(getFilterSelect(wrapper, 'value').props('modelValue')).toBe('sent');
 
-    const range = wrapper.getComponent(DatePicker).props('modelValue') as Date[];
+    const range = wrapper
+      .getComponent(DatePicker)
+      .props('modelValue') as Date[];
     expect(range[0]).toEqual(new Date('2026-02-01T00:00:00'));
     expect(range[1]).toEqual(new Date('2026-02-28T00:00:00'));
   });

@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeInvoiceAmount } from './invoice-amount';
+import { computeInvoiceAmount } from './invoice-amount.js';
 
 describe('computeInvoiceAmount', () => {
+  it('rounds a quarter hour at 1.01 up to 26 cents without a discount', () => {
+    expect(computeInvoiceAmount(0.25, 1.01)).toBe(0.26);
+  });
   it('computes exact-cent amounts without extra rounding', () => {
     // 2.5h x $80 minus 15% = $170.00
     expect(computeInvoiceAmount(2.5, 80, 15)).toBe(170);

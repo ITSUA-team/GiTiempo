@@ -217,7 +217,10 @@ watch(
       @switch-workspace="handleSwitchWorkspace"
     />
 
-    <div class="flex flex-1">
+    <div
+      class="flex flex-1"
+      :class="{ 'sm:[&>aside]:w-[60px]': activeName === routeNames.invoices }"
+    >
       <WorkspaceNavigation
         :active-name="activeName"
         :items="navItems"
@@ -225,7 +228,8 @@ watch(
 
       <main
         :id="MAIN_CONTENT_ELEMENT_ID"
-        class="min-w-0 flex-1 p-6 pb-20 sm:pb-6"
+        class="min-w-0 flex-1 pb-20 sm:pb-6"
+        :class="activeName === routeNames.invoices || activeName === routeNames.settings ? 'px-4 pt-4 sm:px-6 sm:pt-6' : 'px-6 pt-6'"
         tabindex="-1"
       >
         <RouterView />

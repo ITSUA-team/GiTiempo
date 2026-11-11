@@ -1,3 +1,4 @@
+import { computeInvoiceAmount } from '@gitiempo/shared';
 import { renderInvoicePdf } from './invoice-pdf';
 import {
   ForbiddenException,
@@ -401,7 +402,15 @@ export class InvoicesService {
     }
 
     let listQuery = this.db
-      .select(invoiceDetailSelection)
+      .select({
+        ...invoiceDetailSelection,
+        personalGroupId: sql<string | null>`(
+          select m.group_id from invoice_group_memberships m
+          where m.invoice_id = ${invoices.id}
+            and m.workspace_id = ${user.workspaceId}::uuid
+            and m.owner_id = ${user.sub}::uuid
+        )`,
+      })
       .from(invoices)
       .leftJoin(projects, eq(projects.id, invoices.projectId))
       .leftJoin(users, eq(users.id, invoices.createdBy));
@@ -454,9 +463,10 @@ export class InvoicesService {
       countByInvoice.set(r.invoiceId!, r.entryCount);
     }
 
-    const items = rows.map((row) =>
-      this.toInvoiceListItem(row, countByInvoice.get(row.id) ?? 0),
-    );
+    const items = rows.map((row) => ({
+      ...this.toInvoiceListItem(row, countByInvoice.get(row.id) ?? 0),
+      groupId: row.personalGroupId ?? null,
+    }));
 
     return {
       items,
@@ -1418,25 +1428,14 @@ export class InvoicesService {
     hourlyRate: number,
     discountPercent: number,
   ): { totalHours: number; totalAmount: number } {
-    const totalHoursCents = InvoicesService.secondsToCentihours(totalSeconds);
-    const rateCents = Math.round(hourlyRate * 100);
-    const discountBps = Math.round(discountPercent * 100); // 0–10000
-    const discountFactor = 10_000 - discountBps; // 0–10000
-
-    // totalAmount = (totalHoursCents/100) × (rateCents/100) ×
-    //                (discountFactor/10_000)
-    //             = totalHoursCents × rateCents × discountFactor / 1_000_000
-    // BigInt ceiling: add (divisor - 1) before floor division so any
-    // fractional cent rounds UP to the next whole cent (3.3333 → 3.34).
-    const amountCents = Number(
-      (BigInt(totalHoursCents) * BigInt(rateCents) * BigInt(discountFactor) +
-        999_999n) /
-        1_000_000n,
-    );
-
+    const totalHours = InvoicesService.secondsToCentihours(totalSeconds) / 100;
     return {
-      totalHours: totalHoursCents / 100,
-      totalAmount: amountCents / 100,
+      totalHours,
+      totalAmount: computeInvoiceAmount(
+        totalHours,
+        hourlyRate,
+        discountPercent,
+      ),
     };
   }
 
