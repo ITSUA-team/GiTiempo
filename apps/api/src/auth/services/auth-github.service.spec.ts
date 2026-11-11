@@ -40,19 +40,16 @@ function createAuthStub() {
     resolveActiveMemberIdsByEmails: vi.fn(async () => ['member-1']),
     resolveUserIdsByEmails: vi.fn(async () => [] as string[]),
     assertVerifiedEmailOwnership: vi.fn(async () => undefined),
-    createSessionForMember: vi
-      .fn<(id: string, tx: unknown) => Promise<typeof pair>>()
-      .mockResolvedValue(pair),
     assertActiveMember: vi.fn(async () => undefined),
     provisionSocialSession: vi.fn(
       async (
         input: { userId?: string },
         persist: (tx: unknown, user: { id: string }) => Promise<void>,
       ) => {
-        const tx = {};
-        const userId = input.userId ?? 'new-user';
-        await persist(tx, { id: userId });
-        return auth.createSessionForMember(userId, tx);
+        // The real flow persists OAuth data and issues the session
+        // atomically; the stub mirrors that persistence hand-off.
+        await persist({}, { id: input.userId ?? 'new-user' });
+        return pair;
       },
     ),
   };
@@ -615,14 +612,13 @@ describe('AuthGithubService', () => {
       0,
       expect.any(Date),
     );
-    expect(auth.createSessionForMember).not.toHaveBeenCalled();
     await expect(
       svc.exchangeSession(redirect.searchParams.get('code')!),
     ).rejects.toThrow();
   });
 
   it('breaks a tie with the primary address instead of refusing', async () => {
-    const { svc, auth } = createService();
+    const { svc, auth, accounts } = createService();
     auth.resolveActiveMemberIdsByEmails
       .mockResolvedValueOnce(['member-1', 'member-2'])
       .mockResolvedValueOnce(['member-2']);
@@ -647,8 +643,16 @@ describe('AuthGithubService', () => {
 
     await svc.exchangeSession(redirect.searchParams.get('code')!);
 
-    expect(auth.createSessionForMember).toHaveBeenCalledWith(
+    expect(auth.provisionSocialSession).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'member-2' }),
+      expect.any(Function),
+    );
+    expect(accounts.saveOAuthInTransaction).toHaveBeenCalledWith(
+      expect.anything(),
       'member-2',
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
       expect.anything(),
     );
   });
@@ -690,7 +694,7 @@ describe('AuthGithubService', () => {
     expect(redirect.pathname).toBe('/login');
     expect(redirect.searchParams.get('githubError')).toBe('ambiguous');
     expect(redirect.searchParams.get('code')).toBeNull();
-    expect(auth.createSessionForMember).not.toHaveBeenCalled();
+    expect(auth.provisionSocialSession).not.toHaveBeenCalled();
   });
 
   it('refuses rather than picking when there is no primary address at all', async () => {
@@ -795,9 +799,9 @@ describe('AuthGithubService', () => {
     expect(auth.resolveActiveMemberIdsByEmails).toHaveBeenCalledWith([
       'admin@example.com',
     ]);
-    expect(auth.createSessionForMember).toHaveBeenCalledWith(
-      'member-1',
-      expect.anything(),
+    expect(auth.provisionSocialSession).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'member-1' }),
+      expect.any(Function),
     );
     expect(result).toEqual(pair);
   });
