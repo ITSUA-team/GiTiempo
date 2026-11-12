@@ -1,0 +1,12 @@
+meta {
+  name: List personal invoice groups
+  type: http
+  seq: 5
+}
+get {
+  url: {{baseUrl}}/invoices/groups
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}

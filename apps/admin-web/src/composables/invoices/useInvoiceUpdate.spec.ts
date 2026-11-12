@@ -1,4 +1,4 @@
-import { defineComponent, nextTick, shallowRef } from 'vue';
+import { defineComponent, nextTick, shallowRef, type ShallowRef } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { InvoiceResponse, UpdateInvoiceInput } from '@gitiempo/shared';
@@ -47,6 +47,7 @@ function createInvoiceResponse(overrides: Partial<InvoiceResponse> = {}): Invoic
 
 function mountInvoiceUpdate(
   options: {
+    scope?: ShallowRef<AdminServerStateScope>;
     client: Pick<AdminInvoicesClient, 'updateInvoice'>;
     onError?: (message: string, error: unknown, action: string) => void;
     onSuccess?: (invoice: InvoiceResponse) => void;
@@ -62,7 +63,7 @@ function mountInvoiceUpdate(
           client: options.client,
           onError: options.onError,
           onSuccess: options.onSuccess,
-          scope: shallowRef(createScope()),
+          scope: options.scope ?? shallowRef(createScope()),
         });
         return () => null;
       },
@@ -196,5 +197,47 @@ describe('useInvoiceUpdate', () => {
 
     expect(composable.isUpdating.value).toBe(false);
     expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('invoice update mutation scope', () => {
+  it('invalidates only the submitted workspace and suppresses stale success', async () => {
+    const queryClient = createTestQueryClient();
+    const originalScope = createScope();
+    const nextScope = { ...originalScope, workspaceId: 'another-workspace' };
+    const scope = shallowRef(originalScope);
+    queryClient.setQueryData(adminInvoicesKeys.list(originalScope), { items: [] });
+    queryClient.setQueryData(adminInvoicesKeys.list(nextScope), { items: [] });
+    let resolve!: (value: InvoiceResponse) => void;
+    const request = vi.fn(() => new Promise<InvoiceResponse>(done => { resolve = done; }));
+    const onSuccess = vi.fn();
+    const composable = mountInvoiceUpdate({ client: { updateInvoice: request }, scope, onSuccess }, queryClient);
+    const pending = composable.updateInvoice({ data: { title: 'Edited' }, invoiceId });
+    await flushPromises();
+    expect(composable.isUpdating.value).toBe(true);
+    scope.value = nextScope;
+    await nextTick();
+    expect(composable.isUpdating.value).toBe(false);
+    resolve(createInvoiceResponse());
+    await pending;
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(queryClient.getQueryState(adminInvoicesKeys.list(originalScope))?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(adminInvoicesKeys.list(nextScope))?.isInvalidated).toBe(false);
+  });
+
+  it('does not report a stale failure after leaving and returning to the same user/workspace', async () => {
+    const scope = shallowRef(createScope());
+    let reject!: (error: Error) => void;
+    const request = vi.fn(() => new Promise<InvoiceResponse>((_resolve, fail) => { reject = fail; }));
+    const onError = vi.fn();
+    const composable = mountInvoiceUpdate({ client: { updateInvoice: request }, scope, onError });
+    const pending = composable.updateInvoice({ data: { title: 'Edited' }, invoiceId }).catch(error => error);
+    await flushPromises();
+    scope.value = { ...createScope(), userId: 'another-user' };
+    scope.value = createScope();
+    const failure = new Error('Old failure');
+    reject(failure);
+    expect(await pending).toBe(failure);
+    expect(onError).not.toHaveBeenCalled();
   });
 });

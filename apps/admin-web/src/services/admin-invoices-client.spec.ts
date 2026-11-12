@@ -122,6 +122,65 @@ describe('createAdminInvoicesClient', () => {
 		fetchFn.mockReset();
 	});
 
+	it('previews explicit entry selection and parses authoritative amounts', async () => {
+		fetchFn.mockResolvedValue(jsonResponse({ count: 1, entries: eligibleEntriesResponse.entries, totalHours: 12.5, subtotal: 100, discountAmount: 10, totalAmount: 90, currency: 'USD' }));
+		const result = await client.previewInvoice({ title: 'April', dateFrom: '2026-04-01', dateTo: '2026-04-30', currency: 'usd', hourlyRate: 50, discountPercent: 10, timeEntryIds: [entryId], invoiceId });
+		expect(fetchFn.mock.calls[0]).toEqual([expect.stringContaining('/invoices/preview'), expect.objectContaining({ method: 'POST' })]);
+		expect(getRequestBody(fetchFn)).toMatchObject({ timeEntryIds: [entryId], invoiceId, currency: 'USD' });
+		expect(result.totalAmount).toBe(90);
+	});
+
+	it('loads groups and validates the counts response', async () => {
+		const groups = { groups: [{ id: projectId, name: 'April', count: 2 }], allCount: 3, ungroupedCount: 1 };
+		fetchFn.mockResolvedValueOnce(jsonResponse(groups)).mockResolvedValueOnce(jsonResponse({ ...groups, allCount: -1 }));
+		expect(await client.listGroups()).toEqual(groups);
+		expect(fetchFn.mock.calls[0]?.[0]).toBe('https://api.example.test/invoices/groups');
+		await expect(client.listGroups()).rejects.toMatchObject({ name: 'ZodError' });
+	});
+
+	it('creates and renames groups with normalized names', async () => {
+		fetchFn.mockImplementation(async () => jsonResponse({ id: projectId, name: 'April', count: 0 }));
+		await client.createGroup({ name: ' April ' });
+		expect(getRequestBody(fetchFn)).toEqual({ name: 'April' });
+		expect(fetchFn.mock.calls[0]).toEqual([expect.stringContaining('/invoices/groups'), expect.objectContaining({ method: 'POST' })]);
+		await client.updateGroup(projectId, { name: 'Renamed' });
+		expect(getRequestBody(fetchFn)).toEqual({ name: 'Renamed' });
+		expect(fetchFn.mock.calls[1]).toEqual([expect.stringContaining(`/invoices/groups/${projectId}`), expect.objectContaining({ method: 'PATCH' })]);
+	});
+
+	it('deletes groups and moves invoices to ungrouped using no-content requests', async () => {
+		fetchFn.mockImplementation(async () => new Response(null, { status: 204 }));
+		await client.deleteGroup(projectId);
+		expect(fetchFn.mock.calls[0]).toEqual([expect.stringContaining(`/invoices/groups/${projectId}`), expect.objectContaining({ method: 'DELETE' })]);
+		await client.moveInvoices({ invoiceIds: [invoiceId], groupId: null });
+		expect(getRequestBody(fetchFn)).toEqual({ invoiceIds: [invoiceId], groupId: null });
+		expect(fetchFn.mock.calls[1]).toEqual([expect.stringContaining('/invoices/groups/move'), expect.objectContaining({ method: 'POST' })]);
+	});
+
+	it('rejects empty group names and duplicate move selection before sending', async () => {
+		expect(() => client.createGroup({ name: ' ' })).toThrow('Invalid invoice group');
+		await expect(client.moveInvoices({ invoiceIds: [invoiceId, invoiceId], groupId: null })).rejects.toThrow('Invalid invoice move');
+		expect(fetchFn).not.toHaveBeenCalled();
+	});
+
+	it('downloads authenticated PDF bytes and surfaces API failures', async () => {
+		fetchFn.mockResolvedValueOnce(new Response('%PDF-1.7', { headers: { 'Content-Type': 'application/pdf' } }));
+		const blob = await client.downloadInvoicePdf(invoiceId);
+		expect(blob.size).toBe(8);
+		expect(blob.type).toBe('application/pdf');
+		expect(fetchFn.mock.calls[0]).toEqual([expect.stringContaining(`/invoices/${invoiceId}/pdf`), expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer access-token' }) })]);
+		fetchFn.mockResolvedValueOnce(jsonResponse({ message: 'Invoice not found' }, 404));
+		await expect(client.downloadInvoicePdf(invoiceId)).rejects.toMatchObject({ status: 404, message: 'Invoice not found' });
+	});
+
+	it('retains group filters and edited invoice eligibility in query strings', async () => {
+		fetchFn.mockResolvedValueOnce(jsonResponse(invoiceListResponse)).mockResolvedValueOnce(jsonResponse(eligibleEntriesResponse));
+		await client.listInvoices({ groupId: 'ungrouped' });
+		expect(new URL(fetchFn.mock.calls[0]?.[0] as string).searchParams.get('groupId')).toBe('ungrouped');
+		await client.listEligibleEntries({ dateFrom: '2026-04-01', dateTo: '2026-04-30', invoiceId });
+		expect(new URL(fetchFn.mock.calls[1]?.[0] as string).searchParams.get('invoiceId')).toBe(invoiceId);
+	});
+
 	it('lists invoices with pagination defaults and parsed items', async () => {
 		fetchFn.mockResolvedValue(jsonResponse(invoiceListResponse));
 

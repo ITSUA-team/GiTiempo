@@ -10,7 +10,7 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 
 - **GIVEN** an authenticated admin opens the create dialog
 - **WHEN** the dialog renders
-- **THEN** it shows fields: Title (required), Project (optional), Date range (required), Hourly rate (optional, placeholder "From workspace settings"), Currency (optional, PrimeVue `<Select>` with the same currency options as Settings → Currency, placeholder "Auto"), Discount (optional, default 0), and Notes (optional)
+- **THEN** it shows fields: Title (required), Project (optional), Date range (required), Hourly rate (defaults from settings when available), Currency (workspace currency options), Discount (optional, default 0), and Notes (optional)
 - **AND** the admin may leave Project empty to create a workspace-wide invoice
 - **AND** no Status field is shown — the invoice is always created as `draft`
 
@@ -18,15 +18,15 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 
 - **GIVEN** an authenticated PM opens the create dialog
 - **WHEN** the dialog renders
-- **THEN** the Project field is required and limited to projects assigned to the PM
+- **THEN** the Project field is required and limited to projects visible under the existing PM project-access policy
 - **AND** submitting without a project is blocked
 
 #### Scenario: Live eligible-entries preview
 
 - **GIVEN** the user has entered a Date range (and a Project for PMs)
 - **WHEN** the preview loads from `GET /invoices/eligible-entries`
-- **THEN** the dialog shows total hours and computed total amount from the preview response
-- **AND** an expandable section shows eligible time entries (Date, User, Duration, Description) in a scrollable table
+- **THEN** the dialog shows the hours and amount for the included selection using the authoritative billing preview
+- **AND** a selectable section shows eligible time entries (Date, User, Duration, Description) in a scrollable table
 - **AND** the Hourly rate field is pre-filled with `defaultHourlyRate` from the preview response when available
 - **AND** Currency is pre-selected with the workspace settings currency as soon as the dialog opens, and the preview `defaultCurrency` fills it only while the workspace settings currency is not yet loaded
 
@@ -42,7 +42,7 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 
 - **GIVEN** the eligible-entries preview returns zero entries
 - **WHEN** the preview result is displayed
-- **THEN** the dialog shows a warning banner "No billable entries found for this project and date range"
+- **THEN** the dialog explains there are no eligible entries and suggests changing the project or period
 - **AND** the `Create invoice` button remains enabled because the API allows empty invoices
 
 #### Scenario: Successful creation
@@ -66,56 +66,72 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 - **THEN** the page shows an error toast with the API message
 - **AND** the dialog remains open
 
+#### Scenario: Create with billing details and selected entries
+
+- **GIVEN** an authorized user opens Create invoice inside a custom group
+- **WHEN** the form loads
+- **THEN** the personal group is preselected and changeable, and From and How to pay use the workspace invoice defaults
+- **AND** the user can edit sender, recipient, service description, payment details, billing inputs and selection before submission
+- **AND** the user can exclude individual eligible entries, including all of them, and see included count, billed hours, subtotal, discount and total for the selection
+- **AND** a failed preview offers retry and is distinguishable from a successful zero-entry preview
+
 ### Requirement: Invoice Detail Page
 
-The invoice detail page MUST display the full invoice with status-dependent actions, a read-only summary, editable fields, and linked time entries.
+The detail page MUST display the saved invoice and let an authorized user edit its business fields and select any supported status.
 
 #### Scenario: Detail page renders full invoice
 
-- **GIVEN** an admin or PM navigates to `/invoices/:id`
-- **WHEN** the invoice loads successfully
-- **AND** the page topbar shows "Invoices" as the page name (the invoice title is displayed in the page header below the topbar; a dynamic topbar breadcrumb with the invoice title is a future enhancement)
-- **AND** the page header shows a back button, the invoice title, and a status badge
-- **AND** a read-only summary card displays Project, Date range, Hourly rate, Currency, Discount, Total hours, Total amount, Created, Created by, and Last updated
-- **AND** an editable card shows Title (input) and Notes (textarea) with a `Save changes` button
-- **AND** a time entries card shows linked entries (Date, User, Task, Duration, Description) with entry count and total hours in the header
+- **GIVEN** an Admin or authorized PM opens an accessible invoice
+- **WHEN** the detail loads
+- **THEN** the page shows reference, status selector, personal group, sender, recipient, service description, project, period, rate, currency, rounding, included entries with dates, people, descriptions and billed time, subtotal, discount, total, payment details, notes and audit details
 
-#### Scenario: Draft status actions
+#### Scenario: Change status
 
-- **GIVEN** the invoice has status `draft`
-- **WHEN** the detail page renders
-- **THEN** the header shows a `Mark as sent` action (admin + PM) and a `Delete` action (admin only)
-- **AND** PMs do not see the Delete action
-
-#### Scenario: Sent status actions
-
-- **GIVEN** the invoice has status `sent`
-- **WHEN** the detail page renders
-- **THEN** the header shows a `Mark as paid` action (admin + PM)
-- **AND** no Delete action is shown
-
-#### Scenario: Paid status actions
-
-- **GIVEN** the invoice has status `paid`
-- **WHEN** the detail page renders
-- **THEN** no status actions are shown in the header
-
-#### Scenario: Mark as sent is semantic only
-
-- **GIVEN** an admin or PM activates `Mark as sent` on a draft invoice
-- **WHEN** the PATCH succeeds
-- **THEN** the invoice status changes to `sent`
-- **AND** the UI label makes the manual nature of the transition clear
-- **AND** no email is sent and no PDF is generated
+- **GIVEN** the detail is open in any status
+- **WHEN** the user selects Draft, Sent or Paid, including Sent to Draft
+- **THEN** the page saves the status without sending email or exporting a PDF, refreshes detail, list, filters and summary counts, and offers Delete only to an Admin viewing a draft
 
 #### Scenario: Editable fields save
 
-- **GIVEN** an admin or PM edits the Title or Notes in the editable card
-- **WHEN** the user activates `Save changes`
-- **THEN** the page sends a PATCH request with only `title` and/or `notes`
-- **AND** on success the detail refreshes without a redundant success/info notification
-- **AND** dirty flags clear only for title/notes values actually saved by that request; status-only updates preserve unsaved edits
-- **AND** snapshot fields (rate, currency, discount, totals, dates) are not editable
+- **GIVEN** the user opens Edit invoice in any status
+- **WHEN** they change title, group, project, period, services, rate, currency, discount, rounding, From, Bill to, payment details, notes or selected entries
+- **THEN** the form previews the resulting charges before saving and permits adding eligible entries or excluding linked entries without changing tracked time
+
+#### Scenario: Save revision
+
+- **GIVEN** the user reviews the edited values and selected entries
+- **WHEN** Save changes succeeds
+- **THEN** the detail shows the saved revision without a redundant success toast. Reference, audit fields and computed totals cannot be entered manually. Status-only saves preserve unsaved edits
+
+#### Scenario: Override billing defaults
+
+- **GIVEN** an invoice has saved issuer and payment details
+- **WHEN** the editor opens
+- **THEN** the form starts from its saved values, offers an explicit Use settings action and allows invoice-specific overrides without changing workspace defaults
+
+#### Scenario: Draft status actions
+
+- **GIVEN** an authorized user opens a Draft invoice
+- **WHEN** the actions render
+- **THEN** Draft is selected and the user can choose Sent or Paid. Only an Admin can delete the draft.
+
+#### Scenario: Sent status actions
+
+- **GIVEN** an authorized user opens a Sent invoice
+- **WHEN** the actions render
+- **THEN** Sent is selected and the user can choose Draft or Paid.
+
+#### Scenario: Paid status actions
+
+- **GIVEN** an authorized user opens a Paid invoice
+- **WHEN** the actions render
+- **THEN** Paid is selected and the user can choose Sent or Draft.
+
+#### Scenario: Mark as sent is semantic only
+
+- **GIVEN** the current invoice is a draft
+- **WHEN** the user selects Sent
+- **THEN** only its recorded status changes; delivery and document download are separate actions.
 
 ### Requirement: Invoice Deletion
 
@@ -174,7 +190,7 @@ The invoices list and detail pages MUST implement distinct loading, empty, and r
 - **THEN** the page shows a retryable error surface
 - **AND** a 404 response shows a not-found message indicating the invoice does not exist
 
-#### Scenario: Mutation feedback follows the notification policy
+#### Scenario: Mutation feedback via toast
 
 - **GIVEN** an authorized admin or PM performs a create, update, status change, or delete action
 - **WHEN** the action succeeds

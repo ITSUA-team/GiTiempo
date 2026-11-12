@@ -416,7 +416,7 @@ describe('SettingsView', () => {
     vi.unstubAllEnvs();
   });
 
-  it('shows the settings skeleton before the first load resolves, then renders editable and inactive fields', async () => {
+  it('shows the settings skeleton before the first load resolves, then renders editable workspace and invoice fields', async () => {
     const workspaceRequest = createDeferred<typeof workspaceResponse>();
     const settingsRequest = createDeferred<typeof settingsResponse>();
 
@@ -441,11 +441,11 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('Currency');
     expect(wrapper.text()).toContain('Time rounding step (minutes)');
     expect(wrapper.text()).toContain('Time zone');
-    expect(wrapper.text()).toContain('Billing Defaults');
+    expect(wrapper.text()).toContain('Invoice sender');
     expect(wrapper.text()).toContain('Invoice prefix');
     expect(wrapper.text()).toContain('Payment terms');
-    expect(wrapper.text()).toContain('Organization');
-    expect(wrapper.text()).toContain('Legal entity');
+    expect(wrapper.text()).toContain('Payment defaults');
+    expect(wrapper.text()).toContain('Legal / sender name');
     expect(wrapper.text()).toContain('Tax ID');
     expect(wrapper.text()).toContain('GitHub Account');
     expect(wrapper.text()).toContain('octocat');
@@ -481,18 +481,18 @@ describe('SettingsView', () => {
         .element.closest('form'),
     ).toBeNull();
     expect(
-      wrapper.get<HTMLInputElement>('#settings-invoice-prefix').element
+      wrapper.get<HTMLInputElement>('#invoice-prefix').element
         .disabled,
-    ).toBe(true);
+    ).toBe(false);
     expect(
-      wrapper.get<HTMLInputElement>('#settings-payment-terms').element.disabled,
-    ).toBe(true);
+      wrapper.get<HTMLInputElement>('#invoice-payment-terms').element.disabled,
+    ).toBe(false);
     expect(
-      wrapper.get<HTMLInputElement>('#settings-legal-entity').element.disabled,
-    ).toBe(true);
+      wrapper.get<HTMLInputElement>('#invoice-sender-name').element.disabled,
+    ).toBe(false);
     expect(
-      wrapper.get<HTMLInputElement>('#settings-tax-id').element.disabled,
-    ).toBe(true);
+      wrapper.get<HTMLInputElement>('#invoice-sender-taxId').element.disabled,
+    ).toBe(false);
     expect(wrapper.text()).toContain(
       'No GitHub organizations are allowed for this workspace yet.',
     );

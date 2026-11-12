@@ -1,9 +1,10 @@
-import { defineComponent, ref, toValue, type MaybeRefOrGetter, type Ref } from 'vue';
+import { computed, defineComponent, ref, toValue, type MaybeRefOrGetter, type Ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
+import ConfirmationService from 'primevue/confirmationservice';
 import type * as VueRouter from 'vue-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   CreateInvoiceInput,
   InvoiceDefaultsResponse,
@@ -34,6 +35,8 @@ const testMocks = vi.hoisted(() => ({
   createInvoice: vi.fn(),
   errorToast: vi.fn(),
   getInvoiceDefaults: vi.fn(),
+  listGroups: vi.fn(),
+  moveInvoices: vi.fn(),
   refetch: vi.fn(),
   routerPush: vi.fn(),
   successToast: vi.fn(),
@@ -44,6 +47,8 @@ const testMocks = vi.hoisted(() => ({
 vi.mock('@/services/admin-invoices-client', () => ({
   adminInvoicesClient: {
     getInvoiceDefaults: testMocks.getInvoiceDefaults,
+    listGroups: testMocks.listGroups,
+    moveInvoices: testMocks.moveInvoices,
   },
 }));
 
@@ -295,11 +300,6 @@ function getCapturedQueryValue(): Partial<InvoiceListQuery> {
   return toValue(query);
 }
 
-const ManagementPageSkeletonStub = {
-  name: 'ManagementPageSkeleton',
-  template: '<div data-testid="invoices-page-skeleton" />',
-};
-
 const InvoicesTableStub = {
   name: 'InvoicesTable',
   emits: [
@@ -321,6 +321,7 @@ const InvoicesTableStub = {
   },
   template: `
     <div data-testid="invoices-table">
+      <slot name="error" />
       {{ rows.length }} rows | page={{ page }} | loading={{ loading }} | search={{ filters.search }}
       <span
         v-if="isMobileViewport"
@@ -436,18 +437,21 @@ function mountInvoicesView(
 
   return mount(InvoicesView, {
     global: {
-      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions], createTestQueryPlugin()],
+      plugins: [pinia, ConfirmationService, [PrimeVue, giTiempoPrimeVueOptions], createTestQueryPlugin()],
       stubs: {
         InvoiceCreateDialog: InvoiceCreateDialogStub,
         InvoicesTable: InvoicesTableStub,
-        ManagementPageSkeleton: ManagementPageSkeletonStub,
       },
     },
   });
 }
 
 describe('InvoicesView', () => {
+  afterEach(() => vi.unstubAllGlobals());
   beforeEach(() => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn(), addListener: vi.fn(), removeListener: vi.fn() })));
+    testMocks.listGroups.mockResolvedValue({ groups: [], allCount: 0, ungroupedCount: 0 });
+    testMocks.moveInvoices.mockResolvedValue(undefined);
     testMocks.createInvoice.mockReset();
     testMocks.errorToast.mockReset();
     testMocks.getInvoiceDefaults.mockReset();
@@ -480,7 +484,7 @@ describe('InvoicesView', () => {
         return {
           initialLoaded: invoicesDataRefs.initialLoaded,
           invoices: invoicesDataRefs.invoices,
-          invoicesLoading: ref(false),
+          invoicesLoading: computed(() => !invoicesDataRefs.initialLoaded.value && !invoicesDataRefs.loadError.value),
           loadError: invoicesDataRefs.loadError,
           refetch: testMocks.refetch,
           stats: invoicesDataRefs.stats,
@@ -521,32 +525,30 @@ describe('InvoicesView', () => {
     stubInvoicesData(createLoadedInvoicesData());
   });
 
-  it('renders the page skeleton until the first invoices load settles, then the list content', async () => {
-    stubInvoicesData({
-      initialLoaded: false,
-      invoices: undefined,
-      loadError: null,
-      stats: undefined,
-    });
-
+  it('keeps the same table and its filters mounted during initial loading', async () => {
+    stubInvoicesData({ initialLoaded: false, invoices: undefined, loadError: null, stats: undefined });
     const wrapper = mountInvoicesView();
-
-    expect(
-      wrapper.find('[data-testid="invoices-page-skeleton"]').exists(),
-    ).toBe(true);
-    expect(wrapper.findComponent({ name: 'InvoicesTable' }).exists()).toBe(
-      false,
-    );
-
+    const table = wrapper.getComponent({ name: 'InvoicesTable' });
+    expect(table.props('loading')).toBe(true);
+    await wrapper.get('[data-testid="invoices-search-intent"]').trigger('click');
     stubInvoicesData(createLoadedInvoicesData());
     await flushPromises();
+    expect(wrapper.getComponent({ name: 'InvoicesTable' }).vm).toBe(table.vm);
+    expect(table.props('loading')).toBe(false);
+    expect(table.props('filters')).toMatchObject({ search: 'orion' });
+  });
 
-    expect(
-      wrapper.find('[data-testid="invoices-page-skeleton"]').exists(),
-    ).toBe(false);
-    expect(wrapper.findComponent({ name: 'InvoicesTable' }).exists()).toBe(
-      true,
-    );
+  it('clears the filters of an empty search while retaining the selected group', async () => {
+    testMocks.listGroups.mockResolvedValue({ groups: [{ id: 'group-1', name: 'Retainers', count: 1 }], allCount: 1, ungroupedCount: 0 });
+    const wrapper = mountInvoicesView();
+    await flushPromises();
+    await wrapper.findAll('button').find(button => button.text().includes('Retainers'))!.trigger('click');
+    const table = wrapper.getComponent({ name: 'InvoicesTable' });
+    await wrapper.get('[data-testid="invoices-search-intent"]').trigger('click');
+    expect(getCapturedQueryValue()).toMatchObject({ groupId: 'group-1', search: 'orion' });
+    table.vm.$emit('clear-filters');
+    await flushPromises();
+    expect(getCapturedQueryValue()).toMatchObject({ groupId: 'group-1', page: 1, search: undefined });
   });
 
   it('renders a retryable error card when the invoices request fails', async () => {
@@ -566,7 +568,7 @@ describe('InvoicesView', () => {
     expect(errorCard.text()).toContain('Failed to load invoices');
     expect(errorCard.text()).toContain('Invoice api unreachable');
     expect(wrapper.findComponent({ name: 'InvoicesTable' }).exists()).toBe(
-      false,
+      true,
     );
 
     await errorCard.get('button').trigger('click');
@@ -809,14 +811,14 @@ describe('InvoicesView', () => {
     const billedCard = statCards[1];
     const draftsCard = statCards[2];
 
-    expect(openCard.props('label')).toBe('Open Invoices');
+    expect(openCard.props('label')).toBe('Open invoices');
     expect(openCard.props('value')).toBe('3');
-    expect(openCard.props('description')).toBe('2 ready to send');
+    expect(openCard.props('description')).toBe('2 drafts · 1 sent');
 
-    expect(billedCard.props('label')).toBe('Billed This Month');
+    expect(billedCard.props('label')).toBe('Billed this month');
     expect(billedCard.props('value')).toBe('$2,500.00');
     expect(billedCard.props('description')).toBe(
-      '2 invoices · 2 projects',
+      'Workspace invoices · USD',
     );
 
     expect(draftsCard.props('label')).toBe('Drafts');

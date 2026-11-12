@@ -1,0 +1,24 @@
+meta {
+  name: Revise invoice selection and status
+  type: http
+  seq: 3
+}
+patch {
+  url: {{baseUrl}}/invoices/{{invoiceId}}
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  {
+    "status": "draft",
+    "dueDate": null,
+    "timeEntryIds": [],
+    "expectedRevision": {{invoiceRevision}}
+  }
+}
+script:post-response {
+  if (res.status === 200) bru.setVar("invoiceRevision", res.body.revision);
+}

@@ -1,3 +1,4 @@
+import { invoiceBillingProfileSchema } from "./invoices.js";
 import { z } from 'zod';
 import { roundingStepMinutesSchema } from './common.js';
 
@@ -58,6 +59,7 @@ export const updateWorkspaceSchema = z
   });
 
 export const workspaceSettingsResponseSchema = z.object({
+  billingProfile: invoiceBillingProfileSchema.nullable().optional(),
   id: z.uuid(),
   workspaceId: z.uuid(),
   currency: z.string().length(3),
@@ -174,6 +176,7 @@ export const addWorkspaceGitHubOrganizationSchema = z
 
 export const updateWorkspaceSettingsSchema = z
   .object({
+    billingProfile: invoiceBillingProfileSchema.nullable().optional(),
     currency: z
       .string()
       .regex(/^[A-Z]{3}$/)
@@ -185,6 +188,7 @@ export const updateWorkspaceSettingsSchema = z
   .strict()
   .refine(
     (data) =>
+      data.billingProfile !== undefined ||
       data.currency !== undefined ||
       data.defaultHourlyRate !== undefined ||
       data.timeZone !== undefined ||

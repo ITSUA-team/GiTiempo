@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
+import { adminMutationInvalidationKeys } from '@/lib/query-keys';
 import { useRouter } from 'vue-router';
 import { WorkspaceRoles } from '@gitiempo/shared';
 import {
@@ -10,11 +12,12 @@ import {
 } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
+import InvoiceMoveToolbar from '@/components/invoices/InvoiceMoveToolbar.vue';
+import InvoiceGroups from '@/components/invoices/InvoiceGroups.vue';
 import InvoicesTable from '@/components/invoices/InvoicesTable.vue';
 import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
-import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import { useAdminProjectsQuery } from '@/composables/query';
+import { invalidateQueryKeys, useAdminProjectsQuery } from '@/composables/query';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useInvoiceDefaults } from '@/composables/invoices/useInvoiceDefaults';
@@ -28,18 +31,19 @@ import {
   type InvoicesTableFilterUpdate,
   type InvoicesTableFilters,
 } from '@/lib/invoices-table';
-import { getAdminServerStateScope } from '@/lib/server-state-scope';
+import { useInvoiceServerScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const ROWS_PER_PAGE = 20;
 
+const queryClient = useQueryClient();
 const router = useRouter();
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
 const isMobileViewport = useIsMobileViewport();
 
 const accessToken = computed(() => authStore.accessToken);
-const scope = computed(() => getAdminServerStateScope(accessToken.value));
+const scope = useInvoiceServerScope(accessToken);
 const isAdmin = computed(
   () => authStore.profile?.role === WorkspaceRoles.Admin,
 );
@@ -63,8 +67,15 @@ const filters = ref<InvoicesTableFilters>({
   status: null,
 });
 const currentPage = ref(1);
+const selectedGroup = ref<string | null>(null);
+const selectedInvoices = ref<string[]>([]);
+const moveToolbar = ref<InstanceType<typeof InvoiceMoveToolbar>>();
+const personalGroup = computed(() => personalGroups.value.find(group => group.id === selectedGroup.value));
+const groupName = computed(() => personalGroup.value?.name ?? (selectedGroup.value === 'ungrouped' ? 'Ungrouped' : 'All invoices'));
+const personalGroups = ref<Array<{id:string;name:string;count:number}>>([]);
 
 const listQuery = computed(() => ({
+  groupId: selectedGroup.value ?? undefined,
   dateFrom: filters.value.dateFrom ?? undefined,
   dateTo: filters.value.dateTo ?? undefined,
   limit: ROWS_PER_PAGE,
@@ -75,9 +86,9 @@ const listQuery = computed(() => ({
 }));
 
 const {
-  initialLoaded,
   invoices,
   invoicesLoading,
+  placeholderRows,
   loadError,
   refetch,
   stats,
@@ -88,24 +99,10 @@ const {
   scope,
 });
 
-// initialLoaded flips back to false while a changed query key refetches; track
-// the first successful load so filter/page changes don't re-show the page
-// skeleton. Later fetches are surfaced through the table's loading state.
-const hasInitiallyLoaded = ref(false);
+const invoiceRows = computed(() => invoices.value?.items ?? []);
 
-watch(
-  initialLoaded,
-  (loaded) => {
-    if (loaded) {
-      hasInitiallyLoaded.value = true;
-    }
-  },
-  { immediate: true },
-);
-
-const isInitialLoading = computed(
-  () => !hasInitiallyLoaded.value && !loadError.value,
-);
+watch([listQuery, scope], () => {selectedInvoices.value=[];});
+watch(scope,()=>{selectedGroup.value=null;personalGroups.value=[];});
 
 const projectsQuery = useAdminProjectsQuery({
   client: adminProjectsClient,
@@ -200,13 +197,13 @@ const statsCards = computed(() => {
 
   return [
     {
-      description: `${statsData.byStatus.draft} ready to send`,
-      label: 'Open Invoices',
+      description: `${statsData.byStatus.draft} ${statsData.byStatus.draft === 1 ? 'draft' : 'drafts'} · ${statsData.byStatus.sent} sent`,
+      label: 'Open invoices',
       value: String(statsData.byStatus.draft + statsData.byStatus.sent),
     },
     {
-      description: `${statsData.thisMonth.invoiceCount} invoices · ${statsData.thisMonth.projectCount} projects`,
-      label: 'Billed This Month',
+      description: `Workspace invoices · ${statsData.thisMonth.currency}`,
+      label: 'Billed this month',
       value: formatCurrency(
         statsData.thisMonth.totalAmount,
         statsData.thisMonth.currency,
@@ -219,6 +216,10 @@ const statsCards = computed(() => {
     },
   ];
 });
+
+async function refreshGroups(): Promise<void> {
+  await invalidateQueryKeys(queryClient, adminMutationInvalidationKeys.afterInvoiceGroupMutation(scope.value));
+}
 
 async function fetchAll(): Promise<void> {
   await refetch();
@@ -252,6 +253,11 @@ function handleUpdatePage(page: number): void {
   currentPage.value = page;
 }
 
+function selectGroup(group: string | null): void {
+  selectedGroup.value = group;
+  currentPage.value = 1;
+}
+
 function handleRowClick(invoiceId: string): void {
   router.push({ name: routeNames.invoiceDetail, params: { id: invoiceId } });
 }
@@ -263,88 +269,110 @@ function handleCreateInvoice(): void {
 // The mutation invalidates the invoice query keys, so no explicit refetch is needed.
 function handleCreateSuccess(): void {
   createDialogVisible.value = false;
-
 }
 </script>
 
 <template>
   <div
-    class="flex flex-col gap-6"
+    class="flex min-w-0 flex-col gap-3 sm:gap-6"
     data-testid="invoices-view"
   >
-    <ManagementPageSkeleton
-      v-if="isInitialLoading"
-      variant="invoices"
-    />
-
     <div
-      v-else-if="loadError"
-      class="flex flex-col gap-4"
+      v-if="statsCards && !isMobileViewport"
+      class="grid h-[108px] grid-cols-3 gap-4"
+      data-testid="invoices-stats"
     >
-      <RequestErrorCard
-        title="Failed to load invoices"
-        :message="loadErrorMessage"
-        data-testid="invoices-load-error"
-        @retry="fetchAll"
+      <StatCard
+        v-for="card in statsCards"
+        :key="card.label"
+        class="invoice-stat-card"
+        :description="card.description"
+        :label="card.label"
+        :value="card.value"
       />
-      <div
-        v-if="hasActiveFilters"
-        class="flex justify-center"
-      >
-        <Button
-          label="Clear filters"
-          severity="secondary"
-          variant="text"
-          data-testid="invoices-clear-filters"
-          @click="clearFilters"
+    </div>
+    <div class="grid min-w-0 grid-cols-1 items-start gap-3 sm:grid-cols-[208px_minmax(0,1fr)] sm:gap-5">
+      <InvoiceGroups
+        :scope="scope"
+        :selected-group="selectedGroup"
+        @loaded="personalGroups=$event"
+        @select="selectGroup"
+      />
+      <div class="flex min-w-0 flex-col gap-4">
+        <RequestErrorCard
+          v-if="projectsError"
+          title="Failed to load projects"
+          :message="projectsErrorMessage"
+          data-testid="invoices-projects-error"
+          @retry="refetchProjects"
         />
+        <SurfaceCard
+          class="invoice-list-panel min-w-0"
+          padding-class="p-0 sm:p-4"
+        >
+          <InvoicesTable
+            v-model:selection="selectedInvoices"
+            :empty-description="emptyStateDescription"
+            :has-active-filters="hasActiveFilters"
+            :group-name="groupName"
+            :personal-group="Boolean(personalGroup)"
+            :empty-personal-group="Boolean(personalGroup) && !hasActiveFilters"
+            :filter-options="filterOptions"
+            :filters="filters"
+            :is-mobile-viewport="isMobileViewport"
+            :loading="invoicesLoading"
+            :placeholder-rows="placeholderRows"
+            :page="currentPage"
+            :rows="invoiceRows"
+            :rows-per-page="ROWS_PER_PAGE"
+            :total-records="invoices?.meta.total ?? 0"
+            @create-invoice="handleCreateInvoice"
+            @row-click="handleRowClick"
+            @browse-all="selectGroup(null)"
+            @clear-filters="clearFilters"
+            @move-row="moveToolbar?.open([$event])"
+            @update:filters="handleUpdateFilters"
+            @update:page="handleUpdatePage"
+          >
+            <template #bulk-actions>
+              <InvoiceMoveToolbar
+                ref="moveToolbar"
+                v-model:selection="selectedInvoices"
+                :scope="scope"
+                :query="listQuery"
+                :rows="invoiceRows"
+                :groups="personalGroups"
+                @moved="refreshGroups"
+              />
+            </template>
+            <template
+              v-if="loadError"
+              #error
+            >
+              <RequestErrorCard
+                :title="selectedGroup ? 'Could not load this group' : 'Failed to load invoices'"
+                :message="selectedGroup ? 'Your group selection and filters are saved. Try loading its invoices again.' : loadErrorMessage"
+                retry-label="Retry"
+                data-testid="invoices-load-error"
+                @retry="fetchAll"
+              />
+              <Button
+                v-if="hasActiveFilters"
+                label="Clear filters"
+                severity="secondary"
+                variant="text"
+                data-testid="invoices-clear-filters"
+                @click="clearFilters"
+              />
+            </template>
+          </InvoicesTable>
+        </SurfaceCard>
       </div>
     </div>
-
-    <template v-else>
-      <div
-        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
-        data-testid="invoices-stats"
-      >
-        <StatCard
-          v-for="card in statsCards"
-          :key="card.label"
-          :description="card.description"
-          :label="card.label"
-          :value="card.value"
-        />
-      </div>
-
-      <RequestErrorCard
-        v-if="projectsError"
-        title="Failed to load projects"
-        :message="projectsErrorMessage"
-        data-testid="invoices-projects-error"
-        @retry="refetchProjects"
-      />
-
-      <SurfaceCard padding-class="p-6">
-        <InvoicesTable
-          :empty-description="emptyStateDescription"
-          :filter-options="filterOptions"
-          :filters="filters"
-          :is-mobile-viewport="isMobileViewport"
-          :loading="invoicesLoading"
-          :page="currentPage"
-          :rows="invoices?.items ?? []"
-          :rows-per-page="ROWS_PER_PAGE"
-          :total-records="invoices?.meta.total ?? 0"
-          @create-invoice="handleCreateInvoice"
-          @row-click="handleRowClick"
-          @update:filters="handleUpdateFilters"
-          @update:page="handleUpdatePage"
-        />
-      </SurfaceCard>
-    </template>
-
     <InvoiceCreateDialog
       v-model:visible="createDialogVisible"
       :create-mutation="createMutation"
+      :group-id="selectedGroup === 'ungrouped' ? null : selectedGroup"
       :is-admin="isAdmin"
       :projects="dialogProjects"
       :scope="scope"
@@ -355,3 +383,15 @@ function handleCreateSuccess(): void {
     />
   </div>
 </template>
+<style scoped>
+.invoice-stat-card {
+  line-height: 1.2;
+  min-height: 0;
+}
+@media (max-width: 639px) {
+  .invoice-list-panel {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+</style>
