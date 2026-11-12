@@ -448,7 +448,7 @@ The time entries page SHALL allow the user to review and edit their own complete
 - **WHEN** they choose to edit one completed entry
 - **THEN** the edit interaction opens in a PrimeVue dialog
 - **AND** the dialog pre-fills the selected entry's project, task, started-at, ended-at, description, and billable state
-- **AND** saving valid changes updates the entry, closes or resets the dialog according to the page flow, refreshes the list, and shows toast feedback
+- **AND** saving valid changes updates the entry, closes or resets the dialog according to the page flow, refreshes or reconciles the list without a redundant success/info notification
 
 #### Scenario: Edit dialog uses approved field order
 
@@ -502,7 +502,7 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **WHEN** they submit a valid new display name
 - **THEN** the page calls `PATCH /users/me`
 - **AND** the page updates the rendered profile identity from the authoritative API response
-- **AND** the page shows a success toast notification
+- **AND** the page does not show a redundant success/info notification
 
 #### Scenario: Profile cancels a pending display name edit
 
@@ -576,7 +576,7 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **AND** accepting the confirmation calls the full GitHub disconnect API only when server-derived eligibility allows it
 - **AND** successful disconnect refetches `GET /github/connection` before settling the card state
 - **AND** the refreshed card settles to the disconnected state
-- **AND** successful disconnect shows a success toast notification
+- **AND** successful disconnect does not show a redundant success/info notification
 - **AND** rejected unlink keeps the previous connection state and shows an error toast
 - **AND** completed local unlink with unconfirmed provider revocation settles to disconnected and shows a safe warning
 
@@ -601,7 +601,7 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **AND** the supported callback outcome values for `github` are `connected` and `error`
 - **AND** when `github=error`, the callback also includes a safe `code` query key whose value is a backend-defined safe error enum
 - **WHEN** the Profile page initializes
-- **THEN** the page surfaces the outcome with a standard PrimeVue toast notification only
+- **THEN** supported success is handled quietly and supported failure uses a standard PrimeVue error toast
 - **AND** the page does not render an inline success or error banner for the callback outcome
 - **AND** the handled callback query parameters are removed from the URL without adding another history entry
 
@@ -610,14 +610,14 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **GIVEN** GitHub redirects the user back to `/profile` with `github=connected`
 - **WHEN** the Profile page initializes
 - **THEN** the page treats the callback as a supported success outcome
-- **AND** the page shows the callback success through a toast notification only
+- **AND** the ordinary authoritative status load renders the connection card without a success toast or inline success banner
 
 #### Scenario: Profile callback success can still fall back to request-error state
 
 - **GIVEN** GitHub redirects the user back to `/profile` with `github=connected`
 - **AND** the follow-up `GET /github/connection` request fails
 - **WHEN** the Profile page initializes
-- **THEN** the page still surfaces the callback success with a toast notification
+- **THEN** the page handles the callback quietly and preserves actionable feedback for the status-load failure
 - **AND** the handled callback query parameters are removed from the URL without adding another history entry
 - **AND** the GitHub connection surface settles into the request-error state instead of collapsing into disconnected
 
@@ -677,7 +677,7 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **WHEN** the Profile GitHub connection UI is implemented or updated
 - **THEN** fetch-boundary behavior is covered for request paths, auth headers, response parsing, and API error propagation
 - **AND** the editable display-name surface is covered for save success, save failure, and cancel/reset behavior
-- **AND** page or composable tests cover loading, request-error, disconnected, connected, redirecting/connecting, callback success toast, callback error toast, callback-success-followed-by-fetch-failure, connect failure, disconnect success, and disconnect failure behavior
+- **AND** page or composable tests cover loading, request-error, disconnected, connected, redirecting/connecting, quiet callback success with URL cleanup, callback error toast, callback-success-followed-by-fetch-failure with URL cleanup, connect failure, disconnect success, and disconnect failure behavior
 - **AND** frontend lint and typecheck pass for user-web
 
 #### Scenario: OAuth login already linked the account
@@ -876,7 +876,7 @@ Dashboard Recent Time Entries SHALL provide direct timer actions only for listed
 
 #### Scenario: Dashboard direct timer mutations provide visible feedback
 - **WHEN** a Dashboard recent-entry direct start or stop succeeds
-- **THEN** the app shows success feedback and reconciles visible Dashboard timer state
+- **THEN** the app reconciles visible Dashboard timer and entry state without a redundant success/info notification
 - **AND** failed direct starts or stops show an error toast using the backend or client error message
 
 ### Requirement: User Pages Use Browser-Local Timezone Semantics

@@ -17,9 +17,9 @@ Migrating server state to TanStack Query and splitting composables MUST preserve
 #### Scenario: User feedback remains scoped
 
 - **WHEN** a migrated read or write operation succeeds or fails
-- **THEN** success and error toasts remain aligned with the existing user-visible action
+- **THEN** ordinary visible success and background refresh remain quiet under the frontend notification policy while actionable failures and meaningful exception feedback remain available
 - **AND** one failed action does not create duplicate page-level and local inline errors for unrelated surfaces
-- **AND** this refresh optimization does not remove, suppress, reclassify, or otherwise change existing success, info, or error notification behavior
+- **AND** notification selection does not add replacement reads or change existing cache, reconciliation, loading, retry, or access-scope behavior
 
 #### Scenario: Design and accessibility behavior remain unchanged
 

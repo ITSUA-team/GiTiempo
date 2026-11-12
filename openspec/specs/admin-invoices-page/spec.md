@@ -107,7 +107,7 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 - **GIVEN** the user has filled required fields
 - **WHEN** the user activates `Create invoice`
 - **THEN** the page sends a POST request with only contract-supported fields
-- **AND** on success the dialog closes, a success toast is shown, and the invoice list refreshes
+- **AND** on success the dialog closes and the invoice list refreshes without a redundant success/info notification
 
 #### Scenario: Domain error on missing rate or currency
 
@@ -170,7 +170,7 @@ The invoice detail page MUST display the full invoice with status-dependent acti
 - **GIVEN** an admin or PM edits the Title or Notes in the editable card
 - **WHEN** the user activates `Save changes`
 - **THEN** the page sends a PATCH request with only `title` and/or `notes`
-- **AND** on success a success toast is shown and the detail refreshes
+- **AND** on success the detail refreshes without a redundant success/info notification
 - **AND** snapshot fields (rate, currency, discount, totals, dates) are not editable
 
 ### Requirement: Invoice Deletion
@@ -183,7 +183,7 @@ The invoice detail page MUST support draft-only deletion with confirmation, rest
 - **WHEN** a confirmation dialog appears with the message "Delete this invoice? Linked time entries will be unlinked and become available for future invoices."
 - **AND** the admin confirms
 - **THEN** the page sends a DELETE request
-- **AND** on success a success toast is shown and the user is navigated back to the invoices list
+- **AND** on success the user is navigated back to the invoices list without a redundant success/info notification
 
 #### Scenario: PM cannot delete
 
@@ -268,10 +268,10 @@ The invoices list and detail pages MUST implement distinct loading, empty, and r
 
 #### Scenario: Mutation feedback via toast
 
-- **GIVEN** an admin or PM performs a create, update, status change, or delete action
-- **WHEN** the action succeeds or fails
-- **THEN** the page shows a success or error toast respectively
-- **AND** the toast is the primary feedback channel, complementing any inline state changes
+- **GIVEN** an authorized admin or PM performs a create, update, status change, or delete action
+- **WHEN** the action succeeds
+- **THEN** the updated visible state or existing navigation communicates success without a redundant success/info notification
+- **AND** failures retain actionable error toasts and their existing retry, conflict, and input-preservation behavior
 
 ### Requirement: Invoice Mobile Responsive Layout
 

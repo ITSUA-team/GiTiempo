@@ -4,14 +4,14 @@
 
 ### Requirement: Admin Settings Page Saves Existing Workspace Configuration
 
-The admin Settings page MUST save changed current API fields through the existing workspace endpoint boundaries.
+The admin Settings page MUST save changed current API fields through the existing workspace endpoint boundaries. `timeRoundingStepMinutes` changes are saved through `PATCH /workspace/settings` alongside the other workspace settings fields.
 
 #### Scenario: Valid save persists changed API-supported fields
 
 - **GIVEN** the admin has changed one or more supported settings fields
 - **WHEN** the admin activates `Save Settings`
 - **THEN** workspace name changes are sent through `PATCH /workspace`
-- **AND** currency, default hourly rate, or time zone changes are sent through `PATCH /workspace/settings`
+- **AND** currency, default hourly rate, time zone, or time rounding step changes are sent through `PATCH /workspace/settings`
 - **AND** unchanged resources and unchanged fields are not patched just to satisfy request schemas
 - **AND** successful save refreshes or reconciles the rendered form from authoritative responses
 - **AND** successful workspace name save updates the authenticated admin shell workspace label from the authoritative response
@@ -27,7 +27,7 @@ The admin Settings page MUST save changed current API fields through the existin
 
 #### Scenario: Cancel restores persisted settings
 
-- **GIVEN** the admin has unsaved settings changes, including a Time zone change
+- **GIVEN** the admin has unsaved settings changes, including a Time zone or Time rounding step change
 - **WHEN** the admin activates `Cancel`
 - **THEN** the page restores the latest successfully loaded or saved workspace and settings values
 - **AND** no update request is sent
