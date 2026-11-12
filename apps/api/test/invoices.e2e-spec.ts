@@ -1322,6 +1322,260 @@ describe('Invoices (e2e)', () => {
     expect(res.status).toBe(400);
   });
 
+  it('rejects moving a visible invoice into an inaccessible PM project without changes', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'PM destination',
+        projectId: publicProjectId,
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        hourlyRate: 40,
+        timeEntryIds: [],
+      });
+    expect(created.status).toBe(201);
+    try {
+      const changed = await request(app.getHttpServer())
+        .patch('/invoices/' + created.body.id)
+        .set('Authorization', bearer(pmToken))
+        .send({ projectId: probeProjectId });
+      expect(changed.status).toBe(403);
+      const saved = await request(app.getHttpServer())
+        .get('/invoices/' + created.body.id)
+        .set('Authorization', bearer(adminToken));
+      expect(saved.body.projectId).toBe(publicProjectId);
+      expect(saved.body.revision).toBe(created.body.revision);
+      expect(saved.body.timeEntries).toEqual(created.body.timeEntries);
+    } finally {
+      await db.delete(invoices).where(eq(invoices.id, created.body.id));
+    }
+  });
+
+  it('rejects a move when the locked destination group is deleted before the move proceeds', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Group race',
+        projectId: publicProjectId,
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        hourlyRate: 40,
+        timeEntryIds: [],
+      });
+    expect(created.status).toBe(201);
+    const group = await request(app.getHttpServer())
+      .post('/invoices/groups')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: 'Group deletion race' });
+    expect(group.status).toBe(201);
+    const pool = app.get<Pool>(PG_POOL);
+    const lock = await pool.connect();
+    let pending: Promise<request.Response> | undefined;
+    try {
+      await lock.query('BEGIN');
+      const {
+        rows: [{ pid }],
+      } = await lock.query('SELECT pg_backend_pid() AS pid');
+      await lock.query('SELECT id FROM invoice_groups WHERE id=$1 FOR UPDATE', [
+        group.body.id,
+      ]);
+      pending = request(app.getHttpServer())
+        .post('/invoices/groups/move')
+        .set('Authorization', bearer(adminToken))
+        .send({ invoiceIds: [created.body.id], groupId: group.body.id })
+        .then((r) => r);
+      await vi.waitFor(
+        async () => {
+          const { rows } = await pool.query(
+            'SELECT 1 FROM pg_stat_activity WHERE $1::int = ANY(pg_blocking_pids(pid))',
+            [pid],
+          );
+          expect(rows.length).toBeGreaterThan(0);
+        },
+        { timeout: 5000, interval: 10 },
+      );
+      await lock.query('DELETE FROM invoice_groups WHERE id=$1', [
+        group.body.id,
+      ]);
+      await lock.query('COMMIT');
+      expect((await pending).status).toBe(404);
+      const saved = await request(app.getHttpServer())
+        .get('/invoices/' + created.body.id)
+        .set('Authorization', bearer(adminToken));
+      expect(saved.status).toBe(200);
+      expect(saved.body.groupId).toBeNull();
+      expect(saved.body.revision).toBe(created.body.revision);
+    } finally {
+      await lock.query('ROLLBACK');
+      lock.release();
+      if (pending) await Promise.allSettled([pending]);
+      await db.delete(invoices).where(eq(invoices.id, created.body.id));
+      await db.delete(invoiceGroups).where(eq(invoiceGroups.id, group.body.id));
+    }
+  });
+
+  it('rechecks PM destination access after waiting for the invoice lock', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'PM destination race',
+        projectId: publicProjectId,
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        hourlyRate: 40,
+        timeEntryIds: [],
+      });
+    expect(created.status).toBe(201);
+    const [target] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: 'PM race target',
+        visibility: 'public',
+        isActive: true,
+      })
+      .returning();
+    const pool = app.get<Pool>(PG_POOL);
+    const lock = await pool.connect();
+    let pending: Promise<request.Response> | undefined;
+    try {
+      await lock.query('BEGIN');
+      const {
+        rows: [{ pid }],
+      } = await lock.query('SELECT pg_backend_pid() AS pid');
+      await lock.query('SELECT id FROM invoices WHERE id=$1 FOR UPDATE', [
+        created.body.id,
+      ]);
+      pending = request(app.getHttpServer())
+        .patch('/invoices/' + created.body.id)
+        .set('Authorization', bearer(pmToken))
+        .send({ projectId: target!.id })
+        .then((r) => r);
+      await vi.waitFor(
+        async () => {
+          const { rows } = await pool.query(
+            'SELECT 1 FROM pg_stat_activity WHERE $1::int = ANY(pg_blocking_pids(pid))',
+            [pid],
+          );
+          expect(rows.length).toBeGreaterThan(0);
+        },
+        { timeout: 5000, interval: 10 },
+      );
+      await lock.query("UPDATE projects SET visibility='private' WHERE id=$1", [
+        target!.id,
+      ]);
+      await lock.query('COMMIT');
+      expect((await pending).status).toBe(403);
+      const saved = await request(app.getHttpServer())
+        .get('/invoices/' + created.body.id)
+        .set('Authorization', bearer(adminToken));
+      expect(saved.body.projectId).toBe(publicProjectId);
+      expect(saved.body.revision).toBe(created.body.revision);
+      expect(saved.body.timeEntries).toEqual(created.body.timeEntries);
+    } finally {
+      await lock.query('ROLLBACK');
+      lock.release();
+      if (pending) await Promise.allSettled([pending]);
+      await db.delete(invoices).where(eq(invoices.id, created.body.id));
+      await db.delete(projects).where(eq(projects.id, target!.id));
+    }
+  });
+
+  it.each(['Pacific/Kiritimati', 'America/Los_Angeles'])(
+    'defaults omitted issueDate using workspace %s',
+    async (timeZone) => {
+      const [original] = await db
+        .select()
+        .from(workspaceSettings)
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+      const { admin } = await getSeededAdminWorkspace(db);
+      let id: string | undefined;
+      vi.setSystemTime(
+        new Date(
+          timeZone === 'Pacific/Kiritimati'
+            ? '2026-11-12T14:00:00Z'
+            : '2026-11-12T01:00:00Z',
+        ),
+      );
+      try {
+        await db
+          .update(workspaceSettings)
+          .set({ timeZone })
+          .where(eq(workspaceSettings.workspaceId, workspaceId));
+        const invoice = await app.get(InvoicesService).createInvoice(
+          {
+            sub: admin.id,
+            firebaseUid: ADMIN_UID,
+            email: ADMIN_EMAIL,
+            role: 'admin',
+            workspaceId,
+          },
+          {
+            title: 'Timezone default',
+            projectId: publicProjectId,
+            dateFrom: DATE_FROM,
+            dateTo: DATE_TO,
+            hourlyRate: 40,
+            timeEntryIds: [],
+            discountPercent: 0,
+          },
+        );
+        id = invoice.id;
+        expect(invoice.issueDate).toBe(
+          timeZone === 'Pacific/Kiritimati' ? '2026-11-13' : '2026-11-11',
+        );
+      } finally {
+        vi.useRealTimers();
+        await db
+          .update(workspaceSettings)
+          .set({ timeZone: original!.timeZone })
+          .where(eq(workspaceSettings.workspaceId, workspaceId));
+        if (id) await db.delete(invoices).where(eq(invoices.id, id));
+      }
+    },
+  );
+
+  it.each(['/invoices', '/invoices/preview'])(
+    'rejects explicit unavailable entries on %s atomically',
+    async (endpoint) => {
+      await db
+        .update(timeEntries)
+        .set({ invoiceId: null })
+        .where(eq(timeEntries.id, ENTRY_PROBE_1));
+      const before = await db
+        .select({ id: invoices.id })
+        .from(invoices)
+        .where(eq(invoices.workspaceId, workspaceId));
+      const response = await request(app.getHttpServer())
+        .post(endpoint)
+        .set('Authorization', bearer(adminToken))
+        .send({
+          title: 'Explicit conflict',
+          projectId: probeProjectId,
+          dateFrom: DATE_FROM,
+          dateTo: DATE_TO,
+          hourlyRate: 40,
+          timeEntryIds: [ENTRY_PROBE_1, ENTRY_BOB_NON_BILLABLE],
+        });
+      expect(response.status).toBe(409);
+      expect(response.body.code).toBe('invoice_entry_conflict');
+      expect(
+        await db
+          .select({ id: invoices.id })
+          .from(invoices)
+          .where(eq(invoices.workspaceId, workspaceId)),
+      ).toHaveLength(before.length);
+      const [entry] = await db
+        .select()
+        .from(timeEntries)
+        .where(eq(timeEntries.id, ENTRY_PROBE_1));
+      expect(entry!.invoiceId).toBeNull();
+    },
+  );
+
   it('rejects PM updates to invoices on unassigned private projects', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/invoices')
@@ -2926,13 +3180,28 @@ describe('Invoices (e2e)', () => {
           workspaceId,
         };
         await service.moveInvoices(user, [id], group.body.id);
-        expect(queries.some((query) => query.includes('for key share'))).toBe(
-          true,
-        );
         queries.length = 0;
         const groups = await service.listGroups(user);
         expect(groups.groups).toContainEqual({ ...group.body, count: 1 });
-        expect(queries.length).toBeLessThanOrEqual(2);
+        const baselineQueries = queries.length;
+        const [extra] = await db
+          .insert(invoiceGroups)
+          .values({
+            workspaceId,
+            ownerId: admin.id,
+            name: 'Query growth probe',
+          })
+          .returning();
+        try {
+          queries.length = 0;
+          const expanded = await service.listGroups(user);
+          expect(expanded.groups).toContainEqual(
+            expect.objectContaining({ id: extra!.id, count: 0 }),
+          );
+          expect(queries.length).toBe(baselineQueries);
+        } finally {
+          await db.delete(invoiceGroups).where(eq(invoiceGroups.id, extra!.id));
+        }
       } finally {
         await pool.end();
       }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useQueryClient } from '@tanstack/vue-query';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { InvoiceGroupsResponse } from '@gitiempo/shared';
 import Button from 'primevue/button';
@@ -6,13 +7,16 @@ import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import { AppDialog, getErrorMessage } from '@gitiempo/web-shared';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
+import { useInvoiceGroups } from '@/composables/invoices/useInvoiceGroups';
+import { adminMutationInvalidationKeys, type AdminServerStateScope } from '@/lib/query-keys';
+import { invalidateQueryKeys } from '@/composables/query';
 import { adminInvoicesClient } from '@/services/admin-invoices-client';
 
+const queryClient = useQueryClient();
 const { dismissConfirmation, requireConfirmation } = useConfirmation();
 const props = defineProps<{
-  scope: unknown;
+  scope: AdminServerStateScope;
   selectedGroup?: string | null;
-  refreshToken?: number;
 }>();
 const emit = defineEmits<{
   select: [value: string | null];
@@ -20,11 +24,13 @@ const emit = defineEmits<{
   loaded: [value: InvoiceGroupsResponse['groups']];
 }>();
 const emptyGroups = () => ({ groups: [], allCount: 0, ungroupedCount: 0 });
-const groups = ref<InvoiceGroupsResponse>(emptyGroups());
+const groupsQuery = useInvoiceGroups({ scope: () => props.scope, enabled: true });
+const groups = computed(() => groupsQuery.data.value ?? emptyGroups());
+watch(groupsQuery.data, (value) => { if (value) emit('loaded', value.groups); }, { immediate: true });
 const current = ref<string | null>(null);
 watch(() => props.selectedGroup, (value) => { current.value = value ?? null; });
-const loading = ref(false);
-const loaded = ref(false);
+const loading = groupsQuery.isFetching;
+const loaded = groupsQuery.isSuccess;
 const options = computed(() => [
   { id: null, name: 'All invoices', count: groups.value.allCount, icon: 'pi-copy' },
   { id: 'ungrouped', name: 'Ungrouped', count: groups.value.ungroupedCount, icon: 'pi-inbox' },
@@ -42,40 +48,20 @@ const heading = computed(() => ({
 })[mode.value]);
 const deleteError = ref('');
 const error = ref('');
-const loadError = ref('');
+const loadError = computed(() => groupsQuery.error.value ? getErrorMessage(groupsQuery.error.value) : '');
 const busy = ref(false);
 let generation = 0;
-let loadSequence = 0;
-
 async function load() {
-  const sequence = ++loadSequence;
-  loading.value = true;
-  try {
-    const result = await adminInvoicesClient.listGroups();
-    if (sequence !== loadSequence) return;
-    groups.value = result;
-    loaded.value = true;
-    emit('loaded', result.groups);
-    loadError.value = '';
-  } catch (cause) {
-    if (sequence === loadSequence) loadError.value = getErrorMessage(cause);
-  } finally {
-    if (sequence === loadSequence) loading.value = false;
-  }
+  await groupsQuery.refetch();
 }
 watch(() => props.scope, (_scope, _previous, onCleanup) => {
   onCleanup(dismissConfirmation);
   generation++;
   dialog.value = false;
   current.value = null;
-  groups.value = emptyGroups();
-  loaded.value = false;
   deleteError.value = '';
-  loadError.value = '';
   busy.value = false;
-  void load();
 }, { immediate: true, deep: true });
-watch(() => props.refreshToken, () => void load());
 
 onBeforeUnmount(() => { generation++; });
 
@@ -93,6 +79,7 @@ function open(next: DialogMode, group = selectedPersonal.value) {
 async function submit() {
   if (busy.value || mode.value === 'manage') return;
   const requestGeneration = generation;
+  const requestScope = { ...props.scope };
   const group = target.value;
   const trimmed = name.value.trim();
   if (mode.value !== 'create' && !group) return;
@@ -106,6 +93,7 @@ async function submit() {
     let createdGroupId: string | undefined;
     if (mode.value === 'rename' && group) await adminInvoicesClient.updateGroup(group.id, { name: trimmed });
     else createdGroupId = (await adminInvoicesClient.createGroup({ name: trimmed })).id;
+    await invalidateQueryKeys(queryClient, adminMutationInvalidationKeys.afterInvoiceGroupMutation(requestScope));
     if (requestGeneration !== generation) return;
     dialog.value = false;
     if (createdGroupId) select(createdGroupId);
@@ -123,6 +111,7 @@ async function submit() {
 function confirmDelete(group = selectedPersonal.value) {
   if (!group || busy.value) return;
   const requestGeneration = generation;
+  const requestScope = { ...props.scope };
   dialog.value = false;
   deleteError.value = '';
   requireConfirmation(
@@ -134,6 +123,7 @@ function confirmDelete(group = selectedPersonal.value) {
       busy.value = true;
       try {
         await adminInvoicesClient.deleteGroup(group.id);
+        await invalidateQueryKeys(queryClient, adminMutationInvalidationKeys.afterInvoiceGroupMutation(requestScope));
         if (requestGeneration !== generation) return;
         if (group.id === current.value) select(null);
         emit('changed');

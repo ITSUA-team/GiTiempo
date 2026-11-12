@@ -1,5 +1,22 @@
 # #527 implementation verification
 
+## Maintainability and coverage follow-up, 2026-11-12
+
+Reviewed changes above 5359f21b against Q1–Q3 and T1–T5. The cleanup plan was to preserve mutation scope semantics with existing regressions, add shared-cache coverage, consolidate only the repeated mutation lifecycle and PM visibility condition, and replace implementation-specific assertions with observable transaction behavior.
+
+- Invoice create/update/delete now reuse useScopedInvoiceMutation. Original-scope invalidation, synchronous scope generations, stale callback suppression and pending-state semantics remain covered by the mutation suites. Independent dialog-lifecycle and request-order guards remain local.
+- Group rail and pickers now consume useInvoiceGroups. Group mutations invalidate their captured original scope even if the user switches workspace or the component unmounts before completion. The parent refresh-token channel and duplicate rail refresh handler were removed. The delayed-create regression checks the original cache is invalidated while the new scope stays untouched.
+- PM project visibility has one SQL condition used by groups, bulk moves, list, statistics and point access. Invoice PATCH rechecks the effective target through the transaction after locking the invoice. The inaccessible-target and lock-wait access-revocation tests both assert 403 and unchanged source project, revision and entries.
+- Omitted issue dates are checked at both sides of UTC date boundaries using Pacific/Kiritimati and America/Los_Angeles. Explicit mixed valid/unavailable entry selections produce invoice_entry_conflict in create and preview, preserving the invoice count and leaving eligible entries unclaimed.
+- Three migration regressions execute the real 0032, 0035 and 0036 SQL against disposable schemas. They verify historical identities/totals, labels, rounding, ordering, preserved snapshots, missing labels, timezone backfill, UTC fallback and the due-date constraint.
+- The group-lock SQL substring assertion was replaced by a concurrent deletion test that observes a blocking transaction and requires 404 with unchanged invoice membership/revision. Group-count query coverage compares query growth with more groups while retaining the one-connection-pool regression.
+
+Targeted verification passed 90 invoice API integration tests, three migration tests and the final 18 group component tests. Independent review of the final API and frontend fixes found no remaining P0/P1. This follow-up changes state/query handling without changing template layout or design frames.
+
+Repository typecheck and lint passed all 11 tasks with existing warnings only. Full API integration verification passed 469 tests across 37 files against the explicitly selected gitiempo_e2e database after e2e:prepare. The final standalone Admin suite passed 1042 tests across 91 files. Earlier overlapping runs hit timeouts in unrelated authorization tests and a cascading assertion failure, so package tests were repeated after other checks completed. The API, shared contracts, browser helpers, UI config, User SPA and extension suites passed as well. The unused test wrapper found by the initial lint run was corrected before final lint. Git diff whitespace checks passed.
+
+The final pnpm test run passed all 11 Turbo tasks and the five CI target-detection tests. Strict OpenSpec validation passed with all 36 implementation tasks complete.
+
 ## Issue dates and adaptive payments, 2026-11-11
 
 Implemented above commit c5fe75f4. Chrome for Testing 149.0.7827.55 acceptance used the isolated gitiempo_manual_527 database, Admin role, 1280 × 900 and 375 × 900 viewports. Desktop and mobile reference frames were rendered directly from the updated GITiempo.pen JSON. The date row, adaptive fields, shared settings/editor controls and detail/PDF metadata were reviewed against the updated create/edit, detail, settings, Card and Other frames. No PrimeVue-specific design deviation was required.

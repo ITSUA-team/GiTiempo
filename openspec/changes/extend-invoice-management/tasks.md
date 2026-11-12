@@ -48,3 +48,11 @@
 - [x] 6.3 Render saved dates and selected-method details in invoice detail and PDF, with clickable Card links and historical invoice support. Add date, partial-update, link-validation and PDF regressions.
 - [x] 6.4 Update approved desktop/mobile .pen frames and manually verify Bank transfer, Card, Other/custom, switching back, clearing due date, copied dates, failed saves and PDF output at desktop/mobile widths. Record passing results and any remaining differences.
 - [x] 6.5 Run targeted regressions, repository lint/typecheck/tests, API integration checks and strict OpenSpec validation. Record verification evidence and resolve findings before acceptance.
+
+## 7. Maintainability and coverage follow-up
+
+- [x] 7.1 Lock mutation scope and shared group refresh behavior with regressions, then share the invoice mutation lifecycle and use one scoped group query for the rail and pickers. Preserve independent request-order and dialog-lifecycle guards.
+- [x] 7.2 Reuse the PM visibility condition and validate the effective target project inside the invoice update transaction. Test inaccessible destinations and access revoked while waiting for the invoice lock.
+- [x] 7.3 Test omitted issue dates across workspace/UTC date boundaries and explicit unavailable entry selections in create and preview, including atomic failure.
+- [x] 7.4 Exercise historical invoice SQL migrations against pre-migration rows, preserving saved snapshots and workspace-local issue dates. Replace SQL-text and fixed query-count assertions with behavior and query-growth checks.
+- [x] 7.5 Run repository checks and isolated API integration tests, independently review the fixes and record remaining limitations.

@@ -69,7 +69,6 @@ const filters = ref<InvoicesTableFilters>({
 const currentPage = ref(1);
 const selectedGroup = ref<string | null>(null);
 const selectedInvoices = ref<string[]>([]);
-const groupsRefreshToken = ref(0);
 const moveToolbar = ref<InstanceType<typeof InvoiceMoveToolbar>>();
 const personalGroup = computed(() => personalGroups.value.find(group => group.id === selectedGroup.value));
 const groupName = computed(() => personalGroup.value?.name ?? (selectedGroup.value === 'ungrouped' ? 'Ungrouped' : 'All invoices'));
@@ -219,7 +218,6 @@ const statsCards = computed(() => {
 });
 
 async function refreshGroups(): Promise<void> {
-  groupsRefreshToken.value++;
   await invalidateQueryKeys(queryClient, adminMutationInvalidationKeys.afterInvoiceGroupMutation(scope.value));
 }
 
@@ -271,7 +269,6 @@ function handleCreateInvoice(): void {
 // The mutation invalidates the invoice query keys, so no explicit refetch is needed.
 function handleCreateSuccess(): void {
   createDialogVisible.value = false;
-  groupsRefreshToken.value++;
 }
 </script>
 
@@ -297,11 +294,9 @@ function handleCreateSuccess(): void {
     <div class="grid min-w-0 grid-cols-1 items-start gap-3 sm:grid-cols-[208px_minmax(0,1fr)] sm:gap-5">
       <InvoiceGroups
         :scope="scope"
-        :refresh-token="groupsRefreshToken"
         :selected-group="selectedGroup"
         @loaded="personalGroups=$event"
         @select="selectGroup"
-        @changed="refreshGroups"
       />
       <div class="flex min-w-0 flex-col gap-4">
         <RequestErrorCard

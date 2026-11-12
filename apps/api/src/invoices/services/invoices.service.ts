@@ -250,6 +250,16 @@ export class InvoicesService {
     );
   }
 
+  private pmProjectVisibility(userId: string): SQL {
+    return and(
+      eq(projects.isActive, true),
+      or(
+        eq(projects.visibility, 'public'),
+        eq(projectAssignments.userId, userId),
+      ),
+    )!;
+  }
+
   private visibleProject(user: AuthUser, db: DrizzleDB | DbTransaction) {
     return inArray(
       invoices.projectId,
@@ -266,11 +276,7 @@ export class InvoicesService {
         .where(
           and(
             eq(projects.workspaceId, user.workspaceId),
-            eq(projects.isActive, true),
-            or(
-              eq(projects.visibility, 'public'),
-              eq(projectAssignments.userId, user.sub),
-            ),
+            this.pmProjectVisibility(user.sub),
           ),
         ),
     );
@@ -544,13 +550,7 @@ export class InvoicesService {
           eq(projectAssignments.userId, user.sub),
         ),
       );
-      conditions.push(eq(projects.isActive, true));
-      conditions.push(
-        or(
-          eq(projects.visibility, 'public'),
-          eq(projectAssignments.userId, user.sub),
-        )!,
-      );
+      conditions.push(this.pmProjectVisibility(user.sub));
     }
 
     const total = await this.countInvoices(conditions, isPm, user.sub);
@@ -679,13 +679,7 @@ export class InvoicesService {
           eq(projectAssignments.userId, user.sub),
         ),
       );
-      baseConditions.push(eq(projects.isActive, true));
-      baseConditions.push(
-        or(
-          eq(projects.visibility, 'public'),
-          eq(projectAssignments.userId, user.sub),
-        )!,
-      );
+      baseConditions.push(this.pmProjectVisibility(user.sub));
     }
 
     const statusRows = await statusQuery
@@ -1298,6 +1292,15 @@ export class InvoicesService {
           invoice.projectId,
           tx,
         );
+        if (!projectId) throw new ForbiddenException('Project required');
+        if (projectId !== invoice.projectId) {
+          await this.requirePmProjectAccess(
+            user.sub,
+            user.workspaceId,
+            projectId,
+            tx,
+          );
+        }
       }
       if (
         input.expectedRevision !== undefined &&
@@ -1700,11 +1703,7 @@ export class InvoicesService {
         and(
           eq(projects.id, projectId),
           eq(projects.workspaceId, workspaceId),
-          eq(projects.isActive, true),
-          or(
-            eq(projects.visibility, 'public'),
-            eq(projectAssignments.userId, userId),
-          )!,
+          this.pmProjectVisibility(userId),
         ),
       )
       .limit(1);

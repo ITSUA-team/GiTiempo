@@ -1,3 +1,5 @@
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
+import { adminInvoicesKeys } from '@/lib/query-keys';
 import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PrimeVue from 'primevue/config';
@@ -20,6 +22,7 @@ vi.mock('@/services/admin-invoices-client', () => ({
   },
 }));
 describe('Personal invoice groups', () => {
+  let railQueryClient: QueryClient;
   beforeEach(() => {
     vi.stubGlobal(
       'matchMedia',
@@ -31,6 +34,7 @@ describe('Personal invoice groups', () => {
     );
     api.request.mockReset();
     api.request.mockResolvedValue({});
+    api.requestJson.mockReset();
     api.requestJson.mockResolvedValue({
       groups: [{ id: 'group-a', name: 'Retainers', count: 2 }],
       allCount: 3,
@@ -38,13 +42,30 @@ describe('Personal invoice groups', () => {
     });
   });
   function render() {
+    railQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return mount(InvoiceGroups, {
       props: {
-        scope: 'user-a',
+        scope: { userId: 'user-a' },
       },
-      global: { plugins: [PrimeVue, ConfirmationService], stubs: { Teleport: true } },
+      global: { plugins: [PrimeVue, ConfirmationService, [VueQueryPlugin, { queryClient: railQueryClient }]], stubs: { Teleport: true } },
     });
   }
+  it('refreshes the rail when another invoice surface invalidates the shared group query', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = mount(InvoiceGroups, {
+      props: { scope: { userId: 'user-a' } },
+      global: { plugins: [PrimeVue, ConfirmationService, [VueQueryPlugin, { queryClient }]], stubs: { Teleport: true } },
+    });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Retainers');
+    api.requestJson.mockResolvedValueOnce({ groups: [{ id: 'group-b', name: 'Updated elsewhere', count: 4 }], allCount: 4, ungroupedCount: 0 });
+    await queryClient.invalidateQueries({ queryKey: adminInvoicesKeys.groups({ userId: 'user-a' }) });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Updated elsewhere');
+    expect(wrapper.text()).not.toContain('Retainers');
+    wrapper.unmount();
+    queryClient.clear();
+  });
   it('selects a personal view and keeps All and Ungrouped available', async () => {
     const wrapper = render();
     await flushPromises();
@@ -59,12 +80,12 @@ describe('Personal invoice groups', () => {
   function renderMove(groupId: string | null = null) {
     return mount(InvoiceMoveToolbar, {
       props: {
-        scope: 'user-a',
+        scope: { userId: 'user-a' },
         rows: [{ id: 'invoice-a', groupId }],
         groups: [{ id: 'group-a', name: 'Retainers' }],
         selection: ['invoice-a'],
       },
-      global: { plugins: [PrimeVue, ConfirmationService], stubs: { Teleport: true } },
+      global: { plugins: [PrimeVue, ConfirmationService, [VueQueryPlugin, { queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }]], stubs: { Teleport: true } },
     });
   }
   it('searches destinations and submits one move', async () => {
@@ -146,7 +167,8 @@ describe('Personal invoice groups', () => {
     await flushPromises();
     let finish!: (value: unknown) => void;
     api.requestJson.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
-    await wrapper.setProps({ refreshToken: 1 });
+    void railQueryClient.invalidateQueries({ queryKey: adminInvoicesKeys.groups({ userId: 'user-a' }) });
+    await flushPromises();
     expect(wrapper.getComponent(Select).props('loading')).toBe(false);
     expect(wrapper.getComponent(Select).props('options')).toContainEqual(expect.objectContaining({ name: 'Retainers' }));
     finish({ groups: [], allCount: 1, ungroupedCount: 1 });
@@ -157,9 +179,11 @@ describe('Personal invoice groups', () => {
     const wrapper = render();
     await flushPromises();
     const calls = api.requestJson.mock.calls.length;
-    await wrapper.setProps({ refreshToken: 1 });
+    void railQueryClient.invalidateQueries({ queryKey: adminInvoicesKeys.groups({ userId: 'user-a' }) });
+    await flushPromises();
     await flushPromises();
     expect(api.requestJson.mock.calls.length).toBe(calls + 1);
+    wrapper.unmount();
   });
   it('switches both group controls to the newly created personal group', async () => {
     const wrapper = render();
@@ -176,7 +200,6 @@ describe('Personal invoice groups', () => {
     await flushPromises();
     expect(wrapper.emitted('select')).toEqual([['group-new']]);
     expect(wrapper.emitted('changed')).toHaveLength(1);
-    await wrapper.setProps({ refreshToken: 1 });
     await flushPromises();
     expect(wrapper.getComponent(Select).props('modelValue')).toBe('group-new');
     expect(wrapper.findAll('button').find(button => button.text().includes('Monthly'))!
@@ -190,11 +213,13 @@ describe('Personal invoice groups', () => {
     await wrapper.get('button[aria-label="Create group"]').trigger('click');
     await wrapper.get('#group-name').setValue('Monthly');
     await wrapper.get('#invoice-group-form').trigger('submit');
-    await wrapper.setProps({ scope: 'user-b' });
+    await wrapper.setProps({ scope: { userId: 'user-b' } });
     finish({ id: 'group-old', name: 'Monthly' });
     await flushPromises();
     expect(wrapper.emitted('select')).toBeUndefined();
     expect(wrapper.getComponent(Select).props('modelValue')).toBe(null);
+    expect(railQueryClient.getQueryState(adminInvoicesKeys.groups({ userId: 'user-a' }))?.isInvalidated).toBe(true);
+    expect(railQueryClient.getQueryState(adminInvoicesKeys.groups({ userId: 'user-b' }))?.isInvalidated).toBe(false);
   });
   it('shows duplicate-name failures inside the still-open group dialog', async () => {
     api.request.mockRejectedValueOnce(
@@ -220,7 +245,7 @@ describe('Personal invoice groups', () => {
   });
   it('uses the shared confirmation with Cancel focused and preserves membership on deletion failure', async () => {
     const confirm = mount(ConfirmDialog, {
-      global: { plugins: [PrimeVue, ConfirmationService], stubs: { Teleport: true } },
+      global: { plugins: [PrimeVue, ConfirmationService, [VueQueryPlugin, { queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }]], stubs: { Teleport: true } },
     });
     const wrapper = render();
     try {
@@ -257,7 +282,7 @@ describe('Personal invoice groups', () => {
   });
   it.each(['scope', 'unmount'])('closes a pending group confirmation on %s', async (change) => {
     const confirm = mount(ConfirmDialog, {
-      global: { plugins: [PrimeVue, ConfirmationService], stubs: { Teleport: true } },
+      global: { plugins: [PrimeVue, ConfirmationService, [VueQueryPlugin, { queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }]], stubs: { Teleport: true } },
     });
     const wrapper = render();
     try {
@@ -265,7 +290,7 @@ describe('Personal invoice groups', () => {
       await wrapper.get('button[aria-label="Manage personal groups"]').trigger('click');
       await wrapper.get('button[aria-label="Delete Retainers"]').trigger('click');
       expect(confirm.text()).toContain('Delete “Retainers”?');
-      if (change === 'scope') await wrapper.setProps({ scope: 'user-b' });
+      if (change === 'scope') await wrapper.setProps({ scope: { userId: 'user-b' } });
       else wrapper.unmount();
       await flushPromises();
       expect(confirm.text()).not.toContain('Delete “Retainers”?');
@@ -289,7 +314,7 @@ describe('Personal invoice groups', () => {
       allCount: 4,
       ungroupedCount: 0,
     });
-    await wrapper.setProps({ refreshToken: 1 });
+    await wrapper.setProps({ scope: { userId: 'user-b' } });
     await flushPromises();
     resolveOld({
       groups: [{ id: 'group-a', name: 'Old name', count: 1 }],
