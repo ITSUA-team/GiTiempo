@@ -26,4 +26,4 @@ This change builds on the invoice editor, saved documents and PDF introduced by 
 
 ## Acceptance criteria
 
-- [ ] Complete the component-by-component comparison with the approved `GITiempo.pen` frames for desktop and mobile creation, editing and details, and for both PDF formats. Record the results and resolve discrepancies as specified in [tasks.md](tasks.md).
+- [x] Complete the component-by-component comparison with the approved `GITiempo.pen` frames for desktop and mobile creation, editing and details, and for both PDF formats. Record the results and resolve discrepancies as specified in [tasks.md](tasks.md).

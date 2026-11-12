@@ -83,6 +83,8 @@
 - When a billing period or project scope is chosen, select all eligible entries by default. Preserve manual exclusions during refreshes of the same scope. Opening an existing invoice retains its saved selection until its period or project changes.
 - Show the applied optional sender logo in the editor and invoice details; absence leaves no placeholder.
 - Present eligible entries as selectable rows. Retain entries belonging to the edited invoice and allow adding eligible unbilled entries. Excluding an entry releases its association on save while preserving tracked work.
+- Place the labeled Show time by selector immediately above the time rows: Time entry (new-invoice default) and Task. Editing restores the saved choice; copying inherits it for a new reviewed period. Switching views preserves the selected entry IDs and requires no eligibility refresh. Cancel discards pending format changes.
+- In Task mode group the full eligible list by task ID, including fully excluded tasks. Each expandable group shows its task title, included/available entry count and the sum of included per-entry rounded durations. Expanded rows retain individual inclusion controls. The desktop child-table header checkbox reflects partial selection and selects or clears only its task. Disclosure and selection controls support keyboard access and announce their state. Below 640 px use expandable groups with selectable child cards and preserve the same information and actions.
 - Show included count, per-entry rounded billed duration, hours, subtotal, discount and final amount for the reviewed selection. Use authoritative preview calculation with the same billing inputs and rounding rules as save. A successful zero-entry preview permits a zero-total draft.
 - Save business fields, selected entries, totals and a changed personal group together. A conflict or failed save preserves typed values and choices, refreshes eligibility and identifies unavailable entries.
 - Forms fit the viewport, with scrollable bodies and reachable close and primary actions. Below 640 px the invoice editor fills the viewport width with 16 px inner gutters, stacked fields, selectable time-entry cards and a full-width primary action. Restore keyboard focus on dismissal.
@@ -92,10 +94,23 @@
 - The header shows the saved invoice reference and actions Download PDF, Create from this invoice and Edit invoice. A status Select allows Draft, Sent and Paid in either direction, including Sent to Draft and Paid to earlier states.
 - Status selection is manual bookkeeping. Disable repeated submissions while pending and restore authoritative state on failure while retaining unsaved business edits.
 - Display saved From, Bill to, services, scope, period, rate, currency, rounding, included entries, subtotal, discount, total, payment instructions, notes and audit details.
+- Render included work in its saved format on desktop and mobile. Time entry preserves individual rows; Task shows task titles and summed billed durations without individual dates, people or descriptions. Use historical snapshot names, the first nonblank name per task or Unnamed task, and omit tasks with no included entries. Empty work remains an explicit empty state with zero totals. Historical invoices without a mode use Time entry.
 - Show Delete invoice alongside the other header actions only for Admins viewing a Draft invoice. Confirm deletion and explain that linked entries become eligible for future invoices.
 - Create from this invoice first reviews a new period and personal group, then opens an independent draft with reusable source business fields. The draft uses the source logo when available and otherwise starts with the workspace logo. The user can replace or remove it. The source reference, status and billed entries are not reused. Cancellation writes nothing. Saving opens the new invoice's detail page.
 - PDF export uses the saved revision. Include reference, issue date, period, parties, services, selected charges and payment details. Optional logo absence leaves no blank block. Wrap long descriptions, repeat item headings and page footers, and show the grand total on the final page.
 - Show Preparing PDF while generating and offer a local retry on rendering failure. For older invoices missing required billing sections, identify those fields for completion before export.
+- PDF task mode adds the saved rate and pre-discount line amount to each task, allocated by summing original entry cents before grouping. Both formats retain the same subtotal, discount, total, invoice-level service description, period and payment sections.
+
+Approved `GITiempo.pen` frame map for both formats:
+
+| Surface | Time entry desktop / mobile | Task desktop / mobile |
+|---|---|---|
+| Create | `i527_0633` / `i527_1142` | `task_create_desktop` / `task_create_mobile` |
+| Edit | `i527_0457` / `i527_0970` | `task_edit_desktop` / `task_edit_mobile` |
+| Detail | `i527_0281` / `i527_1217` | `task_detail_desktop` / `task_detail_mobile` |
+| A4 PDF | `i527_0712` | `task_pdf_a4` |
+
+The shared example includes Dashboard UX 17h (10h + 7h; 2h excluded) and Invoice editing 8h: 25h at $100/h, $2,500.00 subtotal, $250.00 discount and $2,250.00 total. Compare every visible component in both formats and at 375 px, and record discrepancies before acceptance.
 
 ### Personal groups
 

@@ -1,0 +1,325 @@
+- generic
+  - link "Skip to main content" [ref=e1]
+  - banner
+    - paragraph
+      - StaticText "GiTiempo Admin"
+    - StaticText "/"
+    - paragraph
+      - StaticText "Invoices"
+    - generic
+      - StaticText "GI Tiempo"
+      - button "Open profile menu for Admin (seed)" [expanded=false, ref=e4]
+  - complementary
+    - navigation
+      - link "Dashboard" [ref=e5]
+        - StaticText "Dashboard"
+      - link "Reports" [ref=e6]
+        - StaticText "Reports"
+      - link "Invoices" [ref=e7]
+        - StaticText "Invoices"
+      - link "Members" [ref=e8]
+        - StaticText "Members"
+      - link "Projects" [ref=e9]
+        - StaticText "Projects"
+  - main
+    - sectionheader
+      - button "Back to invoices" [ref=e10]
+        - StaticText ""
+      - heading "INV-1" [level=1, ref=e11]
+      - LabelText
+        - StaticText "Status"
+      - generic [ref=e12] clickable [cursor:pointer]
+        - combobox "Invoice status" [expanded=false, ref=e23]: Draft
+          - StaticText "Draft"
+      - LabelText
+        - StaticText "My group"
+      - generic [ref=e13] clickable [cursor:pointer]
+        - combobox "My group" [expanded=false, ref=e24]: Ungrouped
+          - StaticText "Ungrouped"
+      - StaticText "Updated 12 Nov 2026"
+      - button "Download PDF" [ref=e14]
+        - StaticText ""
+        - StaticText "Download PDF"
+      - button "Create from this invoice" [ref=e15]
+        - StaticText ""
+        - StaticText "Create from this invoice"
+      - button "Edit invoice" [ref=e16]
+        - StaticText ""
+        - StaticText "Edit invoice"
+      - button "Delete invoice" [ref=e17]
+        - StaticText ""
+        - StaticText "Delete invoice"
+    - heading "From" [level=2, ref=e18]
+    - paragraph
+      - StaticText "ITSUA"
+    - paragraph
+      - StaticText "Test billing address"
+    - paragraph
+      - StaticText "billing@example.com"
+    - paragraph
+      - StaticText "Sender details saved with this invoice"
+    - heading "Bill to" [level=2, ref=e19]
+    - paragraph
+      - StaticText "Acme Ltd"
+    - paragraph
+      - StaticText "Test billing address"
+    - paragraph
+      - StaticText "accounts@example.com"
+    - heading "Product design and development" [level=2, ref=e20]
+    - DescriptionList
+      - term "Issue date"
+      - definition
+        - StaticText "12 Nov 2026"
+      - term "Due date"
+      - definition
+        - StaticText "30 Nov 2026"
+      - term "Project"
+      - definition
+        - StaticText "Task invoice acceptance"
+      - term "Billing period"
+      - definition
+        - StaticText "01 – 30 Nov 2026"
+      - term "Hourly rate"
+      - definition
+        - StaticText "100.00 USD"
+      - term "Rounding"
+      - definition
+        - StaticText "1 min"
+    - StaticText "25h × 100.00 USD"
+    - StaticText "Subtotal "
+    - StaticText "2,500.00 USD"
+    - StaticText "Discount · 10%"
+    - StaticText "−250.00 USD"
+    - StaticText "Total"
+    - StaticText "2,250.00 USD"
+    - heading "Included tasks" [level=2, ref=e21]
+    - StaticText "3 entries · 25h"
+    - table
+      - rowgroup
+        - row
+          - columnheader "Task" [ref=e70]
+            - StaticText "Task"
+          - columnheader "Billed duration" [ref=e71]
+            - StaticText "Billed duration"
+      - rowgroup
+        - row
+          - cell "Dashboard UX" [ref=e72]
+          - cell "17h" [ref=e73]
+        - row
+          - cell "Invoice editing" [ref=e74]
+          - cell "8h" [ref=e75]
+    - heading "Payment instructions" [level=2, ref=e22]
+    - paragraph
+      - StaticText "Bank transfer · 14 days"
+    - paragraph
+      - StaticText "Beneficiary: ITSUA"
+    - paragraph
+      - StaticText "Bank: Test Bank"
+    - paragraph
+      - StaticText "Account: DEMO-ACCOUNT"
+    - paragraph
+      - StaticText "SWIFT / BIC: DEMO-BIC"
+    - paragraph
+      - StaticText "Reference: INV-1 · Include invoice reference"
+    - generic
+      - heading "Notes" [level=3, ref=e25]
+      - paragraph
+        - StaticText "Thank you for your business."
+    - group
+      - DisclosureTriangle "Invoice history" [expanded=false]
+        - StaticText "Invoice history"
+- dialog "Edit invoice"
+  - generic
+    - StaticText "Edit invoice"
+    - button "Close" [ref=e3]
+  - generic
+    - group
+      - StaticText "Dialog content"
+    - generic
+      - paragraph
+        - StaticText "INV-1 · Draft · All business fields are editable."
+      - heading "Invoice information" [level=2, ref=e26]
+      - LabelText
+        - StaticText "Invoice title"
+      - textbox "Invoice title" [ref=e27]: November development
+        - StaticText "November development"
+      - LabelText
+        - StaticText "Issue date"
+      - generic
+        - combobox "Issue date" [expanded=false, ref=e47]: 12 Nov 2026
+          - StaticText "12 Nov 2026"
+      - LabelText
+        - StaticText "Due date (optional)"
+      - generic
+        - combobox "Due date (optional)" [expanded=false, ref=e48]: 30 Nov 2026
+          - StaticText "30 Nov 2026"
+      - LabelText
+        - StaticText "Personal group"
+      - generic [ref=e28] clickable [cursor:pointer]
+        - combobox "Personal group" [expanded=false, ref=e49]: Ungrouped
+          - StaticText "Ungrouped"
+      - LabelText
+        - StaticText "Project"
+      - generic [ref=e29] clickable [cursor:pointer]
+        - combobox "Task invoice acceptance" [expanded=false, ref=e50]
+      - LabelText
+        - StaticText "Billing period"
+      - generic
+        - combobox "Billing period" [expanded=false, ref=e51]: 01 Nov 2026 - 30 Nov 2026
+          - StaticText "01 Nov 2026 - 30 Nov 2026"
+      - LabelText
+        - StaticText "Services / what is being billed"
+      - textbox "Services / what is being billed" [ref=e30]: Product design and development
+        - StaticText "Product design and development"
+      - LabelText
+        - StaticText "Hourly rate"
+      - spinbutton "Hourly rate" [ref=e31]: 100
+        - StaticText "100"
+      - LabelText
+        - StaticText "Currency"
+      - generic [ref=e32] clickable [cursor:pointer]
+        - combobox "USD" [expanded=false, ref=e52]
+      - LabelText
+        - StaticText "Discount (%)"
+      - spinbutton "Discount (%)" [ref=e33]: 10
+        - StaticText "10%"
+      - LabelText
+        - StaticText "Rounding"
+      - generic [ref=e34] clickable [cursor:pointer]
+        - combobox "1 min" [expanded=false, ref=e53]
+      - heading "From" [level=2, ref=e35]
+      - generic
+        - button "Use settings" [ref=e54]
+          - StaticText "Use settings"
+        - button "Invoice logo options" [expanded=false, ref=e55]
+      - paragraph
+        - StaticText "Prefilled from Admin Settings. Changes apply to this invoice only."
+      - LabelText
+        - StaticText "Sender / legal name"
+        - textbox "Sender / legal name" [ref=e56]: ITSUA
+          - StaticText "ITSUA"
+      - LabelText
+        - StaticText "Address"
+        - textbox "Address" [ref=e57]: Test billing address
+          - StaticText "Test billing address"
+      - LabelText
+        - StaticText "Email"
+        - textbox "Email" [ref=e58]: billing@example.com
+          - StaticText "billing@example.com"
+      - LabelText
+        - StaticText "Tax ID (optional)"
+        - textbox "Tax ID (optional)" [ref=e59]
+      - heading "Bill to" [level=2, ref=e36]
+      - LabelText
+        - StaticText "Recipient / company"
+        - textbox "Recipient / company" [ref=e60]: Acme Ltd
+          - StaticText "Acme Ltd"
+      - LabelText
+        - StaticText "Address"
+        - textbox "Address" [ref=e61]: Test billing address
+          - StaticText "Test billing address"
+      - LabelText
+        - StaticText "Email"
+        - textbox "Email" [ref=e62]: accounts@example.com
+          - StaticText "accounts@example.com"
+      - LabelText
+        - StaticText "Tax ID (optional)"
+        - textbox "Tax ID (optional)" [ref=e63]
+      - heading "How to pay" [level=2, ref=e37]
+      - LabelText
+        - StaticText "Payment method"
+      - generic [ref=e38] clickable [cursor:pointer]
+        - combobox "Bank transfer" [expanded=false, ref=e64]
+      - LabelText
+        - StaticText "Payment terms"
+      - textbox "Payment terms" [ref=e39]: 14 days
+        - StaticText "14 days"
+      - LabelText
+        - StaticText "Beneficiary"
+      - textbox "Beneficiary" [ref=e40]: ITSUA
+        - StaticText "ITSUA"
+      - LabelText
+        - StaticText "Bank"
+      - textbox "Bank" [ref=e41]: Test Bank
+        - StaticText "Test Bank"
+      - LabelText
+        - StaticText "IBAN / account number"
+      - textbox "IBAN / account number" [ref=e42]: DEMO-ACCOUNT
+        - StaticText "DEMO-ACCOUNT"
+      - LabelText
+        - StaticText "SWIFT / BIC (optional)"
+      - textbox "SWIFT / BIC (optional)" [ref=e43]: DEMO-BIC
+        - StaticText "DEMO-BIC"
+      - LabelText
+        - StaticText "Payment instructions"
+      - textbox "Payment instructions" [ref=e44]: Include invoice reference
+        - StaticText "Include invoice reference"
+      - LabelText
+        - StaticText "Notes (optional)"
+        - textbox "Notes (optional)" [ref=e65]: Thank you for your business.
+          - StaticText "Thank you for your business."
+      - heading "Time entries" [level=2, ref=e45]
+      - StaticText "1 of 4 included"
+      - LabelText
+        - StaticText "Show time by"
+      - generic [ref=e46] clickable [cursor:pointer]
+        - combobox "Task" [expanded=false, ref=e66]
+      - status
+        - StaticText "1 of 4 entries included."
+      - paragraph
+        - StaticText "Uncheck an entry to exclude it. Tracked time is preserved."
+      - generic
+        - button "Collapse Dashboard UX" [expanded=true, ref=e67]
+          - StaticText "Dashboard UX"
+          - StaticText "0 of 3 included"
+          - StaticText "0m"
+        - region "Dashboard UX entries" [ref=e68]
+          - table
+            - rowgroup
+              - row
+                - columnheader "Include all entries in Dashboard UX" [ref=e76]
+                  - generic
+                    - checkbox "Include all entries in Dashboard UX" [checked=false, ref=e96]
+                - columnheader "Date" [ref=e77]
+                  - StaticText "Date"
+                - columnheader "Task / description" [ref=e78]
+                  - StaticText "Task / description"
+                - columnheader "User" [ref=e79]
+                  - StaticText "User"
+                - columnheader "Billed time" [ref=e80]
+                  - StaticText "Billed time"
+            - rowgroup
+              - row
+                - cell "Include Dashboard UX · Individual work 10h" [ref=e81]
+                  - generic
+                    - checkbox "Include Dashboard UX · Individual work 10h" [checked=false, ref=e97]
+                - cell "03 Nov 2026" [ref=e82]
+                - cell "Dashboard UX · Individual work 10h" [ref=e83]
+                - cell "Admin (seed)" [ref=e84]
+                - cell "10h" [ref=e85]
+              - row
+                - cell "Include Dashboard UX · Individual work 7h" [ref=e86]
+                  - generic
+                    - checkbox "Include Dashboard UX · Individual work 7h" [checked=false, ref=e98]
+                - cell "04 Nov 2026" [ref=e87]
+                - cell "Dashboard UX · Individual work 7h" [ref=e88]
+                - cell "Bob (seed)" [ref=e89]
+                - cell "7h" [ref=e90]
+              - row
+                - cell "Include Dashboard UX · Individual work 2h" [ref=e91]
+                  - generic
+                    - checkbox "Include Dashboard UX · Individual work 2h" [checked=false, ref=e99]
+                - cell "05 Nov 2026" [ref=e92]
+                - cell "Dashboard UX · Individual work 2h" [ref=e93]
+                - cell "Admin (seed)" [ref=e94]
+                - cell "2h" [ref=e95]
+      - button "Expand Invoice editing" [expanded=false, ref=e69]
+        - StaticText "Invoice editing"
+        - StaticText "1 of 1 included"
+        - StaticText "8h"
+      - paragraph
+        - StaticText "Only eligible entries can be added. Entries linked to another invoice are unavailable."
+      - status
+        - StaticText "Calculating totals…"
+  - button "Save changes" [disabled, ref=e2]
+    - StaticText "Save changes"

@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { and, eq, gte, inArray, lt } from 'drizzle-orm';
 import { previewInvoiceResponseSchema } from '@gitiempo/shared';
+import PdfPrinter from 'pdfmake';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from '../src/db/schema';
@@ -3418,6 +3419,299 @@ describe('Invoices (e2e)', () => {
       await db.delete(invoices).where(eq(invoices.id, id));
     }
   });
+  it('persists and previews invoice formats while preserving historical work and enforcing revisions and PM access', async () => {
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: publicProjectId,
+        title: 'Original task snapshot',
+      })
+      .returning({ id: tasks.id });
+    const adminId = await findUserId(ADMIN_UID);
+    const entries = await db
+      .insert(timeEntries)
+      .values([
+        {
+          workspaceId,
+          taskId: task.id,
+          userId: bobUserId,
+          source: 'manual' as const,
+          startedAt: new Date('2090-07-03T10:00:00Z'),
+          endedAt: new Date('2090-07-03T10:06:00Z'),
+          durationSeconds: 360,
+          isBillable: true,
+          description: 'First saved entry',
+        },
+        {
+          workspaceId,
+          taskId: task.id,
+          userId: adminId,
+          source: 'manual' as const,
+          startedAt: new Date('2090-07-04T10:00:00Z'),
+          endedAt: new Date('2090-07-04T10:06:00Z'),
+          durationSeconds: 360,
+          isBillable: true,
+          description: 'Second saved entry',
+        },
+        {
+          workspaceId,
+          taskId: task.id,
+          userId: bobUserId,
+          source: 'manual' as const,
+          startedAt: new Date('2090-07-05T10:00:00Z'),
+          endedAt: new Date('2090-07-05T10:06:00Z'),
+          durationSeconds: 360,
+          isBillable: true,
+          description: 'Excluded work',
+        },
+      ])
+      .returning({ id: timeEntries.id });
+    const scope = {
+      title: 'Task format invoice',
+      projectId: publicProjectId,
+      dateFrom: '2090-07-01',
+      dateTo: '2090-07-31',
+      hourlyRate: 100,
+      currency: 'USD',
+      roundingStepMinutes: 15,
+      discountPercent: 10,
+      timeEntryIds: entries.slice(0, 2).map((line) => line.id),
+      sender: { name: 'Issuer', address: '', email: '', taxId: '' },
+      recipient: { name: 'Client', address: '', email: '', taxId: '' },
+      services: 'Development',
+      payment: {
+        method: 'Bank transfer',
+        terms: '',
+        beneficiary: '',
+        provider: '',
+        account: '',
+        instructions: '',
+      },
+    };
+    let invoiceId: string | undefined;
+    let privateInvoiceId: string | undefined;
+    try {
+      const previews: Array<
+        ReturnType<typeof previewInvoiceResponseSchema.parse>
+      > = [];
+      for (const timeDisplayMode of ['entries', 'tasks']) {
+        const preview = await request(app.getHttpServer())
+          .post('/invoices/preview')
+          .set('Authorization', bearer(pmToken))
+          .send({ ...scope, timeDisplayMode });
+        expect(preview.status).toBe(201);
+        expect(preview.body).toMatchObject({
+          timeDisplayMode,
+          count: 2,
+          totalHours: 0.5,
+          subtotal: 50,
+          totalAmount: 45,
+        });
+        previews.push(previewInvoiceResponseSchema.parse(preview.body));
+      }
+      expect(previews[0].entries).toEqual(previews[1].entries);
+      const created = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(pmToken))
+        .send({ ...scope, timeDisplayMode: 'tasks' });
+      expect(created.status).toBe(201);
+      invoiceId = created.body.id;
+      expect(created.body).toMatchObject({
+        timeDisplayMode: 'tasks',
+        timeEntryCount: 2,
+        totalHours: 0.5,
+        totalAmount: 45,
+      });
+      const originalEntries = created.body.timeEntries;
+      await db
+        .update(tasks)
+        .set({ title: 'Renamed live task' })
+        .where(eq(tasks.id, task.id));
+      await db
+        .update(timeEntries)
+        .set({ description: 'Changed live work', durationSeconds: 60 })
+        .where(eq(timeEntries.id, entries[0].id));
+      const defaultPreview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(pmToken))
+        .send({ ...scope, invoiceId });
+      expect(defaultPreview.status).toBe(201);
+      expect(defaultPreview.body).toMatchObject({
+        timeDisplayMode: 'tasks',
+        entries: originalEntries,
+        totalAmount: 45,
+      });
+      const unsavedPreview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(pmToken))
+        .send({ ...scope, invoiceId, timeDisplayMode: 'entries' });
+      expect(unsavedPreview.status).toBe(201);
+      expect(unsavedPreview.body.timeDisplayMode).toBe('entries');
+      const stillSaved = await request(app.getHttpServer())
+        .get('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken));
+      expect(stillSaved.body.timeDisplayMode).toBe('tasks');
+      const printer = vi.spyOn(PdfPrinter.prototype, 'createPdfKitDocument');
+      try {
+        const exported = await request(app.getHttpServer())
+          .get('/invoices/' + invoiceId + '/pdf')
+          .set('Authorization', bearer(pmToken));
+        expect(exported.status).toBe(200);
+        expect(exported.headers['content-type']).toContain('application/pdf');
+        const definition = printer.mock.calls.at(-1)![0] as unknown as {
+          content: Array<{ table?: { body: Array<Array<{ text: string }>> } }>;
+        };
+        const rows = definition.content.find(
+          (node) =>
+            node.table?.body[0]?.map((cell) => cell.text).join('|') ===
+            'Task|Hours|Rate|Amount',
+        )!.table!.body;
+        expect(rows).toHaveLength(2);
+        expect(rows[1].map((cell) => cell.text)).toEqual([
+          'Original task snapshot',
+          '0.5',
+          '100.00',
+          '50.00',
+        ]);
+      } finally {
+        printer.mockRestore();
+      }
+      const changed = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken))
+        .send({
+          timeDisplayMode: 'entries',
+          expectedRevision: created.body.revision,
+        });
+      expect(changed.status).toBe(200);
+      expect(changed.body).toMatchObject({
+        timeDisplayMode: 'entries',
+        timeEntries: originalEntries,
+        totalAmount: 45,
+        totalHours: 0.5,
+        hourlyRate: 100,
+        discountPercent: 10,
+        revision: created.body.revision + 1,
+      });
+      const stale = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken))
+        .send({
+          timeDisplayMode: 'tasks',
+          expectedRevision: created.body.revision,
+        });
+      expect(stale.status).toBe(409);
+      expect(stale.body.code).toBe('invoice_update_conflict');
+      const taskMode = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken))
+        .send({
+          timeDisplayMode: 'tasks',
+          expectedRevision: changed.body.revision,
+        });
+      expect(taskMode.status).toBe(200);
+      const partial = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken))
+        .send({
+          notes: 'Partial edit',
+          expectedRevision: taskMode.body.revision,
+        });
+      expect(partial.status).toBe(200);
+      expect(partial.body).toMatchObject({
+        timeDisplayMode: 'tasks',
+        timeEntries: originalEntries,
+        totalAmount: 45,
+      });
+      const linkedEntries = await db
+        .select({ id: timeEntries.id, invoiceId: timeEntries.invoiceId })
+        .from(timeEntries)
+        .where(
+          inArray(
+            timeEntries.id,
+            entries.map((line) => line.id),
+          ),
+        );
+      expect(
+        linkedEntries
+          .filter((line) => line.invoiceId === invoiceId)
+          .map((line) => line.id)
+          .sort(),
+      ).toEqual(scope.timeEntryIds.slice().sort());
+      expect(
+        linkedEntries.find((line) => line.id === entries[2].id)!.invoiceId,
+      ).toBeNull();
+
+      const [saved] = await db
+        .select({ document: invoices.document })
+        .from(invoices)
+        .where(eq(invoices.id, invoiceId!));
+      const historicalDocument = { ...saved.document };
+      delete historicalDocument.timeDisplayMode;
+      await db
+        .update(invoices)
+        .set({ document: historicalDocument })
+        .where(eq(invoices.id, invoiceId!));
+      const historical = await request(app.getHttpServer())
+        .get('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken));
+      expect(historical.body).toMatchObject({
+        timeDisplayMode: 'entries',
+        timeEntries: originalEntries,
+        totalAmount: 45,
+      });
+      const historicalPreview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(pmToken))
+        .send({ ...scope, invoiceId });
+      expect(historicalPreview.body.timeDisplayMode).toBe('entries');
+      const [unchanged] = await db
+        .select({ document: invoices.document })
+        .from(invoices)
+        .where(eq(invoices.id, invoiceId!));
+      expect(unchanged.document).toEqual(historicalDocument);
+
+      const inaccessible = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({ ...scope, projectId: probeProjectId, timeEntryIds: [] });
+      expect(inaccessible.status).toBe(201);
+      privateInvoiceId = inaccessible.body.id;
+      expect(inaccessible.body.timeDisplayMode).toBe('entries');
+      const forbidden = await request(app.getHttpServer())
+        .patch('/invoices/' + privateInvoiceId)
+        .set('Authorization', bearer(pmToken))
+        .send({
+          timeDisplayMode: 'tasks',
+          expectedRevision: inaccessible.body.revision,
+        });
+      expect(forbidden.status).toBe(403);
+      const forbiddenPreview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(pmToken))
+        .send({ ...scope, invoiceId: privateInvoiceId, timeEntryIds: [] });
+      expect(forbiddenPreview.status).toBe(403);
+      const unchangedPrivate = await request(app.getHttpServer())
+        .get('/invoices/' + privateInvoiceId)
+        .set('Authorization', bearer(adminToken));
+      expect(unchangedPrivate.body).toMatchObject({
+        timeDisplayMode: 'entries',
+        revision: inaccessible.body.revision,
+      });
+    } finally {
+      for (const id of [invoiceId, privateInvoiceId])
+        if (id) await db.delete(invoices).where(eq(invoices.id, id));
+      await db.delete(timeEntries).where(
+        inArray(
+          timeEntries.id,
+          entries.map((line) => line.id),
+        ),
+      );
+      await db.delete(tasks).where(eq(tasks.id, task.id));
+    }
+  });
+
   it('revises selected entries atomically and keeps saved line snapshots', async () => {
     const entryId = '00000000-0000-4000-8000-300000000009';
     await db.insert(timeEntries).values({

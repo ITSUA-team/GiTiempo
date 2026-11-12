@@ -28,7 +28,7 @@ const invalid = computed(() => Boolean(issueDate.value && dueDate.value && getLo
         show-icon
         show-button-bar
         icon-display="input"
-        :pt="giTiempoDatePickerPt"
+        :pt="{ ...giTiempoDatePickerPt, pcInputText: { root: { class: giTiempoDatePickerPt.pcInputText.root.class, style: { fontSize: '13px', fontWeight: 400, color: 'var(--color-text-dark)' } } } }"
         class="w-full"
         @show="issuePicker.handleShow"
       >
@@ -64,7 +64,7 @@ const invalid = computed(() => Boolean(issueDate.value && dueDate.value && getLo
         show-button-bar
         icon-display="input"
         :invalid="invalid"
-        :pt="giTiempoDatePickerPt"
+        :pt="{ ...giTiempoDatePickerPt, pcInputText: { root: { class: giTiempoDatePickerPt.pcInputText.root.class, style: { fontSize: '13px', fontWeight: 400, color: 'var(--color-text-dark)' } } } }"
         class="w-full"
         @show="duePicker.handleShow"
       >

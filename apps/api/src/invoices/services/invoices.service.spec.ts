@@ -354,6 +354,155 @@ function stageUpdateDb(
 }
 
 describe('InvoicesService', () => {
+  describe('time display mode', () => {
+    it.each([undefined, 'entries', 'tasks'] as const)(
+      'resolves saved mode %s without rewriting historical snapshots',
+      (mode) => {
+        const { service } = createService('admin');
+        const toResponse = priv<[unknown, unknown[]], InvoiceResponse>(
+          service,
+          'toInvoiceResponse',
+        );
+        const snapshot = [
+          {
+            id: 'saved',
+            taskId: 'task',
+            taskName: 'Original',
+            roundedDurationSeconds: 900,
+          },
+        ];
+        const row = {
+          ...sampleInvoiceRow,
+          document: {
+            timeEntries: snapshot,
+            ...(mode ? { timeDisplayMode: mode } : {}),
+          },
+        };
+        const response = toResponse(row, []);
+        expect(response.timeDisplayMode).toBe(mode ?? 'entries');
+        expect(response.timeEntries).toEqual(snapshot);
+        if (!mode) expect(row.document).not.toHaveProperty('timeDisplayMode');
+      },
+    );
+
+    it.each(['entries', 'tasks'] as const)(
+      'persists %s on creation and the completed saved document',
+      async (mode) => {
+        const { service } = createService('admin');
+        const { insertValuesSpy, updateSetSpy } = stageCreateDb(service, {
+          settings: [
+            {
+              defaultHourlyRate: 75,
+              currency: 'EUR',
+              timeRoundingStepMinutes: 5,
+            },
+          ],
+          detailRow: {
+            ...sampleInvoiceRow,
+            document: { timeDisplayMode: mode },
+          },
+        });
+        const response = await service.createInvoice(adminUser, {
+          title: 'Display',
+          dateFrom: '2026-04-01',
+          dateTo: '2026-04-30',
+          discountPercent: 0,
+          timeDisplayMode: mode,
+        });
+        expect(insertValuesSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            document: expect.objectContaining({ timeDisplayMode: mode }),
+          }),
+        );
+        expect(updateSetSpy).toHaveBeenLastCalledWith({
+          document: expect.objectContaining({
+            timeDisplayMode: mode,
+            timeEntries: [],
+          }),
+        });
+        expect(response.timeDisplayMode).toBe(mode);
+      },
+    );
+
+    it('changes only the saved format without recalculating or relinking the original snapshot', async () => {
+      const { service } = createService('admin');
+      const snapshot = [
+        { id: 'saved', taskName: 'Original', roundedDurationSeconds: 900 },
+      ];
+      const { updateSetSpy, updateSpy } = stageUpdateDb(service, {
+        initialRow: {
+          ...sampleInvoiceRow,
+          document: { timeEntries: snapshot, timeDisplayMode: 'entries' },
+        },
+      });
+      await service.updateInvoice(adminUser, sampleInvoiceRow.id, {
+        timeDisplayMode: 'tasks',
+        expectedRevision: 1,
+      });
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+      expect(updateSpy).toHaveBeenCalledWith(invoices);
+      expect(updateSetSpy).toHaveBeenCalledWith({
+        document: { timeEntries: snapshot, timeDisplayMode: 'tasks' },
+        revision: 2,
+        updatedAt: expect.any(Date),
+      });
+    });
+
+    it('preserves a saved task format when PATCH omits it', async () => {
+      const { service } = createService('admin');
+      const { updateSetSpy } = stageUpdateDb(service, {
+        initialRow: {
+          ...sampleInvoiceRow,
+          document: { timeDisplayMode: 'tasks' },
+        },
+      });
+      await service.updateInvoice(adminUser, sampleInvoiceRow.id, {
+        title: 'New title',
+      });
+      expect(updateSetSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ document: { timeDisplayMode: 'tasks' } }),
+      );
+    });
+
+    it.each([
+      { saved: undefined, explicit: undefined, expected: 'entries' },
+      { saved: 'tasks', explicit: undefined, expected: 'tasks' },
+      { saved: 'tasks', explicit: 'entries', expected: 'entries' },
+    ] as const)(
+      'resolves preview mode to $expected from saved=$saved and explicit=$explicit',
+      async ({ saved, explicit, expected }) => {
+        const { service } = createService('admin');
+        vi.spyOn(service, 'previewEligibleEntries').mockResolvedValue({
+          entries: [],
+          count: 0,
+          totalHours: 0,
+          defaultCurrency: 'USD',
+          defaultHourlyRate: 100,
+          defaultRoundingStepMinutes: 1,
+        });
+        const getInvoice = vi.spyOn(service, 'getInvoice').mockResolvedValue({
+          ...sampleInvoiceRow,
+          timeDisplayMode: saved ?? 'entries',
+        } as unknown as InvoiceResponse);
+        const result = await service.previewInvoice(adminUser, {
+          title: 'Preview',
+          dateFrom: '2026-04-01',
+          dateTo: '2026-04-30',
+          discountPercent: 0,
+          ...(saved ? { invoiceId: sampleInvoiceRow.id } : {}),
+          ...(explicit ? { timeDisplayMode: explicit } : {}),
+        });
+        expect(result.timeDisplayMode).toBe(expected);
+        if (saved && !explicit)
+          expect(getInvoice).toHaveBeenCalledWith(
+            adminUser,
+            sampleInvoiceRow.id,
+          );
+        else expect(getInvoice).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   // ── Authorization ─────────────────────────────────────────────────────
 
   it('rejects members on list', async () => {

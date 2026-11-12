@@ -467,7 +467,13 @@ export class InvoicesService {
         422,
       );
     const subtotal = this.computeInvoiceTotals(seconds, rate, 0).totalAmount;
+    const timeDisplayMode =
+      input.timeDisplayMode ??
+      (input.invoiceId
+        ? (await this.getInvoice(user, input.invoiceId)).timeDisplayMode
+        : 'entries');
     return {
+      timeDisplayMode,
       entries,
       count: entries.length,
       ...totals,
@@ -1142,6 +1148,7 @@ export class InvoicesService {
           reference: sql`${settings?.billingProfile?.invoicePrefix ?? 'INV'} || '-' || nextval('invoice_reference_sequence')::text`,
           status: 'draft',
           document: {
+            timeDisplayMode: input.timeDisplayMode ?? 'entries',
             sender: input.sender ?? settings?.billingProfile?.sender,
             recipient: input.recipient,
             payment: input.payment ?? settings?.billingProfile?.payment,
@@ -1201,6 +1208,7 @@ export class InvoicesService {
         user.workspaceId,
       );
       const document = {
+        timeDisplayMode: saved.timeDisplayMode,
         sender: saved.sender,
         recipient: saved.recipient,
         payment: this.resolvePayment(
@@ -1376,7 +1384,13 @@ export class InvoicesService {
           Object.assign(updates, { [key]: input[key] });
       }
       const document = { ...invoice.document };
-      for (const key of ['sender', 'recipient', 'services', 'logo'] as const) {
+      for (const key of [
+        'sender',
+        'recipient',
+        'services',
+        'logo',
+        'timeDisplayMode',
+      ] as const) {
         if (input[key] !== undefined) document[key] = input[key];
       }
       if (input.payment !== undefined)
@@ -1767,6 +1781,8 @@ export class InvoicesService {
 
     return {
       ...(row.document ?? {}),
+      timeDisplayMode:
+        row.document?.timeDisplayMode === 'tasks' ? 'tasks' : 'entries',
       reference: row.reference,
       revision: row.revision,
       id: row.id,

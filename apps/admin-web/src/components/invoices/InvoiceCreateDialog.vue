@@ -9,6 +9,7 @@ import type {
   EligibleEntriesQuery,
   InvoiceResponse,
   InvoiceTimeEntrySummary,
+  InvoiceTimeDisplayMode,
 } from '@gitiempo/shared';
 import {
   AppDialog,
@@ -98,6 +99,7 @@ const dueDate = ref<Date | null>(null);
 const services = ref('');
 const logo = ref<string | null>(null);
 const selectedEntries = ref<string[]>([]);
+const timeDisplayMode = ref<InvoiceTimeDisplayMode>('entries');
 const selectedEntriesScope = ref<string | null>(null);
 const defaultSelectedEntryIds = ref<Set<string> | null>(null);
 const saveError = ref('');
@@ -300,6 +302,7 @@ watch(
     defaultsPending.value = logoPending.value = false;
     calculationFailed.value=false;
     selectedEntries.value = [];
+    timeDisplayMode.value = 'entries';
     selectedEntriesScope.value = null;
     defaultSelectedEntryIds.value = null;
     sender.value = {name:'',address:'',email:'',taxId:''};
@@ -317,6 +320,7 @@ watch(
         rateTouched.value = true;
         currencyTouched.value = true;
         title.value = source.title;
+        timeDisplayMode.value = source.timeDisplayMode ?? 'entries';
         selectedProjectId.value = source.projectId;
         dateRange.value = [new Date(source.dateFrom+'T12:00:00'),new Date(source.dateTo+'T12:00:00')];
         hourlyRate.value = source.hourlyRate;
@@ -539,7 +543,7 @@ async function calculatePreview() {
   calculating.value = true;
   calculatedPreview.value = null;
   try {
-    const result = await adminInvoicesClient.previewInvoice({...query,title:title.value || 'Preview',hourlyRate:hourlyRate.value ?? undefined,currency:currency.value || undefined,discountPercent:discountPercent.value ?? 0,roundingStepMinutes:roundingStepMinutes.value,timeEntryIds:selectedEntries.value});
+    const result = await adminInvoicesClient.previewInvoice({...query,title:title.value || 'Preview',hourlyRate:hourlyRate.value ?? undefined,currency:currency.value || undefined,discountPercent:discountPercent.value ?? 0,roundingStepMinutes:roundingStepMinutes.value,timeEntryIds:selectedEntries.value,timeDisplayMode:timeDisplayMode.value});
     if (generation === calculationGeneration) {calculatedPreview.value = result;calculationFailed.value=false;calculationError.value='';}
   } catch (error) {if (generation === calculationGeneration) {
     calculationFailed.value = true;
@@ -548,7 +552,7 @@ async function calculatePreview() {
   }}
   finally {if (generation === calculationGeneration) calculating.value=false;}
 }
-watch([previewQuery,hourlyRate,currency,discountPercent,roundingStepMinutes,selectedEntries],()=>void calculatePreview(),{deep:true});
+watch([previewQuery,hourlyRate,currency,discountPercent,roundingStepMinutes,selectedEntries,timeDisplayMode],()=>void calculatePreview(),{deep:true});
 async function retryCalculation() {
  const generation=lifecycleGeneration;
  await refreshEligibility();
@@ -582,6 +586,7 @@ function currentDraft(): CreateInvoiceInput {
       issueDate: getLocalDateKey(issueDate.value!), dueDate: dueDate.value ? getLocalDateKey(dueDate.value) : null,
       sender: sender.value, recipient: recipient.value, payment: payment.value, services: services.value,
       logo: logo.value, timeEntryIds: selectedEntries.value, groupId: group.value,
+      timeDisplayMode: timeDisplayMode.value,
       title: title.value.trim(),
       dateFrom: getLocalDateKey(dateRange.value![0]!),
       dateTo: getLocalDateKey(dateRange.value![1]!),
@@ -620,6 +625,7 @@ async function reviewLatestRevision() {
     if (draft.recipient) recipient.value = {...draft.recipient};
     logo.value = draft.logo ?? null;
     selectedEntries.value = draft.timeEntryIds ?? [];
+    timeDisplayMode.value = draft.timeDisplayMode ?? 'entries';
     selectedEntriesScope.value = entriesScope.value;
     defaultSelectedEntryIds.value = null;
     saveError.value = '';
@@ -678,7 +684,7 @@ async function handleCreate(): Promise<void> {
     :closable="!isCreating"
     :dismissable-mask="!isCreating"
     :close-on-escape="!isCreating"
-    :pt="{ root: 'w-screen max-w-[1000px] bg-app-bg', header: 'bg-app-bg px-4 pt-4 pb-0 sm:px-6 sm:pt-6', content: 'bg-app-bg px-4 pt-4 pb-4 sm:px-6', footer: 'bg-app-bg px-4 pb-4 pt-0 sm:px-6 sm:pb-6' }"
+    :pt="{ root: 'w-screen max-w-[1000px] bg-app-bg rounded-lg border-divider', title: { class: 'text-text-dark' }, pcCloseButton: { root: { class: 'h-11 w-11 rounded-sm border border-divider bg-surface-primary text-brand' }, icon: { class: 'h-4 w-4' } }, header: 'bg-app-bg px-4 pt-4 pb-0 sm:px-6 sm:pt-6', content: 'bg-app-bg px-4 pt-4 pb-4 sm:px-6', footer: 'bg-app-bg px-4 pb-4 pt-0 sm:px-6 sm:pb-6' }"
     :visible="visible"
     @update:visible="handleVisibleChange"
   >
@@ -703,7 +709,7 @@ async function handleCreate(): Promise<void> {
         padding-class="p-4"
         body-class="flex flex-col gap-3"
       >
-        <h2 class="text-lg font-semibold">
+        <h2 class="text-text-dark text-lg font-semibold">
           Invoice information
         </h2>
         <div class="flex flex-col gap-1.5">
@@ -717,7 +723,7 @@ async function handleCreate(): Promise<void> {
             maxlength="255"
             placeholder="Invoice title"
             :invalid="titleError"
-            class="h-[38px] w-full"
+            class="text-text-dark h-[38px] w-full text-[13px] font-normal"
           />
           <Message
             v-if="titleError"
@@ -757,7 +763,7 @@ async function handleCreate(): Promise<void> {
             show-clear
             :invalid="projectError"
             class="w-full"
-            :pt="giTiempoFieldWidthSelectPt"
+            :pt="{ ...giTiempoFieldWidthSelectPt, label: { class: 'text-[13px] font-normal text-text-dark' } }"
           />
           <Message
             v-if="projectError"
@@ -791,7 +797,7 @@ async function handleCreate(): Promise<void> {
               show-button-bar
               show-icon
               class="w-full"
-              :pt="giTiempoDatePickerPt"
+              :pt="{ ...giTiempoDatePickerPt, pcInputText: { root: { class: giTiempoDatePickerPt.pcInputText.root.class, style: { fontSize: '13px', fontWeight: 400, color: 'var(--color-text-dark)' } } } }"
               @show="datePicker.handleShow"
             >
               <template #buttonbar>
@@ -820,7 +826,7 @@ async function handleCreate(): Promise<void> {
           <Textarea
             id="invoice-services"
             v-model="services"
-            class="h-[70px] w-full"
+            class="text-text-dark h-[70px] w-full text-[13px] font-normal"
           />
         </div>
         <div
@@ -839,7 +845,7 @@ async function handleCreate(): Promise<void> {
               :max-fraction-digits="2"
               :min="0"
               :model-value="hourlyRate"
-              input-class="h-[38px] w-full"
+              input-class="h-[38px] w-full text-[13px] font-normal text-text-dark"
               class="w-full"
               @update:model-value="handleRateUpdate"
             />
@@ -858,7 +864,7 @@ async function handleCreate(): Promise<void> {
               placeholder="Auto"
               show-clear
               class="w-full"
-              :pt="giTiempoFieldWidthSelectPt"
+              :pt="{ ...giTiempoFieldWidthSelectPt, label: { class: 'text-[13px] font-normal text-text-dark' } }"
               @update:model-value="handleCurrencyUpdate"
             />
           </div>
@@ -874,7 +880,7 @@ async function handleCreate(): Promise<void> {
               :max-fraction-digits="2"
               :min="0"
               :model-value="discountPercent"
-              input-class="h-[38px] w-full"
+              input-class="h-[38px] w-full text-[13px] font-normal text-text-dark"
               class="w-full"
               @update:model-value="handleDiscountUpdate"
             />
@@ -891,7 +897,7 @@ async function handleCreate(): Promise<void> {
               option-label="label"
               option-value="value"
               class="w-full"
-              :pt="giTiempoFieldWidthSelectPt"
+              :pt="{ ...giTiempoFieldWidthSelectPt, label: { class: 'text-[13px] font-normal text-text-dark' } }"
               @update:model-value="handleRoundingStepUpdate"
             />
           </div>
@@ -904,7 +910,7 @@ async function handleCreate(): Promise<void> {
         padding-class="p-5"
         body-class="flex flex-col items-start gap-4"
       >
-        <h2 class="text-lg font-semibold">
+        <h2 class="text-text-dark text-lg font-semibold">
           Changes were not saved
         </h2>
         <p class="text-text-muted text-sm">
@@ -977,7 +983,7 @@ async function handleCreate(): Promise<void> {
           body-class="flex flex-col gap-3"
         >
           <div class="flex items-center justify-between gap-3">
-            <h2 class="text-lg font-semibold">
+            <h2 class="text-text-dark text-lg font-semibold">
               {{ label }}
             </h2>
             <template v-if="label === 'From'">
@@ -986,6 +992,10 @@ async function handleCreate(): Promise<void> {
                 severity="secondary"
                 outlined
                 :model="logoActions"
+                :pt="{
+                  pcButton: { root: { class: 'h-[38px] text-[13px] text-brand' }, label: { class: 'font-medium' } },
+                  pcDropdown: { root: { class: 'h-[38px] w-[38px] text-brand' } },
+                }"
                 :menu-button-props="{'aria-label': 'Invoice logo options'}"
                 @click="useSettings()"
               />
@@ -1006,19 +1016,19 @@ async function handleCreate(): Promise<void> {
           <label
             v-for="key in (['name','address','email','taxId'] as const)"
             :key="key"
-            class="flex flex-col gap-1.5 text-[13px] font-medium"
+            class="text-text-dark flex flex-col gap-1.5 text-[13px] font-medium"
           >
             {{ {name: label === 'From' ? 'Sender / legal name' : 'Recipient / company', address: 'Address', email: 'Email', taxId: 'Tax ID (optional)'}[key] }}
             <Textarea
               v-if="key === 'address'"
               v-model="party[key]"
               rows="1"
-              class="field-sizing-content min-h-[38px] w-full"
+              class="text-text-dark field-sizing-content min-h-[38px] w-full text-[13px] leading-5 font-normal"
             />
             <InputText
               v-else
               v-model="party[key]"
-              class="h-[38px] w-full"
+              class="text-text-dark h-[38px] w-full text-[13px] font-normal"
             />
           </label>
         </SurfaceCard>
@@ -1028,13 +1038,13 @@ async function handleCreate(): Promise<void> {
         padding-class="p-4"
         body-class="flex flex-col gap-3"
       >
-        <h2 class="text-lg font-semibold">
+        <h2 class="text-text-dark text-lg font-semibold">
           How to pay
         </h2>
         <InvoicePaymentFields v-model="payment" />
         <label
           for="invoice-create-notes"
-          class="flex flex-col gap-1.5 text-[13px] font-medium"
+          class="text-text-dark flex flex-col gap-1.5 text-[13px] font-medium"
         >
           Notes (optional)
           <Textarea
@@ -1042,12 +1052,13 @@ async function handleCreate(): Promise<void> {
             v-model="notes"
             maxlength="5000"
             placeholder="Add notes..."
-            class="h-[70px] w-full"
+            class="text-text-dark h-[70px] w-full text-[13px] font-normal"
           />
         </label>
       </SurfaceCard>
       <InvoiceEditorEntries
         v-model="selectedEntries"
+        v-model:time-display-mode="timeDisplayMode"
         :state="entriesState"
         :entries="preview?.entries ?? []"
         :unavailable="unavailable"
@@ -1065,7 +1076,7 @@ async function handleCreate(): Promise<void> {
         border
         padding-class="p-4"
       >
-        <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2.5 text-sm">
+        <dl class="text-text-dark grid grid-cols-[1fr_auto] gap-x-3 gap-y-2.5 text-[13px]">
           <dt><span class="sr-only">Subtotal · </span>{{ selectedEntries.length }} {{ selectedEntries.length === 1 ? 'entry' : 'entries' }} · {{ calculatedPreview.totalHours }}h</dt>
           <dd class="text-right">
             {{ formatInvoiceAmount(calculatedPreview.subtotal,calculatedPreview.currency) }}
@@ -1081,7 +1092,7 @@ async function handleCreate(): Promise<void> {
           <dt class="text-base font-semibold">
             Total
           </dt>
-          <dd class="text-right text-base font-semibold">
+          <dd class="text-brand text-right text-lg font-semibold sm:text-2xl">
             {{ formatInvoiceAmount(calculatedPreview.totalAmount,calculatedPreview.currency) }}
           </dd>
         </dl>
@@ -1097,7 +1108,8 @@ async function handleCreate(): Promise<void> {
         <Button
           :label="editing ? 'Save changes' : 'Create invoice'"
           data-testid="invoice-create-submit"
-          class="h-[38px] w-full sm:w-auto"
+          class="h-[38px] w-full text-[13px] font-medium sm:w-auto"
+          :pt="{ label: { class: 'font-medium' } }"
           :loading="isCreating"
           :disabled="submitBlocked"
           @click="handleCreate"

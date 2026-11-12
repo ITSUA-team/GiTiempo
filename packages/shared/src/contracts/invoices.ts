@@ -53,6 +53,8 @@ export type InvoicePayment = z.infer<typeof invoicePaymentSchema>;
 export type InvoiceBillingProfile = z.infer<typeof invoiceBillingProfileSchema>;
 
 export const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
+export const invoiceTimeDisplayModeSchema = z.enum(["entries", "tasks"]);
+export type InvoiceTimeDisplayMode = z.infer<typeof invoiceTimeDisplayModeSchema>;
 
 export const invoiceProjectSummarySchema = z.object({
   id: z.uuid(),
@@ -98,6 +100,7 @@ export const invoiceResponseSchema = z.object({
   totalHours: z.number().nonnegative().max(99999999.99).multipleOf(0.01),
   totalAmount: z.number().nonnegative().max(9999999999.99).multipleOf(0.01),
   roundingStepMinutes: roundingStepMinutesSchema,
+  timeDisplayMode: invoiceTimeDisplayModeSchema.default("entries"),
   notes: z.string().nullable(),
   createdBy: z.uuid(),
   createdByName: z.string().nullable(),
@@ -110,6 +113,7 @@ export const invoiceResponseSchema = z.object({
 
 export const invoiceListItemSchema = invoiceResponseSchema.omit({
   timeEntries: true,
+  timeDisplayMode: true,
   sender: true,
   payment: true,
   services: true,
@@ -166,6 +170,7 @@ export const invoiceListQuerySchema = z
 export const createInvoiceSchema = z
   .object({
     ...invoiceBusinessFields,
+    timeDisplayMode: invoiceTimeDisplayModeSchema.optional(),
     timeEntryIds: distinctEntryIds.optional(),
     groupId: z.uuid().nullable().optional(),
     title: z.string().trim().min(1).max(255),
@@ -285,6 +290,7 @@ export const invoiceGroupsResponseSchema = z.object({
 export const moveInvoicesSchema = z.object({ invoiceIds: distinctEntryIds.refine(ids => ids.length > 0), groupId: z.uuid().nullable() }).strict();
 export const previewInvoiceSchema = z.object(createInvoiceSchema.shape).extend({ invoiceId: z.uuid().optional() }).strict().refine(isValidInvoiceDateRange);
 export const previewInvoiceResponseSchema = eligibleEntriesResponseSchema.pick({ count: true, entries: true, totalHours: true }).extend({
+  timeDisplayMode: invoiceTimeDisplayModeSchema.default("entries"),
   subtotal: z.number().nonnegative(), discountAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), currency: z.string(),
 });
 export type InvoiceGroup = z.infer<typeof invoiceGroupSchema>;

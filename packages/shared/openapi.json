@@ -10174,6 +10174,13 @@
             "pattern": "^data:image\\/(png|svg\\+xml);base64,[A-Za-z0-9+/=]+$",
             "nullable": true
           },
+          "timeDisplayMode": {
+            "type": "string",
+            "enum": [
+              "entries",
+              "tasks"
+            ]
+          },
           "timeEntryIds": {
             "maxItems": 10000,
             "type": "array",
@@ -10505,6 +10512,14 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 60
+          },
+          "timeDisplayMode": {
+            "default": "entries",
+            "type": "string",
+            "enum": [
+              "entries",
+              "tasks"
+            ]
           },
           "notes": {
             "type": "string",
@@ -11143,6 +11158,13 @@
             "pattern": "^data:image\\/(png|svg\\+xml);base64,[A-Za-z0-9+/=]+$",
             "nullable": true
           },
+          "timeDisplayMode": {
+            "type": "string",
+            "enum": [
+              "entries",
+              "tasks"
+            ]
+          },
           "timeEntryIds": {
             "maxItems": 10000,
             "type": "array",
@@ -11323,6 +11345,14 @@
             "minimum": 0,
             "maximum": 99999999.99,
             "multipleOf": 0.01
+          },
+          "timeDisplayMode": {
+            "default": "entries",
+            "type": "string",
+            "enum": [
+              "entries",
+              "tasks"
+            ]
           },
           "subtotal": {
             "type": "number",
@@ -11667,6 +11697,13 @@
             "maxLength": 341362,
             "pattern": "^data:image\\/(png|svg\\+xml);base64,[A-Za-z0-9+/=]+$",
             "nullable": true
+          },
+          "timeDisplayMode": {
+            "type": "string",
+            "enum": [
+              "entries",
+              "tasks"
+            ]
           },
           "timeEntryIds": {
             "maxItems": 10000,

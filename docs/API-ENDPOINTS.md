@@ -422,6 +422,10 @@ PNG logos are fully decoded at API writes and PDF export with a 4-megapixel limi
 
 Invoice list responses include recipient summaries for display. Sender, payment instructions, services, logos and saved time-entry rows are returned by the detail endpoint. List entry counts use saved document rows. Editing an invoice preserves retained historical rows even when their source time entries have subsequently changed or been deleted. A deliberately revised period or project must still contain the retained rows.
 
+Create, `POST /invoices/preview` and PATCH accept optional `timeDisplayMode: "entries" | "tasks"`; null and unknown values are rejected. Detail, create/update and billing-preview responses expose the resolved mode and retain individual entry summaries and entry counts. New invoices and previews default to `entries`. A revision preview that supplies `invoiceId` inherits its accessible saved invoice's mode unless explicitly overridden, without writing anything. An omitted PATCH mode preserves the saved preference. A mode-only PATCH uses the normal access and `expectedRevision` checks and advances the revision without changing entry links, historical snapshots or billed values. The eligible-entries and invoice-list contracts remain independent of display mode.
+
+PDF export uses the saved mode. Task rows group included historical snapshots by task ID in first-appearance order, taking the first nonblank saved task name or `Unnamed task`. Each task shows summed rounded duration, the saved hourly rate and its pre-discount amount, without entry dates, people or descriptions. Amounts sum the cents allocated to each entry in original saved order before grouping; subtotal, discount and total match entry mode. Empty selections produce no work rows and zero charges. Unsaved edits never affect export.
+
 Editors submit changed fields with `expectedRevision`. After a revision conflict they compare their original values, local edits and the latest saved invoice before retrying. Personal group moves use their dedicated endpoint and retain their independence from business revisions.
 
 ### Invoice dates and method-specific payment details

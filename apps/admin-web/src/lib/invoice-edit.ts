@@ -13,12 +13,13 @@ export function savedDraft(invoice: InvoiceResponse): CreateInvoiceInput {
     sender: invoice.sender ?? emptyParty, recipient: invoice.recipient ?? emptyParty,
     payment: invoice.payment ?? emptyPayment, logo: invoice.logo ?? null, services: invoice.services ?? '',
     timeEntryIds: invoice.timeEntries.map(entry => entry.id),
+    timeDisplayMode: invoice.timeDisplayMode ?? 'entries',
   };
 }
 
 const scalarFields = [
   'issueDate', 'dueDate', 'title', 'dateFrom', 'dateTo', 'projectId', 'groupId', 'hourlyRate', 'currency',
-  'discountPercent', 'roundingStepMinutes', 'notes', 'logo', 'services', 'timeEntryIds',
+  'discountPercent', 'roundingStepMinutes', 'notes', 'logo', 'services', 'timeEntryIds', 'timeDisplayMode',
 ] as const;
 
 function equal(a: unknown, b: unknown) {

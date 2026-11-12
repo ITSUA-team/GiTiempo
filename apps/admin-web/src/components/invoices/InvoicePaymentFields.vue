@@ -27,7 +27,7 @@ function error(key: string) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-3">
     <div class="flex flex-col gap-1.5">
       <label
         for="invoice-payment-method"
@@ -37,8 +37,9 @@ function error(key: string) {
         v-model="payment.method"
         input-id="invoice-payment-method"
         :options="methods"
+        :pt="{ label: { class: 'text-[13px] font-normal text-text-dark' } }"
         :disabled="disabled"
-        class="h-[38px] w-full"
+        class="text-text-dark h-[38px] w-full text-[13px] font-normal"
       />
     </div>
     <div
@@ -57,7 +58,8 @@ function error(key: string) {
         :disabled="disabled"
         :rows="field.key === 'account' ? 1 : 2"
         :invalid="Boolean(error(field.key))"
-        class="field-sizing-content min-h-[38px] w-full"
+        class="text-text-dark field-sizing-content w-full text-[13px] leading-5 font-normal"
+        :class="field.key === 'instructions' ? 'min-h-[70px]' : 'min-h-[38px]'"
       />
       <InputText
         v-else
@@ -65,7 +67,7 @@ function error(key: string) {
         v-model="payment[field.key]"
         :disabled="disabled"
         :invalid="Boolean(error(field.key))"
-        class="h-[38px] w-full"
+        class="text-text-dark h-[38px] w-full text-[13px] font-normal"
       />
       <Message
         v-if="error(field.key)"

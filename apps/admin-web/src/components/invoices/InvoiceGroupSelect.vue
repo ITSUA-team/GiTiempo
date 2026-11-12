@@ -39,7 +39,7 @@ const options = computed(() => [{ id: null, name: 'Ungrouped' }, ...props.groups
         option-value="id"
         :loading="loading"
         :disabled="disabled || loading || failed"
-        :pt="giTiempoFieldWidthSelectPt"
+        :pt="{ ...giTiempoFieldWidthSelectPt, label: { class: 'text-[13px] font-normal text-text-dark' } }"
         class="h-[38px] w-full"
         :class="{ 'sm:w-[190px]': inline }"
       />
