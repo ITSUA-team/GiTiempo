@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import Skeleton from "primevue/skeleton";
-import { SurfaceCard } from "@gitiempo/web-shared";
+import { SurfaceCard, useIsMobileViewport } from "@gitiempo/web-shared";
+
+const isMobileViewport = useIsMobileViewport();
 </script>
 
 <template>
@@ -118,7 +120,67 @@ import { SurfaceCard } from "@gitiempo/web-shared";
         />
       </div>
 
-      <div class="border-divider overflow-hidden rounded-md border">
+      <div
+        v-if="isMobileViewport"
+        class="flex flex-col gap-3"
+      >
+        <div
+          v-for="index in 4"
+          :key="index"
+          class="border-divider bg-surface-primary flex flex-col gap-3 rounded-lg border p-4"
+        >
+          <div class="flex min-w-0 items-start gap-3">
+            <Skeleton
+              width="3rem"
+              height="2rem"
+            />
+            <Skeleton
+              width="70%"
+              height="1rem"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex min-w-0 flex-col gap-1">
+              <Skeleton
+                width="2.75rem"
+                height="0.75rem"
+              />
+              <Skeleton
+                width="6rem"
+                height="0.875rem"
+              />
+            </div>
+
+            <div class="flex min-w-0 flex-col items-end gap-1">
+              <Skeleton
+                width="4rem"
+                height="0.75rem"
+              />
+              <Skeleton
+                width="4.5rem"
+                height="0.875rem"
+              />
+            </div>
+
+            <div class="col-span-2 flex min-w-0 flex-col gap-1">
+              <Skeleton
+                width="3rem"
+                height="0.75rem"
+              />
+              <Skeleton
+                width="9rem"
+                height="0.875rem"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-else
+        class="border-divider overflow-hidden rounded-md border"
+      >
         <div
           v-for="index in 4"
           :key="index"

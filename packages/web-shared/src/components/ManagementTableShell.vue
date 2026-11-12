@@ -72,6 +72,23 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
       />
     </div>
 
+    <table
+      v-if="!showHeader"
+      class="sr-only"
+    >
+      <thead>
+        <tr>
+          <th
+            v-for="col in columns"
+            :key="col.key"
+            scope="col"
+          >
+            {{ col.label }}
+          </th>
+        </tr>
+      </thead>
+    </table>
+
     <DataTable
       v-model:expanded-rows="expandedRows"
       :value="value"

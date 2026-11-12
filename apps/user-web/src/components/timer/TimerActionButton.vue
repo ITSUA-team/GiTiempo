@@ -84,9 +84,9 @@ function handleClick(): void {
 <template>
   <Button
     v-tooltip.bottom="tooltip"
-    :aria-label="label"
+    :aria-label="tooltip"
     :aria-busy="props.isLoading === true ? 'true' : undefined"
-    :aria-disabled="props.disabled === true ? 'true' : undefined"
+    :aria-disabled="isNativeDisabled ? 'true' : undefined"
     :data-testid="testId"
     :disabled="isNativeDisabled"
     type="button"

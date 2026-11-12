@@ -160,6 +160,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
 
   return {
     dashboardStats,
+    hasConfirmedActiveTimer: directTimerActions.hasConfirmedActiveTimer,
     isDirectStartBlockedByCurrentTimer: directTimerActions.isDirectStartBlockedByCurrentTimer,
     pageState,
     recentEntryRows,
@@ -169,6 +170,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
     startTimerForEntry: directTimerActions.startTimerForEntry,
     stoppingTimerEntryId: directTimerActions.stoppingTimerEntryId,
     stopTimerForEntry: directTimerActions.stopTimerForEntry,
+    verifyActiveTimerEntry: directTimerActions.verifyActiveTimerEntry,
     weeklyFocus,
   };
 }

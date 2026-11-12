@@ -39,11 +39,11 @@ Projects task sections SHALL hide the column-heading strip on all viewports thro
 - **AND** the project section heading remains visible
 - **AND** the task, status, and updated columns retain their content and layout
 
-#### Scenario: Projects preserves mobile metadata labels
+#### Scenario: Projects preserves mobile metadata content
 
 - **GIVEN** the Projects page renders a visible project section with active tasks below the mobile breakpoint
 - **WHEN** the task cards render
-- **THEN** mobile field labels for Task, Status, and Updated metadata remain visible
+- **THEN** each task card shows the task name, status, and updated time as visible content
 - **AND** the project section heading remains visible
 
 ### Requirement: User Projects Active Task Highlight

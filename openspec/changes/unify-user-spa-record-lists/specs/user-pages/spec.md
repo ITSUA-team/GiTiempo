@@ -148,8 +148,18 @@ Dashboard Recent Time Entries SHALL provide direct timer actions only for listed
 
 - **GIVEN** the Dashboard Recent Time Entries section shows the authoritative running entry
 - **WHEN** the user activates that entry's task title
-- **THEN** the app opens the existing global top-bar timer picker
+- **THEN** the app verifies via the emitted entry ID that the clicked entry is still the authoritative current timer
+- **AND** if the timer changed, the app refreshes timer and entry state, shows an info toast, and does not open the picker
+- **AND** when the clicked entry is confirmed as the running timer, the app opens the existing global top-bar timer picker
 - **AND** the picker allows reassigning the running timer's task or description as in Time Entries
+
+#### Scenario: Dashboard running entry stale check before opening picker
+
+- **GIVEN** the Dashboard Recent Time Entries section shows a running entry
+- **AND** the running timer changed in another session or tab
+- **WHEN** the user activates that entry's task title
+- **THEN** the app refreshes timer and entry state and does not open the global timer picker
+- **AND** the app shows an info toast that the timer status was refreshed
 
 #### Scenario: Dashboard stop-first guidance matches Time Entries
 

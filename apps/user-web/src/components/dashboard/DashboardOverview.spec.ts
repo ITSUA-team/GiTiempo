@@ -1,5 +1,6 @@
 import { mount, type VueWrapper } from "@vue/test-utils";
-import type { ProjectResponse } from "@gitiempo/shared";
+import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
+import TimeEntryDialogConnection from "@/components/time-entries/TimeEntryDialogConnection.vue";
 import type * as QueryModule from "@/composables/query";
 import { createPinia } from "pinia";
 import { computed, defineComponent, nextTick, ref } from "vue";
@@ -19,6 +20,62 @@ const requestDeleteDialogEntry = vi.fn(async () => undefined);
 const requestOpen = vi.fn();
 const saveDialog = vi.fn(async () => undefined);
 const isDialogOpen = ref(false);
+const hasConfirmedActiveTimerState = ref(false);
+const editingEntry = ref<TimeEntryResponse | null>(null);
+const visibleProjectsState = ref<ProjectResponse[]>([]);
+const focusViewAll = vi.fn();
+
+function createRecentEntryRows() {
+  return [
+    {
+      description: null,
+      durationLabel: "1h 10m",
+      entry: {
+        id: "entry-1",
+        description: null,
+        task: { id: "task-1", title: "Fix export column order" },
+        taskTitle: "Fix export column order",
+        project: { id: "project-1", name: "Billing API" },
+        projectName: "Billing API",
+        timerEntry: { endedAt: null, id: "entry-1", task: { title: "Fix export column order" }, taskId: "task-1" },
+      },
+      id: "entry-1",
+      isHighlighted: true,
+      projectName: "Billing API",
+      taskTitle: "Fix export column order",
+      timerEntry: {
+        endedAt: null,
+        id: "entry-1",
+        task: { title: "Fix export column order" },
+        taskId: "task-1",
+      },
+      timeRangeLabel: "09:00 - 10:10",
+    },
+    {
+      description: null,
+      durationLabel: "00:40:00",
+      entry: {
+        id: "entry-2",
+        description: null,
+        task: { id: "task-2", title: "Improve reports filters" },
+        project: { id: "project-2", name: "Project Orion" },
+      },
+      id: "entry-2",
+      isHighlighted: false,
+      projectName: "Project Orion",
+      taskTitle: "Improve reports filters",
+      timerEntry: {
+        endedAt: "2026-04-21T11:00:00.000Z",
+        id: "entry-2",
+        task: { title: "Improve reports filters" },
+        taskId: "task-2",
+      },
+      timeRangeLabel: "10:20 - Running",
+    },
+  ];
+}
+
+const recentEntryRowsState = ref(createRecentEntryRows());
 
 const DashboardRecentEntriesCardStub = defineComponent({
   name: "DashboardRecentEntriesCard",
@@ -30,6 +87,9 @@ const DashboardRecentEntriesCardStub = defineComponent({
     stoppingTimerEntryId: { type: String, default: null },
   },
   emits: ["editEntry", "openActiveTimer", "startTimer", "stopTimer", "view-all"],
+  setup(_props, { expose }) {
+    expose({ focusViewAll });
+  },
   template: `
     <section data-testid="dashboard-recent-entries-card">
       <h2>Recent Time Entries</h2>
@@ -42,7 +102,7 @@ const DashboardRecentEntriesCardStub = defineComponent({
       <button data-testid="dashboard-recent-start" type="button" @click="$emit('startTimer', entries[1].timerEntry)">Start timer</button>
       <button data-testid="dashboard-recent-view-all" type="button" @click="$emit('view-all')">View all</button>
       <button data-testid="dashboard-recent-edit-entry" type="button" @click="$emit('editEntry', entries[0].entry)">Edit entry</button>
-      <button data-testid="dashboard-recent-open-timer" type="button" @click="$emit('openActiveTimer')">Open active timer</button>
+      <button data-testid="dashboard-recent-open-timer" type="button" @click="$emit('openActiveTimer', 'test-entry-id')">Open active timer</button>
     </section>
   `,
 });
@@ -74,7 +134,7 @@ vi.mock("@/composables/query", async (importOriginal) => {
   return {
     ...actual,
     useVisibleProjectsQuery: () => ({
-      data: ref<ProjectResponse[]>([]),
+      data: computed(() => visibleProjectsState.value),
       error: ref(null),
       isPending: computed(() => false),
       refetch: vi.fn(async () => ({ data: [] as ProjectResponse[] })),
@@ -100,6 +160,7 @@ vi.mock("@/composables/time-entries/useTimeEntryDialog", () => ({
     dialogTaskSuggestions: computed(() => []),
     dialogTaskValue: ref(null),
     dialogTitle: ref("Edit time entry"),
+    editingEntry,
     isDialogOpen,
     isLoadingDialogTasks: ref(false),
     setDescription: vi.fn(),
@@ -148,54 +209,9 @@ vi.mock("@/composables/dashboard/useDashboardOverview", () => ({
       { description: "4 entries tracked this week", label: "This Week", value: "28h 15m" },
       { description: "2 projects received tracked time", label: "Projects This Week", value: "2" },
     ]),
+    hasConfirmedActiveTimer: computed(() => hasConfirmedActiveTimerState.value),
     pageState,
-    recentEntryRows: computed(() => [
-      {
-        description: null,
-        durationLabel: "1h 10m",
-        entry: {
-          id: "entry-1",
-          description: null,
-          task: { id: "task-1", title: "Fix export column order" },
-          taskTitle: "Fix export column order",
-          project: { id: "project-1", name: "Billing API" },
-          projectName: "Billing API",
-          timerEntry: { endedAt: null, id: "entry-1", task: { title: "Fix export column order" }, taskId: "task-1" },
-        },
-        id: "entry-1",
-        isHighlighted: true,
-        projectName: "Billing API",
-        taskTitle: "Fix export column order",
-        timerEntry: {
-          endedAt: null,
-          id: "entry-1",
-          task: { title: "Fix export column order" },
-          taskId: "task-1",
-        },
-        timeRangeLabel: "09:00 - 10:10",
-      },
-      {
-        description: null,
-        durationLabel: "00:40:00",
-        entry: {
-          id: "entry-2",
-          description: null,
-          task: { id: "task-2", title: "Improve reports filters" },
-          project: { id: "project-2", name: "Project Orion" },
-        },
-        id: "entry-2",
-        isHighlighted: false,
-        projectName: "Project Orion",
-        taskTitle: "Improve reports filters",
-        timerEntry: {
-          endedAt: "2026-04-21T11:00:00.000Z",
-          id: "entry-2",
-          task: { title: "Improve reports filters" },
-          taskId: "task-2",
-        },
-        timeRangeLabel: "10:20 - Running",
-      },
-    ]),
+    recentEntryRows: computed(() => recentEntryRowsState.value),
     isDirectStartBlockedByCurrentTimer: computed(() => false),
     requestErrorMessage,
     retryLoadOverview,
@@ -203,6 +219,7 @@ vi.mock("@/composables/dashboard/useDashboardOverview", () => ({
     startTimerForEntry,
     stoppingTimerEntryId: ref<string | null>(null),
     stopTimerForEntry,
+    verifyActiveTimerEntry: vi.fn().mockResolvedValue(true),
     weeklyFocus: computed(() => ({
       project: {
         description: "3h 45m tracked across 4 entries",
@@ -228,6 +245,11 @@ describe("DashboardOverview", () => {
   beforeEach(() => {
     pageState.value = "ready";
     requestErrorMessage.value = null;
+    hasConfirmedActiveTimerState.value = false;
+    editingEntry.value = null;
+    visibleProjectsState.value = [];
+    recentEntryRowsState.value = createRecentEntryRows();
+    focusViewAll.mockReset();
     retryLoadOverview.mockClear();
     routerPush.mockClear();
     startTimerForEntry.mockClear();
@@ -246,8 +268,9 @@ describe("DashboardOverview", () => {
     }
   });
 
-  function mountOverview() {
+  function mountOverview(attachToBody = false) {
     const wrapper = mount(DashboardOverview, {
+      ...(attachToBody ? { attachTo: document.body } : null),
       global: {
         plugins: [createPinia()],
         stubs: {
@@ -443,5 +466,69 @@ describe("DashboardOverview", () => {
     const recentEntriesCard = wrapper.getComponent(DashboardRecentEntriesCardStub);
 
     expect(recentEntriesCard.props("showStopFirstGuidance")).toBe(false);
+  });
+
+  it("marks stop-first guidance on the card while a running timer is confirmed", () => {
+    hasConfirmedActiveTimerState.value = true;
+
+    const wrapper = mountOverview();
+    const recentEntriesCard = wrapper.getComponent(DashboardRecentEntriesCardStub);
+
+    expect(recentEntriesCard.props("showStopFirstGuidance")).toBe(true);
+  });
+
+  it("passes only active projects to the time entry dialog connection", () => {
+    visibleProjectsState.value = [
+      { id: "project-1", isActive: true, name: "Billing API" } as ProjectResponse,
+      { id: "project-2", isActive: false, name: "Archived Project" } as ProjectResponse,
+    ];
+
+    const wrapper = mountOverview();
+    const connection = wrapper.getComponent(TimeEntryDialogConnection);
+
+    expect(
+      connection.props("projects").map((project) => project.id),
+    ).toEqual(["project-1"]);
+  });
+
+  it("focuses View all after a successful delete while entries remain", async () => {
+    editingEntry.value = { id: "entry-1" } as TimeEntryResponse;
+    isDialogOpen.value = true;
+
+    const wrapper = mountOverview();
+
+    await wrapper.get('[data-testid="time-entry-dialog-delete"]').trigger("click");
+    expect(requestDeleteDialogEntry).toHaveBeenCalledTimes(1);
+
+    recentEntryRowsState.value = recentEntryRowsState.value.filter(
+      (row) => row.id !== "entry-1",
+    );
+    isDialogOpen.value = false;
+    await nextTick();
+    await nextTick();
+
+    expect(focusViewAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("focuses Open Time Entries after a delete that empties the recent list", async () => {
+    editingEntry.value = { id: "entry-1" } as TimeEntryResponse;
+    isDialogOpen.value = true;
+
+    const wrapper = mountOverview(true);
+
+    await wrapper.get('[data-testid="time-entry-dialog-delete"]').trigger("click");
+
+    recentEntryRowsState.value = [];
+    pageState.value = "empty";
+    isDialogOpen.value = false;
+    await nextTick();
+    await nextTick();
+
+    const openTimeEntriesButton = wrapper
+      .findAll("button")
+      .find((candidate) => candidate.text() === "Open Time Entries");
+
+    expect(openTimeEntriesButton).toBeDefined();
+    expect(openTimeEntriesButton?.element).toBe(document.activeElement);
   });
 });

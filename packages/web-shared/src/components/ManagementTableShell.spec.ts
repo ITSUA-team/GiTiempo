@@ -120,4 +120,57 @@ describe('ManagementTableShell', () => {
     expect(tableContainer.classes()).toContain('overflow-visible');
     expect(tableContainer.attributes('style')).toContain('overflow: visible');
   });
+
+  it('exposes column labels through an sr-only header row when the visible header is hidden', () => {
+    const wrapper = mount(ManagementTableShell, {
+      props: {
+        columns: [
+          { key: 'name', label: 'Name', width: 'fill' },
+          { key: 'hours', label: 'Hours', width: 120, align: 'end' },
+        ],
+        dataKey: 'id',
+        loading: false,
+        showHeader: false,
+        value: [{ id: 'row-1', name: 'Example' }],
+      },
+      global: {
+        stubs: {
+          DataTable: {
+            template: '<div data-testid="datatable-stub" />',
+          },
+        },
+      },
+    });
+
+    const headerCells = wrapper.get('table.sr-only').findAll('th');
+
+    expect(headerCells).toHaveLength(2);
+    expect(headerCells[0].attributes('scope')).toBe('col');
+    expect(headerCells[0].text()).toBe('Name');
+    expect(headerCells[1].attributes('scope')).toBe('col');
+    expect(headerCells[1].text()).toBe('Hours');
+    expect(wrapper.find('[data-testid="management-table-header-name"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="management-table-header-hours"]').exists()).toBe(false);
+  });
+
+  it('does not render the sr-only header when the visible header is shown', () => {
+    const wrapper = mount(ManagementTableShell, {
+      props: {
+        columns: [{ key: 'name', label: 'Name', width: 'fill' }],
+        dataKey: 'id',
+        loading: false,
+        value: [{ id: 'row-1', name: 'Example' }],
+      },
+      global: {
+        stubs: {
+          DataTable: {
+            template: '<div data-testid="datatable-stub" />',
+          },
+        },
+      },
+    });
+
+    expect(wrapper.find('table.sr-only').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="management-table-header-name"]').text()).toBe('Name');
+  });
 });

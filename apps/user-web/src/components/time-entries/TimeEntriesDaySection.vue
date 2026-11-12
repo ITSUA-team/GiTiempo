@@ -24,6 +24,7 @@ import {
   getRecordEntryRowClass,
 } from "../records/record-entry-actions";
 import RecordEntryTaskCell from "../records/RecordEntryTaskCell.vue";
+import TimeEntryMetadata from "../records/TimeEntryMetadata.vue";
 
 const props = defineProps<{
   formatDuration: (entry: TimeEntryResponse) => string;
@@ -40,7 +41,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   createForDay: [day: string];
   editEntry: [entry: TimeEntryResponse];
-  openActiveTimer: [];
+  openActiveTimer: [entryId: string];
   startTimer: [entry: TimeEntryResponse];
   stopTimer: [entry: TimeEntryResponse];
 }>();
@@ -95,7 +96,7 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
   }
 
   if (entry.endedAt === null) {
-    emit("openActiveTimer");
+    emit("openActiveTimer", entry.id);
     return;
   }
 
@@ -157,33 +158,16 @@ function handleStartTimer(entry: TimeEntryResponse): void {
           test-id-prefix="time-entry-mobile"
           variant="mobile"
           @open="handleEntryTaskOpen(entry)"
-          @open-active-timer="emit('openActiveTimer')"
+          @open-active-timer="emit('openActiveTimer', entry.id)"
           @start-timer="() => handleStartTimer(entry)"
           @stop-timer="() => handleStopTimer(entry)"
         />
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex min-w-0 flex-col gap-1">
-            <span class="text-text-muted text-xs">Project</span>
-            <span class="text-text-dark truncate text-[13px] font-medium">
-              {{ entry.project.name }}
-            </span>
-          </div>
-
-          <div class="flex min-w-0 flex-col gap-1 text-right">
-            <span class="text-text-muted text-xs">Duration</span>
-            <span class="text-text-dark text-[13px] font-semibold tabular-nums">
-              {{ props.formatDuration(entry) }}
-            </span>
-          </div>
-
-          <div class="col-span-2 flex min-w-0 flex-col gap-1">
-            <span class="text-text-muted text-xs">Range</span>
-            <span class="text-text-dark text-[13px] font-medium">
-              {{ props.formatTimeRange(entry) }}
-            </span>
-          </div>
-        </div>
+        <TimeEntryMetadata
+          :project-name="entry.project.name"
+          :duration-label="props.formatDuration(entry)"
+          :time-range-label="props.formatTimeRange(entry)"
+        />
       </MobileRecordCard>
     </div>
 
@@ -219,7 +203,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
             test-id-prefix="time-entry"
             variant="desktop"
             @open="handleEntryTaskOpen(entry)"
-            @open-active-timer="emit('openActiveTimer')"
+            @open-active-timer="emit('openActiveTimer', entry.id)"
             @start-timer="() => handleStartTimer(entry)"
             @stop-timer="() => handleStopTimer(entry)"
           />

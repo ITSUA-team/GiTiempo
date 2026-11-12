@@ -415,7 +415,8 @@ describe("DashboardRecentEntriesCard", () => {
       .get('[data-testid="dashboard-recent-entry-mobile-open-timer-entry-1"]')
       .trigger("click");
 
-    expect(wrapper.emitted("openActiveTimer")).toEqual([[]]);
+    expect(wrapper.emitted("openActiveTimer")).toHaveLength(1);
+    expect(typeof wrapper.emitted("openActiveTimer")?.[0]?.[0]).toBe("string");
     expect(wrapper.emitted("editEntry")).toHaveLength(1);
   });
 
@@ -486,7 +487,8 @@ describe("DashboardRecentEntriesCard", () => {
       .get('[data-testid="dashboard-recent-entry-open-timer-entry-1"]')
       .trigger("click");
 
-    expect(wrapper.emitted("openActiveTimer")).toEqual([[]]);
+    expect(wrapper.emitted("openActiveTimer")).toHaveLength(1);
+    expect(wrapper.emitted("openActiveTimer")?.[0]?.[0]).toBe("entry-1");
     expect(wrapper.emitted("editEntry")).toBeUndefined();
   });
 
@@ -510,7 +512,8 @@ describe("DashboardRecentEntriesCard", () => {
 
     await startButton.trigger("click");
 
-    expect(wrapper.emitted("openActiveTimer")).toEqual([[]]);
+    expect(wrapper.emitted("openActiveTimer")).toHaveLength(1);
+    expect(wrapper.emitted("openActiveTimer")?.[0]?.[0]).toBe("entry-1");
     expect(wrapper.emitted("startTimer")).toBeUndefined();
   });
 });

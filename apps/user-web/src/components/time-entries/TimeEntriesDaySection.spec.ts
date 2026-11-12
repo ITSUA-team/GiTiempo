@@ -314,7 +314,7 @@ describe('TimeEntriesDaySection', () => {
     const startTimerButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
 
     expect(startTimerButton.attributes('disabled')).toBeUndefined();
-    expect(startTimerButton.attributes('aria-disabled')).toBe('true');
+    expect(startTimerButton.attributes('aria-disabled')).toBeUndefined();
     expect(startTimerButton.classes()).toContain('bg-surface-primary');
     expect(startTimerButton.classes()).toContain('border-divider');
     expect(startTimerButton.attributes('data-tooltip-value')).toBe(
@@ -339,7 +339,7 @@ describe('TimeEntriesDaySection', () => {
     const startTimerButton = wrapper.get('[data-testid="time-entry-mobile-start-timer-entry-completed"]');
 
     expect(startTimerButton.attributes('disabled')).toBeUndefined();
-    expect(startTimerButton.attributes('aria-disabled')).toBe('true');
+    expect(startTimerButton.attributes('aria-disabled')).toBeUndefined();
     expect(startTimerButton.classes()).toContain('bg-surface-primary');
     expect(startTimerButton.classes()).toContain('border-divider');
     expect(startTimerButton.attributes('data-tooltip-value')).toBe(
@@ -359,9 +359,8 @@ describe('TimeEntriesDaySection', () => {
 
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
     expect(wrapper.findComponent({ name: 'ManagementTableShell' }).props('showHeader')).toBe(false);
-    expect(wrapper.text()).not.toContain('Task');
-    expect(wrapper.text()).not.toContain('Range');
-    expect(wrapper.text()).not.toContain('Duration');
+    const srOnlyHeader = wrapper.find('table.sr-only');
+    expect(srOnlyHeader.exists()).toBe(true);
     expect(wrapper.text()).not.toContain('Time');
     expect(wrapper.text()).not.toContain('Actions');
     expect(wrapper.text()).not.toContain('Stop from the top bar');

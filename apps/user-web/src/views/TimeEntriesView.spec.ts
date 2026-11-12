@@ -491,7 +491,7 @@ async function mountView(
                     :data-testid="'time-entry-open-timer-' + entry.id"
                     :disabled="isInteractionDisabled === true"
                     type="button"
-                    @click="isInteractionDisabled !== true && $emit('openActiveTimer')"
+                    @click="isInteractionDisabled !== true && $emit('openActiveTimer', entry.id)"
                   >Update timer</button>
                   <button
                     v-if="entry.endedAt === null"
@@ -702,10 +702,20 @@ describe("TimeEntriesView", () => {
   });
 
   it("opens the active timer dialog instead of the time-entry edit dialog for running entries", async () => {
-    const { topBarTimerDialogController, wrapper } = await mountView();
+    const client = createClientMock();
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.runningEntry,
+        source: "web",
+      }),
+    });
+    const { topBarTimerDialogController, wrapper } = await mountView(client);
 
     await flushPromises();
     await wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+    await flushPromises();
 
     expect(topBarTimerDialogController.requestOpen).toHaveBeenCalledTimes(1);
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);

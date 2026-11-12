@@ -36,7 +36,7 @@ Alternative rejected: re-fetching the entry when the user opens the editor. This
 
 ### 3. Add editEntry and openActiveTimer emits to Dashboard
 
-Add `editEntry: [entry: TimeEntryResponse]` and `openActiveTimer: []` emits to `DashboardRecentEntriesCard.vue`, mirroring Time Entries. Wire the task title click: completed entries emit `editEntry` (opening the existing `TimeEntryDialog`), the authoritative running entry emits `openActiveTimer` (opening the existing `TopBarTimerTaskDialog`). The Dashboard view (`DashboardView.vue`) wires these to the same dialog and picker components already used by Time Entries, reusing validation, permissions, save/delete behavior, and post-mutation reconciliation.
+Add `editEntry: [entry: TimeEntryResponse]` and `openActiveTimer: [entryId: string]` emits to `DashboardRecentEntriesCard.vue`, mirroring Time Entries. Wire the task title click: completed entries emit `editEntry` (opening the existing `TimeEntryDialog`), the running entry emits `openActiveTimer` with the clicked entry's ID. `DashboardView.vue` wires these to the same dialog and picker components already used by Time Entries, reusing validation, permissions, save/delete behavior, and post-mutation reconciliation. Before opening the global timer picker, the view verifies via `verifyActiveTimerEntry(entryId)` that the clicked entry is still the authoritative running timer; if the timer changed (for example in another session or tab), the app refreshes timer and entry state, shows an info toast, and does not open the picker.
 
 Alternative rejected: duplicating the edit dialog inside the Dashboard card. This would diverge behavior and duplicate reconciliation logic; reusing the existing dialog keeps mutations consistent.
 

@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import Skeleton from "primevue/skeleton";
+import { useIsMobileViewport } from "@gitiempo/web-shared";
+
+const isMobileViewport = useIsMobileViewport();
 </script>
 
 <template>
@@ -56,7 +59,43 @@ import Skeleton from "primevue/skeleton";
         />
       </div>
 
-      <div class="border-divider bg-surface-primary flex flex-col rounded-lg border">
+      <div
+        v-if="isMobileViewport"
+        class="flex flex-col gap-3"
+      >
+        <div
+          v-for="rowIndex in 3"
+          :key="rowIndex"
+          class="border-divider bg-surface-primary flex flex-col gap-2 rounded-lg border p-4"
+        >
+          <div class="flex min-h-8 min-w-0 items-center gap-3">
+            <Skeleton
+              width="3rem"
+              height="2rem"
+            />
+            <Skeleton
+              width="70%"
+              height="1rem"
+            />
+          </div>
+
+          <div class="flex items-center justify-between gap-3">
+            <Skeleton
+              width="4rem"
+              height="1.75rem"
+            />
+            <Skeleton
+              width="5.5rem"
+              height="0.875rem"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-else
+        class="border-divider bg-surface-primary flex flex-col rounded-lg border"
+      >
         <div
           v-for="rowIndex in 3"
           :key="rowIndex"

@@ -15,7 +15,7 @@
 
 ## 3. Dashboard interactions: task-title, edit flow, and stop-first guidance
 
-- [x] 3.1 Add `editEntry: [entry: TimeEntryResponse]` and `openActiveTimer: []` emits to `DashboardRecentEntriesCard.vue`; wire the task-title click so completed entries emit `editEntry` and the authoritative running entry emits `openActiveTimer`, matching `TimeEntriesDaySection.vue`. Verify the emits fire correctly for completed and running entries in the component spec.
+- [x] 3.1 Add `editEntry: [entry: TimeEntryResponse]` and `openActiveTimer: [entryId: string]` emits to `DashboardRecentEntriesCard.vue`; wire the task-title click so completed entries emit `editEntry` and the running entry emits `openActiveTimer` with the clicked entry's ID, matching `TimeEntriesDaySection.vue`. Verify the emits fire correctly for completed and running entries (including the entry ID payload) in the component spec, and that the open path verifies via `verifyActiveTimerEntry(entryId)` that the clicked entry is still the authoritative running timer before opening the picker.
 - [x] 3.2 Wire `DashboardView.vue` to handle `editEntry` by opening the existing `TimeEntryDialog` and `openActiveTimer` by opening the existing `TopBarTimerTaskDialog`; reuse the same validation, permissions, save/delete behavior, and post-mutation reconciliation as Time Entries. Verify Dashboard mutations update recent entries, running state, and affected summaries without a full-page reload.
 - [x] 3.3 Add `showStopFirstGuidance` prop to `DashboardRecentEntriesCard.vue` and wire it in `DashboardView.vue` to the same top-bar timer guidance surface used by Time Entries and Projects. Verify the guidance appears when another task or workspace owns the timer and that disabled pending/loading states, authoritative checks, conflict handling, and duplicate-start/stop protection remain intact.
 - [x] 3.4 Add or update Dashboard view tests to cover completed-entry editor opening, running-entry picker opening, save/delete reconciliation, stop-first guidance, disabled/pending/conflict/error paths, and preserved `View all` action; verify the tests pass and assert unchanged request counts.
@@ -28,7 +28,7 @@
 
 ## 5. Projects presentation alignment
 
-- [x] 5.1 Hide the column-heading strip in `ProjectsTaskSection.vue` using the existing suppression mechanism; preserve project section headings and mobile field labels (Task, Status, Updated). Verify the table renders without a heading strip on desktop and section headings and mobile labels remain.
+- [x] 5.1 Hide the column-heading strip in `ProjectsTaskSection.vue` using the existing suppression mechanism; preserve project section headings and mobile task card content (task name, status, updated time). Verify the table renders without a heading strip on desktop and section headings and mobile card content remain.
 - [x] 5.2 On mobile cards in `ProjectsTaskSection.vue`, move the timer action before the task title, matching the unified record-list layout. Verify the mobile card renders the timer action before the title below 640px.
 - [x] 5.3 Add active-task highlight to `ProjectsTaskSection.vue` desktop rows and mobile cards using the existing `activeTimerTaskId` prop and the same highlight class (`bg-accent-tint`) used by Dashboard and Time Entries. Verify the row/card matching the running timer is highlighted on both desktop and mobile.
 - [x] 5.4 Update `ProjectsLoadingSkeleton.vue` to match the headerless task-section layouts and final row dimensions. Verify the skeleton renders without heading-strip space and with matching row dimensions.
@@ -53,12 +53,14 @@
 - [x] 8.3 Run `pnpm exec openspec validate unify-user-spa-record-lists --strict`; verify schema validity and that all delta specs resolve against their base capabilities.
 - [ ] 8.4 Perform manual desktop, tablet, and mobile QA across the 640px breakpoint for Dashboard, Time Entries, and Projects: verify no visible column headings, consistent desktop/mobile presentation, completed/active entry opening, save/delete reconciliation, stop-first guidance, loading/pending/conflict/error paths, preserved GitHub/`View all` actions, long names/descriptions, empty/loading/error states, keyboard operation, and accessible action names. Record results with revision, viewport, expected/actual, and PASS/FAIL.
 - [x] 8.5 Complete a final design-parity review against the approved `.pen` frames; explicitly identify any remaining deltas and document PrimeVue-only compromises if any.
-  - **Desktop Dashboard**: matches updated `.pen` — headerless, 52px rows, 170/130/110 widths, brand-colored task titles, descriptions, active-row highlight, surface-primary fill on idle rows. ✅
-  - **Desktop Projects**: matches updated `.pen` — headerless, active-task row highlighted. Task titles already brand-colored in both `.pen` and code. ✅
-  - **Mobile Projects**: matches updated `.pen` — timer before title, stop-timer card highlighted. ✅
+  - **Desktop Dashboard**: matches updated `.pen` — headerless, 52px rows, 170/130/110 widths, brand-colored task titles, descriptions, active-row highlight with Stop timer button, surface-primary fill on idle rows. ✅
+  - **Desktop Dashboard — Profile Dropdown Open variants**: synchronized with main Dashboard — header strips removed, row heights 48→52px, column widths 180/120/120→170/130/110. ✅
+  - **Desktop Projects**: matches updated `.pen` — headerless, active-task row highlighted with Stop timer button (not Start). Task titles brand-colored in both `.pen` and code. ✅
+  - **Mobile Projects**: matches updated `.pen` — timer before title, stop-timer card highlighted. Mobile card content (task name, status, updated time) visible without separate field labels, matching `.pen` and implementation. ✅
   - **Mobile Dashboard**: no `.pen` frame exists for comparison — code implements the layout matching Time Entries mobile pattern; design-parity cannot be checked against `.pen`. ⚠️ Design gap (not implementation gap).
   - **PrimeVue compromises**: none — all changes use existing PrimeVue components (`ManagementTableShell`, `MobileRecordCard`, `TaskNameLink`, `TimerActionButton`) and token-based classes.
-  - **Shared component reuse**: `RecordEntryTaskCell.vue` extracted and used by both Dashboard and Time Entries — consistent with spec requirement. ✅
+  - **Shared component reuse**: `RecordEntryTaskCell.vue` extracted and used by both Dashboard and Time Entries; `TimeEntryMetadata.vue` extracted for shared mobile Project/Duration/Range grid; `TimeEntryDialogConnection.vue` extracted for shared dialog wiring. Consistent with spec requirement. ✅
+  - **Accessible column headers**: `ManagementTableShell` now renders visually-hidden `<th scope="col">` elements when the visual header strip is suppressed, preserving screen-reader accessibility. ✅
 
 ## Workflow follow-up
 

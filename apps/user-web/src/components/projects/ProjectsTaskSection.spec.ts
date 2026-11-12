@@ -241,7 +241,7 @@ describe("ProjectsTaskSection", () => {
       '[data-testid="project-task-start-timer-task-1"]',
     );
 
-    expect(timerButton.attributes("aria-disabled")).toBe("true");
+    expect(timerButton.attributes("aria-disabled")).toBeUndefined();
     expect(timerButton.attributes("disabled")).toBeUndefined();
 
     await timerButton.trigger("click");

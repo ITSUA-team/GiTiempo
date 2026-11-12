@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import Button from "primevue/button";
 import Column from "primevue/column";
 import {
@@ -18,6 +19,7 @@ import {
   getRecordEntryRowClass,
 } from "../records/record-entry-actions";
 import RecordEntryTaskCell from "../records/RecordEntryTaskCell.vue";
+import TimeEntryMetadata from "../records/TimeEntryMetadata.vue";
 
 const props = defineProps<{
   entries: DashboardRecentEntryRow[];
@@ -29,7 +31,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   editEntry: [entry: TimeEntryResponse];
-  openActiveTimer: [];
+  openActiveTimer: [entryId: string];
   startTimer: [entry: DashboardRecentEntryRow["timerEntry"]];
   stopTimer: [entry: DashboardRecentEntryRow["timerEntry"]];
   viewAll: [];
@@ -62,7 +64,7 @@ function isStopTimerDisabled(): boolean {
 
 function handleEntryTaskOpen(entry: DashboardRecentEntryRow): void {
   if (entry.timerEntry.endedAt === null) {
-    emit("openActiveTimer");
+    emit("openActiveTimer", entry.timerEntry.id);
     return;
   }
 
@@ -76,6 +78,14 @@ function handleStartTimer(entry: DashboardRecentEntryRow): void {
 function handleStopTimer(entry: DashboardRecentEntryRow): void {
   emit("stopTimer", entry.timerEntry);
 }
+
+const viewAllButtonRef = ref<{ $el?: HTMLElement } | null>(null);
+
+function focusViewAll(): void {
+  viewAllButtonRef.value?.$el?.focus();
+}
+
+defineExpose({ focusViewAll });
 </script>
 
 <template>
@@ -89,6 +99,7 @@ function handleStopTimer(entry: DashboardRecentEntryRow): void {
     >
       <template #actions>
         <Button
+          ref="viewAllButtonRef"
           class="text-brand"
           label="View all"
           size="small"
@@ -123,33 +134,17 @@ function handleStopTimer(entry: DashboardRecentEntryRow): void {
           test-id-prefix="dashboard-recent-entry-mobile"
           variant="mobile"
           @open="handleEntryTaskOpen(entry)"
-          @open-active-timer="emit('openActiveTimer')"
+          @open-active-timer="emit('openActiveTimer', entry.timerEntry.id)"
           @start-timer="() => handleStartTimer(entry)"
           @stop-timer="() => handleStopTimer(entry)"
         />
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex min-w-0 flex-col gap-1">
-            <span class="text-text-muted text-xs">Project</span>
-            <span class="text-text-dark truncate text-[13px] font-medium">
-              {{ entry.projectName }}
-            </span>
-          </div>
-
-          <div class="flex min-w-0 flex-col gap-1 text-right">
-            <span class="text-text-muted text-xs">Duration</span>
-            <span class="text-text-dark text-[13px] font-semibold tabular-nums">
-              {{ entry.durationLabel }}
-            </span>
-          </div>
-
-          <div class="col-span-2 flex min-w-0 flex-col gap-1">
-            <span class="text-text-muted text-xs">Range</span>
-            <span class="text-text-dark truncate text-[13px] font-medium">
-              {{ entry.timeRangeLabel }}
-            </span>
-          </div>
-        </div>
+        <TimeEntryMetadata
+          :project-name="entry.projectName"
+          :duration-label="entry.durationLabel"
+          :time-range-label="entry.timeRangeLabel"
+          truncate-range
+        />
       </MobileRecordCard>
     </div>
 
@@ -185,7 +180,7 @@ function handleStopTimer(entry: DashboardRecentEntryRow): void {
             test-id-prefix="dashboard-recent-entry"
             variant="desktop"
             @open="handleEntryTaskOpen(entry)"
-            @open-active-timer="emit('openActiveTimer')"
+            @open-active-timer="emit('openActiveTimer', entry.timerEntry.id)"
             @start-timer="() => handleStartTimer(entry)"
             @stop-timer="() => handleStopTimer(entry)"
           />

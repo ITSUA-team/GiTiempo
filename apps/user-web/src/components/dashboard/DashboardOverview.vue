@@ -3,7 +3,7 @@ import { ChartBarSquareIcon, ExclamationTriangleIcon } from "@heroicons/vue/24/o
 import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
 import Button from "primevue/button";
 import { getErrorMessage, StatCard, SurfaceCard } from "@gitiempo/web-shared";
-import { computed } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { useRouter } from "vue-router";
@@ -11,7 +11,7 @@ import { useRouter } from "vue-router";
 import DashboardOverviewLoading from "@/components/dashboard/DashboardOverviewLoading.vue";
 import DashboardRecentEntriesCard from "@/components/dashboard/DashboardRecentEntriesCard.vue";
 import DashboardWeeklyFocusCard from "@/components/dashboard/DashboardWeeklyFocusCard.vue";
-import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
+import TimeEntryDialogConnection from "@/components/time-entries/TimeEntryDialogConnection.vue";
 import { useDashboardOverview } from "@/composables/dashboard/useDashboardOverview";
 import { useVisibleProjectsQuery } from "@/composables/query";
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
@@ -40,6 +40,7 @@ const visibleProjectsQuery = useVisibleProjectsQuery({
   scope,
 });
 const visibleProjects = computed(() => visibleProjectsQuery.data.value ?? []);
+const activeProjects = computed(() => visibleProjects.value.filter((project) => project.isActive));
 const isLoadingProjects = computed(() => visibleProjectsQuery.isPending.value);
 const projectsErrorMessage = computed(() =>
   visibleProjectsQuery.error.value
@@ -86,49 +87,18 @@ const dialogWorkflow = useTimeEntryDialogWorkflow({
   scope,
   taskOptions,
   toast,
-  visibleProjects,
+  visibleProjects: activeProjects,
 });
 
+const { isDialogOpen } = dialog;
 const {
-  closeDialog,
-  dialogDescription,
-  dialogEndedAt,
-  dialogErrors,
-  dialogIsBillable,
-  dialogMode,
-  dialogNewTaskTitle,
-  dialogProjectId,
-  dialogRequestErrorMessage,
-  dialogSaveLabel,
-  dialogStartedAt,
-  dialogSubtitle,
-  dialogTasksErrorMessage,
-  dialogTaskSuggestions,
-  dialogTaskValue,
-  dialogTitle,
-  isDialogOpen,
-  isLoadingDialogTasks,
-  setDescription: setDialogDescription,
-  setEndedAt: setDialogEndedAt,
-  setIsBillable: setDialogIsBillable,
-  setNewTaskTitle: setDialogNewTaskTitle,
-  setStartedAt: setDialogStartedAt,
-} = dialog;
-const {
-  handleDialogTaskSearch,
-  canCreateDialogTask,
-  isDeletingDialogEntry,
-  isReconcilingDialogTarget,
-  isSavingDialogFlow,
   openEditDialog: openEditDialogWorkflow,
   requestDeleteDialogEntry: requestDeleteDialogEntryWorkflow,
-  saveDialog,
-  setDialogProjectId,
-  setDialogTaskValue,
 } = dialogWorkflow;
 const { requestOpen: openActiveTimer } = topBarTimerDialogController;
 const {
   dashboardStats,
+  hasConfirmedActiveTimer,
   isDirectStartBlockedByCurrentTimer,
   pageState,
   recentEntryRows,
@@ -138,6 +108,7 @@ const {
   startTimerForEntry,
   stoppingTimerEntryId,
   stopTimerForEntry,
+  verifyActiveTimerEntry,
   weeklyFocus,
 } = useDashboardOverview();
 
@@ -145,13 +116,49 @@ function openTimeEntries(): void {
   void router.push({ name: routeNames.timeEntries });
 }
 
+async function handleOpenActiveTimer(entryId: string): Promise<void> {
+  const isStillActive = await verifyActiveTimerEntry(entryId);
+  if (isStillActive) {
+    openActiveTimer();
+  }
+}
+
 function openEditDialog(entry: TimeEntryResponse): void {
   openEditDialogWorkflow(entry);
 }
 
+const recentEntriesCardRef = ref<InstanceType<typeof DashboardRecentEntriesCard> | null>(null);
+const openTimeEntriesButtonRef = ref<{ $el?: HTMLElement } | null>(null);
+const deletedEntryId = ref<string | null>(null);
+
 function requestDeleteDialogEntry(): void {
+  deletedEntryId.value = dialog.editingEntry.value?.id ?? null;
   requestDeleteDialogEntryWorkflow();
 }
+
+watch(isDialogOpen, (open) => {
+  if (open || !deletedEntryId.value) {
+    return;
+  }
+
+  const wasDeleted = !recentEntryRows.value.some(
+    (row) => row.id === deletedEntryId.value,
+  );
+  deletedEntryId.value = null;
+
+  if (!wasDeleted) {
+    return;
+  }
+
+  void nextTick(() => {
+    if (pageState.value === "empty") {
+      const el = openTimeEntriesButtonRef.value?.$el;
+      el?.focus();
+    } else {
+      recentEntriesCardRef.value?.focusViewAll();
+    }
+  });
+});
 </script>
 
 <template>
@@ -203,6 +210,7 @@ function requestDeleteDialogEntry(): void {
       </div>
 
       <Button
+        ref="openTimeEntriesButtonRef"
         label="Open Time Entries"
         @click="openTimeEntries"
       />
@@ -229,55 +237,27 @@ function requestDeleteDialogEntry(): void {
       <DashboardWeeklyFocusCard :focus="weeklyFocus" />
 
       <DashboardRecentEntriesCard
+        ref="recentEntriesCardRef"
         :entries="recentEntryRows"
         :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
-        :show-stop-first-guidance="isDirectStartBlockedByCurrentTimer"
+        :show-stop-first-guidance="hasConfirmedActiveTimer"
         :starting-timer-entry-id="startingTimerEntryId"
         :stopping-timer-entry-id="stoppingTimerEntryId"
         @edit-entry="(entry) => openEditDialog(entry)"
-        @open-active-timer="openActiveTimer"
+        @open-active-timer="(entryId) => void handleOpenActiveTimer(entryId)"
         @start-timer="(entry) => void startTimerForEntry(entry)"
         @stop-timer="(entry) => void stopTimerForEntry(entry)"
         @view-all="openTimeEntries"
       />
     </div>
 
-    <TimeEntryDialog
-      :can-create-task="canCreateDialogTask"
-      :dialog-error-message="dialogRequestErrorMessage"
-      :ended-at="dialogEndedAt"
-      :errors="dialogErrors"
-      :is-deleting="isDeletingDialogEntry"
+    <TimeEntryDialogConnection
+      :dialog="dialog"
+      :workflow="dialogWorkflow"
       :is-loading-projects="isLoadingProjects"
-      :is-loading-tasks="isLoadingDialogTasks"
-      :is-open="isDialogOpen"
-      :is-reconciling-target="isReconcilingDialogTarget"
-      :is-saving="isSavingDialogFlow"
-      :mode="dialogMode"
-      :new-task-title="dialogNewTaskTitle"
-      :project-id="dialogProjectId"
-      :projects="visibleProjects"
+      :projects="activeProjects"
       :projects-error-message="projectsErrorMessage"
-      :save-label="dialogSaveLabel"
-      :started-at="dialogStartedAt"
-      :subtitle="dialogSubtitle"
-      :task-suggestions="dialogTaskSuggestions"
-      :task-value="dialogTaskValue"
-      :tasks-error-message="dialogTasksErrorMessage"
-      :title="dialogTitle"
-      :value-description="dialogDescription"
-      :value-is-billable="dialogIsBillable"
-      @close="closeDialog"
       @delete-entry="requestDeleteDialogEntry"
-      @save="void saveDialog()"
-      @task-search="handleDialogTaskSearch"
-      @update:description="setDialogDescription"
-      @update:ended-at="setDialogEndedAt"
-      @update:is-billable="setDialogIsBillable"
-      @update:new-task-title="setDialogNewTaskTitle"
-      @update:project-id="(value) => void setDialogProjectId(value)"
-      @update:started-at="setDialogStartedAt"
-      @update:task-value="setDialogTaskValue"
     />
   </section>
 </template>
