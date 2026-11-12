@@ -326,7 +326,8 @@ describe('TimeEntriesDaySection', () => {
     await startTimerButton.trigger('click');
 
     expect(wrapper.emitted('startTimer')).toBeUndefined();
-    expect(wrapper.emitted('openActiveTimer')).toHaveLength(1);
+    expect(wrapper.emitted('goToActiveTimer')).toHaveLength(1);
+    expect(wrapper.emitted('openActiveTimer')).toBeUndefined();
   });
 
   it('routes blocked mobile direct timer starts to the active timer picker', async () => {
@@ -351,7 +352,8 @@ describe('TimeEntriesDaySection', () => {
     await startTimerButton.trigger('click');
 
     expect(wrapper.emitted('startTimer')).toBeUndefined();
-    expect(wrapper.emitted('openActiveTimer')).toHaveLength(1);
+    expect(wrapper.emitted('goToActiveTimer')).toHaveLength(1);
+    expect(wrapper.emitted('openActiveTimer')).toBeUndefined();
   });
 
   it('renders the desktop entry table branch without an actions column', () => {
@@ -359,7 +361,7 @@ describe('TimeEntriesDaySection', () => {
 
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
     expect(wrapper.findComponent({ name: 'ManagementTableShell' }).props('showHeader')).toBe(false);
-    const srOnlyHeader = wrapper.find('table.sr-only');
+    const srOnlyHeader = wrapper.find('thead.sr-only');
     expect(srOnlyHeader.exists()).toBe(true);
     expect(wrapper.text()).not.toContain('Time');
     expect(wrapper.text()).not.toContain('Actions');

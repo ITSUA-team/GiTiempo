@@ -6,7 +6,7 @@ User SPA record-list surfaces (Projects, Dashboard Recent Time Entries, and Time
 
 ## What Changes
 
-- Hide column-heading strips on Projects and Dashboard Recent Time Entries through the existing page-level table option. Preserve project section headings, the Recent Time Entries section heading, the `View all` action, and mobile field labels.
+- Hide column-heading strips on Projects and Dashboard Recent Time Entries through the existing page-level table option. Preserve project section headings, the Recent Time Entries section heading, the `View all` action, and mobile task card content.
 - Match Dashboard desktop row height (52px), column widths (170/130/110px), rounding, spacing, typography, task/description composition, and active-entry treatment to Time Entries.
 - Match Dashboard mobile layout to Time Entries: timer action before title, optional description under title, Project and Duration together, Range below. Preserve readable truncation and separate GitHub issue links.
 - Retain entry description and the entry data needed by interactions in the Dashboard model using already-fetched data; no per-row requests or duplicate list fetches for presentation.
@@ -26,7 +26,7 @@ None. This change unifies presentation and interaction behavior across existing 
 ### Modified Capabilities
 
 - `user-pages`: Dashboard overview hides column headings and matches Time Entries desktop/mobile row dimensions, column widths, typography, description, and active-entry treatment; Dashboard recent-entry task-title interactions open the entry editor (completed) or global timer picker (running); Dashboard stop-first guidance matches Time Entries; Dashboard recent-entry mobile layout matches Time Entries; Dashboard loading skeletons match headerless layouts and final row dimensions; Time Entries is the reference presentation for record lists.
-- `user-projects-list-page`: Projects task sections hide column headings while preserving section headings and mobile metadata labels; Projects task rows/cards place the timer action before the title on mobile; Projects highlights the active task row/card on desktop and mobile; Projects loading skeletons match headerless layouts and final row dimensions.
+- `user-projects-list-page`: Projects task sections hide column headings while preserving section headings and mobile task card content; Projects task rows/cards place the timer action before the title on mobile; Projects highlights the active task row/card on desktop and mobile; Projects loading skeletons match headerless layouts and final row dimensions.
 
 ## Impact
 

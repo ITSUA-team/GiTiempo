@@ -29,7 +29,7 @@ User-web Projects task sections SHALL preserve desktop table rendering on tablet
 
 ### Requirement: User Projects Task Sections Hide Column Headings
 
-Projects task sections SHALL hide the column-heading strip on all viewports through the existing page-level table option, while preserving project section headings and mobile field labels.
+Projects task sections SHALL hide the column-heading strip on all viewports through the existing page-level table option, while preserving project section headings and mobile task card content (task name, status, and updated time).
 
 #### Scenario: Projects hides column headings on desktop
 

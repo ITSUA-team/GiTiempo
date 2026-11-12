@@ -31,7 +31,7 @@ const props = defineProps<RecordEntryTaskCellProps>();
 
 const emit = defineEmits<{
   open: [];
-  openActiveTimer: [];
+  goToActiveTimer: [];
   startTimer: [];
   stopTimer: [];
 }>();
@@ -62,7 +62,7 @@ function handleStartTimer(): void {
   }
 
   if (props.isStartDisabled) {
-    emit("openActiveTimer");
+    emit("goToActiveTimer");
     return;
   }
 

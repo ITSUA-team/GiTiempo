@@ -12,7 +12,7 @@ import {
   type ManagementTableColumn,
 } from './management-table';
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     bodyRowClass?: string;
     columns: ManagementTableColumn[];
@@ -40,6 +40,19 @@ withDefaults(
 );
 
 const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedRows');
+
+interface HeaderCellPTOptions {
+  context?: { index?: number };
+  column?: { context?: { index?: number } };
+}
+
+function columnHeaderCellAttrs(options: HeaderCellPTOptions): Record<string, string> {
+  const index = options?.context?.index ?? options?.column?.context?.index ?? 0;
+  return {
+    scope: 'col',
+    'aria-label': props.columns[index]?.label ?? '',
+  };
+}
 </script>
 
 <template>
@@ -72,28 +85,10 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
       />
     </div>
 
-    <table
-      v-if="!showHeader"
-      class="sr-only"
-    >
-      <thead>
-        <tr>
-          <th
-            v-for="col in columns"
-            :key="col.key"
-            scope="col"
-          >
-            {{ col.label }}
-          </th>
-        </tr>
-      </thead>
-    </table>
-
     <DataTable
       v-model:expanded-rows="expandedRows"
       :value="value"
       :loading="loading"
-      :show-headers="false"
       :data-key="dataKey"
       :row-class="rowClass"
       :pt="{
@@ -103,6 +98,10 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
           style: singleScroll ? { overflow: 'visible' } : undefined,
         },
         table: { class: tableClass },
+        thead: { class: 'sr-only' },
+        column: {
+          headerCell: columnHeaderCellAttrs,
+        },
         bodyRow: { class: bodyRowClass },
         rowExpansion: { style: 'height: auto;' },
         rowExpansionCell: { class: 'border-0 border-t border-divider p-0' },

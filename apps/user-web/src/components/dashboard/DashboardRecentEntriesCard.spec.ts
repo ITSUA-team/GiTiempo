@@ -492,7 +492,7 @@ describe("DashboardRecentEntriesCard", () => {
     expect(wrapper.emitted("editEntry")).toBeUndefined();
   });
 
-  it("emits openActiveTimer when stop-first guidance is shown and start is clicked", async () => {
+  it("emits goToActiveTimer when stop-first guidance is shown and start is clicked", async () => {
     const wrapper = mount(DashboardRecentEntriesCard, {
       props: {
         entries: [createRecentEntryRow({ id: "entry-1" })],
@@ -512,8 +512,8 @@ describe("DashboardRecentEntriesCard", () => {
 
     await startButton.trigger("click");
 
-    expect(wrapper.emitted("openActiveTimer")).toHaveLength(1);
-    expect(wrapper.emitted("openActiveTimer")?.[0]?.[0]).toBe("entry-1");
+    expect(wrapper.emitted("goToActiveTimer")).toHaveLength(1);
+    expect(wrapper.emitted("openActiveTimer")).toBeUndefined();
     expect(wrapper.emitted("startTimer")).toBeUndefined();
   });
 });

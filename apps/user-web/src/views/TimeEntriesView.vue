@@ -267,6 +267,12 @@ async function openActiveTimerDialog(entryId: string): Promise<void> {
   }
 }
 
+function goToActiveTimer(): void {
+  if (!isShowingPreviousEntries.value) {
+    topBarTimerDialogController.requestOpen();
+  }
+}
+
 async function retryLoadEntries(): Promise<void> {
   await data.loadEntries();
 }
@@ -383,6 +389,7 @@ onMounted(async () => {
           @create-for-day="(day) => void openCreateDialog(day)"
           @edit-entry="(entry) => void openEditDialog(entry)"
           @open-active-timer="(entryId) => void openActiveTimerDialog(entryId)"
+          @go-to-active-timer="goToActiveTimer"
           @start-timer="(entry) => void startTimerForEntry(entry)"
           @stop-timer="(entry) => void stopTimerForEntry(entry)"
         />

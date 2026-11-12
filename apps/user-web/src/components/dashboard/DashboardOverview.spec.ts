@@ -24,6 +24,7 @@ const hasConfirmedActiveTimerState = ref(false);
 const editingEntry = ref<TimeEntryResponse | null>(null);
 const visibleProjectsState = ref<ProjectResponse[]>([]);
 const focusViewAll = vi.fn();
+const verifyActiveTimerEntry = vi.fn(async () => true);
 
 function createRecentEntryRows() {
   return [
@@ -86,7 +87,7 @@ const DashboardRecentEntriesCardStub = defineComponent({
     startingTimerEntryId: { type: String, default: null },
     stoppingTimerEntryId: { type: String, default: null },
   },
-  emits: ["editEntry", "openActiveTimer", "startTimer", "stopTimer", "view-all"],
+  emits: ["editEntry", "goToActiveTimer", "openActiveTimer", "startTimer", "stopTimer", "view-all"],
   setup(_props, { expose }) {
     expose({ focusViewAll });
   },
@@ -103,6 +104,7 @@ const DashboardRecentEntriesCardStub = defineComponent({
       <button data-testid="dashboard-recent-view-all" type="button" @click="$emit('view-all')">View all</button>
       <button data-testid="dashboard-recent-edit-entry" type="button" @click="$emit('editEntry', entries[0].entry)">Edit entry</button>
       <button data-testid="dashboard-recent-open-timer" type="button" @click="$emit('openActiveTimer', 'test-entry-id')">Open active timer</button>
+      <button data-testid="dashboard-recent-go-to-timer" type="button" @click="$emit('goToActiveTimer')">Go to timer</button>
     </section>
   `,
 });
@@ -219,7 +221,7 @@ vi.mock("@/composables/dashboard/useDashboardOverview", () => ({
     startTimerForEntry,
     stoppingTimerEntryId: ref<string | null>(null),
     stopTimerForEntry,
-    verifyActiveTimerEntry: vi.fn().mockResolvedValue(true),
+    verifyActiveTimerEntry,
     weeklyFocus: computed(() => ({
       project: {
         description: "3h 45m tracked across 4 entries",
@@ -259,6 +261,8 @@ describe("DashboardOverview", () => {
     requestDeleteDialogEntry.mockClear();
     requestOpen.mockClear();
     saveDialog.mockClear();
+    verifyActiveTimerEntry.mockClear();
+    verifyActiveTimerEntry.mockResolvedValue(true);
     isDialogOpen.value = false;
   });
 
@@ -433,6 +437,18 @@ describe("DashboardOverview", () => {
       .get('[data-testid="dashboard-recent-open-timer"]')
       .trigger("click");
 
+    expect(requestOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("forwards the card go-to-timer action to the top-bar timer controller without verification", async () => {
+    verifyActiveTimerEntry.mockResolvedValue(false);
+    const wrapper = mountOverview();
+
+    await wrapper
+      .get('[data-testid="dashboard-recent-go-to-timer"]')
+      .trigger("click");
+
+    expect(verifyActiveTimerEntry).not.toHaveBeenCalled();
     expect(requestOpen).toHaveBeenCalledTimes(1);
   });
 

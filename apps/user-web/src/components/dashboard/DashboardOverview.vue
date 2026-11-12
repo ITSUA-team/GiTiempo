@@ -245,6 +245,7 @@ watch(isDialogOpen, (open) => {
         :stopping-timer-entry-id="stoppingTimerEntryId"
         @edit-entry="(entry) => openEditDialog(entry)"
         @open-active-timer="(entryId) => void handleOpenActiveTimer(entryId)"
+        @go-to-active-timer="openActiveTimer"
         @start-timer="(entry) => void startTimerForEntry(entry)"
         @stop-timer="(entry) => void stopTimerForEntry(entry)"
         @view-all="openTimeEntries"

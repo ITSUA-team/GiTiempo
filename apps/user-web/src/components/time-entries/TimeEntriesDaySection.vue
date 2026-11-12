@@ -41,6 +41,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   createForDay: [day: string];
   editEntry: [entry: TimeEntryResponse];
+  goToActiveTimer: [];
   openActiveTimer: [entryId: string];
   startTimer: [entry: TimeEntryResponse];
   stopTimer: [entry: TimeEntryResponse];
@@ -158,7 +159,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
           test-id-prefix="time-entry-mobile"
           variant="mobile"
           @open="handleEntryTaskOpen(entry)"
-          @open-active-timer="emit('openActiveTimer', entry.id)"
+          @go-to-active-timer="emit('goToActiveTimer')"
           @start-timer="() => handleStartTimer(entry)"
           @stop-timer="() => handleStopTimer(entry)"
         />
@@ -203,7 +204,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
             test-id-prefix="time-entry"
             variant="desktop"
             @open="handleEntryTaskOpen(entry)"
-            @open-active-timer="emit('openActiveTimer', entry.id)"
+            @go-to-active-timer="emit('goToActiveTimer')"
             @start-timer="() => handleStartTimer(entry)"
             @stop-timer="() => handleStopTimer(entry)"
           />

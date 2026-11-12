@@ -31,6 +31,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   editEntry: [entry: TimeEntryResponse];
+  goToActiveTimer: [];
   openActiveTimer: [entryId: string];
   startTimer: [entry: DashboardRecentEntryRow["timerEntry"]];
   stopTimer: [entry: DashboardRecentEntryRow["timerEntry"]];
@@ -134,7 +135,7 @@ defineExpose({ focusViewAll });
           test-id-prefix="dashboard-recent-entry-mobile"
           variant="mobile"
           @open="handleEntryTaskOpen(entry)"
-          @open-active-timer="emit('openActiveTimer', entry.timerEntry.id)"
+          @go-to-active-timer="emit('goToActiveTimer')"
           @start-timer="() => handleStartTimer(entry)"
           @stop-timer="() => handleStopTimer(entry)"
         />
@@ -180,7 +181,7 @@ defineExpose({ focusViewAll });
             test-id-prefix="dashboard-recent-entry"
             variant="desktop"
             @open="handleEntryTaskOpen(entry)"
-            @open-active-timer="emit('openActiveTimer', entry.timerEntry.id)"
+            @go-to-active-timer="emit('goToActiveTimer')"
             @start-timer="() => handleStartTimer(entry)"
             @stop-timer="() => handleStopTimer(entry)"
           />

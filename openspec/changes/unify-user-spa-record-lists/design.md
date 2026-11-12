@@ -40,6 +40,8 @@ Add `editEntry: [entry: TimeEntryResponse]` and `openActiveTimer: [entryId: stri
 
 Alternative rejected: duplicating the edit dialog inside the Dashboard card. This would diverge behavior and duplicate reconciliation logic; reusing the existing dialog keeps mutations consistent.
 
+Follow-up refinement: the stop-first guidance button (the Start button rendered in guidance mode on a completed entry when another timer is running) emits a separate `goToActiveTimer` event with no payload. The view handles this unconditionally by calling `topBarTimerDialogController.requestOpen()` without ID verification, since the button's intent is to open the current timer regardless of which entry the button appears on. The `openActiveTimer` emit with entry-ID verification remains exclusively for the task-title click on a running entry.
+
 ### 4. Add stop-first guidance to Dashboard
 
 Pass `showStopFirstGuidance` through to `DashboardRecentEntriesCard.vue` and wire it to the same top-bar timer guidance surface that Time Entries and Projects already use. Preserve the existing disabled pending/loading states, authoritative current-state checks, conflict handling, and duplicate-start/stop protection.

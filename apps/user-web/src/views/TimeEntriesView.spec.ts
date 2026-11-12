@@ -454,7 +454,7 @@ async function mountView(
         },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
-          emits: ["createForDay", "editEntry", "openActiveTimer", "startTimer", "stopTimer"],
+          emits: ["createForDay", "editEntry", "goToActiveTimer", "openActiveTimer", "startTimer", "stopTimer"],
           props: [
             "formatDuration",
             "formatTimeRange",
@@ -479,6 +479,12 @@ async function mountView(
                     type="button"
                     @click="!(isInteractionDisabled === true || isStartTimerDisabled === true || (startingTimerEntryId !== null && startingTimerEntryId !== undefined)) && $emit('startTimer', entry)"
                   >Start timer</button>
+                  <button
+                    v-if="entry.endedAt !== null"
+                    data-testid="stub-go-to-timer"
+                    type="button"
+                    @click="$emit('goToActiveTimer')"
+                  >Go to timer</button>
                   <button
                     v-if="entry.endedAt !== null"
                     data-testid="time-entry-edit-entry-completed"
@@ -719,6 +725,30 @@ describe("TimeEntriesView", () => {
 
     expect(topBarTimerDialogController.requestOpen).toHaveBeenCalledTimes(1);
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+  });
+
+  it("opens the active timer from the stopped-first guidance button without entry verification", async () => {
+    const client = createClientMock();
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.updatedEntry,
+        source: "web",
+      }),
+    });
+    const { topBarTimerDialogController, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="stub-go-to-timer"]').trigger("click");
+    await flushPromises();
+
+    expect(topBarTimerDialogController.requestOpen).toHaveBeenCalledTimes(1);
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "The running timer changed. Please try again.",
+      }),
+    );
   });
 
   it("stops the active timer from a running entry row", async () => {
