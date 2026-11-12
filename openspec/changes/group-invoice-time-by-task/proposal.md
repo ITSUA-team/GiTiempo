@@ -23,3 +23,7 @@ Customers paying for a task may receive many lines for that task when several pe
 ## Impact
 
 This change builds on the invoice editor, saved documents and PDF introduced by [#527](https://github.com/ITSUA-team/GiTiempo/issues/527). Apply its spec deltas after `extend-invoice-management`. It affects the Admin SPA, shared contracts and OpenAPI, and the invoice API and PDF renderer. The existing invoice document can store the option without a database backfill. Existing access rules and billing calculations apply to both formats.
+
+## Acceptance criteria
+
+- [ ] Complete the component-by-component comparison with the approved `GITiempo.pen` frames for desktop and mobile creation, editing and details, and for both PDF formats. Record the results and resolve discrepancies as specified in [tasks.md](tasks.md).
