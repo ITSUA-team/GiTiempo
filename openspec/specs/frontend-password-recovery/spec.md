@@ -36,7 +36,7 @@ The password recovery request page SHALL accept a registered email address, vali
 
 - **GIVEN** an unauthenticated visitor is on the password recovery request route
 - **WHEN** they enter a valid registered email and submit the form
-- **THEN** the frontend calls the Firebase client SDK password reset email helper with a continue URL pointing to the in-app reset password landing route, and shows a persistent success confirmation (in-panel state) plus a success toast so the user knows to check their email
+- **THEN** the frontend calls the Firebase client SDK password reset email helper with a continue URL pointing to the in-app reset password landing route, and shows a persistent account-safe in-panel confirmation instructing the visitor to check their email, without a duplicate success toast
 
 #### Scenario: Invalid email is rejected client-side
 
@@ -48,7 +48,7 @@ The password recovery request page SHALL accept a registered email address, vali
 
 - **GIVEN** a visitor submits an email that is not registered in Firebase Auth
 - **WHEN** the Firebase reset email call resolves
-- **THEN** the UI shows the same in-panel success confirmation and success toast it shows for a known email, without revealing whether the account exists
+- **THEN** the UI shows the same in-panel success confirmation without a success toast that it shows for a known email, without revealing whether the account exists
 
 #### Scenario: Firebase request failure shows recoverable error
 
@@ -108,7 +108,7 @@ After a successful password update on the reset password landing page, the front
 
 ### Requirement: Recovery Notifications Follow Project Toast And Inline Conventions
 
-The recovery flow SHALL use the shared createAppToast helper for toasts and inline Message components for field/form errors, matching the invite password-setup precedent. Client-side validation stays inline only; failed Firebase API calls surface both inline state and an error toast with a { action, feature } logContext; successes use a success toast. Raw passwords SHALL NOT appear in any toast, inline copy, or log output.
+The recovery flow SHALL use the shared createAppToast helper for toasts and inline Message components for field/form errors, matching the invite password-setup precedent. Client-side validation stays inline only; failed Firebase API calls surface both inline state and an error toast with a { action, feature } logContext; recovery-request success uses its persistent panel without a duplicate toast, while successful password confirmation retains its success toast and login redirect. Raw passwords SHALL NOT appear in any toast, inline copy, or log output.
 
 #### Scenario: Client-side validation stays inline only
 
@@ -122,11 +122,17 @@ The recovery flow SHALL use the shared createAppToast helper for toasts and inli
 - **WHEN** the error is received
 - **THEN** an inline error state is shown on the relevant surface AND an error toast is shown via the shared toast helper with a `logContext` of `{ action, feature }` form, requiring manual dismiss
 
+#### Scenario: Recovery request success is quiet beyond its panel
+
+- **GIVEN** the recovery email request is accepted
+- **WHEN** the Firebase call resolves successfully
+- **THEN** the persistent account-safe check-your-email panel remains visible without a duplicate success toast
+
 #### Scenario: Successes use success toast
 
-- **GIVEN** the recovery request email is sent or the new password is confirmed successfully
+- **GIVEN** the new password is confirmed successfully
 - **WHEN** the Firebase call resolves successfully
-- **THEN** a success toast is shown via the shared toast helper with the default auto-dismiss life
+- **THEN** a success toast is shown via the shared toast helper with the default auto-dismiss life and the existing login redirect is preserved
 
 #### Scenario: Passwords never appear in notifications or logs
 

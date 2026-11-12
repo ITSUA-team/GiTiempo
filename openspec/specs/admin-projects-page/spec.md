@@ -103,7 +103,7 @@ The admin Projects page MUST allow editing a project's visibility and member ass
 - **GIVEN** the Projects page renders project settings expansion content
 - **WHEN** the admin submits visibility or assigned-member changes
 - **THEN** the expansion form emits a typed save payload
-- **AND** the Projects page or focused composable performs auth checks, project update, assignment add/remove calls, success/error toast feedback, summary/row refresh, and row collapse
+- **AND** the Projects page or focused composable performs auth checks, project update, assignment add/remove calls, actionable error toast feedback, summary/row refresh, and row collapse without redundant success/info notifications
 - **AND** the expansion form itself does not import admin API clients, auth stores, toast helpers, or confirmation helpers
 
 ### Requirement: Admin Can Archive And Unarchive Projects
@@ -134,7 +134,7 @@ The Projects page MUST keep project archive and unarchive API orchestration outs
 - **GIVEN** the Projects page receives an `archive` intent from the page-owned inline settings content
 - **WHEN** the page handles the intent
 - **THEN** it opens the shared destructive confirmation dialog using the selected project's name
-- **AND** confirming updates the project with `{ isActive: false }`, refreshes project rows and summary stats on success, and shows success toast feedback
+- **AND** confirming updates the project with `{ isActive: false }`, refreshes project rows and summary stats on success without a redundant success/info notification
 - **AND** cancelling sends no project-update request
 - **AND** archive API errors are surfaced through error toast feedback without removing or changing the row in loaded data
 
@@ -149,8 +149,15 @@ The Projects page MUST keep project archive and unarchive API orchestration outs
 
 - **GIVEN** the Projects page receives an `unarchive` intent from the page-owned inline settings content
 - **WHEN** the page handles the intent
-- **THEN** it updates the project with `{ isActive: true }`, refreshes project rows and summary stats on success, and shows success toast feedback
+- **THEN** it updates the project with `{ isActive: true }`, refreshes project rows and summary stats on success without a redundant success/info notification
 - **AND** unarchive API errors are surfaced through error toast feedback without changing the row in loaded data
+
+#### Scenario: Unarchive explains an automatic rename
+
+- **GIVEN** another active project already holds the archived project's original name
+- **WHEN** unarchive succeeds with a different authoritative name
+- **THEN** the refreshed project displays its resulting name
+- **AND** retained feedback explains the rename and its cause
 
 ### Requirement: New Project Button Navigates To Add Project Route
 The admin Projects page MUST provide a table-header New Project action that navigates to the add-project route.
