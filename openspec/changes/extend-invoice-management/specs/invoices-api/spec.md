@@ -401,3 +401,20 @@ The system MUST allow an authorized caller to reuse the saved business details a
 - **GIVEN** a paid source belongs to an accessible project
 - **WHEN** the caller reviews a new period, destination group and eligible entries then saves
 - **THEN** normal creation rules assign a fresh reference and draft status, use reviewed fields and eligible entries only, and preserve the source and its links.
+
+## ADDED Requirements
+
+### Requirement: Persist and export invoice dates and applicable payment details
+
+The API SHALL persist issueDate and nullable dueDate in the invoice revision. Date changes SHALL use the existing revision and authorization checks. PDF export SHALL use saved dates and the selected method's payment details.
+
+#### Scenario: Export the revised document
+
+- **WHEN** an authorized user exports an invoice with dates and Card payment details
+- **THEN** the PDF includes Issue date, Due date when set, provider, instructions and a clickable HTTPS payment link when supplied
+- **AND** bank-only details retained in the saved object are excluded from Card output
+
+#### Scenario: Preserve a historical invoice
+
+- **WHEN** an older invoice is migrated or exported
+- **THEN** its issue date is derived deterministically from creation in the workspace timezone, its due date remains null, and existing financial totals and linked entries are preserved

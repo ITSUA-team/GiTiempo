@@ -49341,6 +49341,75 @@
                         },
                         {
                           "type": "frame",
+                          "id": "i527_dates_57_row",
+                          "name": "Invoice dates",
+                          "width": "fill_container",
+                          "gap": 12,
+                          "padding": 0,
+                          "layout": "horizontal",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "i527_dates_57",
+                              "name": "Issue date",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "padding": 0,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "i527_dates_58",
+                                  "content": "Issue date",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500",
+                                  "fill": "$color-text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "i527_dates_57_value",
+                                  "content": "11 Nov 2026",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500",
+                                  "fill": "$color-text-dark"
+                                }
+                              ],
+                              "layout": "vertical"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "i527_dates_61",
+                              "name": "Due date",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "padding": 0,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "i527_dates_62",
+                                  "content": "Due date",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500",
+                                  "fill": "$color-text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "i527_dates_61_value",
+                                  "content": "11 Dec 2026",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500",
+                                  "fill": "$color-text-dark"
+                                }
+                              ],
+                              "layout": "vertical"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
                           "id": "i527_0208",
                           "name": "Scope",
                           "width": "fill_container",
@@ -50135,6 +50204,141 @@
                     }
                   ],
                   "layout": "vertical"
+                },
+                {
+                  "type": "frame",
+                  "id": "i527_dates_9_row",
+                  "name": "Invoice dates",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": 0,
+                  "layout": "horizontal",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_9",
+                      "name": "Issue date",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": 0,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_10",
+                          "content": "Issue date",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500",
+                          "fill": "$color-text-dark"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i527_dates_11",
+                          "name": "Input",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i527_dates_12",
+                              "content": "11 Nov 2026",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "fill": "$color-text-dark",
+                              "width": "fill_container",
+                              "textGrowth": "fixed-width-height",
+                              "height": 22
+                            },
+                            {
+                              "type": "icon",
+                              "id": "i527_dates_icon_i527_dates_9",
+                              "name": "calendar",
+                              "icon": "calendar",
+                              "library": "lucide",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "$color-text-muted"
+                            }
+                          ],
+                          "height": 38,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "alignItems": "center"
+                        }
+                      ],
+                      "layout": "vertical"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_13",
+                      "name": "Due date (optional)",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": 0,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_14",
+                          "content": "Due date (optional)",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500",
+                          "fill": "$color-text-dark"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i527_dates_15",
+                          "name": "Input",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i527_dates_16",
+                              "content": "11 Dec 2026",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "fill": "$color-text-dark",
+                              "width": "fill_container",
+                              "textGrowth": "fixed-width-height",
+                              "height": 22
+                            },
+                            {
+                              "type": "icon",
+                              "id": "i527_dates_icon_i527_dates_13",
+                              "name": "calendar",
+                              "icon": "calendar",
+                              "library": "lucide",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "$color-text-muted"
+                            }
+                          ],
+                          "height": 38,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "alignItems": "center"
+                        }
+                      ],
+                      "layout": "vertical"
+                    }
+                  ]
                 },
                 {
                   "type": "frame",
@@ -51340,7 +51544,7 @@
                 {
                   "type": "frame",
                   "id": "i527_0389",
-                  "name": "Bank / payment provider",
+                  "name": "Bank",
                   "width": "fill_container",
                   "gap": 6,
                   "padding": 0,
@@ -51348,7 +51552,7 @@
                     {
                       "type": "text",
                       "id": "i527_0386",
-                      "content": "Bank / payment provider",
+                      "content": "Bank",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "500",
@@ -51392,7 +51596,7 @@
                 {
                   "type": "frame",
                   "id": "i527_0393",
-                  "name": "Account / payment details",
+                  "name": "IBAN / account number",
                   "width": "fill_container",
                   "gap": 6,
                   "padding": 0,
@@ -51400,7 +51604,7 @@
                     {
                       "type": "text",
                       "id": "i527_0390",
-                      "content": "Account / payment details",
+                      "content": "IBAN / account number",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "500",
@@ -51420,7 +51624,59 @@
                         {
                           "type": "text",
                           "id": "i527_0391",
-                          "content": "DEMO-ACCOUNT-001 · SWIFT DEMOBANK",
+                          "content": "DEMO-ACCOUNT-001",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal",
+                          "fill": "$color-text-dark",
+                          "width": "fill_container",
+                          "textGrowth": "fixed-width-height",
+                          "height": 22
+                        }
+                      ],
+                      "height": 38,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "alignItems": "center"
+                    }
+                  ],
+                  "layout": "vertical"
+                },
+                {
+                  "type": "frame",
+                  "id": "i527_dates_33",
+                  "name": "SWIFT / BIC (optional)",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "padding": 0,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "i527_dates_34",
+                      "content": "SWIFT / BIC (optional)",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500",
+                      "fill": "$color-text-dark"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_35",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_36",
+                          "content": "DEMOBANK",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal",
@@ -51551,7 +51807,8 @@
               "cornerRadius": "$radius-lg",
               "stroke": "$color-divider",
               "strokeWidth": 1,
-              "strokeAlignment": "inner"
+              "strokeAlignment": "inner",
+              "context": " Bank transfer fields shown. Card shows Payment provider and Payment link (optional, HTTPS). Other/custom shows generic Beneficiary, Bank / payment provider, Account / payment details. Terms and instructions are common. Preserve inactive local values across switches; render only selected-method fields in detail/PDF. Retain hidden beneficiary/account/SWIFT/paymentUrl values. Provider, terms and instructions are shared across methods. Only Card exposes and renders a payment link."
             },
             {
               "type": "frame",
@@ -52247,7 +52504,7 @@
           "stroke": "$color-divider",
           "strokeWidth": 1,
           "strokeAlignment": "inner",
-          "context": "Actual modal dialog, shown expanded on canvas for field parity. Header close dismisses; one primary footer action. On device, body scrolls within viewport and header/footer remain reachable; restore focus to opener. All business fields remain editable regardless of status. Totals are calculated, not free-form. Required fields and request errors remain inline; failed saves preserve all draft fields and entry selection. No status advance is required. Sender and payment fields are copied snapshots with invoice-specific overrides. Creating inside a personal group preselects it.",
+          "context": "Actual modal dialog, shown expanded on canvas for field parity. Header close dismisses; one primary footer action. On device, body scrolls within viewport and header/footer remain reachable; restore focus to opener. All business fields remain editable regardless of status. Totals are calculated, not free-form. Required fields and request errors remain inline; failed saves preserve all draft fields and entry selection. No status advance is required. Sender and payment fields are copied snapshots with invoice-specific overrides. Creating inside a personal group preselects it. Issue date and optional Due date are editable calendar controls, distinct from Billing period. New/copy uses browser-local today and empty due date. Edit retains saved dates; Due date must be on/after Issue date.",
           "x": 64,
           "y": 1770
         },
@@ -52395,6 +52652,141 @@
                     }
                   ],
                   "layout": "vertical"
+                },
+                {
+                  "type": "frame",
+                  "id": "i527_dates_1_row",
+                  "name": "Invoice dates",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": 0,
+                  "layout": "horizontal",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_1",
+                      "name": "Issue date",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": 0,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_2",
+                          "content": "Issue date",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500",
+                          "fill": "$color-text-dark"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i527_dates_3",
+                          "name": "Input",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i527_dates_4",
+                              "content": "11 Nov 2026",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "fill": "$color-text-dark",
+                              "width": "fill_container",
+                              "textGrowth": "fixed-width-height",
+                              "height": 22
+                            },
+                            {
+                              "type": "icon",
+                              "id": "i527_dates_icon_i527_dates_1",
+                              "name": "calendar",
+                              "icon": "calendar",
+                              "library": "lucide",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "$color-text-muted"
+                            }
+                          ],
+                          "height": 38,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "alignItems": "center"
+                        }
+                      ],
+                      "layout": "vertical"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_5",
+                      "name": "Due date (optional)",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": 0,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_6",
+                          "content": "Due date (optional)",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500",
+                          "fill": "$color-text-dark"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i527_dates_7",
+                          "name": "Input",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i527_dates_8",
+                              "content": "Select date",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "fill": "$color-text-dark",
+                              "width": "fill_container",
+                              "textGrowth": "fixed-width-height",
+                              "height": 22
+                            },
+                            {
+                              "type": "icon",
+                              "id": "i527_dates_icon_i527_dates_5",
+                              "name": "calendar",
+                              "icon": "calendar",
+                              "library": "lucide",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "$color-text-muted"
+                            }
+                          ],
+                          "height": 38,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "alignItems": "center"
+                        }
+                      ],
+                      "layout": "vertical"
+                    }
+                  ]
                 },
                 {
                   "type": "frame",
@@ -53600,7 +53992,7 @@
                 {
                   "type": "frame",
                   "id": "i527_0565",
-                  "name": "Bank / payment provider",
+                  "name": "Bank",
                   "width": "fill_container",
                   "gap": 6,
                   "padding": 0,
@@ -53608,7 +54000,7 @@
                     {
                       "type": "text",
                       "id": "i527_0562",
-                      "content": "Bank / payment provider",
+                      "content": "Bank",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "500",
@@ -53652,7 +54044,7 @@
                 {
                   "type": "frame",
                   "id": "i527_0569",
-                  "name": "Account / payment details",
+                  "name": "IBAN / account number",
                   "width": "fill_container",
                   "gap": 6,
                   "padding": 0,
@@ -53660,7 +54052,7 @@
                     {
                       "type": "text",
                       "id": "i527_0566",
-                      "content": "Account / payment details",
+                      "content": "IBAN / account number",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "500",
@@ -53680,7 +54072,59 @@
                         {
                           "type": "text",
                           "id": "i527_0567",
-                          "content": "DEMO-ACCOUNT-001 · SWIFT DEMOBANK",
+                          "content": "DEMO-ACCOUNT-001",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal",
+                          "fill": "$color-text-dark",
+                          "width": "fill_container",
+                          "textGrowth": "fixed-width-height",
+                          "height": 22
+                        }
+                      ],
+                      "height": 38,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "alignItems": "center"
+                    }
+                  ],
+                  "layout": "vertical"
+                },
+                {
+                  "type": "frame",
+                  "id": "i527_dates_37",
+                  "name": "SWIFT / BIC (optional)",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "padding": 0,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "i527_dates_38",
+                      "content": "SWIFT / BIC (optional)",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500",
+                      "fill": "$color-text-dark"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_39",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_40",
+                          "content": "DEMOBANK",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal",
@@ -53811,7 +54255,8 @@
               "cornerRadius": "$radius-lg",
               "stroke": "$color-divider",
               "strokeWidth": 1,
-              "strokeAlignment": "inner"
+              "strokeAlignment": "inner",
+              "context": " Bank transfer fields shown. Card shows Payment provider and Payment link (optional, HTTPS). Other/custom shows generic Beneficiary, Bank / payment provider, Account / payment details. Terms and instructions are common. Preserve inactive local values across switches; render only selected-method fields in detail/PDF. Retain hidden beneficiary/account/SWIFT/paymentUrl values. Provider, terms and instructions are shared across methods. Only Card exposes and renders a payment link."
             },
             {
               "type": "frame",
@@ -54507,7 +54952,7 @@
           "stroke": "$color-divider",
           "strokeWidth": 1,
           "strokeAlignment": "inner",
-          "context": "Actual modal dialog, shown expanded on canvas for field parity. Header close dismisses; one primary footer action. On device, body scrolls within viewport and header/footer remain reachable; restore focus to opener. All business fields remain editable regardless of status. Totals are calculated, not free-form. Required fields and request errors remain inline; failed saves preserve all draft fields and entry selection. No status advance is required. Sender and payment fields are copied snapshots with invoice-specific overrides. Creating inside a personal group preselects it.",
+          "context": "Actual modal dialog, shown expanded on canvas for field parity. Header close dismisses; one primary footer action. On device, body scrolls within viewport and header/footer remain reachable; restore focus to opener. All business fields remain editable regardless of status. Totals are calculated, not free-form. Required fields and request errors remain inline; failed saves preserve all draft fields and entry selection. No status advance is required. Sender and payment fields are copied snapshots with invoice-specific overrides. Creating inside a personal group preselects it. Issue date and optional Due date are editable calendar controls, distinct from Billing period. New/copy uses browser-local today and empty due date. Edit retains saved dates; Due date must be on/after Issue date.",
           "x": 1128,
           "y": 1770
         },
@@ -54645,7 +55090,7 @@
                     {
                       "type": "text",
                       "id": "i527_0644",
-                      "content": "Issued",
+                      "content": "Issue date",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal",
@@ -54655,6 +55100,35 @@
                       "type": "text",
                       "id": "i527_0645",
                       "content": "11 Nov 2026",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500",
+                      "fill": "$color-text-dark"
+                    }
+                  ],
+                  "layout": "vertical"
+                },
+                {
+                  "type": "frame",
+                  "id": "i527_dates_73",
+                  "name": "Due date",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": 0,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "i527_dates_74",
+                      "content": "Due date",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "fill": "$color-text-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "i527_dates_75",
+                      "content": "11 Dec 2026",
                       "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "500",
@@ -56639,6 +57113,141 @@
                 },
                 {
                   "type": "frame",
+                  "id": "i527_dates_25_row",
+                  "name": "Invoice dates",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": 0,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_25",
+                      "name": "Issue date",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": 0,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_26",
+                          "content": "Issue date",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500",
+                          "fill": "$color-text-dark"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i527_dates_27",
+                          "name": "Input",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i527_dates_28",
+                              "content": "11 Nov 2026",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "fill": "$color-text-dark",
+                              "width": "fill_container",
+                              "textGrowth": "fixed-width-height",
+                              "height": 22
+                            },
+                            {
+                              "type": "icon",
+                              "id": "i527_dates_icon_i527_dates_25",
+                              "name": "calendar",
+                              "icon": "calendar",
+                              "library": "lucide",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "$color-text-muted"
+                            }
+                          ],
+                          "height": 38,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "alignItems": "center"
+                        }
+                      ],
+                      "layout": "vertical"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_29",
+                      "name": "Due date (optional)",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": 0,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_30",
+                          "content": "Due date (optional)",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500",
+                          "fill": "$color-text-dark"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i527_dates_31",
+                          "name": "Input",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i527_dates_32",
+                              "content": "11 Dec 2026",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "fill": "$color-text-dark",
+                              "width": "fill_container",
+                              "textGrowth": "fixed-width-height",
+                              "height": 22
+                            },
+                            {
+                              "type": "icon",
+                              "id": "i527_dates_icon_i527_dates_29",
+                              "name": "calendar",
+                              "icon": "calendar",
+                              "library": "lucide",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "$color-text-muted"
+                            }
+                          ],
+                          "height": 38,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "alignItems": "center"
+                        }
+                      ],
+                      "layout": "vertical"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "i527_0812",
                   "name": "Personal group",
                   "width": "fill_container",
@@ -57830,7 +58439,7 @@
                 {
                   "type": "frame",
                   "id": "i527_0905",
-                  "name": "Bank / payment provider",
+                  "name": "Bank",
                   "width": "fill_container",
                   "gap": 6,
                   "padding": 0,
@@ -57838,7 +58447,7 @@
                     {
                       "type": "text",
                       "id": "i527_0902",
-                      "content": "Bank / payment provider",
+                      "content": "Bank",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "500",
@@ -57882,7 +58491,7 @@
                 {
                   "type": "frame",
                   "id": "i527_0909",
-                  "name": "Account / payment details",
+                  "name": "IBAN / account number",
                   "width": "fill_container",
                   "gap": 6,
                   "padding": 0,
@@ -57890,7 +58499,7 @@
                     {
                       "type": "text",
                       "id": "i527_0906",
-                      "content": "Account / payment details",
+                      "content": "IBAN / account number",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "500",
@@ -57910,7 +58519,59 @@
                         {
                           "type": "text",
                           "id": "i527_0907",
-                          "content": "DEMO-ACCOUNT-001 · SWIFT DEMOBANK",
+                          "content": "DEMO-ACCOUNT-001",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal",
+                          "fill": "$color-text-dark",
+                          "width": "fill_container",
+                          "textGrowth": "fixed-width-height",
+                          "height": 22
+                        }
+                      ],
+                      "height": 38,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "alignItems": "center"
+                    }
+                  ],
+                  "layout": "vertical"
+                },
+                {
+                  "type": "frame",
+                  "id": "i527_dates_41",
+                  "name": "SWIFT / BIC (optional)",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "padding": 0,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "i527_dates_42",
+                      "content": "SWIFT / BIC (optional)",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500",
+                      "fill": "$color-text-dark"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_43",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_44",
+                          "content": "DEMOBANK",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal",
@@ -58041,7 +58702,8 @@
               "cornerRadius": "$radius-lg",
               "stroke": "$color-divider",
               "strokeWidth": 1,
-              "strokeAlignment": "inner"
+              "strokeAlignment": "inner",
+              "context": " Bank transfer fields shown. Card shows Payment provider and Payment link (optional, HTTPS). Other/custom shows generic Beneficiary, Bank / payment provider, Account / payment details. Terms and instructions are common. Preserve inactive local values across switches; render only selected-method fields in detail/PDF. Retain hidden beneficiary/account/SWIFT/paymentUrl values. Provider, terms and instructions are shared across methods. Only Card exposes and renders a payment link."
             },
             {
               "type": "frame",
@@ -58646,7 +59308,7 @@
           "stroke": "$color-divider",
           "strokeWidth": 1,
           "strokeAlignment": "inner",
-          "context": "Actual modal dialog, shown expanded on canvas for field parity. Header close dismisses; one primary footer action. On device, body scrolls within viewport and header/footer remain reachable; restore focus to opener. All business fields remain editable regardless of status. Totals are calculated, not free-form. Required fields and request errors remain inline; failed saves preserve all draft fields and entry selection. No status advance is required. Sender and payment fields are copied snapshots with invoice-specific overrides. Creating inside a personal group preselects it.",
+          "context": "Actual modal dialog, shown expanded on canvas for field parity. Header close dismisses; one primary footer action. On device, body scrolls within viewport and header/footer remain reachable; restore focus to opener. All business fields remain editable regardless of status. Totals are calculated, not free-form. Required fields and request errors remain inline; failed saves preserve all draft fields and entry selection. No status advance is required. Sender and payment fields are copied snapshots with invoice-specific overrides. Creating inside a personal group preselects it. Issue date and optional Due date are editable calendar controls, distinct from Billing period. New/copy uses browser-local today and empty due date. Edit retains saved dates; Due date must be on/after Issue date.",
           "x": 2192,
           "y": 1770
         },
@@ -58794,6 +59456,141 @@
                     }
                   ],
                   "layout": "vertical"
+                },
+                {
+                  "type": "frame",
+                  "id": "i527_dates_17_row",
+                  "name": "Invoice dates",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": 0,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_17",
+                      "name": "Issue date",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": 0,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_18",
+                          "content": "Issue date",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500",
+                          "fill": "$color-text-dark"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i527_dates_19",
+                          "name": "Input",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i527_dates_20",
+                              "content": "11 Nov 2026",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "fill": "$color-text-dark",
+                              "width": "fill_container",
+                              "textGrowth": "fixed-width-height",
+                              "height": 22
+                            },
+                            {
+                              "type": "icon",
+                              "id": "i527_dates_icon_i527_dates_17",
+                              "name": "calendar",
+                              "icon": "calendar",
+                              "library": "lucide",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "$color-text-muted"
+                            }
+                          ],
+                          "height": 38,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "alignItems": "center"
+                        }
+                      ],
+                      "layout": "vertical"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_21",
+                      "name": "Due date (optional)",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": 0,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_22",
+                          "content": "Due date (optional)",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500",
+                          "fill": "$color-text-dark"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i527_dates_23",
+                          "name": "Input",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i527_dates_24",
+                              "content": "Select date",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal",
+                              "fill": "$color-text-dark",
+                              "width": "fill_container",
+                              "textGrowth": "fixed-width-height",
+                              "height": 22
+                            },
+                            {
+                              "type": "icon",
+                              "id": "i527_dates_icon_i527_dates_21",
+                              "name": "calendar",
+                              "icon": "calendar",
+                              "library": "lucide",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "$color-text-muted"
+                            }
+                          ],
+                          "height": 38,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "alignItems": "center"
+                        }
+                      ],
+                      "layout": "vertical"
+                    }
+                  ]
                 },
                 {
                   "type": "frame",
@@ -59988,7 +60785,7 @@
                 {
                   "type": "frame",
                   "id": "i527_1077",
-                  "name": "Bank / payment provider",
+                  "name": "Bank",
                   "width": "fill_container",
                   "gap": 6,
                   "padding": 0,
@@ -59996,7 +60793,7 @@
                     {
                       "type": "text",
                       "id": "i527_1074",
-                      "content": "Bank / payment provider",
+                      "content": "Bank",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "500",
@@ -60040,7 +60837,7 @@
                 {
                   "type": "frame",
                   "id": "i527_1081",
-                  "name": "Account / payment details",
+                  "name": "IBAN / account number",
                   "width": "fill_container",
                   "gap": 6,
                   "padding": 0,
@@ -60048,7 +60845,7 @@
                     {
                       "type": "text",
                       "id": "i527_1078",
-                      "content": "Account / payment details",
+                      "content": "IBAN / account number",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "500",
@@ -60068,7 +60865,59 @@
                         {
                           "type": "text",
                           "id": "i527_1079",
-                          "content": "DEMO-ACCOUNT-001 · SWIFT DEMOBANK",
+                          "content": "DEMO-ACCOUNT-001",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal",
+                          "fill": "$color-text-dark",
+                          "width": "fill_container",
+                          "textGrowth": "fixed-width-height",
+                          "height": 22
+                        }
+                      ],
+                      "height": 38,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "alignItems": "center"
+                    }
+                  ],
+                  "layout": "vertical"
+                },
+                {
+                  "type": "frame",
+                  "id": "i527_dates_45",
+                  "name": "SWIFT / BIC (optional)",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "padding": 0,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "i527_dates_46",
+                      "content": "SWIFT / BIC (optional)",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500",
+                      "fill": "$color-text-dark"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_47",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_48",
+                          "content": "DEMOBANK",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal",
@@ -60199,7 +61048,8 @@
               "cornerRadius": "$radius-lg",
               "stroke": "$color-divider",
               "strokeWidth": 1,
-              "strokeAlignment": "inner"
+              "strokeAlignment": "inner",
+              "context": " Bank transfer fields shown. Card shows Payment provider and Payment link (optional, HTTPS). Other/custom shows generic Beneficiary, Bank / payment provider, Account / payment details. Terms and instructions are common. Preserve inactive local values across switches; render only selected-method fields in detail/PDF. Retain hidden beneficiary/account/SWIFT/paymentUrl values. Provider, terms and instructions are shared across methods. Only Card exposes and renders a payment link."
             },
             {
               "type": "frame",
@@ -60804,7 +61654,7 @@
           "stroke": "$color-divider",
           "strokeWidth": 1,
           "strokeAlignment": "inner",
-          "context": "Actual modal dialog, shown expanded on canvas for field parity. Header close dismisses; one primary footer action. On device, body scrolls within viewport and header/footer remain reachable; restore focus to opener. All business fields remain editable regardless of status. Totals are calculated, not free-form. Required fields and request errors remain inline; failed saves preserve all draft fields and entry selection. No status advance is required. Sender and payment fields are copied snapshots with invoice-specific overrides. Creating inside a personal group preselects it.",
+          "context": "Actual modal dialog, shown expanded on canvas for field parity. Header close dismisses; one primary footer action. On device, body scrolls within viewport and header/footer remain reachable; restore focus to opener. All business fields remain editable regardless of status. Totals are calculated, not free-form. Required fields and request errors remain inline; failed saves preserve all draft fields and entry selection. No status advance is required. Sender and payment fields are copied snapshots with invoice-specific overrides. Creating inside a personal group preselects it. Issue date and optional Due date are editable calendar controls, distinct from Billing period. New/copy uses browser-local today and empty due date. Edit retains saved dates; Due date must be on/after Issue date.",
           "x": 2631,
           "y": 3770
         },
@@ -61299,6 +62149,75 @@
                   "width": "fill_container",
                   "textGrowth": "fixed-width-height",
                   "height": 46
+                },
+                {
+                  "type": "frame",
+                  "id": "i527_dates_65_row",
+                  "name": "Invoice dates",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": 0,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_65",
+                      "name": "Issue date",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": 0,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_66",
+                          "content": "Issue date",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500",
+                          "fill": "$color-text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "i527_dates_65_value",
+                          "content": "11 Nov 2026",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500",
+                          "fill": "$color-text-dark"
+                        }
+                      ],
+                      "layout": "vertical"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i527_dates_69",
+                      "name": "Due date",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": 0,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i527_dates_70",
+                          "content": "Due date",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500",
+                          "fill": "$color-text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "i527_dates_69_value",
+                          "content": "11 Dec 2026",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500",
+                          "fill": "$color-text-dark"
+                        }
+                      ],
+                      "layout": "vertical"
+                    }
+                  ]
                 },
                 {
                   "type": "text",
@@ -65455,7 +66374,7 @@
                         {
                           "type": "frame",
                           "id": "i527_1435",
-                          "name": "Bank / payment provider",
+                          "name": "Bank",
                           "width": "fill_container",
                           "gap": 6,
                           "padding": 0,
@@ -65463,7 +66382,7 @@
                             {
                               "type": "text",
                               "id": "i527_1432",
-                              "content": "Bank / payment provider",
+                              "content": "Bank",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "500",
@@ -65507,7 +66426,7 @@
                         {
                           "type": "frame",
                           "id": "i527_1439",
-                          "name": "Account / payment details",
+                          "name": "IBAN / account number",
                           "width": "fill_container",
                           "gap": 6,
                           "padding": 0,
@@ -65515,7 +66434,7 @@
                             {
                               "type": "text",
                               "id": "i527_1436",
-                              "content": "Account / payment details",
+                              "content": "IBAN / account number",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "500",
@@ -65535,7 +66454,59 @@
                                 {
                                   "type": "text",
                                   "id": "i527_1437",
-                                  "content": "DEMO-ACCOUNT-001 · SWIFT DEMOBANK",
+                                  "content": "DEMO-ACCOUNT-001",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal",
+                                  "fill": "$color-text-dark",
+                                  "width": "fill_container",
+                                  "textGrowth": "fixed-width-height",
+                                  "height": 22
+                                }
+                              ],
+                              "height": 38,
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "alignItems": "center"
+                            }
+                          ],
+                          "layout": "vertical"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i527_dates_49",
+                          "name": "SWIFT / BIC (optional)",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "padding": 0,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i527_dates_50",
+                              "content": "SWIFT / BIC (optional)",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500",
+                              "fill": "$color-text-dark"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "i527_dates_51",
+                              "name": "Input",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "i527_dates_52",
+                                  "content": "DEMOBANK",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal",
@@ -65657,7 +66628,7 @@
                       "stroke": "$color-divider",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
-                      "context": "Admin-only editable workspace defaults. Authorized PMs receive invoice-safe defaults through invoice defaults, not full workspace Settings. Optional logo has upload/remove controls and must not block creation or PDF when absent. Validation and save-error retain draft values. Save changes affects new invoice defaults only; invoice-specific overrides remain editable."
+                      "context": "Admin-only editable workspace defaults. Authorized PMs receive invoice-safe defaults through invoice defaults, not full workspace Settings. Optional logo has upload/remove controls and must not block creation or PDF when absent. Validation and save-error retain draft values. Save changes affects new invoice defaults only; invoice-specific overrides remain editable. Bank transfer fields shown. Card shows Payment provider and Payment link (optional, HTTPS). Other/custom shows generic Beneficiary, Bank / payment provider, Account / payment details. Terms and instructions are common. Preserve inactive local values across switches; render only selected-method fields in detail/PDF. Retain hidden beneficiary/account/SWIFT/paymentUrl values. Provider, terms and instructions are shared across methods. Only Card exposes and renders a payment link."
                     },
                     {
                       "type": "frame",
@@ -67445,7 +68416,7 @@
             {
               "type": "frame",
               "id": "i527_1502",
-              "name": "Bank / payment provider",
+              "name": "Bank",
               "width": "fill_container",
               "gap": 6,
               "padding": 0,
@@ -67453,7 +68424,7 @@
                 {
                   "type": "text",
                   "id": "i527_1499",
-                  "content": "Bank / payment provider",
+                  "content": "Bank",
                   "fontFamily": "Inter",
                   "fontSize": 13,
                   "fontWeight": "500",
@@ -67497,7 +68468,7 @@
             {
               "type": "frame",
               "id": "i527_1506",
-              "name": "Account / payment details",
+              "name": "IBAN / account number",
               "width": "fill_container",
               "gap": 6,
               "padding": 0,
@@ -67505,7 +68476,7 @@
                 {
                   "type": "text",
                   "id": "i527_1503",
-                  "content": "Account / payment details",
+                  "content": "IBAN / account number",
                   "fontFamily": "Inter",
                   "fontSize": 13,
                   "fontWeight": "500",
@@ -67525,7 +68496,7 @@
                     {
                       "type": "text",
                       "id": "i527_1504",
-                      "content": "DEMO-ACCOUNT-001 · SWIFT DEMOBANK",
+                      "content": "DEMO-ACCOUNT-001",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal",
@@ -67536,6 +68507,58 @@
                     }
                   ],
                   "height": 70,
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "alignItems": "center"
+                }
+              ],
+              "layout": "vertical"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_53",
+              "name": "SWIFT / BIC (optional)",
+              "width": "fill_container",
+              "gap": 6,
+              "padding": 0,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_54",
+                  "content": "SWIFT / BIC (optional)",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500",
+                  "fill": "$color-text-dark"
+                },
+                {
+                  "type": "frame",
+                  "id": "i527_dates_55",
+                  "name": "Input",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "i527_dates_56",
+                      "content": "DEMOBANK",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "fill": "$color-text-dark",
+                      "width": "fill_container",
+                      "textGrowth": "fixed-width-height",
+                      "height": 22
+                    }
+                  ],
+                  "height": 38,
                   "fill": "$color-surface",
                   "cornerRadius": "$radius-sm",
                   "stroke": "$color-divider",
@@ -67633,7 +68656,7 @@
           "layout": "vertical",
           "fill": "$color-app-bg",
           "cornerRadius": 12,
-          "context": "Mobile Admin-only invoice default section. Fields stack full width, body scrolls, save remains reachable. Logo is optional. Existing invoice snapshots are not rewritten.",
+          "context": "Mobile Admin-only invoice default section. Fields stack full width, body scrolls, save remains reachable. Logo is optional. Existing invoice snapshots are not rewritten. Bank transfer fields shown. Card shows Payment provider and Payment link (optional, HTTPS). Other/custom shows generic Beneficiary, Bank / payment provider, Account / payment details. Terms and instructions are common. Preserve inactive local values across switches; render only selected-method fields in detail/PDF. Retain hidden beneficiary/account/SWIFT/paymentUrl values. Provider, terms and instructions are shared across methods. Only Card exposes and renders a payment link.",
           "x": 1400,
           "y": 148
         },
@@ -85538,6 +86561,1302 @@
           "fontWeight": "500"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "i527_dates_76",
+      "name": "Invoice payment — Card — Desktop",
+      "width": 480,
+      "gap": 12,
+      "padding": 16,
+      "children": [
+        {
+          "type": "text",
+          "id": "i527_dates_77",
+          "content": "How to pay",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": "600",
+          "fill": "$color-text-dark"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_78",
+          "name": "Payment method",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_79",
+              "content": "Payment method",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_80",
+              "name": "Select",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_81",
+                  "content": "Card",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                },
+                {
+                  "type": "icon",
+                  "id": "i527_dates_82",
+                  "name": "chevron-down",
+                  "icon": "chevron-down",
+                  "library": "lucide",
+                  "width": 16,
+                  "height": 16,
+                  "fill": "$color-text-muted"
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_83",
+          "name": "Payment terms",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_84",
+              "content": "Payment terms",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_85",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_86",
+                  "content": "Net 30",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_111",
+          "name": "Payment provider",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_112",
+              "content": "Payment provider",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_113",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_114",
+                  "content": "Stripe",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_115",
+          "name": "Payment link (optional)",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_116",
+              "content": "Payment link (optional)",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_117",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_118",
+                  "content": "https://pay.example.com/invoice",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_103",
+          "name": "Payment instructions",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_104",
+              "content": "Payment instructions",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_105",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_106",
+                  "content": "Use the reference assigned to this invoice.",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 54
+                }
+              ],
+              "height": 70,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        }
+      ],
+      "layout": "vertical",
+      "fill": "$color-surface",
+      "cornerRadius": "$radius-lg",
+      "stroke": "$color-divider",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "context": "Same adaptive component in invoice editor and workspace payment defaults. Card link must use HTTPS. Values from inactive methods stay in the draft and reappear on switching back. Selected-method details only in saved document/PDF. Retain hidden beneficiary/account/SWIFT/paymentUrl values. Provider, terms and instructions are shared across methods. Only Card exposes and renders a payment link.",
+      "x": 19000,
+      "y": 9500
+    },
+    {
+      "type": "frame",
+      "id": "i527_dates_119",
+      "name": "Invoice payment — Card — Mobile",
+      "width": 375,
+      "gap": 12,
+      "padding": 16,
+      "children": [
+        {
+          "type": "text",
+          "id": "i527_dates_120",
+          "content": "How to pay",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": "600",
+          "fill": "$color-text-dark"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_121",
+          "name": "Payment method",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_122",
+              "content": "Payment method",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_123",
+              "name": "Select",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_124",
+                  "content": "Card",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                },
+                {
+                  "type": "icon",
+                  "id": "i527_dates_125",
+                  "name": "chevron-down",
+                  "icon": "chevron-down",
+                  "library": "lucide",
+                  "width": 16,
+                  "height": 16,
+                  "fill": "$color-text-muted"
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_126",
+          "name": "Payment terms",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_127",
+              "content": "Payment terms",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_128",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_129",
+                  "content": "Net 30",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_154",
+          "name": "Payment provider",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_155",
+              "content": "Payment provider",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_156",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_157",
+                  "content": "Stripe",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_158",
+          "name": "Payment link (optional)",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_159",
+              "content": "Payment link (optional)",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_160",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_161",
+                  "content": "https://pay.example.com/invoice",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_146",
+          "name": "Payment instructions",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_147",
+              "content": "Payment instructions",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_148",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_149",
+                  "content": "Use the reference assigned to this invoice.",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 54
+                }
+              ],
+              "height": 70,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        }
+      ],
+      "layout": "vertical",
+      "fill": "$color-surface",
+      "cornerRadius": "$radius-lg",
+      "stroke": "$color-divider",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "context": "Same adaptive component in invoice editor and workspace payment defaults. Card link must use HTTPS. Values from inactive methods stay in the draft and reappear on switching back. Selected-method details only in saved document/PDF. Retain hidden beneficiary/account/SWIFT/paymentUrl values. Provider, terms and instructions are shared across methods. Only Card exposes and renders a payment link.",
+      "x": 19550,
+      "y": 9500
+    },
+    {
+      "type": "frame",
+      "id": "i527_dates_162",
+      "name": "Invoice payment — Other — Desktop",
+      "width": 480,
+      "gap": 12,
+      "padding": 16,
+      "children": [
+        {
+          "type": "text",
+          "id": "i527_dates_163",
+          "content": "How to pay",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": "600",
+          "fill": "$color-text-dark"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_164",
+          "name": "Payment method",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_165",
+              "content": "Payment method",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_166",
+              "name": "Select",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_167",
+                  "content": "Other",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                },
+                {
+                  "type": "icon",
+                  "id": "i527_dates_168",
+                  "name": "chevron-down",
+                  "icon": "chevron-down",
+                  "library": "lucide",
+                  "width": 16,
+                  "height": 16,
+                  "fill": "$color-text-muted"
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_169",
+          "name": "Payment terms",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_170",
+              "content": "Payment terms",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_171",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_172",
+                  "content": "Net 30",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_197",
+          "name": "Beneficiary",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_198",
+              "content": "Beneficiary",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_199",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_200",
+                  "content": "Acme Studio LLC",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_201",
+          "name": "Bank / payment provider",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_202",
+              "content": "Bank / payment provider",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_203",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_204",
+                  "content": "Payment provider",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_205",
+          "name": "Account / payment details",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_206",
+              "content": "Account / payment details",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_207",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_208",
+                  "content": "Payment details",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_189",
+          "name": "Payment instructions",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_190",
+              "content": "Payment instructions",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_191",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_192",
+                  "content": "Use the reference assigned to this invoice.",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 54
+                }
+              ],
+              "height": 70,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        }
+      ],
+      "layout": "vertical",
+      "fill": "$color-surface",
+      "cornerRadius": "$radius-lg",
+      "stroke": "$color-divider",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "context": "Same adaptive component in invoice editor and workspace payment defaults. Card link must use HTTPS. Values from inactive methods stay in the draft and reappear on switching back. Selected-method details only in saved document/PDF. Retain hidden beneficiary/account/SWIFT/paymentUrl values. Provider, terms and instructions are shared across methods. Only Card exposes and renders a payment link.",
+      "x": 20100,
+      "y": 9500
+    },
+    {
+      "type": "frame",
+      "id": "i527_dates_209",
+      "name": "Invoice payment — Other — Mobile",
+      "width": 375,
+      "gap": 12,
+      "padding": 16,
+      "children": [
+        {
+          "type": "text",
+          "id": "i527_dates_210",
+          "content": "How to pay",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": "600",
+          "fill": "$color-text-dark"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_211",
+          "name": "Payment method",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_212",
+              "content": "Payment method",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_213",
+              "name": "Select",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_214",
+                  "content": "Other",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                },
+                {
+                  "type": "icon",
+                  "id": "i527_dates_215",
+                  "name": "chevron-down",
+                  "icon": "chevron-down",
+                  "library": "lucide",
+                  "width": 16,
+                  "height": 16,
+                  "fill": "$color-text-muted"
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_216",
+          "name": "Payment terms",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_217",
+              "content": "Payment terms",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_218",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_219",
+                  "content": "Net 30",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_244",
+          "name": "Beneficiary",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_245",
+              "content": "Beneficiary",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_246",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_247",
+                  "content": "Acme Studio LLC",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_248",
+          "name": "Bank / payment provider",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_249",
+              "content": "Bank / payment provider",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_250",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_251",
+                  "content": "Payment provider",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_252",
+          "name": "Account / payment details",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_253",
+              "content": "Account / payment details",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_254",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_255",
+                  "content": "Payment details",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 22
+                }
+              ],
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        },
+        {
+          "type": "frame",
+          "id": "i527_dates_236",
+          "name": "Payment instructions",
+          "width": "fill_container",
+          "gap": 6,
+          "padding": 0,
+          "children": [
+            {
+              "type": "text",
+              "id": "i527_dates_237",
+              "content": "Payment instructions",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "i527_dates_238",
+              "name": "Input",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "i527_dates_239",
+                  "content": "Use the reference assigned to this invoice.",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-dark",
+                  "width": "fill_container",
+                  "textGrowth": "fixed-width-height",
+                  "height": 54
+                }
+              ],
+              "height": 70,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "alignItems": "center"
+            }
+          ],
+          "layout": "vertical"
+        }
+      ],
+      "layout": "vertical",
+      "fill": "$color-surface",
+      "cornerRadius": "$radius-lg",
+      "stroke": "$color-divider",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "context": "Same adaptive component in invoice editor and workspace payment defaults. Card link must use HTTPS. Values from inactive methods stay in the draft and reappear on switching back. Selected-method details only in saved document/PDF. Retain hidden beneficiary/account/SWIFT/paymentUrl values. Provider, terms and instructions are shared across methods. Only Card exposes and renders a payment link.",
+      "x": 20650,
+      "y": 9500
     }
   ],
   "variables": {

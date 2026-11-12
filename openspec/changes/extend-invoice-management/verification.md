@@ -1,5 +1,27 @@
 # #527 implementation verification
 
+## Issue dates and adaptive payments, 2026-11-11
+
+Implemented above commit c5fe75f4. Chrome for Testing 149.0.7827.55 acceptance used the isolated gitiempo_manual_527 database, Admin role, 1280 × 900 and 375 × 900 viewports. Desktop and mobile reference frames were rendered directly from the updated GITiempo.pen JSON. The date row, adaptive fields, shared settings/editor controls and detail/PDF metadata were reviewed against the updated create/edit, detail, settings, Card and Other frames. No PrimeVue-specific design deviation was required.
+
+| Scenario | Result |
+| --- | --- |
+| Edit issue and due dates | PASS on both widths. Saved 12 Nov 2026 / 25 Nov 2026, checked API values, detail and reload. |
+| Clear due date | PASS on both widths. Clear control persisted explicit null. |
+| Bank/Card/Other switching | PASS on both widths. Account and SWIFT remained available on return to Bank, Card exposed HTTPS payment link, Other exposed general details. Provider, terms and instructions are shared values. |
+| Workspace defaults | PASS on both widths. Settings adapted between Card/Bank, retained SWIFT, and a fresh create loaded the saved Card payment URL. Automated coverage also checks late defaults hydration. |
+| Copy dates | PASS on both widths. A 2020-dated source opened a new draft with browser-local today and no due date. Saving navigated to the new invoice, source dates stayed intact. |
+| Failed save and retry | PASS on both widths. Simulated POST 503 retained title, issue date and payment link. Removing the failure and retrying created the invoice. |
+| Card PDF | PASS on both widths. Browser downloads contained the saved dates, provider and clickable HTTPS URL. Native PDFKit extraction confirmed dates/link and absence of inactive account/SWIFT. The rendered A4 page was visually checked. |
+| Bank/Other/custom PDF | PASS. Browser checks confirmed adaptive fields for each method. Extracted PDFs included the saved account details, included SWIFT only for Bank and excluded the inactive Card URL. |
+| Date/link validation | PASS in contract, editor, service and PDF regressions. Covers same-day dates, invalid order, merged single-field PATCH, hidden invalid URLs, unsafe persisted links and stale revision preservation. |
+
+Artifacts are in the session visualization directory under dom-527, named dates-card-editor-*, dates-card-detail-*, dates-card-*.pdf and dates-pdf-*.png. Disposable browser invoices were deleted and original test workspace defaults were restored.
+
+Repository pnpm typecheck, pnpm lint and pnpm test passed. The admin suite passed 1041 tests, API unit suite 777 and shared contracts suite 720. The full isolated API integration run passed 459 tests across 36 files. Existing lint warnings remain in unchanged components. OpenAPI was regenerated.
+
+Migration 0036 backfills historical issue dates from creation timestamps using workspace time zones. It was applied successfully to both isolated test databases and the local development database gi_tiempo. New and copied UI drafts use browser-local today, while API creates omitting issueDate default to workspace-local today. Due date is optional.
+
 ## Copy logo and destination retest, 2026-11-11
 
 PASS in Chrome for Testing 149 at 1280 × 900 and 375 × 812, with the local Admin SPA and test API on the isolated manual database. On the working tree above `1c09a858`, a saved source without a logo was copied into a new period. Both editors displayed the configured workspace PNG. Saving opened the detail URL for the ID returned by the create request. Reloading that URL displayed the same image, and the saved source still had no logo. The disposable invoices were removed and the test workspace's original settings were restored.

@@ -50,6 +50,8 @@ const entryCount = computed(
 );
 const project = computed(() => props.invoice.project?.name ?? 'Workspace-wide');
 const scopeFields = computed(() => [
+  ['Issue date', periodFormat.format(new Date((props.invoice.issueDate ?? props.invoice.createdAt.slice(0, 10)) + 'T12:00:00Z'))],
+  ...(props.invoice.dueDate ? [['Due date', periodFormat.format(new Date(props.invoice.dueDate + 'T12:00:00Z'))]] : []),
   ['Project', project.value],
   ['Billing period', period.value],
   ['Hourly rate', money(props.invoice.hourlyRate)],
@@ -62,23 +64,28 @@ const parties = computed(() => [
   { title: 'From', party: props.invoice.sender },
   { title: 'Bill to', party: props.invoice.recipient },
 ]);
+const paymentLink = computed(() => {
+  const payment = props.invoice.payment;
+  if (payment?.method !== 'Card' || !payment.paymentUrl) return null;
+  try {
+    const url = new URL(payment.paymentUrl);
+    return url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+});
 const paymentLines = computed(() => {
   const payment = props.invoice.payment;
+  if (!payment) return [];
+  const card = payment.method === 'Card';
+  const bank = payment.method === 'Bank transfer';
   return [
-    [payment?.method, payment?.terms].filter(Boolean).join(' · '),
-    [
-      payment?.beneficiary && `Beneficiary: ${payment.beneficiary}`,
-      payment?.provider && `Bank: ${payment.provider}`,
-    ]
-      .filter(Boolean)
-      .join(' · '),
-    payment?.account && `Account: ${payment.account}`,
-    [
-      props.invoice.reference && `Reference: ${props.invoice.reference}`,
-      payment?.instructions,
-    ]
-      .filter(Boolean)
-      .join(' · '),
+    [payment.method, payment.terms].filter(Boolean).join(' · '),
+    !card && payment.beneficiary && 'Beneficiary: ' + payment.beneficiary,
+    payment.provider && (bank ? 'Bank: ' : 'Provider: ') + payment.provider,
+    !card && payment.account && (bank ? 'Account: ' : 'Payment details: ') + payment.account,
+    bank && payment.swift && 'SWIFT / BIC: ' + payment.swift,
+    [props.invoice.reference && 'Reference: ' + props.invoice.reference, payment.instructions].filter(Boolean).join(' · '),
   ].filter(Boolean);
 });
 </script>
@@ -146,7 +153,9 @@ const paymentLines = computed(() => {
       v-if="mobile"
       class="text-text-muted text-xs"
     >
-      {{ project }} · {{ period }}<br>Rate {{ money(invoice.hourlyRate) }} ·
+      Issue date {{ scopeFields[0]?.[1] }}<br><template v-if="invoice.dueDate">
+        Due date {{ scopeFields[1]?.[1] }}<br>
+      </template>{{ project }} · {{ period }}<br>Rate {{ money(invoice.hourlyRate) }} ·
       Rounding {{ invoice.roundingStepMinutes }} min
     </p>
     <dl
@@ -306,6 +315,13 @@ const paymentLines = computed(() => {
     >
       {{ line }}
     </p>
+    <a
+      v-if="paymentLink"
+      :href="paymentLink"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="text-brand text-sm underline"
+    >Pay online</a>
     <section
       v-if="invoice.notes && !mobile"
       class="border-divider flex flex-col gap-2.5 border-t pt-2.5 text-[13px]"

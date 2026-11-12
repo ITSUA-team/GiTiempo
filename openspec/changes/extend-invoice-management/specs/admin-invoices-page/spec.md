@@ -361,3 +361,41 @@ The detail MUST offer a PDF download based on saved invoice data in every status
 - **GIVEN** a saved invoice lacks required issuer, recipient, service or payment details
 - **WHEN** the user chooses Download PDF
 - **THEN** the UI identifies the missing details and offers the editor to complete and save them before export
+
+## ADDED Requirements
+
+### Requirement: Invoice issue and payment dates
+
+The editor SHALL expose an editable Issue date followed by an optional Due date, separately from the billing period. Details and PDF SHALL show the saved issue date and the due date when set.
+
+#### Scenario: Create, edit and copy dates
+
+- **WHEN** a user opens a new invoice or creates one from an existing invoice
+- **THEN** Issue date starts at the browser-local calendar date today and Due date starts empty, independently of the source invoice's absolute dates
+- **WHEN** a saved invoice is edited
+- **THEN** its dates are restored, retained through request failure and revision review, and saved with the reviewed business changes
+- **AND** an older invoice uses its persisted issue date or creation-date fallback and does not receive an invented due date
+
+#### Scenario: Validate the payment deadline
+
+- **WHEN** Due date precedes Issue date
+- **THEN** saving is rejected with an actionable error while preserving both inputs
+- **AND** clearing Due date explicitly removes the deadline
+
+### Requirement: Payment method specific fields
+
+Invoice editors SHALL adapt payment fields to the selected method. Bank transfer SHALL expose beneficiary, bank, account or IBAN and optional SWIFT/BIC. Card SHALL expose provider and an optional HTTPS payment link. Other and custom methods SHALL expose flexible legacy payment details. Terms and instructions SHALL remain available for every method.
+
+#### Scenario: Switch payment methods without losing edits
+
+- **WHEN** the user switches from Bank transfer to Card
+- **THEN** bank-specific inputs are replaced by provider and payment link inputs
+- **AND** switching back restores the locally entered fields hidden by the other method, including beneficiary, account and SWIFT/BIC
+- **AND** saved details and exported PDF include the selected method's applicable fields
+- **AND** provider, terms and instructions are shared values across methods, while paymentUrl is a Card-only input and output
+- **AND** Card never requests card numbers, expiry or CVV
+
+#### Scenario: Preserve custom payment methods
+
+- **WHEN** an older invoice or a user-entered method is outside Bank transfer and Card
+- **THEN** the editor preserves its name and generic payment details without converting it to a built-in method

@@ -219,3 +219,11 @@
 - 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current admin role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace membership is available.
 - The 403 `Switch workspace` action opens the authenticated workspace switcher for the current session. It must not be reused as the cross-app link back to `user-web`.
 - Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the full route surface; request errors stay scoped to the feature surface that failed.
+
+### Invoice dates and payment methods
+
+- Invoice information includes editable Issue date followed by optional Due date. Keep these distinct from Billing period. Pair them on desktop and stack on mobile. Reject a Due date before Issue date while preserving input.
+- A new or copied invoice starts with today's browser-local calendar date and an empty deadline. The API uses the workspace-local date only when a caller omits Issue date. Editing restores saved dates, including creation-date fallback for legacy data. Clearing Due date saves null.
+- Use the same adaptive payment controls in workspace defaults and invoice editing. Bank transfer exposes beneficiary, bank, IBAN/account and optional SWIFT/BIC. Card exposes payment provider and optional HTTPS payment link. Other and custom methods expose generic beneficiary/provider/account details.
+- Terms and instructions remain available for every method. Preserve locally entered hidden fields (beneficiary, account, SWIFT/BIC and payment link) across switches. Provider, terms and instructions are shared values across methods. Only Card exposes and renders the payment link. Show only applicable payment details in the saved document and PDF. Card does not collect card numbers or CVV.
+- Display Issue date and a supplied Due date in saved details and PDF. Card payment links are clickable in the PDF.

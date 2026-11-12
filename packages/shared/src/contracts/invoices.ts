@@ -14,6 +14,8 @@ export const invoicePartySchema = z.object({
 }).strict();
 export const invoicePaymentSchema = z.object({
   method: billingText, terms: billingText, beneficiary: billingText, provider: billingText, account: billingText, instructions: billingText,
+  swift: billingText.optional(),
+  paymentUrl: z.union([z.url({ protocol: /^https$/ }).trim().max(5000), z.literal("")]).optional(),
 }).strict();
 export const invoiceLogoSchema = z.string().max(341362)
   .regex(/^data:image\/(png|svg\+xml);base64,[A-Za-z0-9+/=]+$/)
@@ -86,6 +88,8 @@ export const invoiceResponseSchema = z.object({
   projectId: z.uuid().nullable(),
   title: z.string(),
   status: invoiceStatusSchema,
+  issueDate: dateSchema.optional(),
+  dueDate: dateSchema.nullable().optional(),
   dateFrom: dateSchema,
   dateTo: dateSchema,
   hourlyRate: z.number().nonnegative().max(99999999.99).multipleOf(0.01),
@@ -118,6 +122,10 @@ export const invoiceListResponseSchema = z.object({
   items: z.array(invoiceListItemSchema),
   meta: invoiceListMetaSchema,
 });
+
+function isValidPaymentDates(data: { issueDate?: string; dueDate?: string | null }): boolean {
+  return !data.issueDate || !data.dueDate || data.dueDate >= data.issueDate;
+}
 
 // Optional fields so list queries with only one date bound can reuse the
 // helper; a range is only checked when both bounds are present.
@@ -161,6 +169,8 @@ export const createInvoiceSchema = z
     timeEntryIds: distinctEntryIds.optional(),
     groupId: z.uuid().nullable().optional(),
     title: z.string().trim().min(1).max(255),
+    issueDate: dateSchema.optional(),
+    dueDate: dateSchema.nullable().optional(),
     dateFrom: dateSchema,
     dateTo: dateSchema,
     projectId: z.uuid().optional(),
@@ -181,6 +191,7 @@ export const createInvoiceSchema = z
     roundingStepMinutes: roundingStepMinutesSchema.optional(),
   })
   .strict()
+  .refine(isValidPaymentDates, { message: "Due date must be on or after the issue date", path: ["dueDate"] })
   .refine(isValidInvoiceDateRange, {
     message: "dateTo must be later than or equal to dateFrom",
     path: ["dateTo"],
@@ -191,7 +202,7 @@ export const updateInvoiceSchema = z.object(createInvoiceSchema.shape).partial()
   status: invoiceStatusSchema.optional(),
   projectId: z.uuid().nullable().optional(),
   expectedRevision: z.number().int().nonnegative().optional(),
-}).strict().refine(data => Object.keys(data).some(key => key !== "expectedRevision"), "At least one field must be provided").refine(isValidInvoiceDateRange, {
+}).strict().refine(isValidPaymentDates, { message: "Due date must be on or after the issue date", path: ["dueDate"] }).refine(data => Object.keys(data).some(key => key !== "expectedRevision"), "At least one field must be provided").refine(isValidInvoiceDateRange, {
   message: "dateTo must be later than or equal to dateFrom", path: ["dateTo"],
 });
 

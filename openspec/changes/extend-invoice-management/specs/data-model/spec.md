@@ -64,3 +64,15 @@ The system MUST store the workspace invoice reference prefix, sender identity an
 - **GIVEN** an invoice captured a billing profile
 - **WHEN** an administrator changes its payment instructions or logo
 - **THEN** the new workspace profile persists independently and the earlier invoice retains its saved values.
+
+## ADDED Requirements
+
+### Requirement: Invoice document dates
+
+Invoices SHALL persist a date-only issue date and an optional date-only due date separately from creation audit timestamps and billing periods.
+
+#### Scenario: Backfill existing invoices
+
+- **WHEN** the migration runs on pre-existing invoices
+- **THEN** the issue date is backfilled deterministically from the creation timestamp and workspace timezone
+- **AND** Due date remains null and invoice IDs, status, financial totals and entry associations are preserved

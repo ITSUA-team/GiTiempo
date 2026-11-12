@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInvoiceSchema,
   invoiceBillingProfileSchema,
+  invoicePaymentSchema,
   invoiceGroupsResponseSchema,
   invoiceDocumentIncompleteErrorSchema,
   invoiceLogoSchema,
@@ -1298,4 +1299,23 @@ it("decodes calculation previews independently of discovery defaults", () => {
   const response = { count: 0, entries: [], totalHours: 0, subtotal: 0, discountAmount: 0, totalAmount: 0, currency: "USD" };
   expect(previewInvoiceResponseSchema.parse(response)).toEqual(response);
   expect(previewInvoiceResponseSchema.safeParse({ ...response, totalAmount: -1 }).success).toBe(false);
+});
+
+
+it("validates invoice payment dates independently of the billing period", () => {
+  const input = { title: "Consulting", dateFrom: "2026-04-01", dateTo: "2026-04-30", issueDate: "2026-05-01", dueDate: "2026-05-31" };
+  expect(createInvoiceSchema.safeParse(input).success).toBe(true);
+  expect(createInvoiceSchema.safeParse({ ...input, dueDate: "2026-04-30" }).success).toBe(false);
+  expect(createInvoiceSchema.safeParse({ ...input, issueDate: "2026-02-30" }).success).toBe(false);
+  expect(updateInvoiceSchema.safeParse({ dueDate: null }).success).toBe(true);
+  expect(updateInvoiceSchema.safeParse({ issueDate: input.issueDate, dueDate: "2026-04-30" }).success).toBe(false);
+});
+
+it("accepts legacy payment fields and HTTPS payment links while rejecting unsafe schemes", () => {
+  const payment = { method: "Card", terms: "", beneficiary: "", provider: "", account: "", instructions: "" };
+  expect(invoicePaymentSchema.parse(payment)).toEqual(payment);
+  expect(invoicePaymentSchema.safeParse({ ...payment, paymentUrl: "https://pay.example.com/invoice" }).success).toBe(true);
+  for (const paymentUrl of ["javascript:alert(1)", "http://pay.example.com", "not a link"]) {
+    expect(invoicePaymentSchema.safeParse({ ...payment, paymentUrl }).success).toBe(false);
+  }
 });

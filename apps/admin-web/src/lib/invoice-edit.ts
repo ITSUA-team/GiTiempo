@@ -5,6 +5,7 @@ const emptyPayment = { method: '', terms: '', beneficiary: '', provider: '', acc
 
 export function savedDraft(invoice: InvoiceResponse): CreateInvoiceInput {
   return {
+    issueDate: invoice.issueDate ?? invoice.createdAt.slice(0, 10), dueDate: invoice.dueDate ?? null,
     title: invoice.title, dateFrom: invoice.dateFrom, dateTo: invoice.dateTo,
     projectId: invoice.projectId ?? undefined, groupId: invoice.groupId ?? null,
     hourlyRate: invoice.hourlyRate, currency: invoice.currency, discountPercent: invoice.discountPercent,
@@ -16,7 +17,7 @@ export function savedDraft(invoice: InvoiceResponse): CreateInvoiceInput {
 }
 
 const scalarFields = [
-  'title', 'dateFrom', 'dateTo', 'projectId', 'groupId', 'hourlyRate', 'currency',
+  'issueDate', 'dueDate', 'title', 'dateFrom', 'dateTo', 'projectId', 'groupId', 'hourlyRate', 'currency',
   'discountPercent', 'roundingStepMinutes', 'notes', 'logo', 'services', 'timeEntryIds',
 ] as const;
 

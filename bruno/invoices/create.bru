@@ -14,6 +14,8 @@ auth:bearer {
 body:json {
   {
     "title": "November development",
+    "issueDate": "2026-12-01",
+    "dueDate": "2026-12-15",
     "dateFrom": "2026-11-01",
     "dateTo": "2026-11-30",
     "hourlyRate": 100,
@@ -22,7 +24,7 @@ body:json {
     "sender": {"name": "Sender", "address": "Kyiv", "email": "billing@example.com", "taxId": ""},
     "recipient": {"name": "Customer", "address": "London", "email": "accounts@example.com", "taxId": ""},
     "services": "Development services",
-    "payment": {"method": "Bank transfer", "terms": "14 days", "beneficiary": "Sender", "provider": "Bank", "account": "DEMO", "instructions": "Include invoice reference"}
+    "payment": {"method": "Bank transfer", "terms": "14 days", "beneficiary": "Sender", "provider": "Bank", "account": "DEMO", "swift": "DEMO-BIC", "instructions": "Include invoice reference"}
   }
 }
 script:post-response {

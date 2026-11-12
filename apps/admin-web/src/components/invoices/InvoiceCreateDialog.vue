@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, type Ref } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { invoiceLogoSchema } from '@gitiempo/shared';
+import { invoiceLogoSchema, invoicePaymentSchema, type InvoicePayment } from '@gitiempo/shared';
 import { adminInvoicesKeys } from '@/lib/query-keys';
 import type {
   PreviewInvoiceResponse,
@@ -34,6 +34,8 @@ import Textarea from 'primevue/textarea';
 import { adminInvoicesClient } from '@/services/admin-invoices-client';
 import { useEligibleEntriesPreview } from '@/composables/invoices/useEligibleEntriesPreview';
 import { getSettingsCurrencyOptions } from '@/lib/currencies';
+import InvoiceDocumentDates from './InvoiceDocumentDates.vue';
+import InvoicePaymentFields from './InvoicePaymentFields.vue';
 import InvoiceEditorEntries from './InvoiceEditorEntries.vue';
 import InvoiceGroupSelect from './InvoiceGroupSelect.vue';
 import { useInvoiceGroups } from '@/composables/invoices/useInvoiceGroups';
@@ -90,7 +92,9 @@ const ROUNDING_STEP_OPTIONS = getRoundingStepOptions();
 
 const sender = ref({name:'',address:'',email:'',taxId:''});
 const recipient = ref({name:'',address:'',email:'',taxId:''});
-const payment = ref({method:'',terms:'',beneficiary:'',provider:'',account:'',instructions:''});
+const payment = ref<InvoicePayment>({method:'',terms:'',beneficiary:'',provider:'',account:'',instructions:''});
+const issueDate = ref<Date | null>(new Date());
+const dueDate = ref<Date | null>(null);
 const services = ref('');
 const logo = ref<string | null>(null);
 const selectedEntries = ref<string[]>([]);
@@ -173,8 +177,8 @@ async function useSettings(fields: 'billing' | 'logo' = 'billing') {
     for (const key of Object.keys(initialSender) as Array<keyof typeof initialSender>) {
       if (sender.value[key] === initialSender[key]) sender.value[key] = profile.sender[key];
     }
-    for (const key of Object.keys(initialPayment) as Array<keyof typeof initialPayment>) {
-      if (payment.value[key] === initialPayment[key]) payment.value[key] = profile.payment[key];
+    for (const key of [...new Set([...Object.keys(initialPayment), ...Object.keys(profile.payment)])] as Array<keyof typeof initialPayment>) {
+      if (payment.value[key] === initialPayment[key]) Object.assign(payment.value, { [key]: profile.payment[key] });
     }
   } catch {
     if (current()) defaultsError.value = 'Could not load billing settings. Try again.';
@@ -214,11 +218,6 @@ function selectLogo(event: Event) {
   if (input.files?.[0]) uploadLogo({files: input.files[0]});
   input.value = '';
 }
-const paymentMethods = computed(() => [...new Set(['Bank transfer', 'Card', 'Other', payment.value.method].filter(Boolean))]);
-const paymentFields = [
-  ['terms', 'Payment terms'], ['beneficiary', 'Beneficiary'], ['provider', 'Bank / payment provider'],
-  ['account', 'Account / payment details'], ['instructions', 'Payment instructions'],
-] as const;
 const workspaceRateKnown = ref(false);
 const workspaceCurrencyKnown = ref(false);
 
@@ -286,6 +285,8 @@ watch(
     currencyTouched.value = false;
     roundingStepTouched.value = false;
     title.value = '';
+    issueDate.value = new Date();
+    dueDate.value = null;
     selectedProjectId.value = null;
     dateRange.value = null;
     hourlyRate.value = null;
@@ -309,6 +310,10 @@ watch(
       group.value = props.source?.groupId ?? props.groupId ?? null;
       const source = props.source;
       if (source) {
+        if (props.editing) {
+          issueDate.value = new Date((source.issueDate ?? source.createdAt.slice(0, 10)) + 'T12:00:00');
+          dueDate.value = source.dueDate ? new Date(source.dueDate + 'T12:00:00') : null;
+        }
         rateTouched.value = true;
         currencyTouched.value = true;
         title.value = source.title;
@@ -483,9 +488,12 @@ const projectError = computed(
     validationTriggered.value && !props.isAdmin && !selectedProjectId.value,
 );
 
+const documentDatesValid = computed(() => Boolean(issueDate.value) && (!dueDate.value || getLocalDateKey(dueDate.value) >= getLocalDateKey(issueDate.value!)));
+const paymentValid = computed(() => invoicePaymentSchema.safeParse(payment.value).success);
+
 const canSubmit = computed(
   () =>
-    hasTitle.value &&
+    documentDatesValid.value && paymentValid.value && hasTitle.value &&
     hasDateRange.value &&
     (props.isAdmin || Boolean(selectedProjectId.value)),
 );
@@ -507,7 +515,7 @@ const unavailable = computed(() => {
 });
 
 const submitBlocked = computed(() =>
-  isCreating.value || defaultsPending.value || logoPending.value || props.revisionConflict ||
+  !documentDatesValid.value || !paymentValid.value || isCreating.value || defaultsPending.value || logoPending.value || props.revisionConflict ||
   (canSubmit.value && (
     calculating.value || !calculatedPreview.value || !preview.value ||
     previewError.value || unavailable.value.length > 0
@@ -571,6 +579,7 @@ function handleVisibleChange(nextVisible: boolean): void {
 
 function currentDraft(): CreateInvoiceInput {
     return {
+      issueDate: getLocalDateKey(issueDate.value!), dueDate: dueDate.value ? getLocalDateKey(dueDate.value) : null,
       sender: sender.value, recipient: recipient.value, payment: payment.value, services: services.value,
       logo: logo.value, timeEntryIds: selectedEntries.value, groupId: group.value,
       title: title.value.trim(),
@@ -595,6 +604,8 @@ async function reviewLatestRevision() {
     const {draft, conflicts, savedLogo} = await props.reviewRevision(currentDraft);
     if (generation !== lifecycleGeneration || !props.visible) return;
     title.value = draft.title;
+    issueDate.value = new Date((draft.issueDate ?? props.source?.createdAt.slice(0, 10) ?? getLocalDateKey(new Date())) + 'T12:00:00');
+    dueDate.value = draft.dueDate ? new Date(draft.dueDate + 'T12:00:00') : null;
     dateRange.value = [new Date(draft.dateFrom + 'T12:00:00'), new Date(draft.dateTo + 'T12:00:00')];
     selectedProjectId.value = draft.projectId ?? null;
     group.value = draft.groupId ?? null;
@@ -718,6 +729,10 @@ async function handleCreate(): Promise<void> {
           </Message>
         </div>
 
+        <InvoiceDocumentDates
+          v-model:issue-date="issueDate"
+          v-model:due-date="dueDate"
+        />
         <InvoiceGroupSelect
           v-model="group"
           input-id="invoice-group"
@@ -753,6 +768,7 @@ async function handleCreate(): Promise<void> {
             Select a project.
           </Message>
         </div>
+
 
         <div
           data-testid="invoice-create-row-dates"
@@ -1015,39 +1031,7 @@ async function handleCreate(): Promise<void> {
         <h2 class="text-lg font-semibold">
           How to pay
         </h2>
-        <label
-          for="invoice-payment-method"
-          class="flex flex-col gap-1.5 text-[13px] font-medium"
-        >
-          Payment method
-          <Select
-            v-model="payment.method"
-            input-id="invoice-payment-method"
-            :options="paymentMethods"
-            :pt="giTiempoFieldWidthSelectPt"
-            editable
-            class="w-full"
-          />
-        </label>
-        <label
-          v-for="[key,label] in paymentFields"
-          :key="key"
-          class="flex flex-col gap-1.5 text-[13px] font-medium"
-        >
-          {{ label }}
-          <Textarea
-            v-if="key === 'instructions' || key === 'account'"
-            v-model="payment[key]"
-            :rows="key === 'account' ? 1 : 2"
-            class="w-full"
-            :class="key === 'account' ? 'min-h-[38px] field-sizing-content' : 'h-[70px]'"
-          />
-          <InputText
-            v-else
-            v-model="payment[key]"
-            class="h-[38px] w-full"
-          />
-        </label>
+        <InvoicePaymentFields v-model="payment" />
         <label
           for="invoice-create-notes"
           class="flex flex-col gap-1.5 text-[13px] font-medium"

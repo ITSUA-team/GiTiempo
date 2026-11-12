@@ -19,6 +19,8 @@ import { routeNames } from '@/constants/routes';
 import { createTestQueryPlugin } from '@/test/query-client';
 import { useAuthStore } from '@/stores/auth';
 
+const BrowserURL = URL;
+
 const testMocks = vi.hoisted(() => ({
   createInvoice: vi.fn(),
   deleteInvoice: vi.fn(),
@@ -204,7 +206,7 @@ describe('InvoiceDetailView', () => {
     testMocks.routeParams=reactive({id:invoiceId});
     vi.stubGlobal('matchMedia',vi.fn(()=>({matches:false,addEventListener:vi.fn(),removeEventListener:vi.fn()})));
     testMocks.request.mockResolvedValue({blob:()=>Promise.resolve(new Blob(['pdf']))});
-    vi.stubGlobal('URL', {createObjectURL:vi.fn(()=> 'blob:invoice'),revokeObjectURL:vi.fn()});
+    vi.stubGlobal('URL', Object.assign(class extends BrowserURL {}, {createObjectURL:vi.fn(()=> 'blob:invoice'),revokeObjectURL:vi.fn()}));
     testMocks.deleteInvoice.mockReset();
     testMocks.createInvoice.mockReset();
     testMocks.errorToast.mockReset();
@@ -959,4 +961,27 @@ describe('InvoiceDetailView', () => {
       { label: 'Paid', value: 'paid' },
     ]);
   });
+  it('reconciles independently edited dates and flags competing due date edits', () => {
+    const base = createInvoice({ issueDate:'2026-03-01', dueDate:'2026-03-10' });
+    const local = { ...savedDraft(base), dueDate:'2026-03-20' };
+    const remote = createInvoice({ issueDate:'2026-03-02', dueDate:'2026-03-15' });
+    const reviewed = reconcileInvoiceDraft(base, local, remote);
+    expect(reviewed.patch).toEqual({ dueDate:'2026-03-20' });
+    expect(reviewed.draft.issueDate).toBe('2026-03-02');
+    expect(reviewed.conflicts).toEqual([expect.stringContaining('dueDate')]);
+    expect(reconcileInvoiceDraft(base,savedDraft(base),base).patch).toEqual({});
+  });
+
+  it('displays saved dates and a card link without inactive bank details', async () => {
+    testMocks.getInvoice.mockResolvedValue(createInvoice({issueDate:'2026-03-01',dueDate:'2026-03-20',payment:{method:'Card',terms:'Net 19',provider:'Stripe',beneficiary:'Hidden beneficiary',account:'Hidden account',swift:'Hidden SWIFT',instructions:'Pay invoice',paymentUrl:'https://pay.example.test/invoice'}}));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    expect(wrapper.text()).toContain('01 Mar 2026');
+    expect(wrapper.text()).toContain('20 Mar 2026');
+    expect(wrapper.get('a[href="https://pay.example.test/invoice"]').text()).toBe('Pay online');
+    expect(wrapper.text()).not.toContain('Hidden account');
+    expect(wrapper.text()).not.toContain('Hidden beneficiary');
+    expect(wrapper.text()).not.toContain('Hidden SWIFT');
+  });
+
 });

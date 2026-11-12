@@ -8,7 +8,7 @@ import Button from 'primevue/button';
 import FileUpload, { type FileUploadUploaderEvent } from 'primevue/fileupload';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
-import Select from 'primevue/select';
+import InvoicePaymentFields from '@/components/invoices/InvoicePaymentFields.vue';
 import Message from 'primevue/message';
 
 import { getAdminSettingsClient } from '@/services/admin-settings-client';
@@ -41,16 +41,6 @@ const senderFields = [
   { key: 'email', label: 'Billing email' },
   { key: 'taxId', label: 'Tax ID (optional)' },
 ] as const;
-const paymentMethods = computed(() => [...new Set(['Bank transfer', 'Card', 'Other', draft.value.payment.method].filter(Boolean))]);
-const paymentFields = [
-  { key: 'method', label: 'Payment method' },
-  { key: 'terms', label: 'Payment terms' },
-  { key: 'beneficiary', label: 'Beneficiary' },
-  { key: 'provider', label: 'Bank / payment provider' },
-  { key: 'account', label: 'Account / payment details' },
-  { key: 'instructions', label: 'Payment instructions' },
-] as const;
-
 watch(() => props.profile, (profile) => {
   if (dirty.value && saved.value) return;
   draft.value = structuredClone(toRaw(profile ?? emptyProfile()));
@@ -189,7 +179,10 @@ async function save(): Promise<void> {
           alt="Invoice logo"
           class="h-12 w-12 rounded-lg object-contain"
         >
-        <div class="flex min-w-0 flex-col gap-1 sm:flex-1" :class="{'col-span-2': !draft.logo}">
+        <div
+          class="flex min-w-0 flex-col gap-1 sm:flex-1"
+          :class="{'col-span-2': !draft.logo}"
+        >
           <span class="text-text-dark text-[13px] font-medium">Logo (optional)</span>
           <span class="text-text-muted hidden text-xs sm:block">PNG or SVG · shown on PDF</span>
         </div>
@@ -218,7 +211,11 @@ async function save(): Promise<void> {
           @click="removeLogo"
         >
           <span v-if="isMobile">Remove</span>
-          <i v-else class="pi pi-trash" aria-hidden="true" />
+          <i
+            v-else
+            class="pi pi-trash"
+            aria-hidden="true"
+          />
         </Button>
       </div>
       <div class="border-divider border-t pt-4">
@@ -227,44 +224,11 @@ async function save(): Promise<void> {
         </h2>
       </div>
       <div class="flex flex-col gap-4">
-        <div class="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
-          <div
-            v-for="field in paymentFields.slice(0, 2)"
-            :key="field.key"
-            class="flex flex-col gap-1.5"
-          >
-            <label
-              :for="`invoice-payment-${field.key}`"
-              class="text-text-dark text-[13px] font-medium"
-            >{{ field.label }}</label>
-            <Select
-              v-if="field.key === 'method'"
-              v-model="draft.payment.method"
-              input-id="invoice-payment-method"
-              :options="paymentMethods"
-              editable
-              :disabled="saving"
-              :invalid="Boolean(fieldErrors['payment.method'])"
-              class="h-[38px] w-full"
-            />
-            <InputText
-              v-else
-              :id="`invoice-payment-${field.key}`"
-              v-model="draft.payment[field.key]"
-              :disabled="saving"
-              :invalid="Boolean(fieldErrors[`payment.${field.key}`])"
-              class="h-[38px] w-full"
-            />
-            <Message
-              v-if="fieldErrors[`payment.${field.key}`]"
-              severity="error"
-              size="small"
-              variant="simple"
-            >
-              {{ fieldErrors[`payment.${field.key}`] }}
-            </Message>
-          </div>
-        </div>
+        <InvoicePaymentFields
+          v-model="draft.payment"
+          :disabled="saving"
+          :errors="fieldErrors"
+        />
         <div class="order-first flex flex-col gap-1.5 sm:order-none">
           <label
             for="invoice-prefix"
@@ -272,8 +236,8 @@ async function save(): Promise<void> {
           >Invoice prefix</label>
           <InputText
             id="invoice-prefix"
-            class="h-[38px] w-full"
             v-model="draft.invoicePrefix"
+            class="h-[38px] w-full"
             :disabled="saving"
             :invalid="Boolean(fieldErrors.invoicePrefix)"
           />
@@ -284,40 +248,6 @@ async function save(): Promise<void> {
             variant="simple"
           >
             {{ fieldErrors.invoicePrefix }}
-          </Message>
-        </div>
-        <div
-          v-for="field in paymentFields.slice(2)"
-          :key="field.key"
-          class="flex flex-col gap-1.5"
-        >
-          <label
-            :for="`invoice-payment-${field.key}`"
-            class="text-text-dark text-[13px] font-medium"
-          >{{ field.label }}</label>
-          <Textarea
-            v-if="field.key === 'instructions' || field.key === 'account'"
-            :id="`invoice-payment-${field.key}`"
-            v-model="draft.payment[field.key]"
-            :disabled="saving"
-            :rows="field.key === 'account' && !isMobile ? 1 : 2"
-            class="w-full"
-            :class="field.key === 'account' ? 'h-[70px] sm:h-[38px]' : 'h-[70px]'"
-          />
-          <InputText
-            v-else
-            :id="`invoice-payment-${field.key}`"
-            v-model="draft.payment[field.key]"
-            :disabled="saving"
-            class="h-[38px] w-full"
-          />
-          <Message
-            v-if="fieldErrors[`payment.${field.key}`]"
-            severity="error"
-            size="small"
-            variant="simple"
-          >
-            {{ fieldErrors[`payment.${field.key}`] }}
           </Message>
         </div>
       </div>

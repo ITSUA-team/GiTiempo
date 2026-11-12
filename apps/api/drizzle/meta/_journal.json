@@ -253,6 +253,13 @@
       "when": 1794394067794,
       "tag": "0035_invoice_historical_lines",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794430090153,
+      "tag": "0036_strange_gauntlet",
+      "breakpoints": true
     }
   ]
 }

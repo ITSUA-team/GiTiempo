@@ -3642,4 +3642,49 @@ describe('Invoices (e2e)', () => {
       await db.delete(invoices).where(eq(invoices.id, create.body.id));
     }
   });
+  it('persists invoice dates, rejects invalid merged patches, and clears the due date', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Invoice dates regression',
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        timeEntryIds: [],
+        hourlyRate: 100,
+        currency: 'USD',
+        issueDate: '2027-07-01',
+        dueDate: '2027-07-31',
+      });
+    expect(created.status).toBe(201);
+    const id = created.body.id;
+    try {
+      expect(created.body.issueDate).toBe('2027-07-01');
+      expect(created.body.dueDate).toBe('2027-07-31');
+      for (const patch of [
+        { issueDate: '2027-08-01' },
+        { dueDate: '2027-06-30' },
+      ]) {
+        const invalid = await request(app.getHttpServer())
+          .patch('/invoices/' + id)
+          .set('Authorization', bearer(adminToken))
+          .send(patch);
+        expect(invalid.status).toBe(422);
+      }
+      const saved = await request(app.getHttpServer())
+        .get('/invoices/' + id)
+        .set('Authorization', bearer(adminToken));
+      expect(saved.body.issueDate).toBe('2027-07-01');
+      expect(saved.body.dueDate).toBe('2027-07-31');
+      const cleared = await request(app.getHttpServer())
+        .patch('/invoices/' + id)
+        .set('Authorization', bearer(adminToken))
+        .send({ dueDate: null, issueDate: '2027-08-01' });
+      expect(cleared.status).toBe(200);
+      expect(cleared.body.dueDate).toBeNull();
+      expect(cleared.body.issueDate).toBe('2027-08-01');
+    } finally {
+      await db.delete(invoices).where(eq(invoices.id, id));
+    }
+  });
 });

@@ -187,3 +187,20 @@ The shared contracts SHALL represent a read-only calculation request with candid
 - **GIVEN** the detail response identifies the saved revision
 - **WHEN** a new editor submits that revision after a different business edit has been committed
 - **THEN** the API reports a conflict and the caller can read the current revision before resubmitting
+
+## ADDED Requirements
+
+### Requirement: Invoice date and payment contracts
+
+Invoice requests SHALL accept date-only issueDate and nullable dueDate. Omitted issueDate on create SHALL resolve to today in the workspace timezone, and omitted dueDate SHALL resolve to null. Update requests SHALL preserve omitted values and clear an explicitly null dueDate. Payment contracts SHALL add optional swift and paymentUrl while preserving existing payment payloads.
+
+#### Scenario: Validate dates and links
+
+- **WHEN** create or update supplies invalid calendar dates or an unsafe non-HTTPS paymentUrl
+- **THEN** validation rejects the request
+- **AND** a dueDate earlier than the effective issueDate is rejected, including partial updates with only one date
+
+#### Scenario: Accept older callers
+
+- **WHEN** an existing caller omits the new dates or payment fields
+- **THEN** its request remains valid and existing payment details remain available

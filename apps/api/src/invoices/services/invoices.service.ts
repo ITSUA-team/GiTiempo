@@ -67,6 +67,8 @@ interface InvoiceDetailRow {
   projectId: string | null;
   title: string;
   status: InvoiceStatus;
+  issueDate?: string;
+  dueDate?: string | null;
   dateFrom: string;
   dateTo: string;
   hourlyRate: number;
@@ -106,6 +108,8 @@ const invoiceSummarySelection = {
   projectId: invoices.projectId,
   title: invoices.title,
   status: invoices.status,
+  issueDate: invoices.issueDate,
+  dueDate: invoices.dueDate,
   dateFrom: invoices.dateFrom,
   dateTo: invoices.dateTo,
   hourlyRate: invoices.hourlyRate,
@@ -1029,6 +1033,16 @@ export class InvoicesService {
     }
     const discountPercent = input.discountPercent;
     const timeZone = settings?.timeZone ?? 'UTC';
+    const issueDate =
+      input.issueDate ??
+      new Intl.DateTimeFormat('sv-SE', { timeZone }).format(new Date());
+    if (input.dueDate && input.dueDate < issueDate) {
+      throw new DomainError(
+        'invoice_invalid_payment_dates',
+        'Due date must be on or after the issue date',
+        422,
+      );
+    }
 
     // Snapshot step: explicit body value → project step (null = inherits
     // workspace) → workspace setting.
@@ -1143,6 +1157,8 @@ export class InvoicesService {
                 ? settings?.billingProfile?.logo
                 : input.logo,
           },
+          issueDate,
+          dueDate: input.dueDate ?? null,
           dateFrom: input.dateFrom,
           dateTo: input.dateTo,
           hourlyRate,
@@ -1325,11 +1341,26 @@ export class InvoicesService {
           (field) =>
             input[field] !== undefined && input[field] !== invoice[field],
         );
+      const issueDate =
+        input.issueDate ??
+        invoice.issueDate ??
+        invoice.createdAt.toISOString().slice(0, 10);
+      const dueDate =
+        input.dueDate === undefined ? invoice.dueDate : input.dueDate;
+      if (dueDate && dueDate < issueDate) {
+        throw new DomainError(
+          'invoice_invalid_payment_dates',
+          'Due date must be on or after the issue date',
+          422,
+        );
+      }
       const updates: Partial<typeof invoices.$inferInsert> = {};
       for (const key of [
         'title',
         'status',
         'notes',
+        'issueDate',
+        'dueDate',
         'dateFrom',
         'dateTo',
         'hourlyRate',
@@ -1744,6 +1775,8 @@ export class InvoicesService {
       projectId: row.projectId,
       title: row.title,
       status: row.status as InvoiceResponse['status'],
+      issueDate: row.issueDate ?? row.createdAt.toISOString().slice(0, 10),
+      dueDate: row.dueDate ?? null,
       dateFrom: row.dateFrom,
       dateTo: row.dateTo,
       hourlyRate: Number(row.hourlyRate),
@@ -1784,6 +1817,8 @@ export class InvoicesService {
       projectId: row.projectId,
       title: row.title,
       status: row.status as InvoiceResponse['status'],
+      issueDate: row.issueDate ?? row.createdAt.toISOString().slice(0, 10),
+      dueDate: row.dueDate ?? null,
       dateFrom: row.dateFrom,
       dateTo: row.dateTo,
       hourlyRate: Number(row.hourlyRate),

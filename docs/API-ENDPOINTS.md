@@ -423,3 +423,7 @@ PNG logos are fully decoded at API writes and PDF export with a 4-megapixel limi
 Invoice list responses include recipient summaries for display. Sender, payment instructions, services, logos and saved time-entry rows are returned by the detail endpoint. List entry counts use saved document rows. Editing an invoice preserves retained historical rows even when their source time entries have subsequently changed or been deleted. A deliberately revised period or project must still contain the retained rows.
 
 Editors submit changed fields with `expectedRevision`. After a revision conflict they compare their original values, local edits and the latest saved invoice before retrying. Personal group moves use their dedicated endpoint and retain their independence from business revisions.
+
+### Invoice dates and method-specific payment details
+
+Invoice create and patch accept `issueDate` (YYYY-MM-DD) and `dueDate` (YYYY-MM-DD or null). Omitted issue dates on creation use today in the workspace time zone. Omitted due dates remain unset. Patches validate the combined persisted and submitted dates, returning 422 `invoice_invalid_payment_dates` when the due date precedes the issue date. Response and PDF use saved issue dates. `payment.swift` and `payment.paymentUrl` are optional; payment URLs must use HTTPS. Bank-transfer PDFs include account and SWIFT details, card PDFs include provider and a clickable payment link, and Other/custom methods retain free-form payment details. Terms and instructions apply to every method.

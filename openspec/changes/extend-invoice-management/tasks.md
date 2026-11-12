@@ -40,3 +40,11 @@
 - [x] 5.3 Submit changed editor fields only, review concurrent field conflicts explicitly, preserve independent group moves and drafts across token refresh, and preserve workspace defaults during asynchronous loading. Add editor/view regressions.
 - [x] 5.4 Keep calculation failures separate from other editor errors and validate logo uploads consistently in both editors. Add regressions for failed defaults/groups requests and unrelated invalid settings fields.
 - [x] 5.5 Repeat targeted and repository checks, isolated API integration tests, desktop/mobile browser acceptance, strict OpenSpec validation and an independent review of the fixes. Record results and remaining limitations.
+
+## 6. Issue dates and adaptive payment details
+
+- [x] 6.1 Extend shared contracts, persistence and API create/update for issueDate, nullable dueDate, optional SWIFT/BIC and HTTPS paymentUrl. Validate merged partial dates and preserve legacy payloads. Generate migration and document historical backfill.
+- [x] 6.2 Implement issue/due date editing, copying defaults and revision conflict preservation. Reuse adaptive payment controls in invoice editor and workspace settings while retaining inactive values.
+- [x] 6.3 Render saved dates and selected-method details in invoice detail and PDF, with clickable Card links and historical invoice support. Add date, partial-update, link-validation and PDF regressions.
+- [x] 6.4 Update approved desktop/mobile .pen frames and manually verify Bank transfer, Card, Other/custom, switching back, clearing due date, copied dates, failed saves and PDF output at desktop/mobile widths. Record passing results and any remaining differences.
+- [x] 6.5 Run targeted regressions, repository lint/typecheck/tests, API integration checks and strict OpenSpec validation. Record verification evidence and resolve findings before acceptance.

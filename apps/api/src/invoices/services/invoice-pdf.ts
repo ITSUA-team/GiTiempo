@@ -120,10 +120,30 @@ export async function renderInvoicePdf(
     };
   }
   const discount = Math.round((subtotal - invoice.totalAmount) * 100) / 100;
+  const paymentUrl =
+    payment.paymentUrl &&
+    URL.canParse(payment.paymentUrl) &&
+    new URL(payment.paymentUrl).protocol === 'https:'
+      ? payment.paymentUrl
+      : null;
   const paymentLines = [
     [payment.method, payment.terms].filter(Boolean).join(' · '),
-    [payment.beneficiary, payment.provider].filter(Boolean).join(' · '),
-    payment.account && 'Account: ' + payment.account,
+    ...(payment.method === 'Card'
+      ? [
+          payment.provider,
+          paymentUrl && {
+            text: paymentUrl,
+            link: paymentUrl,
+            color: COLOR.brand,
+          },
+        ]
+      : [
+          [payment.beneficiary, payment.provider].filter(Boolean).join(' · '),
+          payment.account && 'Account: ' + payment.account,
+          payment.method === 'Bank transfer' &&
+            payment.swift &&
+            'SWIFT / BIC: ' + payment.swift,
+        ]),
     payment.instructions,
   ].filter(Boolean);
   function render(totalsLast: boolean): Promise<Buffer> {
@@ -149,8 +169,16 @@ export async function renderInvoicePdf(
           identification('Invoice number', invoice.reference ?? invoice.id, 12),
           identification(
             'Issued',
-            dateFormat.format(new Date(invoice.createdAt)),
+            dateFormat.format(new Date(invoice.issueDate ?? invoice.createdAt)),
           ),
+          ...(invoice.dueDate
+            ? [
+                identification(
+                  'Due date',
+                  dateFormat.format(new Date(invoice.dueDate)),
+                ),
+              ]
+            : []),
           identification('Billing period', period),
         ],
         columnGap: 9,
@@ -252,7 +280,11 @@ export async function renderInvoicePdf(
       {
         stack: [
           { text: 'HOW TO PAY', style: 'section' },
-          ...paymentLines.map((text) => ({ text, margin: [0, 0, 0, 4] })),
+          ...paymentLines.map((text) =>
+            typeof text === 'object'
+              ? { ...text, margin: [0, 0, 0, 4] }
+              : { text, margin: [0, 0, 0, 4] },
+          ),
         ],
       },
       ...(invoice.notes

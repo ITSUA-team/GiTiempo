@@ -210,3 +210,59 @@ describe('invoice PNG logos', () => {
     },
   );
 });
+
+describe('invoice dates and payment methods', () => {
+  it('uses the saved issue and due dates instead of creation time', async () => {
+    const text = (
+      await renderedPages({ issueDate: '2026-12-02', dueDate: '2026-12-15' })
+    ).join('\n');
+    expect(text).toContain('02 Dec 2026');
+    expect(text).toContain('15 Dec 2026');
+    expect(text).toContain('Due date');
+  });
+  it('includes only card instructions after changing from bank transfer', async () => {
+    const text = (
+      await renderedPages({
+        payment: {
+          ...payment,
+          method: 'Card',
+          provider: 'Stripe',
+          account: 'OLD-IBAN',
+          swift: 'OLD-SWIFT',
+          beneficiary: 'OLD-BENEFICIARY',
+          paymentUrl: 'https://pay.example.com/invoice',
+        },
+      })
+    ).join('\n');
+    expect(text).toContain('https://pay.example.com/invoice');
+    expect(text).toContain('Stripe');
+    expect(text).not.toContain('OLD-');
+  });
+  it('includes SWIFT details for a bank transfer and omits card links', async () => {
+    const text = (
+      await renderedPages({
+        payment: {
+          ...payment,
+          account: 'TEST-IBAN',
+          swift: 'TESTBIC',
+          paymentUrl: 'https://pay.example.com/old',
+        },
+      })
+    ).join('\n');
+    expect(text).toContain('TEST-IBAN');
+    expect(text).toContain('TESTBIC');
+    expect(text).not.toContain('https://pay.example.com/old');
+  });
+  it('omits unsafe payment links in persisted documents', async () => {
+    const text = (
+      await renderedPages({
+        payment: {
+          ...payment,
+          method: 'Card',
+          paymentUrl: 'javascript:alert(1)',
+        },
+      })
+    ).join('\n');
+    expect(text).not.toContain('javascript:');
+  });
+});

@@ -60,3 +60,15 @@ The Settings page MUST allow Admins to manage workspace defaults for the invoice
 - **GIVEN** a PM with invoice access opens invoice creation
 - **WHEN** the page loads its invoice defaults
 - **THEN** it retrieves the permitted defaults in the invoice workflow without displaying or querying the Admin Settings page
+
+## ADDED Requirements
+
+### Requirement: Adaptive payment defaults
+
+Workspace invoice payment defaults SHALL use the same method-specific fields as invoice editing. Defaults SHALL preserve hidden-field values across method switches, with provider, terms and instructions shared across methods and provide applicable defaults to new invoices.
+
+#### Scenario: Save Card defaults
+
+- **WHEN** an Admin selects Card and saves a provider and HTTPS payment link
+- **THEN** a new invoice starts with those Card defaults
+- **AND** existing invoice snapshots keep their own dates and payment details

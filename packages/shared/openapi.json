@@ -5740,6 +5740,25 @@
                   "instructions": {
                     "type": "string",
                     "maxLength": 5000
+                  },
+                  "swift": {
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "paymentUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 5000,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          ""
+                        ]
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -5897,6 +5916,25 @@
                   "instructions": {
                     "type": "string",
                     "maxLength": 5000
+                  },
+                  "swift": {
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "paymentUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 5000,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          ""
+                        ]
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -9816,6 +9854,17 @@
                     "paid"
                   ]
                 },
+                "issueDate": {
+                  "type": "string",
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                },
+                "dueDate": {
+                  "type": "string",
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                  "nullable": true
+                },
                 "dateFrom": {
                   "type": "string",
                   "format": "date",
@@ -10082,6 +10131,25 @@
               "instructions": {
                 "type": "string",
                 "maxLength": 5000
+              },
+              "swift": {
+                "type": "string",
+                "maxLength": 5000
+              },
+              "paymentUrl": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 5000,
+                    "format": "uri"
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      ""
+                    ]
+                  }
+                ]
               }
             },
             "required": [
@@ -10125,6 +10193,17 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 255
+          },
+          "issueDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "nullable": true
           },
           "dateFrom": {
             "type": "string",
@@ -10297,6 +10376,25 @@
               "instructions": {
                 "type": "string",
                 "maxLength": 5000
+              },
+              "swift": {
+                "type": "string",
+                "maxLength": 5000
+              },
+              "paymentUrl": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 5000,
+                    "format": "uri"
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      ""
+                    ]
+                  }
+                ]
               }
             },
             "required": [
@@ -10351,6 +10449,17 @@
               "sent",
               "paid"
             ]
+          },
+          "issueDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "nullable": true
           },
           "dateFrom": {
             "type": "string",
@@ -10805,6 +10914,25 @@
                   "instructions": {
                     "type": "string",
                     "maxLength": 5000
+                  },
+                  "swift": {
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "paymentUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 5000,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          ""
+                        ]
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -10972,6 +11100,25 @@
               "instructions": {
                 "type": "string",
                 "maxLength": 5000
+              },
+              "swift": {
+                "type": "string",
+                "maxLength": 5000
+              },
+              "paymentUrl": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 5000,
+                    "format": "uri"
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      ""
+                    ]
+                  }
+                ]
               }
             },
             "required": [
@@ -11015,6 +11162,17 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 255
+          },
+          "issueDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "nullable": true
           },
           "dateFrom": {
             "type": "string",
@@ -11467,6 +11625,25 @@
               "instructions": {
                 "type": "string",
                 "maxLength": 5000
+              },
+              "swift": {
+                "type": "string",
+                "maxLength": 5000
+              },
+              "paymentUrl": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 5000,
+                    "format": "uri"
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      ""
+                    ]
+                  }
+                ]
               }
             },
             "required": [
@@ -11510,6 +11687,17 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 255
+          },
+          "issueDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "nullable": true
           },
           "dateFrom": {
             "type": "string",

@@ -38,6 +38,10 @@ export const invoices = pgTable(
       .$type<InvoiceStatus>()
       .default('draft')
       .notNull(),
+    issueDate: date('issue_date')
+      .notNull()
+      .default(sql`CURRENT_DATE`),
+    dueDate: date('due_date'),
     dateFrom: date('date_from').notNull(),
     dateTo: date('date_to').notNull(),
     hourlyRate: numeric('hourly_rate', {
@@ -90,6 +94,10 @@ export const invoices = pgTable(
     check(
       'invoices_status_check',
       sql`${table.status} IN ('draft', 'sent', 'paid')`,
+    ),
+    check(
+      'invoices_payment_dates_check',
+      sql`${table.dueDate} IS NULL OR ${table.dueDate} >= ${table.issueDate}`,
     ),
     check(
       'invoices_date_range_check',

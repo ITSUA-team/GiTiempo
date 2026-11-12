@@ -13,6 +13,8 @@ Design source: `GITiempo.pen` at commit `c5180df6`. Frame IDs below point to edi
 | Create, edit, review entries and copy | i527_0633, i527_0457, i527_1274 | i527_1142, i527_0970, i527_1366, i527_1532 |
 | Invoice document and export failure | i527_0712 | i527_1360 |
 | Workspace invoice defaults | h8YRz | i527_1513 |
+| Adaptive Card payment fields | i527_dates_76 | i527_dates_119 |
+| Adaptive Other payment fields | i527_dates_162 | i527_dates_209 |
 
 The interaction notes in i527_1526 apply across these screens. The example names, groups, references and amounts are sample data.
 
@@ -59,3 +61,13 @@ Scope cached groups, counts and list queries to the signed-in user, active works
 1. Add nullable document/profile fields, revision and reference support, immutable logo storage and personal group tables. Backfill stable, unique references idempotently for each workspace. Snapshot available linked-line display data. Keep missing billing identity or payment details unset.
 2. Validate uniqueness, preserved links, existing totals and status before enforcing reference constraints. Serve compatible API contracts before enabling the new Admin UI. Existing invoices appear in Ungrouped for each user initially.
 3. Roll back the UI first if needed. Keep the compatible API, new columns and persisted invoices/groups while investigating. Reverting to a backend that cannot maintain edited invoice revisions requires suspending invoice writes first.
+
+## Issue dates and adaptive payment details
+
+Issue date and optional Due date appear consecutively in invoice information, beside each other on desktop and stacked on mobile. They are distinct from the billing period. New and copied invoices in the browser start with today's local calendar date and no deadline. The editor submits that explicit date. A create API caller omitting issueDate receives today's workspace-timezone date. Editing restores saved values. Clearing the deadline writes null. Both dates participate in partial patches and revision conflict review. Validate the effective pair after merging a partial update. Historical invoices backfill issue date from their creation instant in workspace timezone and leave due date unset.
+
+Bank transfer shows beneficiary, bank, IBAN/account and optional SWIFT/BIC. Card shows provider and an optional HTTPS payment link. Other/custom methods retain generic beneficiary/provider/account fields. Terms and instructions apply to all methods. A method switch preserves values of hidden fields (beneficiary, account, SWIFT/BIC and paymentUrl) for switching back, while detail/PDF rendering selects only applicable payment fields. Provider, terms and instructions are shared values across methods. The payment link is a Card-only input and output; Other/custom methods do not expose it. Settings and the invoice editor reuse the same payment field surface. Legacy free-text method names remain editable. Card detail collection is outside this change.
+
+PDF metadata uses the saved issueDate, with creation-date fallback for historical input, and adds Due date only when set. A supplied HTTPS Card link is clickable. No deadline is inferred from free-text terms.
+
+The date and payment follow-up updates the existing desktop/mobile create, edit, detail, settings and PDF frames, and adds explicit Card/Other payment variants. The parity checklist is field order, date validation state, retained method values, scoped rendering, label association, narrow-screen stacking and reachable modal actions.
