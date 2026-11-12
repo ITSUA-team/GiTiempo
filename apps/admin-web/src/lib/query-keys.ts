@@ -56,6 +56,7 @@ export function normalizeInvoiceListQuery(
   query: Partial<InvoiceListQuery> = {},
 ) {
   return {
+    groupId: query.groupId ?? null,
     dateFrom: query.dateFrom ?? null,
     dateTo: query.dateTo ?? null,
     limit: query.limit ?? null,
@@ -70,6 +71,7 @@ export function normalizeEligibleEntriesQuery(
   query: Partial<EligibleEntriesQuery> = {},
 ) {
   return {
+    invoiceId: query.invoiceId ?? null,
     dateFrom: query.dateFrom ?? null,
     dateTo: query.dateTo ?? null,
     projectId: query.projectId ?? null,
@@ -155,6 +157,8 @@ export const adminInvoicesKeys = {
     [...adminInvoicesKeys.all(scope), 'defaults'] as const,
   stats: (scope: AdminServerStateScope) =>
     [...adminInvoicesKeys.all(scope), 'stats'] as const,
+  groups: (scope: AdminServerStateScope) =>
+    [...adminInvoicesKeys.all(scope), 'groups'] as const,
   eligibleEntries: (
     scope: AdminServerStateScope,
     query?: Partial<EligibleEntriesQuery>,
@@ -167,6 +171,13 @@ export const adminInvoicesKeys = {
 };
 
 export const adminMutationInvalidationKeys = {
+  afterInvoiceGroupMutation(scope: AdminServerStateScope): QueryKey[] {
+    return [
+      [...adminInvoicesKeys.all(scope), 'list'],
+      [...adminInvoicesKeys.all(scope), 'detail'],
+      adminInvoicesKeys.groups(scope),
+    ];
+  },
   afterInvoiceMutation(scope: AdminServerStateScope): QueryKey[] {
     return [adminInvoicesKeys.all(scope)];
   },

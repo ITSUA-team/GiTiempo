@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   createInvoiceSchema,
+  invoiceBillingProfileSchema,
+  invoicePaymentSchema,
+  invoiceGroupsResponseSchema,
+  invoiceDocumentIncompleteErrorSchema,
+  invoiceLogoSchema,
+  moveInvoicesSchema,
+  createInvoiceGroupSchema,
+  previewInvoiceSchema,
+  previewInvoiceResponseSchema,
   eligibleEntriesQuerySchema,
   eligibleEntriesResponseSchema,
   invoiceDefaultsResponseSchema,
@@ -220,16 +229,15 @@ describe("invoiceListResponseSchema", () => {
     expect(Object.hasOwn(result.items[0] ?? {}, "timeEntries")).toBe(false);
   });
 
-  // invoiceListItemSchema is a non-strict omit shape: a supplied timeEntries
-  // key is stripped rather than rejected.
-  it("strips a provided timeEntries array from list items", () => {
-    const result = invoiceListResponseSchema.parse({
-      items: [{ ...validInvoiceResponse, timeEntries: [] }],
+  it("strips detail-only billing fields from list responses", () => {
+    const { items } = invoiceListResponseSchema.parse({
+      items: [{ ...validInvoiceResponse, timeEntries: [], logo: "logo", sender: {}, payment: {}, services: "Consulting" }],
       meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
     });
 
-    expect(result.items).toHaveLength(1);
-    expect(Object.hasOwn(result.items[0] ?? {}, "timeEntries")).toBe(false);
+    for (const field of ["timeEntries", "logo", "sender", "payment", "services"]) {
+      expect(items[0]).not.toHaveProperty(field);
+    }
   });
 
   it("accepts an empty items array", () => {
@@ -630,11 +638,10 @@ describe("updateInvoiceSchema", () => {
     expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
   });
 
-  it("rejects hourly rate mutation", () => {
+  it("accepts hourly rate mutation", () => {
     const result = updateInvoiceSchema.safeParse({ hourlyRate: 100 });
 
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+    expect(result.success).toBe(true);
   });
 
   it("requires at least one field", () => {
@@ -682,18 +689,16 @@ describe("updateInvoiceSchema", () => {
     expect(result.error?.issues[0]?.path).toEqual(["status"]);
   });
 
-  it("rejects discountPercent edits after creation", () => {
+  it("accepts discountPercent edits after creation", () => {
     const result = updateInvoiceSchema.safeParse({ discountPercent: 10 });
 
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+    expect(result.success).toBe(true);
   });
 
-  it("rejects roundingStepMinutes as a snapshot field", () => {
+  it("accepts roundingStepMinutes as a snapshot field", () => {
     const result = updateInvoiceSchema.safeParse({ roundingStepMinutes: 15 });
 
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+    expect(result.success).toBe(true);
   });
 });
 
@@ -1180,4 +1185,137 @@ describe("invoiceDefaultsResponseSchema", () => {
     expect(belowMin.success).toBe(false);
     expect(overMax.success).toBe(false);
   });
+});
+describe("invoice revision contracts", () => {
+  const id = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010";
+  it("preserves omitted selection and accepts an explicit empty set", () => {
+    expect(updateInvoiceSchema.parse({ status: "draft" })).toEqual({ status: "draft" });
+    expect(updateInvoiceSchema.parse({ timeEntryIds: [] })).toEqual({ timeEntryIds: [] });
+  });
+  it("rejects repeated selections and calculated fields", () => {
+    expect(updateInvoiceSchema.safeParse({ timeEntryIds: [id, id] }).success).toBe(false);
+    expect(updateInvoiceSchema.safeParse({ totalAmount: 12 }).success).toBe(false);
+    expect(updateInvoiceSchema.safeParse({ reference: "FORGED" }).success).toBe(false);
+  });
+  it("validates revised dates and revision preconditions", () => {
+    expect(updateInvoiceSchema.safeParse({ dateFrom: "2026-12-10", dateTo: "2026-12-01" }).success).toBe(false);
+    expect(updateInvoiceSchema.safeParse({ expectedRevision: -1, status: "draft" }).success).toBe(false);
+  });
+});
+
+describe("personal groups and billing profiles", () => {
+  const id = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010";
+  it("supports moving to Ungrouped but rejects empty and repeated selections", () => {
+    expect(moveInvoicesSchema.parse({ invoiceIds: [id], groupId: null }).groupId).toBeNull();
+    expect(moveInvoicesSchema.safeParse({ invoiceIds: [], groupId: null }).success).toBe(false);
+    expect(moveInvoicesSchema.safeParse({ invoiceIds: [id, id], groupId: null }).success).toBe(false);
+  });
+  it("rejects blank group names and nested or forged owner fields", () => {
+    expect(createInvoiceGroupSchema.safeParse({ name: "  " }).success).toBe(false);
+    expect(createInvoiceGroupSchema.safeParse({ name: "Retainers", parentId: id }).success).toBe(false);
+    expect(createInvoiceGroupSchema.safeParse({ name: "Retainers", ownerId: id }).success).toBe(false);
+    expect(createInvoiceGroupSchema.parse({ name: " Retainers " }).name).toBe("Retainers");
+  });
+  it("accepts a profile without a logo and rejects remote or oversized logos", () => {
+    const profile = {
+      sender: { name: "", address: "", email: "", taxId: "" },
+      payment: { method: "", terms: "", beneficiary: "", provider: "", account: "", instructions: "" },
+      invoicePrefix: "INV-2026", logo: null,
+    };
+    expect(invoiceBillingProfileSchema.safeParse(profile).success).toBe(true);
+    expect(invoiceBillingProfileSchema.safeParse({ ...profile, logo: "https://example.com/logo.svg" }).success).toBe(false);
+    expect(invoiceBillingProfileSchema.safeParse({ ...profile, logo: "data:image/png;base64," + "A".repeat(1400000) }).success).toBe(false);
+  });
+  it("rejects reversed preview dates and preserves explicit zero selections", () => {
+    const preview = { title: "Example", dateFrom: "2026-12-01", dateTo: "2026-12-31", timeEntryIds: [] };
+    expect(previewInvoiceSchema.parse(preview).timeEntryIds).toEqual([]);
+    expect(previewInvoiceSchema.safeParse({ ...preview, dateTo: "2026-11-01" }).success).toBe(false);
+  });
+});
+
+describe("SVG invoice logos", () => {
+  const logo = (svg: string) => "data:image/svg+xml;base64," + btoa(svg);
+  it("accepts static vector shapes", () => {
+    expect(invoiceLogoSchema.safeParse(logo('<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0L1 1"/></svg>')).success).toBe(true);
+  });
+  it.each([
+    '<svg><script>alert(1)</script></svg>',
+    '<svg onload="alert(1)"></svg>',
+    '<svg><foreignObject/></svg>',
+    '<svg><image href="https://example.com/logo"/></svg>',
+    '<svg><path style="fill:url(https://example.com/pattern)"/></svg>',
+    '<!DOCTYPE svg><svg/>',
+  ])("rejects active or externally referenced SVG %s", svg => {
+    expect(invoiceLogoSchema.safeParse(logo(svg)).success).toBe(false);
+  });
+});
+
+
+describe("invoice management boundary contracts", () => {
+  const id = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010";
+  it("accepts every manual status and explicit nullable snapshot fields", () => {
+    for (const status of ["draft", "sent", "paid"] as const) {
+      expect(updateInvoiceSchema.parse({ status, expectedRevision: 3 })).toEqual({ status, expectedRevision: 3 });
+    }
+    expect(updateInvoiceSchema.parse({ sender: null, recipient: null, payment: null, services: null, logo: null, projectId: null, groupId: null })).toMatchObject({ sender: null, projectId: null, groupId: null });
+    expect(invoiceResponseSchema.parse(validInvoiceResponse).sender).toBeUndefined();
+    for (const field of ["id", "workspaceId", "createdAt", "createdBy", "reference", "totalHours", "totalAmount"]) {
+      expect(updateInvoiceSchema.safeParse({ title: "Revised", [field]: id }).success).toBe(false);
+    }
+  });
+  it("distinguishes automatic and explicitly empty selections", () => {
+    const input = { title: "Example", dateFrom: "2026-12-01", dateTo: "2026-12-31" };
+    expect(createInvoiceSchema.parse(input).timeEntryIds).toBeUndefined();
+    expect(createInvoiceSchema.parse({ ...input, timeEntryIds: [] }).timeEntryIds).toEqual([]);
+    expect(createInvoiceSchema.safeParse({ ...input, timeEntryIds: ["invalid"] }).success).toBe(false);
+    expect(createInvoiceSchema.safeParse({ ...input, timeEntryIds: [id, id] }).success).toBe(false);
+    expect(eligibleEntriesQuerySchema.safeParse({ dateFrom: input.dateFrom, dateTo: input.dateTo, invoiceId: "invalid" }).success).toBe(false);
+  });
+  it("supports All, Ungrouped and valid personal IDs while rejecting forged group IDs", () => {
+    expect(invoiceListQuerySchema.parse({}).groupId).toBeUndefined();
+    expect(invoiceListQuerySchema.parse({ groupId: "ungrouped" }).groupId).toBe("ungrouped");
+    expect(invoiceListQuerySchema.parse({ groupId: id, status: "sent" }).groupId).toBe(id);
+    expect(invoiceListQuerySchema.safeParse({ groupId: "all" }).success).toBe(false);
+    expect(moveInvoicesSchema.safeParse({ invoiceIds: [id], groupId: "invalid" }).success).toBe(false);
+    const response = { groups: [{ id, name: "Retainers", count: 2 }], allCount: 3, ungroupedCount: 1 };
+    expect(invoiceGroupsResponseSchema.parse(response)).toEqual(response);
+    expect(invoiceGroupsResponseSchema.safeParse({ ...response, allCount: -1 }).success).toBe(false);
+  });
+  it("identifies sections blocking export separately from rendering failures", () => {
+    expect(invoiceDocumentIncompleteErrorSchema.parse({ code: "invoice_document_incomplete", message: "Complete details", details: { missingFields: ["sender", "payment"] } }).details.missingFields).toEqual(["sender", "payment"]);
+    expect(invoiceDocumentIncompleteErrorSchema.safeParse({ code: "invoice_render_failed", message: "Try again" }).success).toBe(false);
+    expect(invoiceDocumentIncompleteErrorSchema.safeParse({ code: "invoice_document_incomplete", message: "Complete", details: { missingFields: ["unknown"] } }).success).toBe(false);
+  });
+});
+
+
+it("rejects corrupt PNG payloads and accepts a PNG signature", () => {
+  expect(invoiceLogoSchema.safeParse("data:image/png;base64,YQ==").success).toBe(false);
+  expect(invoiceLogoSchema.safeParse("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l2cAAAAASUVORK5CYII=").success).toBe(true);
+});
+
+
+it("decodes calculation previews independently of discovery defaults", () => {
+  const response = { count: 0, entries: [], totalHours: 0, subtotal: 0, discountAmount: 0, totalAmount: 0, currency: "USD" };
+  expect(previewInvoiceResponseSchema.parse(response)).toEqual(response);
+  expect(previewInvoiceResponseSchema.safeParse({ ...response, totalAmount: -1 }).success).toBe(false);
+});
+
+
+it("validates invoice payment dates independently of the billing period", () => {
+  const input = { title: "Consulting", dateFrom: "2026-04-01", dateTo: "2026-04-30", issueDate: "2026-05-01", dueDate: "2026-05-31" };
+  expect(createInvoiceSchema.safeParse(input).success).toBe(true);
+  expect(createInvoiceSchema.safeParse({ ...input, dueDate: "2026-04-30" }).success).toBe(false);
+  expect(createInvoiceSchema.safeParse({ ...input, issueDate: "2026-02-30" }).success).toBe(false);
+  expect(updateInvoiceSchema.safeParse({ dueDate: null }).success).toBe(true);
+  expect(updateInvoiceSchema.safeParse({ issueDate: input.issueDate, dueDate: "2026-04-30" }).success).toBe(false);
+});
+
+it("accepts legacy payment fields and HTTPS payment links while rejecting unsafe schemes", () => {
+  const payment = { method: "Card", terms: "", beneficiary: "", provider: "", account: "", instructions: "" };
+  expect(invoicePaymentSchema.parse(payment)).toEqual(payment);
+  expect(invoicePaymentSchema.safeParse({ ...payment, paymentUrl: "https://pay.example.com/invoice" }).success).toBe(true);
+  for (const paymentUrl of ["javascript:alert(1)", "http://pay.example.com", "not a link"]) {
+    expect(invoicePaymentSchema.safeParse({ ...payment, paymentUrl }).success).toBe(false);
+  }
 });

@@ -246,19 +246,19 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 | GET    | `/invoices/eligible-entries` | JWT  | Admin/PM | Preview eligible time entries for a potential invoice (PM: requires `canViewInvoices`) |
 | GET    | `/invoices/stats`            | JWT  | Admin/PM | Get invoice stats (counts by status, this month summary, PM: requires `canViewInvoices`) |
 | GET    | `/invoices/:id` | JWT  | Admin/PM | Get invoice details (PM: requires `canViewInvoices`)                        |
-| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Update invoice (status, notes, title, PM: requires `canViewInvoices`)      |
+| PATCH  | `/invoices/:id` | JWT  | Admin/PM | Revise invoice business data and status (PM: requires `canViewInvoices`)      |
 | DELETE | `/invoices/:id` | JWT  | Admin    | Delete invoice                             |
 
-**GET /invoices** query: `page?`, `limit?`, `projectId?`, `status?`, `dateFrom?`, `dateTo?`, `search?`
+**GET /invoices** query: `page?`, `limit?`, `projectId?`, `status?`, `dateFrom?`, `dateTo?`, `search?`, `groupId?`
 
 - PMs see only invoices scoped to active public projects or private projects assigned to them. Workspace-wide invoices (no project scope) are admin-only.
 - PMs must have `canViewInvoices = true` (set by an admin on the Members page); otherwise the endpoint returns `403`.
 
 **GET /invoices/defaults**
 
-- Returns workspace-level defaults for invoice creation: currency, default hourly rate, and time rounding step.
-- Accessible to both admins and PMs (including PMs without `canViewInvoices`) so the invoices page can load defaults without calling the admin-only `GET /workspace/settings` endpoint.
-- Response: `{ currency: string, defaultHourlyRate: number | null, timeRoundingStepMinutes: number }`
+- Returns workspace-level defaults for invoice creation: currency, default hourly rate, time rounding step and billing profile.
+- Accessible to admins and PMs with `canViewInvoices`; members and PMs without that permission receive 403.
+- Response: `{ currency: string, defaultHourlyRate: number | null, timeRoundingStepMinutes: number, billingProfile: InvoiceBillingProfile | null }`
 
 **POST /invoices** body: `{ title: string, dateFrom: string (YYYY-MM-DD), dateTo: string (YYYY-MM-DD), projectId?: string, hourlyRate?: number, currency?: string, discountPercent?: number (0–100, step 0.01, default 0), notes?: string | null }`
 
@@ -287,12 +287,12 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 **PATCH /invoices/:id** body: `{ title?: string, status?: "draft" | "sent" | "paid", notes?: string | null }`
 
-- Updates only editable fields (`title`, `status`, `notes`). Snapshot fields (`hourlyRate`, `currency`, `discountPercent`, `totalHours`, `totalAmount`, `dateFrom`, `dateTo`) and the linked time-entry set are immutable after creation. Totals are never recomputed by an update.
-- Status can advance from `draft` to `sent` or `paid`, and from `sent` to `paid`; backward transitions return `409 Conflict`. An update also returns `409` if the status changed concurrently after it was read; none of that request's fields are applied, and the client should reload the invoice before retrying.
+- Accepts business fields from invoice creation, reviewed `timeEntryIds`, nullable personal `groupId`, and `expectedRevision`. Totals and line links are recalculated atomically when billing inputs change. IDs, reference, workspace, creator and calculated totals remain read-only.
+- All pairs of `draft`, `sent` and `paid` are supported. A stale `expectedRevision` or unavailable selected entry returns 409 without partial writes. Status changes preserve billed entry links; they do not send email or record a payment.
 
 **DELETE /invoices/:id** (Admin only)
 
-- Only `draft` invoices can be deleted. `sent` or `paid` invoices are locked (409 Conflict) to prevent re-billing of already invoiced time entries.
+- Only `draft` invoices can be deleted, including invoices returned to Draft through the status selector. Deleting Sent or Paid invoices returns 409.
 - Deleting a draft invoice unlinks its time entries via `time_entries.invoice_id` `ON DELETE SET NULL`, making them eligible for a later invoice. Time entries themselves are not deleted.
 
 **Invoice list response** items include snapshot fields (`hourlyRate`, `currency`, `totalHours`, `totalAmount`, `discountPercent`), `status`, billing date range, optional `project` summary, and `timeEntryCount` (no `timeEntries` array in list items).
@@ -406,3 +406,24 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 ```
 
 `code` is optional unless an endpoint defines stable machine-readable error identifiers. When present, clients should branch on `code` and treat `message` as display text rather than as the parsing contract.
+
+### Extended invoice workflows (#527)
+
+Invoice create accepts explicit `timeEntryIds`, parties (`sender`, `recipient`), `services`, `payment`, optional `logo` and personal `groupId`. An omitted selection preserves automatic eligibility selection. An empty array creates a zero-hour draft. PATCH accepts the same business inputs plus any supported status and `expectedRevision`. Revisions atomically update links and totals. Stale edits or unavailable selected entries return 409. Exclusion releases a link and preserves tracked work.
+
+- `POST /invoices/preview` calculates a reviewed selection without saving. Supply `invoiceId` when editing to include the invoice's own entries.
+- `GET /invoices/:id/pdf` downloads the saved document. Missing issuer, recipient, services or payment sections return `invoice_document_incomplete` with 422 and `details.missingFields` listing `sender`, `recipient`, `services` and/or `payment`. Successful responses use `application/pdf` and an attachment filename derived from the saved reference.
+- `GET /invoices/groups` returns personal groups and authorized counts. POST creates, PATCH `/invoices/groups/:id` renames, DELETE removes only the group.
+- `POST /invoices/groups/move` accepts `invoiceIds` and nullable `groupId` and commits one personal move. List queries support `groupId` as a UUID or `ungrouped`.
+
+Workspace settings accept a `billingProfile` with sender, payment, optional logo and invoice prefix. Authorized PMs read these through `GET /invoices/defaults`. Existing saved invoices retain their applied details.
+
+PNG logos are fully decoded at API writes and PDF export with a 4-megapixel limit, then normalized within 512 × 512 pixels. Invalid image content returns `422` with `invoice_logo_invalid`, including when an older saved invoice contains an invalid logo. The existing 250 KB upload limit applies to PNG and static SVG inputs.
+
+Invoice list responses include recipient summaries for display. Sender, payment instructions, services, logos and saved time-entry rows are returned by the detail endpoint. List entry counts use saved document rows. Editing an invoice preserves retained historical rows even when their source time entries have subsequently changed or been deleted. A deliberately revised period or project must still contain the retained rows.
+
+Editors submit changed fields with `expectedRevision`. After a revision conflict they compare their original values, local edits and the latest saved invoice before retrying. Personal group moves use their dedicated endpoint and retain their independence from business revisions.
+
+### Invoice dates and method-specific payment details
+
+Invoice create and patch accept `issueDate` (YYYY-MM-DD) and `dueDate` (YYYY-MM-DD or null). Omitted issue dates on creation use today in the workspace time zone. Omitted due dates remain unset. Patches validate the combined persisted and submitted dates, returning 422 `invoice_invalid_payment_dates` when the due date precedes the issue date. Response and PDF use saved issue dates. `payment.swift` and `payment.paymentUrl` are optional; payment URLs must use HTTPS. Bank-transfer PDFs include account and SWIFT details, card PDFs include provider and a clickable payment link, and Other/custom methods retain free-form payment details. Terms and instructions apply to every method.

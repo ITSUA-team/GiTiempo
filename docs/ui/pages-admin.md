@@ -56,48 +56,55 @@
 
 ## Invoices Page
 
-- Successful creation, edits, status transitions, and deletion use the existing list/detail state or navigation without success toasts. Preserve confirmation, errors, pending title/notes edits, and dirty-state clearing only for edits actually saved.
+- Successful creation, edits, status transitions, and deletion use the existing list/detail state or navigation without success toasts. Preserve confirmation, errors, pending business edits, and dirty-state clearing only for edits actually saved.
 
 ### List page (`/invoices`)
 
-- Searchable invoice table with columns: Title, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
+- Searchable invoice table with columns: Invoice reference and recipient, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), Status badge (draft/sent/paid).
+- Invoice status badges follow the invoice frames: Draft uses the accent tint, Sent uses the warning tint, and Paid uses the active tint.
 - Search filters by invoice title (API `search` param, case-insensitive ILIKE). The search input is capped at 200 characters to match the API contract; the filter row stays interactive so the user can always clear filters even when a load error replaces the table.
-- Filter row: Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
+- Filter row above the list: three equal-width controls — Project dropdown, Date range picker (`dateFrom`/`dateTo` query params), Status dropdown. No amount filter (API does not support it).
 - Mobile filters (< 640px): the same three filters stack vertically — Project, Period, and Status all full-width and equal width, one under the other. Filter wrappers use `min-w-0` so long project names truncate inside the Select instead of expanding the container.
 - If the projects request fails, a separate inline error card with Retry is shown between the stats cards and the table. The invoice list stays usable for non-project filtering; the project dropdown shows no options until the retry succeeds. For PMs this explains why invoice creation is blocked (a project is required).
 - Pagination control below the table (API returns `meta.totalPages`).
 - Table header has a `Create invoice` action button (plus icon).
-- Clicking a row title navigates to the detail page (`/invoices/:id`).
-- Stats cards show invoice counts using only `draft`, `sent`, `paid` statuses. No "pending" status. Data from `GET /invoices/stats`.
-  - "Open Invoices" = draft + sent count. Subtitle: "N ready to send" (draft count).
-  - "Billed This Month" = sum of `totalAmount` for invoices created this month. Subtitle: "N invoices · M projects" (invoice count + distinct project count). Currency from workspace default. Totals are approximate if multiple currencies are present.
+- Clicking a row reference navigates to the detail page (`/invoices/:id`).
+- On desktop, the 60 px invoice navigation rail sits beside the page. The three 108 px stats cards sit above the 208 px personal group rail and invoice list. Mobile starts directly with the group picker. Stats cards show invoice counts using only `draft`, `sent`, `paid` statuses. No "pending" status. Data from `GET /invoices/stats`.
+  - "Open invoices" = draft + sent count. The subtitle shows both draft and sent counts.
+  - "Billed this month" = sum of `totalAmount` for invoices created this month. The subtitle shows "Workspace invoices" and the currency. Currency from workspace default. Totals are approximate if multiple currencies are present.
   - "Drafts" = draft count. Subtitle: "Ready for review".
-- Mobile cards (< 640px): each invoice renders as a `MobileRecordCard` with a clickable title link, status badge, and a `MobileRecordMetadataList` grid (Project, Period, Hours, Amount). The metadata grid uses `min-w-0` on grid items and `break-words` on values so long unbroken strings (e.g., long project names without spaces) wrap instead of overflowing into the adjacent cell.
+- Mobile cards (< 640px): each invoice renders as a `MobileRecordCard` with a selection checkbox, clickable invoice reference, status badge, recipient and project on one wrapping line, period, hours and amount. Each card offers Move to group and a row actions menu.
 - Currency formatting: use `Intl.NumberFormat` with the `currency` field from the API response (e.g., `new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })`). Do not hardcode currency symbols — the workspace may use any 3-letter ISO 4217 currency code.
 
-### Create dialog (modal)
+### Create and edit dialogs
 
-- Triggered from the list page `Create invoice` action button.
-- Fields: Title (required), Project (optional — admins can leave empty for workspace-wide; PMs must select an assigned project), Date range (required), Hourly rate (optional — pre-filled from workspace Settings; placeholder "From settings" when the workspace rate is not configured, falls back to the eligible-entries preview default when workspace settings are unavailable), Currency (optional — PrimeVue `<Select>` with the same currency options as Settings → Currency, pre-selected with the workspace settings currency as soon as the dialog opens; placeholder "Auto" while unknown, falls back to workspace default on submit), Discount (optional, default 0), `Rounding step` (PrimeVue `<Select>` with presets: 1, 5, 10, 15, 30, 60; pre-filled from the eligible-entries preview `defaultRoundingStepMinutes` which sources the project's effective rounding step; dynamically updates when the project selection changes; updates immediately from the selected project's `timeRoundingStepMinutes` (or the workspace default when the project inherits) without waiting for the preview response, with the preview response subsequently reconciling the value; overridable per-invoice without changing project settings; uses the same touched-flag pattern as rate and currency), Notes (optional).
-- Pricing row layout: on desktop (sm and up), Currency, Discount, and `Rounding step` share a single row with equal widths (`sm:flex-1`); on mobile (below sm), they stack vertically full-width. The date range and hourly rate share a separate row (date range flexible, hourly rate fixed-width on desktop, stacked on mobile).
-- Calculated fields: Total hours and Total amount update live from `GET /invoices/eligible-entries` preview.
-- Expandable preview section: shows eligible time entries (count, total hours, computed amount). Collapsed by default; expands to a scrollable table with Date, User, Duration, Description. The Duration column renders the rounded billed duration (`roundedDurationSeconds` from the preview response), computed with the effective rounding step — not the raw tracked duration.
-- Empty state: if preview returns 0 entries, show a warning banner ("No billable entries found for this project and date range"). Create button stays enabled — the API allows empty invoices.
-- Actions: `Cancel` and `Create invoice` (POST). No Status field (always `draft` on creation). No Preview/Send/Delete buttons.
+- Create and Edit use the same business form. Include title, personal group, project, billing period, services, hourly rate, currency, discount, rounding, sender/legal name and address/email/tax ID, recipient details, payment method/terms/beneficiary/provider/account/instructions and notes. Admins can choose workspace-wide scope. PMs choose a project allowed by their existing access.
+- Creation starts in Draft and receives a fresh reference on save. New invoices prefill sender and payment fields from `GET /invoices/defaults`. Editing starts from saved invoice snapshots. The explicit Use settings action replaces local draft defaults, applied only after Save.
+- When a billing period or project scope is chosen, select all eligible entries by default. Preserve manual exclusions during refreshes of the same scope. Opening an existing invoice retains its saved selection until its period or project changes.
+- Show the applied optional sender logo in the editor and invoice details; absence leaves no placeholder.
+- Present eligible entries as selectable rows. Retain entries belonging to the edited invoice and allow adding eligible unbilled entries. Excluding an entry releases its association on save while preserving tracked work.
+- Show included count, per-entry rounded billed duration, hours, subtotal, discount and final amount for the reviewed selection. Use authoritative preview calculation with the same billing inputs and rounding rules as save. A successful zero-entry preview permits a zero-total draft.
+- Save business fields, selected entries, totals and a changed personal group together. A conflict or failed save preserves typed values and choices, refreshes eligibility and identifies unavailable entries.
+- Forms fit the viewport, with scrollable bodies and reachable close and primary actions. Below 640 px the invoice editor fills the viewport width with 16 px inner gutters, stacked fields, selectable time-entry cards and a full-width primary action. Restore keyboard focus on dismissal.
 
 ### Detail page (`/invoices/:id`)
 
-- Full page route with topbar breadcrumb (GiTiempo Admin / Invoices / {title}).
-- Page header: Back button, invoice title, status badge, and status-dependent action buttons.
-- Status-dependent header actions:
-  - **Draft**: `Mark as sent` (PATCH status→sent, admin+PM) + `Delete` (DELETE, admin only, draft only — sent/paid return 409).
-  - **Sent**: `Mark as paid` (PATCH status→paid, admin+PM). No Delete button.
-  - **Paid**: no status actions (terminal state). No Delete button.
-- "Mark as sent" is a semantic status change only — no email is sent and no PDF is generated. Email delivery and PDF generation are deferred to a future milestone. The UI label makes the manual nature of the transition clear.
-- Delete requires a confirmation dialog: "Delete this invoice? Linked time entries will be unlinked and become available for future invoices."
-- Summary card (read-only): Project, Date range, Hourly rate, Currency, Discount, Total hours, Total amount, Created, Created by, Last updated. All snapshot fields are immutable after creation.
-- Editable card: Title (input), Notes (textarea), `Save changes` button (PATCH title + notes). No Status dropdown — status transitions happen only via header action buttons.
-- Time entries card: scrollable table of linked time entries (Date, User, Task, Duration, Description) with entry count and total hours in the header. The Duration column renders the rounded billed duration (`roundedDurationSeconds` from the response), computed with the invoice's `roundingStepMinutes` snapshot — not the raw tracked duration. The rounding step value itself is not displayed; only its effect on each entry's duration and the aggregate `totalHours` is visible.
+- The header shows the saved invoice reference and actions Download PDF, Create from this invoice and Edit invoice. A status Select allows Draft, Sent and Paid in either direction, including Sent to Draft and Paid to earlier states.
+- Status selection is manual bookkeeping. Disable repeated submissions while pending and restore authoritative state on failure while retaining unsaved business edits.
+- Display saved From, Bill to, services, scope, period, rate, currency, rounding, included entries, subtotal, discount, total, payment instructions, notes and audit details.
+- Show Delete invoice alongside the other header actions only for Admins viewing a Draft invoice. Confirm deletion and explain that linked entries become eligible for future invoices.
+- Create from this invoice first reviews a new period and personal group, then opens an independent draft with reusable source business fields. The draft uses the source logo when available and otherwise starts with the workspace logo. The user can replace or remove it. The source reference, status and billed entries are not reused. Cancellation writes nothing. Saving opens the new invoice's detail page.
+- PDF export uses the saved revision. Include reference, issue date, period, parties, services, selected charges and payment details. Optional logo absence leaves no blank block. Wrap long descriptions, repeat item headings and page footers, and show the grand total on the final page.
+- Show Preparing PDF while generating and offer a local retry on rendering failure. For older invoices missing required billing sections, identify those fields for completion before export.
+
+### Personal groups
+
+- Provide All invoices, Ungrouped and flat personal groups with accessible-invoice counts. Groups and assignments belong to one user in one workspace. A group never grants invoice access.
+- After successful group creation, switch to that group in both desktop navigation and the mobile picker. Failed creation preserves the current group.
+- Create, rename and delete groups with inline name validation and preserved input on request failure. Deleting a group preserves invoices and returns them to Ungrouped for its owner.
+- Create inside a group preselects that destination. Allow moving a single invoice or multiple selected invoices to a group or Ungrouped. A bulk failure preserves selection and all prior assignments.
+- Keep search, project, period and status filters usable inside the selected view. Distinguish empty groups, filtered zero results, loading and request errors. Desktop uses group navigation alongside the list; mobile provides the same choices and operations.
+- Scope cached organization to user and workspace. Group moves refresh affected views and counts without changing invoice financial data or PDF content.
 
 ### Navigation
 
@@ -143,8 +150,7 @@
 - Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, `Time rounding step (minutes)`, and `Time zone`.
 - `Time rounding step (minutes)` uses PrimeVue `<Select>` with presets 1, 5, 10, 15, 30, 60 and default 1, renders near the Default hourly rate + Currency row, and is saved via `PATCH /workspace/settings`.
 - `Currency` uses PrimeVue `<Select>` and `Time zone` uses PrimeVue `<AutoComplete dropdown forceSelection>`. `Time zone` stays full width below the Default hourly rate + Currency row, enables predictive filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source. Time-zone option values remain exact IANA identifiers, while visible labels replace underscores with spaces, for example `Africa/Addis_Ababa` displays as `Africa/Addis Ababa`.
-- Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
-- Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
+- Admins can save the workspace invoice prefix, sender/legal identity and contact details, optional tax ID and logo, and reusable payment details in Invoice defaults. Use the billing profile contract. PNG/SVG upload and removal affect future invoice defaults; existing invoice snapshots retain their applied logo and billing information. Validation and save failures preserve draft fields. Authorized PMs read the invoice-safe defaults through the invoices endpoint.
 - Below the workspace settings form, render a desktop card at the same `max-width: 620px` for `GitHub Account` before workspace GitHub organization setup.
 - The GitHub Account card shows the current user's `GET /github/connection` status without token material: loading, retryable request-error, disconnected prerequisite guidance, or connected safe account details such as login/avatar. Connected identity, OAuth organization-discovery readiness, and personal GitHub App data readiness are separate states.
 - The GitHub Account card links to the user profile GitHub connection flow when the user app profile URL can be built; otherwise it still renders the status and prerequisite copy without a link.
@@ -213,3 +219,11 @@
 - 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current admin role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace membership is available.
 - The 403 `Switch workspace` action opens the authenticated workspace switcher for the current session. It must not be reused as the cross-app link back to `user-web`.
 - Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the full route surface; request errors stay scoped to the feature surface that failed.
+
+### Invoice dates and payment methods
+
+- Invoice information includes editable Issue date followed by optional Due date. Keep these distinct from Billing period. Pair them on desktop and stack on mobile. Reject a Due date before Issue date while preserving input.
+- A new or copied invoice starts with today's browser-local calendar date and an empty deadline. The API uses the workspace-local date only when a caller omits Issue date. Editing restores saved dates, including creation-date fallback for legacy data. Clearing Due date saves null.
+- Use the same adaptive payment controls in workspace defaults and invoice editing. Bank transfer exposes beneficiary, bank, IBAN/account and optional SWIFT/BIC. Card exposes payment provider and optional HTTPS payment link. Other and custom methods expose generic beneficiary/provider/account details.
+- Terms and instructions remain available for every method. Preserve locally entered hidden fields (beneficiary, account, SWIFT/BIC and payment link) across switches. Provider, terms and instructions are shared values across methods. Only Card exposes and renders the payment link. Show only applicable payment details in the saved document and PDF. Card does not collect card numbers or CVV.
+- Display Issue date and a supplied Due date in saved details and PDF. Card payment links are clickable in the PDF.

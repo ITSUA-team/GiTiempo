@@ -1,7 +1,9 @@
+import type { InvoiceBillingProfile } from '@gitiempo/shared';
 import { getTableColumns, sql } from 'drizzle-orm';
 import {
   check,
   integer,
+  jsonb,
   numeric,
   pgTable,
   timestamp,
@@ -18,6 +20,7 @@ export const workspaceSettings = pgTable(
     workspaceId: uuid('workspace_id')
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
+    billingProfile: jsonb('billing_profile').$type<InvoiceBillingProfile>(),
     currency: varchar('currency', { length: 3 }).default('USD').notNull(),
     defaultHourlyRate: numeric('default_hourly_rate', {
       precision: 10,

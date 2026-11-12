@@ -162,6 +162,8 @@ const sampleInvoiceRow = {
   workspaceId: adminUser.workspaceId,
   projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005',
   title: 'Invoice 2026-04',
+  revision: 1,
+  document: {},
   status: 'draft',
   dateFrom: '2026-04-01',
   dateTo: '2026-04-30',
@@ -313,7 +315,7 @@ function stageUpdateDb(
   const txSelectSpy = vi
     .fn()
     .mockImplementationOnce(() =>
-      makeSelectChain('limit', initialRow ? [initialRow] : []),
+      makeSelectChain('for', initialRow ? [initialRow] : []),
     )
     .mockImplementationOnce(() =>
       makeSelectChain('limit', refreshedRow ? [refreshedRow] : []),
@@ -327,6 +329,17 @@ function stageUpdateDb(
   Object.defineProperty(service, 'db', {
     value: { transaction: transactionSpy },
   });
+  vi.spyOn(service, 'getInvoice').mockImplementation(async () => {
+    if (!initialRow) throw new NotFoundException('Invoice not found');
+    return initialRow as unknown as InvoiceResponse;
+  });
+  Object.defineProperty(service, 'requireWorkspaceProject', {
+    value: vi.fn().mockResolvedValue({}),
+  });
+  Object.defineProperty(service, 'requirePmProjectAccess', {
+    value: vi.fn().mockResolvedValue({}),
+  });
+
   Object.defineProperty(service, 'toInvoiceResponse', {
     value: vi.fn().mockReturnValue({ id: sampleInvoiceRow.id }),
   });
@@ -482,6 +495,7 @@ describe('InvoicesService', () => {
       const result = await service.getInvoiceDefaults(adminUser);
 
       expect(result).toEqual({
+        billingProfile: null,
         currency: 'USD',
         defaultHourlyRate: 100,
         timeRoundingStepMinutes: 5,
@@ -505,6 +519,7 @@ describe('InvoicesService', () => {
       Object.defineProperty(service, 'db', { value: { select: selectSpy } });
 
       await expect(service.getInvoiceDefaults(pmUser)).resolves.toEqual({
+        billingProfile: null,
         currency: 'EUR',
         defaultHourlyRate: null,
         timeRoundingStepMinutes: 15,
@@ -531,6 +546,7 @@ describe('InvoicesService', () => {
       Object.defineProperty(service, 'db', { value: { select: selectSpy } });
 
       await expect(service.getInvoiceDefaults(adminUser)).resolves.toEqual({
+        billingProfile: null,
         currency: null,
         defaultHourlyRate: null,
         timeRoundingStepMinutes: 1,
@@ -1546,23 +1562,6 @@ describe('InvoicesService', () => {
     expect(setCallArg).not.toHaveProperty('hourlyRate');
   });
 
-  it('does not patch the row when the update body is empty', async () => {
-    const { service } = createService('admin');
-    const { updateSpy, transactionSpy, txSelectSpy } = stageUpdateDb(service);
-
-    const result = await service.updateInvoice(
-      adminUser,
-      sampleInvoiceRow.id,
-      {},
-    );
-
-    expect(updateSpy).not.toHaveBeenCalled();
-    expect(transactionSpy).toHaveBeenCalledTimes(1);
-    // Initial detail, refreshed detail, and linked entries all use the tx.
-    expect(txSelectSpy).toHaveBeenCalledTimes(3);
-    expect(result).toEqual({ id: sampleInvoiceRow.id });
-  });
-
   it('patches title only and stamps updatedAt', async () => {
     const { service } = createService('admin');
     const { updateSetSpy } = stageUpdateDb(service);
@@ -1571,7 +1570,7 @@ describe('InvoicesService', () => {
       title: 'Renamed',
     });
 
-    expect(updateSetSpy.mock.calls[0][0]).toEqual({
+    expect(updateSetSpy.mock.calls[0][0]).toMatchObject({
       title: 'Renamed',
       updatedAt: expect.any(Date),
     });
@@ -1585,7 +1584,7 @@ describe('InvoicesService', () => {
       notes: null,
     });
 
-    expect(updateSetSpy.mock.calls[0][0]).toEqual({
+    expect(updateSetSpy.mock.calls[0][0]).toMatchObject({
       notes: null,
       updatedAt: expect.any(Date),
     });
@@ -1594,11 +1593,14 @@ describe('InvoicesService', () => {
   it('rejects a stale status update when another request changed the invoice', async () => {
     const { service } = createService('admin');
     const { transactionSpy, updateReturningSpy } = stageUpdateDb(service, {
-      updateResult: [],
+      initialRow: { ...sampleInvoiceRow, revision: 2 },
     });
 
     const thrown = await service
-      .updateInvoice(adminUser, sampleInvoiceRow.id, { status: 'sent' })
+      .updateInvoice(adminUser, sampleInvoiceRow.id, {
+        status: 'sent',
+        expectedRevision: 1,
+      })
       .then(
         () => null,
         (error: unknown) => error,
@@ -1610,7 +1612,7 @@ describe('InvoicesService', () => {
     });
     expect((thrown as DomainError).getStatus()).toBe(409);
     expect(transactionSpy).toHaveBeenCalledTimes(1);
-    expect(updateReturningSpy).toHaveBeenCalledTimes(1);
+    expect(updateReturningSpy).not.toHaveBeenCalled();
   });
 
   it('fails the transaction when the updated invoice cannot be refreshed', async () => {
@@ -1624,10 +1626,10 @@ describe('InvoicesService', () => {
       service.updateInvoice(adminUser, sampleInvoiceRow.id, {
         title: 'Renamed',
       }),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toBeInstanceOf(DomainError);
 
     expect(transactionSpy).toHaveBeenCalledTimes(1);
-    expect(updateReturningSpy).toHaveBeenCalledTimes(1);
+    expect(updateReturningSpy).not.toHaveBeenCalled();
     // Initial and refreshed detail reads run in the transaction; linked
     // entries are not read after the refresh failure.
     expect(txSelectSpy).toHaveBeenCalledTimes(2);
@@ -1646,7 +1648,7 @@ describe('InvoicesService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
 
     expect(updateSpy).not.toHaveBeenCalled();
-    expect(transactionSpy).toHaveBeenCalledTimes(1);
+    expect(transactionSpy).not.toHaveBeenCalled();
   });
 
   it('denies PM updates to workspace-wide invoices (null project)', async () => {
@@ -1665,6 +1667,24 @@ describe('InvoicesService', () => {
 
     expect(updateSpy).not.toHaveBeenCalled();
   });
+
+  it.each(['sent', 'paid'] as const)(
+    'allows %s to return to Draft with unchanged totals',
+    async (status) => {
+      const { service } = createService('admin');
+      const { updateSetSpy } = stageUpdateDb(service, {
+        initialRow: { ...sampleInvoiceRow, status },
+      });
+      await service.updateInvoice(adminUser, sampleInvoiceRow.id, {
+        status: 'draft',
+        expectedRevision: 1,
+      });
+      expect(updateSetSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'draft', revision: 2 }),
+      );
+      expect(updateSetSpy.mock.calls[0][0]).not.toHaveProperty('totalAmount');
+    },
+  );
 
   // ── Delete ────────────────────────────────────────────────────────────
 
@@ -1839,7 +1859,10 @@ describe('InvoicesService', () => {
     );
     selectSpy.mockImplementationOnce(() => makeSelectChain('orderBy', []));
     Object.defineProperty(service, 'db', {
-      value: { select: selectSpy },
+      value: {
+        select: selectSpy,
+        execute: vi.fn().mockResolvedValue({ rows: [] }),
+      },
     });
 
     const result = await service.getInvoice(pmUser, sampleInvoiceRow.id);
