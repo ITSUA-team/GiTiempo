@@ -1,0 +1,45 @@
+{
+  "reviewBase": "44ab3947",
+  "checks": {
+    "typecheck": "PASS (11 Turbo tasks)",
+    "lint": "PASS (11 Turbo tasks, existing warnings)",
+    "unit": {
+      "result": "PASS",
+      "command": "pnpm exec turbo run test --concurrency=1 -- --maxWorkers=2",
+      "packages": {
+        "@gitiempo/web-config": 18,
+        "@gitiempo/shared": 754,
+        "@gitiempo/api": 797,
+        "chrome-ext": 261,
+        "@gitiempo/web-shared": 310,
+        "user-web": 660,
+        "admin-web": 1056,
+        "landing-web": 17
+      },
+      "total": 3873,
+      "note": "Initial broad runs hit a Chrome extension timeout and cascading assertion. Bounded run then found old API client test fixtures missing required mode, corrected before final pass."
+    },
+    "ciTargets": "PASS (node --test .github/scripts/detect-ci-targets.test.mjs)",
+    "apiE2E": {
+      "result": "PASS",
+      "tests": 470,
+      "files": 37,
+      "command": "pnpm test:e2e",
+      "database": "isolated gitiempo_e2e in Docker"
+    },
+    "openapi": "PASS, both responses require timeDisplayMode",
+    "openspec": "PASS --strict",
+    "pdf": "5/5 content, hash and visual checks; 53/53 entry and 49/49 task text styles match with approved heading override"
+  },
+  "independentReview": {
+    "code-reviewer": "APPROVE, five findings closed; final API client fixtures also approved",
+    "architect": "CLEAR, five findings closed"
+  },
+  "logs": [
+    "/tmp/invoice-fixes-tests-final.log",
+    "/tmp/invoice-fixes-ci-targets.log",
+    "/tmp/invoice-fixes-e2e.log",
+    "/tmp/invoice-fixes-lint-final.log",
+    "/tmp/invoice-fixes-typecheck-final.log"
+  ]
+}

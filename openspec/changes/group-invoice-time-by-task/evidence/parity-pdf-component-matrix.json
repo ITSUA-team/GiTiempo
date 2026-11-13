@@ -1574,12 +1574,12 @@
         "height": 10.884993912789403
       },
       "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
-      "actualText": "HOW TO PAY",
-      "fixtureDifference": false,
+      "actualText": "Payment instructions",
+      "fixtureDifference": true,
       "actualGlyphBoxPt": {
         "x0": 36.0,
         "top": 614.314843433,
-        "x1": 93.13330043299999,
+        "x1": 128.188476654,
         "bottom": 623.314843433
       },
       "actualEmbeddedFonts": [
@@ -1591,7 +1591,9 @@
       "actualColors": [
         "#5D2B85"
       ],
-      "styleMatches": true
+      "styleMatches": true,
+      "approvedTextOverride": "Payment instructions",
+      "overrideReason": "Explicit user request after original design acceptance"
     },
     {
       "nodeId": "i527_0700",
@@ -3309,12 +3311,12 @@
         "height": 10.884993912789403
       },
       "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
-      "actualText": "HOW TO PAY",
-      "fixtureDifference": false,
+      "actualText": "Payment instructions",
+      "fixtureDifference": true,
       "actualGlyphBoxPt": {
         "x0": 36.0,
         "top": 573.814843433,
-        "x1": 93.13330043299999,
+        "x1": 128.188476654,
         "bottom": 582.814843433
       },
       "actualEmbeddedFonts": [
@@ -3326,7 +3328,9 @@
       "actualColors": [
         "#5D2B85"
       ],
-      "styleMatches": true
+      "styleMatches": true,
+      "approvedTextOverride": "Payment instructions",
+      "overrideReason": "Explicit user request after original design acceptance"
     },
     {
       "nodeId": "itm_1143",

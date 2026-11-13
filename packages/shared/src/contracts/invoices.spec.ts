@@ -24,6 +24,7 @@ import {
 } from "./invoices.js";
 
 const validInvoiceResponse = {
+  timeDisplayMode: "entries",
   id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010",
   workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
   projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005",
@@ -1297,7 +1298,7 @@ it("rejects corrupt PNG payloads and accepts a PNG signature", () => {
 
 
 it("decodes calculation previews independently of discovery defaults", () => {
-  const response = { count: 0, entries: [], totalHours: 0, subtotal: 0, discountAmount: 0, totalAmount: 0, currency: "USD" };
+  const response = { timeDisplayMode: "entries", count: 0, entries: [], totalHours: 0, subtotal: 0, discountAmount: 0, totalAmount: 0, currency: "USD" };
   expect(previewInvoiceResponseSchema.parse(response)).toEqual({ ...response, timeDisplayMode: "entries" });
   expect(previewInvoiceResponseSchema.safeParse({ ...response, totalAmount: -1 }).success).toBe(false);
 });
@@ -1322,9 +1323,11 @@ describe("invoice time display mode contracts", () => {
     expect(updateInvoiceSchema.safeParse({ expectedRevision: 2 }).success).toBe(false);
   });
 
-  it("resolves missing response modes for historical documents and previews to entries", () => {
-    expect(invoiceResponseSchema.parse(validInvoiceResponse).timeDisplayMode).toBe("entries");
-    expect(previewInvoiceResponseSchema.parse(preview).timeDisplayMode).toBe("entries");
+  it("rejects responses without a resolved mode", () => {
+    const missingMode = { ...validInvoiceResponse };
+    Reflect.deleteProperty(missingMode, "timeDisplayMode");
+    expect(invoiceResponseSchema.safeParse(missingMode).success).toBe(false);
+    expect(previewInvoiceResponseSchema.safeParse(preview).success).toBe(false);
   });
 
   it.each([null, "task", "", 0])("rejects invalid mode %s at every mode boundary", timeDisplayMode => {

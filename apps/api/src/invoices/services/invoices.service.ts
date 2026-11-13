@@ -429,7 +429,10 @@ export class InvoicesService {
     user: AuthUser,
     input: import('@gitiempo/shared').PreviewInvoiceInput,
   ) {
-    const preview = await this.previewEligibleEntries(user, input);
+    const { preview, currentInvoice } = await this.loadEligibleEntries(
+      user,
+      input,
+    );
     const entries =
       input.timeEntryIds === undefined
         ? preview.entries
@@ -468,10 +471,7 @@ export class InvoicesService {
       );
     const subtotal = this.computeInvoiceTotals(seconds, rate, 0).totalAmount;
     const timeDisplayMode =
-      input.timeDisplayMode ??
-      (input.invoiceId
-        ? (await this.getInvoice(user, input.invoiceId)).timeDisplayMode
-        : 'entries');
+      input.timeDisplayMode ?? currentInvoice?.timeDisplayMode ?? 'entries';
     return {
       timeDisplayMode,
       entries,
@@ -823,6 +823,16 @@ export class InvoicesService {
     user: AuthUser,
     query: EligibleEntriesQuery,
   ): Promise<EligibleEntriesResponse> {
+    return (await this.loadEligibleEntries(user, query)).preview;
+  }
+
+  private async loadEligibleEntries(
+    user: AuthUser,
+    query: EligibleEntriesQuery,
+  ): Promise<{
+    preview: EligibleEntriesResponse;
+    currentInvoice: InvoiceResponse | null;
+  }> {
     const membership = await this.members.requireRole(
       user.sub,
       user.workspaceId,
@@ -955,12 +965,15 @@ export class InvoicesService {
     const totalHours = InvoicesService.secondsToCentihours(seconds) / 100;
 
     return {
-      count: entries.length,
-      totalHours,
-      entries,
-      defaultHourlyRate: settings?.defaultHourlyRate ?? null,
-      defaultCurrency: settings?.currency ?? null,
-      defaultRoundingStepMinutes,
+      currentInvoice,
+      preview: {
+        count: entries.length,
+        totalHours,
+        entries,
+        defaultHourlyRate: settings?.defaultHourlyRate ?? null,
+        defaultCurrency: settings?.currency ?? null,
+        defaultRoundingStepMinutes,
+      },
     };
   }
 

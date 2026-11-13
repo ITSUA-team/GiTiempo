@@ -546,6 +546,19 @@ describe('invoice PNG logos', () => {
 });
 
 describe('invoice dates and payment methods', () => {
+  it('formats a single-day billing period as one date in both modes', async () => {
+    for (const timeDisplayMode of ['entries', 'tasks'] as const) {
+      const text = (
+        await renderedPages({
+          dateFrom: '2026-11-12',
+          dateTo: '2026-11-12',
+          timeDisplayMode,
+        })
+      ).join('\n');
+      expect(text).toContain('12 Nov 2026');
+      expect(text).not.toContain('12–12 Nov 2026');
+    }
+  });
   it('uses the saved issue and due dates instead of creation time', async () => {
     const text = (
       await renderedPages({ issueDate: '2026-12-02', dueDate: '2026-12-15' })

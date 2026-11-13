@@ -63,7 +63,7 @@ PASS after correction: embedded Inter400/500/600; Issue date and Task labels; co
 
 The [five-page stress PDF](evidence/parity-pdf-long.pdf) retains45 tasks, including a250-character unbroken title. All glyphs remain within x36–559.280001pt, numeric columns remain visible and the final total is unique. This stress fixture has11.25h/1,012.50USD and is separate from the25h/2,250.00USD design fixture.
 
-Actual Chrome Download PDF exports also pass in [both modes](evidence/parity-chrome-pdf-check.json), with [unchanged saved snapshots](evidence/parity-chrome-export-proof.json).
+Historical Chrome Download PDF exports from the original acceptance pass remain in [both modes](evidence/parity-chrome-pdf-check.json), with [unchanged saved snapshots](evidence/parity-chrome-export-proof.json).
 
 ## Recorded differences and governing rules
 
@@ -73,3 +73,7 @@ Actual Chrome Download PDF exports also pass in [both modes](evidence/parity-chr
 - The supplied design JSON is the comparison source; inferred flex positions are labeled and no screenshot-level pixel-perfect claim is made. No unresolved component defect or PrimeVue-forced compromise remains.
 
 All discovered implementation discrepancies were corrected and the affected browser/PDF checks repeated. See the [verification report](verification.md) for interaction, regression and independent review evidence.
+
+## Review correction PDF pass
+
+Both normal PDFs, their PNG renders, physical metrics and component text/style matrix were refreshed after the review corrections. `Payment instructions` is the user-approved heading override. The zero-discount and single-day PDFs are linked in the [current verification section](verification.md). Original Chrome downloads and the five-page stress proof retain their original-run provenance. No PrimeVue limitation affected these corrections.

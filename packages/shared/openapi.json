@@ -10514,7 +10514,6 @@
             "maximum": 60
           },
           "timeDisplayMode": {
-            "default": "entries",
             "type": "string",
             "enum": [
               "entries",
@@ -10661,6 +10660,7 @@
           "totalHours",
           "totalAmount",
           "roundingStepMinutes",
+          "timeDisplayMode",
           "notes",
           "createdBy",
           "createdByName",
@@ -11347,7 +11347,6 @@
             "multipleOf": 0.01
           },
           "timeDisplayMode": {
-            "default": "entries",
             "type": "string",
             "enum": [
               "entries",
@@ -11374,6 +11373,7 @@
           "count",
           "entries",
           "totalHours",
+          "timeDisplayMode",
           "subtotal",
           "discountAmount",
           "totalAmount",

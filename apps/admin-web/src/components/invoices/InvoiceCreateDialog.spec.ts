@@ -1892,7 +1892,7 @@ describe('InvoiceCreateDialog', () => {
   it('renders authoritative totals from the real calculation response without eligibility defaults',async()=>{
     const entry=createTimeEntry();
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
-    testMocks.requestJson.mockImplementation(async()=>previewInvoiceResponseSchema.parse({entries:[entry],count:1,totalHours:2.5,subtotal:200,discountAmount:20,totalAmount:180,currency:'USD'}));
+    testMocks.requestJson.mockImplementation(async()=>previewInvoiceResponseSchema.parse({timeDisplayMode:'entries',entries:[entry],count:1,totalHours:2.5,subtotal:200,discountAmount:20,totalAmount:180,currency:'USD'}));
     const createInvoice=createCreateInvoiceSpy();
     const wrapper=await mountDialog({createInvoice});
     await wrapper.getComponent('#invoice-create-title').setValue('Reviewed invoice');
@@ -2078,7 +2078,7 @@ describe('InvoiceCreateDialog', () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     testMocks.requestJson.mockImplementation(async()=>{
       if(fail)throw new Error('Entry was claimed. Review selection.');
-      return previewInvoiceResponseSchema.parse({entries:[createTimeEntry()],count:1,totalHours:2.5,subtotal:200,discountAmount:0,totalAmount:200,currency:'USD'});
+      return previewInvoiceResponseSchema.parse({timeDisplayMode:'entries',entries:[createTimeEntry()],count:1,totalHours:2.5,subtotal:200,discountAmount:0,totalAmount:200,currency:'USD'});
     });
     const wrapper=await mountDialog();
     await wrapper.getComponent('#invoice-create-title').setValue('Keep typed title');
@@ -2160,10 +2160,15 @@ describe('InvoiceCreateDialog', () => {
       await wrapper.getComponent('#invoice-create-title').setValue('Task invoice');
       await enterDateRange(wrapper);
       const reads = testMocks.listEligibleEntries.mock.calls.length;
+      const calculations = testMocks.requestJson.mock.calls.length;
+      expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
+      testMocks.requestJson.mockRejectedValueOnce(new Error('Preview unavailable'));
       await mode.vm.$emit('update:modelValue', 'tasks');
       await flushPromises();
       expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(reads);
-      expect(testMocks.requestJson).toHaveBeenLastCalledWith(expect.objectContaining({body: expect.objectContaining({timeDisplayMode: 'tasks'})}));
+      expect(testMocks.requestJson).toHaveBeenCalledTimes(calculations);
+      expect(wrapper.text()).not.toContain('Calculating totals');
+      expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
       await submitInvoice(wrapper);
       expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({timeDisplayMode: 'tasks'}));
     });

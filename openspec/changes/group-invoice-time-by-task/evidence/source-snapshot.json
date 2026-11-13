@@ -1,8 +1,8 @@
 {
   "baseHead": "7613c4ae799fcc2582bc8f2a51a57bfee5fdd0e2",
   "sourceFiles": {
-    "apps/admin-web/src/components/invoices/InvoiceCreateDialog.spec.ts": "3a0e40fbc3707622dd1e948a92fbdfa75b9f5ca99b7dad9931159ff52038ffc9",
-    "apps/admin-web/src/components/invoices/InvoiceCreateDialog.vue": "ca993a58f7eddcd90deabc3dd5c22d3ecf4b5730706d6526be9ad4b659248714",
+    "apps/admin-web/src/components/invoices/InvoiceCreateDialog.spec.ts": "3f3602621a00ad94427fb9b6c815b36c2a6b1c63ca8f08c8b5f8d2c4e60b8fec",
+    "apps/admin-web/src/components/invoices/InvoiceCreateDialog.vue": "593d509515f872ee7f2b6eb84741c46d0d57ddec1a7b842bc4b31c9a4e8ee7c8",
     "apps/admin-web/src/components/invoices/InvoiceDetailDocument.vue": "92bcf97d043cc1c8db7f18d38018c7ceb00f172c920420d5903785ad8a5d5691",
     "apps/admin-web/src/components/invoices/InvoiceDetailHeader.vue": "85125d708c75125f482f8a0cc1950f73e1e78ddda284e426cf4c4ed5fb950280",
     "apps/admin-web/src/components/invoices/InvoiceDocumentDates.vue": "05f4800ea1845594ebbe978b272e9e0a55e6e70843898c4607a53eea71e5c0a4",
@@ -18,10 +18,10 @@
     "apps/admin-web/src/lib/invoice-edit.ts": "8b87f0a50029a5ce595c1fc5304fbcf1708871800b3a459d0e59bccab1bbd869",
     "apps/admin-web/src/views/InvoiceDetailView.spec.ts": "92d87a9b28d4fe8e68219614d410f2fe9774bcc89ae583ff32adf5feb968a047",
     "apps/admin-web/src/views/InvoicesView.spec.ts": "6750c4abe5c6e08cdb1d8d397d080099692ba8dfa1339ed9eccd775ecb6423f8",
-    "apps/api/src/invoices/services/invoice-pdf.spec.ts": "cac02aa323bb8324fe0643497bcc9fd6cb7113266a5f3dc4907b1846f06b4e50",
-    "apps/api/src/invoices/services/invoice-pdf.ts": "15517546e8e7a295c29cbf8a2723c8ec31f7db83240d0994fd831f560553ba14",
-    "apps/api/src/invoices/services/invoices.service.spec.ts": "fb956f83e55ec647605c7b9b3ad64ac04dae4777c7a101a1a39a25574fd1921d",
-    "apps/api/src/invoices/services/invoices.service.ts": "1162296fb9e08e21b10d1a58785795257bf17ce1365c5a9ca120e72fc43af974",
+    "apps/api/src/invoices/services/invoice-pdf.spec.ts": "76ff143c781c26e0fa11c64114003c14430ab5e74398035d607d0e404550cda0",
+    "apps/api/src/invoices/services/invoice-pdf.ts": "6460f92bf00bece85f5896f4574e46d6e133ec1d5f364515c59147e97c393e09",
+    "apps/api/src/invoices/services/invoices.service.spec.ts": "ae917af96c1ff18566991d3f4fc15c4ae7223bf9fcaabd12197f0b4e90d756ba",
+    "apps/api/src/invoices/services/invoices.service.ts": "0efbe7de57d6e9ec058e884c8ba9404e27e3d564ae04851617c68e47433e6b62",
     "apps/api/src/reports/assets/Inter-LICENSE.txt": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
     "apps/api/src/reports/assets/Inter-Medium.ttf": "97ad806f526e41546d46365bb3a393145f75b7b1568913db74549ad8b8dba872",
     "apps/api/src/reports/assets/Inter-Regular.ttf": "40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82",
@@ -34,13 +34,16 @@
     "docs/DATA-MODEL.md": "3da2a0bbc410378fc288029201f78b41b235a852ceb33302886a77b71e365a7f",
     "docs/PROPOSAL.md": "d1a54bcc8d007270fa4e1156f06de7a9289cb683bdac62204064f0cfb8fae2b7",
     "docs/ui/pages-admin.md": "ef6252063cdc89d35ee8ed76b4c77df9a74eb2aed26fbca7eb9cda81b9929b2d",
-    "packages/shared/openapi.json": "639499603e7d4ab660b784365805aa8227881f6fd94b590bfc87cab2bcd78e59",
-    "packages/shared/src/contracts/invoices.spec.ts": "1da2af534dbeee853bc49faabf2909bd43390812d0f7b01d26d106a96eb3ad53",
-    "packages/shared/src/contracts/invoices.ts": "1a89ba744e43c45dccfe3fb5c7bf9a200fe85d09710aa9e5d9ae4a8f6e223244",
+    "packages/shared/openapi.json": "8d2a3aa034abc7e626295264c268294aadb2b58cc920cf7c38de04d86edf2c0a",
+    "packages/shared/src/contracts/invoices.spec.ts": "1172d2d3c49835aa7033597a954665a0581bc647071aad9fa0130200f6f3a007",
+    "packages/shared/src/contracts/invoices.ts": "0d1ad8c80ff794f6a8f7dac978e87dfe597eaf961a9fdd4c577de5ea60fc2a91",
     "packages/shared/src/index.ts": "9936944ea50007ea57b3e3f63df2e6bb883b527f1b51e4dbedf4950dd5efb9f6",
     "packages/shared/src/invoice-time.spec.ts": "18420d16509465596c4d4bfb2c5fe3f4688927b1b04d5594fe0fd17615a46b49",
-    "packages/shared/src/invoice-time.ts": "d3c66a5e9f91c3b201639936017c834b92b8405a9bff6731b3d24c6bd8307235"
+    "packages/shared/src/invoice-time.ts": "d3c66a5e9f91c3b201639936017c834b92b8405a9bff6731b3d24c6bd8307235",
+    "apps/admin-web/src/services/admin-invoices-client.spec.ts": "e30ac8ece296847c3a26a494bc19e5d38c2c5f46585daf98b9ffd02ac947cd59"
   },
   "designSha256": "ba5dff1e63be0fec49f91d1e7f85cbef624d6b7367ca9f8f0e25651c1151c223",
-  "note": "Final source freeze; all changed app, shared-contract, font, example and product-documentation files. Evidence/reports excluded from source digest."
+  "note": "Final source freeze; all changed app, shared-contract, font, example and product-documentation files. Evidence/reports excluded from source digest.",
+  "reviewBaseHead": "44ab3947",
+  "reviewNote": "Hashes refreshed after maintainability review fixes. Historical Chrome/stress captures retain their original provenance."
 }

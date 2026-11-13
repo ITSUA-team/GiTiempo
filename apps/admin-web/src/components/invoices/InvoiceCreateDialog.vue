@@ -552,7 +552,7 @@ async function calculatePreview() {
   }}
   finally {if (generation === calculationGeneration) calculating.value=false;}
 }
-watch([previewQuery,hourlyRate,currency,discountPercent,roundingStepMinutes,selectedEntries,timeDisplayMode],()=>void calculatePreview(),{deep:true});
+watch([previewQuery,hourlyRate,currency,discountPercent,roundingStepMinutes,selectedEntries],()=>void calculatePreview(),{deep:true});
 async function retryCalculation() {
  const generation=lifecycleGeneration;
  await refreshEligibility();

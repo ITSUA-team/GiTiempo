@@ -1,6 +1,6 @@
 {
-  "apps/api/src/invoices/services/invoice-pdf.ts": "15517546e8e7a295c29cbf8a2723c8ec31f7db83240d0994fd831f560553ba14",
-  "apps/api/src/invoices/services/invoice-pdf.spec.ts": "cac02aa323bb8324fe0643497bcc9fd6cb7113266a5f3dc4907b1846f06b4e50",
+  "apps/api/src/invoices/services/invoice-pdf.ts": "6460f92bf00bece85f5896f4574e46d6e133ec1d5f364515c59147e97c393e09",
+  "apps/api/src/invoices/services/invoice-pdf.spec.ts": "76ff143c781c26e0fa11c64114003c14430ab5e74398035d607d0e404550cda0",
   "apps/api/src/reports/assets/Inter-Regular.ttf": "40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82",
   "apps/api/src/reports/assets/Inter-Medium.ttf": "97ad806f526e41546d46365bb3a393145f75b7b1568913db74549ad8b8dba872",
   "apps/api/src/reports/assets/Inter-SemiBold.ttf": "78a843fade9d4612a5567302fb595b56976eb5fcebf4fea5a5912d638bafcde3",

@@ -116,6 +116,7 @@ export async function renderInvoicePdf(
   const firstDate = new Date(invoice.dateFrom);
   const lastDate = new Date(invoice.dateTo);
   const period =
+    invoice.dateFrom !== invoice.dateTo &&
     invoice.dateFrom.slice(0, 7) === invoice.dateTo.slice(0, 7)
       ? invoice.dateFrom.slice(-2) + '–' + dateFormat.format(lastDate)
       : dateFormat.formatRange(firstDate, lastDate);

@@ -472,17 +472,22 @@ describe('InvoicesService', () => {
       'resolves preview mode to $expected from saved=$saved and explicit=$explicit',
       async ({ saved, explicit, expected }) => {
         const { service } = createService('admin');
-        vi.spyOn(service, 'previewEligibleEntries').mockResolvedValue({
-          entries: [],
-          count: 0,
-          totalHours: 0,
-          defaultCurrency: 'USD',
-          defaultHourlyRate: 100,
-          defaultRoundingStepMinutes: 1,
-        });
+        const select = vi
+          .fn()
+          .mockReturnValueOnce(
+            makeSelectChain('limit', [
+              {
+                defaultHourlyRate: 100,
+                currency: 'USD',
+              },
+            ]),
+          )
+          .mockReturnValueOnce(makeSelectChain('orderBy', []));
+        Object.defineProperty(service, 'db', { value: { select } });
         const getInvoice = vi.spyOn(service, 'getInvoice').mockResolvedValue({
           ...sampleInvoiceRow,
           timeDisplayMode: saved ?? 'entries',
+          timeEntries: [],
         } as unknown as InvoiceResponse);
         const result = await service.previewInvoice(adminUser, {
           title: 'Preview',
@@ -493,12 +498,13 @@ describe('InvoicesService', () => {
           ...(explicit ? { timeDisplayMode: explicit } : {}),
         });
         expect(result.timeDisplayMode).toBe(expected);
-        if (saved && !explicit)
+        if (saved) {
+          expect(getInvoice).toHaveBeenCalledTimes(1);
           expect(getInvoice).toHaveBeenCalledWith(
             adminUser,
             sampleInvoiceRow.id,
           );
-        else expect(getInvoice).not.toHaveBeenCalled();
+        } else expect(getInvoice).not.toHaveBeenCalled();
       },
     );
   });
