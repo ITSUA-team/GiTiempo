@@ -317,7 +317,7 @@ watch(
         rateTouched.value = true;
         currencyTouched.value = true;
         title.value = source.title;
-        timeDisplayMode.value = source.timeDisplayMode ?? 'entries';
+        timeDisplayMode.value = source.timeDisplayMode;
         selectedProjectId.value = source.projectId;
         dateRange.value = [new Date(source.dateFrom+'T12:00:00'),new Date(source.dateTo+'T12:00:00')];
         hourlyRate.value = source.hourlyRate;

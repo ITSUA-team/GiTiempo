@@ -13,7 +13,7 @@ export function savedDraft(invoice: InvoiceResponse): CreateInvoiceInput {
     sender: invoice.sender ?? emptyParty, recipient: invoice.recipient ?? emptyParty,
     payment: invoice.payment ?? emptyPayment, logo: invoice.logo ?? null, services: invoice.services ?? '',
     timeEntryIds: invoice.timeEntries.map(entry => entry.id),
-    timeDisplayMode: invoice.timeDisplayMode ?? 'entries',
+    timeDisplayMode: invoice.timeDisplayMode,
   };
 }
 

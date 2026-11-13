@@ -1,5 +1,5 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { and, eq, gte, inArray, lt } from 'drizzle-orm';
 import { previewInvoiceResponseSchema } from '@gitiempo/shared';
@@ -610,6 +610,61 @@ describe('Invoices (e2e)', () => {
       });
     expect(reversedDates.status).toBe(400);
   });
+
+  describe.each(['create', 'preview', 'update'] as const)(
+    '%s time display mode validation',
+    (operation) => {
+      it.each(['task', null])(
+        'rejects %j with a field-specific 400 error',
+        async (timeDisplayMode) => {
+          const input = {
+            title: 'Mode validation',
+            dateFrom: DATE_FROM,
+            dateTo: DATE_TO,
+            hourlyRate: 100,
+            currency: 'USD',
+            timeEntryIds: [],
+          };
+          let invoiceId: string | undefined;
+          try {
+            if (operation === 'update') {
+              const created = await request(app.getHttpServer())
+                .post('/invoices')
+                .set('Authorization', bearer(adminToken))
+                .send(input);
+              expect(created.status).toBe(201);
+              invoiceId = created.body.id;
+            }
+
+            const client = request(app.getHttpServer());
+            const pending =
+              operation === 'update'
+                ? client.patch('/invoices/' + invoiceId)
+                : client.post(
+                    operation === 'preview' ? '/invoices/preview' : '/invoices',
+                  );
+            const response = await pending
+              .set('Authorization', bearer(adminToken))
+              .send(
+                operation === 'update'
+                  ? { timeDisplayMode }
+                  : { ...input, timeDisplayMode },
+              );
+
+            expect(response.status).toBe(400);
+            expect(response.body.details).toEqual(
+              expect.arrayContaining([
+                expect.objectContaining({ path: ['timeDisplayMode'] }),
+              ]),
+            );
+          } finally {
+            if (invoiceId)
+              await db.delete(invoices).where(eq(invoices.id, invoiceId));
+          }
+        },
+      );
+    },
+  );
 
   it('applies discountPercent to the snapshot totals', async () => {
     // Fresh billable entry outside the June window so no other invoice
