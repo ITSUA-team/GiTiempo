@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { invoiceSelectPt } from './invoice-field-pt';
 import { computed } from 'vue';
 import { useIsMobileViewport } from '@gitiempo/web-shared';
 import type { InvoiceResponse, InvoiceStatus } from '@gitiempo/shared';
@@ -104,7 +105,7 @@ const actions = computed(() => {
           option-value="value"
           class="h-[38px] sm:w-[150px]"
           :disabled="updating"
-          :pt="{ label: { class: 'text-[13px] font-normal text-text-dark' } }"
+          :pt="invoiceSelectPt"
           @update:model-value="emit('status', $event)"
         >
           <template #option="{ option }">

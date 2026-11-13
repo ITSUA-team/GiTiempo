@@ -77,6 +77,22 @@ describe('invoice grouped entry selection', () => {
     wrapper.unmount();
   });
 
+  it.each([false, true])('describes each task summary and distinguishes entry controls (mobile=%s)', async mobile => {
+    const { wrapper } = mountEditor(mobile);
+    const group = wrapper.get('[data-task-id="task-a"]');
+    const expand = group.get('button');
+    const describedBy = expand.attributes('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    const summary = describedBy!.split(' ').map(id => wrapper.get(`[id="${id}"]`).text()).join(' ');
+    expect(summary).toContain('2 of 2 entries included');
+    expect(summary).toContain('30m');
+    await expand.trigger('click');
+    const names = group.findAll('input[type="checkbox"]').map(input => input.attributes('aria-label'));
+    expect(names.some(name => name?.includes('01 Nov 2026') && name.includes('Alex') && name.includes('15m'))).toBe(true);
+    expect(names.some(name => name?.includes('01 Nov 2026') && name.includes('Sam') && name.includes('15m'))).toBe(true);
+    wrapper.unmount();
+  });
+
   it('scopes mixed-state select-all to the expanded task and retains other and unavailable selections', async () => {
     const {wrapper, selection} = mountEditor();
     selection.value = ['a1', 'b1', 'missing'];

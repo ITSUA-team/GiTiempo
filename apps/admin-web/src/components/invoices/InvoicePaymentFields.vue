@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { invoiceSelectPt } from './invoice-field-pt';
 import { computed } from 'vue';
 import { invoicePaymentSchema, type InvoicePayment } from '@gitiempo/shared';
 import InputText from 'primevue/inputtext';
@@ -37,7 +38,7 @@ function error(key: string) {
         v-model="payment.method"
         input-id="invoice-payment-method"
         :options="methods"
-        :pt="{ label: { class: 'text-[13px] font-normal text-text-dark' } }"
+        :pt="invoiceSelectPt"
         :disabled="disabled"
         class="text-text-dark h-[38px] w-full text-[13px] font-normal"
       />

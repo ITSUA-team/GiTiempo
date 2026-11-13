@@ -61,7 +61,7 @@ function dropEntry(id: string) {
         :pt="{
           root: { class: 'bg-surface-primary border-divider rounded-md border p-[3px]' },
           pcToggleButton: {
-            root: { class: 'h-8 rounded-sm border-0 px-3.5 py-0 text-[13px] font-medium data-[p-checked=true]:font-semibold data-[p-checked=true]:bg-accent-tint data-[p-checked=true]:text-brand data-[p-checked=false]:bg-surface-primary data-[p-checked=false]:text-text-muted' },
+            root: { class: 'h-11 rounded-sm border-0 px-3.5 py-0 text-[13px] font-medium data-[p-checked=true]:font-semibold data-[p-checked=true]:bg-accent-tint data-[p-checked=true]:text-brand data-[p-checked=false]:bg-surface-primary data-[p-checked=false]:text-text-muted' },
             content: { class: 'bg-transparent p-0 shadow-none' },
           },
         }"

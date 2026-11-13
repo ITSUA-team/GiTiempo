@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { invoiceDatePickerPt } from './invoice-field-pt';
 import { computed } from 'vue';
 import DatePicker from 'primevue/datepicker';
 import Message from 'primevue/message';
 import { getLocalDateKey } from '@gitiempo/web-shared/time';
 import { DatePickerButtonBar, useDatePickerConfirmCancel } from '@gitiempo/web-shared';
-import { giTiempoDatePickerPt } from '@gitiempo/web-config/theme';
 const issueDate = defineModel<Date | null>('issueDate', { required: true });
 const dueDate = defineModel<Date | null>('dueDate', { required: true });
 const issuePicker = useDatePickerConfirmCancel<Date | null>();
@@ -28,7 +28,7 @@ const invalid = computed(() => Boolean(issueDate.value && dueDate.value && getLo
         show-icon
         show-button-bar
         icon-display="input"
-        :pt="{ ...giTiempoDatePickerPt, pcInputText: { root: { class: giTiempoDatePickerPt.pcInputText.root.class, style: { fontSize: '13px', fontWeight: 400, color: 'var(--color-text-dark)' } } } }"
+        :pt="invoiceDatePickerPt"
         class="w-full"
         @show="issuePicker.handleShow"
       >
@@ -64,7 +64,7 @@ const invalid = computed(() => Boolean(issueDate.value && dueDate.value && getLo
         show-button-bar
         icon-display="input"
         :invalid="invalid"
-        :pt="{ ...giTiempoDatePickerPt, pcInputText: { root: { class: giTiempoDatePickerPt.pcInputText.root.class, style: { fontSize: '13px', fontWeight: 400, color: 'var(--color-text-dark)' } } } }"
+        :pt="invoiceDatePickerPt"
         class="w-full"
         @show="duePicker.handleShow"
       >

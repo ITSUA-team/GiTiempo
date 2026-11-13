@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { invoiceDatePickerPt, invoiceSelectPt } from './invoice-field-pt';
 import { computed, ref, watch, type Ref } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { invoiceLogoSchema, invoicePaymentSchema, type InvoicePayment } from '@gitiempo/shared';
@@ -20,10 +21,6 @@ import {
 import {
   getLocalDateKey,
 } from '@gitiempo/web-shared/time';
-import {
-  giTiempoDatePickerPt,
-  giTiempoFieldWidthSelectPt,
-} from '@gitiempo/web-config/theme';
 import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
 import InputNumber from 'primevue/inputnumber';
@@ -763,7 +760,7 @@ async function handleCreate(): Promise<void> {
             show-clear
             :invalid="projectError"
             class="w-full"
-            :pt="{ ...giTiempoFieldWidthSelectPt, label: { class: 'text-[13px] font-normal text-text-dark' } }"
+            :pt="invoiceSelectPt"
           />
           <Message
             v-if="projectError"
@@ -797,7 +794,7 @@ async function handleCreate(): Promise<void> {
               show-button-bar
               show-icon
               class="w-full"
-              :pt="{ ...giTiempoDatePickerPt, pcInputText: { root: { class: giTiempoDatePickerPt.pcInputText.root.class, style: { fontSize: '13px', fontWeight: 400, color: 'var(--color-text-dark)' } } } }"
+              :pt="invoiceDatePickerPt"
               @show="datePicker.handleShow"
             >
               <template #buttonbar>
@@ -864,7 +861,7 @@ async function handleCreate(): Promise<void> {
               placeholder="Auto"
               show-clear
               class="w-full"
-              :pt="{ ...giTiempoFieldWidthSelectPt, label: { class: 'text-[13px] font-normal text-text-dark' } }"
+              :pt="invoiceSelectPt"
               @update:model-value="handleCurrencyUpdate"
             />
           </div>
@@ -897,7 +894,7 @@ async function handleCreate(): Promise<void> {
               option-label="label"
               option-value="value"
               class="w-full"
-              :pt="{ ...giTiempoFieldWidthSelectPt, label: { class: 'text-[13px] font-normal text-text-dark' } }"
+              :pt="invoiceSelectPt"
               @update:model-value="handleRoundingStepUpdate"
             />
           </div>

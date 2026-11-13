@@ -53,12 +53,12 @@ const entryCount = computed(
 const timeCount = computed(() => taskMode.value
   ? `${taskRows.value.length} ${taskRows.value.length === 1 ? 'task' : 'tasks'} · ${props.invoice.totalHours}h`
   : entryCount.value);
-const dateFields = computed(() => scopeFields.value.filter(([label]) => label === 'Issue date' || label === 'Due date'));
-const billingFields = computed(() => scopeFields.value.filter(([label]) => label !== 'Issue date' && label !== 'Due date'));
 const project = computed(() => props.invoice.project?.name ?? 'Workspace-wide');
-const scopeFields = computed(() => [
+const dateFields = computed(() => [
   ['Issue date', periodFormat.format(new Date((props.invoice.issueDate ?? props.invoice.createdAt.slice(0, 10)) + 'T12:00:00Z'))],
   ...(props.invoice.dueDate ? [['Due date', periodFormat.format(new Date(props.invoice.dueDate + 'T12:00:00Z'))]] : []),
+]);
+const billingFields = computed(() => [
   ['Project', project.value],
   ['Billing period', period.value],
   ['Hourly rate', money(props.invoice.hourlyRate)],

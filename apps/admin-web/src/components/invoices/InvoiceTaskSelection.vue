@@ -43,6 +43,7 @@ function toggle(taskId: string) {
         variant="text"
         class="text-text-dark bg-app-bg flex w-full items-center justify-start gap-2.5 rounded-sm px-3 py-2 text-left"
         :aria-label="`${expanded.has(group.taskId) ? 'Collapse' : 'Expand'} ${group.taskName}`"
+        :aria-describedby="`${regionId}-${group.taskId}-count ${regionId}-${group.taskId}-duration`"
         :aria-expanded="expanded.has(group.taskId)"
         :aria-controls="`${regionId}-${group.taskId}`"
         @click="toggle(group.taskId)"
@@ -54,9 +55,15 @@ function toggle(taskId: string) {
         />
         <span class="flex min-w-0 flex-1 flex-col items-start gap-[3px]">
           <span class="min-w-0 text-sm font-semibold break-words">{{ group.taskName }}</span>
-          <span class="text-text-muted text-xs font-medium">{{ group.includedCount }} of {{ group.entries.length }} {{ group.entries.length === 1 ? 'entry' : 'entries' }} included</span>
+          <span
+            :id="`${regionId}-${group.taskId}-count`"
+            class="text-text-muted text-xs font-medium"
+          >{{ group.includedCount }} of {{ group.entries.length }} {{ group.entries.length === 1 ? 'entry' : 'entries' }} included</span>
         </span>
-        <span class="text-brand ml-2 shrink-0 text-sm font-semibold">{{ formatCompactDuration(group.includedSeconds) }}</span>
+        <span
+          :id="`${regionId}-${group.taskId}-duration`"
+          class="text-brand ml-2 shrink-0 text-sm font-semibold"
+        >{{ formatCompactDuration(group.includedSeconds) }}</span>
       </Button>
       <div
         v-show="expanded.has(group.taskId)"

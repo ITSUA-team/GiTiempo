@@ -30,6 +30,9 @@ function toggleAll() {
 function label(entry: InvoiceTimeEntrySummary) {
   return [entry.taskName, entry.description].filter(Boolean).join(' · ') || 'Time entry';
 }
+function selectionLabel(entry: InvoiceTimeEntrySummary) {
+  return `Include ${label(entry)} · ${entryDate.format(new Date(entry.startedAt))} · ${entry.userName || 'Unknown user'} · ${formatCompactDuration(entry.roundedDurationSeconds)}`;
+}
 const entryDate = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit', month: 'short', year: 'numeric',
 });
@@ -53,7 +56,7 @@ function entryRowClass(entry: InvoiceTimeEntrySummary) {
         v-model="selection"
         :pt="{ root: { class: 'h-[18px] w-[18px]' }, box: { class: 'h-[18px] w-[18px]' } }"
         :value="entry.id"
-        :aria-label="'Include ' + label(entry)"
+        :aria-label="selectionLabel(entry)"
       />
       <div class="text-text-dark flex min-w-0 flex-col gap-1 text-[13px] break-words">
         <span class="font-medium">{{ entry.taskName || 'Time entry' }}</span>
@@ -96,7 +99,7 @@ function entryRowClass(entry: InvoiceTimeEntrySummary) {
           v-model="selection"
           :value="data.id"
           :pt="{ root: { class: 'h-[18px] w-[18px]' }, box: { class: 'h-[18px] w-[18px]' } }"
-          :aria-label="'Include ' + label(data)"
+          :aria-label="selectionLabel(data)"
         />
       </template>
     </Column>
