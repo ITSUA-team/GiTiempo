@@ -429,7 +429,10 @@ export class InvoicesService {
     user: AuthUser,
     input: import('@gitiempo/shared').PreviewInvoiceInput,
   ) {
-    const preview = await this.previewEligibleEntries(user, input);
+    const { preview, currentInvoice } = await this.loadEligibleEntries(
+      user,
+      input,
+    );
     const entries =
       input.timeEntryIds === undefined
         ? preview.entries
@@ -467,7 +470,10 @@ export class InvoicesService {
         422,
       );
     const subtotal = this.computeInvoiceTotals(seconds, rate, 0).totalAmount;
+    const timeDisplayMode =
+      input.timeDisplayMode ?? currentInvoice?.timeDisplayMode ?? 'entries';
     return {
+      timeDisplayMode,
       entries,
       count: entries.length,
       ...totals,
@@ -817,6 +823,16 @@ export class InvoicesService {
     user: AuthUser,
     query: EligibleEntriesQuery,
   ): Promise<EligibleEntriesResponse> {
+    return (await this.loadEligibleEntries(user, query)).preview;
+  }
+
+  private async loadEligibleEntries(
+    user: AuthUser,
+    query: EligibleEntriesQuery,
+  ): Promise<{
+    preview: EligibleEntriesResponse;
+    currentInvoice: InvoiceResponse | null;
+  }> {
     const membership = await this.members.requireRole(
       user.sub,
       user.workspaceId,
@@ -949,12 +965,15 @@ export class InvoicesService {
     const totalHours = InvoicesService.secondsToCentihours(seconds) / 100;
 
     return {
-      count: entries.length,
-      totalHours,
-      entries,
-      defaultHourlyRate: settings?.defaultHourlyRate ?? null,
-      defaultCurrency: settings?.currency ?? null,
-      defaultRoundingStepMinutes,
+      currentInvoice,
+      preview: {
+        count: entries.length,
+        totalHours,
+        entries,
+        defaultHourlyRate: settings?.defaultHourlyRate ?? null,
+        defaultCurrency: settings?.currency ?? null,
+        defaultRoundingStepMinutes,
+      },
     };
   }
 
@@ -1142,6 +1161,7 @@ export class InvoicesService {
           reference: sql`${settings?.billingProfile?.invoicePrefix ?? 'INV'} || '-' || nextval('invoice_reference_sequence')::text`,
           status: 'draft',
           document: {
+            timeDisplayMode: input.timeDisplayMode ?? 'entries',
             sender: input.sender ?? settings?.billingProfile?.sender,
             recipient: input.recipient,
             payment: input.payment ?? settings?.billingProfile?.payment,
@@ -1201,6 +1221,7 @@ export class InvoicesService {
         user.workspaceId,
       );
       const document = {
+        timeDisplayMode: saved.timeDisplayMode,
         sender: saved.sender,
         recipient: saved.recipient,
         payment: this.resolvePayment(
@@ -1376,7 +1397,13 @@ export class InvoicesService {
           Object.assign(updates, { [key]: input[key] });
       }
       const document = { ...invoice.document };
-      for (const key of ['sender', 'recipient', 'services', 'logo'] as const) {
+      for (const key of [
+        'sender',
+        'recipient',
+        'services',
+        'logo',
+        'timeDisplayMode',
+      ] as const) {
         if (input[key] !== undefined) document[key] = input[key];
       }
       if (input.payment !== undefined)
@@ -1767,6 +1794,8 @@ export class InvoicesService {
 
     return {
       ...(row.document ?? {}),
+      timeDisplayMode:
+        row.document?.timeDisplayMode === 'tasks' ? 'tasks' : 'entries',
       reference: row.reference,
       revision: row.revision,
       id: row.id,

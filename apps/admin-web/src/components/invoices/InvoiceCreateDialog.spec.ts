@@ -8,6 +8,7 @@ import DataTable from 'primevue/datatable';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
+import SelectButton from 'primevue/selectbutton';
 import Textarea from 'primevue/textarea';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type {
@@ -98,6 +99,7 @@ function createEntriesResponse(
 
 function createInvoiceResponse(): InvoiceResponse {
   return {
+    timeDisplayMode: 'entries',
     id: invoiceId,
     workspaceId,
     projectId,
@@ -976,6 +978,7 @@ describe('InvoiceCreateDialog', () => {
 
     expect(createInvoice).toHaveBeenCalledTimes(1);
     expect(createInvoice).toHaveBeenCalledWith({
+      timeDisplayMode: 'entries',
       issueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), dueDate: null,
       sender: { name: '', address: '', email: '', taxId: '' },
       recipient: { name: '', address: '', email: '', taxId: '' },
@@ -1008,6 +1011,7 @@ describe('InvoiceCreateDialog', () => {
 
     expect(createInvoice).toHaveBeenCalledTimes(1);
     expect(createInvoice).toHaveBeenCalledWith({
+      timeDisplayMode: 'entries',
       issueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), dueDate: null,
       sender: { name: '', address: '', email: '', taxId: '' },
       recipient: { name: '', address: '', email: '', taxId: '' },
@@ -1161,6 +1165,7 @@ describe('InvoiceCreateDialog', () => {
 
     expect(createInvoice).toHaveBeenCalledTimes(1);
     expect(createInvoice).toHaveBeenCalledWith({
+      timeDisplayMode: 'entries',
       issueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), dueDate: null,
       sender: { name: '', address: '', email: '', taxId: '' },
       recipient: { name: '', address: '', email: '', taxId: '' },
@@ -1589,6 +1594,7 @@ describe('InvoiceCreateDialog', () => {
     await submitInvoice(wrapper);
 
     expect(createInvoice).toHaveBeenCalledWith({
+      timeDisplayMode: 'entries',
       issueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), dueDate: null,
       sender: { name: '', address: '', email: '', taxId: '' },
       recipient: { name: '', address: '', email: '', taxId: '' },
@@ -1886,7 +1892,7 @@ describe('InvoiceCreateDialog', () => {
   it('renders authoritative totals from the real calculation response without eligibility defaults',async()=>{
     const entry=createTimeEntry();
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
-    testMocks.requestJson.mockImplementation(async()=>previewInvoiceResponseSchema.parse({entries:[entry],count:1,totalHours:2.5,subtotal:200,discountAmount:20,totalAmount:180,currency:'USD'}));
+    testMocks.requestJson.mockImplementation(async()=>previewInvoiceResponseSchema.parse({timeDisplayMode:'entries',entries:[entry],count:1,totalHours:2.5,subtotal:200,discountAmount:20,totalAmount:180,currency:'USD'}));
     const createInvoice=createCreateInvoiceSpy();
     const wrapper=await mountDialog({createInvoice});
     await wrapper.getComponent('#invoice-create-title').setValue('Reviewed invoice');
@@ -2072,7 +2078,7 @@ describe('InvoiceCreateDialog', () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     testMocks.requestJson.mockImplementation(async()=>{
       if(fail)throw new Error('Entry was claimed. Review selection.');
-      return previewInvoiceResponseSchema.parse({entries:[createTimeEntry()],count:1,totalHours:2.5,subtotal:200,discountAmount:0,totalAmount:200,currency:'USD'});
+      return previewInvoiceResponseSchema.parse({timeDisplayMode:'entries',entries:[createTimeEntry()],count:1,totalHours:2.5,subtotal:200,discountAmount:0,totalAmount:200,currency:'USD'});
     });
     const wrapper=await mountDialog();
     await wrapper.getComponent('#invoice-create-title').setValue('Keep typed title');
@@ -2142,6 +2148,62 @@ describe('InvoiceCreateDialog', () => {
     expect(document.querySelector<HTMLInputElement>('#invoice-payment-' + key)?.value).toBe(value);
     await submitInvoice(wrapper);
     expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({payment:expect.objectContaining({[key]:value})}));
+  });
+
+  describe('invoice time display mode draft lifecycle', () => {
+    it('defaults a fresh draft to entries and submits an explicit Task choice', async () => {
+      testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+      const createInvoice = createCreateInvoiceSpy();
+      const wrapper = await mountDialog({createInvoice});
+      const mode = wrapper.getComponent(SelectButton);
+      expect(mode.props('modelValue')).toBe('entries');
+      await wrapper.getComponent('#invoice-create-title').setValue('Task invoice');
+      await enterDateRange(wrapper);
+      const reads = testMocks.listEligibleEntries.mock.calls.length;
+      const calculations = testMocks.requestJson.mock.calls.length;
+      expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
+      testMocks.requestJson.mockRejectedValueOnce(new Error('Preview unavailable'));
+      await mode.vm.$emit('update:modelValue', 'tasks');
+      await flushPromises();
+      expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(reads);
+      expect(testMocks.requestJson).toHaveBeenCalledTimes(calculations);
+      expect(wrapper.text()).not.toContain('Calculating totals');
+      expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
+      await submitInvoice(wrapper);
+      expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({timeDisplayMode: 'tasks'}));
+    });
+
+    it.each([false, true])('inherits source mode and discards a canceled mode edit (editing=%s)', async editing => {
+      testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+      const source = {...createInvoiceResponse(), timeDisplayMode: 'tasks' as const};
+      const before = structuredClone(source);
+      const createInvoice = createCreateInvoiceSpy();
+      const wrapper = await mountDialog({source, editing, createInvoice});
+      expect(wrapper.getComponent(SelectButton).props('modelValue')).toBe('tasks');
+      await wrapper.getComponent(SelectButton).vm.$emit('update:modelValue', 'entries');
+      await wrapper.getComponent(Dialog).vm.$emit('update:visible', false);
+      await wrapper.setProps({visible: false});
+      await wrapper.setProps({visible: true});
+      await flushPromises();
+      expect(wrapper.getComponent(SelectButton).props('modelValue')).toBe('tasks');
+      expect(createInvoice).not.toHaveBeenCalled();
+      expect(source).toEqual(before);
+    });
+
+    it('copies into another reviewed period with its source mode without reusing source entry IDs', async () => {
+      testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+      const source = {...createInvoiceResponse(), timeDisplayMode: 'tasks' as const};
+      const before = structuredClone(source);
+      const decemberEntry = createTimeEntry({id: '99999999-9999-4999-8999-999999999999', startedAt: '2026-12-02T09:00:00Z', endedAt: '2026-12-02T11:30:00Z'});
+      testMocks.listEligibleEntries.mockImplementation(async query => createEntriesResponse(query.dateFrom === '2026-12-01' ? {entries: [decemberEntry]} : {}));
+      const createInvoice = createCreateInvoiceSpy();
+      const wrapper = await mountDialog({source, createInvoice});
+      await wrapper.findAllComponents(DatePicker).find(field => field.props('inputId') === 'invoice-create-date-range')!.vm.$emit('update:modelValue', [new Date(2026, 11, 1), new Date(2026, 11, 31)]);
+      await flushPromises();
+      await submitInvoice(wrapper);
+      expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({timeDisplayMode: 'tasks', dateFrom: '2026-12-01', dateTo: '2026-12-31', timeEntryIds: [decemberEntry.id]}));
+      expect(source).toEqual(before);
+    });
   });
 
 });

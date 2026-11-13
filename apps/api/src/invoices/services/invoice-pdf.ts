@@ -1,7 +1,11 @@
 import { prepareInvoiceLogo } from './invoice-logo';
 import PdfPrinter from 'pdfmake';
-import fonts from 'pdfmake/build/vfs_fonts';
-import { computeInvoiceAmount, type InvoiceResponse } from '@gitiempo/shared';
+import { join } from 'node:path';
+import {
+  computeInvoiceAmount,
+  groupInvoiceTimeByTask,
+  type InvoiceResponse,
+} from '@gitiempo/shared';
 import { HttpException } from '@nestjs/common';
 import { COLOR } from '../../reports/services/report-pdf-theme';
 
@@ -29,11 +33,23 @@ export async function renderInvoicePdf(
       422,
     );
   }
-  // pdfmake ships its Unicode-capable Roboto fonts as a virtual file system.
-  const font = Buffer.from(fonts['Roboto-Regular.ttf'], 'base64');
-  const bold = Buffer.from(fonts['Roboto-Medium.ttf'], 'base64');
+  const fontPath = (weight: string) =>
+    join(__dirname, '../../reports/assets', `Inter-${weight}.ttf`);
+  const regular = fontPath('Regular');
+  const semibold = fontPath('SemiBold');
   const printer = new PdfPrinter({
-    Roboto: { normal: font, bold, italics: font, bolditalics: bold },
+    Inter: {
+      normal: regular,
+      bold: semibold,
+      italics: regular,
+      bolditalics: semibold,
+    },
+    InterMedium: {
+      normal: fontPath('Medium'),
+      bold: semibold,
+      italics: regular,
+      bolditalics: semibold,
+    },
   });
   const sender = invoice.sender;
   const services = invoice.services;
@@ -53,18 +69,35 @@ export async function renderInvoicePdf(
       : 0;
     const amount = next - allocated;
     allocated = next;
-    return (amount / 100).toFixed(2);
+    return amount;
   });
+  const lines =
+    invoice.timeDisplayMode === 'tasks'
+      ? groupInvoiceTimeByTask(invoice.timeEntries).map((task) => ({
+          description: task.taskName,
+          seconds: task.roundedDurationSeconds,
+          amountCents: task.sourceIndices.reduce(
+            (sum, index) => sum + amounts[index],
+            0,
+          ),
+        }))
+      : invoice.timeEntries.map((entry, index) => ({
+          description: [entry.taskName, entry.description]
+            .filter(Boolean)
+            .join(' · '),
+          seconds: entry.roundedDurationSeconds,
+          amountCents: amounts[index],
+        }));
   const rule = () => ({
     canvas: [
       {
-        type: 'line',
-        x1: 0,
-        x2: 523,
-        y1: 0,
-        y2: 0,
-        lineWidth: 0.75,
-        lineColor: COLOR.divider,
+        type: 'rect',
+        x: 0,
+        y: 0,
+        w: 523.28,
+        h: 0.75,
+        lineWidth: 0,
+        color: COLOR.divider,
       },
     ],
   });
@@ -73,7 +106,7 @@ export async function renderInvoicePdf(
     maximumFractionDigits: 2,
   });
   const money = (value: number) =>
-    amountFormat.format(value) + ' ' + invoice.currency;
+    amountFormat.format(value).replace(/^-/, '−') + ' ' + invoice.currency;
   const dateFormat = new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -82,7 +115,11 @@ export async function renderInvoicePdf(
   });
   const firstDate = new Date(invoice.dateFrom);
   const lastDate = new Date(invoice.dateTo);
-  const period = dateFormat.formatRange(firstDate, lastDate);
+  const period =
+    invoice.dateFrom !== invoice.dateTo &&
+    invoice.dateFrom.slice(0, 7) === invoice.dateTo.slice(0, 7)
+      ? invoice.dateFrom.slice(-2) + '–' + dateFormat.format(lastDate)
+      : dateFormat.formatRange(firstDate, lastDate);
   const periodLabel =
     invoice.dateFrom.endsWith('-01') &&
     invoice.dateFrom.slice(0, 7) === invoice.dateTo.slice(0, 7) &&
@@ -96,16 +133,50 @@ export async function renderInvoicePdf(
   const identification = (label: string, value: string, fontSize = 10.5) => ({
     stack: [
       { text: label, style: 'caption' },
-      { text: value, bold: true, fontSize, margin: [0, 9, 0, 0] },
+      {
+        text: value,
+        font: fontSize === 12 ? 'Inter' : 'InterMedium',
+        bold: fontSize === 12,
+        fontSize,
+        margin: [0, 9, 0, 0],
+      },
     ],
   });
   const party = (heading: string, value: typeof sender) => ({
     stack: [
-      { text: heading, style: 'section' },
+      { text: heading, style: 'section', margin: [0, 0, 0, 7.5] },
       { text: value.name, fontSize: 12, bold: true },
-      ...[value.address, value.email, value.taxId && 'Tax ID ' + value.taxId]
-        .filter(Boolean)
-        .map((text) => ({ text, margin: [0, 5, 0, 0] })),
+      ...(value.address
+        ? [
+            {
+              table: {
+                widths: ['*'],
+                heights: 30,
+                body: [[{ text: value.address }]],
+              },
+              layout: {
+                hLineWidth: () => 0,
+                vLineWidth: () => 0,
+                paddingLeft: () => 0,
+                paddingRight: () => 0,
+                paddingTop: () => 0,
+                paddingBottom: () => 0,
+              },
+              margin: [0, 7.5, 0, 0],
+            },
+          ]
+        : []),
+      ...(value.email ? [{ text: value.email, margin: [0, 7.5, 0, 0] }] : []),
+      ...(value.taxId
+        ? [
+            {
+              text: 'Tax ID ' + value.taxId,
+              fontSize: 9,
+              color: COLOR.textMuted,
+              margin: [0, 7.5, 0, 0],
+            },
+          ]
+        : []),
     ],
   });
   const preparedLogo = await prepareInvoiceLogo(invoice.logo);
@@ -139,28 +210,92 @@ export async function renderInvoicePdf(
         ]
       : [
           [payment.beneficiary, payment.provider].filter(Boolean).join(' · '),
-          payment.account && 'Account: ' + payment.account,
-          payment.method === 'Bank transfer' &&
-            payment.swift &&
-            'SWIFT / BIC: ' + payment.swift,
+          [
+            payment.account && 'Account: ' + payment.account,
+            payment.method === 'Bank transfer' &&
+              payment.swift &&
+              'SWIFT: ' + payment.swift,
+          ]
+            .filter(Boolean)
+            .join(' · '),
         ]),
     payment.instructions,
   ].filter(Boolean);
-  function render(totalsLast: boolean): Promise<Buffer> {
-    const content = [
+  const pageMargins = [36, 36, 36, 48];
+  const tableCellPadding = 9;
+  const numericColumnWidths = [40.5, 57, 67.5];
+  const descriptionWidth =
+    595.28 -
+    pageMargins[0] -
+    pageMargins[2] -
+    tableCellPadding * (numericColumnWidths.length + 2) -
+    numericColumnWidths.reduce((sum, width) => sum + width, 0);
+  const pageFooter = (page: number, pages: number, inFlow: boolean) => ({
+    margin: inFlow ? [0, 18, 0, 0] : [36, 6, 36, 0],
+    fontSize: 8.25,
+    color: COLOR.textMuted,
+    stack: [
+      rule(),
       {
         columns: [
-          ...(logo ? [{ ...logo }] : []),
-          { text: sender.name, bold: true, fontSize: 15, width: '*' },
           {
-            text: 'INVOICE',
-            color: COLOR.brand,
-            bold: true,
-            fontSize: 21,
+            text: [sender.name, sender.email].filter(Boolean).join(' · '),
+            width: '*',
+            maxHeight: 26,
+          },
+          {
+            text: `Page ${page} of ${pages}`,
+            noWrap: true,
+            alignment: 'right',
             width: 'auto',
           },
         ],
         columnGap: 9,
+        margin: [0, inFlow ? 18 : 6, 0, 0],
+      },
+    ],
+  });
+  let pageCount = 0;
+  function render(totalsLast: boolean, flowFooter = false): Promise<Buffer> {
+    const content = [
+      {
+        table: {
+          widths: ['*'],
+          heights: 42,
+          body: [
+            [
+              {
+                columns: [
+                  ...(logo ? [{ ...logo, margin: [0, 3, 0, 0] }] : []),
+                  {
+                    text: sender.name,
+                    bold: true,
+                    fontSize: 15,
+                    width: '*',
+                    margin: [0, 12, 0, 0],
+                  },
+                  {
+                    text: 'INVOICE',
+                    color: COLOR.brand,
+                    bold: true,
+                    fontSize: 21,
+                    margin: [0, 8, 0, 0],
+                    width: 'auto',
+                  },
+                ],
+                columnGap: 9,
+              },
+            ],
+          ],
+        },
+        layout: {
+          hLineWidth: () => 0,
+          vLineWidth: () => 0,
+          paddingLeft: () => 0,
+          paddingRight: () => 0,
+          paddingTop: () => 0,
+          paddingBottom: () => 0,
+        },
         margin: [0, 0, 0, 18],
       },
       rule(),
@@ -168,7 +303,7 @@ export async function renderInvoicePdf(
         columns: [
           identification('Invoice number', invoice.reference ?? invoice.id, 12),
           identification(
-            'Issued',
+            'Issue date',
             dateFormat.format(new Date(invoice.issueDate ?? invoice.createdAt)),
           ),
           ...(invoice.dueDate
@@ -192,78 +327,104 @@ export async function renderInvoicePdf(
         text: services,
         bold: true,
         fontSize: 13.5,
-        margin: [0, 18, 0, 4],
+        margin: [0, 18, 0, 6],
       },
       {
         text: [invoice.project?.name, periodLabel].filter(Boolean).join(' · '),
         color: COLOR.textMuted,
-        margin: [0, 0, 0, 14],
+        margin: [0, 0, 0, 18],
       },
       {
         table: {
           headerRows: 1,
-          heights: (row: number) => (row === 0 ? 15.5 : 24.5),
-          widths: ['*', 40, 57, 67],
+          heights: (row: number) => (row === 0 ? 12.75 : 14.25),
+          // A star column grows to its longest word; fixed width lets pdfmake wrap it.
+          widths: [descriptionWidth, ...numericColumnWidths],
           body: [
-            ['Service / work description', 'Hours', 'Rate', 'Amount'].map(
-              (text, i) => ({
-                text,
-                bold: true,
-                fontSize: 9,
-                alignment: i ? 'right' : 'left',
-                fillColor: COLOR.accentTint,
-              }),
-            ),
-            ...invoice.timeEntries.map((entry, i) => [
-              [entry.taskName, entry.description].filter(Boolean).join(' · '),
+            [
+              invoice.timeDisplayMode === 'tasks'
+                ? 'Task'
+                : 'Service / work description',
+              'Hours',
+              'Rate',
+              'Amount',
+            ].map((text) => ({
+              text,
+              bold: true,
+              fontSize: 9,
+              alignment: 'left',
+              fillColor: COLOR.accentTint,
+            })),
+            ...lines.map((line) => [
+              line.description,
               {
-                text: (entry.roundedDurationSeconds / 3600).toFixed(2),
-                alignment: 'right',
+                text: String(Number((line.seconds / 3600).toFixed(2))),
+                alignment: 'left',
               },
               {
                 text: amountFormat.format(invoice.hourlyRate),
-                alignment: 'right',
+                alignment: 'left',
               },
               {
-                text: amountFormat.format(Number(amounts[i])),
-                alignment: 'right',
+                text: amountFormat.format(line.amountCents / 100),
+                alignment: 'left',
               },
             ]),
           ],
         },
         layout: {
           vLineWidth: () => 0,
-          hLineWidth: (i: number) => (i > 1 ? 0.5 : 0),
+          hLineWidth: (i: number) => (i > 1 ? 0.75 : 0),
           hLineColor: () => COLOR.divider,
-          paddingLeft: () => 8,
-          paddingRight: () => 8,
-          paddingTop: () => 8,
-          paddingBottom: () => 8,
+          paddingLeft: () => tableCellPadding,
+          paddingRight: (column: number) =>
+            column === 3 ? tableCellPadding : 0,
+          paddingTop: (row: number) => (row === 0 ? 9.375 : 12.75),
+          paddingBottom: (row: number) => (row === 0 ? 9.375 : 12.75),
         },
       },
     ];
     const totals = {
       id: 'invoice-totals',
       unbreakable: true,
-      margin: [0, 15, 0, 16],
+      margin: [0, 18, 0, totalsLast ? 0 : 18],
       stack: [
         {
           columns: [
             'Subtotal · ' + invoice.totalHours + 'h',
-            { text: money(subtotal), alignment: 'right' },
+            {
+              text: money(subtotal),
+              font: 'InterMedium',
+              fontSize: 10.5,
+              alignment: 'right',
+            },
           ],
+          margin: [0, 0, 0, invoice.discountPercent > 0 ? 1.55 : 10.55],
         },
-        {
-          columns: [
-            'Discount · ' + invoice.discountPercent + '%',
-            { text: money(-discount || 0), alignment: 'right' },
-          ],
-          margin: [0, 7, 0, 7],
-        },
+        ...(invoice.discountPercent > 0
+          ? [
+              {
+                columns: [
+                  'Discount · ' + invoice.discountPercent + '%',
+                  {
+                    text: money(-discount || 0),
+                    fontSize: 10.5,
+                    alignment: 'right',
+                  },
+                ],
+                margin: [0, 9, 0, 10.55],
+              },
+            ]
+          : []),
         rule(),
         {
           columns: [
-            { text: 'TOTAL DUE', bold: true },
+            {
+              text: 'TOTAL DUE',
+              bold: true,
+              fontSize: 10.5,
+              margin: [0, 3.4, 0, 0],
+            },
             {
               text: money(invoice.totalAmount),
               fontSize: 18,
@@ -272,24 +433,30 @@ export async function renderInvoicePdf(
               alignment: 'right',
             },
           ],
-          margin: [0, 7, 0, 0],
+          margin: [0, 9, 0, 0],
         },
       ],
     };
     const instructionsAndNotes = [
       {
         stack: [
-          { text: 'HOW TO PAY', style: 'section' },
-          ...paymentLines.map((text) =>
+          { text: 'Payment instructions', style: 'section' },
+          ...paymentLines.map((text, index) =>
             typeof text === 'object'
-              ? { ...text, margin: [0, 0, 0, 4] }
-              : { text, margin: [0, 0, 0, 4] },
+              ? { ...text, margin: [0, 0, 0, 7.5] }
+              : {
+                  text,
+                  ...(index === 0
+                    ? { font: 'InterMedium', fontSize: 10.5 }
+                    : {}),
+                  margin: [0, 0, 0, 7.5],
+                },
           ),
         ],
       },
       ...(invoice.notes
         ? [
-            { text: 'Notes', bold: true, fontSize: 9, margin: [0, 12, 0, 4] },
+            { text: 'Notes', bold: true, fontSize: 9, margin: [0, 10.5, 0, 6] },
             { text: invoice.notes, color: COLOR.textMuted },
           ]
         : []),
@@ -297,14 +464,14 @@ export async function renderInvoicePdf(
     return new Promise((resolve, reject) => {
       const doc = printer.createPdfKitDocument({
         pageSize: 'A4',
-        pageMargins: [36, 36, 36, 48],
-        defaultStyle: { font: 'Roboto', fontSize: 10, color: COLOR.textDark },
+        pageMargins: flowFooter ? [36, 36, 36, 36] : pageMargins,
+        defaultStyle: { font: 'Inter', fontSize: 9.75, color: COLOR.textDark },
         styles: {
           section: {
             fontSize: 9,
             bold: true,
             color: COLOR.brand,
-            margin: [0, 0, 0, 6],
+            margin: [0, 0, 0, 7.5],
           },
           caption: { fontSize: 9, color: COLOR.textMuted },
         },
@@ -313,6 +480,7 @@ export async function renderInvoicePdf(
           ...(totalsLast
             ? [...instructionsAndNotes, totals]
             : [totals, ...instructionsAndNotes]),
+          ...(flowFooter ? [pageFooter(1, 1, true)] : []),
         ],
         ...(!totalsLast && {
           pageBreakBefore: (node: {
@@ -325,31 +493,10 @@ export async function renderInvoicePdf(
             return false;
           },
         }),
-        footer: (page: number, pages: number) => ({
-          margin: [36, 6, 36, 0],
-          fontSize: 8,
-          color: COLOR.textMuted,
-          stack: [
-            rule(),
-            {
-              columns: [
-                {
-                  text: [sender.name, sender.email].filter(Boolean).join(' · '),
-                  width: '*',
-                  maxHeight: 26,
-                },
-                {
-                  text: `Page ${page} of ${pages}`,
-                  noWrap: true,
-                  alignment: 'right',
-                  width: 'auto',
-                },
-              ],
-              columnGap: 12,
-              margin: [0, 6, 0, 0],
-            },
-          ],
-        }),
+        footer: (page: number, pages: number) => {
+          pageCount = pages;
+          return flowFooter ? { text: '' } : pageFooter(page, pages, false);
+        },
       });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
@@ -362,5 +509,10 @@ export async function renderInvoicePdf(
   // can flow beyond the totals, in which case the final page must close with them.
   let moveTotalsToEnd = false;
   const pdf = await render(false);
-  return moveTotalsToEnd ? render(true) : pdf;
+  if (moveTotalsToEnd) return render(true);
+  if (pageCount === 1) {
+    const withFlowFooter = await render(false, true);
+    if (pageCount === 1) return withFlowFooter;
+  }
+  return pdf;
 }

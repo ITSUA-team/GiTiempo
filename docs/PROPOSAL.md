@@ -84,6 +84,7 @@ Reports aggregate tracked hours with totals per task, project, and user.
 Admins and authorized Project Managers create invoices from completed billable time entries within their workspace and project permissions.
 
 - Billed hours use the invoice's per-entry ceiling rounding step. Charges use the saved rate, currency and optional percentage discount.
+- Show time by chooses Time entry or Task on each invoice. New and historical invoices default to Time entry; editing restores the saved format and copying inherits it. Task groups retain individual inclusion controls in the editor, while saved details and PDFs show one line per included task. Switching formats preserves selected entries, rounded hours and charges.
 - Draft, Sent and Paid are manually selected statuses with reversible transitions. All business fields and included time entries can be edited in any status, with a preview and atomic save. Excluding tracked entries releases them for another invoice.
 - Sender, recipient, services and payment details are captured on each invoice. Admin Settings supplies reusable sender/payment defaults and an optional logo. Later settings edits preserve historical invoice details.
 - PDF downloads contain the saved reference, parties, services, selected charges, currency, discount, total and payment instructions, with readable multipage formatting.

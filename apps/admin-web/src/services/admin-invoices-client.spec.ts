@@ -79,6 +79,7 @@ const invoiceListItem = {
 
 const invoiceResponse = {
 	...invoiceListItem,
+	timeDisplayMode: 'entries',
 	timeEntries: [timeEntrySummary],
 };
 
@@ -123,7 +124,7 @@ describe('createAdminInvoicesClient', () => {
 	});
 
 	it('previews explicit entry selection and parses authoritative amounts', async () => {
-		fetchFn.mockResolvedValue(jsonResponse({ count: 1, entries: eligibleEntriesResponse.entries, totalHours: 12.5, subtotal: 100, discountAmount: 10, totalAmount: 90, currency: 'USD' }));
+		fetchFn.mockResolvedValue(jsonResponse({ timeDisplayMode: 'entries', count: 1, entries: eligibleEntriesResponse.entries, totalHours: 12.5, subtotal: 100, discountAmount: 10, totalAmount: 90, currency: 'USD' }));
 		const result = await client.previewInvoice({ title: 'April', dateFrom: '2026-04-01', dateTo: '2026-04-30', currency: 'usd', hourlyRate: 50, discountPercent: 10, timeEntryIds: [entryId], invoiceId });
 		expect(fetchFn.mock.calls[0]).toEqual([expect.stringContaining('/invoices/preview'), expect.objectContaining({ method: 'POST' })]);
 		expect(getRequestBody(fetchFn)).toMatchObject({ timeEntryIds: [entryId], invoiceId, currency: 'USD' });

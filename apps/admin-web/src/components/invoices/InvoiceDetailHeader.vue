@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { invoiceSelectPt } from './invoice-field-pt';
 import { computed } from 'vue';
 import { useIsMobileViewport } from '@gitiempo/web-shared';
 import type { InvoiceResponse, InvoiceStatus } from '@gitiempo/shared';
@@ -67,16 +68,16 @@ const actions = computed(() => {
 
 <template>
   <header
-    class="flex flex-col gap-4 sm:grid sm:grid-cols-[minmax(8rem,1fr)_minmax(0,auto)] sm:gap-x-3 sm:gap-y-6"
+    class="flex flex-col gap-4 sm:grid sm:grid-cols-[minmax(8rem,1fr)_minmax(0,auto)] sm:gap-x-3 sm:gap-y-4"
     data-testid="invoice-detail-header"
   >
-    <div class="flex min-w-0 items-center gap-3">
+    <div class="flex min-w-0 items-center gap-3 sm:min-h-[42px]">
       <Button
         icon="pi pi-arrow-left"
         outlined
         severity="secondary"
         aria-label="Back to invoices"
-        class="h-[38px] w-[38px] shrink-0"
+        class="text-brand h-[38px] w-[38px] shrink-0"
         data-testid="invoice-back-button"
         @click="emit('back')"
       />
@@ -93,7 +94,7 @@ const actions = computed(() => {
       <div class="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
         <label
           for="detail-status"
-          class="text-[13px] font-medium"
+          class="text-text-dark text-[13px] font-medium"
         >Status</label>
         <Select
           input-id="detail-status"
@@ -104,6 +105,7 @@ const actions = computed(() => {
           option-value="value"
           class="h-[38px] sm:w-[150px]"
           :disabled="updating"
+          :pt="invoiceSelectPt"
           @update:model-value="emit('status', $event)"
         >
           <template #option="{ option }">
@@ -144,7 +146,9 @@ const actions = computed(() => {
         :loading="action.busy"
         :outlined="!action.primary"
         :severity="action.primary ? undefined : 'secondary'"
-        class="h-[38px]"
+        class="h-[38px] text-[13px]"
+        :class="action.primary ? 'text-text-inverse' : 'text-brand'"
+        :pt="{ label: { class: 'font-medium' }, icon: { class: 'text-base' } }"
         @click="action.handler"
       />
       <Button

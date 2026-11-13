@@ -19,10 +19,12 @@ import {
   invoiceResponseSchema,
   invoiceStatsResponseSchema,
   invoiceStatusSchema,
+  invoiceTimeDisplayModeSchema,
   updateInvoiceSchema,
 } from "./invoices.js";
 
 const validInvoiceResponse = {
+  timeDisplayMode: "entries",
   id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010",
   workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
   projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005",
@@ -1296,9 +1298,66 @@ it("rejects corrupt PNG payloads and accepts a PNG signature", () => {
 
 
 it("decodes calculation previews independently of discovery defaults", () => {
-  const response = { count: 0, entries: [], totalHours: 0, subtotal: 0, discountAmount: 0, totalAmount: 0, currency: "USD" };
-  expect(previewInvoiceResponseSchema.parse(response)).toEqual(response);
+  const response = { timeDisplayMode: "entries", count: 0, entries: [], totalHours: 0, subtotal: 0, discountAmount: 0, totalAmount: 0, currency: "USD" };
+  expect(previewInvoiceResponseSchema.parse(response)).toEqual({ ...response, timeDisplayMode: "entries" });
   expect(previewInvoiceResponseSchema.safeParse({ ...response, totalAmount: -1 }).success).toBe(false);
+});
+
+describe("invoice time display mode contracts", () => {
+  const input = { title: "Consulting", dateFrom: "2026-11-01", dateTo: "2026-11-30" };
+  const preview = { count: 0, entries: [], totalHours: 0, subtotal: 0, discountAmount: 0, totalAmount: 0, currency: "USD" };
+
+  it.each(["entries", "tasks"] as const)("accepts %s on create, preview, update and detail", timeDisplayMode => {
+    expect(invoiceTimeDisplayModeSchema.parse(timeDisplayMode)).toBe(timeDisplayMode);
+    expect(createInvoiceSchema.parse({ ...input, timeDisplayMode }).timeDisplayMode).toBe(timeDisplayMode);
+    expect(previewInvoiceSchema.parse({ ...input, timeDisplayMode }).timeDisplayMode).toBe(timeDisplayMode);
+    expect(updateInvoiceSchema.parse({ timeDisplayMode })).toEqual({ timeDisplayMode });
+    expect(invoiceResponseSchema.parse({ ...validInvoiceResponse, timeDisplayMode }).timeDisplayMode).toBe(timeDisplayMode);
+    expect(previewInvoiceResponseSchema.parse({ ...preview, timeDisplayMode }).timeDisplayMode).toBe(timeDisplayMode);
+  });
+
+  it("leaves omitted input modes unresolved so PATCH preserves the saved preference", () => {
+    expect(createInvoiceSchema.parse(input)).not.toHaveProperty("timeDisplayMode");
+    expect(previewInvoiceSchema.parse(input)).not.toHaveProperty("timeDisplayMode");
+    expect(updateInvoiceSchema.parse({ title: "Updated" })).toEqual({ title: "Updated" });
+    expect(updateInvoiceSchema.safeParse({ expectedRevision: 2 }).success).toBe(false);
+  });
+
+  it("rejects responses without a resolved mode", () => {
+    const missingMode = { ...validInvoiceResponse };
+    Reflect.deleteProperty(missingMode, "timeDisplayMode");
+    expect(invoiceResponseSchema.safeParse(missingMode).success).toBe(false);
+    expect(previewInvoiceResponseSchema.safeParse(preview).success).toBe(false);
+  });
+
+  it.each([null, "task", "", 0])("rejects invalid mode %s at every mode boundary", timeDisplayMode => {
+    expect(createInvoiceSchema.safeParse({ ...input, timeDisplayMode }).success).toBe(false);
+    expect(previewInvoiceSchema.safeParse({ ...input, timeDisplayMode }).success).toBe(false);
+    expect(updateInvoiceSchema.safeParse({ timeDisplayMode }).success).toBe(false);
+    expect(invoiceResponseSchema.safeParse({ ...validInvoiceResponse, timeDisplayMode }).success).toBe(false);
+    expect(previewInvoiceResponseSchema.safeParse({ ...preview, timeDisplayMode }).success).toBe(false);
+  });
+
+  it("keeps list responses and eligible-entry queries independent of mode", () => {
+    const response = invoiceListResponseSchema.parse({
+      items: [{ ...validInvoiceResponse, timeDisplayMode: "tasks" }],
+      meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    });
+    expect(response.items[0]).not.toHaveProperty("timeDisplayMode");
+    expect(invoiceListQuerySchema.safeParse({ timeDisplayMode: "tasks" }).success).toBe(false);
+    expect(eligibleEntriesQuerySchema.safeParse({ dateFrom: input.dateFrom, dateTo: input.dateTo, timeDisplayMode: "tasks" }).success).toBe(false);
+  });
+
+  it("retains individual entries and their count in task-mode responses", () => {
+    const first = validInvoiceResponse.timeEntries[0]!;
+    const entries = [first, { ...first, id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9021" }];
+    const result = invoiceResponseSchema.parse({ ...validInvoiceResponse, timeDisplayMode: "tasks", timeEntryCount: 2, timeEntries: entries });
+    const calculated = previewInvoiceResponseSchema.parse({ ...preview, timeDisplayMode: "tasks", count: 2, entries, totalHours: 4 });
+    expect(result.timeEntryCount).toBe(2);
+    expect(result.timeEntries).toEqual(entries);
+    expect(calculated.count).toBe(2);
+    expect(calculated.entries).toEqual(entries);
+  });
 });
 
 

@@ -1,0 +1,34 @@
+ITSUA INVOICE
+Invoice number
+INV-1
+Issued
+12 Nov 2026
+Due date
+30 Nov 2026
+Billing period
+1 – 30 Nov 2026
+FROM
+ITSUA
+Test billing address
+billing@example.com
+BILL TO
+Acme Ltd
+Test billing address
+accounts@example.com
+Product design and development
+Task invoice acceptance · November 2026
+Service / work description Hours Rate Amount
+Dashboard UX 17.00 100.00 1,700.00
+Invoice editing 8.00 100.00 800.00
+Subtotal · 25h 2,500.00 USD
+Discount · 10% -250.00 USD
+TOTAL DUE 2,250.00 USD
+HOW TO PAY
+Bank transfer · 14 days
+ITSUA · Test Bank
+Account: DEMO-ACCOUNT
+SWIFT / BIC: DEMO-BIC
+Include invoice reference
+Notes
+Thank you for your business.
+ITSUA · billing@example.com Page 1 of 1
