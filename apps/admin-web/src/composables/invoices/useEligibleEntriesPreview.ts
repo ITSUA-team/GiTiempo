@@ -49,6 +49,7 @@ export function useEligibleEntriesPreview({
   });
 
   return {
+    refetch: () => entriesQuery.refetch(),
     hasEntries: computed(() => (entriesQuery.data.value?.count ?? 0) > 0),
     isEmpty: computed(
       () =>

@@ -1,0 +1,62 @@
+{
+  "parity-pdf-entries": {
+    "pages": 1,
+    "sha256": "e5b4017d6b08c19c820516be5aea35e871bf7a02c5a02ad6bba42e5bde708cd8",
+    "pageSize": [
+      595.28,
+      841.89
+    ],
+    "paymentHeading": true,
+    "discountRow": true,
+    "contentChecks": "PASS",
+    "generator": "built production renderInvoicePdf, saved parity-pdf-invoice-source.json fixture; zero-discount sets percent=0,total=2500; single-day sets both dates=2026-11-12"
+  },
+  "parity-pdf-tasks": {
+    "pages": 1,
+    "sha256": "a9feabc4bc5271c59f9771341dc70f11e5ba87d1de8eba5f91777852f75dc6c2",
+    "pageSize": [
+      595.28,
+      841.89
+    ],
+    "paymentHeading": true,
+    "discountRow": true,
+    "contentChecks": "PASS",
+    "generator": "built production renderInvoicePdf, saved parity-pdf-invoice-source.json fixture; zero-discount sets percent=0,total=2500; single-day sets both dates=2026-11-12"
+  },
+  "review-zero-discount-entries": {
+    "pages": 1,
+    "sha256": "3f5759a7af53670b0140ddbae49359959a4914da1f384d14b141264ac16e17ea",
+    "pageSize": [
+      595.28,
+      841.89
+    ],
+    "paymentHeading": true,
+    "discountRow": false,
+    "contentChecks": "PASS",
+    "generator": "built production renderInvoicePdf, saved parity-pdf-invoice-source.json fixture; zero-discount sets percent=0,total=2500; single-day sets both dates=2026-11-12"
+  },
+  "review-zero-discount-tasks": {
+    "pages": 1,
+    "sha256": "edda2be83b9d7c7e61bd3c8757fe133905df5737822d3a49741dd52337a6d768",
+    "pageSize": [
+      595.28,
+      841.89
+    ],
+    "paymentHeading": true,
+    "discountRow": false,
+    "contentChecks": "PASS",
+    "generator": "built production renderInvoicePdf, saved parity-pdf-invoice-source.json fixture; zero-discount sets percent=0,total=2500; single-day sets both dates=2026-11-12"
+  },
+  "review-single-day": {
+    "pages": 1,
+    "sha256": "9ff13b069c3d1c38a88c3d83369796bd48bed9094e278699a15a8b31e67afbf4",
+    "pageSize": [
+      595.28,
+      841.89
+    ],
+    "paymentHeading": true,
+    "discountRow": true,
+    "contentChecks": "PASS",
+    "generator": "built production renderInvoicePdf, saved parity-pdf-invoice-source.json fixture; zero-discount sets percent=0,total=2500; single-day sets both dates=2026-11-12"
+  }
+}

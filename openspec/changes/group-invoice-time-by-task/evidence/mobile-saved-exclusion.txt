@@ -1,0 +1,104 @@
+- generic
+  - link "Skip to main content" [ref=e1]
+  - banner
+    - paragraph
+      - StaticText "GiTiempo Admin"
+    - StaticText "/"
+    - paragraph
+      - StaticText "Invoices"
+    - button "Open profile menu for Admin (seed)" [expanded=false, ref=e7]
+  - navigation
+    - link "Dashboard" [ref=e2]
+      - StaticText "Dashboard"
+    - link "Reports" [ref=e3]
+      - StaticText "Reports"
+    - link "Invoices" [ref=e4]
+      - StaticText "Invoices"
+    - link "Members" [ref=e5]
+      - StaticText "Members"
+    - link "Projects" [ref=e6]
+      - StaticText "Projects"
+  - main
+    - sectionheader
+      - button "Back to invoices" [ref=e8]
+        - StaticText ""
+      - heading "INV-1" [level=1, ref=e9]
+      - LabelText
+        - StaticText "Status"
+      - generic [ref=e10] clickable [cursor:pointer]
+        - combobox "Invoice status" [expanded=false, ref=e21]: Draft
+          - StaticText "Draft"
+      - LabelText
+        - StaticText "My group"
+      - generic [ref=e11] clickable [cursor:pointer]
+        - combobox "My group" [expanded=false, ref=e22]: Ungrouped
+          - StaticText "Ungrouped"
+      - button "Edit invoice" [ref=e12]
+        - StaticText ""
+        - StaticText "Edit invoice"
+      - button "Download PDF" [ref=e13]
+        - StaticText ""
+        - StaticText "Download PDF"
+      - button "Create from this invoice" [ref=e14]
+        - StaticText ""
+        - StaticText "Create from this invoice"
+      - button "Delete invoice" [ref=e15]
+        - StaticText ""
+        - StaticText "Delete invoice"
+    - heading "From" [level=2, ref=e16]
+    - paragraph
+      - StaticText "ITSUA"
+    - paragraph
+      - StaticText "Test billing address"
+    - paragraph
+      - StaticText "billing@example.com"
+    - heading "Bill to" [level=2, ref=e17]
+    - paragraph
+      - StaticText "Acme Ltd"
+    - paragraph
+      - StaticText "Test billing address"
+    - paragraph
+      - StaticText "accounts@example.com"
+    - heading "Product design and development" [level=2, ref=e18]
+    - paragraph
+      - StaticText "Issue date 12 Nov 2026"
+      - LineBreak "\n"
+      - StaticText "Due date 30 Nov 2026"
+      - LineBreak "\n"
+      - StaticText "Task invoice acceptance · 01 – 30 Nov 2026"
+      - LineBreak "\n"
+      - StaticText "Rate 100.00 USD · Rounding 1 min"
+    - StaticText "2 entries · 18h"
+    - StaticText "Subtotal"
+    - StaticText "1,800.00 USD"
+    - StaticText "Discount · 10%"
+    - StaticText "−180.00 USD"
+    - StaticText "Total"
+    - StaticText "1,620.00 USD"
+    - heading "Included tasks · 2" [level=2, ref=e19]
+      - StaticText "Included tasks · 2"
+    - list
+      - listitem [level=1]
+        - StaticText "Dashboard UX"
+        - StaticText "10h"
+      - listitem [level=1]
+        - StaticText "Invoice editing"
+        - StaticText "8h"
+    - heading "How to pay" [level=2, ref=e20]
+    - paragraph
+      - StaticText "Bank transfer · 14 days"
+    - paragraph
+      - StaticText "Beneficiary: ITSUA"
+    - paragraph
+      - StaticText "Bank: Test Bank"
+    - paragraph
+      - StaticText "Account: DEMO-ACCOUNT"
+    - paragraph
+      - StaticText "SWIFT / BIC: DEMO-BIC"
+    - paragraph
+      - StaticText "Reference: INV-1 · Include invoice reference"
+    - paragraph
+      - StaticText "Thank you for your business."
+    - group
+      - DisclosureTriangle "Invoice history" [expanded=false]
+        - StaticText "Invoice history"

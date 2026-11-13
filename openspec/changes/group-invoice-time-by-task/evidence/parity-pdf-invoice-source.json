@@ -1,0 +1,94 @@
+{
+  "id": "062704e3-8890-4099-b22d-39b1431517c1",
+  "workspaceId": "00000000-0000-4000-8000-000000000001",
+  "sender": {
+    "name": "Acme Studio LLC",
+    "address": "12 Studio Lane, Kyiv, Ukraine",
+    "email": "billing@acme.example",
+    "taxId": "UA123456"
+  },
+  "recipient": {
+    "name": "Orion Labs Ltd.",
+    "address": "45 Market Street, London, UK",
+    "email": "accounts@orion.example",
+    "taxId": "GB654321"
+  },
+  "payment": {
+    "method": "Bank transfer",
+    "terms": "Net 30",
+    "beneficiary": "Acme Studio LLC",
+    "provider": "Example Bank",
+    "account": "DEMO-ACCOUNT-001",
+    "instructions": "Please include the invoice reference.",
+    "swift": "DEMOBANK"
+  },
+  "services": "Product design & development",
+  "reference": "INV-4",
+  "revision": 2,
+  "groupId": "e2f1f576-a3fc-4f5b-9b0e-4dd883aa098e",
+  "projectId": "2555657b-08d0-41e4-83e0-24058d73e353",
+  "title": "November services",
+  "status": "sent",
+  "issueDate": "2026-11-11",
+  "dueDate": "2026-12-11",
+  "dateFrom": "2026-11-01",
+  "dateTo": "2026-11-30",
+  "hourlyRate": 100,
+  "currency": "USD",
+  "discountPercent": 10,
+  "totalHours": 25,
+  "totalAmount": 2250,
+  "roundingStepMinutes": 15,
+  "timeDisplayMode": "tasks",
+  "notes": "Thank you for your partnership.",
+  "createdBy": "670b3832-c6c6-4ece-a524-5f15bd8f03d2",
+  "createdByName": "Admin (seed)",
+  "timeEntryCount": 3,
+  "timeEntries": [
+    {
+      "id": "7145dfb7-5235-4c8b-945f-99b65fb3d416",
+      "taskId": "096d2659-fea8-4d39-a218-7662247c39b0",
+      "userId": "670b3832-c6c6-4ece-a524-5f15bd8f03d2",
+      "userName": "Admin (seed)",
+      "taskName": "Dashboard UX",
+      "startedAt": "2026-11-05T08:00:00.000Z",
+      "endedAt": "2026-11-05T18:00:00.000Z",
+      "durationSeconds": 36000,
+      "roundedDurationSeconds": 36000,
+      "isBillable": true,
+      "description": "Design iteration"
+    },
+    {
+      "id": "bcc73a65-62dc-44ed-9876-7ccccf9c8f83",
+      "taskId": "878bda21-4241-49cf-9fa4-2de8c367b747",
+      "userId": "aa2cc849-62c6-43e4-9f6a-a17bb2b522b8",
+      "userName": "Bob (seed)",
+      "taskName": "Invoice editing",
+      "startedAt": "2026-11-07T08:00:00.000Z",
+      "endedAt": "2026-11-07T16:00:00.000Z",
+      "durationSeconds": 28800,
+      "roundedDurationSeconds": 28800,
+      "isBillable": true,
+      "description": "Implementation"
+    },
+    {
+      "id": "7d786e29-1e5d-470d-a2dc-2554b8d4e718",
+      "taskId": "096d2659-fea8-4d39-a218-7662247c39b0",
+      "userId": "670b3832-c6c6-4ece-a524-5f15bd8f03d2",
+      "userName": "Admin (seed)",
+      "taskName": "Dashboard UX",
+      "startedAt": "2026-11-09T08:00:00.000Z",
+      "endedAt": "2026-11-09T15:00:00.000Z",
+      "durationSeconds": 25200,
+      "roundedDurationSeconds": 25200,
+      "isBillable": true,
+      "description": "Acceptance checks"
+    }
+  ],
+  "project": {
+    "id": "2555657b-08d0-41e4-83e0-24058d73e353",
+    "name": "Project Orion"
+  },
+  "createdAt": "2026-11-12T13:05:52.519Z",
+  "updatedAt": "2026-11-12T13:05:52.555Z"
+}

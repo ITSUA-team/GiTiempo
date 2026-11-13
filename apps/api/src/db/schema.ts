@@ -29,3 +29,4 @@ export * from '../github/schemas/workspace-github-organizations.schema';
 export * from '../github/schemas/workspace-github-installations.schema';
 export * from '../reports/schemas/saved-reports.schema';
 export * from '../invoices/schemas/invoices.schema';
+export * from '../invoices/schemas/invoice-groups.schema';

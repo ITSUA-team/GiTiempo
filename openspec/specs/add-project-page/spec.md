@@ -51,7 +51,7 @@ The Add Project form MUST render the fields required for the chosen source and b
 - **WHEN** the user submits an empty project name for a manual project
 - **THEN** the form shows an inline validation error and sends no API request
 - **AND** valid submission disables duplicate submission while the request is in flight
-- **AND** successful creation navigates to the Projects list and shows a success toast
+- **AND** successful creation navigates to the updated Projects list without a redundant success/info notification
 - **AND** failed creation shows an inline error while keeping the form editable
 
 #### Scenario: A name an active project already holds is reported on the field

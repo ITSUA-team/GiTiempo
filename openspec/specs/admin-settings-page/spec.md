@@ -151,7 +151,7 @@ The admin Settings page MUST save changed current API fields through the existin
 - **AND** unchanged resources and unchanged fields are not patched just to satisfy request schemas
 - **AND** successful save refreshes or reconciles the rendered form from authoritative responses
 - **AND** successful workspace name save updates the authenticated admin shell workspace label from the authoritative response
-- **AND** the page shows success toast feedback
+- **AND** the reconciled form communicates success without a redundant success/info notification
 
 #### Scenario: Save failure preserves edits
 

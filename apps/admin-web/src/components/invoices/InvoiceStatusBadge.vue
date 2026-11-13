@@ -9,16 +9,16 @@ interface InvoiceStatusTagConfig {
   value: string;
 }
 
-const tagBaseRoot = 'rounded-sm px-2 py-0.5 text-xs font-medium';
+const tagBaseRoot = 'h-[26px] rounded-sm px-2.5 py-0 text-xs font-medium';
 
 const tagConfigByStatus: Record<InvoiceStatus, InvoiceStatusTagConfig> = {
   draft: {
-    ptRoot: `${tagBaseRoot} bg-status-warn-bg text-status-warn-text`,
-    severity: 'warn',
+    ptRoot: `${tagBaseRoot} bg-accent-tint text-brand`,
     value: 'Draft',
   },
   sent: {
-    ptRoot: `${tagBaseRoot} bg-accent-tint text-brand`,
+    ptRoot: `${tagBaseRoot} bg-status-warn-bg text-status-warn-text`,
+    severity: 'warn',
     value: 'Sent',
   },
   paid: {

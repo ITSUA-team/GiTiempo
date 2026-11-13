@@ -1,3 +1,4 @@
+import { prepareInvoiceLogo } from '../../invoices/services/invoice-logo';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import type {
@@ -54,9 +55,13 @@ export class WorkspacesService {
     workspaceId: string,
     input: UpdateWorkspaceSettingsInput,
   ): Promise<WorkspaceSettingsResponse> {
+    await prepareInvoiceLogo(input.billingProfile?.logo);
     const [row] = await this.db
       .update(workspaceSettings)
       .set({
+        ...(input.billingProfile !== undefined
+          ? { billingProfile: input.billingProfile }
+          : {}),
         ...(input.currency !== undefined ? { currency: input.currency } : {}),
         ...(input.defaultHourlyRate !== undefined
           ? { defaultHourlyRate: input.defaultHourlyRate }
@@ -111,6 +116,7 @@ export class WorkspacesService {
       id: row.id,
       workspaceId: row.workspaceId,
       currency: row.currency,
+      billingProfile: row.billingProfile ?? null,
       defaultHourlyRate: row.defaultHourlyRate,
       timeZone: row.timeZone,
       timeRoundingStepMinutes: row.timeRoundingStepMinutes,

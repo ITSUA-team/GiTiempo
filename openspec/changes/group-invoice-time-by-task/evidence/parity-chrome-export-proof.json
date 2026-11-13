@@ -1,0 +1,13 @@
+{
+  "invoiceId": "9160bebc-c770-47a2-b7f5-176f279221fe",
+  "finalMode": "tasks",
+  "hours": 25,
+  "total": 2250,
+  "savedEntryCount": 3,
+  "snapshotHash": "4374544ccd8b6d01e3e4cf7fc6e1f5900a38522c3fa510b2d05aad4b4946460d",
+  "snapshotsPreserved": true,
+  "downloads": [
+    "parity-chrome-tasks.pdf",
+    "parity-chrome-entries.pdf"
+  ]
+}

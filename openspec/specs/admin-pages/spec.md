@@ -382,7 +382,7 @@ The admin Settings page MUST provide an interactive GitHub Workspace Access card
 - **AND** an admin selects or types a GitHub organization that is not already allowed for the workspace
 - **WHEN** the admin activates Add organization and the backend saves the policy row
 - **THEN** the card reconciles from the authoritative response or refreshed policy list
-- **AND** the page shows success toast feedback
+- **AND** the reconciled organization list communicates success without a redundant success/info notification
 
 #### Scenario: Settings page handles add organization failure
 
@@ -410,7 +410,7 @@ The admin Settings page MUST provide an interactive GitHub Workspace Access card
 - **GIVEN** an admin sees a saved allowed GitHub organization row
 - **WHEN** the admin activates Remove and the backend removes the policy row
 - **THEN** the row is removed from the rendered allow-list after authoritative reconciliation
-- **AND** the page shows success toast feedback
+- **AND** the reconciled organization list communicates success without a redundant success/info notification
 
 #### Scenario: Settings page handles organization policy request errors
 
