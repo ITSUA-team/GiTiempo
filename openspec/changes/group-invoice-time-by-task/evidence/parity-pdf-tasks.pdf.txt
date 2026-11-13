@@ -1,0 +1,24 @@
+Acme Studio LLC INVOICE
+Invoice number Issue date Due date Billing period
+INV-4 11 Nov 2026 11 Dec 2026 01–30 Nov 2026
+FROM BILL TO
+Acme Studio LLC Orion Labs Ltd.
+12 Studio Lane, Kyiv, Ukraine 45 Market Street, London, UK
+billing@acme.example accounts@orion.example
+Tax ID UA123456 Tax ID GB654321
+Product design & development
+Project Orion · November 2026
+Task Hours Rate Amount
+Dashboard UX 17 100.00 1,700.00
+Invoice editing 8 100.00 800.00
+Subtotal · 25h 2,500.00 USD
+Discount · 10% −250.00 USD
+TOTAL DUE 2,250.00 USD
+Payment instructions
+Bank transfer · Net 30
+Acme Studio LLC · Example Bank
+Account: DEMO-ACCOUNT-001 · SWIFT: DEMOBANK
+Please include the invoice reference.
+Notes
+Thank you for your partnership.
+Acme Studio LLC · billing@acme.example Page 1 of 1

@@ -139,6 +139,7 @@ function createInvoice(
   overrides: Partial<InvoiceResponse> = {},
 ): InvoiceResponse {
   return {
+    timeDisplayMode: 'entries',
     createdAt: '2026-05-01T10:00:00.000Z',
     createdBy: userId,
     createdByName: 'Alex Admin',
@@ -223,6 +224,47 @@ describe('InvoiceDetailView', () => {
     testMocks.deleteInvoice.mockResolvedValue(undefined);
     testMocks.moveInvoices.mockResolvedValue(undefined);
     testMocks.listGroups.mockResolvedValue({groups:[{id:'group-a',name:'Retainers',count:1}],allCount:1,ungroupedCount:0});
+  });
+
+  it.each([false, true])('renders saved tasks from multiple workers without entry details (mobile=%s)', async mobile => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({matches: mobile, addEventListener: vi.fn(), removeEventListener: vi.fn()})));
+    const rows = [createTimeEntrySummary({roundedDurationSeconds: 36000}), createTimeEntrySummary({id: '88888888-8888-4888-8888-888888888888', userName: 'Sam', roundedDurationSeconds: 25200})];
+    testMocks.getInvoice.mockResolvedValue(createInvoice({timeDisplayMode: 'tasks', timeEntries: rows, timeEntryCount: 2, totalHours: 17}));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    const work = wrapper.get('[data-testid="invoice-time-entries"]');
+    expect(work.text()).toContain('Included tasks');
+    expect(work.text()).toContain('17h');
+    expect(work.text()).not.toContain('Alex Admin');
+    expect(work.text()).not.toContain('Sam');
+    expect(work.text()).not.toContain('API work');
+    expect(work.text()).not.toContain('15 Apr 2026');
+    expect(wrapper.find('[data-testid="invoice-tasks-cards"]').exists()).toBe(mobile);
+    expect(wrapper.find('[data-testid="invoice-tasks-table"]').exists()).toBe(!mobile);
+    expect(wrapper.find('[data-testid="invoice-time-entries-table"]').exists()).toBe(false);
+    const tasks = mobile ? work.findAll('li') : work.findAll('tbody tr');
+    expect(tasks).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it.each([false, true])('renders empty saved Task work without changing the zero totals (mobile=%s)', async mobile => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({matches: mobile, addEventListener: vi.fn(), removeEventListener: vi.fn()})));
+    testMocks.getInvoice.mockResolvedValue(createInvoice({timeDisplayMode: 'tasks', timeEntries: [], timeEntryCount: 0, totalHours: 0, totalAmount: 0}));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    expect(wrapper.get('[data-testid="invoice-time-entries"]').text()).toContain('Included tasks');
+    expect(wrapper.get('[data-testid="invoice-time-entries-empty"]').text()).toContain('No time entries linked');
+    expect(wrapper.get('[data-testid="invoice-total"]').text()).toContain('0.00');
+    expect(wrapper.find('[data-testid="invoice-tasks-table"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('keeps the saved or locally changed display mode when reconciling revisions', () => {
+    const original = createInvoice({timeDisplayMode: 'entries'});
+    const local = {...savedDraft(original), timeDisplayMode: 'tasks' as const};
+    const latest = createInvoice({timeDisplayMode: 'entries', notes: 'Remote edit'});
+    expect(reconcileInvoiceDraft(original, local, latest)).toMatchObject({draft: {timeDisplayMode: 'tasks', notes: 'Remote edit'}, patch: {timeDisplayMode: 'tasks'}});
+    expect(reconcileInvoiceDraft(original, savedDraft(original), createInvoice({timeDisplayMode: 'tasks'})).patch).toEqual({});
   });
 
   it('keeps the skeleton mounted until the detail request settles', async () => {

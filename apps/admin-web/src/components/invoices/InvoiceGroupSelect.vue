@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { invoiceSelectPt } from './invoice-field-pt';
 import { computed } from 'vue';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
-import { giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
 
 const props = defineProps<{
   inputId: string;
@@ -39,7 +39,7 @@ const options = computed(() => [{ id: null, name: 'Ungrouped' }, ...props.groups
         option-value="id"
         :loading="loading"
         :disabled="disabled || loading || failed"
-        :pt="giTiempoFieldWidthSelectPt"
+        :pt="invoiceSelectPt"
         class="h-[38px] w-full"
         :class="{ 'sm:w-[190px]': inline }"
       />

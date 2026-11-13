@@ -1,0 +1,14 @@
+{
+  "files": {
+    "InvoiceCreateDialog.vue": "ca993a58f7eddcd90deabc3dd5c22d3ecf4b5730706d6526be9ad4b659248714",
+    "InvoiceDetailHeader.vue": "85125d708c75125f482f8a0cc1950f73e1e78ddda284e426cf4c4ed5fb950280",
+    "InvoiceDetailDocument.vue": "92bcf97d043cc1c8db7f18d38018c7ceb00f172c920420d5903785ad8a5d5691",
+    "InvoiceEditorEntries.vue": "8e5aa9e1738ec268780837876c772e1f2074d16297abb9b71a11411a44aafece",
+    "InvoiceEntrySelection.vue": "4b91e698256182c57dbf6de516946bfb5a630fc6388f3626d1dcc0ab8536215b",
+    "InvoiceTaskSelection.vue": "b02ee307c9c57ac80f3beb1e0731268f2b906148fcc0eaef02ec49f5ba671b35",
+    "InvoiceDocumentDates.vue": "05f4800ea1845594ebbe978b272e9e0a55e6e70843898c4607a53eea71e5c0a4",
+    "InvoiceGroupSelect.vue": "899475287e41baec9892efee857f5b02f905b7e9484020613f6f909ff55e45d5",
+    "InvoicePaymentFields.vue": "5834c540e3b1311a39d48c1209a8f0f3fc75198e32f5eb01089a005e908a612d"
+  },
+  "combinedSha256": "91d81ef3f3eeb3721176ee871c24712528283029fa2289ac6ec5bf52d4835f30"
+}

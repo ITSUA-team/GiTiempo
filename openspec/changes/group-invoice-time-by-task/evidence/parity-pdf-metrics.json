@@ -1,0 +1,2906 @@
+{
+  "entries": {
+    "pages": [
+      {
+        "page": 1,
+        "width": 595.28,
+        "height": 841.89,
+        "minX": 36.0,
+        "maxX": 559.28000038325,
+        "minY": 48.409179677,
+        "maxY": 794.82973623025,
+        "lines": [
+          {
+            "text": "Acme Studio LLC INVOICE",
+            "x": 36.0,
+            "y": 48.409,
+            "right": 559.28,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              15.0,
+              21.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)",
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Invoice number Issue date Due date Billing period",
+            "x": 36.0,
+            "y": 116.64,
+            "right": 490.506,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "INV-4 11 Nov 2026 11 Dec 2026 01–30 Nov 2026",
+            "x": 36.0,
+            "y": 136.844,
+            "right": 517.005,
+            "fonts": [
+              "Inter-Medium",
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              10.5,
+              12.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "FROM BILL TO",
+            "x": 36.0,
+            "y": 169.049,
+            "right": 343.087,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC Orion Labs Ltd.",
+            "x": 36.0,
+            "y": 188.068,
+            "right": 397.244,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              12.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "12 Studio Lane, Kyiv, Ukraine 45 Market Street, London, UK",
+            "x": 36.0,
+            "y": 209.615,
+            "right": 446.435,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "billing@acme.example accounts@orion.example",
+            "x": 36.0,
+            "y": 247.115,
+            "right": 426.492,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Tax ID UA123456 Tax ID GB654321",
+            "x": 36.0,
+            "y": 266.255,
+            "right": 382.778,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "Product design & development",
+            "x": 36.0,
+            "y": 296.09,
+            "right": 235.672,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              13.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Project Orion · November 2026",
+            "x": 36.0,
+            "y": 317.637,
+            "right": 179.284,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "Service / work description Hours Rate Amount",
+            "x": 45.0,
+            "y": 356.651,
+            "right": 517.106,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Dashboard UX · Design iteration 10 100.00 1,000.00",
+            "x": 45.0,
+            "y": 391.684,
+            "right": 521.632,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Invoice editing · Implementation 8 100.00 800.00",
+            "x": 45.0,
+            "y": 432.184,
+            "right": 515.234,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Dashboard UX · Acceptance checks 7 100.00 700.00",
+            "x": 45.0,
+            "y": 472.684,
+            "right": 514.415,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Subtotal · 25h 2,500.00 USD",
+            "x": 36.0,
+            "y": 518.434,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Medium",
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75,
+              10.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Discount · 10% −250.00 USD",
+            "x": 36.0,
+            "y": 541.688,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75,
+              10.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "TOTAL DUE 2,250.00 USD",
+            "x": 36.0,
+            "y": 576.425,
+            "right": 559.28,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              10.5,
+              18.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)",
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Payment instructions",
+            "x": 36.0,
+            "y": 614.315,
+            "right": 128.188,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Bank transfer · Net 30",
+            "x": 36.0,
+            "y": 633.019,
+            "right": 145.922,
+            "fonts": [
+              "Inter-Medium"
+            ],
+            "sizes": [
+              10.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC · Example Bank",
+            "x": 36.0,
+            "y": 653.067,
+            "right": 188.482,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Account: DEMO-ACCOUNT-001 · SWIFT: DEMOBANK",
+            "x": 36.0,
+            "y": 672.364,
+            "right": 282.797,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Please include the invoice reference.",
+            "x": 36.0,
+            "y": 691.661,
+            "right": 205.701,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Notes",
+            "x": 36.0,
+            "y": 721.3,
+            "right": 61.668,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Thank you for your partnership.",
+            "x": 36.0,
+            "y": 738.348,
+            "right": 181.645,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC · billing@acme.example Page 1 of 1",
+            "x": 36.0,
+            "y": 786.58,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              8.25
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          }
+        ],
+        "accentRects": [
+          {
+            "x": 36.0,
+            "y": 345.386719,
+            "width": 322.28,
+            "height": 31.5
+          },
+          {
+            "x": 358.28,
+            "y": 345.386719,
+            "width": 49.5,
+            "height": 31.5
+          },
+          {
+            "x": 407.78,
+            "y": 345.386719,
+            "width": 66.0,
+            "height": 31.5
+          },
+          {
+            "x": 473.78,
+            "y": 345.386719,
+            "width": 85.5,
+            "height": 31.5
+          }
+        ]
+      }
+    ],
+    "pageCount": 1,
+    "sha256": "e5b4017d6b08c19c820516be5aea35e871bf7a02c5a02ad6bba42e5bde708cd8"
+  },
+  "tasks": {
+    "pages": [
+      {
+        "page": 1,
+        "width": 595.28,
+        "height": 841.89,
+        "minX": 36.0,
+        "maxX": 559.28000038325,
+        "minY": 48.409179677,
+        "maxY": 754.32973623025,
+        "lines": [
+          {
+            "text": "Acme Studio LLC INVOICE",
+            "x": 36.0,
+            "y": 48.409,
+            "right": 559.28,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              15.0,
+              21.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)",
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Invoice number Issue date Due date Billing period",
+            "x": 36.0,
+            "y": 116.64,
+            "right": 490.506,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "INV-4 11 Nov 2026 11 Dec 2026 01–30 Nov 2026",
+            "x": 36.0,
+            "y": 136.844,
+            "right": 517.005,
+            "fonts": [
+              "Inter-Medium",
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              10.5,
+              12.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "FROM BILL TO",
+            "x": 36.0,
+            "y": 169.049,
+            "right": 343.087,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC Orion Labs Ltd.",
+            "x": 36.0,
+            "y": 188.068,
+            "right": 397.244,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              12.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "12 Studio Lane, Kyiv, Ukraine 45 Market Street, London, UK",
+            "x": 36.0,
+            "y": 209.615,
+            "right": 446.435,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "billing@acme.example accounts@orion.example",
+            "x": 36.0,
+            "y": 247.115,
+            "right": 426.492,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Tax ID UA123456 Tax ID GB654321",
+            "x": 36.0,
+            "y": 266.255,
+            "right": 382.778,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "Product design & development",
+            "x": 36.0,
+            "y": 296.09,
+            "right": 235.672,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              13.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Project Orion · November 2026",
+            "x": 36.0,
+            "y": 317.637,
+            "right": 179.284,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "Task Hours Rate Amount",
+            "x": 45.0,
+            "y": 356.651,
+            "right": 517.106,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Dashboard UX 17 100.00 1,700.00",
+            "x": 45.0,
+            "y": 391.684,
+            "right": 520.914,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Invoice editing 8 100.00 800.00",
+            "x": 45.0,
+            "y": 432.184,
+            "right": 515.234,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Subtotal · 25h 2,500.00 USD",
+            "x": 36.0,
+            "y": 477.934,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Medium",
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75,
+              10.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Discount · 10% −250.00 USD",
+            "x": 36.0,
+            "y": 501.188,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75,
+              10.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "TOTAL DUE 2,250.00 USD",
+            "x": 36.0,
+            "y": 535.925,
+            "right": 559.28,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              10.5,
+              18.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)",
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Payment instructions",
+            "x": 36.0,
+            "y": 573.815,
+            "right": 128.188,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Bank transfer · Net 30",
+            "x": 36.0,
+            "y": 592.519,
+            "right": 145.922,
+            "fonts": [
+              "Inter-Medium"
+            ],
+            "sizes": [
+              10.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC · Example Bank",
+            "x": 36.0,
+            "y": 612.567,
+            "right": 188.482,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Account: DEMO-ACCOUNT-001 · SWIFT: DEMOBANK",
+            "x": 36.0,
+            "y": 631.864,
+            "right": 282.797,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Please include the invoice reference.",
+            "x": 36.0,
+            "y": 651.161,
+            "right": 205.701,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Notes",
+            "x": 36.0,
+            "y": 680.8,
+            "right": 61.668,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Thank you for your partnership.",
+            "x": 36.0,
+            "y": 697.848,
+            "right": 181.645,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC · billing@acme.example Page 1 of 1",
+            "x": 36.0,
+            "y": 746.08,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              8.25
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          }
+        ],
+        "accentRects": [
+          {
+            "x": 36.0,
+            "y": 345.386719,
+            "width": 322.28,
+            "height": 31.5
+          },
+          {
+            "x": 358.28,
+            "y": 345.386719,
+            "width": 49.5,
+            "height": 31.5
+          },
+          {
+            "x": 407.78,
+            "y": 345.386719,
+            "width": 66.0,
+            "height": 31.5
+          },
+          {
+            "x": 473.78,
+            "y": 345.386719,
+            "width": 85.5,
+            "height": 31.5
+          }
+        ]
+      }
+    ],
+    "pageCount": 1,
+    "sha256": "a9feabc4bc5271c59f9771341dc70f11e5ba87d1de8eba5f91777852f75dc6c2"
+  },
+  "long": {
+    "pages": [
+      {
+        "page": 1,
+        "width": 595.28,
+        "height": 841.89,
+        "minX": 36.0,
+        "maxX": 559.2800002710001,
+        "minY": 48.409179677,
+        "maxY": 816.62217723025,
+        "lines": [
+          {
+            "text": "Acme Studio LLC INVOICE",
+            "x": 36.0,
+            "y": 48.409,
+            "right": 559.28,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              15.0,
+              21.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)",
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Invoice number Issue date Due date Billing period",
+            "x": 36.0,
+            "y": 116.64,
+            "right": 490.506,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "INV-4 11 Nov 2026 11 Dec 2026 01–30 Nov 2026",
+            "x": 36.0,
+            "y": 136.844,
+            "right": 517.005,
+            "fonts": [
+              "Inter-Medium",
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              10.5,
+              12.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "FROM BILL TO",
+            "x": 36.0,
+            "y": 169.049,
+            "right": 343.087,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC Orion Labs Ltd.",
+            "x": 36.0,
+            "y": 188.068,
+            "right": 397.244,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              12.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "12 Studio Lane, Kyiv, Ukraine 45 Market Street, London, UK",
+            "x": 36.0,
+            "y": 209.615,
+            "right": 446.435,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "billing@acme.example accounts@orion.example",
+            "x": 36.0,
+            "y": 247.115,
+            "right": 426.492,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Tax ID UA123456 Tax ID GB654321",
+            "x": 36.0,
+            "y": 266.255,
+            "right": 382.778,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "Product design & development",
+            "x": 36.0,
+            "y": 296.09,
+            "right": 235.672,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              13.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Project Orion · November 2026",
+            "x": 36.0,
+            "y": 317.637,
+            "right": 179.284,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "Task Hours Rate Amount",
+            "x": 45.0,
+            "y": 356.651,
+            "right": 517.106,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 0: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 391.684,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 403.481,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 1: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 441.528,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 453.325,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 2: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 491.372,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 503.169,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 3: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 541.217,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 553.014,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 4: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 591.061,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 602.858,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 5: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 640.905,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 652.702,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 6: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 690.749,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 702.546,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 7: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 740.594,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 752.391,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC · billing@acme.example Page 1 of 5",
+            "x": 36.0,
+            "y": 808.372,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              8.25
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          }
+        ],
+        "accentRects": [
+          {
+            "x": 36.0,
+            "y": 345.386719,
+            "width": 322.28,
+            "height": 31.5
+          },
+          {
+            "x": 358.28,
+            "y": 345.386719,
+            "width": 49.5,
+            "height": 31.5
+          },
+          {
+            "x": 407.78,
+            "y": 345.386719,
+            "width": 66.0,
+            "height": 31.5
+          },
+          {
+            "x": 473.78,
+            "y": 345.386719,
+            "width": 85.5,
+            "height": 31.5
+          }
+        ]
+      },
+      {
+        "page": 2,
+        "width": 595.28,
+        "height": 841.89,
+        "minX": 36.0,
+        "maxX": 559.27999999675,
+        "minY": 47.26464843300005,
+        "maxY": 816.62217723025,
+        "lines": [
+          {
+            "text": "Task Hours Rate Amount",
+            "x": 45.0,
+            "y": 47.265,
+            "right": 517.106,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 8: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 82.297,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 94.094,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 9: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 146.391,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 158.188,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 10: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 196.236,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 208.033,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 11: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 246.08,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 257.877,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 12: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 295.924,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 307.721,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 13: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 345.768,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 357.565,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 14: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 395.613,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 407.41,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 15: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 445.457,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 457.254,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 16: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 495.301,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 507.098,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 17: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 545.145,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 556.942,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 18: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 594.99,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 606.787,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 19: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 644.834,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 656.631,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 20: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 694.678,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 706.475,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 21: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 744.522,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 756.319,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC · billing@acme.example Page 2 of 5",
+            "x": 36.0,
+            "y": 808.372,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              8.25
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          }
+        ],
+        "accentRects": [
+          {
+            "x": 36.0,
+            "y": 36.0,
+            "width": 322.28,
+            "height": 31.5
+          },
+          {
+            "x": 358.28,
+            "y": 36.0,
+            "width": 49.5,
+            "height": 31.5
+          },
+          {
+            "x": 407.78,
+            "y": 36.0,
+            "width": 66.0,
+            "height": 31.5
+          },
+          {
+            "x": 473.78,
+            "y": 36.0,
+            "width": 85.5,
+            "height": 31.5
+          }
+        ]
+      },
+      {
+        "page": 3,
+        "width": 595.28,
+        "height": 841.89,
+        "minX": 36.0,
+        "maxX": 559.28000012175,
+        "minY": 47.26464843300005,
+        "maxY": 816.62217723025,
+        "lines": [
+          {
+            "text": "Task Hours Rate Amount",
+            "x": 45.0,
+            "y": 47.265,
+            "right": 517.106,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 22: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 82.297,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 94.094,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 23: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 146.391,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 158.188,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 24: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 196.236,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 208.033,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 25: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 246.08,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 257.877,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 26: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 295.924,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 307.721,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 27: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 345.768,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 357.565,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 28: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 395.613,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 407.41,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 29: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 445.457,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 457.254,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 30: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 495.301,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 507.098,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 31: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 545.145,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 556.942,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 32: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 594.99,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 606.787,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 33: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 644.834,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 656.631,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 34: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 694.678,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 706.475,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 35: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 744.522,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 756.319,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC · billing@acme.example Page 3 of 5",
+            "x": 36.0,
+            "y": 808.372,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              8.25
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          }
+        ],
+        "accentRects": [
+          {
+            "x": 36.0,
+            "y": 36.0,
+            "width": 322.28,
+            "height": 31.5
+          },
+          {
+            "x": 358.28,
+            "y": 36.0,
+            "width": 49.5,
+            "height": 31.5
+          },
+          {
+            "x": 407.78,
+            "y": 36.0,
+            "width": 66.0,
+            "height": 31.5
+          },
+          {
+            "x": 473.78,
+            "y": 36.0,
+            "width": 85.5,
+            "height": 31.5
+          }
+        ]
+      },
+      {
+        "page": 4,
+        "width": 595.28,
+        "height": 841.89,
+        "minX": 36.0,
+        "maxX": 559.279999704,
+        "minY": 47.26464843300005,
+        "maxY": 816.62217723025,
+        "lines": [
+          {
+            "text": "Task Hours Rate Amount",
+            "x": 45.0,
+            "y": 47.265,
+            "right": 517.106,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 36: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 82.297,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 94.094,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 37: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 146.391,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 158.188,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 38: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 196.236,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 208.033,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 39: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 246.08,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 257.877,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 40: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 295.924,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 307.721,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 41: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 345.768,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 357.565,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 42: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 395.613,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 407.41,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Task 43: Saved long task title Saved long task title Saved long task 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 445.457,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "title Saved long task title Saved long task title",
+            "x": 45.0,
+            "y": 457.254,
+            "right": 252.673,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 0.25 100.00 25.00",
+            "x": 45.0,
+            "y": 495.301,
+            "right": 508.602,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+            "x": 45.0,
+            "y": 507.098,
+            "right": 349.964,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+            "x": 45.0,
+            "y": 518.895,
+            "right": 349.964,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+            "x": 45.0,
+            "y": 530.692,
+            "right": 349.964,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+            "x": 45.0,
+            "y": 542.49,
+            "right": 349.964,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+            "x": 45.0,
+            "y": 554.287,
+            "right": 349.964,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+            "x": 45.0,
+            "y": 566.084,
+            "right": 349.964,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+            "x": 45.0,
+            "y": 577.881,
+            "right": 349.964,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "WW",
+            "x": 45.0,
+            "y": 589.678,
+            "right": 64.452,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "HOW TO PAY",
+            "x": 36.0,
+            "y": 614.818,
+            "right": 93.133,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Bank transfer · Net 30",
+            "x": 36.0,
+            "y": 633.522,
+            "right": 145.922,
+            "fonts": [
+              "Inter-Medium"
+            ],
+            "sizes": [
+              10.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC · Example Bank",
+            "x": 36.0,
+            "y": 653.569,
+            "right": 188.482,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Account: DEMO-ACCOUNT-001 · SWIFT: DEMOBANK",
+            "x": 36.0,
+            "y": 672.866,
+            "right": 282.797,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Please include the invoice reference.",
+            "x": 36.0,
+            "y": 692.164,
+            "right": 205.701,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Notes",
+            "x": 36.0,
+            "y": 721.803,
+            "right": 61.668,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              9.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Thank you for your partnership.",
+            "x": 36.0,
+            "y": 738.85,
+            "right": 181.645,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC · billing@acme.example Page 4 of 5",
+            "x": 36.0,
+            "y": 808.372,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              8.25
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          }
+        ],
+        "accentRects": [
+          {
+            "x": 36.0,
+            "y": 36.0,
+            "width": 322.28,
+            "height": 31.5
+          },
+          {
+            "x": 358.28,
+            "y": 36.0,
+            "width": 49.5,
+            "height": 31.5
+          },
+          {
+            "x": 407.78,
+            "y": 36.0,
+            "width": 66.0,
+            "height": 31.5
+          },
+          {
+            "x": 473.78,
+            "y": 36.0,
+            "width": 85.5,
+            "height": 31.5
+          }
+        ]
+      },
+      {
+        "page": 5,
+        "width": 595.28,
+        "height": 841.89,
+        "minX": 36.0,
+        "maxX": 559.2800001102501,
+        "minY": 38.04711863574994,
+        "maxY": 816.62217723025,
+        "lines": [
+          {
+            "text": "Subtotal · 11.25h 1,125.00 USD",
+            "x": 36.0,
+            "y": 38.047,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Medium",
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75,
+              10.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "Discount · 10% −112.50 USD",
+            "x": 36.0,
+            "y": 61.302,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              9.75,
+              10.5
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)"
+            ]
+          },
+          {
+            "text": "TOTAL DUE 1,012.50 USD",
+            "x": 36.0,
+            "y": 96.038,
+            "right": 559.28,
+            "fonts": [
+              "Inter-SemiBold"
+            ],
+            "sizes": [
+              10.5,
+              18.0
+            ],
+            "colors": [
+              "(0.10196078431372549, 0.10196078431372549, 0.10196078431372549)",
+              "(0.36470588235294116, 0.16862745098039217, 0.5215686274509804)"
+            ]
+          },
+          {
+            "text": "Acme Studio LLC · billing@acme.example Page 5 of 5",
+            "x": 36.0,
+            "y": 808.372,
+            "right": 559.28,
+            "fonts": [
+              "Inter-Regular"
+            ],
+            "sizes": [
+              8.25
+            ],
+            "colors": [
+              "(0.4, 0.4, 0.4)"
+            ]
+          }
+        ],
+        "accentRects": []
+      }
+    ],
+    "pageCount": 5,
+    "sha256": "046c85ddc4a9c5509222a4e4d8d27348d42615d4604b8641241eddc49af54936"
+  }
+}

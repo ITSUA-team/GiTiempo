@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { InvoiceTimeEntrySummary } from '@gitiempo/shared';
-import { SurfaceCard, useIsMobileViewport } from '@gitiempo/web-shared';
-import { formatCompactDuration } from '@gitiempo/web-shared/time';
+import type { InvoiceTimeDisplayMode, InvoiceTimeEntrySummary } from '@gitiempo/shared';
+import { SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
-import Column from 'primevue/column';
-import DataTable from 'primevue/datatable';
+import SelectButton from 'primevue/selectbutton';
+import InvoiceEntrySelection from './InvoiceEntrySelection.vue';
+import InvoiceTaskSelection from './InvoiceTaskSelection.vue';
 import { formatInvoiceAmount } from '@/lib/format-currency';
 
 const props = defineProps<{
@@ -16,35 +15,16 @@ const props = defineProps<{
   currency?: string | null;
 }>();
 const selection = defineModel<string[]>({ required: true });
+const timeDisplayMode = defineModel<InvoiceTimeDisplayMode>('timeDisplayMode', { default: 'entries' });
+const modeOptions = [{ label: 'Time entry', value: 'entries' }, { label: 'Task', value: 'tasks' }];
 defineEmits<{ retry: [] }>();
-const mobile = useIsMobileViewport();
 const included = computed(() => new Set(selection.value));
 const count = computed(() => props.entries.filter(entry => included.value.has(entry.id)).length);
-const allChecked = computed(() => count.value > 0 && count.value === props.entries.length);
-
-function toggleAll() {
-  const unavailableIds = props.unavailable.map(entry => entry.id);
-  selection.value = allChecked.value ? unavailableIds : [...unavailableIds, ...props.entries.map(entry => entry.id)];
-}
-
-function label(entry: InvoiceTimeEntrySummary) {
-  return [entry.taskName, entry.description].filter(Boolean).join(' · ') || 'Time entry';
-}
 
 function dropEntry(id: string) {
   selection.value = selection.value.filter(selected => selected !== id);
 }
 
-const entryDate = new Intl.DateTimeFormat('en-GB', {
-  day: '2-digit', month: 'short', year: 'numeric',
-});
-const columnPt = {
-  headerCell: { class: 'h-9 bg-app-bg px-3 py-1 text-left text-xs font-semibold' },
-  bodyCell: { class: 'h-[42px] border-b border-divider px-3 py-1 text-[13px]' },
-};
-function entryRowClass(entry: InvoiceTimeEntrySummary) {
-  return included.value.has(entry.id) ? 'bg-surface-primary' : 'bg-app-bg text-text-muted';
-}
 </script>
 
 <template>
@@ -57,13 +37,44 @@ function entryRowClass(entry: InvoiceTimeEntrySummary) {
   >
     <div class="flex items-center justify-between gap-3">
       <h2 class="text-text-dark text-lg font-semibold">
-        Time entries
+        {{ timeDisplayMode === 'tasks' ? 'Tasks' : 'Time entries' }}
       </h2>
       <span
         v-if="state === 'ready' || state === 'empty'"
-        class="text-text-muted text-[13px]"
+        class="text-brand text-xs font-medium"
       >{{ count }} of {{ entries.length }} included</span>
     </div>
+    <div class="flex flex-col items-start gap-1.5">
+      <span
+        id="invoice-time-display-mode-label"
+        class="text-text-dark text-xs font-semibold"
+      >Show time by</span>
+      <SelectButton
+        v-model="timeDisplayMode"
+        :allow-empty="false"
+        size="small"
+        aria-labelledby="invoice-time-display-mode-label"
+        :options="modeOptions"
+        option-label="label"
+        option-value="value"
+        class="invoice-time-mode"
+        :pt="{
+          root: { class: 'bg-surface-primary border-divider rounded-md border p-[3px]' },
+          pcToggleButton: {
+            root: { class: 'h-11 rounded-sm border-0 px-3.5 py-0 text-[13px] font-medium data-[p-checked=true]:font-semibold data-[p-checked=true]:bg-accent-tint data-[p-checked=true]:text-brand data-[p-checked=false]:bg-surface-primary data-[p-checked=false]:text-text-muted' },
+            content: { class: 'bg-transparent p-0 shadow-none' },
+          },
+        }"
+      />
+    </div>
+    <p
+      class="sr-only"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      {{ count }} of {{ entries.length }} entries included.
+    </p>
     <p
       v-if="state === 'initial'"
       data-testid="invoice-create-preview-hint"
@@ -124,97 +135,19 @@ function entryRowClass(entry: InvoiceTimeEntrySummary) {
         </p>
       </div>
       <template v-else>
-        <p class="text-text-muted text-[13px]">
+        <p class="text-text-muted text-xs">
           Uncheck an entry to exclude it. Tracked time is preserved.
         </p>
-        <template v-if="mobile">
-          <article
-            v-for="entry in entries"
-            :key="entry.id"
-            class="border-divider flex min-h-28 items-start gap-3 rounded-lg border p-2.5"
-            :class="entryRowClass(entry)"
-          >
-            <Checkbox
-              v-model="selection"
-              :value="entry.id"
-              :aria-label="'Include ' + label(entry)"
-            />
-            <div class="flex min-w-0 flex-col gap-1 text-[13px] break-words">
-              <strong>{{ entry.taskName || 'Time entry' }}</strong>
-              <span class="text-text-muted">{{ entryDate.format(new Date(entry.startedAt)) }} · {{ entry.userName || '—' }}</span>
-              <span>{{ entry.description || '—' }}</span>
-              <span :class="included.has(entry.id) ? 'text-brand' : 'text-text-muted'">{{ included.has(entry.id) ? 'Included' : 'Excluded' }} · {{ formatCompactDuration(entry.roundedDurationSeconds) }}</span>
-            </div>
-          </article>
-        </template>
-        <DataTable
+        <InvoiceTaskSelection
+          v-if="timeDisplayMode === 'tasks'"
+          v-model="selection"
+          :entries="entries"
+        />
+        <InvoiceEntrySelection
           v-else
-          :value="entries"
-          data-key="id"
-          data-testid="invoice-create-preview-table"
-          :row-class="entryRowClass"
-          size="small"
-          scrollable
-          scroll-height="18rem"
-          table-style="width:100%;table-layout:fixed"
-        >
-          <Column
-            :pt="columnPt"
-            style="width:42px"
-          >
-            <template #header>
-              <Checkbox
-                binary
-                :model-value="allChecked"
-                :indeterminate="count > 0 && !allChecked"
-                aria-label="Include all entries"
-                @update:model-value="toggleAll"
-              />
-            </template>
-            <template #body="{data}">
-              <Checkbox
-                v-model="selection"
-                :value="data.id"
-                :aria-label="'Include ' + label(data)"
-              />
-            </template>
-          </Column>
-          <Column
-            :pt="columnPt"
-            header="Date"
-            style="width:114px"
-          >
-            <template #body="{data}">
-              {{ entryDate.format(new Date(data.startedAt)) }}
-            </template>
-          </Column>
-          <Column
-            :pt="columnPt"
-            header="Task / description"
-          >
-            <template #body="{data}">
-              <span class="break-words whitespace-normal">{{ label(data) }}</span>
-            </template>
-          </Column>
-          <Column
-            :pt="columnPt"
-            header="User"
-            style="width:152px"
-          >
-            <template #body="{data}">
-              {{ data.userName || '—' }}
-            </template>
-          </Column>
-          <Column
-            :pt="columnPt"
-            header="Billed time"
-            style="width:97px"
-          >
-            <template #body="{data}">
-              {{ formatCompactDuration(data.roundedDurationSeconds) }}
-            </template>
-          </Column>
-        </DataTable>
+          v-model="selection"
+          :entries="entries"
+        />
         <p class="text-text-muted text-xs">
           Only eligible entries can be added. Entries linked to another invoice are unavailable.
         </p>

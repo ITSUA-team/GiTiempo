@@ -499,6 +499,8 @@ Migrations 0032–0034 add nullable workspace billing profiles and invoice docum
 
 `invoice_groups` belongs to one workspace and user. Names are unique after trimmed case-insensitive comparison. `invoice_group_memberships` permits one assignment per workspace, user and invoice, with composite foreign keys enforcing matching owner/workspace. Deleting a group removes only assignments. The invoice document contains saved parties, services, payment, logo and line summaries. Personal organization has no effect on the document or business revision.
 
+`invoices.document.timeDisplayMode` stores `entries` or `tasks`. Missing historical values resolve to `entries` on read without rewriting data; no migration or backfill is needed. A format-only revision preserves links, snapshots, rounded durations and financial values. Task rows are derived from included saved entry snapshots by task ID, ordered by the first included snapshot, with the first nonblank saved name (or `Unnamed task`). Equal names on different task IDs remain separate. Rounded entry durations are summed without rounding the group again. PDF line amounts sum original entry allocations, preserving cents across formats.
+
 Migration 0035 freezes available historical line descriptions, people, task labels and billed durations using each invoice's saved rounding step. It preserves financial totals and keeps unknown issuer/recipient/payment information unset. A rehearsal on an isolated `gitiempo_e2e` legacy fixture passed with unchanged invoice ID, status, reference, totals and entry association. Logo content is stored as a validated immutable data URI value inside each invoice snapshot, so replacing workspace defaults cannot remove a historical logo.
 
 ### Invoice issue and payment dates

@@ -1,0 +1,28 @@
+{
+  "database": "gitiempo_e2e_taskmode",
+  "liveDatabaseIdentityVerified": true,
+  "runner": "pnpm --filter @gitiempo/api test:e2e -- test/invoices.e2e-spec.ts",
+  "scopeActuallyRun": "full API e2e suite; forwarded -- prevented filename filtering",
+  "exitCode": 0,
+  "testFiles": {
+    "passed": 37,
+    "total": 37
+  },
+  "tests": {
+    "passed": 470,
+    "total": 470
+  },
+  "start": "2026-11-12 15:30:55 Europe/Kiev",
+  "durationSeconds": 41.12,
+  "toolSessionId": 66369,
+  "checks": [
+    "changed invoices.e2e-spec.ts ESLint passed",
+    "git diff --check passed"
+  ],
+  "e2eSourceSha256": "eaf15d3a75082282dac9b80329f07c5e4a45731641fb9539b75cc617aa9708b2",
+  "repair": "Find items table by exact Task|Hours|Rate|Amount heading and expect compact 0.5 hours.",
+  "finalPngsRefreshed": [
+    "parity-pdf-long-4.png",
+    "parity-pdf-long-5.png"
+  ]
+}
