@@ -241,7 +241,7 @@ describe("ProjectsTaskSection", () => {
       '[data-testid="project-task-start-timer-task-1"]',
     );
 
-    expect(timerButton.attributes("aria-disabled")).toBe("true");
+    expect(timerButton.attributes("aria-disabled")).toBeUndefined();
     expect(timerButton.attributes("disabled")).toBeUndefined();
 
     await timerButton.trigger("click");
@@ -281,6 +281,16 @@ describe("ProjectsTaskSection", () => {
     await timerButton.trigger("click");
 
     expect(wrapper.emitted("stopTimer")).toEqual([[task]]);
+  });
+
+  it("highlights the active timer task row on desktop", () => {
+    const task = createTask();
+    const otherTask = createTask({ id: "task-2", title: "Review feedback" });
+    const wrapper = mountSection([task, otherTask], { activeTimerTaskId: task.id });
+    const rowClass = wrapper.getComponent(ManagementTableShell).props("rowClass");
+
+    expect(rowClass?.(task)).toContain("bg-accent-tint");
+    expect(rowClass?.(otherTask)).not.toContain("bg-accent-tint");
   });
 
   it("locks every task while a start is in flight and shows pending feedback on its initiator", () => {
@@ -369,7 +379,7 @@ describe("ProjectsTaskSection", () => {
     expect(wrapper.emitted("startTimer")).toEqual([[task]]);
   });
 
-  it("places the mobile timer action after the title group", () => {
+  it("places the mobile timer action before the title group", () => {
     mockMatchMedia(true);
 
     const wrapper = mountSection([createTask()]);
@@ -381,8 +391,8 @@ describe("ProjectsTaskSection", () => {
     expect(header.element.contains(action.element)).toBe(true);
     expect(
       title.element.compareDocumentPosition(action.element) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBe(Node.DOCUMENT_POSITION_PRECEDING);
   });
 
   it("keeps mobile stop, blocked, and pending timer states interactive only when allowed", async () => {
@@ -409,21 +419,35 @@ describe("ProjectsTaskSection", () => {
     ).toBeDefined();
   });
 
+  it("highlights the active timer task card on mobile", () => {
+    mockMatchMedia(true);
+
+    const task = createTask();
+    const active = mountSection([task], { activeTimerTaskId: task.id });
+    const idle = mountSection([task]);
+
+    expect(
+      active.findAll('[data-testid="project-task-mobile-card"]')[0]?.classes(),
+    ).toContain("bg-accent-tint");
+    expect(
+      idle.findAll('[data-testid="project-task-mobile-card"]')[0]?.classes(),
+    ).toContain("bg-surface-primary");
+  });
+
   it("renders desktop task, status, and updated headers without duration totals", () => {
     const wrapper = mountSection();
     const tableShell = wrapper.getComponent(ManagementTableShell);
 
-    expect(tableShell.props("headerClass")).toContain("min-w-[740px]");
-    expect(tableShell.props("showHeader")).toBe(true);
+    expect(tableShell.props("showHeader")).toBe(false);
     expect(tableShell.props("singleScroll")).toBe(true);
     expect(tableShell.props("shellClass")).toContain("overflow-x-auto");
     expect(tableShell.props("tableContainerClass")).toBe(
       "overflow-visible rounded-none border-none",
     );
     expect(wrapper.findAll('[data-testid="project-task-mobile-card"]')).toHaveLength(0);
-    expect(wrapper.get('[data-testid="management-table-header-task"]').text()).toBe("Task");
-    expect(wrapper.get('[data-testid="management-table-header-status"]').text()).toBe("Status");
-    expect(wrapper.get('[data-testid="management-table-header-updated"]').text()).toBe("Updated");
+    expect(wrapper.findAll('[data-testid="management-table-header-task"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="management-table-header-status"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="management-table-header-updated"]')).toHaveLength(0);
     expect(wrapper.text()).not.toContain("12:00");
     expect(wrapper.text()).not.toContain("Duration");
     expect(wrapper.text()).not.toContain("Actions");

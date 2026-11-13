@@ -28,10 +28,12 @@ const TEST_SCOPE = {
   workspaceId: null,
 };
 
-type DashboardOverviewClient = Pick<
-  TimeEntriesClient,
-  "getCurrentTimer" | "listOwnEntries" | "startTimer" | "stopTimer"
->;
+type TimeEntriesClientMock = TimeEntriesClient & {
+  getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
+  listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
+  startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
+  stopTimer: ReturnType<typeof vi.fn<TimeEntriesClient["stopTimer"]>>;
+};
 
 function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryResponse {
   const { githubIssue = null, ...entryOverrides } = overrides;
@@ -81,18 +83,15 @@ function createOwnEntriesResponse(
   return { items, meta };
 }
 
-function createClientMock(): DashboardOverviewClient & {
-  getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
-  listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
-  startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
-  stopTimer: ReturnType<typeof vi.fn<TimeEntriesClient["stopTimer"]>>;
-} {
-  return {
+function createClientMock(): TimeEntriesClientMock {
+  const clientMock = {
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
     startTimer: vi.fn(async () => createEntry({ endedAt: null, id: TEST_IDS.startedEntry })),
     stopTimer: vi.fn(async () => createEntry()),
   };
+
+  return clientMock as unknown as TimeEntriesClientMock;
 }
 
 function mountDashboardOverview(options?: {
@@ -420,20 +419,24 @@ describe("useDashboardOverview", () => {
 
     await flushPromises();
 
+    const startedEntry = createEntry({
+      durationSeconds: null,
+      endedAt: null,
+      id: TEST_IDS.startedEntry,
+      startedAt: "2026-04-21T11:00:00.000Z",
+    });
+
     reconcileTimeEntryListCaches(
       queryClient,
       TEST_SCOPE,
-      createEntry({
-        durationSeconds: null,
-        endedAt: null,
-        id: TEST_IDS.startedEntry,
-        startedAt: "2026-04-21T11:00:00.000Z",
-      }),
+      startedEntry,
     );
 
     expect(dashboardOverview.pageState.value).toBe("ready");
     expect(dashboardOverview.recentEntryRows.value[0]).toEqual({
+      description: null,
       durationLabel: "01:00:00",
+      entry: startedEntry,
       githubIssue: null,
       id: TEST_IDS.startedEntry,
       isHighlighted: true,
@@ -581,20 +584,24 @@ describe("useDashboardOverview", () => {
 
     await flushPromises();
 
+    const stoppedEntry = createEntry({
+      durationSeconds: 1800,
+      endedAt: "2026-04-21T11:30:00.000Z",
+      id: TEST_IDS.runningEntry,
+      startedAt: "2026-04-21T11:00:00.000Z",
+      updatedAt: "2026-04-21T11:30:00.000Z",
+    });
+
     reconcileTimeEntryListCaches(
       queryClient,
       TEST_SCOPE,
-      createEntry({
-        durationSeconds: 1800,
-        endedAt: "2026-04-21T11:30:00.000Z",
-        id: TEST_IDS.runningEntry,
-        startedAt: "2026-04-21T11:00:00.000Z",
-        updatedAt: "2026-04-21T11:30:00.000Z",
-      }),
+      stoppedEntry,
     );
 
     expect(dashboardOverview.recentEntryRows.value[0]).toEqual({
+      description: null,
       durationLabel: "30m",
+      entry: stoppedEntry,
       githubIssue: null,
       id: TEST_IDS.runningEntry,
       isHighlighted: false,

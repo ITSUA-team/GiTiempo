@@ -44,7 +44,9 @@ export interface DashboardRecentEntryTimer {
 }
 
 export interface DashboardRecentEntryRow {
+  description: string | null;
   durationLabel: string;
+  entry: TimeEntryResponse;
   githubIssue: SyncedGitHubIssue | null;
   id: string;
   isHighlighted: boolean;
@@ -226,7 +228,9 @@ export function mapDashboardRecentEntryRows(
   nowMs: number,
 ): DashboardRecentEntryRow[] {
   return entries.map((entry) => ({
+    description: entry.description,
     durationLabel: formatTimeEntryDuration(entry, nowMs),
+    entry,
     githubIssue: entry.githubIssue,
     id: entry.id,
     isHighlighted: entry.endedAt === null,

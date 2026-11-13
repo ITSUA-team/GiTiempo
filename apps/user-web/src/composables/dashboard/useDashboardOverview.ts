@@ -26,15 +26,10 @@ export type {
   DashboardWeeklyFocus,
 } from "@/lib/dashboard-overview-helpers";
 
-type DashboardOverviewClient = Pick<
-  TimeEntriesClient,
-  "getCurrentTimer" | "listOwnEntries" | "startTimer" | "stopTimer"
->;
-
 interface UseDashboardOverviewOptions {
   authStore?: ReturnType<typeof useAuthStore>;
   clearIntervalFn?: typeof clearInterval;
-  client?: DashboardOverviewClient;
+  client?: TimeEntriesClient;
   now?: () => number;
   setIntervalFn?: typeof setInterval;
   toast?: ToastLike;
@@ -165,6 +160,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
 
   return {
     dashboardStats,
+    hasConfirmedActiveTimer: directTimerActions.hasConfirmedActiveTimer,
     isDirectStartBlockedByCurrentTimer: directTimerActions.isDirectStartBlockedByCurrentTimer,
     pageState,
     recentEntryRows,
@@ -174,6 +170,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
     startTimerForEntry: directTimerActions.startTimerForEntry,
     stoppingTimerEntryId: directTimerActions.stoppingTimerEntryId,
     stopTimerForEntry: directTimerActions.stopTimerForEntry,
+    verifyActiveTimerEntry: directTimerActions.verifyActiveTimerEntry,
     weeklyFocus,
   };
 }

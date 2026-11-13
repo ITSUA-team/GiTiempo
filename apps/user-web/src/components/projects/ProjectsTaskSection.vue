@@ -11,7 +11,6 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   managementTableColumnPt,
-  managementTableHeaderClass,
   useIsMobileViewport,
   type ManagementTableColumn,
 } from "@gitiempo/web-shared";
@@ -73,7 +72,6 @@ const columns = [
 
 const projectTasksTableBodyRowClass =
   "border-divider h-[52px] border-b transition-colors last:border-b-0 hover:bg-app-bg";
-const projectTasksTableHeaderClass = `${managementTableHeaderClass} min-w-[740px]`;
 
 function formatTaskCount(count: number): string {
   return `${count} active task${count === 1 ? "" : "s"}`;
@@ -95,6 +93,12 @@ function getStatusPt(task: TaskResponse) {
 
 function isTaskTimerRunning(task: TaskResponse): boolean {
   return props.activeTimerTaskId === task.id;
+}
+
+function getTaskRowClass(task: TaskResponse): string {
+  return isTaskTimerRunning(task)
+    ? "bg-accent-tint hover:bg-accent-tint"
+    : "bg-surface-primary hover:bg-app-bg";
 }
 
 function isTimerOperationPending(): boolean {
@@ -297,12 +301,25 @@ function handleTimerAction(task: TaskResponse): void {
         :key="task.id"
         data-testid="project-task-mobile-card"
         :style="isExternalProject ? externalMobileCardStyle : undefined"
+        :tone="isTaskTimerRunning(task) ? 'highlighted' : 'default'"
       >
         <div class="flex min-w-0 flex-col gap-2">
           <div
-            class="flex min-h-8 min-w-0 items-center justify-between gap-3"
+            class="flex min-h-8 min-w-0 items-center gap-3"
             data-testid="project-task-mobile-header"
           >
+            <TimerActionButton
+              v-if="task.status !== 'closed'"
+              :action="isTaskTimerRunning(task) ? 'stop' : 'start'"
+              :class="isExternalProject ? '[&_svg]:size-[18px]' : undefined"
+              :disabled="isTimerActionDisabled(task)"
+              :target="getTimerActionTarget(task)"
+              :is-loading="props.startingTimerTaskId === task.id ||
+                props.stoppingTimerTaskId === task.id"
+              :show-stop-first-guidance="opensStopFirstGuidance(task)"
+              test-id-prefix="project-task-mobile"
+              @trigger="() => handleTimerAction(task)"
+            />
             <div class="flex max-w-full min-w-0 items-center gap-2">
               <TaskNameLink
                 v-if="canManageTask(task)"
@@ -323,18 +340,6 @@ function handleTimerAction(task: TaskResponse): void {
                 :test-id="`project-task-mobile-github-${task.id}`"
               />
             </div>
-            <TimerActionButton
-              v-if="task.status !== 'closed'"
-              :action="isTaskTimerRunning(task) ? 'stop' : 'start'"
-              :class="isExternalProject ? '[&_svg]:size-[18px]' : undefined"
-              :disabled="isTimerActionDisabled(task)"
-              :target="getTimerActionTarget(task)"
-              :is-loading="props.startingTimerTaskId === task.id ||
-                props.stoppingTimerTaskId === task.id"
-              :show-stop-first-guidance="opensStopFirstGuidance(task)"
-              test-id-prefix="project-task-mobile"
-              @trigger="() => handleTimerAction(task)"
-            />
           </div>
 
           <span
@@ -374,8 +379,9 @@ function handleTimerAction(task: TaskResponse): void {
       :body-row-class="projectTasksTableBodyRowClass"
       :columns="columns"
       data-key="id"
-      :header-class="projectTasksTableHeaderClass"
       :loading="false"
+      :row-class="(task) => getTaskRowClass(task as TaskResponse)"
+      :show-header="false"
       shell-class="border-divider overflow-x-auto rounded-lg border bg-surface-primary"
       single-scroll
       table-class="min-w-[740px] w-full table-fixed border-collapse"

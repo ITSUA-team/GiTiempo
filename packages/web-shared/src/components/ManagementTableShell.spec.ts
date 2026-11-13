@@ -120,4 +120,72 @@ describe('ManagementTableShell', () => {
     expect(tableContainer.classes()).toContain('overflow-visible');
     expect(tableContainer.attributes('style')).toContain('overflow: visible');
   });
+
+  it('passes sr-only thead and aria-labelled header cells to DataTable when the visible header is hidden', () => {
+    const wrapper = mount(ManagementTableShell, {
+      props: {
+        columns: [
+          { key: 'name', label: 'Name', width: 'fill' },
+          { key: 'hours', label: 'Hours', width: 120, align: 'end' },
+        ],
+        dataKey: 'id',
+        loading: false,
+        showHeader: false,
+        value: [{ id: 'row-1', name: 'Example' }],
+      },
+      global: {
+        stubs: {
+          DataTable: {
+            props: ['pt'],
+            template: `
+              <div data-testid="datatable-stub">
+                <div data-testid="thead-class">{{ pt.thead?.class }}</div>
+                <div data-testid="header-cell-0-scope">{{ pt.column?.headerCell?.({ context: { index: 0 } })?.scope }}</div>
+                <div data-testid="header-cell-0-label">{{ pt.column?.headerCell?.({ context: { index: 0 } })?.['aria-label'] }}</div>
+                <div data-testid="header-cell-1-scope">{{ pt.column?.headerCell?.({ context: { index: 1 } })?.scope }}</div>
+                <div data-testid="header-cell-1-label">{{ pt.column?.headerCell?.({ context: { index: 1 } })?.['aria-label'] }}</div>
+              </div>
+            `,
+          },
+        },
+      },
+    });
+
+    expect(wrapper.find('table.sr-only').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="management-table-header-name"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="thead-class"]').text()).toBe('sr-only');
+    expect(wrapper.get('[data-testid="header-cell-0-scope"]').text()).toBe('col');
+    expect(wrapper.get('[data-testid="header-cell-0-label"]').text()).toBe('Name');
+    expect(wrapper.get('[data-testid="header-cell-1-scope"]').text()).toBe('col');
+    expect(wrapper.get('[data-testid="header-cell-1-label"]').text()).toBe('Hours');
+  });
+
+  it('also passes the sr-only thead to DataTable when the visible header is shown', () => {
+    const wrapper = mount(ManagementTableShell, {
+      props: {
+        columns: [{ key: 'name', label: 'Name', width: 'fill' }],
+        dataKey: 'id',
+        loading: false,
+        value: [{ id: 'row-1', name: 'Example' }],
+      },
+      global: {
+        stubs: {
+          DataTable: {
+            props: ['pt'],
+            template: `
+              <div data-testid="datatable-stub">
+                <div data-testid="thead-class">{{ pt.thead?.class }}</div>
+                <div data-testid="header-cell-0-label">{{ pt.column?.headerCell?.({ context: { index: 0 } })?.['aria-label'] }}</div>
+              </div>
+            `,
+          },
+        },
+      },
+    });
+
+    expect(wrapper.find('table.sr-only').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="management-table-header-name"]').text()).toBe('Name');
+    expect(wrapper.get('[data-testid="thead-class"]').text()).toBe('sr-only');
+    expect(wrapper.get('[data-testid="header-cell-0-label"]').text()).toBe('Name');
+  });
 });

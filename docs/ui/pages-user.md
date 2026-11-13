@@ -6,18 +6,18 @@
 ## Dashboard
 
 - User-facing date/time displays in `user-web` use the user's current browser-local timezone unless a page requirement explicitly says otherwise. Stored timestamps remain ISO instants; the frontend converts them locally for display labels and calendar boundaries.
-- Initial page load uses a skeleton that approximates the dashboard header, weekly insight/stat surfaces, and recent entries table before rendering empty states.
+- Initial page load uses a skeleton that approximates the dashboard header, weekly insight/stat surfaces, and headerless recent entries table before rendering empty states.
 - Weekly focus insight: full-width `<Card>` highlighting `Top Project This Week` and `Top Task This Week` using the user's current browser-local-week tracked entries.
 - Weekly focus insight values should show the winning project/task labels plus tracked-duration context, and may include a compact relative-share indicator when it improves scannability.
 - When the winning task is backed by a synced GitHub issue, show a compact external-link icon next to the task name that opens the source issue in a new browser tab.
-- Recent Time Entries: render the existing `<DataTable>` on tablet and desktop, and switch to stacked mobile cards below `640px`.
-- The mobile recent-entry cards keep the same record content as the desktop table: task title, project name, time range, duration, and highlighted running/current-entry state when applicable.
+- Recent Time Entries: render the existing `<DataTable>` on tablet and desktop without a column-heading strip, and switch to stacked mobile cards below `640px`. Desktop row height, column widths, rounding, spacing, typography, task/description composition, and active-entry treatment match Time Entries.
+- The mobile recent-entry cards match Time Entries mobile layout: timer action before the task title, optional description under the title, Project and Duration grouped together, and time Range below. Synced GitHub tasks add a separate external-link icon beside the task name that opens the source issue in a new browser tab.
 - Recent-entry rows/cards include the same first-column icon-only direct timer action pattern as Time Entries: completed entries show `Start timer`, and the active running entry shows `Stop timer`.
-- Dashboard recent-entry task names keep their current row behavior, and synced GitHub tasks add a separate external-link icon beside the task name that opens the source issue in a new browser tab.
+- Dashboard recent-entry task titles open the existing entry-edit flow for completed entries and the global timer picker for the authoritative running entry, matching Time Entries. Synced GitHub tasks add a separate external-link icon beside the task name that opens the source issue in a new browser tab.
 - The section-level `View all` action remains available in both desktop/table and mobile-card layouts.
 - Empty dashboard state: reuse the shared empty state pattern.
 - Optional MVP stats row: 3 summary cards.
-- Dashboard page-content timer controls are limited to Recent Time Entries row/card actions; the global top bar remains the main timer surface, and no separate dashboard timer panel appears in page content.
+- When another task or workspace owns the running timer, Dashboard provides the same stop-first guidance as Time Entries, preserving disabled pending/loading states, authoritative current-state and access checks, conflict handling, and duplicate-start/stop protection.
 
 - Successful recent-entry timer actions update the running row and timer state without a success toast. Errors and recovery guidance remain visible.
 
@@ -108,13 +108,13 @@
 - Content is grouped by visible project instead of by day.
 - Projects does not display tracked-duration totals for projects or tasks. Keep task status and updated metadata here; tracked time is displayed in the existing Time Entries view.
 - Render external-reference projects and their tasks in these existing groups, with a compact `External` tag. Do not add external-only pages, routes, sections, or pickers.
-- Project headers stack the title and visible task count; desktop places the External tag and own-time help on the right and shows `Task`, `Status`, `Updated` table headers. External mobile cards keep title/source and timer first, status/updated metadata next, and the External tag below.
+- Project headers stack the title and visible task count; desktop places the External tag and own-time help on the right. The task table hides the column-heading strip while preserving the `Task`, `Status`, and `Updated` column content. External mobile cards place the timer action before the title, keep title/source next, status/updated metadata below, and the External tag at the bottom.
 - For a project returned with `accessScope: own-time`, show a focusable/tappable `?` help control on the project card. Its tooltip says `You can only see your own time and tasks with your time entries.` Hide peer members, peer time, member counts, and tasks without the current user's entries. Do not show the restriction for full `project` scope.
 - Use server `capabilities` for controls. Own-time scope cannot create, edit, close, delete, or otherwise manage shared tasks/projects; full project scope keeps existing controls and rights.
 - Each project section header shows the project name on the left and a primary icon-only PrimeVue `<Button>` with a `plus` icon on the right. The action uses tooltip/accessibility copy `Add task`.
 - Tasks for that project render beneath the project header inside the same section card.
-- At and above `640px`, each project section keeps the existing task table layout.
-- Below `640px`, each project section renders stacked mobile task cards instead of the fixed-width desktop task table.
+- At and above `640px`, each project section keeps the existing task table layout without a column-heading strip. The task row representing the authoritative running timer is highlighted.
+- Below `640px`, each project section renders stacked mobile task cards instead of the fixed-width desktop task table. The timer action appears before the task title, and the task card representing the authoritative running timer is highlighted.
 - Task rows/cards include a direct timer action immediately beside the task-title group, plus the clickable task title, status, and updated metadata. With no running timer it starts a fresh timer and uses `Start timer for <task title>` tooltip/accessibility copy; the matching running task shows `Stop timer for <task title>` and stops only after rechecking the authoritative current timer.
 - When another task or workspace owns the running timer, a task's start action remains visibly blocked but opens the existing top-bar task-and-timer stop-first guidance instead of issuing a start request or duplicating cross-workspace copy in Projects. A stale start conflict refreshes shared timer state and opens that same guidance. Pending or still-loading timer state is natively disabled to avoid duplicate requests.
 - When the task is backed by a synced GitHub issue, show a separate external-link icon beside the title that opens the source issue in a new browser tab. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
