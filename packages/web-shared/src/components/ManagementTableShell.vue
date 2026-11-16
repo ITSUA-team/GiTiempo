@@ -98,7 +98,7 @@ function columnHeaderCellAttrs(options: HeaderCellPTOptions): Record<string, str
           style: singleScroll ? { overflow: 'visible' } : undefined,
         },
         table: { class: tableClass },
-        thead: { class: 'sr-only' },
+        thead: { class: 'sr-only', style: { position: 'absolute' } },
         column: {
           headerCell: columnHeaderCellAttrs,
         },
