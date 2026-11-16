@@ -215,9 +215,9 @@ describe("DashboardRecentEntriesCard", () => {
 
     expect(tableShell.props("showHeader")).toBe(false);
     expect(tableShell.props("bodyRowClass")).toContain("h-[52px]");
-    expect(columns.find((column) => column.key === "project")?.width).toBe(170);
-    expect(columns.find((column) => column.key === "range")?.width).toBe(130);
-    expect(columns.find((column) => column.key === "duration")?.width).toBe(110);
+    expect(columns.find((column) => column.key === "project")?.width).toBe(180);
+    expect(columns.find((column) => column.key === "range")?.width).toBe(100);
+    expect(columns.find((column) => column.key === "duration")?.width).toBe(80);
     expect(tableShell.props("rowClass")?.(rows[0])).not.toContain("bg-accent-tint");
     expect(tableShell.props("rowClass")?.(rows[1])).toContain("bg-accent-tint");
   });

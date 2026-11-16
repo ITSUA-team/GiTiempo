@@ -48,10 +48,17 @@ interface HeaderCellPTOptions {
 
 function columnHeaderCellAttrs(options: HeaderCellPTOptions): Record<string, string> {
   const index = options?.context?.index ?? options?.column?.context?.index ?? 0;
-  return {
+  const col = props.columns[index];
+  const attrs: Record<string, string> = {
     scope: 'col',
-    'aria-label': props.columns[index]?.label ?? '',
+    'aria-label': col?.label ?? '',
   };
+  const styles = ['padding: 0', 'border: 0', 'height: 0', 'line-height: 0', 'font-size: 0'];
+  if (col && typeof col.width === 'number') {
+    styles.push(`width: ${col.width}px`);
+  }
+  attrs.style = styles.join('; ');
+  return attrs;
 }
 </script>
 
@@ -98,7 +105,7 @@ function columnHeaderCellAttrs(options: HeaderCellPTOptions): Record<string, str
           style: singleScroll ? { overflow: 'visible' } : undefined,
         },
         table: { class: tableClass },
-        thead: { class: 'sr-only', style: { position: 'absolute' } },
+        thead: { class: 'sr-only', style: { position: 'static', height: '0', overflow: 'hidden' } },
         column: {
           headerCell: columnHeaderCellAttrs,
         },

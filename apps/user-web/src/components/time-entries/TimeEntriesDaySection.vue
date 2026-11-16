@@ -55,9 +55,9 @@ const timeEntriesTableHeaderClass = `${managementTableHeaderClass} min-w-[740px]
 
 const columns = [
   { key: 'task', label: 'Task', width: 'fill' },
-  { key: 'project', label: 'Project', width: 170 },
-  { key: 'range', label: 'Range', width: 130 },
-  { key: 'duration', label: 'Duration', width: 110, align: 'end' },
+  { key: 'project', label: 'Project', width: 180 },
+  { key: 'range', label: 'Range', width: 100 },
+  { key: 'duration', label: 'Duration', width: 80, align: 'end' },
 ] satisfies ManagementTableColumn[];
 
 function isStartTimerPending(entry: TimeEntryResponse): boolean {
@@ -213,7 +213,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
 
       <Column
         :pt="managementTableColumnPt"
-        style="width: 170px"
+        style="width: 180px"
       >
         <template #body="{ data: entry }">
           <p class="text-text-muted truncate text-[13px] font-normal">
@@ -224,10 +224,10 @@ function handleStartTimer(entry: TimeEntryResponse): void {
 
       <Column
         :pt="managementTableColumnPt"
-        style="width: 130px"
+        style="width: 100px"
       >
         <template #body="{ data: entry }">
-          <p class="text-text-muted text-[13px] font-normal">
+          <p class="text-text-muted whitespace-nowrap text-[13px] font-normal">
             {{ props.formatTimeRange(entry) }}
           </p>
         </template>
@@ -235,7 +235,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
 
       <Column
         :pt="managementTableColumnPt"
-        style="width: 110px"
+        style="width: 80px"
       >
         <template #body="{ data: entry }">
           <p class="text-text-dark text-right text-[13px] font-semibold tabular-nums">

@@ -52,8 +52,8 @@ const emit = defineEmits<{
   stopTimer: [task: TaskResponse];
 }>();
 
-const statusColumnWidth = "8.125rem";
-const updatedColumnWidth = "10.625rem";
+const statusColumnWidth = "6.25rem";
+const updatedColumnWidth = "8.125rem";
 const ownTimeHelpText =
   "You can only see your own time and tasks with your time entries.";
 const ownTimeHelpId = computed(
@@ -66,8 +66,8 @@ const ownTimeHelpTooltipStyle = ref<Record<string, string>>({});
 
 const columns = [
   { key: "task", label: "Task", width: "fill" },
-  { key: "status", label: "Status", width: 130 },
-  { key: "updated", label: "Updated", width: 170 },
+  { key: "status", label: "Status", width: 100 },
+  { key: "updated", label: "Updated", width: 130 },
 ] satisfies ManagementTableColumn[];
 
 const projectTasksTableBodyRowClass =

@@ -143,8 +143,10 @@ describe('ManagementTableShell', () => {
                 <div data-testid="thead-style-position">{{ pt.thead?.style?.position }}</div>
                 <div data-testid="header-cell-0-scope">{{ pt.column?.headerCell?.({ context: { index: 0 } })?.scope }}</div>
                 <div data-testid="header-cell-0-label">{{ pt.column?.headerCell?.({ context: { index: 0 } })?.['aria-label'] }}</div>
+                <div data-testid="header-cell-0-style">{{ pt.column?.headerCell?.({ context: { index: 0 } })?.style }}</div>
                 <div data-testid="header-cell-1-scope">{{ pt.column?.headerCell?.({ context: { index: 1 } })?.scope }}</div>
                 <div data-testid="header-cell-1-label">{{ pt.column?.headerCell?.({ context: { index: 1 } })?.['aria-label'] }}</div>
+                <div data-testid="header-cell-1-style">{{ pt.column?.headerCell?.({ context: { index: 1 } })?.style }}</div>
               </div>
             `,
           },
@@ -155,11 +157,14 @@ describe('ManagementTableShell', () => {
     expect(wrapper.find('table.sr-only').exists()).toBe(false);
     expect(wrapper.find('[data-testid="management-table-header-name"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="thead-class"]').text()).toBe('sr-only');
-    expect(wrapper.get('[data-testid="thead-style-position"]').text()).toBe('absolute');
+    expect(wrapper.get('[data-testid="thead-style-position"]').text()).toBe('static');
     expect(wrapper.get('[data-testid="header-cell-0-scope"]').text()).toBe('col');
     expect(wrapper.get('[data-testid="header-cell-0-label"]').text()).toBe('Name');
+    expect(wrapper.get('[data-testid="header-cell-0-style"]').text()).toContain('padding: 0');
     expect(wrapper.get('[data-testid="header-cell-1-scope"]').text()).toBe('col');
     expect(wrapper.get('[data-testid="header-cell-1-label"]').text()).toBe('Hours');
+    expect(wrapper.get('[data-testid="header-cell-1-style"]').text()).toContain('width: 120px');
+    expect(wrapper.get('[data-testid="header-cell-1-style"]').text()).toContain('padding: 0');
   });
 
   it('also passes the sr-only thead to DataTable when the visible header is shown', () => {
@@ -189,7 +194,7 @@ describe('ManagementTableShell', () => {
     expect(wrapper.find('table.sr-only').exists()).toBe(false);
     expect(wrapper.get('[data-testid="management-table-header-name"]').text()).toBe('Name');
     expect(wrapper.get('[data-testid="thead-class"]').text()).toBe('sr-only');
-    expect(wrapper.get('[data-testid="thead-style-position"]').text()).toBe('absolute');
+    expect(wrapper.get('[data-testid="thead-style-position"]').text()).toBe('static');
     expect(wrapper.get('[data-testid="header-cell-0-label"]').text()).toBe('Name');
   });
 });
