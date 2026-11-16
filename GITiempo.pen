@@ -1043,6 +1043,29 @@
                                   "children": [
                                     {
                                       "type": "frame",
+                                      "id": "c4db8a2c",
+                                      "name": "Start timer for entry 2",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "$color-brand",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "e9d199f1",
+                                          "name": "Start icon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
                                       "id": "d6OrHU",
                                       "width": "fill_container",
                                       "gap": 4,
@@ -1174,6 +1197,29 @@
                                   ],
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "39a20154",
+                                      "name": "Start timer for entry 3",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "$color-brand",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "7c8a89fe",
+                                          "name": "Start icon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
                                     {
                                       "type": "text",
                                       "id": "clZH2",
@@ -2291,6 +2337,29 @@
                                   "alignItems": "center",
                                   "children": [
                                     {
+                                      "type": "frame",
+                                      "id": "af954857",
+                                      "name": "Start timer for entry 2",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "$color-brand",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "4fa7be45",
+                                          "name": "Start icon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
+                                    {
                                       "type": "text",
                                       "id": "p5TNk",
                                       "fill": "$color-text-dark",
@@ -2394,6 +2463,29 @@
                                   ],
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "2c6e24af",
+                                      "name": "Start timer for entry 3",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "$color-brand",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "ce8159a4",
+                                          "name": "Start icon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
                                     {
                                       "type": "text",
                                       "id": "po0t1",
@@ -3726,6 +3818,29 @@
                                   "alignItems": "center",
                                   "children": [
                                     {
+                                      "type": "frame",
+                                      "id": "d259a0fc",
+                                      "name": "Start timer for entry 2",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "$color-brand",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "a12463cf",
+                                          "name": "Start icon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
+                                    {
                                       "type": "text",
                                       "id": "Uyma6",
                                       "fill": "$color-text-dark",
@@ -3829,6 +3944,29 @@
                                   ],
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "807dfc49",
+                                      "name": "Start timer for entry 3",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "$color-brand",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "009addfc",
+                                          "name": "Start icon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
                                     {
                                       "type": "text",
                                       "id": "pU9xk",
@@ -7584,109 +7722,6 @@
                               "strokeAlignment": "inner",
                               "layout": "vertical",
                               "children": [
-                                {
-                                  "type": "frame",
-                                  "id": "DqHtf",
-                                  "name": "head1",
-                                  "width": "fill_container",
-                                  "height": 44,
-                                  "fill": "$color-app-bg",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "kjajX",
-                                      "name": "h1c1",
-                                      "width": "fill_container",
-                                      "height": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "aIUHq",
-                                          "fill": "$color-text-dark",
-                                          "content": "Task",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "84eGa",
-                                      "name": "h1c2",
-                                      "width": 180,
-                                      "height": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "aOhmU",
-                                          "fill": "$color-text-dark",
-                                          "content": "Project",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "6Gmgl",
-                                      "name": "h1c3",
-                                      "width": 100,
-                                      "height": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "1CsSB",
-                                          "fill": "$color-text-dark",
-                                          "content": "Range",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "PXtYs",
-                                      "name": "h1c4",
-                                      "width": 80,
-                                      "height": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12
-                                      ],
-                                      "justifyContent": "end",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "kMVMm",
-                                          "fill": "$color-text-dark",
-                                          "content": "Duration",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
                                 {
                                   "type": "frame",
                                   "id": "OEbRa",
