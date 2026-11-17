@@ -14,8 +14,8 @@ The invoices list page MUST display a searchable, filterable table of invoices w
 
 - **GIVEN** an authenticated admin opens the invoices page
 - **WHEN** invoice data loads successfully
-- **THEN** the page shows a table with columns: Title, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), and a Status badge (draft/sent/paid)
-- **AND** each row's Title is a link that navigates to the invoice detail page
+- **THEN** the page shows a table with columns: Invoice reference and recipient, Project, Period (dateFrom–dateTo), Hours (totalHours), Amount (totalAmount with currency), and a Status badge (draft/sent/paid)
+- **AND** each invoice's reference is a link that navigates to the invoice detail page
 - **AND** the Amount column is formatted using `Intl.NumberFormat` with the invoice's `currency` field
 - **AND** the page shows a `Create invoice` action button in the table header
 
@@ -40,7 +40,7 @@ The invoices list page MUST display a searchable, filterable table of invoices w
 - **WHEN** the user selects a Project, Date range, or Status filter
 - **THEN** the page sends the corresponding `projectId`, `dateFrom`, `dateTo`, or `status` query parameters to the invoice list endpoint
 - **AND** no amount filter is offered because the API does not support it
-- **AND** clearing filters restores the full role-allowed result set
+- **AND** clearing filters restores the role-allowed result set in the selected group view
 
 #### Scenario: Pagination controls page navigation
 
@@ -54,8 +54,8 @@ The invoices list page MUST display a searchable, filterable table of invoices w
 - **GIVEN** an admin or PM opens the invoices page
 - **WHEN** invoice stats load successfully
 - **THEN** the page shows three stats cards from `GET /invoices/stats`
-- **AND** the "Open Invoices" card shows draft + sent count with subtitle "N ready to send" (N = draft count)
-- **AND** the "Billed This Month" card shows the sum of `totalAmount` for invoices created this month with subtitle "N invoices · M projects"
+- **AND** the "Open Invoices" card shows draft + sent count with a breakdown by draft and sent status
+- **AND** the "Billed This Month" card shows the sum of `totalAmount` for invoices created this month with a subtitle identifying scope and currency
 - **AND** the "Drafts" card shows the draft count with subtitle "Ready for review"
 - **AND** the "Billed This Month" total uses the single currency returned by the API `thisMonth` field (multi-currency approximation note is a future enhancement pending API support for per-currency breakdown)
 
@@ -67,7 +67,7 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 
 - **GIVEN** an authenticated admin opens the create dialog
 - **WHEN** the dialog renders
-- **THEN** it shows fields: Title (required), Project (optional), Date range (required), Hourly rate (optional, placeholder "From workspace settings"), Currency (optional, PrimeVue `<Select>` with the same currency options as Settings → Currency, placeholder "Auto"), Discount (optional, default 0), and Notes (optional)
+- **THEN** it shows fields: Title (required), Project (optional), Date range (required), Hourly rate (defaults from settings when available), Currency (workspace currency options), Discount (optional, default 0), and Notes (optional)
 - **AND** the admin may leave Project empty to create a workspace-wide invoice
 - **AND** no Status field is shown — the invoice is always created as `draft`
 
@@ -75,15 +75,15 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 
 - **GIVEN** an authenticated PM opens the create dialog
 - **WHEN** the dialog renders
-- **THEN** the Project field is required and limited to projects assigned to the PM
+- **THEN** the Project field is required and limited to projects visible under the existing PM project-access policy
 - **AND** submitting without a project is blocked
 
 #### Scenario: Live eligible-entries preview
 
 - **GIVEN** the user has entered a Date range (and a Project for PMs)
 - **WHEN** the preview loads from `GET /invoices/eligible-entries`
-- **THEN** the dialog shows total hours and computed total amount from the preview response
-- **AND** an expandable section shows eligible time entries (Date, User, Duration, Description) in a scrollable table
+- **THEN** the dialog shows the hours and amount for the included selection using the authoritative billing preview
+- **AND** the Time entry view shows selectable eligible entries with Date, User, Duration and Description, and the Task view groups those eligible entries
 - **AND** the Hourly rate field is pre-filled with `defaultHourlyRate` from the preview response when available
 - **AND** Currency is pre-selected with the workspace settings currency as soon as the dialog opens, and the preview `defaultCurrency` fills it only while the workspace settings currency is not yet loaded
 
@@ -99,7 +99,7 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 
 - **GIVEN** the eligible-entries preview returns zero entries
 - **WHEN** the preview result is displayed
-- **THEN** the dialog shows a warning banner "No billable entries found for this project and date range"
+- **THEN** the dialog explains there are no eligible entries and suggests changing the project or period
 - **AND** the `Create invoice` button remains enabled because the API allows empty invoices
 
 #### Scenario: Successful creation
@@ -123,55 +123,72 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 - **THEN** the page shows an error toast with the API message
 - **AND** the dialog remains open
 
+#### Scenario: Create with billing details and selected entries
+
+- **GIVEN** an authorized user opens Create invoice inside a custom group
+- **WHEN** the form loads
+- **THEN** the personal group is preselected and changeable, and From and How to pay use the workspace invoice defaults
+- **AND** the user can edit sender, recipient, service description, payment details, billing inputs and selection before submission
+- **AND** the user can exclude individual eligible entries, including all of them, and see included count, billed hours, subtotal, discount and total for the selection
+- **AND** a failed preview offers retry and is distinguishable from a successful zero-entry preview
+
 ### Requirement: Invoice Detail Page
 
-The invoice detail page MUST display the full invoice with status-dependent actions, a read-only summary, editable fields, and linked time entries.
+The detail page MUST display the saved invoice and let an authorized user edit its business fields and select any supported status.
 
 #### Scenario: Detail page renders full invoice
 
-- **GIVEN** an admin or PM navigates to `/invoices/:id`
-- **WHEN** the invoice loads successfully
-- **AND** the page topbar shows "Invoices" as the page name (the invoice title is displayed in the page header below the topbar; a dynamic topbar breadcrumb with the invoice title is a future enhancement)
-- **AND** the page header shows a back button, the invoice title, and a status badge
-- **AND** a read-only summary card displays Project, Date range, Hourly rate, Currency, Discount, Total hours, Total amount, Created, Created by, and Last updated
-- **AND** an editable card shows Title (input) and Notes (textarea) with a `Save changes` button
-- **AND** a time entries card shows linked entries (Date, User, Task, Duration, Description) with entry count and total hours in the header
+- **GIVEN** an Admin or authorized PM opens an accessible invoice
+- **WHEN** the detail loads
+- **THEN** the page shows reference, status selector, personal group, sender, recipient, service description, project, period, rate, currency, rounding, included work in the saved display mode (entry dates, people, descriptions and billed time in Time entry mode, or task names and summed billed time in Task mode), subtotal, discount, total, payment details, notes and audit details
 
-#### Scenario: Draft status actions
+#### Scenario: Change status
 
-- **GIVEN** the invoice has status `draft`
-- **WHEN** the detail page renders
-- **THEN** the header shows a `Mark as sent` action (admin + PM) and a `Delete` action (admin only)
-- **AND** PMs do not see the Delete action
-
-#### Scenario: Sent status actions
-
-- **GIVEN** the invoice has status `sent`
-- **WHEN** the detail page renders
-- **THEN** the header shows a `Mark as paid` action (admin + PM)
-- **AND** no Delete action is shown
-
-#### Scenario: Paid status actions
-
-- **GIVEN** the invoice has status `paid`
-- **WHEN** the detail page renders
-- **THEN** no status actions are shown in the header
-
-#### Scenario: Mark as sent is semantic only
-
-- **GIVEN** an admin or PM activates `Mark as sent` on a draft invoice
-- **WHEN** the PATCH succeeds
-- **THEN** the invoice status changes to `sent`
-- **AND** the UI label makes the manual nature of the transition clear
-- **AND** no email is sent and no PDF is generated
+- **GIVEN** the detail is open in any status
+- **WHEN** the user selects Draft, Sent or Paid, including Sent to Draft
+- **THEN** the page saves the status without sending email or exporting a PDF, refreshes detail, list, filters and summary counts, and offers Delete only to an Admin viewing a draft
 
 #### Scenario: Editable fields save
 
-- **GIVEN** an admin or PM edits the Title or Notes in the editable card
-- **WHEN** the user activates `Save changes`
-- **THEN** the page sends a PATCH request with only `title` and/or `notes`
-- **AND** on success the detail refreshes without a redundant success/info notification
-- **AND** snapshot fields (rate, currency, discount, totals, dates) are not editable
+- **GIVEN** the user opens Edit invoice in any status
+- **WHEN** they change title, group, project, period, services, rate, currency, discount, rounding, From, Bill to, payment details, notes or selected entries
+- **THEN** the form previews the resulting charges before saving and permits adding eligible entries or excluding linked entries without changing tracked time
+
+#### Scenario: Save revision
+
+- **GIVEN** the user reviews the edited values and selected entries
+- **WHEN** Save changes succeeds
+- **THEN** the detail shows the saved revision without a redundant success toast. Reference, audit fields and computed totals cannot be entered manually. Status-only saves preserve unsaved edits
+
+#### Scenario: Override billing defaults
+
+- **GIVEN** an invoice has saved issuer and payment details
+- **WHEN** the editor opens
+- **THEN** the form starts from its saved values, offers an explicit Use settings action and allows invoice-specific overrides without changing workspace defaults
+
+#### Scenario: Draft status actions
+
+- **GIVEN** an authorized user opens a Draft invoice
+- **WHEN** the actions render
+- **THEN** Draft is selected and the user can choose Sent or Paid. Only an Admin sees Delete invoice alongside the other header actions for the draft.
+
+#### Scenario: Sent status actions
+
+- **GIVEN** an authorized user opens a Sent invoice
+- **WHEN** the actions render
+- **THEN** Sent is selected and the user can choose Draft or Paid.
+
+#### Scenario: Paid status actions
+
+- **GIVEN** an authorized user opens a Paid invoice
+- **WHEN** the actions render
+- **THEN** Paid is selected and the user can choose Sent or Draft.
+
+#### Scenario: Mark as sent is semantic only
+
+- **GIVEN** the current invoice is a draft
+- **WHEN** the user selects Sent
+- **THEN** only its recorded status changes; delivery and document download are separate actions.
 
 ### Requirement: Invoice Deletion
 
@@ -200,22 +217,25 @@ The invoice detail page MUST support draft-only deletion with confirmation, rest
 
 ### Requirement: Status Transition Conflict Handling
 
-The invoice detail page MUST handle optimistic concurrency and invalid transition errors by refreshing state and surfacing the failure.
+The detail page MUST preserve the draft while resolving failed edits and status changes.
 
 #### Scenario: Concurrent update conflict
 
-- **GIVEN** an admin or PM activates a status action or saves edits
-- **WHEN** the API returns 409 with `invoice_update_conflict`
-- **THEN** the page shows an error toast advising the user to retry
-- **AND** the detail page reloads the current invoice state from the API
-- **AND** the user's unsaved local edits are not silently discarded without feedback
+- **GIVEN** an authorized user has unsaved changes
+- **WHEN** a save returns invoice_update_conflict
+- **THEN** the UI refreshes current saved state, identifies the conflict and retains draft fields for review and retry
 
 #### Scenario: Invalid status transition
 
-- **GIVEN** an admin or PM attempts a backward status transition
-- **WHEN** the API returns 409 with `invoice_invalid_status_transition`
-- **THEN** the page shows an error toast with a user-friendly message about the invalid transition
-- **AND** the detail page shows the current valid status
+- **GIVEN** the status selector displays the three supported statuses
+- **WHEN** a user chooses an earlier supported status
+- **THEN** the selection succeeds without a backward-transition error; invalid values are unavailable in the selector.
+
+#### Scenario: Selected entry becomes unavailable
+
+- **GIVEN** another invoice has claimed a selected entry
+- **WHEN** the save is rejected
+- **THEN** the editor preserves the input and checkbox choices, refreshes eligibility, highlights the unavailable entry, and lets the user revise the selection before retrying
 
 ### Requirement: Invoice Navigation Visibility
 
@@ -282,8 +302,15 @@ The invoices list page MUST render a mobile-friendly layout below the desktop br
 - **GIVEN** an admin or PM opens the invoices page on a viewport below 640px
 - **WHEN** invoice data loads successfully
 - **THEN** the table switches to stacked mobile record cards
-- **AND** each card shows the same meaningful fields as the desktop row: title, project, period, hours, amount, and status badge
-- **AND** tapping a card title navigates to the detail page
+- **AND** each card shows the same meaningful fields as the desktop row: reference, recipient, project, period, hours, amount, and status badge
+- **AND** tapping a card reference navigates to the detail page
+
+#### Scenario: Full workflows on a narrow screen
+
+- **GIVEN** the viewport is below 640px
+- **WHEN** the user filters, manages groups, selects invoices, opens a detail or opens a create, edit, duplicate or move dialog
+- **THEN** full-width filters, selectable cards and group controls provide the same operations as desktop, including status selection and PDF download
+- **AND** dialogs have scrollable bodies, reachable close and primary actions, labeled controls, visible keyboard focus and focus restoration on dismissal
 
 ### Requirement: Invoice Currency Formatting
 
@@ -361,11 +388,11 @@ The invoice create dialog MUST include a time rounding step field — a PrimeVue
 
 ### Requirement: Invoice Surfaces Display Rounded Per-Entry Duration
 
-The invoice detail page time-entries table and the create dialog eligible-entries preview MUST display the rounded billed duration per entry — the `roundedDurationSeconds` value from the response — not the original raw `durationSeconds`. The raw duration is retained in the response payload for transparency but is not the value rendered in the Duration column. The rounding step value itself is not displayed; only its effect on each entry's duration and the aggregate `totalHours` is visible.
+Whenever an editor or detail view displays an individual time entry, including a child row expanded in the editor, it MUST display its billed duration from `roundedDurationSeconds`. The response retains the raw duration. Task rows MUST sum the included entries’ rounded durations. The summary displays the saved rounding step.
 
 #### Scenario: Invoice detail time-entries table shows rounded duration
 
-- **GIVEN** an invoice was created with `roundingStepMinutes: 5`
+- **GIVEN** an invoice was created in Time entry mode with `roundingStepMinutes: 5`
 - **AND** a linked time entry has `durationSeconds: 360` and `roundedDurationSeconds: 600`
 - **WHEN** the admin or PM opens the invoice detail page
 - **THEN** the time-entries table Duration column for that entry renders the rounded duration (10 minutes)
@@ -374,13 +401,13 @@ The invoice detail page time-entries table and the create dialog eligible-entrie
 #### Scenario: Create dialog eligible-entries preview shows rounded duration
 
 - **GIVEN** the create dialog preview returns an entry with `durationSeconds: 360` and `roundedDurationSeconds: 600`
-- **WHEN** the user expands the eligible time entries preview
+- **WHEN** the user reviews the individual eligible time entries
 - **THEN** the preview table Duration column for that entry renders the rounded duration (10 minutes)
 - **AND** the raw 6-minute duration is not rendered in the Duration column
 
 #### Scenario: Preview Duration column recalculates when the rounding step changes
 
-- **GIVEN** the create dialog preview shows an entry whose `roundedDurationSeconds` is 600 (10 minutes) under a 5-minute step
+- **GIVEN** the create dialog preview displays an individual entry whose `roundedDurationSeconds` is 600 (10 minutes) under a 5-minute step
 - **WHEN** the user changes the `Rounding step` dropdown to 30
 - **THEN** the eligible-entries preview re-fetches with `roundingStepMinutes=30`
 - **AND** the preview table Duration column for that entry re-renders with the new rounded duration (30 minutes) from the fresh response
@@ -388,10 +415,16 @@ The invoice detail page time-entries table and the create dialog eligible-entrie
 
 #### Scenario: Rounding step value is not displayed on the invoice detail page
 
+- **GIVEN** the invoice detail has not loaded
+- **WHEN** the page displays the loading state
+- **THEN** it does not present an assumed rounding step before the invoice snapshot is available
+
+#### Scenario: Rounding step value is displayed on the invoice detail page
+
 - **GIVEN** an invoice has a `roundingStepMinutes` snapshot of 5
 - **WHEN** the admin or PM opens the invoice detail page
-- **THEN** the rounding step value (5) is not rendered anywhere on the detail page
-- **AND** only the rounded `totalHours` and the rounded per-entry durations reflect the rounding
+- **THEN** the summary displays 5 minutes
+- **AND** the rounded `totalHours` and the rounded per-entry durations reflect the rounding
 
 #### Scenario: Create dialog estimate rounds the total amount up to the next cent
 
@@ -402,7 +435,7 @@ The invoice detail page time-entries table and the create dialog eligible-entrie
 
 ### Requirement: Invoice Defaults Loaded From PM-Accessible Endpoint
 
-The invoices page SHALL load currency, default hourly rate, and rounding-step defaults from `GET /invoices/defaults` instead of `GET /workspace/settings`. This endpoint is accessible to both admin and PM users, eliminating the 403 Forbidden error previously shown to PMs.
+The invoices page SHALL load currency, default hourly rate, rounding step, issuer, optional logo and payment defaults from `GET /invoices/defaults` instead of `GET /workspace/settings`. This endpoint is accessible to both admin and PM users, eliminating the 403 Forbidden error previously shown to PMs.
 
 #### Scenario: PM navigates to invoices without 403 toast
 
@@ -417,7 +450,7 @@ The invoices page SHALL load currency, default hourly rate, and rounding-step de
 - **GIVEN** an admin is authenticated
 - **WHEN** the admin navigates to `/invoices`
 - **THEN** the page loads invoice defaults from `GET /invoices/defaults`
-- **AND** the create dialog pre-fills currency and hourly rate from the response
+- **AND** the create dialog pre-fills workspace billing defaults from the response
 
 #### Scenario: Invoice defaults load failure shows error
 
@@ -425,3 +458,148 @@ The invoices page SHALL load currency, default hourly rate, and rounding-step de
 - **WHEN** the `GET /invoices/defaults` request fails
 - **THEN** an error toast is shown with the failure message
 - **AND** the create dialog falls back to null defaults
+
+### Requirement: Personal invoice organization controls
+
+The invoices page MUST provide flat personal group navigation and single and multiple invoice organization actions.
+
+#### Scenario: Browse and manage groups
+
+- **GIVEN** invoices are available to the current user
+- **WHEN** the list opens
+- **THEN** All invoices, Ungrouped and named personal groups show authorized counts. Search, status, project, period and pagination operate within the selected view
+
+#### Scenario: Change a group
+
+- **GIVEN** the user opens create or rename
+- **WHEN** they enter a blank or duplicate name
+- **THEN** inline feedback preserves the entered name. Valid creation and renaming are reflected in navigation without changing invoice data
+
+#### Scenario: Remove a group
+
+- **GIVEN** the user opens Delete group
+- **WHEN** the confirmation opens with Cancel focused and the user confirms
+- **THEN** the group disappears and its invoices return to Ungrouped for that user and remain in All invoices
+
+#### Scenario: Move selection
+
+- **GIVEN** one or more invoices are selected
+- **WHEN** the user chooses Move to group or Remove from group
+- **THEN** the user can replace their membership or return the selection to Ungrouped. The move dialog identifies the current group and disables an unchanged destination. Successful moves refresh counts and rows; failed moves retain selection and memberships for retry
+
+#### Scenario: Empty and failure states
+
+- **GIVEN** an active group has search or filters
+- **WHEN** its results refresh
+- **THEN** loading preserves controls and existing rows during refresh. An empty group offers Create invoice and Browse all invoices; zero matches offer Clear filters; request failure preserves the view and offers Retry
+
+### Requirement: Create from an invoice
+
+The detail MUST offer Create from this invoice in every status.
+
+#### Scenario: Review and create a copy
+
+- **GIVEN** the user opens the action on an accessible invoice
+- **WHEN** they choose the new period and personal group and continue
+- **THEN** an editable draft form opens with source business values, a fresh eligible-entry preview and no copied billed entries. Cancel discards the draft and preserves the source; submission creates a separate draft with its own reference
+- **AND** the draft starts with the source logo if present, otherwise with the current workspace logo if configured. The user can replace or remove the logo before saving.
+- **AND** successful submission opens the newly created invoice's detail page.
+
+### Requirement: Invoice PDF download
+
+The detail MUST offer a PDF download based on saved invoice data in every status.
+
+#### Scenario: Download saved document
+
+- **GIVEN** the user activates Download PDF
+- **WHEN** the request is pending
+- **THEN** Preparing PDF is shown and repeated activation is disabled. Success downloads the saved document; failure offers Retry download and preserves the detail and group selection
+
+#### Scenario: Complete an older invoice before export
+
+- **GIVEN** a saved invoice lacks required issuer, recipient, service or payment details
+- **WHEN** the user chooses Download PDF
+- **THEN** the UI identifies the missing details and offers the editor to complete and save them before export
+
+### Requirement: Invoice issue and payment dates
+
+The editor SHALL expose an editable Issue date followed by an optional Due date, separately from the billing period. Details and PDF SHALL show the saved issue date and the due date when set.
+
+#### Scenario: Create, edit and copy dates
+
+- **WHEN** a user opens a new invoice or creates one from an existing invoice
+- **THEN** Issue date starts at the browser-local calendar date today and Due date starts empty, independently of the source invoice's absolute dates
+- **WHEN** a saved invoice is edited
+- **THEN** its dates are restored, retained through request failure and revision review, and saved with the reviewed business changes
+- **AND** an older invoice uses its persisted issue date or creation-date fallback and does not receive an invented due date
+
+#### Scenario: Validate the payment deadline
+
+- **WHEN** Due date precedes Issue date
+- **THEN** saving is rejected with an actionable error while preserving both inputs
+- **AND** clearing Due date explicitly removes the deadline
+
+### Requirement: Payment method specific fields
+
+Invoice editors SHALL adapt payment fields to the selected method. Bank transfer SHALL expose beneficiary, bank, account or IBAN and optional SWIFT/BIC. Card SHALL expose provider and an optional HTTPS payment link. Other and custom methods SHALL expose flexible legacy payment details. Terms and instructions SHALL remain available for every method.
+
+#### Scenario: Switch payment methods without losing edits
+
+- **WHEN** the user switches from Bank transfer to Card
+- **THEN** bank-specific inputs are replaced by provider and payment link inputs
+- **AND** switching back restores the locally entered fields hidden by the other method, including beneficiary, account and SWIFT/BIC
+- **AND** saved details and exported PDF include the selected method's applicable fields
+- **AND** provider, terms and instructions are shared values across methods, while paymentUrl is a Card-only input and output
+- **AND** Card never requests card numbers, expiry or CVV
+
+#### Scenario: Preserve custom payment methods
+
+- **WHEN** an older invoice or a user-entered method is outside Bank transfer and Card
+- **THEN** the editor preserves its name and generic payment details without converting it to a built-in method
+
+### Requirement: Choose time display in the invoice editor
+
+Create and Edit SHALL place a labeled **Show time by** selector with **Time entry** and **Task** above the entry selection on desktop and mobile. Both views SHALL edit the same set of selected entry IDs. In Task mode users SHALL be able to expand each task, inspect its individual entries, and include or exclude any entry.
+
+#### Scenario: Start a new invoice or use an existing one
+
+- **WHEN** a user opens a new invoice, edits a saved invoice, or creates from another invoice
+- **THEN** the editor selects Time entry for a new invoice and uses the resolved saved mode for edit or copy
+- **AND** users can change the mode before saving
+
+#### Scenario: Review a partial task and switch views
+
+- **GIVEN** two 6-minute entries on one task use a 15-minute rounding step
+- **WHEN** both are selected in Task mode
+- **THEN** the task shows 2 of 2 included and 30 billed minutes
+- **WHEN** the user expands it, excludes one entry and switches between views
+- **THEN** the same entry stays excluded and the task shows 1 of 2 included and 15 billed minutes
+- **AND** both views show identical invoice totals for that selection
+
+#### Scenario: Select entries from an expanded task on desktop
+
+- **GIVEN** an expanded task has both included and excluded entries
+- **WHEN** the user activates its mixed-state header checkbox
+- **THEN** all entries in that task become included and entries in every other task retain their selection
+- **AND** clearing the checked header excludes only entries in that task
+
+#### Scenario: Keep excluded entries reachable
+
+- **WHEN** the user excludes every entry on a task
+- **THEN** its editor group remains expandable with zero included time so the user can restore entries
+- **AND** when every task is excluded the editor shows zero selected entries and zero charges and permits saving an empty invoice
+
+### Requirement: Render the saved time format on invoice details
+
+Invoice details SHALL show the saved format on desktop and mobile. In Task mode details SHALL show one row per included task with its saved name and summed billed duration, omitting individual entries’ people, dates and descriptions.
+
+#### Scenario: Reopen a saved invoice
+
+- **WHEN** an invoice saved in Task mode contains two entries on the same task from different people
+- **THEN** both screen sizes show one task row with their combined billed duration
+- **AND** tasks with zero included entries are absent
+
+#### Scenario: View an empty task-mode invoice
+
+- **WHEN** a saved invoice in Task mode has no included entries
+- **THEN** details show an empty work section and zero totals
