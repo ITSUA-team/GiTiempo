@@ -73,7 +73,7 @@
   - "Open invoices" = draft + sent count. The subtitle shows both draft and sent counts.
   - "Billed this month" = sum of `totalAmount` for invoices created this month. The subtitle shows "Workspace invoices" and the currency. Currency from workspace default. Totals are approximate if multiple currencies are present.
   - "Drafts" = draft count. Subtitle: "Ready for review".
-- Mobile cards (< 640px): each invoice renders as a `MobileRecordCard` with a selection checkbox, clickable invoice reference, status badge, recipient and project on one wrapping line, period, hours and amount. Each card offers Move to group and a row actions menu.
+- Mobile cards (< 640px): each invoice renders as a `MobileRecordCard` with a selection checkbox, clickable invoice reference, status badge, recipient and project on one wrapping line, period, hours and amount. Each card offers a row actions menu containing Open invoice and Move to group; Move to group has no separate button on the card.
 - Currency formatting: use `Intl.NumberFormat` with the `currency` field from the API response (e.g., `new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })`). Do not hardcode currency symbols — the workspace may use any 3-letter ISO 4217 currency code.
 
 ### Create and edit dialogs

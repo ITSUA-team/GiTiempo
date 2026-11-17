@@ -304,7 +304,7 @@ describe('InvoicesTable', () => {
     expect(checkboxes.length).toBeGreaterThan(0);
     expect(checkboxes.every(input => input.element.disabled)).toBe(true);
     expect(wrapper.get<HTMLButtonElement>('button[aria-label^="Actions for"]').element.disabled).toBe(true);
-    if (isMobileViewport) expect(wrapper.findAll('button').find(button => button.text() === 'Move to group')!.element.disabled).toBe(true);
+    if (isMobileViewport) expect(wrapper.findAll('button').some(button => button.text() === 'Move to group')).toBe(false);
     await wrapper.setProps({ placeholderRows: false });
     expect(checkboxes.every(input => !input.element.disabled)).toBe(true);
   });
