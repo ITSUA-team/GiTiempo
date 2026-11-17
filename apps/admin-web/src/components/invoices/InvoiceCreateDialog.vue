@@ -2,7 +2,7 @@
 import { invoiceDatePickerPt, invoiceSelectPt } from './invoice-field-pt';
 import { computed, ref, watch, type Ref } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { invoiceLogoSchema, invoicePaymentSchema, type InvoicePayment } from '@gitiempo/shared';
+import { createInvoiceSchema, invoiceLogoSchema, invoicePartySchema, invoicePaymentSchema, type InvoicePayment } from '@gitiempo/shared';
 import { adminInvoicesKeys } from '@/lib/query-keys';
 import type {
   PreviewInvoiceResponse,
@@ -90,6 +90,10 @@ const ROUNDING_STEP_OPTIONS = getRoundingStepOptions();
 
 const sender = ref({name:'',address:'',email:'',taxId:''});
 const recipient = ref({name:'',address:'',email:'',taxId:''});
+const partySections = computed(() => [
+  { id: 'sender', label: 'From', party: sender.value },
+  { id: 'recipient', label: 'Bill to', party: recipient.value },
+]);
 const payment = ref<InvoicePayment>({method:'',terms:'',beneficiary:'',provider:'',account:'',instructions:''});
 const issueDate = ref<Date | null>(new Date());
 const dueDate = ref<Date | null>(null);
@@ -491,10 +495,35 @@ const projectError = computed(
 
 const documentDatesValid = computed(() => Boolean(issueDate.value) && (!dueDate.value || getLocalDateKey(dueDate.value) >= getLocalDateKey(issueDate.value!)));
 const paymentValid = computed(() => invoicePaymentSchema.safeParse(payment.value).success);
+const businessFieldErrors = computed(() => {
+  const errors: Record<string, string> = {};
+  for (const { id, party } of partySections.value) {
+    const result = invoicePartySchema.safeParse(party);
+    if (result.success) continue;
+    for (const issue of result.error.issues) {
+      errors[`${id}.${issue.path.join('.')}`] = issue.code === 'invalid_format'
+        ? 'Please enter a valid email address.'
+        : issue.code === 'too_big'
+          ? `Use ${issue.maximum} characters or fewer.`
+          : issue.message;
+    }
+  }
+  const result = createInvoiceSchema.shape.services.safeParse(services.value);
+  if (!result.success) {
+    errors.services = result.error.issues.map(issue => issue.code === 'too_big'
+      ? `Use ${issue.maximum} characters or fewer.`
+      : issue.message).join(' ');
+  }
+  return errors;
+});
+
+function fieldError(path: string): string | undefined {
+  return validationTriggered.value ? businessFieldErrors.value[path] : undefined;
+}
 
 const canSubmit = computed(
   () =>
-    documentDatesValid.value && paymentValid.value && hasTitle.value &&
+    documentDatesValid.value && paymentValid.value && !Object.keys(businessFieldErrors.value).length && hasTitle.value &&
     hasDateRange.value &&
     (props.isAdmin || Boolean(selectedProjectId.value)),
 );
@@ -823,8 +852,19 @@ async function handleCreate(): Promise<void> {
           <Textarea
             id="invoice-services"
             v-model="services"
+            :invalid="Boolean(fieldError('services'))"
+            :aria-describedby="fieldError('services') ? 'invoice-services-error' : undefined"
             class="text-text-dark h-[70px] w-full text-[13px] font-normal"
           />
+          <Message
+            v-if="fieldError('services')"
+            id="invoice-services-error"
+            severity="error"
+            size="small"
+            variant="simple"
+          >
+            {{ fieldError('services') }}
+          </Message>
         </div>
         <div
           data-testid="invoice-create-row-pricing"
@@ -973,8 +1013,8 @@ async function handleCreate(): Promise<void> {
       </Message>
       <div class="grid items-start gap-4 sm:grid-cols-2">
         <SurfaceCard
-          v-for="(party, label) in {From: sender, 'Bill to': recipient}"
-          :key="label"
+          v-for="{ id, party, label } in partySections"
+          :key="id"
           border
           padding-class="p-4"
           body-class="flex flex-col gap-3"
@@ -1018,15 +1058,30 @@ async function handleCreate(): Promise<void> {
             {{ {name: label === 'From' ? 'Sender / legal name' : 'Recipient / company', address: 'Address', email: 'Email', taxId: 'Tax ID (optional)'}[key] }}
             <Textarea
               v-if="key === 'address'"
+              :id="`invoice-${id}-${key}`"
               v-model="party[key]"
+              :invalid="Boolean(fieldError(`${id}.${key}`))"
+              :aria-describedby="fieldError(`${id}.${key}`) ? `invoice-${id}-${key}-error` : undefined"
               rows="1"
               class="text-text-dark field-sizing-content min-h-[38px] w-full text-[13px] leading-5 font-normal"
             />
             <InputText
               v-else
+              :id="`invoice-${id}-${key}`"
               v-model="party[key]"
+              :invalid="Boolean(fieldError(`${id}.${key}`))"
+              :aria-describedby="fieldError(`${id}.${key}`) ? `invoice-${id}-${key}-error` : undefined"
               class="text-text-dark h-[38px] w-full text-[13px] font-normal"
             />
+            <Message
+              v-if="fieldError(`${id}.${key}`)"
+              :id="`invoice-${id}-${key}-error`"
+              severity="error"
+              size="small"
+              variant="simple"
+            >
+              {{ fieldError(`${id}.${key}`) }}
+            </Message>
           </label>
         </SurfaceCard>
       </div>

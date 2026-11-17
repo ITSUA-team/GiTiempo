@@ -10,6 +10,16 @@ const dueDate = defineModel<Date | null>('dueDate', { required: true });
 const issuePicker = useDatePickerConfirmCancel<Date | null>();
 const duePicker = useDatePickerConfirmCancel<Date | null>();
 const invalid = computed(() => Boolean(issueDate.value && dueDate.value && getLocalDateKey(dueDate.value) < getLocalDateKey(issueDate.value)));
+const issueDatePt = computed(() => ({
+  ...invoiceDatePickerPt,
+  pcInputText: {
+    ...invoiceDatePickerPt.pcInputText,
+    root: {
+      ...invoiceDatePickerPt.pcInputText.root,
+      'aria-describedby': !issueDate.value ? 'invoice-issue-date-error' : undefined,
+    },
+  },
+}));
 </script>
 
 <template>
@@ -25,10 +35,11 @@ const invalid = computed(() => Boolean(issueDate.value && dueDate.value && getLo
         input-id="invoice-issue-date"
         date-format="dd M yy"
         :manual-input="false"
+        :invalid="!issueDate"
         show-icon
         show-button-bar
         icon-display="input"
-        :pt="invoiceDatePickerPt"
+        :pt="issueDatePt"
         class="w-full"
         @show="issuePicker.handleShow"
       >
@@ -41,6 +52,7 @@ const invalid = computed(() => Boolean(issueDate.value && dueDate.value && getLo
       </DatePicker>
       <Message
         v-if="!issueDate"
+        id="invoice-issue-date-error"
         severity="error"
         size="small"
         variant="simple"
