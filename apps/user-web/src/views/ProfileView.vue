@@ -98,7 +98,10 @@ async function handleSaveProfile(): Promise<void> {
       v-else
       class="flex max-w-[620px] flex-col gap-6"
     >
-      <SurfaceCard border body-class="flex flex-col gap-4">
+      <SurfaceCard
+        border
+        body-class="flex flex-col gap-4"
+      >
         <div class="flex items-center gap-4">
           <Avatar
             :image="imageUrl"

@@ -60,6 +60,29 @@ export function useTimeEntryDirectTimerActions({
     currentTimerGuardQuery.isFetching.value ||
     currentTimerGuardQuery.data.value?.timeEntry?.endedAt === null,
   );
+  const hasConfirmedActiveTimer = computed(() =>
+    !currentTimerGuardQuery.isFetching.value &&
+    currentTimerGuardQuery.data.value?.timeEntry?.endedAt === null,
+  );
+
+  async function verifyActiveTimerEntry(entryId: string): Promise<boolean> {
+    try {
+      const isCurrentTimerMatch = await resolveCurrentTimerMatches(entryId);
+
+      if (isCurrentTimerMatch) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
+
+    await refreshTimerAndEntries();
+    appToast.showInfoToast(
+      "Timer status refreshed",
+      "The running timer changed. Please try again.",
+    );
+    return false;
+  }
 
   async function invalidateTimer(): Promise<void> {
     await queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) });
@@ -70,6 +93,15 @@ export function useTimeEntryDirectTimerActions({
       invalidateTimer(),
       loadEntries(),
     ]);
+  }
+
+  async function resolveCurrentTimerMatches(entryId: string): Promise<boolean> {
+    const currentTimerResult = await currentTimerGuardQuery.refetch({
+      throwOnError: true,
+    });
+    const currentTimer = currentTimerResult.data?.timeEntry ?? null;
+
+    return currentTimer?.id === entryId;
   }
 
   async function startTimerForEntry(entry: DirectTimerEntry): Promise<void> {
@@ -107,12 +139,9 @@ export function useTimeEntryDirectTimerActions({
     stoppingTimerEntryId.value = entry.id;
 
     try {
-      const currentTimerResult = await currentTimerGuardQuery.refetch({
-        throwOnError: true,
-      });
-      const currentTimer = currentTimerResult.data?.timeEntry ?? null;
+      const isCurrentTimerMatch = await resolveCurrentTimerMatches(entry.id);
 
-      if (currentTimer?.id !== entry.id) {
+      if (!isCurrentTimerMatch) {
         await refreshTimerAndEntries();
         appToast.showInfoToast(
           "Timer status refreshed",
@@ -137,10 +166,12 @@ export function useTimeEntryDirectTimerActions({
   }
 
   return {
+    hasConfirmedActiveTimer,
     isDirectStartBlockedByCurrentTimer,
     startingTimerEntryId,
     startTimerForEntry,
     stoppingTimerEntryId,
     stopTimerForEntry,
+    verifyActiveTimerEntry,
   };
 }
