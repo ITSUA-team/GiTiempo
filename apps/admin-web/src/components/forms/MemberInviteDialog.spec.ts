@@ -29,6 +29,10 @@ vi.mock('@/composables/feedback/useToasts', () => ({
 
 import MemberInviteDialog from './MemberInviteDialog.vue';
 
+function token(claims: Record<string, unknown> = { sub: 'admin', workspaceId: 'A', role: 'admin' }) {
+  return `header.${btoa(JSON.stringify(claims))}.signature`;
+}
+
 const DialogStub = {
   emits: ['update:visible'],
   props: {
@@ -68,12 +72,59 @@ describe('MemberInviteDialog', () => {
     vi.unstubAllGlobals();
   });
 
+  it.each([
+    { sub: 'admin', workspaceId: 'A', role: 'member' },
+    { workspaceId: 'A', role: 'admin' },
+    { sub: 'admin', role: 'admin' },
+    { sub: 'admin', workspaceId: 'A' },
+  ])('blocks invite submits without complete admin claims: %s', async (claims) => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useAuthStore(pinia).accessToken = token(claims);
+    const wrapper = mount(MemberInviteDialog, {
+      props: { visible: true },
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: { AppDialog: { name: 'AppDialog', props: ['visible'], template: '<div><slot /></div>' } },
+      },
+    });
+    const form = wrapper.getComponent(Form);
+    expect(wrapper.getComponent({ name: 'AppDialog' }).props('visible')).toBe(false);
+    form.vm.$emit('submit', {
+      valid: true, values: { email: 'test@example.com', role: 'member' }, reset: vi.fn(),
+    });
+    await flushPromises();
+    expect(testMocks.createInvite).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('rejects a validated submit after role loss while the old profile remains admin', async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const auth = useAuthStore(pinia);
+    auth.accessToken = token();
+    const wrapper = mount(MemberInviteDialog, {
+      props: { visible: true },
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: { Dialog: DialogStub },
+      },
+    });
+    const form = wrapper.getComponent(Form);
+    auth.accessToken = token({ sub: 'admin', workspaceId: 'A', role: 'member' });
+    form.vm.$emit('submit', {
+      valid: true, values: { email: 'test@example.com', role: 'member' }, reset: vi.fn(),
+    });
+    await flushPromises();
+    expect(testMocks.createInvite).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="invite-dialog"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it('shows a role validation message and blocks submit until a role is chosen', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
-
-    const authStore = useAuthStore(pinia);
-    authStore.accessToken = 'access-token';
+    useAuthStore(pinia).accessToken = token();
 
     const wrapper = mount(MemberInviteDialog, {
       props: {
@@ -98,7 +149,7 @@ describe('MemberInviteDialog', () => {
   it('closes and resets a successful invite without duplicate success feedback', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
-    useAuthStore(pinia).accessToken = 'access-token';
+    useAuthStore(pinia).accessToken = token();
     const wrapper = mount(MemberInviteDialog, {
       props: { visible: true },
       global: {
@@ -122,6 +173,7 @@ describe('MemberInviteDialog', () => {
   it('shows only the primary invite action in the popup form', () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    useAuthStore(pinia).accessToken = token();
 
     const wrapper = mount(MemberInviteDialog, {
       props: {
@@ -148,6 +200,7 @@ describe('MemberInviteDialog', () => {
   it('resets the invite form when dismissed through dialog close', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    useAuthStore(pinia).accessToken = token();
 
     const wrapper = mount(MemberInviteDialog, {
       props: {

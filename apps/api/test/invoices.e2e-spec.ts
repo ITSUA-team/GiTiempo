@@ -1,8 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { and, eq, gte, inArray, lt } from 'drizzle-orm';
-import type { Pool } from 'pg';
+import { previewInvoiceResponseSchema } from '@gitiempo/shared';
+import PdfPrinter from 'pdfmake';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import * as schema from '../src/db/schema';
+import { InvoicesService } from '../src/invoices/services/invoices.service';
+import { MembersService } from '../src/members/services/members.service';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE, PG_POOL } from '../src/db/db.constants';
@@ -14,8 +20,10 @@ import {
   timeEntries,
   users,
   workspaceSettings,
+  workspaces,
+  invoiceGroups,
 } from '../src/db/schema';
-import { bearer, login } from './helpers/auth';
+import { ADMIN_EMAIL, ADMIN_UID, bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
 const DATE_FROM = '2027-06-01';
@@ -602,6 +610,61 @@ describe('Invoices (e2e)', () => {
       });
     expect(reversedDates.status).toBe(400);
   });
+
+  describe.each(['create', 'preview', 'update'] as const)(
+    '%s time display mode validation',
+    (operation) => {
+      it.each(['task', null])(
+        'rejects %j with a field-specific 400 error',
+        async (timeDisplayMode) => {
+          const input = {
+            title: 'Mode validation',
+            dateFrom: DATE_FROM,
+            dateTo: DATE_TO,
+            hourlyRate: 100,
+            currency: 'USD',
+            timeEntryIds: [],
+          };
+          let invoiceId: string | undefined;
+          try {
+            if (operation === 'update') {
+              const created = await request(app.getHttpServer())
+                .post('/invoices')
+                .set('Authorization', bearer(adminToken))
+                .send(input);
+              expect(created.status).toBe(201);
+              invoiceId = created.body.id;
+            }
+
+            const client = request(app.getHttpServer());
+            const pending =
+              operation === 'update'
+                ? client.patch('/invoices/' + invoiceId)
+                : client.post(
+                    operation === 'preview' ? '/invoices/preview' : '/invoices',
+                  );
+            const response = await pending
+              .set('Authorization', bearer(adminToken))
+              .send(
+                operation === 'update'
+                  ? { timeDisplayMode }
+                  : { ...input, timeDisplayMode },
+              );
+
+            expect(response.status).toBe(400);
+            expect(response.body.details).toEqual(
+              expect.arrayContaining([
+                expect.objectContaining({ path: ['timeDisplayMode'] }),
+              ]),
+            );
+          } finally {
+            if (invoiceId)
+              await db.delete(invoices).where(eq(invoices.id, invoiceId));
+          }
+        },
+      );
+    },
+  );
 
   it('applies discountPercent to the snapshot totals', async () => {
     // Fresh billable entry outside the June window so no other invoice
@@ -1315,6 +1378,260 @@ describe('Invoices (e2e)', () => {
     expect(res.status).toBe(400);
   });
 
+  it('rejects moving a visible invoice into an inaccessible PM project without changes', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'PM destination',
+        projectId: publicProjectId,
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        hourlyRate: 40,
+        timeEntryIds: [],
+      });
+    expect(created.status).toBe(201);
+    try {
+      const changed = await request(app.getHttpServer())
+        .patch('/invoices/' + created.body.id)
+        .set('Authorization', bearer(pmToken))
+        .send({ projectId: probeProjectId });
+      expect(changed.status).toBe(403);
+      const saved = await request(app.getHttpServer())
+        .get('/invoices/' + created.body.id)
+        .set('Authorization', bearer(adminToken));
+      expect(saved.body.projectId).toBe(publicProjectId);
+      expect(saved.body.revision).toBe(created.body.revision);
+      expect(saved.body.timeEntries).toEqual(created.body.timeEntries);
+    } finally {
+      await db.delete(invoices).where(eq(invoices.id, created.body.id));
+    }
+  });
+
+  it('rejects a move when the locked destination group is deleted before the move proceeds', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Group race',
+        projectId: publicProjectId,
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        hourlyRate: 40,
+        timeEntryIds: [],
+      });
+    expect(created.status).toBe(201);
+    const group = await request(app.getHttpServer())
+      .post('/invoices/groups')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: 'Group deletion race' });
+    expect(group.status).toBe(201);
+    const pool = app.get<Pool>(PG_POOL);
+    const lock = await pool.connect();
+    let pending: Promise<request.Response> | undefined;
+    try {
+      await lock.query('BEGIN');
+      const {
+        rows: [{ pid }],
+      } = await lock.query('SELECT pg_backend_pid() AS pid');
+      await lock.query('SELECT id FROM invoice_groups WHERE id=$1 FOR UPDATE', [
+        group.body.id,
+      ]);
+      pending = request(app.getHttpServer())
+        .post('/invoices/groups/move')
+        .set('Authorization', bearer(adminToken))
+        .send({ invoiceIds: [created.body.id], groupId: group.body.id })
+        .then((r) => r);
+      await vi.waitFor(
+        async () => {
+          const { rows } = await pool.query(
+            'SELECT 1 FROM pg_stat_activity WHERE $1::int = ANY(pg_blocking_pids(pid))',
+            [pid],
+          );
+          expect(rows.length).toBeGreaterThan(0);
+        },
+        { timeout: 5000, interval: 10 },
+      );
+      await lock.query('DELETE FROM invoice_groups WHERE id=$1', [
+        group.body.id,
+      ]);
+      await lock.query('COMMIT');
+      expect((await pending).status).toBe(404);
+      const saved = await request(app.getHttpServer())
+        .get('/invoices/' + created.body.id)
+        .set('Authorization', bearer(adminToken));
+      expect(saved.status).toBe(200);
+      expect(saved.body.groupId).toBeNull();
+      expect(saved.body.revision).toBe(created.body.revision);
+    } finally {
+      await lock.query('ROLLBACK');
+      lock.release();
+      if (pending) await Promise.allSettled([pending]);
+      await db.delete(invoices).where(eq(invoices.id, created.body.id));
+      await db.delete(invoiceGroups).where(eq(invoiceGroups.id, group.body.id));
+    }
+  });
+
+  it('rechecks PM destination access after waiting for the invoice lock', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'PM destination race',
+        projectId: publicProjectId,
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        hourlyRate: 40,
+        timeEntryIds: [],
+      });
+    expect(created.status).toBe(201);
+    const [target] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: 'PM race target',
+        visibility: 'public',
+        isActive: true,
+      })
+      .returning();
+    const pool = app.get<Pool>(PG_POOL);
+    const lock = await pool.connect();
+    let pending: Promise<request.Response> | undefined;
+    try {
+      await lock.query('BEGIN');
+      const {
+        rows: [{ pid }],
+      } = await lock.query('SELECT pg_backend_pid() AS pid');
+      await lock.query('SELECT id FROM invoices WHERE id=$1 FOR UPDATE', [
+        created.body.id,
+      ]);
+      pending = request(app.getHttpServer())
+        .patch('/invoices/' + created.body.id)
+        .set('Authorization', bearer(pmToken))
+        .send({ projectId: target!.id })
+        .then((r) => r);
+      await vi.waitFor(
+        async () => {
+          const { rows } = await pool.query(
+            'SELECT 1 FROM pg_stat_activity WHERE $1::int = ANY(pg_blocking_pids(pid))',
+            [pid],
+          );
+          expect(rows.length).toBeGreaterThan(0);
+        },
+        { timeout: 5000, interval: 10 },
+      );
+      await lock.query("UPDATE projects SET visibility='private' WHERE id=$1", [
+        target!.id,
+      ]);
+      await lock.query('COMMIT');
+      expect((await pending).status).toBe(403);
+      const saved = await request(app.getHttpServer())
+        .get('/invoices/' + created.body.id)
+        .set('Authorization', bearer(adminToken));
+      expect(saved.body.projectId).toBe(publicProjectId);
+      expect(saved.body.revision).toBe(created.body.revision);
+      expect(saved.body.timeEntries).toEqual(created.body.timeEntries);
+    } finally {
+      await lock.query('ROLLBACK');
+      lock.release();
+      if (pending) await Promise.allSettled([pending]);
+      await db.delete(invoices).where(eq(invoices.id, created.body.id));
+      await db.delete(projects).where(eq(projects.id, target!.id));
+    }
+  });
+
+  it.each(['Pacific/Kiritimati', 'America/Los_Angeles'])(
+    'defaults omitted issueDate using workspace %s',
+    async (timeZone) => {
+      const [original] = await db
+        .select()
+        .from(workspaceSettings)
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+      const { admin } = await getSeededAdminWorkspace(db);
+      let id: string | undefined;
+      vi.setSystemTime(
+        new Date(
+          timeZone === 'Pacific/Kiritimati'
+            ? '2026-11-12T14:00:00Z'
+            : '2026-11-12T01:00:00Z',
+        ),
+      );
+      try {
+        await db
+          .update(workspaceSettings)
+          .set({ timeZone })
+          .where(eq(workspaceSettings.workspaceId, workspaceId));
+        const invoice = await app.get(InvoicesService).createInvoice(
+          {
+            sub: admin.id,
+            firebaseUid: ADMIN_UID,
+            email: ADMIN_EMAIL,
+            role: 'admin',
+            workspaceId,
+          },
+          {
+            title: 'Timezone default',
+            projectId: publicProjectId,
+            dateFrom: DATE_FROM,
+            dateTo: DATE_TO,
+            hourlyRate: 40,
+            timeEntryIds: [],
+            discountPercent: 0,
+          },
+        );
+        id = invoice.id;
+        expect(invoice.issueDate).toBe(
+          timeZone === 'Pacific/Kiritimati' ? '2026-11-13' : '2026-11-11',
+        );
+      } finally {
+        vi.useRealTimers();
+        await db
+          .update(workspaceSettings)
+          .set({ timeZone: original!.timeZone })
+          .where(eq(workspaceSettings.workspaceId, workspaceId));
+        if (id) await db.delete(invoices).where(eq(invoices.id, id));
+      }
+    },
+  );
+
+  it.each(['/invoices', '/invoices/preview'])(
+    'rejects explicit unavailable entries on %s atomically',
+    async (endpoint) => {
+      await db
+        .update(timeEntries)
+        .set({ invoiceId: null })
+        .where(eq(timeEntries.id, ENTRY_PROBE_1));
+      const before = await db
+        .select({ id: invoices.id })
+        .from(invoices)
+        .where(eq(invoices.workspaceId, workspaceId));
+      const response = await request(app.getHttpServer())
+        .post(endpoint)
+        .set('Authorization', bearer(adminToken))
+        .send({
+          title: 'Explicit conflict',
+          projectId: probeProjectId,
+          dateFrom: DATE_FROM,
+          dateTo: DATE_TO,
+          hourlyRate: 40,
+          timeEntryIds: [ENTRY_PROBE_1, ENTRY_BOB_NON_BILLABLE],
+        });
+      expect(response.status).toBe(409);
+      expect(response.body.code).toBe('invoice_entry_conflict');
+      expect(
+        await db
+          .select({ id: invoices.id })
+          .from(invoices)
+          .where(eq(invoices.workspaceId, workspaceId)),
+      ).toHaveLength(before.length);
+      const [entry] = await db
+        .select()
+        .from(timeEntries)
+        .where(eq(timeEntries.id, ENTRY_PROBE_1));
+      expect(entry!.invoiceId).toBeNull();
+    },
+  );
+
   it('rejects PM updates to invoices on unassigned private projects', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/invoices')
@@ -1373,7 +1690,7 @@ describe('Invoices (e2e)', () => {
 
   // ── Status transition enforcement ─────────────────────────────────────
 
-  it('rejects backward status transition from sent to draft', async () => {
+  it('allows backward status transition from sent to draft', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
@@ -1398,15 +1715,15 @@ describe('Invoices (e2e)', () => {
       .patch(`/invoices/${invoiceId}`)
       .set('Authorization', bearer(adminToken))
       .send({ status: 'draft' });
-    expect(revertRes.status).toBe(409);
+    expect(revertRes.status).toBe(200);
 
     const getRes = await request(app.getHttpServer())
       .get(`/invoices/${invoiceId}`)
       .set('Authorization', bearer(adminToken));
-    expect(getRes.body.status).toBe('sent');
+    expect(getRes.body.status).toBe('draft');
   });
 
-  it('rejects backward status transition from paid to draft', async () => {
+  it('allows backward status transition from paid to draft', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
@@ -1435,10 +1752,10 @@ describe('Invoices (e2e)', () => {
       .patch(`/invoices/${invoiceId}`)
       .set('Authorization', bearer(adminToken))
       .send({ status: 'draft' });
-    expect(revertRes.status).toBe(409);
+    expect(revertRes.status).toBe(200);
   });
 
-  it('rejects backward status transition from paid to sent', async () => {
+  it('allows backward status transition from paid to sent', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
@@ -1465,7 +1782,7 @@ describe('Invoices (e2e)', () => {
       .patch(`/invoices/${invoiceId}`)
       .set('Authorization', bearer(adminToken))
       .send({ status: 'sent' });
-    expect(revertRes.status).toBe(409);
+    expect(revertRes.status).toBe(200);
   });
 
   it('allows direct draft to paid transition', async () => {
@@ -1536,7 +1853,7 @@ describe('Invoices (e2e)', () => {
               SELECT count(*)::int AS count FROM pg_stat_activity
               WHERE datname = current_database()
                 AND wait_event_type = 'Lock'
-                AND query LIKE 'update "invoices"%'
+                AND query LIKE '%for update%'
             `);
               expect(rows[0]?.count).toBe(count);
             },
@@ -1548,7 +1865,7 @@ describe('Invoices (e2e)', () => {
         paidRequest = request(app.getHttpServer())
           .patch(`/invoices/${created.body.id}`)
           .set('Authorization', bearer(adminToken))
-          .send({ status: 'paid' })
+          .send({ status: 'paid', expectedRevision: created.body.revision })
           .then((response) => response);
         await waitForBlockedUpdates(1);
         draftRequest = request(app.getHttpServer())
@@ -1556,6 +1873,7 @@ describe('Invoices (e2e)', () => {
           .set('Authorization', bearer(adminToken))
           .send({
             status: staleStatus,
+            expectedRevision: created.body.revision,
             notes: 'Must not overwrite paid invoice',
           })
           .then((response) => response);
@@ -2805,7 +3123,7 @@ describe('Invoices (e2e)', () => {
     }
   });
 
-  it('rejects update attempts that mutate the rounding step snapshot', async () => {
+  it('updates the rounding step through an explicit billing revision', async () => {
     const invoiceIds: string[] = [];
     try {
       await db.insert(timeEntries).values({
@@ -2840,19 +3158,1151 @@ describe('Invoices (e2e)', () => {
         .set('Authorization', bearer(adminToken))
         .send({ roundingStepMinutes: 15 });
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(200);
 
-      // The rejected patch leaves the snapshot step untouched.
+      // Explicit revision updates the invoice rounding snapshot.
       const detail = await request(app.getHttpServer())
         .get(`/invoices/${createRes.body.id}`)
         .set('Authorization', bearer(adminToken));
       expect(detail.status).toBe(200);
-      expect(detail.body.roundingStepMinutes).toBe(5);
+      expect(detail.body.roundingStepMinutes).toBe(15);
     } finally {
       if (invoiceIds.length > 0) {
         await db.delete(invoices).where(inArray(invoices.id, invoiceIds));
       }
       await db.delete(timeEntries).where(eq(timeEntries.id, ROUNDING_ENTRY_10));
+    }
+  });
+  it('persists personal groups independently and rejects stale business revisions', async () => {
+    const create = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Revision acceptance',
+        projectId: publicProjectId,
+        dateFrom: '2098-01-01',
+        dateTo: '2098-01-31',
+        hourlyRate: 100,
+        timeEntryIds: [],
+        sender: {
+          name: 'Відправник',
+          address: 'Kyiv',
+          email: 'billing@example.com',
+          taxId: '',
+        },
+        recipient: { name: 'Customer', address: '', email: '', taxId: '' },
+        services: 'Development',
+        payment: {
+          method: 'Bank transfer',
+          account: 'DEMO',
+          terms: '',
+          beneficiary: '',
+          provider: '',
+          instructions: '',
+        },
+      });
+    expect(create.status).toBe(201);
+    const id = create.body.id;
+    const group = await request(app.getHttpServer())
+      .post('/invoices/groups')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: 'Acceptance retainers' });
+    expect(group.status).toBe(201);
+    try {
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        max: 1,
+        connectionTimeoutMillis: 1000,
+      });
+      try {
+        const queries: string[] = [];
+        const service = new InvoicesService(
+          drizzle(pool, {
+            schema,
+            logger: {
+              logQuery(query) {
+                queries.push(query);
+              },
+            },
+          }),
+          app.get(MembersService),
+        );
+        const { admin } = await getSeededAdminWorkspace(db);
+        const user = {
+          sub: admin.id,
+          firebaseUid: ADMIN_UID,
+          email: ADMIN_EMAIL,
+          role: 'admin' as const,
+          workspaceId,
+        };
+        await service.moveInvoices(user, [id], group.body.id);
+        queries.length = 0;
+        const groups = await service.listGroups(user);
+        expect(groups.groups).toContainEqual({ ...group.body, count: 1 });
+        const baselineQueries = queries.length;
+        const [extra] = await db
+          .insert(invoiceGroups)
+          .values({
+            workspaceId,
+            ownerId: admin.id,
+            name: 'Query growth probe',
+          })
+          .returning();
+        try {
+          queries.length = 0;
+          const expanded = await service.listGroups(user);
+          expect(expanded.groups).toContainEqual(
+            expect.objectContaining({ id: extra!.id, count: 0 }),
+          );
+          expect(queries.length).toBe(baselineQueries);
+        } finally {
+          await db.delete(invoiceGroups).where(eq(invoiceGroups.id, extra!.id));
+        }
+      } finally {
+        await pool.end();
+      }
+      const admin = await request(app.getHttpServer())
+        .get('/invoices/' + id)
+        .set('Authorization', bearer(adminToken));
+      const pm = await request(app.getHttpServer())
+        .get('/invoices/' + id)
+        .set('Authorization', bearer(pmToken));
+      expect(admin.body.groupId).toBe(group.body.id);
+      for (const [token, expectedGroup] of [
+        [adminToken, group.body.id],
+        [pmToken, null],
+      ]) {
+        const listed = await request(app.getHttpServer())
+          .get('/invoices')
+          .query({ search: 'Revision acceptance' })
+          .set('Authorization', bearer(token));
+        expect(listed.status).toBe(200);
+        const item = listed.body.items.find(
+          (item: { id: string }) => item.id === id,
+        );
+        expect(item).toMatchObject({
+          id,
+          groupId: expectedGroup,
+          recipient: create.body.recipient,
+        });
+        for (const field of [
+          'sender',
+          'services',
+          'payment',
+          'logo',
+          'timeEntries',
+        ])
+          expect(item).not.toHaveProperty(field);
+      }
+      const renamed = await request(app.getHttpServer())
+        .patch('/invoices/groups/' + group.body.id)
+        .set('Authorization', bearer(adminToken))
+        .send({ name: 'Renamed acceptance group' });
+      expect(renamed.status).toBe(200);
+      expect(renamed.body).toEqual({
+        id: group.body.id,
+        name: 'Renamed acceptance group',
+        count: 1,
+      });
+      expect(
+        (
+          await request(app.getHttpServer())
+            .post('/invoices/groups')
+            .set('Authorization', bearer(adminToken))
+            .send({ name: ' renamed ACCEPTANCE group ' })
+        ).status,
+      ).toBe(409);
+      const filtered = await request(app.getHttpServer())
+        .get('/invoices')
+        .query({ groupId: group.body.id })
+        .set('Authorization', bearer(adminToken));
+      expect(
+        filtered.body.items.map((invoice: { id: string }) => invoice.id),
+      ).toContain(id);
+      const counted = await request(app.getHttpServer())
+        .get('/invoices/groups')
+        .set('Authorization', bearer(adminToken));
+      expect(
+        counted.body.groups.find((g: { id: string }) => g.id === group.body.id)
+          .count,
+      ).toBe(1);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .post('/invoices/groups/move')
+            .set('Authorization', bearer(adminToken))
+            .send({ invoiceIds: [id], groupId: null })
+        ).status,
+      ).toBe(204);
+      const ungrouped = await request(app.getHttpServer())
+        .get('/invoices')
+        .query({ groupId: 'ungrouped' })
+        .set('Authorization', bearer(adminToken));
+      expect(
+        ungrouped.body.items.map((invoice: { id: string }) => invoice.id),
+      ).toContain(id);
+      await request(app.getHttpServer())
+        .post('/invoices/groups/move')
+        .set('Authorization', bearer(adminToken))
+        .send({ invoiceIds: [id], groupId: group.body.id });
+
+      expect(pm.body.groupId).toBeNull();
+      const pmGroup = await request(app.getHttpServer())
+        .post('/invoices/groups')
+        .set('Authorization', bearer(pmToken))
+        .send({ name: 'PM personal acceptance' });
+      expect(pmGroup.status).toBe(201);
+      const mixed = await request(app.getHttpServer())
+        .post('/invoices/groups/move')
+        .set('Authorization', bearer(pmToken))
+        .send({
+          invoiceIds: [id, '00000000-0000-4000-8000-999999999996'],
+          groupId: pmGroup.body.id,
+        });
+      expect(mixed.status).toBe(404);
+      const stillUngrouped = await request(app.getHttpServer())
+        .get('/invoices/' + id)
+        .set('Authorization', bearer(pmToken));
+      expect(stillUngrouped.body.groupId).toBeNull();
+      expect(
+        (
+          await request(app.getHttpServer())
+            .post('/invoices/groups/move')
+            .set('Authorization', bearer(pmToken))
+            .send({ invoiceIds: [id], groupId: pmGroup.body.id })
+        ).status,
+      ).toBe(204);
+      await db
+        .update(projects)
+        .set({ visibility: 'private' })
+        .where(eq(projects.id, publicProjectId));
+      try {
+        const revoked = await request(app.getHttpServer())
+          .get('/invoices/groups')
+          .set('Authorization', bearer(pmToken));
+        expect(
+          revoked.body.groups.find(
+            (g: { id: string }) => g.id === pmGroup.body.id,
+          ).count,
+        ).toBe(0);
+        expect(
+          (
+            await request(app.getHttpServer())
+              .post('/invoices/groups/move')
+              .set('Authorization', bearer(pmToken))
+              .send({ invoiceIds: [id], groupId: null })
+          ).status,
+        ).toBe(403);
+      } finally {
+        await db
+          .update(projects)
+          .set({ visibility: 'public' })
+          .where(eq(projects.id, publicProjectId));
+      }
+      await request(app.getHttpServer())
+        .delete('/invoices/groups/' + pmGroup.body.id)
+        .set('Authorization', bearer(pmToken));
+
+      const afterDelete = await request(app.getHttpServer())
+        .get('/invoices/' + id)
+        .set('Authorization', bearer(pmToken));
+      expect(afterDelete.body.groupId).toBeNull();
+      const [otherWorkspace] = await db
+        .insert(workspaces)
+        .values({ name: 'Invoice group isolation fixture' })
+        .returning();
+      const [otherGroup] = await db
+        .insert(invoiceGroups)
+        .values({
+          workspaceId: otherWorkspace.id,
+          ownerId: (
+            await db
+              .select({ ownerId: invoiceGroups.ownerId })
+              .from(invoiceGroups)
+              .where(eq(invoiceGroups.id, group.body.id))
+          )[0]!.ownerId,
+          name: 'Other workspace',
+        })
+        .returning();
+      try {
+        expect(
+          (
+            await request(app.getHttpServer())
+              .post('/invoices/groups/move')
+              .set('Authorization', bearer(adminToken))
+              .send({ invoiceIds: [id], groupId: otherGroup.id })
+          ).status,
+        ).toBe(404);
+      } finally {
+        await db
+          .delete(invoiceGroups)
+          .where(eq(invoiceGroups.id, otherGroup.id));
+        await db.delete(workspaces).where(eq(workspaces.id, otherWorkspace.id));
+      }
+      const revision = create.body.revision;
+      const changes = await Promise.all(
+        ['sent', 'paid'].map((status) =>
+          request(app.getHttpServer())
+            .patch('/invoices/' + id)
+            .set('Authorization', bearer(adminToken))
+            .send({ status, expectedRevision: revision }),
+        ),
+      );
+      expect(changes.map((r) => r.status).sort()).toEqual([200, 409]);
+      const pdf = await request(app.getHttpServer())
+        .get('/invoices/' + id + '/pdf')
+        .set('Authorization', bearer(adminToken));
+      expect(pdf.status).toBe(200);
+      expect(pdf.headers['content-type']).toContain('application/pdf');
+      expect(pdf.headers['content-disposition']).toContain('attachment;');
+      expect(pdf.headers['content-disposition']).toContain(
+        create.body.reference,
+      );
+      const inaccessible = await request(app.getHttpServer())
+        .post('/invoices/groups/move')
+        .set('Authorization', bearer(pmToken))
+        .send({ invoiceIds: [id], groupId: group.body.id });
+      expect(inaccessible.status).toBe(404);
+      const remaining = await request(app.getHttpServer())
+        .get('/invoices/' + id)
+        .set('Authorization', bearer(adminToken));
+      expect(remaining.body.groupId).toBe(group.body.id);
+    } finally {
+      await request(app.getHttpServer())
+        .delete('/invoices/groups/' + group.body.id)
+        .set('Authorization', bearer(adminToken));
+      await db.delete(invoices).where(eq(invoices.id, id));
+    }
+  });
+  it('persists and previews invoice formats while preserving historical work and enforcing revisions and PM access', async () => {
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: publicProjectId,
+        title: 'Original task snapshot',
+      })
+      .returning({ id: tasks.id });
+    const adminId = await findUserId(ADMIN_UID);
+    const entries = await db
+      .insert(timeEntries)
+      .values([
+        {
+          workspaceId,
+          taskId: task.id,
+          userId: bobUserId,
+          source: 'manual' as const,
+          startedAt: new Date('2090-07-03T10:00:00Z'),
+          endedAt: new Date('2090-07-03T10:06:00Z'),
+          durationSeconds: 360,
+          isBillable: true,
+          description: 'First saved entry',
+        },
+        {
+          workspaceId,
+          taskId: task.id,
+          userId: adminId,
+          source: 'manual' as const,
+          startedAt: new Date('2090-07-04T10:00:00Z'),
+          endedAt: new Date('2090-07-04T10:06:00Z'),
+          durationSeconds: 360,
+          isBillable: true,
+          description: 'Second saved entry',
+        },
+        {
+          workspaceId,
+          taskId: task.id,
+          userId: bobUserId,
+          source: 'manual' as const,
+          startedAt: new Date('2090-07-05T10:00:00Z'),
+          endedAt: new Date('2090-07-05T10:06:00Z'),
+          durationSeconds: 360,
+          isBillable: true,
+          description: 'Excluded work',
+        },
+      ])
+      .returning({ id: timeEntries.id });
+    const scope = {
+      title: 'Task format invoice',
+      projectId: publicProjectId,
+      dateFrom: '2090-07-01',
+      dateTo: '2090-07-31',
+      hourlyRate: 100,
+      currency: 'USD',
+      roundingStepMinutes: 15,
+      discountPercent: 10,
+      timeEntryIds: entries.slice(0, 2).map((line) => line.id),
+      sender: { name: 'Issuer', address: '', email: '', taxId: '' },
+      recipient: { name: 'Client', address: '', email: '', taxId: '' },
+      services: 'Development',
+      payment: {
+        method: 'Bank transfer',
+        terms: '',
+        beneficiary: '',
+        provider: '',
+        account: '',
+        instructions: '',
+      },
+    };
+    let invoiceId: string | undefined;
+    let privateInvoiceId: string | undefined;
+    try {
+      const previews: Array<
+        ReturnType<typeof previewInvoiceResponseSchema.parse>
+      > = [];
+      for (const timeDisplayMode of ['entries', 'tasks']) {
+        const preview = await request(app.getHttpServer())
+          .post('/invoices/preview')
+          .set('Authorization', bearer(pmToken))
+          .send({ ...scope, timeDisplayMode });
+        expect(preview.status).toBe(201);
+        expect(preview.body).toMatchObject({
+          timeDisplayMode,
+          count: 2,
+          totalHours: 0.5,
+          subtotal: 50,
+          totalAmount: 45,
+        });
+        previews.push(previewInvoiceResponseSchema.parse(preview.body));
+      }
+      expect(previews[0].entries).toEqual(previews[1].entries);
+      const created = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(pmToken))
+        .send({ ...scope, timeDisplayMode: 'tasks' });
+      expect(created.status).toBe(201);
+      invoiceId = created.body.id;
+      expect(created.body).toMatchObject({
+        timeDisplayMode: 'tasks',
+        timeEntryCount: 2,
+        totalHours: 0.5,
+        totalAmount: 45,
+      });
+      const originalEntries = created.body.timeEntries;
+      await db
+        .update(tasks)
+        .set({ title: 'Renamed live task' })
+        .where(eq(tasks.id, task.id));
+      await db
+        .update(timeEntries)
+        .set({ description: 'Changed live work', durationSeconds: 60 })
+        .where(eq(timeEntries.id, entries[0].id));
+      const defaultPreview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(pmToken))
+        .send({ ...scope, invoiceId });
+      expect(defaultPreview.status).toBe(201);
+      expect(defaultPreview.body).toMatchObject({
+        timeDisplayMode: 'tasks',
+        entries: originalEntries,
+        totalAmount: 45,
+      });
+      const unsavedPreview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(pmToken))
+        .send({ ...scope, invoiceId, timeDisplayMode: 'entries' });
+      expect(unsavedPreview.status).toBe(201);
+      expect(unsavedPreview.body.timeDisplayMode).toBe('entries');
+      const stillSaved = await request(app.getHttpServer())
+        .get('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken));
+      expect(stillSaved.body.timeDisplayMode).toBe('tasks');
+      const printer = vi.spyOn(PdfPrinter.prototype, 'createPdfKitDocument');
+      try {
+        const exported = await request(app.getHttpServer())
+          .get('/invoices/' + invoiceId + '/pdf')
+          .set('Authorization', bearer(pmToken));
+        expect(exported.status).toBe(200);
+        expect(exported.headers['content-type']).toContain('application/pdf');
+        const definition = printer.mock.calls.at(-1)![0] as unknown as {
+          content: Array<{ table?: { body: Array<Array<{ text: string }>> } }>;
+        };
+        const rows = definition.content.find(
+          (node) =>
+            node.table?.body[0]?.map((cell) => cell.text).join('|') ===
+            'Task|Hours|Rate|Amount',
+        )!.table!.body;
+        expect(rows).toHaveLength(2);
+        expect(rows[1].map((cell) => cell.text)).toEqual([
+          'Original task snapshot',
+          '0.5',
+          '100.00',
+          '50.00',
+        ]);
+      } finally {
+        printer.mockRestore();
+      }
+      const changed = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken))
+        .send({
+          timeDisplayMode: 'entries',
+          expectedRevision: created.body.revision,
+        });
+      expect(changed.status).toBe(200);
+      expect(changed.body).toMatchObject({
+        timeDisplayMode: 'entries',
+        timeEntries: originalEntries,
+        totalAmount: 45,
+        totalHours: 0.5,
+        hourlyRate: 100,
+        discountPercent: 10,
+        revision: created.body.revision + 1,
+      });
+      const stale = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken))
+        .send({
+          timeDisplayMode: 'tasks',
+          expectedRevision: created.body.revision,
+        });
+      expect(stale.status).toBe(409);
+      expect(stale.body.code).toBe('invoice_update_conflict');
+      const taskMode = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken))
+        .send({
+          timeDisplayMode: 'tasks',
+          expectedRevision: changed.body.revision,
+        });
+      expect(taskMode.status).toBe(200);
+      const partial = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken))
+        .send({
+          notes: 'Partial edit',
+          expectedRevision: taskMode.body.revision,
+        });
+      expect(partial.status).toBe(200);
+      expect(partial.body).toMatchObject({
+        timeDisplayMode: 'tasks',
+        timeEntries: originalEntries,
+        totalAmount: 45,
+      });
+      const linkedEntries = await db
+        .select({ id: timeEntries.id, invoiceId: timeEntries.invoiceId })
+        .from(timeEntries)
+        .where(
+          inArray(
+            timeEntries.id,
+            entries.map((line) => line.id),
+          ),
+        );
+      expect(
+        linkedEntries
+          .filter((line) => line.invoiceId === invoiceId)
+          .map((line) => line.id)
+          .sort(),
+      ).toEqual(scope.timeEntryIds.slice().sort());
+      expect(
+        linkedEntries.find((line) => line.id === entries[2].id)!.invoiceId,
+      ).toBeNull();
+
+      const [saved] = await db
+        .select({ document: invoices.document })
+        .from(invoices)
+        .where(eq(invoices.id, invoiceId!));
+      const historicalDocument = { ...saved.document };
+      delete historicalDocument.timeDisplayMode;
+      await db
+        .update(invoices)
+        .set({ document: historicalDocument })
+        .where(eq(invoices.id, invoiceId!));
+      const historical = await request(app.getHttpServer())
+        .get('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken));
+      expect(historical.body).toMatchObject({
+        timeDisplayMode: 'entries',
+        timeEntries: originalEntries,
+        totalAmount: 45,
+      });
+      const historicalPreview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(pmToken))
+        .send({ ...scope, invoiceId });
+      expect(historicalPreview.body.timeDisplayMode).toBe('entries');
+      const [unchanged] = await db
+        .select({ document: invoices.document })
+        .from(invoices)
+        .where(eq(invoices.id, invoiceId!));
+      expect(unchanged.document).toEqual(historicalDocument);
+
+      const inaccessible = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({ ...scope, projectId: probeProjectId, timeEntryIds: [] });
+      expect(inaccessible.status).toBe(201);
+      privateInvoiceId = inaccessible.body.id;
+      expect(inaccessible.body.timeDisplayMode).toBe('entries');
+      const forbidden = await request(app.getHttpServer())
+        .patch('/invoices/' + privateInvoiceId)
+        .set('Authorization', bearer(pmToken))
+        .send({
+          timeDisplayMode: 'tasks',
+          expectedRevision: inaccessible.body.revision,
+        });
+      expect(forbidden.status).toBe(403);
+      const forbiddenPreview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(pmToken))
+        .send({ ...scope, invoiceId: privateInvoiceId, timeEntryIds: [] });
+      expect(forbiddenPreview.status).toBe(403);
+      const unchangedPrivate = await request(app.getHttpServer())
+        .get('/invoices/' + privateInvoiceId)
+        .set('Authorization', bearer(adminToken));
+      expect(unchangedPrivate.body).toMatchObject({
+        timeDisplayMode: 'entries',
+        revision: inaccessible.body.revision,
+      });
+    } finally {
+      for (const id of [invoiceId, privateInvoiceId])
+        if (id) await db.delete(invoices).where(eq(invoices.id, id));
+      await db.delete(timeEntries).where(
+        inArray(
+          timeEntries.id,
+          entries.map((line) => line.id),
+        ),
+      );
+      await db.delete(tasks).where(eq(tasks.id, task.id));
+    }
+  });
+
+  it('revises selected entries atomically and keeps saved line snapshots', async () => {
+    const entryId = '00000000-0000-4000-8000-300000000009';
+    await db.insert(timeEntries).values({
+      id: entryId,
+      workspaceId,
+      taskId: probeTaskId,
+      userId: bobUserId,
+      source: 'manual',
+      startedAt: new Date('2097-01-03T10:00:00Z'),
+      endedAt: new Date('2097-01-03T11:00:00Z'),
+      durationSeconds: 3600,
+      isBillable: true,
+      description: 'Saved description',
+    });
+    let invoiceId: string | undefined;
+    try {
+      const create = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          title: 'Selection revision',
+          dateFrom: '2097-01-01',
+          dateTo: '2097-01-31',
+          projectId: probeProjectId,
+          hourlyRate: 100,
+          timeEntryIds: [entryId],
+        });
+      expect(create.status).toBe(201);
+      invoiceId = create.body.id;
+      expect(create.body.totalAmount).toBe(100);
+      const preview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          invoiceId,
+          title: 'Preview selected entries',
+          projectId: probeProjectId,
+          dateFrom: '2097-01-01',
+          dateTo: '2097-01-31',
+          hourlyRate: 100,
+          currency: 'USD',
+          discountPercent: 10,
+          timeEntryIds: [entryId],
+        });
+      expect(preview.status).toBe(201);
+      expect(previewInvoiceResponseSchema.safeParse(preview.body).success).toBe(
+        true,
+      );
+      expect(preview.body).toMatchObject({
+        count: 1,
+        totalHours: 1,
+        subtotal: 100,
+        discountAmount: 10,
+        totalAmount: 90,
+        currency: 'USD',
+      });
+      const missing = await request(app.getHttpServer())
+        .get('/invoices/' + invoiceId + '/pdf')
+        .set('Authorization', bearer(adminToken));
+      expect(missing.status).toBe(422);
+      expect(missing.body.details.missingFields).toEqual(
+        expect.arrayContaining(['sender', 'recipient', 'services', 'payment']),
+      );
+      const forbidden = await request(app.getHttpServer())
+        .get('/invoices/' + invoiceId + '/pdf')
+        .set('Authorization', bearer(pmToken));
+      expect(forbidden.status).toBe(403);
+      expect(forbidden.headers['content-type']).not.toContain(
+        'application/pdf',
+      );
+
+      await db
+        .update(timeEntries)
+        .set({
+          description: 'Changed description',
+          isBillable: false,
+          endedAt: new Date('2097-01-03T10:20:00Z'),
+          durationSeconds: 1200,
+        })
+        .where(eq(timeEntries.id, entryId));
+      const saved = await request(app.getHttpServer())
+        .get('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken));
+      expect(saved.body.timeEntries[0].description).toBe('Saved description');
+      const invalid = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({
+          hourlyRate: 500,
+          timeEntryIds: [ENTRY_BOB_NON_BILLABLE],
+          expectedRevision: create.body.revision,
+        });
+      expect(invalid.status).toBe(409);
+      const unchanged = await request(app.getHttpServer())
+        .get('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken));
+      expect(unchanged.body.totalAmount).toBe(100);
+      const fullEdit = {
+        projectId: probeProjectId,
+        dateFrom: '2097-01-01',
+        dateTo: '2097-01-31',
+        hourlyRate: 100,
+        currency: create.body.currency,
+        discountPercent: create.body.discountPercent,
+        roundingStepMinutes: create.body.roundingStepMinutes,
+        timeEntryIds: [entryId],
+        notes: 'Send with receipt',
+        payment: {
+          method: '',
+          terms: '',
+          beneficiary: '',
+          provider: '',
+          account: '',
+          instructions: 'Use {{invoiceReference}}',
+        },
+      };
+      const edited = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({ ...fullEdit, expectedRevision: create.body.revision });
+      expect(edited.status).toBe(200);
+      expect(edited.body.timeEntries).toEqual(create.body.timeEntries);
+      expect(edited.body.payment.instructions).toBe(
+        'Use ' + create.body.reference,
+      );
+      const pricedPreview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          projectId: probeProjectId,
+          invoiceId,
+          dateFrom: fullEdit.dateFrom,
+          dateTo: fullEdit.dateTo,
+          title: 'Reprice',
+          hourlyRate: 200,
+          currency: create.body.currency,
+          timeEntryIds: [entryId],
+        });
+      expect(pricedPreview.status).toBe(201);
+      expect(pricedPreview.body.totalAmount).toBe(200);
+      const repriced = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({ hourlyRate: 200, expectedRevision: edited.body.revision });
+      expect(repriced.status).toBe(200);
+      expect(repriced.body.timeEntries).toEqual(create.body.timeEntries);
+      expect(repriced.body.totalAmount).toBe(200);
+      const clear = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({ timeEntryIds: [], expectedRevision: repriced.body.revision });
+      expect(clear.status).toBe(200);
+      expect(clear.body.totalAmount).toBe(0);
+      const [entry] = await db
+        .select({
+          invoiceId: timeEntries.invoiceId,
+          description: timeEntries.description,
+        })
+        .from(timeEntries)
+        .where(eq(timeEntries.id, entryId));
+      expect(entry.invoiceId).toBeNull();
+      expect(entry.description).toBe('Changed description');
+    } finally {
+      if (invoiceId)
+        await db.delete(invoices).where(eq(invoices.id, invoiceId));
+      await db.delete(timeEntries).where(eq(timeEntries.id, entryId));
+    }
+  });
+  it('keeps deleted source entries in the invoice snapshot and enforces a revised period', async () => {
+    const [entry] = await db
+      .insert(timeEntries)
+      .values({
+        workspaceId,
+        taskId: probeTaskId,
+        userId: bobUserId,
+        source: 'manual',
+        isBillable: true,
+        startedAt: new Date('2092-01-07T10:00:00Z'),
+        endedAt: new Date('2092-01-07T11:00:00Z'),
+        durationSeconds: 3600,
+      })
+      .returning({ id: timeEntries.id });
+    let invoiceId: string | undefined;
+    try {
+      const scope = {
+        title: 'Removed source snapshot',
+        projectId: probeProjectId,
+        dateFrom: '2092-01-01',
+        dateTo: '2092-01-31',
+      };
+      const created = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          ...scope,
+          hourlyRate: 10,
+          currency: 'USD',
+          timeEntryIds: [entry.id],
+        });
+      expect(created.status).toBe(201);
+      invoiceId = created.body.id;
+      await db.delete(timeEntries).where(eq(timeEntries.id, entry.id));
+      const preview = await request(app.getHttpServer())
+        .post('/invoices/preview')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          ...scope,
+          invoiceId,
+          hourlyRate: 20,
+          currency: 'USD',
+          timeEntryIds: [entry.id],
+        });
+      expect(preview.status).toBe(201);
+      expect(preview.body).toMatchObject({
+        count: 1,
+        totalAmount: 20,
+        entries: created.body.timeEntries,
+      });
+      const outside = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({ dateFrom: '2092-01-08' });
+      expect(outside.status).toBe(409);
+      const updated = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({ hourlyRate: 20 });
+      expect(updated.status).toBe(200);
+      expect(updated.body).toMatchObject({
+        timeEntryCount: 1,
+        totalAmount: 20,
+        timeEntries: created.body.timeEntries,
+      });
+      const list = await request(app.getHttpServer())
+        .get('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .query({ search: scope.title });
+      expect(list.body.items).toContainEqual(
+        expect.objectContaining({ id: invoiceId, timeEntryCount: 1 }),
+      );
+    } finally {
+      if (invoiceId)
+        await db.delete(invoices).where(eq(invoices.id, invoiceId));
+      await db.delete(timeEntries).where(eq(timeEntries.id, entry.id));
+    }
+  });
+  it('limits defaults access and preserves historical billing identity after Admin replacement', async () => {
+    const [original] = await db
+      .select()
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, workspaceId));
+    const profile = {
+      sender: {
+        name: 'Original issuer',
+        address: 'Kyiv',
+        email: 'billing@example.com',
+        taxId: '123',
+      },
+      payment: {
+        method: 'Transfer',
+        terms: '14 days',
+        beneficiary: 'Original issuer',
+        provider: 'Bank',
+        account: 'OLD-ACCOUNT',
+        instructions: 'Use {{invoiceReference}}',
+      },
+      logo:
+        'data:image/svg+xml;base64,' +
+        Buffer.from(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="blue"/></svg>',
+        ).toString('base64'),
+      invoicePrefix: 'TEST527',
+    };
+    let invoiceId: string | undefined;
+    try {
+      const write = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ billingProfile: profile });
+      expect(write.status).toBe(200);
+      const defaults = await request(app.getHttpServer())
+        .get('/invoices/defaults')
+        .set('Authorization', bearer(pmToken));
+      expect(defaults.status).toBe(200);
+      expect(defaults.body.billingProfile).toEqual(profile);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get('/invoices/defaults')
+            .set('Authorization', bearer(memberToken))
+        ).status,
+      ).toBe(403);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .patch('/workspace/settings')
+            .set('Authorization', bearer(pmToken))
+            .send({ billingProfile: profile })
+        ).status,
+      ).toBe(403);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .patch('/workspace/settings')
+            .set('Authorization', bearer(adminToken))
+            .send({
+              billingProfile: {
+                ...profile,
+                logo:
+                  'data:image/svg+xml;base64,' +
+                  Buffer.from('<svg><script>alert(1)</script></svg>').toString(
+                    'base64',
+                  ),
+              },
+            })
+        ).status,
+      ).toBe(400);
+      const corruptPng = Buffer.from(
+        '89504e470d0a1a0a0000000d494844520000000100000001',
+        'hex',
+      );
+      const invalidPng = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          billingProfile: {
+            ...profile,
+            logo: 'data:image/png;base64,' + corruptPng.toString('base64'),
+          },
+        });
+      expect(invalidPng.status).toBe(422);
+      const created = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(pmToken))
+        .send({
+          title: 'Saved billing identity',
+          projectId: publicProjectId,
+          dateFrom: '2094-01-01',
+          dateTo: '2094-01-31',
+          hourlyRate: 100,
+          timeEntryIds: [],
+        });
+      expect(created.status).toBe(201);
+      invoiceId = created.body.id;
+      expect(created.body.reference).toMatch(/^TEST527-/);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .patch('/workspace/settings')
+            .set('Authorization', bearer(adminToken))
+            .send({
+              billingProfile: {
+                ...profile,
+                sender: { ...profile.sender, name: 'New issuer' },
+                payment: { ...profile.payment, account: 'NEW-ACCOUNT' },
+                logo: null,
+              },
+            })
+        ).status,
+      ).toBe(200);
+      const saved = await request(app.getHttpServer())
+        .get('/invoices/' + invoiceId)
+        .set('Authorization', bearer(pmToken));
+      expect(saved.body.sender).toEqual(profile.sender);
+      expect(saved.body.payment.account).toBe('OLD-ACCOUNT');
+      expect(saved.body.payment.instructions).toBe(
+        'Use ' + created.body.reference,
+      );
+      expect(saved.body.logo).toBe(profile.logo);
+    } finally {
+      if (invoiceId)
+        await db.delete(invoices).where(eq(invoices.id, invoiceId));
+      await db
+        .update(workspaceSettings)
+        .set({ billingProfile: original!.billingProfile })
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+    }
+  });
+
+  it('uses the locked current scope when an optional-precondition edit waits for another revision', async () => {
+    const entryId = '00000000-0000-4000-8000-300000000010';
+    await db.insert(timeEntries).values({
+      id: entryId,
+      workspaceId,
+      taskId: PLATFORM_API_TASK_ID,
+      userId: bobUserId,
+      source: 'manual',
+      startedAt: new Date('2093-01-03T10:00:00Z'),
+      endedAt: new Date('2093-01-03T11:00:00Z'),
+      durationSeconds: 3600,
+      isBillable: true,
+    });
+    const created = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Scope race',
+        projectId: probeProjectId,
+        dateFrom: '2093-01-01',
+        dateTo: '2093-01-31',
+        hourlyRate: 100,
+        timeEntryIds: [],
+      });
+    expect(created.status).toBe(201);
+    const pool = app.get<Pool>(PG_POOL);
+    const lock = await pool.connect();
+    let pending: Promise<request.Response> | undefined;
+    try {
+      await lock.query('BEGIN');
+      await lock.query('SELECT id FROM invoices WHERE id=$1 FOR UPDATE', [
+        created.body.id,
+      ]);
+      pending = request(app.getHttpServer())
+        .patch('/invoices/' + created.body.id)
+        .set('Authorization', bearer(adminToken))
+        .send({ hourlyRate: 200, timeEntryIds: [entryId] })
+        .then((r) => r);
+      await vi.waitFor(
+        async () => {
+          const { rows } = await pool.query(
+            "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%for update%'",
+          );
+          expect(rows[0].count).toBe(1);
+        },
+        { timeout: 5000, interval: 10 },
+      );
+      await lock.query(
+        'UPDATE invoices SET project_id=$1,revision=revision+1 WHERE id=$2',
+        [PLATFORM_PROJECT_ID, created.body.id],
+      );
+      await lock.query('COMMIT');
+      const revised = await pending;
+      expect(revised.status).toBe(200);
+      expect(revised.body.projectId).toBe(PLATFORM_PROJECT_ID);
+      expect(revised.body.timeEntries.map((e: { id: string }) => e.id)).toEqual(
+        [entryId],
+      );
+      expect(revised.body.totalAmount).toBe(200);
+    } finally {
+      await lock.query('ROLLBACK');
+      lock.release();
+      if (pending) await Promise.allSettled([pending]);
+      await db.delete(invoices).where(eq(invoices.id, created.body.id));
+      await db.delete(timeEntries).where(eq(timeEntries.id, entryId));
+    }
+  });
+
+  it('supports every pair of manually selected statuses', async () => {
+    const create = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Status matrix',
+        dateFrom: '2096-01-01',
+        dateTo: '2096-01-31',
+        hourlyRate: 100,
+        timeEntryIds: [],
+      });
+    expect(create.status).toBe(201);
+    try {
+      for (const from of ['draft', 'sent', 'paid']) {
+        for (const to of ['draft', 'sent', 'paid']) {
+          await request(app.getHttpServer())
+            .patch('/invoices/' + create.body.id)
+            .set('Authorization', bearer(adminToken))
+            .send({ status: from })
+            .expect(200);
+          const update = await request(app.getHttpServer())
+            .patch('/invoices/' + create.body.id)
+            .set('Authorization', bearer(adminToken))
+            .send({ status: to });
+          expect(update.status).toBe(200);
+          expect(update.body.status).toBe(to);
+          expect(update.body.totalAmount).toBe(0);
+        }
+      }
+      await request(app.getHttpServer())
+        .patch('/invoices/' + create.body.id)
+        .set('Authorization', bearer(adminToken))
+        .send({ status: 'draft' })
+        .expect(200);
+      await request(app.getHttpServer())
+        .delete('/invoices/' + create.body.id)
+        .set('Authorization', bearer(pmToken))
+        .expect(403);
+      await request(app.getHttpServer())
+        .delete('/invoices/' + create.body.id)
+        .set('Authorization', bearer(adminToken))
+        .expect(204);
+    } finally {
+      await db.delete(invoices).where(eq(invoices.id, create.body.id));
+    }
+  });
+  it('persists invoice dates, rejects invalid merged patches, and clears the due date', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/invoices')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: 'Invoice dates regression',
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+        timeEntryIds: [],
+        hourlyRate: 100,
+        currency: 'USD',
+        issueDate: '2027-07-01',
+        dueDate: '2027-07-31',
+      });
+    expect(created.status).toBe(201);
+    const id = created.body.id;
+    try {
+      expect(created.body.issueDate).toBe('2027-07-01');
+      expect(created.body.dueDate).toBe('2027-07-31');
+      for (const patch of [
+        { issueDate: '2027-08-01' },
+        { dueDate: '2027-06-30' },
+      ]) {
+        const invalid = await request(app.getHttpServer())
+          .patch('/invoices/' + id)
+          .set('Authorization', bearer(adminToken))
+          .send(patch);
+        expect(invalid.status).toBe(422);
+      }
+      const saved = await request(app.getHttpServer())
+        .get('/invoices/' + id)
+        .set('Authorization', bearer(adminToken));
+      expect(saved.body.issueDate).toBe('2027-07-01');
+      expect(saved.body.dueDate).toBe('2027-07-31');
+      const cleared = await request(app.getHttpServer())
+        .patch('/invoices/' + id)
+        .set('Authorization', bearer(adminToken))
+        .send({ dueDate: null, issueDate: '2027-08-01' });
+      expect(cleared.status).toBe(200);
+      expect(cleared.body.dueDate).toBeNull();
+      expect(cleared.body.issueDate).toBe('2027-08-01');
+    } finally {
+      await db.delete(invoices).where(eq(invoices.id, id));
     }
   });
 });

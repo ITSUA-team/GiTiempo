@@ -1,0 +1,87 @@
+- link "Skip to main content" [ref=e2]
+- button "Open profile menu for Admin (seed)" [expanded=false, ref=e7]
+- link "Dashboard" [ref=e8]
+- link "Reports" [ref=e9]
+- link "Invoices" [ref=e10]
+- link "Members" [ref=e11]
+- link "Projects" [ref=e12]
+- button "Back to invoices" [ref=e13]
+- heading "INV-2" [level=1, ref=e14]
+- generic "Draft" [ref=e15] clickable [cursor:pointer]
+  - combobox "Invoice status" [expanded=false, ref=e26]: Draft
+- generic "Ungrouped" [ref=e16] clickable [cursor:pointer]
+  - combobox "My group" [expanded=false, ref=e27]: Ungrouped
+- button "Download PDF" [ref=e17]
+- button "Create from this invoice" [ref=e18]
+- button "Edit invoice" [ref=e19]
+- button "Delete invoice" [ref=e20]
+- heading "From" [level=2, ref=e21]
+- heading "Bill to" [level=2, ref=e22]
+- heading "Product design and development" [level=2, ref=e23]
+- heading "Included time entries" [level=2, ref=e24]
+- columnheader "Date" [ref=e72]
+- columnheader "User" [ref=e73]
+- columnheader "Task / description" [ref=e74]
+- columnheader "Billed duration" [ref=e75]
+- cell "03 Dec 2026" [ref=e76]
+- cell "Admin (seed)" [ref=e77]
+- cell "Dashboard UX · Individual work 10h" [ref=e78]
+- cell "10h" [ref=e79]
+- cell "04 Dec 2026" [ref=e80]
+- cell "Bob (seed)" [ref=e81]
+- cell "Dashboard UX · Individual work 7h" [ref=e82]
+- cell "7h" [ref=e83]
+- cell "06 Dec 2026" [ref=e84]
+- cell "Admin (seed)" [ref=e85]
+- cell "Invoice editing · Individual work 8h" [ref=e86]
+- cell "8h" [ref=e87]
+- heading "Payment instructions" [level=2, ref=e25]
+- heading "Notes" [level=3, ref=e28]
+- button "Close" [ref=e6]
+- heading "Invoice information" [level=2, ref=e29]
+- textbox "Invoice title" [ref=e30]: November development
+- combobox "Issue date" [expanded=false, ref=e50]: 12 Nov 2026
+- combobox "Due date (optional)" [expanded=false, ref=e51]
+- generic "Ungrouped" [ref=e31] clickable [cursor:pointer]
+  - combobox "Personal group" [expanded=false, ref=e52]: Ungrouped
+- generic "Task invoice acceptance" [ref=e32] clickable [cursor:pointer]
+  - combobox "Task invoice acceptance" [expanded=false, ref=e53]
+- combobox "Billing period" [expanded=false, ref=e54]: 01 Dec 2026 - 31 Dec 2026
+- textbox "Services / what is being billed" [ref=e33]: Product design and development
+- spinbutton "Hourly rate" [ref=e34]: 100
+- generic "USD" [ref=e35] clickable [cursor:pointer]
+  - combobox "USD" [expanded=false, ref=e55]
+- spinbutton "Discount (%)" [ref=e36]: 10
+- generic "1 min" [ref=e37] clickable [cursor:pointer]
+  - combobox "1 min" [expanded=false, ref=e56]
+- heading "From" [level=2, ref=e38]
+- button "Use settings" [ref=e57]
+- button "Invoice logo options" [expanded=false, ref=e58]
+- textbox "Sender / legal name" [ref=e59]: ITSUA
+- textbox "Address" [ref=e60]: Test billing address
+- textbox "Email" [ref=e61]: billing@example.com
+- textbox "Tax ID (optional)" [ref=e62]
+- heading "Bill to" [level=2, ref=e39]
+- textbox "Recipient / company" [ref=e63]: Acme Ltd
+- textbox "Address" [ref=e64]: Test billing address
+- textbox "Email" [ref=e65]: accounts@example.com
+- textbox "Tax ID (optional)" [ref=e66]
+- heading "How to pay" [level=2, ref=e40]
+- generic "Bank transfer" [ref=e41] clickable [cursor:pointer]
+  - combobox "Bank transfer" [expanded=false, ref=e67]
+- textbox "Payment terms" [ref=e42]: 14 days
+- textbox "Beneficiary" [ref=e43]: ITSUA
+- textbox "Bank" [ref=e44]: Test Bank
+- textbox "IBAN / account number" [ref=e45]: DEMO-ACCOUNT
+- textbox "SWIFT / BIC (optional)" [ref=e46]: DEMO-BIC
+- textbox "Payment instructions" [ref=e47]: Include invoice reference
+- textbox "Notes (optional)" [ref=e68]: Thank you for your business.
+- heading "Time entries" [level=2, ref=e48]
+- generic "Task" [ref=e49] clickable [cursor:pointer]
+  - combobox "Show time by" [expanded=true, ref=e69]: Task
+- button "Expand Dashboard UX" [expanded=false, ref=e70]
+- button "Expand Invoice editing" [expanded=false, ref=e71]
+- button "Save changes" [disabled, ref=e3]
+- listbox [ref=e1]
+  - option "Time entry" [ref=e4]
+  - option "Task" [selected, ref=e5]

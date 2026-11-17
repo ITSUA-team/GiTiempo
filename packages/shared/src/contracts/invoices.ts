@@ -8,7 +8,53 @@ import {
   roundingStepMinutesSchema,
 } from "./common.js";
 
+const billingText = z.string().trim().max(5000);
+export const invoicePartySchema = z.object({
+  name: billingText, address: billingText, email: z.union([z.email(), z.literal("")]), taxId: billingText,
+}).strict();
+export const invoicePaymentSchema = z.object({
+  method: billingText, terms: billingText, beneficiary: billingText, provider: billingText, account: billingText, instructions: billingText,
+  swift: billingText.optional(),
+  paymentUrl: z.union([z.url({ protocol: /^https$/ }).trim().max(5000), z.literal("")]).optional(),
+}).strict();
+export const invoiceLogoSchema = z.string().max(341362)
+  .regex(/^data:image\/(png|svg\+xml);base64,[A-Za-z0-9+/=]+$/)
+  .refine(value => {
+    try {
+      const svg = atob(value.slice(value.indexOf(",") + 1));
+      if (svg.length > 256000) return false;
+      if (value.startsWith("data:image/png;base64,")) {
+        return svg.startsWith("\x89PNG\r\n\x1a\n") && svg.slice(12, 16) === "IHDR";
+      }
+      return /^\s*<svg[\s>]/i.test(svg) &&
+        !/<[!?]|<(?:script|foreignObject|style|iframe|object|embed|image|use|a|animate|set)\b|\son[a-z]+\s*=|(?:href|src)\s*=|url\s*\(|&(?:#|[a-z])/i.test(svg);
+    } catch {
+      return false;
+    }
+  }, "Choose a valid PNG or static SVG logo up to 250 KB, without scripts or external resources")
+  .nullable();
+
+export const invoiceBillingProfileSchema = z.object({
+  sender: invoicePartySchema,
+  payment: invoicePaymentSchema,
+  logo: invoiceLogoSchema,
+  invoicePrefix: z.string().trim().min(1).max(40).regex(/^[A-Za-z0-9_-]+$/),
+}).strict();
+const distinctEntryIds = z.array(z.uuid()).max(10000).refine(ids => new Set(ids).size === ids.length, "Entry IDs must be distinct");
+const invoiceBusinessFields = {
+  sender: invoicePartySchema.nullable().optional(),
+  recipient: invoicePartySchema.nullable().optional(),
+  payment: invoicePaymentSchema.nullable().optional(),
+  services: billingText.nullable().optional(),
+  logo: invoiceLogoSchema.optional(),
+};
+export type InvoiceParty = z.infer<typeof invoicePartySchema>;
+export type InvoicePayment = z.infer<typeof invoicePaymentSchema>;
+export type InvoiceBillingProfile = z.infer<typeof invoiceBillingProfileSchema>;
+
 export const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
+export const invoiceTimeDisplayModeSchema = z.enum(["entries", "tasks"]);
+export type InvoiceTimeDisplayMode = z.infer<typeof invoiceTimeDisplayModeSchema>;
 
 export const invoiceProjectSummarySchema = z.object({
   id: z.uuid(),
@@ -37,9 +83,15 @@ export const invoiceTimeEntrySummarySchema = z.object({
 export const invoiceResponseSchema = z.object({
   id: z.uuid(),
   workspaceId: z.uuid(),
+  ...invoiceBusinessFields,
+  reference: z.string().optional(),
+  revision: z.number().int().nonnegative().optional(),
+  groupId: z.uuid().nullable().optional(),
   projectId: z.uuid().nullable(),
   title: z.string(),
   status: invoiceStatusSchema,
+  issueDate: dateSchema.optional(),
+  dueDate: dateSchema.nullable().optional(),
   dateFrom: dateSchema,
   dateTo: dateSchema,
   hourlyRate: z.number().nonnegative().max(99999999.99).multipleOf(0.01),
@@ -48,6 +100,7 @@ export const invoiceResponseSchema = z.object({
   totalHours: z.number().nonnegative().max(99999999.99).multipleOf(0.01),
   totalAmount: z.number().nonnegative().max(9999999999.99).multipleOf(0.01),
   roundingStepMinutes: roundingStepMinutesSchema,
+  timeDisplayMode: invoiceTimeDisplayModeSchema,
   notes: z.string().nullable(),
   createdBy: z.uuid(),
   createdByName: z.string().nullable(),
@@ -60,6 +113,11 @@ export const invoiceResponseSchema = z.object({
 
 export const invoiceListItemSchema = invoiceResponseSchema.omit({
   timeEntries: true,
+  timeDisplayMode: true,
+  sender: true,
+  payment: true,
+  services: true,
+  logo: true,
 });
 
 export const invoiceListMetaSchema = paginatedListMetaSchema;
@@ -68,6 +126,10 @@ export const invoiceListResponseSchema = z.object({
   items: z.array(invoiceListItemSchema),
   meta: invoiceListMetaSchema,
 });
+
+function isValidPaymentDates(data: { issueDate?: string; dueDate?: string | null }): boolean {
+  return !data.issueDate || !data.dueDate || data.dueDate >= data.issueDate;
+}
 
 // Optional fields so list queries with only one date bound can reuse the
 // helper; a range is only checked when both bounds are present.
@@ -84,6 +146,7 @@ function isValidInvoiceDateRange(data: {
 
 export const invoiceListQuerySchema = z
   .object({
+    groupId: z.union([z.uuid(), z.literal("ungrouped")]).optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     projectId: z.uuid().optional(),
@@ -106,7 +169,13 @@ export const invoiceListQuerySchema = z
 
 export const createInvoiceSchema = z
   .object({
+    ...invoiceBusinessFields,
+    timeDisplayMode: invoiceTimeDisplayModeSchema.optional(),
+    timeEntryIds: distinctEntryIds.optional(),
+    groupId: z.uuid().nullable().optional(),
     title: z.string().trim().min(1).max(255),
+    issueDate: dateSchema.optional(),
+    dueDate: dateSchema.nullable().optional(),
     dateFrom: dateSchema,
     dateTo: dateSchema,
     projectId: z.uuid().optional(),
@@ -127,38 +196,27 @@ export const createInvoiceSchema = z
     roundingStepMinutes: roundingStepMinutesSchema.optional(),
   })
   .strict()
+  .refine(isValidPaymentDates, { message: "Due date must be on or after the issue date", path: ["dueDate"] })
   .refine(isValidInvoiceDateRange, {
     message: "dateTo must be later than or equal to dateFrom",
     path: ["dateTo"],
   });
 
-// Only status, notes, and title are editable after creation. Snapshot fields
-// (hourlyRate, currency, discountPercent, totalHours, totalAmount, dateFrom,
-// dateTo) and the linked time-entry set are immutable; totals are never
-// recomputed by an update.
-export const updateInvoiceSchema = z
-  .object({
-    title: z.string().trim().min(1).max(255).optional(),
-    status: invoiceStatusSchema.optional(),
-    notes: z.string().max(5000).nullable().optional(),
-  })
-  .strict()
-  .refine(
-    (data) =>
-      data.title !== undefined ||
-      data.status !== undefined ||
-      data.notes !== undefined,
-    {
-      message: "At least one field must be provided",
-      path: [],
-    },
-  );
+export const updateInvoiceSchema = z.object(createInvoiceSchema.shape).partial().extend({
+  discountPercent: z.number().min(0).max(100).multipleOf(0.01).optional(),
+  status: invoiceStatusSchema.optional(),
+  projectId: z.uuid().nullable().optional(),
+  expectedRevision: z.number().int().nonnegative().optional(),
+}).strict().refine(isValidPaymentDates, { message: "Due date must be on or after the issue date", path: ["dueDate"] }).refine(data => Object.keys(data).some(key => key !== "expectedRevision"), "At least one field must be provided").refine(isValidInvoiceDateRange, {
+  message: "dateTo must be later than or equal to dateFrom", path: ["dateTo"],
+});
 
 // Preview of time entries that would be billed if an invoice is created
 // with the given project scope and date range. The query mirrors the
 // eligibility conditions used by createInvoice but performs no writes.
 export const eligibleEntriesQuerySchema = z
   .object({
+    invoiceId: z.uuid().optional(),
     projectId: z.uuid().optional(),
     dateFrom: dateSchema,
     dateTo: dateSchema,
@@ -215,6 +273,7 @@ export const invoiceStatsResponseSchema = z.object({
 export type InvoiceStatsResponse = z.infer<typeof invoiceStatsResponseSchema>;
 
 export const invoiceDefaultsResponseSchema = z.object({
+  billingProfile: invoiceBillingProfileSchema.nullable().optional(),
   currency: z.string().length(3).regex(/^[A-Za-z]{3}$/).nullable(),
   defaultHourlyRate: z.number().nonnegative().nullable(),
   timeRoundingStepMinutes: roundingStepMinutesSchema,
@@ -223,3 +282,32 @@ export const invoiceDefaultsResponseSchema = z.object({
 export type InvoiceDefaultsResponse = z.infer<
   typeof invoiceDefaultsResponseSchema
 >;
+export const createInvoiceGroupSchema = z.object({ name: z.string().trim().min(1).max(100) }).strict();
+export const invoiceGroupSchema = z.object({ id: z.uuid(), name: z.string(), count: z.number().int().nonnegative() });
+export const invoiceGroupsResponseSchema = z.object({
+  groups: z.array(invoiceGroupSchema), allCount: z.number().int().nonnegative(), ungroupedCount: z.number().int().nonnegative(),
+});
+export const moveInvoicesSchema = z.object({ invoiceIds: distinctEntryIds.refine(ids => ids.length > 0), groupId: z.uuid().nullable() }).strict();
+export const previewInvoiceSchema = z.object(createInvoiceSchema.shape).extend({ invoiceId: z.uuid().optional() }).strict().refine(isValidInvoiceDateRange);
+export const previewInvoiceResponseSchema = eligibleEntriesResponseSchema.pick({ count: true, entries: true, totalHours: true }).extend({
+  timeDisplayMode: invoiceTimeDisplayModeSchema,
+  subtotal: z.number().nonnegative(), discountAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), currency: z.string(),
+});
+export type InvoiceGroup = z.infer<typeof invoiceGroupSchema>;
+export type InvoiceGroupsResponse = z.infer<typeof invoiceGroupsResponseSchema>;
+export type CreateInvoiceGroupInput = z.infer<typeof createInvoiceGroupSchema>;
+export type MoveInvoicesInput = z.infer<typeof moveInvoicesSchema>;
+export type PreviewInvoiceInput = z.infer<typeof previewInvoiceSchema>;
+export type PreviewInvoiceResponse = z.infer<typeof previewInvoiceResponseSchema>;
+
+export const invoiceDocumentIncompleteErrorSchema = z.object({
+  code: z.literal("invoice_document_incomplete"),
+  message: z.string(),
+  details: z.object({ missingFields: z.array(z.enum(["sender", "recipient", "services", "payment"])).min(1) }),
+});
+export type InvoiceDocumentIncompleteError = z.infer<typeof invoiceDocumentIncompleteErrorSchema>;
+
+export const invoiceLogoInvalidErrorSchema = z.object({
+  code: z.literal("invoice_logo_invalid"),
+  message: z.string(),
+});

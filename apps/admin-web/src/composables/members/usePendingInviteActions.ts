@@ -7,6 +7,7 @@ import {
 } from '@/services/admin-members-client';
 
 interface UsePendingInviteActionsOptions {
+  getVisit?: () => number;
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminMembersClient, 'cancelInvite' | 'resendInvite'>;
   onError: (message: string, error: unknown, action: string) => void;
@@ -26,6 +27,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 export function usePendingInviteActions({
   accessToken,
+  getVisit = () => 0,
   client = adminMembersClient,
   onError,
   onSuccess,
@@ -44,30 +46,35 @@ export function usePendingInviteActions({
       return;
     }
 
+    const visit = getVisit();
     resendingInviteId.value = invite.id;
 
     try {
       await client.resendInvite(invite.id);
+      if (visit !== getVisit()) return;
       onSuccess(`Invitation resent to ${invite.email}.`);
       await refreshPendingInvites();
+      if (visit !== getVisit()) return;
     } catch (error) {
+      if (visit !== getVisit()) return;
       onError(
         getErrorMessage(error, 'Failed to resend invite'),
         error,
         'resend-invite',
       );
     } finally {
-      resendingInviteId.value = null;
+      if (visit === getVisit()) resendingInviteId.value = null;
     }
   }
 
   function handleCancelInvite(invite: WorkspaceInviteResponse): void {
+    const visit = getVisit();
     requireConfirmation(
       `${invite.email} will lose access to this invitation. This action cannot be undone.`,
       'Cancel invite?',
       'Cancel invite',
       async () => {
-        if (!accessToken.value) {
+        if (visit !== getVisit() || !accessToken.value) {
           return;
         }
 
@@ -75,15 +82,18 @@ export function usePendingInviteActions({
 
         try {
           await client.cancelInvite(invite.id);
+          if (visit !== getVisit()) return;
           await refreshPendingInvites();
+          if (visit !== getVisit()) return;
         } catch (error) {
+          if (visit !== getVisit()) return;
           onError(
             getErrorMessage(error, 'Failed to cancel invite'),
             error,
             'cancel-invite',
           );
         } finally {
-          cancelingInviteId.value = null;
+          if (visit === getVisit()) cancelingInviteId.value = null;
         }
       },
     );

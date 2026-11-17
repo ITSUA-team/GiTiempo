@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/vue-query';
+import { matchQuery, useQuery } from '@tanstack/vue-query';
 import { computed, toValue, watch, type MaybeRefOrGetter } from 'vue';
 
 import type {
@@ -31,12 +31,21 @@ export function useInvoicesData({
   query = {},
   scope,
 }: UseInvoicesDataOptions) {
-  const invoicesQuery = useQuery({
-    enabled: computed(() => toValue(enabled)),
-    queryFn: () => client.listInvoices(toValue(query)),
-    queryKey: computed(() =>
-      adminInvoicesKeys.list(toValue(scope), toValue(query)),
-    ),
+  const invoicesQuery = useQuery<InvoiceListResponse>(() => {
+    const listScope = toValue(scope);
+    const filters = toValue(query);
+    const canLoad = toValue(enabled);
+    return {
+      enabled: canLoad,
+      queryFn: () => client.listInvoices(filters),
+      queryKey: adminInvoicesKeys.list(listScope, filters),
+      placeholderData: (previous, previousQuery) => {
+        const groupKey = [...adminInvoicesKeys.all(listScope), 'list', { groupId: filters.groupId ?? null }];
+        return canLoad && previousQuery && matchQuery({ queryKey: groupKey }, previousQuery)
+          ? previous
+          : undefined;
+      },
+    };
   });
   const statsQuery = useQuery({
     enabled: computed(() => toValue(enabled)),
@@ -68,7 +77,8 @@ export function useInvoicesData({
     invoices: computed<InvoiceListResponse | undefined>(
       () => invoicesQuery.data.value,
     ),
-    invoicesLoading: computed(() => invoicesQuery.isLoading.value),
+    invoicesLoading: computed(() => invoicesQuery.isFetching.value),
+    placeholderRows: invoicesQuery.isPlaceholderData,
     loadError: computed(
       () => invoicesQuery.error.value ?? statsQuery.error.value,
     ),

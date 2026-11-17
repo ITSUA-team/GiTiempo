@@ -48,10 +48,7 @@ export function toInvoicesDatePickerRange(
     return null;
   }
 
-  return [
-    new Date(`${dateFrom}T00:00:00`),
-    new Date(`${dateTo}T00:00:00`),
-  ];
+  return [new Date(`${dateFrom}T00:00:00`), new Date(`${dateTo}T00:00:00`)];
 }
 
 // selectionMode="range" also emits bare dates and partial pairs mid-picker;
@@ -75,22 +72,22 @@ export function fromInvoicesDatePickerRange(
   };
 }
 
-const invoicePeriodFormatter = new Intl.DateTimeFormat('en-US', {
-  day: 'numeric',
+const invoicePeriodFormatter = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
   month: 'short',
+  year: 'numeric',
   timeZone: 'UTC',
 });
 
-// Date-only bounds are UTC midnight instants by definition, so rendering with
-// timeZone: 'UTC' keeps the calendar day stable on every client timezone.
-function formatInvoiceMonthDay(dateKey: string): string {
-  return invoicePeriodFormatter.format(new Date(`${dateKey}T00:00:00Z`));
-}
-
-/** 'Apr 1 – Apr 21' style period labels for invoice date bounds. */
-export function formatInvoicePeriod(
-  dateFrom: string,
-  dateTo: string,
-): string {
-  return `${formatInvoiceMonthDay(dateFrom)} – ${formatInvoiceMonthDay(dateTo)}`;
+export function formatInvoicePeriod(dateFrom: string, dateTo: string): string {
+  return invoicePeriodFormatter
+    .formatRangeToParts(
+      new Date(`${dateFrom}T00:00:00Z`),
+      new Date(`${dateTo}T00:00:00Z`),
+    )
+    .map(({ type, value }) => {
+      if (type === 'day') return value.padStart(2, '0');
+      return value.includes('–') ? '–' : value;
+    })
+    .join('');
 }

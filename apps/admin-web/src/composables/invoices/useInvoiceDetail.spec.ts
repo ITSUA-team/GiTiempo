@@ -40,6 +40,7 @@ function createTimeEntrySummary(
 
 function createInvoice(overrides: Partial<InvoiceResponse> = {}): InvoiceResponse {
   return {
+    timeDisplayMode: 'entries',
     createdAt: '2026-05-01T10:00:00.000Z',
     createdBy: userId,
     createdByName: 'Alex Admin',

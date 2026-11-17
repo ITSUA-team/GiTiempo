@@ -33,6 +33,9 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
   >();
   private readonly usersByUid = new Map<string, FirebaseUserIdentity>();
   private readonly deletedUserUids = new Set<string>();
+  private readonly providerLookupFailuresByUid = new Map<string, string>();
+  private readonly lateCreationUids = new Set<string>();
+  private readonly secondLookupFailuresByUid = new Map<string, string>();
 
   async verifyIdToken(idToken: string): Promise<DecodedFirebaseToken> {
     if (typeof idToken !== 'string' || !idToken.startsWith('test:')) {
@@ -270,6 +273,58 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
       (providers?.has('password') ?? true) ||
       providers?.has('google.com') === true
     );
+  }
+
+  async confirmUidAbsent(
+    uid: string,
+  ): Promise<{ absent: boolean; evidence: string }> {
+    const firstFailure = this.providerLookupFailuresByUid.get(uid);
+    if (firstFailure) {
+      return {
+        absent: false,
+        evidence: `provider-lookup-failed:${firstFailure}`,
+      };
+    }
+    if (this.usersByUid.has(uid)) {
+      return { absent: false, evidence: 'user-present' };
+    }
+    if (this.lateCreationUids.has(uid)) {
+      this.usersByUid.set(uid, {
+        uid,
+        email: '',
+        emailVerified: false,
+        disabled: false,
+      });
+    }
+    const secondFailure = this.secondLookupFailuresByUid.get(uid);
+    if (secondFailure) {
+      return {
+        absent: false,
+        evidence: `provider-lookup-failed-on-recheck:${secondFailure}`,
+      };
+    }
+    if (this.usersByUid.has(uid)) {
+      return { absent: false, evidence: 'user-present-after-recheck' };
+    }
+    return {
+      absent: true,
+      evidence: 'auth/user-not-found (confirmed by two consecutive lookups)',
+    };
+  }
+
+  /** Test helper for simulating an uncertain provider outage during absence confirmation. */
+  setProviderLookupFailure(uid: string, message: string): void {
+    this.providerLookupFailuresByUid.set(uid, message);
+  }
+
+  /** Test helper: a late provider creation appears between the two confirmation lookups. */
+  setLateProviderCreation(uid: string): void {
+    this.lateCreationUids.add(uid);
+  }
+
+  /** Test helper: the second confirmation lookup fails (transient outage). */
+  setSecondLookupFailure(uid: string, message: string): void {
+    this.secondLookupFailuresByUid.set(uid, message);
   }
 
   /** Test helper for provider-specific disconnect eligibility. */

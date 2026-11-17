@@ -1,0 +1,1274 @@
+{
+  "invoice-entries": {
+    "pages": 1,
+    "lines": [
+      {
+        "page": 1,
+        "text": "ITSUA INVOICE",
+        "x": 36.0,
+        "y": 38.58,
+        "right": 559.28,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          15.0,
+          21.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Invoice number Issued Due date Billing period",
+        "x": 36.0,
+        "y": 98.16,
+        "right": 487.1,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "INV-1 12 Nov 2026 30 Nov 2026 1 \u2013 30 Nov 2026",
+        "x": 36.0,
+        "y": 117.96,
+        "right": 511.77,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          10.5,
+          12.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "FROM BILL TO",
+        "x": 36.0,
+        "y": 149.77,
+        "right": 341.39,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "ITSUA Acme Ltd",
+        "x": 36.0,
+        "y": 166.83,
+        "right": 360.96,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          12.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Test billing address Test billing address",
+        "x": 36.0,
+        "y": 185.55,
+        "right": 395.94,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "billing@example.com accounts@example.com",
+        "x": 36.0,
+        "y": 202.27,
+        "right": 419.86,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Product design and development",
+        "x": 36.0,
+        "y": 232.59,
+        "right": 234.68,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          13.5
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task invoice acceptance \u00b7 November 2026",
+        "x": 36.0,
+        "y": 251.8,
+        "right": 223.5,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Service / work description Hours Rate Amount",
+        "x": 44.0,
+        "y": 285.35,
+        "right": 551.28,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Dashboard UX \u00b7 Individual work 10h 10.00 100.00 1,000.00",
+        "x": 44.0,
+        "y": 317.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Dashboard UX \u00b7 Individual work 7h 7.00 100.00 700.00",
+        "x": 44.0,
+        "y": 358.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Invoice editing \u00b7 Individual work 8h 8.00 100.00 800.00",
+        "x": 44.0,
+        "y": 399.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Subtotal \u00b7 25h 2,500.00 USD",
+        "x": 36.0,
+        "y": 447.02,
+        "right": 559.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Discount \u00b7 10% -250.00 USD",
+        "x": 36.0,
+        "y": 465.74,
+        "right": 559.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "TOTAL DUE 2,250.00 USD",
+        "x": 36.0,
+        "y": 491.46,
+        "right": 559.28,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          10.0,
+          18.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "HOW TO PAY",
+        "x": 36.0,
+        "y": 528.38,
+        "right": 88.58,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Bank transfer \u00b7 14 days",
+        "x": 36.0,
+        "y": 545.1,
+        "right": 137.57,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "ITSUA \u00b7 Test Bank",
+        "x": 36.0,
+        "y": 560.82,
+        "right": 114.84,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Account: DEMO-ACCOUNT",
+        "x": 36.0,
+        "y": 576.54,
+        "right": 154.33,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "SWIFT / BIC: DEMO-BIC",
+        "x": 36.0,
+        "y": 592.26,
+        "right": 140.45,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Include invoice reference",
+        "x": 36.0,
+        "y": 607.98,
+        "right": 146.64,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Notes",
+        "x": 36.0,
+        "y": 635.52,
+        "right": 59.94,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Thank you for your business.",
+        "x": 36.0,
+        "y": 650.24,
+        "right": 163.64,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "ITSUA \u00b7 billing@example.com Page 1 of 1",
+        "x": 36.0,
+        "y": 807.26,
+        "right": 559.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          8.0
+        ]
+      }
+    ]
+  },
+  "invoice-tasks": {
+    "pages": 1,
+    "lines": [
+      {
+        "page": 1,
+        "text": "ITSUA INVOICE",
+        "x": 36.0,
+        "y": 38.58,
+        "right": 559.28,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          15.0,
+          21.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Invoice number Issued Due date Billing period",
+        "x": 36.0,
+        "y": 98.16,
+        "right": 487.1,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "INV-1 12 Nov 2026 30 Nov 2026 1 \u2013 30 Nov 2026",
+        "x": 36.0,
+        "y": 117.96,
+        "right": 511.77,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          10.5,
+          12.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "FROM BILL TO",
+        "x": 36.0,
+        "y": 149.77,
+        "right": 341.39,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "ITSUA Acme Ltd",
+        "x": 36.0,
+        "y": 166.83,
+        "right": 360.96,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          12.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Test billing address Test billing address",
+        "x": 36.0,
+        "y": 185.55,
+        "right": 395.94,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "billing@example.com accounts@example.com",
+        "x": 36.0,
+        "y": 202.27,
+        "right": 419.86,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Product design and development",
+        "x": 36.0,
+        "y": 232.59,
+        "right": 234.68,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          13.5
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task invoice acceptance \u00b7 November 2026",
+        "x": 36.0,
+        "y": 251.8,
+        "right": 223.5,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Service / work description Hours Rate Amount",
+        "x": 44.0,
+        "y": 285.35,
+        "right": 551.28,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Dashboard UX 17.00 100.00 1,700.00",
+        "x": 44.0,
+        "y": 317.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Invoice editing 8.00 100.00 800.00",
+        "x": 44.0,
+        "y": 358.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Subtotal \u00b7 25h 2,500.00 USD",
+        "x": 36.0,
+        "y": 406.02,
+        "right": 559.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Discount \u00b7 10% -250.00 USD",
+        "x": 36.0,
+        "y": 424.74,
+        "right": 559.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "TOTAL DUE 2,250.00 USD",
+        "x": 36.0,
+        "y": 450.46,
+        "right": 559.28,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          10.0,
+          18.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "HOW TO PAY",
+        "x": 36.0,
+        "y": 487.38,
+        "right": 88.58,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Bank transfer \u00b7 14 days",
+        "x": 36.0,
+        "y": 504.1,
+        "right": 137.57,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "ITSUA \u00b7 Test Bank",
+        "x": 36.0,
+        "y": 519.82,
+        "right": 114.84,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Account: DEMO-ACCOUNT",
+        "x": 36.0,
+        "y": 535.54,
+        "right": 154.33,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "SWIFT / BIC: DEMO-BIC",
+        "x": 36.0,
+        "y": 551.26,
+        "right": 140.45,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Include invoice reference",
+        "x": 36.0,
+        "y": 566.98,
+        "right": 146.64,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Notes",
+        "x": 36.0,
+        "y": 594.52,
+        "right": 59.94,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Thank you for your business.",
+        "x": 36.0,
+        "y": 609.24,
+        "right": 163.64,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "ITSUA \u00b7 billing@example.com Page 1 of 1",
+        "x": 36.0,
+        "y": 807.26,
+        "right": 559.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          8.0
+        ]
+      }
+    ]
+  },
+  "invoice-tasks-long": {
+    "pages": 4,
+    "lines": [
+      {
+        "page": 1,
+        "text": "ITSUA INVOICE",
+        "x": 36.0,
+        "y": 38.58,
+        "right": 559.28,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          15.0,
+          21.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Invoice number Issued Billing period",
+        "x": 36.0,
+        "y": 98.16,
+        "right": 442.74,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "INV-3 12 Nov 2026 1 \u2013 31 Jan 2026",
+        "x": 36.0,
+        "y": 117.96,
+        "right": 466.21,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          10.5,
+          12.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "FROM BILL TO",
+        "x": 36.0,
+        "y": 149.77,
+        "right": 341.39,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "ITSUA Acme Ltd",
+        "x": 36.0,
+        "y": 166.83,
+        "right": 360.96,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          12.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Test billing address Test billing address",
+        "x": 36.0,
+        "y": 185.55,
+        "right": 395.94,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "billing@example.com accounts@example.com",
+        "x": 36.0,
+        "y": 202.27,
+        "right": 419.86,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Product design and development",
+        "x": 36.0,
+        "y": 232.59,
+        "right": 234.68,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          13.5
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task invoice acceptance \u00b7 January 2026",
+        "x": 36.0,
+        "y": 251.8,
+        "right": 213.21,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Service / work description Hours Rate Amount",
+        "x": 44.0,
+        "y": 285.35,
+        "right": 551.28,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 45 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 317.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 328.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 41 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 358.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 369.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 40 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 399.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 410.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 39 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 440.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 451.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 38 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 481.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 492.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 37 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 522.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 533.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 36 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 563.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 574.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 35 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 604.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 615.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 34 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 645.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 656.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 33 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 686.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 697.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 32 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 727.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 738.74,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "Task 31 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 768.02,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 1,
+        "text": "ITSUA \u00b7 billing@example.com Page 1 of 4",
+        "x": 36.0,
+        "y": 807.26,
+        "right": 559.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          8.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "Service / work description Hours Rate Amount",
+        "x": 44.0,
+        "y": 45.55,
+        "right": 551.28,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "Task 24 \u2014 Detailed product design, accessibility and 1.00 100.00 100.00",
+        "x": 44.0,
+        "y": 77.22,
+        "right": 551.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "implementation review for invoice presentation",
+        "x": 44.0,
+        "y": 88.94,
+        "right": 252.14,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "Subtotal \u00b7 45h 4,500.00 USD",
+        "x": 36.0,
+        "y": 148.66,
+        "right": 559.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "Discount \u00b7 10% -450.00 USD",
+        "x": 36.0,
+        "y": 167.38,
+        "right": 559.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "TOTAL DUE 4,050.00 USD",
+        "x": 36.0,
+        "y": 193.09,
+        "right": 559.28,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          10.0,
+          18.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "HOW TO PAY",
+        "x": 36.0,
+        "y": 230.02,
+        "right": 88.58,
+        "fonts": [
+          "BZZZZZ+Roboto-Medium"
+        ],
+        "sizes": [
+          9.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "Bank transfer \u00b7 14 days",
+        "x": 36.0,
+        "y": 246.73,
+        "right": 137.57,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "ITSUA \u00b7 Test Bank",
+        "x": 36.0,
+        "y": 262.45,
+        "right": 114.84,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "Account: DEMO-ACCOUNT",
+        "x": 36.0,
+        "y": 278.17,
+        "right": 154.33,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "SWIFT / BIC: DEMO-BIC",
+        "x": 36.0,
+        "y": 293.89,
+        "right": 140.45,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "Include invoice reference",
+        "x": 36.0,
+        "y": 309.61,
+        "right": 146.64,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          10.0
+        ]
+      },
+      {
+        "page": 4,
+        "text": "ITSUA \u00b7 billing@example.com Page 4 of 4",
+        "x": 36.0,
+        "y": 807.26,
+        "right": 559.28,
+        "fonts": [
+          "CZZZZZ+Roboto-Regular"
+        ],
+        "sizes": [
+          8.0
+        ]
+      }
+    ]
+  }
+}

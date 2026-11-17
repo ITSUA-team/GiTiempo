@@ -165,6 +165,12 @@ function rowNames(state: ReturnType<typeof useMembersTableState>): string[] {
 }
 
 describe('useMembersTableState', () => {
+  it('disables management when the current identity is unknown', () => {
+    const { state, currentUserId } = createState();
+    currentUserId.value = null;
+    expect(state.rows.value.every((row) => !row.canManage && !row.canAssignPm)).toBe(true);
+  });
+
   it('derives member table rows, action flags, filter options, and empty copy', () => {
     const { state } = createState();
 

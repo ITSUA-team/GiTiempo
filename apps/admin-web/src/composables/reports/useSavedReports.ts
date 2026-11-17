@@ -41,6 +41,7 @@ export function useSavedReports({
   const error = ref<string | null>(null);
   let collectionVersion = 0;
   let latestRefreshId = 0;
+  let generation = 0;
 
   const activePreset = computed(
     () => presets.value.find((preset) => preset.id === activeId.value) ?? null,
@@ -127,20 +128,35 @@ export function useSavedReports({
     );
   }
 
+  function reset(): void {
+    generation += 1;
+    collectionVersion += 1;
+    latestRefreshId += 1;
+    presets.value = [];
+    clearActive();
+    isLoading.value = false;
+    isSaving.value = false;
+    error.value = null;
+  }
+
   function recordLocalWrite(): void {
     collectionVersion += 1;
   }
 
-  async function withSave<T>(action: () => Promise<T>): Promise<T | null> {
+  async function withSave<T>(
+    action: (isCurrent: () => boolean) => Promise<T | null>,
+  ): Promise<T | null> {
+    const visit = generation;
+    const isCurrent = () => visit === generation;
     isSaving.value = true;
     error.value = null;
     try {
-      return await action();
+      return await action(isCurrent);
     } catch (caught) {
-      error.value = toMessage(caught);
+      if (isCurrent()) error.value = toMessage(caught);
       return null;
     } finally {
-      isSaving.value = false;
+      if (isCurrent()) isSaving.value = false;
     }
   }
 
@@ -149,10 +165,11 @@ export function useSavedReports({
     const id = activeId.value;
     if (id === null) return Promise.resolve(null);
 
-    return withSave(async () => {
+    return withSave(async (isCurrent) => {
       const saved = await client.updateSavedReport(id, {
         config: currentConfig.value,
       });
+      if (!isCurrent()) return null;
       recordLocalWrite();
       upsertPreset(saved);
       activeId.value = saved.id;
@@ -162,11 +179,12 @@ export function useSavedReports({
   }
 
   function saveAsNew(name: string): Promise<SavedReport | null> {
-    return withSave(async () => {
+    return withSave(async (isCurrent) => {
       const created = await client.createSavedReport({
         config: currentConfig.value,
         name,
       });
+      if (!isCurrent()) return null;
       recordLocalWrite();
       upsertPreset(created);
       activeId.value = created.id;
@@ -176,8 +194,9 @@ export function useSavedReports({
   }
 
   function rename(id: string, name: string): Promise<SavedReport | null> {
-    return withSave(async () => {
+    return withSave(async (isCurrent) => {
       const renamed = await client.updateSavedReport(id, { name });
+      if (!isCurrent()) return null;
       recordLocalWrite();
       upsertPreset(renamed);
       return renamed;
@@ -185,8 +204,9 @@ export function useSavedReports({
   }
 
   function remove(id: string): Promise<boolean | null> {
-    return withSave(async () => {
+    return withSave(async (isCurrent) => {
       await client.deleteSavedReport(id);
+      if (!isCurrent()) return null;
       recordLocalWrite();
       presets.value = presets.value.filter((preset) => preset.id !== id);
       if (activeId.value === id) clearActive();
@@ -205,6 +225,7 @@ export function useSavedReports({
     isSaving,
     presets,
     refresh,
+    reset,
     remove,
     rename,
     save,

@@ -10,8 +10,10 @@ import type { RegisterRequest } from '@gitiempo/shared';
 import { AuthService } from './auth.service';
 import { TokenService } from './token.service';
 import { FirebaseAdminAuthError } from './firebase-admin.interface';
+import { IdentityReservationCoordinator } from './identity-reservation-coordinator';
 import {
-  refreshTokens,
+  firebaseIdentityReservations as reservationsTable,
+  firebaseSubjectBindings as bindingsTable,
   users as usersTable,
   workspaceMembers,
   workspaceSettings,
@@ -25,6 +27,7 @@ const envMap: Record<string, string> = {
   JWT_REFRESH_TTL: '7d',
   JWT_ISSUER: 'gitiempo-api',
   JWT_AUDIENCE: 'gitiempo-clients',
+  AUTH_AGED_RESERVATION_THRESHOLD: '24h',
 };
 
 const fakeConfig = {
@@ -73,13 +76,21 @@ function createActiveRefreshTokenRow(overrides: Record<string, unknown> = {}) {
 }
 
 function createSelectMock(queue: unknown[][]) {
+  const consume = () => queue.shift() ?? [];
   const result = () => ({
     where: vi.fn(() => ({
-      limit: vi.fn().mockImplementation(async () => queue.shift() ?? []),
+      orderBy: vi.fn(() => ({
+        limit: vi.fn().mockImplementation(async () => consume()),
+        then: (
+          resolve: (rows: unknown[]) => unknown,
+          reject?: (reason: unknown) => unknown,
+        ) => Promise.resolve(consume()).then(resolve, reject),
+      })),
+      limit: vi.fn().mockImplementation(async () => consume()),
       then: (
         resolve: (rows: unknown[]) => unknown,
         reject?: (reason: unknown) => unknown,
-      ) => Promise.resolve(queue.shift() ?? []).then(resolve, reject),
+      ) => Promise.resolve(consume()).then(resolve, reject),
     })),
   });
   return vi.fn(() => ({
@@ -108,6 +119,30 @@ function createTransactionInsertMock(
           if (!Array.isArray(result)) throw result;
           return result;
         }),
+        onConflictDoNothing: vi.fn(async () => undefined),
+      };
+    }),
+  }));
+}
+
+interface RecordedUpdate {
+  table: unknown;
+  values: unknown;
+}
+
+function createTransactionUpdateMock(
+  recordedUpdates: RecordedUpdate[] = [],
+  returningQueue: unknown[][] = [],
+) {
+  return vi.fn((table: unknown) => ({
+    set: vi.fn((values: unknown) => {
+      recordedUpdates.push({ table, values });
+      return {
+        where: vi.fn(() => ({
+          returning: vi
+            .fn()
+            .mockImplementation(async () => returningQueue.shift() ?? []),
+        })),
       };
     }),
   }));
@@ -124,7 +159,10 @@ describe('AuthService', () => {
     verifyIdToken: ReturnType<typeof vi.fn>;
     assertActiveUserByUid: ReturnType<typeof vi.fn>;
     createEmailPasswordUser: ReturnType<typeof vi.fn>;
+    createUnclaimedUser: ReturnType<typeof vi.fn>;
+    getUserByUid: ReturnType<typeof vi.fn>;
     deleteUser: ReturnType<typeof vi.fn>;
+    confirmUidAbsent: ReturnType<typeof vi.fn>;
   };
   let repo: {
     create: ReturnType<typeof vi.fn>;
@@ -201,7 +239,12 @@ describe('AuthService', () => {
       verifyIdToken: vi.fn(),
       assertActiveUserByUid: vi.fn().mockResolvedValue(undefined),
       createEmailPasswordUser: vi.fn(),
+      createUnclaimedUser: vi.fn().mockResolvedValue(undefined),
+      getUserByUid: vi.fn(),
       deleteUser: vi.fn().mockResolvedValue(undefined),
+      confirmUidAbsent: vi
+        .fn()
+        .mockResolvedValue({ absent: true, evidence: 'auth/user-not-found' }),
     };
     repo = {
       create: vi.fn(async (input) => ({
@@ -473,65 +516,84 @@ describe('AuthService', () => {
     });
   });
 
-  describe('createSessionForMember', () => {
-    it('issues a token pair for a resolved member', async () => {
-      const pair = await service.createSessionForMember(seedUserRow.id);
+  /** Three transactions: reservation, confirmation, and the session commit. */
+  function setupNewUserSocialProvision() {
+    const socialReservationRow = {
+      id: 'reservation-social-1',
+      firebaseUid: 'uid-social-1',
+      normalizedEmail: 'octo@example.com',
+      purpose: 'github-signin',
+      state: 'reserved',
+    };
+    const userRow = {
+      id: 'user-social-1',
+      firebaseUid: 'uid-social-1',
+      email: 'octo@example.com',
+      displayName: 'octocat',
+      avatarUrl: 'https://avatars/123.png',
+    };
+    const workspaceRow = { id: 'workspace-social-1', name: 'Workspace' };
+    const membershipRow = {
+      id: 'membership-social-1',
+      userId: 'user-social-1',
+      workspaceId: 'workspace-social-1',
+      role: 'admin',
+    };
+    const recordedInserts: RecordedInsert[] = [];
+    const reserveTx = {
+      execute: vi.fn().mockResolvedValue(undefined),
+      select: createSelectMock([[]]),
+      insert: createTransactionInsertMock(
+        [[socialReservationRow]],
+        recordedInserts,
+      ),
+    };
+    const confirmTx = {
+      execute: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn(() => ({
+        set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+      })),
+    };
+    const tx = {
+      execute: vi.fn().mockResolvedValue(undefined),
+      select: createSelectMock([[], [], [], []]),
+      insert: createTransactionInsertMock(
+        [[userRow], [workspaceRow], [membershipRow]],
+        recordedInserts,
+      ),
+      update: vi.fn(() => ({
+        set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+      })),
+      delete: vi.fn(() => ({
+        where: vi.fn().mockResolvedValue(undefined),
+      })),
+    };
+    const transactions = [reserveTx, confirmTx, tx];
+    db.select = createSelectMock([[], [], []]);
+    db.transaction.mockImplementation(async (callback) =>
+      callback(transactions.shift()!),
+    );
+    members.resolveActiveMembershipForUser.mockResolvedValueOnce(null);
+    return { tx, recordedInserts, userRow, workspaceRow, membershipRow };
+  }
 
-      expect(users.findRowById).toHaveBeenCalledWith(seedUserRow.id);
-      expect(repo.create).toHaveBeenCalled();
-      expect(pair.accessToken).toBeTruthy();
-      expect(pair.refreshToken).toBeTruthy();
-      expect(pair.accessTokenExpiresIn).toBeGreaterThan(0);
-    });
-
-    it('rejects a member that no longer exists and skips membership', async () => {
-      users.findRowById.mockResolvedValueOnce(null);
-
-      await expect(
-        service.createSessionForMember('gone'),
-      ).rejects.toBeInstanceOf(UnauthorizedException);
-      expect(members.resolveActiveMembershipForUser).not.toHaveBeenCalled();
-      expect(repo.create).not.toHaveBeenCalled();
-    });
-
-    it('rejects a member whose membership was revoked after resolution', async () => {
-      members.resolveActiveMembershipForUser.mockResolvedValueOnce(null);
-
-      await expect(
-        service.createSessionForMember(seedUserRow.id),
-      ).rejects.toBeInstanceOf(UnauthorizedException);
-      expect(repo.create).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('register', () => {
-    it('creates the Firebase identity, workspace owner session, and token pair', async () => {
-      db.select = createSelectMock([[]]);
-      const txSelect = createSelectMock([
-        [],
-        [],
+  /** Register transactions: reservation, then the Firebase + session commit. */
+  function setupRegisterHappyPath() {
+    const reservationRow = {
+      id: 'reservation-1',
+      firebaseUid: 'firebase-register-1',
+      normalizedEmail: 'owner@example.com',
+      purpose: 'registration',
+      state: 'reserved',
+    };
+    db.select = createSelectMock([[]]);
+    const recordedInserts: RecordedInsert[] = [];
+    const tx = {
+      execute: vi.fn().mockResolvedValue(undefined),
+      select: createSelectMock([[], [], [reservationRow], []]),
+      insert: createTransactionInsertMock(
         [
-          {
-            id: 'reservation-1',
-            firebaseUid: 'firebase-register-1',
-            normalizedEmail: 'owner@example.com',
-            purpose: 'registration',
-            state: 'reserved',
-          },
-        ],
-        [],
-      ]);
-      const recordedInserts: RecordedInsert[] = [];
-      const txInsert = createTransactionInsertMock(
-        [
-          [
-            {
-              id: 'reservation-1',
-              firebaseUid: 'firebase-register-1',
-              normalizedEmail: 'owner@example.com',
-              state: 'reserved',
-            },
-          ],
+          [reservationRow],
           [
             {
               id: 'user-register-1',
@@ -555,21 +617,244 @@ describe('AuthService', () => {
           ],
         ],
         recordedInserts,
-      );
+      ),
+      update: vi.fn(() => ({
+        set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+      })),
+      delete: vi.fn(() => ({
+        where: vi.fn().mockResolvedValue(undefined),
+      })),
+    };
+    db.transaction.mockImplementation(async (callback) => callback(tx));
+    firebase.createEmailPasswordUser.mockResolvedValueOnce({
+      uid: 'firebase-register-1',
+      email: 'owner@example.com',
+      displayName: 'Owner Person',
+    });
+    return { tx, recordedInserts };
+  }
+
+  describe('provisionSocialSession', () => {
+    /** Single session transaction against an existing email-matched user. */
+    function setupExistingUserSocialProvision(
+      avatarSource: 'provider' | 'user',
+    ) {
+      const existingRow = {
+        id: 'user-existing-1',
+        firebaseUid: 'uid-existing-1',
+        email: 'known@example.com',
+        displayName: 'Old Name',
+        avatarUrl: 'https://old/avatar.png',
+        avatarSource,
+      };
+      const membershipRow = {
+        id: 'membership-existing-1',
+        workspaceId: 'workspace-existing-1',
+        role: 'admin',
+      };
+      const recordedInserts: RecordedInsert[] = [];
+      const recordedUpdates: RecordedUpdate[] = [];
+      users.findRowById.mockResolvedValue(existingRow);
       const tx = {
         execute: vi.fn().mockResolvedValue(undefined),
-        insert: txInsert,
-        select: txSelect,
+        select: createSelectMock([
+          [existingRow],
+          [existingRow],
+          [],
+          [existingRow],
+          [membershipRow],
+        ]),
+        insert: createTransactionInsertMock([], recordedInserts),
+        update: createTransactionUpdateMock(recordedUpdates, [[existingRow]]),
+      };
+      db.select = createSelectMock([[existingRow]]);
+      db.transaction.mockImplementation(async (callback) => callback(tx));
+      firebase.getUserByUid.mockResolvedValue({
+        disabled: false,
+        emailVerified: true,
+        email: 'known@example.com',
+      });
+      return { recordedInserts, recordedUpdates };
+    }
+
+    it('normalizes GitHub name/picture aliases into a new user profile', async () => {
+      const { tx, recordedInserts } = setupNewUserSocialProvision();
+
+      const pair = await service.provisionSocialSession({
+        provider: 'github',
+        email: 'octo@example.com',
+        name: 'octocat',
+        picture: 'https://avatars/123.png',
+      });
+
+      expect(firebase.createUnclaimedUser).toHaveBeenCalledWith({
+        uid: 'uid-social-1',
+        email: 'octo@example.com',
+      });
+      expect(firebase.assertActiveUserByUid).toHaveBeenCalledWith(
+        'uid-social-1',
+        'octo@example.com',
+        undefined,
+      );
+      expect(recordedInserts.map(({ table }) => table)).toEqual([
+        reservationsTable,
+        usersTable,
+        bindingsTable,
+        workspaces,
+        workspaceSettings,
+        workspaceMembers,
+      ]);
+      expect(recordedInserts[1]?.values).toMatchObject({
+        email: 'octo@example.com',
+        firebaseUid: 'uid-social-1',
+        displayName: 'octocat',
+        avatarUrl: 'https://avatars/123.png',
+      });
+      expect(recordedInserts[2]?.values).toMatchObject({
+        firebaseUid: 'uid-social-1',
+        userId: 'user-social-1',
+        providerId: 'github',
+        verifiedEmail: 'octo@example.com',
+      });
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-social-1',
+          workspaceMemberId: 'membership-social-1',
+          workspaceId: 'workspace-social-1',
+          familyId: expect.any(String),
+          tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+          expiresAt: expect.any(Date),
+        }),
+        tx,
+      );
+      expect(pair.refreshToken.length).toBeGreaterThan(20);
+
+      const payload = tokens.verifyAccess(pair.accessToken);
+      expect(payload.sub).toBe('user-social-1');
+      expect(payload.firebaseUid).toBe('uid-social-1');
+      expect(payload.workspaceId).toBe('workspace-social-1');
+      expect(payload.role).toBe('admin');
+    });
+
+    it('passes canonical Google profile fields through without a reservation', async () => {
+      const recordedInserts: RecordedInsert[] = [];
+      const tx = {
+        execute: vi.fn().mockResolvedValue(undefined),
+        select: createSelectMock([[], [], [], []]),
+        insert: createTransactionInsertMock(
+          [
+            [
+              {
+                id: 'user-google-1',
+                firebaseUid: 'google-uid-1',
+                email: 'gperson@example.com',
+                displayName: 'G Person',
+                avatarUrl: 'https://google/a.png',
+              },
+            ],
+            [{ id: 'workspace-google-1', name: 'Workspace' }],
+            [
+              {
+                id: 'membership-google-1',
+                workspaceId: 'workspace-google-1',
+                role: 'admin',
+              },
+            ],
+          ],
+          recordedInserts,
+        ),
         update: vi.fn(() => ({
           set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
         })),
       };
+      db.select = createSelectMock([[], []]);
       db.transaction.mockImplementation(async (callback) => callback(tx));
-      firebase.createEmailPasswordUser.mockResolvedValueOnce({
-        uid: 'firebase-register-1',
-        email: 'owner@example.com',
-        displayName: 'Owner Person',
+
+      await service.provisionSocialSession({
+        provider: 'google',
+        email: 'gperson@example.com',
+        displayName: 'G Person',
+        avatarUrl: 'https://google/a.png',
+        firebaseUid: 'google-uid-1',
+        googleSubject: 'google-subject-1',
       });
+
+      expect(firebase.assertActiveUserByUid).toHaveBeenCalledWith(
+        'google-uid-1',
+        'gperson@example.com',
+        'google-subject-1',
+      );
+      expect(firebase.createUnclaimedUser).not.toHaveBeenCalled();
+      expect(recordedInserts[0]?.table).toBe(usersTable);
+      expect(recordedInserts[0]?.values).toMatchObject({
+        email: 'gperson@example.com',
+        firebaseUid: 'google-uid-1',
+        displayName: 'G Person',
+        avatarUrl: 'https://google/a.png',
+      });
+    });
+
+    it('keeps a provider-owned avatar when no picture is supplied', async () => {
+      const { recordedUpdates } = setupExistingUserSocialProvision('provider');
+
+      await service.provisionSocialSession({
+        provider: 'github',
+        userId: 'user-existing-1',
+        verifiedEmails: ['known@example.com'],
+        name: 'New Name',
+      });
+
+      expect(recordedUpdates[0]?.table).toBe(usersTable);
+      expect(recordedUpdates[0]?.values).toMatchObject({
+        email: 'known@example.com',
+        displayName: 'New Name',
+        avatarUrl: 'https://old/avatar.png',
+        updatedAt: expect.any(Date),
+      });
+      expect(recordedUpdates[1]?.table).toBe(reservationsTable);
+      expect(recordedUpdates[1]?.values).toMatchObject({
+        state: 'bound',
+        userId: 'user-existing-1',
+      });
+    });
+
+    it('refreshes a provider-owned avatar from the social picture', async () => {
+      const { recordedUpdates } = setupExistingUserSocialProvision('provider');
+
+      await service.provisionSocialSession({
+        provider: 'github',
+        userId: 'user-existing-1',
+        verifiedEmails: ['known@example.com'],
+        picture: 'https://new/avatar.png',
+      });
+
+      expect(recordedUpdates[0]?.values).toMatchObject({
+        displayName: 'Old Name',
+        avatarUrl: 'https://new/avatar.png',
+      });
+    });
+
+    it('preserves a user-owned avatar even when the provider supplies a picture', async () => {
+      const { recordedUpdates } = setupExistingUserSocialProvision('user');
+
+      await service.provisionSocialSession({
+        provider: 'github',
+        userId: 'user-existing-1',
+        verifiedEmails: ['known@example.com'],
+        name: 'New Name',
+        picture: 'https://new/avatar.png',
+      });
+
+      expect(recordedUpdates[0]?.values).toMatchObject({
+        displayName: 'New Name',
+        avatarUrl: 'https://old/avatar.png',
+      });
+    });
+  });
+
+  describe('register', () => {
+    it('creates the Firebase identity, workspace owner session, and token pair', async () => {
+      const { tx, recordedInserts } = setupRegisterHappyPath();
 
       const pair = await service.register(registerInput);
 
@@ -587,7 +872,6 @@ describe('AuthService', () => {
         workspaces,
         workspaceSettings,
         workspaceMembers,
-        refreshTokens,
       ]);
       expect(recordedInserts[1]?.values).toMatchObject({
         avatarUrl: null,
@@ -606,14 +890,18 @@ describe('AuthService', () => {
         userId: 'user-register-1',
         workspaceId: 'workspace-register-1',
       });
-      expect(recordedInserts[5]?.values).toMatchObject({
-        expiresAt: expect.any(Date),
-        familyId: expect.any(String),
-        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
-        userId: 'user-register-1',
-        workspaceMemberId: 'membership-register-1',
-        workspaceId: 'workspace-register-1',
-      });
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-register-1',
+          workspaceMemberId: 'membership-register-1',
+          workspaceId: 'workspace-register-1',
+          familyId: expect.any(String),
+          tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+          expiresAt: expect.any(Date),
+        }),
+        tx,
+      );
+      expect(repo.create).toHaveBeenCalledOnce();
       expect(firebase.deleteUser).not.toHaveBeenCalled();
       expect(pair.refreshToken.length).toBeGreaterThan(20);
 
@@ -852,6 +1140,14 @@ describe('AuthService', () => {
             name: 'Acme Studio',
           },
         ],
+        [
+          {
+            id: 'membership-register-1',
+            role: 'admin',
+            userId: 'user-register-1',
+            workspaceId: 'workspace-register-1',
+          },
+        ],
       ]);
       const tx = {
         execute: vi.fn().mockResolvedValue(undefined),
@@ -944,19 +1240,11 @@ describe('AuthService', () => {
           delete: vi.fn(),
         }),
       );
+      const { reservations } = service as unknown as {
+        reservations: IdentityReservationCoordinator;
+      };
 
-      const compensated = await (
-        service as unknown as {
-          compensateKnownRegistrationFailure(
-            reservation: {
-              id: string;
-              firebaseUid: string;
-              normalizedEmail: string;
-            },
-            firebaseUid: string,
-          ): Promise<boolean>;
-        }
-      ).compensateKnownRegistrationFailure(
+      const compensated = await reservations.compensateKnownRegistrationFailure(
         reservation,
         reservation.firebaseUid,
       );
@@ -980,19 +1268,11 @@ describe('AuthService', () => {
           delete: vi.fn(),
         }),
       );
+      const { reservations } = service as unknown as {
+        reservations: IdentityReservationCoordinator;
+      };
 
-      const compensated = await (
-        service as unknown as {
-          compensateKnownRegistrationFailure(
-            reservation: {
-              id: string;
-              firebaseUid: string;
-              normalizedEmail: string;
-            },
-            firebaseUid: string,
-          ): Promise<boolean>;
-        }
-      ).compensateKnownRegistrationFailure(
+      const compensated = await reservations.compensateKnownRegistrationFailure(
         reservation,
         reservation.firebaseUid,
       );
@@ -1041,6 +1321,156 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(UnauthorizedException);
       expect(txInsert).not.toHaveBeenCalled();
       expect(repo.create).not.toHaveBeenCalled();
+    });
+
+    it('does not recover a resolved registration', async () => {
+      const reservation = {
+        id: 'reservation-1',
+        firebaseUid: 'firebase-register-1',
+        normalizedEmail: 'owner@example.com',
+        purpose: 'registration',
+        state: 'resolved',
+        registrationDisplayName: 'Owner Person',
+        registrationWorkspaceName: 'Acme Studio',
+        registrationOwnerAcknowledgement: true,
+      };
+      db.select = createSelectMock([[reservation]]);
+
+      const result = await (
+        service as unknown as {
+          recoverPendingRegistration(input: {
+            uid: string;
+            email: string;
+          }): Promise<unknown>;
+        }
+      ).recoverPendingRegistration({
+        uid: reservation.firebaseUid,
+        email: reservation.normalizedEmail,
+      });
+
+      expect(result).toBeNull();
+      expect(firebase.assertActiveUserByUid).not.toHaveBeenCalled();
+      expect(repo.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('identity reservation coordination', () => {
+    function reservations() {
+      return (
+        service as unknown as {
+          reservations: IdentityReservationCoordinator;
+        }
+      ).reservations;
+    }
+
+    it('locks register transactions with email before uid keys on the caller tx', async () => {
+      setupRegisterHappyPath();
+      const locking = vi.spyOn(reservations(), 'lockIdentityReservationKeys');
+      const findByUid = vi.spyOn(reservations(), 'findReservationByUid');
+
+      await service.register(registerInput);
+
+      expect(locking.mock.calls.map(([, keys]) => keys)).toEqual([
+        ['email:owner@example.com'],
+        ['email:owner@example.com', 'uid:firebase-register-1'],
+      ]);
+      const mainTx = locking.mock.calls[1]![0];
+      expect(findByUid).toHaveBeenCalledWith('firebase-register-1', mainTx);
+    });
+
+    it('locks recovery with email before uid and passes the caller tx through', async () => {
+      const reservationRow = {
+        id: 'reservation-1',
+        firebaseUid: 'firebase-register-1',
+        normalizedEmail: 'owner@example.com',
+        purpose: 'registration',
+        state: 'confirmed',
+        registrationDisplayName: 'Owner Person',
+        registrationWorkspaceName: 'Acme Studio',
+        registrationOwnerAcknowledgement: true,
+      };
+      db.select = createSelectMock([[reservationRow]]);
+      const tx = {
+        execute: vi.fn().mockResolvedValue(undefined),
+        select: createSelectMock([[reservationRow], []]),
+        insert: createTransactionInsertMock([
+          [
+            {
+              id: 'user-recovered-1',
+              firebaseUid: 'firebase-register-1',
+              email: 'owner@example.com',
+            },
+          ],
+          [{ id: 'workspace-recovered-1', name: 'Acme Studio' }],
+          [
+            {
+              id: 'membership-recovered-1',
+              workspaceId: 'workspace-recovered-1',
+              role: 'admin',
+            },
+          ],
+        ]),
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
+        })),
+      };
+      db.transaction.mockImplementation(async (callback) => callback(tx));
+      firebase.assertActiveUserByUid.mockResolvedValue(undefined);
+      const locking = vi.spyOn(reservations(), 'lockIdentityReservationKeys');
+      const findByUid = vi.spyOn(reservations(), 'findReservationByUid');
+
+      await (
+        service as unknown as {
+          recoverPendingRegistration(input: {
+            uid: string;
+            email: string;
+          }): Promise<unknown>;
+        }
+      ).recoverPendingRegistration({
+        uid: 'firebase-register-1',
+        email: 'owner@example.com',
+      });
+
+      expect(locking).toHaveBeenCalledTimes(1);
+      expect(locking.mock.calls[0]![1]).toEqual([
+        'email:owner@example.com',
+        'uid:firebase-register-1',
+      ]);
+      const lockedTx = locking.mock.calls[0]![0];
+      expect(findByUid).toHaveBeenNthCalledWith(1, 'firebase-register-1');
+      expect(findByUid).toHaveBeenNthCalledWith(
+        2,
+        'firebase-register-1',
+        lockedTx,
+      );
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-recovered-1' }),
+        lockedTx,
+      );
+    });
+
+    it('provisions social sessions with email before uid keys on the caller tx', async () => {
+      const { tx } = setupNewUserSocialProvision();
+      const locking = vi.spyOn(reservations(), 'lockIdentityReservationKeys');
+      const rejectPending = vi.spyOn(
+        reservations(),
+        'rejectPendingRegistrationReservation',
+      );
+
+      await service.provisionSocialSession({
+        provider: 'github',
+        email: 'octo@example.com',
+        name: 'octocat',
+        picture: 'https://avatars/123.png',
+      });
+
+      expect(locking.mock.calls.map(([, keys]) => keys)).toEqual([
+        ['email:octo@example.com'],
+        ['email:octo@example.com', 'uid:uid-social-1'],
+      ]);
+      expect(rejectPending).toHaveBeenCalledTimes(1);
+      expect(rejectPending.mock.calls[0]![0]).toBe(tx);
+      expect(locking.mock.calls[1]![0]).toBe(tx);
     });
   });
 
@@ -1480,6 +1910,161 @@ describe('AuthService', () => {
         ),
       ).rejects.toBeInstanceOf(UnauthorizedException);
       expect(repo.rotateIfActive).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('aged unbound registration reservations', () => {
+    const agedRow = {
+      id: 'reservation-aged',
+      normalizedEmail: 'stranded@example.com',
+      firebaseUid: 'firebase-aged-1',
+      purpose: 'registration',
+      state: 'reserved',
+      createdAt: new Date(Date.now() - 30 * 3_600_000),
+      registrationDisplayName: 'Stranded Owner',
+      registrationWorkspaceName: 'Acme',
+    };
+
+    it('surfaces aged reservations through a read-only query', async () => {
+      db.select = createSelectMock([[agedRow]]);
+
+      const aged = await service.listAgedUnboundRegistrationReservations();
+
+      expect(aged).toEqual([agedRow]);
+      expect(db.select).toHaveBeenCalledTimes(1);
+      expect(db.transaction).not.toHaveBeenCalled();
+    });
+
+    it('warns with a redacted payload per aged reservation without mutating state', async () => {
+      db.select = createSelectMock([[agedRow]]);
+      const loggerWarn = vi.spyOn(service['logger'], 'warn');
+
+      service.reportAgedUnboundRegistrationReservations(
+        await service.listAgedUnboundRegistrationReservations(),
+      );
+
+      expect(loggerWarn).toHaveBeenCalledTimes(1);
+      const payload = loggerWarn.mock.calls[0]![0] as Record<string, unknown>;
+      expect(Object.keys(payload).sort()).toEqual([
+        'ageMs',
+        'event',
+        'firebaseUid',
+        'normalizedEmail',
+        'reservationId',
+      ]);
+      expect(payload).toMatchObject({
+        event: 'auth.identity.aged_unbound_reservation',
+        reservationId: 'reservation-aged',
+        normalizedEmail: 'stranded@example.com',
+        firebaseUid: 'firebase-aged-1',
+        ageMs: expect.any(Number),
+      });
+      const expectedAgeMs = Date.now() - agedRow.createdAt.getTime();
+      expect(payload.ageMs as number).toBeGreaterThanOrEqual(
+        expectedAgeMs - 1_000,
+      );
+      expect(payload.ageMs as number).toBeLessThanOrEqual(
+        expectedAgeMs + 5_000,
+      );
+      expect(db.transaction).not.toHaveBeenCalled();
+      loggerWarn.mockRestore();
+    });
+  });
+
+  describe('operator recovery', () => {
+    function reservationsCoordinator() {
+      return (
+        service as unknown as {
+          reservations: IdentityReservationCoordinator;
+        }
+      ).reservations;
+    }
+
+    it('delegates operator resolution to the coordinator with the operator input', async () => {
+      const resolve = vi
+        .spyOn(
+          reservationsCoordinator(),
+          'resolveConclusivelyAbandonedRegistration',
+        )
+        .mockResolvedValue(undefined);
+      const input = {
+        reservationId: 'reservation-1',
+        operatorDecision: 'resolve-abandoned',
+        operatorIdentity: 'ops@example.com',
+      };
+
+      await service.resolveConclusivelyAbandonedRegistration(input);
+
+      expect(resolve).toHaveBeenCalledWith({
+        ...input,
+        minAgeMs: expect.any(Number),
+      });
+    });
+
+    it('still completes automated exact-UID recovery on the original foundation', async () => {
+      const reservationRow = {
+        id: 'reservation-1',
+        firebaseUid: 'firebase-register-1',
+        normalizedEmail: 'owner@example.com',
+        purpose: 'registration',
+        state: 'reserved',
+        registrationDisplayName: 'Owner Person',
+        registrationWorkspaceName: 'Acme Studio',
+        registrationOwnerAcknowledgement: true,
+      };
+      db.select = createSelectMock([[reservationRow]]);
+      const recordedUpdates: RecordedUpdate[] = [];
+      const tx = {
+        execute: vi.fn().mockResolvedValue(undefined),
+        select: createSelectMock([[reservationRow], []]),
+        insert: createTransactionInsertMock([
+          [
+            {
+              id: 'user-recovered-1',
+              firebaseUid: 'firebase-register-1',
+              email: 'owner@example.com',
+            },
+          ],
+          [{ id: 'workspace-recovered-1', name: 'Acme Studio' }],
+          [
+            {
+              id: 'membership-recovered-1',
+              workspaceId: 'workspace-recovered-1',
+              role: 'admin',
+            },
+          ],
+        ]),
+        update: createTransactionUpdateMock(recordedUpdates),
+      };
+      db.transaction.mockImplementation(async (callback) => callback(tx));
+      firebase.assertActiveUserByUid.mockResolvedValue(undefined);
+
+      const pair = (await (
+        service as unknown as {
+          recoverPendingRegistration(input: {
+            uid: string;
+            email: string;
+          }): Promise<unknown>;
+        }
+      ).recoverPendingRegistration({
+        uid: 'firebase-register-1',
+        email: 'owner@example.com',
+      })) as { accessToken: string; refreshToken: string };
+
+      expect(pair).toEqual(
+        expect.objectContaining({
+          accessToken: expect.any(String),
+          refreshToken: expect.any(String),
+        }),
+      );
+      expect(
+        recordedUpdates.map((u) => (u.values as { state?: string }).state),
+      ).toEqual(['confirmed', 'bound']);
+      expect(recordedUpdates[1]!.values).toMatchObject({
+        state: 'bound',
+        userId: 'user-recovered-1',
+      });
+      expect(firebase.confirmUidAbsent).not.toHaveBeenCalled();
     });
   });
 });

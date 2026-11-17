@@ -4,11 +4,13 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
   timestamp,
   uuid,
+  unique,
   varchar,
 } from 'drizzle-orm/pg-core';
 import type { InvoiceStatus } from '@gitiempo/shared';
@@ -26,11 +28,20 @@ export const invoices = pgTable(
     projectId: uuid('project_id').references(() => projects.id, {
       onDelete: 'set null',
     }),
+    reference: text('reference')
+      .notNull()
+      .default(sql`'INV-' || gen_random_uuid()::text`),
+    revision: integer('revision').notNull().default(1),
+    document: jsonb('document').$type<Record<string, unknown>>(),
     title: varchar('title', { length: 255 }).notNull(),
     status: varchar('status', { length: 20 })
       .$type<InvoiceStatus>()
       .default('draft')
       .notNull(),
+    issueDate: date('issue_date')
+      .notNull()
+      .default(sql`CURRENT_DATE`),
+    dueDate: date('due_date'),
     dateFrom: date('date_from').notNull(),
     dateTo: date('date_to').notNull(),
     hourlyRate: numeric('hourly_rate', {
@@ -73,11 +84,20 @@ export const invoices = pgTable(
       .notNull(),
   },
   (table) => [
+    unique('invoices_workspace_identity_key').on(table.id, table.workspaceId),
+    unique('invoices_workspace_reference_key').on(
+      table.workspaceId,
+      table.reference,
+    ),
     index('invoices_workspace_id_idx').on(table.workspaceId),
     index('invoices_workspace_status_idx').on(table.workspaceId, table.status),
     check(
       'invoices_status_check',
       sql`${table.status} IN ('draft', 'sent', 'paid')`,
+    ),
+    check(
+      'invoices_payment_dates_check',
+      sql`${table.dueDate} IS NULL OR ${table.dueDate} >= ${table.issueDate}`,
     ),
     check(
       'invoices_date_range_check',

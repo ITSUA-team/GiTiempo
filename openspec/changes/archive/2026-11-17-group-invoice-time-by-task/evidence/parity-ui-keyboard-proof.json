@@ -1,0 +1,45 @@
+{
+  "TabFromTimeEntry": {
+    "focused": "Task",
+    "modes": [
+      {
+        "label": "Time entry",
+        "pressed": "true"
+      },
+      {
+        "label": "Task",
+        "pressed": "false"
+      }
+    ]
+  },
+  "SpaceOnTask": [
+    {
+      "label": "Time entry",
+      "pressed": "false"
+    },
+    {
+      "label": "Task",
+      "pressed": "true"
+    }
+  ],
+  "SpaceOnSelectedTaskCannotClear": [
+    {
+      "label": "Time entry",
+      "pressed": "false"
+    },
+    {
+      "label": "Task",
+      "pressed": "true"
+    }
+  ],
+  "ShiftTabThenEnterOnTimeEntry": [
+    {
+      "label": "Time entry",
+      "pressed": "true"
+    },
+    {
+      "label": "Task",
+      "pressed": "false"
+    }
+  ]
+}

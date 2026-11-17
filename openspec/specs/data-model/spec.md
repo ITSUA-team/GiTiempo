@@ -576,14 +576,15 @@ Provider references SHALL distinguish user-supplied issue context from provider-
 
 ### Requirement: Invoice Records Are Stored
 
-The backend data model MUST persist workspace-owned invoice records with a title, status, billing date range, snapshot hourly rate, snapshot currency, optional discount, snapshot total hours, snapshot total amount, optional notes, the creating user, and timestamps.
+The backend data model MUST persist workspace-owned invoice records with a title, status, billing date range, snapshot hourly rate, snapshot currency, optional discount, snapshot total hours, snapshot total amount, a non-null snapshot rounding step, optional notes, the creating user, and timestamps.
 
 #### Scenario: Invoice row stores snapshot fields
 
 - **GIVEN** an invoice is created from a set of time entries
 - **WHEN** the backend persists the invoice row
-- **THEN** the row stores `workspace_id`, optional `project_id`, `title`, `status`, `date_from`, `date_to`, `hourly_rate`, `currency`, `discount_percent`, `total_hours`, `total_amount`, `notes`, `created_by`, and timestamps
+- **THEN** the row stores `workspace_id`, optional `project_id`, `title`, `status`, `date_from`, `date_to`, `hourly_rate`, `currency`, `discount_percent`, `total_hours`, `total_amount`, `rounding_step_minutes`, `notes`, `created_by`, and timestamps
 - **AND** `status` is one of `draft`, `sent`, or `paid`
+- **AND** `rounding_step_minutes` is a non-null integer between 1 and 60 inclusive with a column default of 1
 
 #### Scenario: Invoice status is constrained
 
@@ -597,6 +598,24 @@ The backend data model MUST persist workspace-owned invoice records with a title
 - **WHEN** the backend records the invoice
 - **THEN** the row references a non-null `workspace_id`
 - **AND** the workspace owns the invoice
+
+#### Scenario: Existing invoices are backfilled with 1
+
+- **GIVEN** existing invoice rows predate the `rounding_step_minutes` column
+- **WHEN** the rounding-step migration is applied
+- **THEN** existing invoice rows receive `rounding_step_minutes: 1`
+
+#### Scenario: Preserve the saved document
+
+- **GIVEN** two invoices are created concurrently in one workspace
+- **WHEN** they are persisted
+- **THEN** each has a distinct stable reference and its own saved party, optional logo, services, payment and line-item data sufficient to reproduce its saved charges independently of workspace defaults.
+
+#### Scenario: Migrate older invoices
+
+- **GIVEN** existing invoices predate references and party details
+- **WHEN** the migration runs
+- **THEN** each receives a unique stable reference while existing status, links, scope, amounts and audit history survive; unknown historical billing details remain unset instead of being fabricated from current defaults.
 
 ### Requirement: Time Entry Invoice Linkage Is Single
 
@@ -693,3 +712,108 @@ The system SHALL persist additional Firebase subjects only after verified provid
 - **WHEN** GitHub disconnect checks for a usable alternative login
 - **THEN** it checks the canonical and proven additional subjects against live Firebase availability
 - **AND** a disabled or deleted identity or historical sign-in alone cannot authorize disconnect
+
+### Requirement: Workspace Time Rounding Step Is Stored
+
+The backend data model MUST persist a non-null `time_rounding_step_minutes` column on workspace settings records that defines the workspace-wide per-entry rounding step for invoices. Rounding is always active, so the column MUST NOT be nullable and MUST default to 1.
+
+#### Scenario: Workspace settings row stores the rounding step
+
+- **GIVEN** a workspace settings row is stored
+- **WHEN** the row is represented in the core data model
+- **THEN** the row includes a non-null integer `time_rounding_step_minutes` column
+- **AND** the column defaults to 1
+- **AND** the value is constrained to integers between 1 and 60 inclusive
+
+#### Scenario: Existing workspace settings rows are backfilled with 1
+
+- **GIVEN** existing workspace settings rows predate the `time_rounding_step_minutes` column
+- **WHEN** the rounding-step migration is applied
+- **THEN** existing workspace settings rows receive `time_rounding_step_minutes: 1`
+
+### Requirement: Project Time Rounding Step Is Stored
+
+The backend data model MUST persist an optional `time_rounding_step_minutes` column on project records that overrides the workspace-wide per-entry rounding step for invoices scoped to that project. Null means the project inherits the workspace settings' `time_rounding_step_minutes`.
+
+#### Scenario: Project row stores rounding step
+
+- **GIVEN** a project row is stored
+- **WHEN** the row is represented in the core data model
+- **THEN** the row includes a nullable integer `time_rounding_step_minutes` column
+- **AND** the column accepts integers from 1 to 60 inclusive or null
+
+#### Scenario: Null project rounding step means inherit from workspace
+
+- **GIVEN** a project row has `time_rounding_step_minutes` set to null
+- **WHEN** the effective per-entry rounding step for that project is resolved
+- **THEN** the workspace settings' `time_rounding_step_minutes` value is used
+
+#### Scenario: New project defaults to null rounding step
+
+- **GIVEN** a project is created without an explicit `timeRoundingStepMinutes`
+- **WHEN** the backend stores the project row
+- **THEN** `time_rounding_step_minutes` is null
+
+#### Scenario: Existing projects are backfilled with null rounding step
+
+- **GIVEN** existing project rows predate the `time_rounding_step_minutes` column
+- **WHEN** the rounding-step migration is applied
+- **THEN** existing project rows receive `time_rounding_step_minutes: null`
+
+#### Scenario: Rounding step is constrained to valid range
+
+- **GIVEN** a project row is stored
+- **WHEN** the backend records the `time_rounding_step_minutes` value
+- **THEN** the value is either null or an integer between 1 and 60 inclusive
+
+### Requirement: Personal Invoice Organization Storage
+
+The data model MUST persist flat groups per workspace and owner and at most one membership per workspace, owner and invoice. Membership MUST reference a group of that owner in that workspace.
+
+#### Scenario: Delete a personal group
+
+- **GIVEN** two users independently organize the same invoice
+- **WHEN** one deletes their group
+- **THEN** only its membership rows are removed, preserving the invoice, billed entries and the other user’s organization.
+
+### Requirement: Workspace Invoice Billing Profile
+
+The system MUST store the workspace invoice reference prefix, sender identity and contact details, optional legal and logo information, and default payment method, terms, beneficiary, provider, account details and instructions.
+
+#### Scenario: Update workspace defaults
+
+- **GIVEN** an invoice captured a billing profile
+- **WHEN** an administrator changes its payment instructions or logo
+- **THEN** the new workspace profile persists independently and the earlier invoice retains its saved values.
+
+### Requirement: Invoice document dates
+
+Invoices SHALL persist a date-only issue date and an optional date-only due date separately from creation audit timestamps and billing periods.
+
+#### Scenario: Backfill existing invoices
+
+- **WHEN** the migration runs on pre-existing invoices
+- **THEN** the issue date is backfilled deterministically from the creation timestamp and workspace timezone
+- **AND** Due date remains null and invoice IDs, status, financial totals and entry associations are preserved
+
+### Requirement: Preserve the display mode and derive task rows from invoice snapshots
+
+Each invoice document SHALL retain its own mode. Saved task rows SHALL group included entry snapshots by task ID, sum their rounded durations and follow the order of each task’s first included entry. The label SHALL use its first nonblank included snapshot name in saved order, falling back to **Unnamed task**.
+
+#### Scenario: Same titles across tasks and people
+
+- **GIVEN** two task IDs have the same saved title and two people logged entries against the first task
+- **WHEN** the saved invoice is displayed by task
+- **THEN** it contains two task rows in first-included-entry order, with both people's included time combined under the first ID
+
+#### Scenario: Resolve missing or differing historical names
+
+- **GIVEN** the included snapshots for a single task have names null, Original and Revised in that order
+- **WHEN** the saved invoice details or PDF are generated after the live task is renamed or removed
+- **THEN** the task row is labeled Original and retains its saved duration
+- **AND** a different task whose snapshots lack a name appears independently as Unnamed task
+
+#### Scenario: Older invoice in its original layout
+
+- **WHEN** an invoice without a saved display mode is opened or exported
+- **THEN** it resolves to `entries` without rewriting the invoice and retains its original entries, billing snapshot and totals

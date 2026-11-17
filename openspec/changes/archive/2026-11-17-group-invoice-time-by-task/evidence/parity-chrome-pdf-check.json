@@ -1,0 +1,24 @@
+{
+  "tasks": {
+    "pages": 1,
+    "total": 2250,
+    "glyphsInsideA4": true,
+    "fonts": [
+      "Inter-Medium",
+      "Inter-Regular",
+      "Inter-SemiBold"
+    ],
+    "individualDescriptions": false
+  },
+  "entries": {
+    "pages": 1,
+    "total": 2250,
+    "glyphsInsideA4": true,
+    "fonts": [
+      "Inter-Medium",
+      "Inter-Regular",
+      "Inter-SemiBold"
+    ],
+    "individualDescriptions": true
+  }
+}

@@ -103,7 +103,7 @@ The admin Projects page MUST allow editing a project's visibility and member ass
 - **GIVEN** the Projects page renders project settings expansion content
 - **WHEN** the admin submits visibility or assigned-member changes
 - **THEN** the expansion form emits a typed save payload
-- **AND** the Projects page or focused composable performs auth checks, project update, assignment add/remove calls, success/error toast feedback, summary/row refresh, and row collapse
+- **AND** the Projects page or focused composable performs auth checks, project update, assignment add/remove calls, actionable error toast feedback, summary/row refresh, and row collapse without redundant success/info notifications
 - **AND** the expansion form itself does not import admin API clients, auth stores, toast helpers, or confirmation helpers
 
 ### Requirement: Admin Can Archive And Unarchive Projects
@@ -134,7 +134,7 @@ The Projects page MUST keep project archive and unarchive API orchestration outs
 - **GIVEN** the Projects page receives an `archive` intent from the page-owned inline settings content
 - **WHEN** the page handles the intent
 - **THEN** it opens the shared destructive confirmation dialog using the selected project's name
-- **AND** confirming updates the project with `{ isActive: false }`, refreshes project rows and summary stats on success, and shows success toast feedback
+- **AND** confirming updates the project with `{ isActive: false }`, refreshes project rows and summary stats on success without a redundant success/info notification
 - **AND** cancelling sends no project-update request
 - **AND** archive API errors are surfaced through error toast feedback without removing or changing the row in loaded data
 
@@ -149,8 +149,15 @@ The Projects page MUST keep project archive and unarchive API orchestration outs
 
 - **GIVEN** the Projects page receives an `unarchive` intent from the page-owned inline settings content
 - **WHEN** the page handles the intent
-- **THEN** it updates the project with `{ isActive: true }`, refreshes project rows and summary stats on success, and shows success toast feedback
+- **THEN** it updates the project with `{ isActive: true }`, refreshes project rows and summary stats on success without a redundant success/info notification
 - **AND** unarchive API errors are surfaced through error toast feedback without changing the row in loaded data
+
+#### Scenario: Unarchive explains an automatic rename
+
+- **GIVEN** another active project already holds the archived project's original name
+- **WHEN** unarchive succeeds with a different authoritative name
+- **THEN** the refreshed project displays its resulting name
+- **AND** retained feedback explains the rename and its cause
 
 ### Requirement: New Project Button Navigates To Add Project Route
 The admin Projects page MUST provide a table-header New Project action that navigates to the add-project route.
@@ -228,3 +235,69 @@ The admin Projects page MUST show the approved follow-up popup only after a proj
 - **AND** the project has no existing tasks and no existing time entries
 - **WHEN** the save flow settles
 - **THEN** the page does not show the project follow-up popup
+
+### Requirement: Admin Projects Page Edits Project Time Rounding Step
+
+The admin Projects page MUST expose the project time rounding step in the project settings form and the Add Project form so admins and PMs can configure the default per-entry rounding step for invoices scoped to the project. The value is a positive integer between 1 and 60, or null to inherit the workspace's `timeRoundingStepMinutes`; the Select MUST NOT offer a no-rounding option because rounding is always active.
+
+#### Scenario: Project settings form includes time rounding step
+
+- **GIVEN** the Projects page has loaded project rows
+- **AND** the workspace's `timeRoundingStepMinutes` is 5
+- **WHEN** an admin or PM opens a project's settings row
+- **THEN** the form includes a `Time rounding step (minutes)` Select control
+- **AND** the control offers `Inherit from workspace (5 min)` as the first option, followed by the presets 1, 5, 10, 15, 30, 60
+- **AND** the control is initialized from the project's `timeRoundingStepMinutes` value
+- **AND** the control offers no no-rounding option
+
+#### Scenario: Settings form shows the inherited effective value
+
+- **GIVEN** the Projects page has loaded project rows
+- **AND** the workspace's `timeRoundingStepMinutes` is 5
+- **AND** a project's `timeRoundingStepMinutes` is null
+- **WHEN** an admin or PM opens that project's settings row
+- **THEN** the `Time rounding step (minutes)` control shows `Inherit from workspace (5 min)` with N reflecting the current workspace default
+
+#### Scenario: Selecting inherit saves null
+
+- **GIVEN** an admin or PM selects `Inherit from workspace` in the `Time rounding step (minutes)` control
+- **WHEN** they save the project settings form
+- **THEN** the page sends `timeRoundingStepMinutes: null` in the project update request
+- **AND** the saved project inherits the workspace rounding step
+
+#### Scenario: Saving changed rounding step persists the project default
+
+- **GIVEN** an admin or PM changes `Time rounding step (minutes)` to an explicit preset (for example 15)
+- **WHEN** they save the project settings form
+- **THEN** the page sends the new `timeRoundingStepMinutes` in the project update request
+- **AND** the page refreshes project rows after save
+
+#### Scenario: Add Project form includes time rounding step
+
+- **WHEN** an admin or PM opens the Add Project page
+- **THEN** the form includes a `Time rounding step (minutes)` Select control defaulting to `Inherit from workspace`
+- **AND** submitting the form sends the selected `timeRoundingStepMinutes` (null when inheriting) with the project create request
+
+### Requirement: Projects follow the active workspace on the open page
+The Projects page SHALL refresh project rows, management counters and member choices when the active workspace changes, and SHALL expose only actions available in the current workspace.
+
+#### Scenario: Switch between workspaces with different projects
+- **GIVEN** an admin on Projects can access the page in workspaces A and B and has a project from A open for editing
+- **WHEN** the switch to B succeeds
+- **THEN** the page stays on Projects and immediately clears A's rows, counters, member selections and open project actions
+- **AND** the page automatically shows B's rows, counters and member options when they load, including empty results
+
+#### Scenario: An obsolete response arrives after switching back
+- **GIVEN** an earlier Projects request from A is pending when the admin switches to B and back to A
+- **WHEN** the earlier request completes after the current visit's request
+- **THEN** the displayed project data and load status still belong to the current visit
+
+#### Scenario: The destination data fails to load
+- **GIVEN** the switch to B succeeded and its project data is loading
+- **WHEN** the load fails
+- **THEN** Projects shows the failure for B and keeps A's data and actions unavailable
+
+#### Scenario: The workspace remains unchanged
+- **GIVEN** the admin is viewing projects in A
+- **WHEN** a switch is rejected or the session token refreshes within A
+- **THEN** the current project view and selection are preserved

@@ -2,7 +2,8 @@ import { createAppConfirm } from '@gitiempo/web-shared';
 import { useConfirm } from 'primevue/useconfirm';
 
 export function useConfirmation() {
-  const { confirmDestructive } = createAppConfirm(useConfirm());
+  const service = useConfirm();
+  const { confirmDestructive } = createAppConfirm(service);
 
   function requireConfirmation(
     message: string,
@@ -13,5 +14,5 @@ export function useConfirmation() {
     confirmDestructive({ accept, acceptLabel, header, message });
   }
 
-  return { requireConfirmation };
+  return { dismissConfirmation: () => service.close(), requireConfirmation };
 }

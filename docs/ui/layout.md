@@ -53,6 +53,8 @@ User SPA and Admin SPA share the same shell:
 | Tablet     | `640px - 1024px` | `sm:` / `md:`   | Sidebar uses fixed-width `w-20` icon rail |
 | Desktop    | `> 1024px`       | `lg:`           | Sidebar uses fixed-width `w-20` icon rail |
 
+The approved Admin invoice screens use a 60px desktop/tablet rail and 16px mobile content gutters.
+
 MVP is desktop-first. Mobile is required but less polished.
 
 ## Top-Bar Breadcrumb Pattern

@@ -68,6 +68,13 @@ export interface FirebaseAdminService {
   ): Promise<string>;
   /** Whether Firebase has a server-verified non-GitHub credential for this user. */
   hasUsableAlternativeLogin(firebaseUid: string): Promise<boolean>;
+  /**
+   * Deterministic absence confirmation for operator recovery. Only the
+   * provider's authoritative `user-not-found` result confirms absence; an
+   * existing user or any lookup failure leaves absence unconfirmed so the
+   * caller must retain the reservation.
+   */
+  confirmUidAbsent(uid: string): Promise<{ absent: boolean; evidence: string }>;
 }
 
 export const FIREBASE_ADMIN = Symbol('FIREBASE_ADMIN');

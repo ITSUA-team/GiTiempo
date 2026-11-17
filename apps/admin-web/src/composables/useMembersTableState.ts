@@ -203,8 +203,8 @@ export function useMembersTableState({
     return {
       avatarImage: member.avatarUrl ?? undefined,
       avatarLabel: member.avatarUrl ? undefined : getInitials(member),
-      canAssignPm: !self && member.role !== 'admin',
-      canManage: !self,
+      canAssignPm: unref(currentUserId) !== null && !self && member.role !== 'admin',
+      canManage: unref(currentUserId) !== null && !self,
       email: member.email,
       id: member.id,
       lastActiveLabel: formatLocalCalendarDate(member.lastActiveAt),

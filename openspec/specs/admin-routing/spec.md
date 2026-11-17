@@ -13,7 +13,7 @@ The `admin-web` SPA MUST define a stable route inventory for the documented admi
 #### Scenario: Admin page routes are defined
 
 - **WHEN** the admin-web router is configured
-- **THEN** it includes route entries for dashboard, reports, invoices, members, projects, and settings
+- **THEN** it includes route entries for dashboard, reports, invoices, invoice detail (`/invoices/:id`), members, projects, and settings
 - **AND** each route maps to the admin-web page set described in the project UI requirements
 
 #### Scenario: Route map stays aligned with project docs
@@ -31,7 +31,7 @@ The admin-web router SHALL load route view components other than the primary pub
 - **WHEN** the admin-web router module is initialized
 - **THEN** the public login route is available without a lazy route component loader
 - **AND** the authenticated admin shell route is available without a lazy route component loader
-- **AND** dashboard, reports, invoices, members, projects, add-project, settings, 403, and 404 route views are configured as lazy route components that resolve only when their route is visited
+- **AND** dashboard, reports, invoices, invoice detail, members, projects, add-project, settings, 403, and 404 route views are configured as lazy route components that resolve only when their route is visited
 
 #### Scenario: Admin lazy routes preserve navigation behavior
 
@@ -91,7 +91,7 @@ The `admin-web` router and authenticated shell MUST keep role restrictions consi
 #### Scenario: Product route role matrix is explicit
 
 - **WHEN** the admin-web router defines role-restricted product routes
-- **THEN** Dashboard, Reports, and Invoices allow workspace roles `admin` and `pm`
+- **THEN** Dashboard, Reports, Invoices, and Invoice Detail allow workspace roles `admin` and `pm`
 - **AND** Members, Projects, Add Project, and Settings allow only workspace role `admin`
 - **AND** route-level `/403` and authenticated not-found routes remain authenticated standalone routes without product-page role restrictions
 
@@ -110,7 +110,7 @@ The `admin-web` router and authenticated shell MUST keep role restrictions consi
 #### Scenario: PM users only see PM-safe admin routes
 
 - **WHEN** an authenticated PM uses admin-web
-- **THEN** the dashboard, reports, and invoices routes are available
+- **THEN** the dashboard, reports, invoices, and invoice detail routes are available
 - **AND** members, projects, add-project, and settings are denied until their PM-safe UI behavior is implemented
 - **AND** denied product routes redirect to the standalone 403 route
 - **AND** denied product routes are omitted from the authenticated shell navigation
@@ -197,3 +197,63 @@ The web products MUST provide visible entry points between `user-web` and `admin
 - **WHEN** either SPA updates its counterpart workspace URL configuration for local or deployed environments
 - **THEN** the shell and login cross-links for that SPA use the same documented source of truth
 - **AND** the implementation does not require duplicated inline localhost port values across multiple app views or layouts
+
+### Requirement: Invoice Routes Guarded By PM Invoice View Permission
+
+The `/invoices` and `/invoices/:id` routes SHALL be guarded by a `requiresInvoiceViewPermission` meta flag. A PM user with `canViewInvoices = false` navigating to either route is redirected to the forbidden page. Admins and PMs with `canViewInvoices = true` are allowed.
+
+#### Scenario: PM without permission redirected from invoices
+
+- **GIVEN** a PM with `canViewInvoices = false` is authenticated
+- **WHEN** the PM navigates to `/invoices`
+- **THEN** the router redirects to the forbidden route
+
+#### Scenario: PM without permission redirected from invoice detail
+
+- **GIVEN** a PM with `canViewInvoices = false` is authenticated
+- **WHEN** the PM navigates to `/invoices/:id`
+- **THEN** the router redirects to the forbidden route
+
+#### Scenario: PM with permission allowed to invoices
+
+- **GIVEN** a PM with `canViewInvoices = true` is authenticated
+- **WHEN** the PM navigates to `/invoices`
+- **THEN** the invoices route renders normally
+
+#### Scenario: Admin always allowed to invoices
+
+- **GIVEN** an admin is authenticated
+- **WHEN** the admin navigates to `/invoices`
+- **THEN** the invoices route renders normally regardless of `canViewInvoices` value
+
+### Requirement: Invoices Nav Item Hidden For PMs Without Permission
+
+The invoices navigation item SHALL be hidden from the sidebar and mobile bottom navigation for PM users with `canViewInvoices = false`. Admins and PMs with `canViewInvoices = true` see the nav item as usual.
+
+#### Scenario: PM without permission does not see invoices nav item
+
+- **GIVEN** a PM with `canViewInvoices = false` is authenticated
+- **WHEN** the admin shell renders the navigation
+- **THEN** no invoices navigation link is rendered in the sidebar or mobile bottom navigation
+
+#### Scenario: PM with permission sees invoices nav item
+
+- **GIVEN** a PM with `canViewInvoices = true` is authenticated
+- **WHEN** the admin shell renders the navigation
+- **THEN** the invoices navigation link is rendered in the sidebar and mobile bottom navigation
+
+### Requirement: Revoked Invoice Permission Closes Open Invoice Page
+
+When a PM's `canViewInvoices` permission is revoked while the invoices page is open, the page SHALL redirect away on the next authorization refresh. The authorization context refresh SHALL detect `canViewInvoices` changes and treat them as an authorization change. On window focus and workspace switch, if the current route requires invoice view permission and the PM no longer has it, the user is redirected to the forbidden page (on focus) or dashboard (on workspace switch).
+
+#### Scenario: PM on invoices page redirected to forbidden when permission revoked on focus
+
+- **GIVEN** a PM with `canViewInvoices = true` is on `/invoices`
+- **WHEN** the window regains focus and the authorization refresh detects `canViewInvoices` changed to `false`
+- **THEN** the router redirects to the forbidden route
+
+#### Scenario: PM on invoices page redirected to dashboard when switching to workspace without permission
+
+- **GIVEN** a PM with `canViewInvoices = true` is on `/invoices`
+- **WHEN** the PM switches to a workspace where `canViewInvoices = false`
+- **THEN** the router redirects to the dashboard route

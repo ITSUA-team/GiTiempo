@@ -144,26 +144,27 @@ describe("dashboard-overview-helpers", () => {
 
   it("maps recent entries to display rows with running duration labels", () => {
     const nowMs = Date.parse("2026-04-21T12:00:00.000Z");
+    const runningEntry = createEntry({
+      durationSeconds: null,
+      endedAt: null,
+      githubIssue: {
+        githubRepo: "octo/repo",
+        issueNumber: 185,
+      },
+      id: "entry-running",
+      startedAt: "2026-04-21T11:00:00.000Z",
+    });
+    const completedEntry = createEntry({ id: "entry-completed" });
     const rows = mapDashboardRecentEntryRows(
-      [
-        createEntry({
-          durationSeconds: null,
-          endedAt: null,
-          githubIssue: {
-            githubRepo: "octo/repo",
-            issueNumber: 185,
-          },
-          id: "entry-running",
-          startedAt: "2026-04-21T11:00:00.000Z",
-        }),
-        createEntry({ id: "entry-completed" }),
-      ],
+      [runningEntry, completedEntry],
       nowMs,
     );
 
     expect(rows).toEqual([
       {
+        description: null,
         durationLabel: "01:00:00",
+        entry: runningEntry,
         githubIssue: {
           githubRepo: "octo/repo",
           issueNumber: 185,
@@ -181,7 +182,9 @@ describe("dashboard-overview-helpers", () => {
         timeRangeLabel: "14:00 - Running",
       },
       {
+        description: null,
         durationLabel: "1h",
+        entry: completedEntry,
         githubIssue: null,
         id: "entry-completed",
         isHighlighted: false,
@@ -209,5 +212,26 @@ describe("dashboard-overview-helpers", () => {
 
     expect(rows[0]?.isHighlighted).toBe(false);
     expect(rows[1]?.isHighlighted).toBe(false);
+  });
+
+  it("retains description and full entry reference for interactions", () => {
+    const nowMs = Date.parse("2026-04-21T12:00:00.000Z");
+    const withDescription = createEntry({
+      description: "Review query performance edge cases",
+      id: "entry-with-description",
+    });
+    const withoutDescription = createEntry({
+      description: null,
+      id: "entry-without-description",
+    });
+    const rows = mapDashboardRecentEntryRows(
+      [withDescription, withoutDescription],
+      nowMs,
+    );
+
+    expect(rows[0]?.description).toBe("Review query performance edge cases");
+    expect(rows[0]?.entry).toBe(withDescription);
+    expect(rows[1]?.description).toBe(null);
+    expect(rows[1]?.entry).toBe(withoutDescription);
   });
 });

@@ -1,0 +1,3435 @@
+{
+  "source": "GITiempo.pen",
+  "scale": {
+    "x": 0.7497229219143576,
+    "y": 0.7496794300979519
+  },
+  "intrinsicTextHeightBasis": "Inter v4.1 font ascent minus descent (1.2099609375 em); inferred geometry, NOT observed Pencil renderer pixels. Explicit dimensions remain exact.",
+  "frames": {
+    "i527_0712": [
+      {
+        "id": "i527_0712",
+        "type": "frame",
+        "name": "Invoice PDF — A4 first page",
+        "fill": "$color-surface",
+        "padding": 48,
+        "gap": 24,
+        "explicitWidth": 794,
+        "explicitHeight": 1123,
+        "boxPx": {
+          "x": 0,
+          "y": 0,
+          "width": 794,
+          "height": 1123
+        },
+        "boxPt": {
+          "x": 0,
+          "y": 0,
+          "width": 595.28,
+          "height": 841.89
+        }
+      },
+      {
+        "id": "i527_0639",
+        "type": "frame",
+        "name": "Document heading",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 56,
+        "boxPx": {
+          "x": 48,
+          "y": 48,
+          "width": 698,
+          "height": 56
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 35.98461264470169,
+          "width": 523.3065994962217,
+          "height": 41.9820480854853
+        }
+      },
+      {
+        "id": "i527_0637",
+        "type": "frame",
+        "name": "Optional logo",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 52,
+          "width": 569.76171875,
+          "height": 48
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 38.9833303650935,
+          "width": 427.1634205761965,
+          "height": 35.98461264470169
+        }
+      },
+      {
+        "id": "i527_0635",
+        "type": "frame",
+        "name": "Acme logo",
+        "fill": "$color-accent-tint",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": 48,
+        "explicitHeight": 48,
+        "boxPx": {
+          "x": 48,
+          "y": 52,
+          "width": 48,
+          "height": 48
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 38.9833303650935,
+          "width": 35.98670025188917,
+          "height": 35.98461264470169
+        }
+      },
+      {
+        "id": "i527_0634",
+        "type": "text",
+        "content": "A",
+        "fontFamily": "Inter",
+        "fontSize": 22,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 48,
+          "y": 52,
+          "width": 16.005859375,
+          "height": 26.619140625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 38.9833303650935,
+          "width": 11.999959658375314,
+          "height": 19.95582217344724
+        }
+      },
+      {
+        "id": "i527_0636",
+        "type": "text",
+        "content": "Acme Studio",
+        "fontFamily": "Inter",
+        "fontSize": 20,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 108,
+          "y": 63.900390625,
+          "width": 123.28125,
+          "height": 24.19921875
+        },
+        "boxPt": {
+          "x": 80.97007556675062,
+          "y": 47.90480842678651,
+          "width": 92.4267789672544,
+          "height": 18.14165652131567
+        }
+      },
+      {
+        "id": "i527_0638",
+        "type": "text",
+        "content": "INVOICE",
+        "fontFamily": "Inter",
+        "fontSize": 28,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 629.76171875,
+          "y": 59.060546875,
+          "width": 116.23828125,
+          "height": 33.87890625
+        },
+        "boxPt": {
+          "x": 472.1467958910579,
+          "y": 44.276477122523374,
+          "width": 87.14650385705289,
+          "height": 25.39831912984194
+        }
+      },
+      {
+        "id": "i527_0640",
+        "type": "frame",
+        "name": "divider",
+        "fill": "$color-divider",
+        "padding": 0,
+        "gap": 0,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 1,
+        "boxPx": {
+          "x": 48,
+          "y": 128,
+          "width": 698,
+          "height": 1
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 95.95896705253784,
+          "width": 523.3065994962217,
+          "height": 0.7496794300979519
+        }
+      },
+      {
+        "id": "i527_0650",
+        "type": "frame",
+        "name": "Invoice identification",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 153,
+          "width": 698,
+          "height": 45.87890625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 114.70095280498664,
+          "width": 523.3065994962217,
+          "height": 34.394472291017365
+        }
+      },
+      {
+        "id": "i527_0643",
+        "type": "frame",
+        "name": "Reference",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 153,
+          "width": 165.5,
+          "height": 45.87890625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 114.70095280498664,
+          "width": 124.07914357682618,
+          "height": 34.394472291017365
+        }
+      },
+      {
+        "id": "i527_0641",
+        "type": "text",
+        "content": "Invoice number",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 48,
+          "y": 153,
+          "width": 87.943359375,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 114.70095280498664,
+          "width": 65.93315235358942,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "i527_0642",
+        "type": "text",
+        "content": "INV-2026-042",
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 179.51953125,
+          "width": 115.015625,
+          "height": 19.359375
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 134.58209987895145,
+          "width": 86.22985044080603,
+          "height": 14.513325217052538
+        }
+      },
+      {
+        "id": "i527_0646",
+        "type": "frame",
+        "name": "Invoice date",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 225.5,
+          "y": 153,
+          "width": 165.5,
+          "height": 43.458984375
+        },
+        "boxPt": {
+          "x": 169.06251889168766,
+          "y": 114.70095280498664,
+          "width": 124.07914357682618,
+          "height": 32.580306638885794
+        }
+      },
+      {
+        "id": "i527_0644",
+        "type": "text",
+        "content": "Issue date",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 225.5,
+          "y": 153,
+          "width": 58.365234375,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 169.06251889168766,
+          "y": 114.70095280498664,
+          "width": 43.75775405384131,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "i527_0645",
+        "type": "text",
+        "content": "11 Nov 2026",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 225.5,
+          "y": 179.51953125,
+          "width": 81.2861328125,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 169.06251889168766,
+          "y": 134.58209987895145,
+          "width": 60.94207700330604,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "i527_dates_73",
+        "type": "frame",
+        "name": "Due date",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 403,
+          "y": 153,
+          "width": 165.5,
+          "height": 43.458984375
+        },
+        "boxPt": {
+          "x": 302.1383375314861,
+          "y": 114.70095280498664,
+          "width": 124.07914357682618,
+          "height": 32.580306638885794
+        }
+      },
+      {
+        "id": "i527_dates_74",
+        "type": "text",
+        "content": "Due date",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 403,
+          "y": 153,
+          "width": 51.134765625,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 302.1383375314861,
+          "y": 114.70095280498664,
+          "width": 38.33690589578085,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "i527_dates_75",
+        "type": "text",
+        "content": "11 Dec 2026",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 403,
+          "y": 179.51953125,
+          "width": 80.6025390625,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 302.1383375314861,
+          "y": 134.58209987895145,
+          "width": 60.42957109965365,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "i527_0649",
+        "type": "frame",
+        "name": "Invoice period",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 580.5,
+          "y": 153,
+          "width": 165.5,
+          "height": 43.458984375
+        },
+        "boxPt": {
+          "x": 435.2141561712846,
+          "y": 114.70095280498664,
+          "width": 124.07914357682618,
+          "height": 32.580306638885794
+        }
+      },
+      {
+        "id": "i527_0647",
+        "type": "text",
+        "content": "Billing period",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 580.5,
+          "y": 153,
+          "width": 73.611328125,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 435.2141561712846,
+          "y": 114.70095280498664,
+          "width": 55.18810000787153,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "i527_0648",
+        "type": "text",
+        "content": "01–30 Nov 2026",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 580.5,
+          "y": 179.51953125,
+          "width": 109.3271484375,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 435.2141561712846,
+          "y": 134.58209987895145,
+          "width": 81.9650691711272,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "i527_0663",
+        "type": "frame",
+        "name": "PDF issuer and recipient",
+        "padding": 0,
+        "gap": 32,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 222.87890625,
+          "width": 698,
+          "height": 144.1279296875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 167.08773141835485,
+          "width": 523.3065994962217,
+          "height": 108.04974418932268
+        }
+      },
+      {
+        "id": "i527_0656",
+        "type": "frame",
+        "name": "From",
+        "padding": 0,
+        "gap": 10,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 222.87890625,
+          "width": 333,
+          "height": 144.1279296875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 167.08773141835485,
+          "width": 249.6577329974811,
+          "height": 108.04974418932268
+        }
+      },
+      {
+        "id": "i527_0651",
+        "type": "text",
+        "content": "FROM",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 48,
+          "y": 222.87890625,
+          "width": 35.173828125,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 167.08773141835485,
+          "width": 26.37062519678841,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "i527_0652",
+        "type": "text",
+        "content": "Acme Studio LLC",
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 247.3984375,
+          "width": 132.5390625,
+          "height": 19.359375
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 185.46951963212376,
+          "width": 99.36757320528966,
+          "height": 14.513325217052538
+        }
+      },
+      {
+        "id": "i527_0653",
+        "type": "text",
+        "content": "12 Studio Lane\nKyiv, Ukraine",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 40,
+        "boxPx": {
+          "x": 48,
+          "y": 276.7578125,
+          "width": 333,
+          "height": 40
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 207.47963915015583,
+          "width": 249.6577329974811,
+          "height": 29.987177203918076
+        }
+      },
+      {
+        "id": "i527_0654",
+        "type": "text",
+        "content": "billing@acme.example",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 326.7578125,
+          "width": 138.251953125,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 244.96361065505343,
+          "width": 103.6506582572418,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "i527_0655",
+        "type": "text",
+        "content": "Tax ID UA123456",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 48,
+          "y": 352.4873046875,
+          "width": 98.80078125,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 264.2524816948881,
+          "width": 74.07321040617128,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "i527_0662",
+        "type": "frame",
+        "name": "Bill to",
+        "padding": 0,
+        "gap": 10,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 413,
+          "y": 222.87890625,
+          "width": 333,
+          "height": 144.1279296875
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 167.08773141835485,
+          "width": 249.6577329974811,
+          "height": 108.04974418932268
+        }
+      },
+      {
+        "id": "i527_0657",
+        "type": "text",
+        "content": "BILL TO",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 413,
+          "y": 222.87890625,
+          "width": 44.970703125,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 167.08773141835485,
+          "width": 33.71556694741813,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "i527_0658",
+        "type": "text",
+        "content": "Orion Labs Ltd.",
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 413,
+          "y": 247.3984375,
+          "width": 117.21875,
+          "height": 19.359375
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 185.46951963212376,
+          "width": 87.8815837531486,
+          "height": 14.513325217052538
+        }
+      },
+      {
+        "id": "i527_0659",
+        "type": "text",
+        "content": "45 Market Street\nLondon, UK",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 40,
+        "boxPx": {
+          "x": 413,
+          "y": 276.7578125,
+          "width": 333,
+          "height": 40
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 207.47963915015583,
+          "width": 249.6577329974811,
+          "height": 29.987177203918076
+        }
+      },
+      {
+        "id": "i527_0660",
+        "type": "text",
+        "content": "accounts@orion.example",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 413,
+          "y": 326.7578125,
+          "width": 156.09521484375,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 244.96361065505343,
+          "width": 117.02816056950566,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "i527_0661",
+        "type": "text",
+        "content": "Tax ID GB654321",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 413,
+          "y": 352.4873046875,
+          "width": 98.396484375,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 264.2524816948881,
+          "width": 73.77009977172544,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "i527_0666",
+        "type": "frame",
+        "name": "Services",
+        "padding": 0,
+        "gap": 8,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 391.0068359375,
+          "width": 698,
+          "height": 45.5087890625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 293.1297819300284,
+          "width": 523.3065994962217,
+          "height": 34.11700304882291
+        }
+      },
+      {
+        "id": "i527_0664",
+        "type": "text",
+        "content": "Product design & development",
+        "fontFamily": "Inter",
+        "fontSize": 18,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 391.0068359375,
+          "width": 267.29296875,
+          "height": 21.779296875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 293.1297819300284,
+          "width": 200.39566553841308,
+          "height": 16.327490869184103
+        }
+      },
+      {
+        "id": "i527_0665",
+        "type": "text",
+        "content": "Project Orion · November 2026",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 48,
+          "y": 420.7861328125,
+          "width": 191.64208984375,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 315.4547082399961,
+          "width": 143.6784675594301,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "i527_0687",
+        "type": "frame",
+        "name": "PDF line items",
+        "padding": 0,
+        "gap": 0,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 460.515625,
+          "width": 698,
+          "height": 204
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 345.2390913012021,
+          "width": 523.3065994962217,
+          "height": 152.93460373998218
+        }
+      },
+      {
+        "id": "i527_0671",
+        "type": "frame",
+        "name": "Columns",
+        "fill": "$color-accent-tint",
+        "padding": [
+          0,
+          12
+        ],
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 42,
+        "boxPx": {
+          "x": 48,
+          "y": 460.515625,
+          "width": 698,
+          "height": 42
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 345.2390913012021,
+          "width": 523.3065994962217,
+          "height": 31.48653606411398
+        }
+      },
+      {
+        "id": "i527_0667",
+        "type": "text",
+        "content": "Service / work description",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 17,
+        "boxPx": {
+          "x": 60,
+          "y": 473.015625,
+          "width": 418,
+          "height": 17
+        },
+        "boxPt": {
+          "x": 44.983375314861455,
+          "y": 354.61008417742653,
+          "width": 313.38418136020147,
+          "height": 12.744550311665183
+        }
+      },
+      {
+        "id": "i527_0668",
+        "type": "text",
+        "content": "Hours",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "explicitWidth": 54,
+        "explicitHeight": 17,
+        "boxPx": {
+          "x": 490,
+          "y": 473.015625,
+          "width": 54,
+          "height": 17
+        },
+        "boxPt": {
+          "x": 367.36423173803524,
+          "y": 354.61008417742653,
+          "width": 40.48503778337531,
+          "height": 12.744550311665183
+        }
+      },
+      {
+        "id": "i527_0669",
+        "type": "text",
+        "content": "Rate",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "explicitWidth": 76,
+        "explicitHeight": 17,
+        "boxPx": {
+          "x": 556,
+          "y": 473.015625,
+          "width": 76,
+          "height": 17
+        },
+        "boxPt": {
+          "x": 416.84594458438283,
+          "y": 354.61008417742653,
+          "width": 56.97894206549118,
+          "height": 12.744550311665183
+        }
+      },
+      {
+        "id": "i527_0670",
+        "type": "text",
+        "content": "Amount",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "explicitWidth": 90,
+        "explicitHeight": 17,
+        "boxPx": {
+          "x": 644,
+          "y": 473.015625,
+          "width": 90,
+          "height": 17
+        },
+        "boxPt": {
+          "x": 482.8215617128463,
+          "y": 354.61008417742653,
+          "width": 67.47506297229219,
+          "height": 12.744550311665183
+        }
+      },
+      {
+        "id": "i527_0676",
+        "type": "frame",
+        "name": "PDF service",
+        "stroke": "$color-divider",
+        "padding": [
+          0,
+          12
+        ],
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 54,
+        "boxPx": {
+          "x": 48,
+          "y": 502.515625,
+          "width": 698,
+          "height": 54
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 376.7256273653161,
+          "width": 523.3065994962217,
+          "height": 40.482689225289405
+        }
+      },
+      {
+        "id": "i527_0672",
+        "type": "text",
+        "content": "Dashboard UX · Design iteration",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 60,
+          "y": 520.015625,
+          "width": 418,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 44.983375314861455,
+          "y": 389.8450173920303,
+          "width": 313.38418136020147,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0673",
+        "type": "text",
+        "content": "10",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 54,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 490,
+          "y": 520.015625,
+          "width": 54,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 367.36423173803524,
+          "y": 389.8450173920303,
+          "width": 40.48503778337531,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0674",
+        "type": "text",
+        "content": "100.00",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 76,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 556,
+          "y": 520.015625,
+          "width": 76,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 416.84594458438283,
+          "y": 389.8450173920303,
+          "width": 56.97894206549118,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0675",
+        "type": "text",
+        "content": "1,000.00",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 90,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 644,
+          "y": 520.015625,
+          "width": 90,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 482.8215617128463,
+          "y": 389.8450173920303,
+          "width": 67.47506297229219,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0681",
+        "type": "frame",
+        "name": "PDF service",
+        "stroke": "$color-divider",
+        "padding": [
+          0,
+          12
+        ],
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 54,
+        "boxPx": {
+          "x": 48,
+          "y": 556.515625,
+          "width": 698,
+          "height": 54
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 417.20831659060553,
+          "width": 523.3065994962217,
+          "height": 40.482689225289405
+        }
+      },
+      {
+        "id": "i527_0677",
+        "type": "text",
+        "content": "Invoice editing · Implementation",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 60,
+          "y": 574.015625,
+          "width": 418,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 44.983375314861455,
+          "y": 430.3277066173197,
+          "width": 313.38418136020147,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0678",
+        "type": "text",
+        "content": "8",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 54,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 490,
+          "y": 574.015625,
+          "width": 54,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 367.36423173803524,
+          "y": 430.3277066173197,
+          "width": 40.48503778337531,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0679",
+        "type": "text",
+        "content": "100.00",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 76,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 556,
+          "y": 574.015625,
+          "width": 76,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 416.84594458438283,
+          "y": 430.3277066173197,
+          "width": 56.97894206549118,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0680",
+        "type": "text",
+        "content": "800.00",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 90,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 644,
+          "y": 574.015625,
+          "width": 90,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 482.8215617128463,
+          "y": 430.3277066173197,
+          "width": 67.47506297229219,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0686",
+        "type": "frame",
+        "name": "PDF service",
+        "stroke": "$color-divider",
+        "padding": [
+          0,
+          12
+        ],
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 54,
+        "boxPx": {
+          "x": 48,
+          "y": 610.515625,
+          "width": 698,
+          "height": 54
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 457.6910058158949,
+          "width": 523.3065994962217,
+          "height": 40.482689225289405
+        }
+      },
+      {
+        "id": "i527_0682",
+        "type": "text",
+        "content": "Dashboard UX · Acceptance checks",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 60,
+          "y": 628.015625,
+          "width": 418,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 44.983375314861455,
+          "y": 470.81039584260907,
+          "width": 313.38418136020147,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0683",
+        "type": "text",
+        "content": "7",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 54,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 490,
+          "y": 628.015625,
+          "width": 54,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 367.36423173803524,
+          "y": 470.81039584260907,
+          "width": 40.48503778337531,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0684",
+        "type": "text",
+        "content": "100.00",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 76,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 556,
+          "y": 628.015625,
+          "width": 76,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 416.84594458438283,
+          "y": 470.81039584260907,
+          "width": 56.97894206549118,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0685",
+        "type": "text",
+        "content": "700.00",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 90,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 644,
+          "y": 628.015625,
+          "width": 90,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 482.8215617128463,
+          "y": 470.81039584260907,
+          "width": 67.47506297229219,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0698",
+        "type": "frame",
+        "name": "PDF totals",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 688.515625,
+          "width": 698,
+          "height": 104.0390625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 516.1660013635352,
+          "width": 523.3065994962217,
+          "height": 77.9959450829252
+        }
+      },
+      {
+        "id": "i527_0690",
+        "type": "frame",
+        "name": "Subtotal",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 688.515625,
+          "width": 698,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 516.1660013635352,
+          "width": 523.3065994962217,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0688",
+        "type": "text",
+        "content": "Subtotal · 25h",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 48,
+          "y": 688.515625,
+          "width": 591.048828125,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 516.1660013635352,
+          "width": 443.12285441593195,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0689",
+        "type": "text",
+        "content": "2,500.00 USD",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 651.048828125,
+          "y": 689.5458984375,
+          "width": 94.951171875,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 488.1062297307934,
+          "y": 516.9383761670052,
+          "width": 71.18707001731738,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "i527_0693",
+        "type": "frame",
+        "name": "Discount",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 719.515625,
+          "width": 698,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 539.4060636965717,
+          "width": 523.3065994962217,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0691",
+        "type": "text",
+        "content": "Discount · 10%",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 48,
+          "y": 719.515625,
+          "width": 595.9228515625,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 539.4060636965717,
+          "width": 446.7770215089735,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "i527_0692",
+        "type": "text",
+        "content": "−250.00 USD",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 655.9228515625,
+          "y": 720.5458984375,
+          "width": 90.0771484375,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 491.760396823835,
+          "y": 540.1784385000417,
+          "width": 67.53290292427582,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "i527_0694",
+        "type": "frame",
+        "name": "divider",
+        "fill": "$color-divider",
+        "padding": 0,
+        "gap": 0,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 1,
+        "boxPx": {
+          "x": 48,
+          "y": 750.515625,
+          "width": 698,
+          "height": 1
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 562.6461260296082,
+          "width": 523.3065994962217,
+          "height": 0.7496794300979519
+        }
+      },
+      {
+        "id": "i527_0697",
+        "type": "frame",
+        "name": "Amount due",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 763.515625,
+          "width": 698,
+          "height": 29.0390625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 572.3919586208816,
+          "width": 523.3065994962217,
+          "height": 21.769987825578806
+        }
+      },
+      {
+        "id": "i527_0695",
+        "type": "text",
+        "content": "TOTAL DUE",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 20,
+        "boxPx": {
+          "x": 48,
+          "y": 768.03515625,
+          "width": 521.94921875,
+          "height": 20
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 575.7801582326914,
+          "width": 391.3172933721662,
+          "height": 14.993588601959038
+        }
+      },
+      {
+        "id": "i527_0696",
+        "type": "text",
+        "content": "2,250.00 USD",
+        "fontFamily": "Inter",
+        "fontSize": 24,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 581.94921875,
+          "y": 763.515625,
+          "width": 164.05078125,
+          "height": 29.0390625
+        },
+        "boxPt": {
+          "x": 436.30066868702767,
+          "y": 572.3919586208816,
+          "width": 122.99263106108312,
+          "height": 21.769987825578806
+        }
+      },
+      {
+        "id": "i527_0704",
+        "type": "frame",
+        "name": "PDF payment",
+        "padding": 0,
+        "gap": 10,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 816.5546875,
+          "width": 698,
+          "height": 118.6474609375
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 612.1542527688113,
+          "width": 523.3065994962217,
+          "height": 88.94756089819401
+        }
+      },
+      {
+        "id": "i527_0699",
+        "type": "text",
+        "content": "HOW TO PAY",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 48,
+          "y": 816.5546875,
+          "width": 78.6328125,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 612.1542527688113,
+          "width": 58.95282194584382,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "i527_0700",
+        "type": "text",
+        "content": "Bank transfer · Net 30",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 841.07421875,
+          "width": 147,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 630.5360409825802,
+          "width": 110.20926952141058,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "i527_0701",
+        "type": "text",
+        "content": "Acme Studio LLC · Example Bank",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 868.013671875,
+          "width": 203.67724609375,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 650.7319948484807,
+          "width": 152.70150006887593,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "i527_0702",
+        "type": "text",
+        "content": "Account: DEMO-ACCOUNT-001 · SWIFT: DEMOBANK",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 893.7431640625,
+          "width": 330.9794921875,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 670.0208658883154,
+          "width": 248.1429119765428,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "i527_0703",
+        "type": "text",
+        "content": "Please include payment reference INV-2026-042.",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 919.47265625,
+          "width": 308.12158203125,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 689.3097369281501,
+          "width": 231.00581278534318,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "i527_0707",
+        "type": "frame",
+        "name": "PDF notes",
+        "padding": 0,
+        "gap": 8,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 959.2021484375,
+          "width": 698,
+          "height": 38.2490234375
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 719.094119989356,
+          "width": 523.3065994962217,
+          "height": 28.674506092428206
+        }
+      },
+      {
+        "id": "i527_0705",
+        "type": "text",
+        "content": "Notes",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 959.2021484375,
+          "width": 34.341796875,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 719.094119989356,
+          "width": 25.746832296914356,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "i527_0706",
+        "type": "text",
+        "content": "Thank you for your partnership.",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 48,
+          "y": 981.7216796875,
+          "width": 194.75244140625,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 735.976549342929,
+          "width": 146.01036942104847,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "i527_0708",
+        "type": "frame",
+        "name": "divider",
+        "fill": "$color-divider",
+        "padding": 0,
+        "gap": 0,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 1,
+        "boxPx": {
+          "x": 48,
+          "y": 1021.451171875,
+          "width": 698,
+          "height": 1
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 765.7609324041351,
+          "width": 523.3065994962217,
+          "height": 0.7496794300979519
+        }
+      },
+      {
+        "id": "i527_0711",
+        "type": "frame",
+        "name": "Document footer",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 1046.451171875,
+          "width": 698,
+          "height": 16
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 784.5029181565839,
+          "width": 523.3065994962217,
+          "height": 11.99487088156723
+        }
+      },
+      {
+        "id": "i527_0709",
+        "type": "text",
+        "content": "Acme Studio LLC · billing@acme.example",
+        "fontFamily": "Inter",
+        "fontSize": 11,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 16,
+        "boxPx": {
+          "x": 48,
+          "y": 1046.451171875,
+          "width": 630.7421875,
+          "height": 16
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 784.5029181565839,
+          "width": 472.8818757871536,
+          "height": 11.99487088156723
+        }
+      },
+      {
+        "id": "i527_0710",
+        "type": "text",
+        "content": "Page 1 of 1",
+        "fontFamily": "Inter",
+        "fontSize": 11,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 690.7421875,
+          "y": 1047.79638671875,
+          "width": 55.2578125,
+          "height": 13.3095703125
+        },
+        "boxPt": {
+          "x": 517.8652511020151,
+          "y": 785.5113980540057,
+          "width": 41.42804864609572,
+          "height": 9.97791108672362
+        }
+      }
+    ],
+    "task_pdf_a4": [
+      {
+        "id": "task_pdf_a4",
+        "type": "frame",
+        "name": "Invoice PDF — A4 first page · Tasks",
+        "fill": "$color-surface",
+        "padding": 48,
+        "gap": 24,
+        "explicitWidth": 794,
+        "explicitHeight": 1123,
+        "boxPx": {
+          "x": 0,
+          "y": 0,
+          "width": 794,
+          "height": 1123
+        },
+        "boxPt": {
+          "x": 0,
+          "y": 0,
+          "width": 595.28,
+          "height": 841.89
+        }
+      },
+      {
+        "id": "itm_1073",
+        "type": "frame",
+        "name": "Document heading",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 56,
+        "boxPx": {
+          "x": 48,
+          "y": 48,
+          "width": 698,
+          "height": 56
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 35.98461264470169,
+          "width": 523.3065994962217,
+          "height": 41.9820480854853
+        }
+      },
+      {
+        "id": "itm_1074",
+        "type": "frame",
+        "name": "Optional logo",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 52,
+          "width": 569.76171875,
+          "height": 48
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 38.9833303650935,
+          "width": 427.1634205761965,
+          "height": 35.98461264470169
+        }
+      },
+      {
+        "id": "itm_1075",
+        "type": "frame",
+        "name": "Acme logo",
+        "fill": "$color-accent-tint",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": 48,
+        "explicitHeight": 48,
+        "boxPx": {
+          "x": 48,
+          "y": 52,
+          "width": 48,
+          "height": 48
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 38.9833303650935,
+          "width": 35.98670025188917,
+          "height": 35.98461264470169
+        }
+      },
+      {
+        "id": "itm_1076",
+        "type": "text",
+        "content": "A",
+        "fontFamily": "Inter",
+        "fontSize": 22,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 48,
+          "y": 52,
+          "width": 16.005859375,
+          "height": 26.619140625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 38.9833303650935,
+          "width": 11.999959658375314,
+          "height": 19.95582217344724
+        }
+      },
+      {
+        "id": "itm_1077",
+        "type": "text",
+        "content": "Acme Studio",
+        "fontFamily": "Inter",
+        "fontSize": 20,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 108,
+          "y": 63.900390625,
+          "width": 123.28125,
+          "height": 24.19921875
+        },
+        "boxPt": {
+          "x": 80.97007556675062,
+          "y": 47.90480842678651,
+          "width": 92.4267789672544,
+          "height": 18.14165652131567
+        }
+      },
+      {
+        "id": "itm_1078",
+        "type": "text",
+        "content": "INVOICE",
+        "fontFamily": "Inter",
+        "fontSize": 28,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 629.76171875,
+          "y": 59.060546875,
+          "width": 116.23828125,
+          "height": 33.87890625
+        },
+        "boxPt": {
+          "x": 472.1467958910579,
+          "y": 44.276477122523374,
+          "width": 87.14650385705289,
+          "height": 25.39831912984194
+        }
+      },
+      {
+        "id": "itm_1079",
+        "type": "frame",
+        "name": "divider",
+        "fill": "$color-divider",
+        "padding": 0,
+        "gap": 0,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 1,
+        "boxPx": {
+          "x": 48,
+          "y": 128,
+          "width": 698,
+          "height": 1
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 95.95896705253784,
+          "width": 523.3065994962217,
+          "height": 0.7496794300979519
+        }
+      },
+      {
+        "id": "itm_1080",
+        "type": "frame",
+        "name": "Invoice identification",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 153,
+          "width": 698,
+          "height": 45.87890625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 114.70095280498664,
+          "width": 523.3065994962217,
+          "height": 34.394472291017365
+        }
+      },
+      {
+        "id": "itm_1081",
+        "type": "frame",
+        "name": "Reference",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 153,
+          "width": 165.5,
+          "height": 45.87890625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 114.70095280498664,
+          "width": 124.07914357682618,
+          "height": 34.394472291017365
+        }
+      },
+      {
+        "id": "itm_1082",
+        "type": "text",
+        "content": "Invoice number",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 48,
+          "y": 153,
+          "width": 87.943359375,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 114.70095280498664,
+          "width": 65.93315235358942,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "itm_1083",
+        "type": "text",
+        "content": "INV-2026-042",
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 179.51953125,
+          "width": 115.015625,
+          "height": 19.359375
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 134.58209987895145,
+          "width": 86.22985044080603,
+          "height": 14.513325217052538
+        }
+      },
+      {
+        "id": "itm_1084",
+        "type": "frame",
+        "name": "Invoice date",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 225.5,
+          "y": 153,
+          "width": 165.5,
+          "height": 43.458984375
+        },
+        "boxPt": {
+          "x": 169.06251889168766,
+          "y": 114.70095280498664,
+          "width": 124.07914357682618,
+          "height": 32.580306638885794
+        }
+      },
+      {
+        "id": "itm_1085",
+        "type": "text",
+        "content": "Issue date",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 225.5,
+          "y": 153,
+          "width": 58.365234375,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 169.06251889168766,
+          "y": 114.70095280498664,
+          "width": 43.75775405384131,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "itm_1086",
+        "type": "text",
+        "content": "11 Nov 2026",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 225.5,
+          "y": 179.51953125,
+          "width": 81.2861328125,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 169.06251889168766,
+          "y": 134.58209987895145,
+          "width": 60.94207700330604,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "itm_1087",
+        "type": "frame",
+        "name": "Due date",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 403,
+          "y": 153,
+          "width": 165.5,
+          "height": 43.458984375
+        },
+        "boxPt": {
+          "x": 302.1383375314861,
+          "y": 114.70095280498664,
+          "width": 124.07914357682618,
+          "height": 32.580306638885794
+        }
+      },
+      {
+        "id": "itm_1088",
+        "type": "text",
+        "content": "Due date",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 403,
+          "y": 153,
+          "width": 51.134765625,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 302.1383375314861,
+          "y": 114.70095280498664,
+          "width": 38.33690589578085,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "itm_1089",
+        "type": "text",
+        "content": "11 Dec 2026",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 403,
+          "y": 179.51953125,
+          "width": 80.6025390625,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 302.1383375314861,
+          "y": 134.58209987895145,
+          "width": 60.42957109965365,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "itm_1090",
+        "type": "frame",
+        "name": "Invoice period",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 580.5,
+          "y": 153,
+          "width": 165.5,
+          "height": 43.458984375
+        },
+        "boxPt": {
+          "x": 435.2141561712846,
+          "y": 114.70095280498664,
+          "width": 124.07914357682618,
+          "height": 32.580306638885794
+        }
+      },
+      {
+        "id": "itm_1091",
+        "type": "text",
+        "content": "Billing period",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 580.5,
+          "y": 153,
+          "width": 73.611328125,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 435.2141561712846,
+          "y": 114.70095280498664,
+          "width": 55.18810000787153,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "itm_1092",
+        "type": "text",
+        "content": "01–30 Nov 2026",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 580.5,
+          "y": 179.51953125,
+          "width": 109.3271484375,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 435.2141561712846,
+          "y": 134.58209987895145,
+          "width": 81.9650691711272,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "itm_1093",
+        "type": "frame",
+        "name": "PDF issuer and recipient",
+        "padding": 0,
+        "gap": 32,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 222.87890625,
+          "width": 698,
+          "height": 144.1279296875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 167.08773141835485,
+          "width": 523.3065994962217,
+          "height": 108.04974418932268
+        }
+      },
+      {
+        "id": "itm_1094",
+        "type": "frame",
+        "name": "From",
+        "padding": 0,
+        "gap": 10,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 222.87890625,
+          "width": 333,
+          "height": 144.1279296875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 167.08773141835485,
+          "width": 249.6577329974811,
+          "height": 108.04974418932268
+        }
+      },
+      {
+        "id": "itm_1095",
+        "type": "text",
+        "content": "FROM",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 48,
+          "y": 222.87890625,
+          "width": 35.173828125,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 167.08773141835485,
+          "width": 26.37062519678841,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "itm_1096",
+        "type": "text",
+        "content": "Acme Studio LLC",
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 247.3984375,
+          "width": 132.5390625,
+          "height": 19.359375
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 185.46951963212376,
+          "width": 99.36757320528966,
+          "height": 14.513325217052538
+        }
+      },
+      {
+        "id": "itm_1097",
+        "type": "text",
+        "content": "12 Studio Lane\nKyiv, Ukraine",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 40,
+        "boxPx": {
+          "x": 48,
+          "y": 276.7578125,
+          "width": 333,
+          "height": 40
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 207.47963915015583,
+          "width": 249.6577329974811,
+          "height": 29.987177203918076
+        }
+      },
+      {
+        "id": "itm_1098",
+        "type": "text",
+        "content": "billing@acme.example",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 326.7578125,
+          "width": 138.251953125,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 244.96361065505343,
+          "width": 103.6506582572418,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "itm_1099",
+        "type": "text",
+        "content": "Tax ID UA123456",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 48,
+          "y": 352.4873046875,
+          "width": 98.80078125,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 264.2524816948881,
+          "width": 74.07321040617128,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "itm_1100",
+        "type": "frame",
+        "name": "Bill to",
+        "padding": 0,
+        "gap": 10,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 413,
+          "y": 222.87890625,
+          "width": 333,
+          "height": 144.1279296875
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 167.08773141835485,
+          "width": 249.6577329974811,
+          "height": 108.04974418932268
+        }
+      },
+      {
+        "id": "itm_1101",
+        "type": "text",
+        "content": "BILL TO",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 413,
+          "y": 222.87890625,
+          "width": 44.970703125,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 167.08773141835485,
+          "width": 33.71556694741813,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "itm_1102",
+        "type": "text",
+        "content": "Orion Labs Ltd.",
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 413,
+          "y": 247.3984375,
+          "width": 117.21875,
+          "height": 19.359375
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 185.46951963212376,
+          "width": 87.8815837531486,
+          "height": 14.513325217052538
+        }
+      },
+      {
+        "id": "itm_1103",
+        "type": "text",
+        "content": "45 Market Street\nLondon, UK",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 40,
+        "boxPx": {
+          "x": 413,
+          "y": 276.7578125,
+          "width": 333,
+          "height": 40
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 207.47963915015583,
+          "width": 249.6577329974811,
+          "height": 29.987177203918076
+        }
+      },
+      {
+        "id": "itm_1104",
+        "type": "text",
+        "content": "accounts@orion.example",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 413,
+          "y": 326.7578125,
+          "width": 156.09521484375,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 244.96361065505343,
+          "width": 117.02816056950566,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "itm_1105",
+        "type": "text",
+        "content": "Tax ID GB654321",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 413,
+          "y": 352.4873046875,
+          "width": 98.396484375,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 309.6355667506297,
+          "y": 264.2524816948881,
+          "width": 73.77009977172544,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "itm_1106",
+        "type": "frame",
+        "name": "Services",
+        "padding": 0,
+        "gap": 8,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 391.0068359375,
+          "width": 698,
+          "height": 45.5087890625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 293.1297819300284,
+          "width": 523.3065994962217,
+          "height": 34.11700304882291
+        }
+      },
+      {
+        "id": "itm_1107",
+        "type": "text",
+        "content": "Product design & development",
+        "fontFamily": "Inter",
+        "fontSize": 18,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 391.0068359375,
+          "width": 267.29296875,
+          "height": 21.779296875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 293.1297819300284,
+          "width": 200.39566553841308,
+          "height": 16.327490869184103
+        }
+      },
+      {
+        "id": "itm_1108",
+        "type": "text",
+        "content": "Project Orion · November 2026",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 48,
+          "y": 420.7861328125,
+          "width": 191.64208984375,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 315.4547082399961,
+          "width": 143.6784675594301,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "itm_1109",
+        "type": "frame",
+        "name": "PDF line items",
+        "padding": 0,
+        "gap": 0,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 460.515625,
+          "width": 698,
+          "height": 150
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 345.2390913012021,
+          "width": 523.3065994962217,
+          "height": 112.45191451469279
+        }
+      },
+      {
+        "id": "itm_1110",
+        "type": "frame",
+        "name": "Columns",
+        "fill": "$color-accent-tint",
+        "padding": [
+          0,
+          12
+        ],
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 42,
+        "boxPx": {
+          "x": 48,
+          "y": 460.515625,
+          "width": 698,
+          "height": 42
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 345.2390913012021,
+          "width": 523.3065994962217,
+          "height": 31.48653606411398
+        }
+      },
+      {
+        "id": "itm_1111",
+        "type": "text",
+        "content": "Task",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 17,
+        "boxPx": {
+          "x": 60,
+          "y": 473.015625,
+          "width": 418,
+          "height": 17
+        },
+        "boxPt": {
+          "x": 44.983375314861455,
+          "y": 354.61008417742653,
+          "width": 313.38418136020147,
+          "height": 12.744550311665183
+        }
+      },
+      {
+        "id": "itm_1112",
+        "type": "text",
+        "content": "Hours",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "explicitWidth": 54,
+        "explicitHeight": 17,
+        "boxPx": {
+          "x": 490,
+          "y": 473.015625,
+          "width": 54,
+          "height": 17
+        },
+        "boxPt": {
+          "x": 367.36423173803524,
+          "y": 354.61008417742653,
+          "width": 40.48503778337531,
+          "height": 12.744550311665183
+        }
+      },
+      {
+        "id": "itm_1113",
+        "type": "text",
+        "content": "Rate",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "explicitWidth": 76,
+        "explicitHeight": 17,
+        "boxPx": {
+          "x": 556,
+          "y": 473.015625,
+          "width": 76,
+          "height": 17
+        },
+        "boxPt": {
+          "x": 416.84594458438283,
+          "y": 354.61008417742653,
+          "width": 56.97894206549118,
+          "height": 12.744550311665183
+        }
+      },
+      {
+        "id": "itm_1114",
+        "type": "text",
+        "content": "Amount",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "explicitWidth": 90,
+        "explicitHeight": 17,
+        "boxPx": {
+          "x": 644,
+          "y": 473.015625,
+          "width": 90,
+          "height": 17
+        },
+        "boxPt": {
+          "x": 482.8215617128463,
+          "y": 354.61008417742653,
+          "width": 67.47506297229219,
+          "height": 12.744550311665183
+        }
+      },
+      {
+        "id": "itm_1115",
+        "type": "frame",
+        "name": "PDF service",
+        "stroke": "$color-divider",
+        "padding": [
+          0,
+          12
+        ],
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 54,
+        "boxPx": {
+          "x": 48,
+          "y": 502.515625,
+          "width": 698,
+          "height": 54
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 376.7256273653161,
+          "width": 523.3065994962217,
+          "height": 40.482689225289405
+        }
+      },
+      {
+        "id": "itm_1116",
+        "type": "text",
+        "content": "Dashboard UX",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 60,
+          "y": 520.015625,
+          "width": 418,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 44.983375314861455,
+          "y": 389.8450173920303,
+          "width": 313.38418136020147,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1117",
+        "type": "text",
+        "content": "17",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 54,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 490,
+          "y": 520.015625,
+          "width": 54,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 367.36423173803524,
+          "y": 389.8450173920303,
+          "width": 40.48503778337531,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1118",
+        "type": "text",
+        "content": "100.00",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 76,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 556,
+          "y": 520.015625,
+          "width": 76,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 416.84594458438283,
+          "y": 389.8450173920303,
+          "width": 56.97894206549118,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1119",
+        "type": "text",
+        "content": "1,700.00",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 90,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 644,
+          "y": 520.015625,
+          "width": 90,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 482.8215617128463,
+          "y": 389.8450173920303,
+          "width": 67.47506297229219,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1120",
+        "type": "frame",
+        "name": "PDF service",
+        "stroke": "$color-divider",
+        "padding": [
+          0,
+          12
+        ],
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 54,
+        "boxPx": {
+          "x": 48,
+          "y": 556.515625,
+          "width": 698,
+          "height": 54
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 417.20831659060553,
+          "width": 523.3065994962217,
+          "height": 40.482689225289405
+        }
+      },
+      {
+        "id": "itm_1121",
+        "type": "text",
+        "content": "Invoice editing",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 60,
+          "y": 574.015625,
+          "width": 418,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 44.983375314861455,
+          "y": 430.3277066173197,
+          "width": 313.38418136020147,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1122",
+        "type": "text",
+        "content": "8",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 54,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 490,
+          "y": 574.015625,
+          "width": 54,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 367.36423173803524,
+          "y": 430.3277066173197,
+          "width": 40.48503778337531,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1123",
+        "type": "text",
+        "content": "100.00",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 76,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 556,
+          "y": 574.015625,
+          "width": 76,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 416.84594458438283,
+          "y": 430.3277066173197,
+          "width": 56.97894206549118,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1124",
+        "type": "text",
+        "content": "800.00",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": 90,
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 644,
+          "y": 574.015625,
+          "width": 90,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 482.8215617128463,
+          "y": 430.3277066173197,
+          "width": 67.47506297229219,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1130",
+        "type": "frame",
+        "name": "PDF totals",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 634.515625,
+          "width": 698,
+          "height": 104.0390625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 475.68331213824575,
+          "width": 523.3065994962217,
+          "height": 77.9959450829252
+        }
+      },
+      {
+        "id": "itm_1131",
+        "type": "frame",
+        "name": "Subtotal",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 634.515625,
+          "width": 698,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 475.68331213824575,
+          "width": 523.3065994962217,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1132",
+        "type": "text",
+        "content": "Subtotal · 25h",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 48,
+          "y": 634.515625,
+          "width": 591.048828125,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 475.68331213824575,
+          "width": 443.12285441593195,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1133",
+        "type": "text",
+        "content": "2,500.00 USD",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 651.048828125,
+          "y": 635.5458984375,
+          "width": 94.951171875,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 488.1062297307934,
+          "y": 476.45568694171584,
+          "width": 71.18707001731738,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "itm_1134",
+        "type": "frame",
+        "name": "Discount",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 665.515625,
+          "width": 698,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 498.9233744712823,
+          "width": 523.3065994962217,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1135",
+        "type": "text",
+        "content": "Discount · 10%",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 19,
+        "boxPx": {
+          "x": 48,
+          "y": 665.515625,
+          "width": 595.9228515625,
+          "height": 19
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 498.9233744712823,
+          "width": 446.7770215089735,
+          "height": 14.243909171861086
+        }
+      },
+      {
+        "id": "itm_1136",
+        "type": "text",
+        "content": "−250.00 USD",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 655.9228515625,
+          "y": 666.5458984375,
+          "width": 90.0771484375,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 491.760396823835,
+          "y": 499.69574927475236,
+          "width": 67.53290292427582,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "itm_1137",
+        "type": "frame",
+        "name": "divider",
+        "fill": "$color-divider",
+        "padding": 0,
+        "gap": 0,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 1,
+        "boxPx": {
+          "x": 48,
+          "y": 696.515625,
+          "width": 698,
+          "height": 1
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 522.1634368043187,
+          "width": 523.3065994962217,
+          "height": 0.7496794300979519
+        }
+      },
+      {
+        "id": "itm_1138",
+        "type": "frame",
+        "name": "Amount due",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 709.515625,
+          "width": 698,
+          "height": 29.0390625
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 531.9092693955921,
+          "width": 523.3065994962217,
+          "height": 21.769987825578806
+        }
+      },
+      {
+        "id": "itm_1139",
+        "type": "text",
+        "content": "TOTAL DUE",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 20,
+        "boxPx": {
+          "x": 48,
+          "y": 714.03515625,
+          "width": 521.94921875,
+          "height": 20
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 535.297469007402,
+          "width": 391.3172933721662,
+          "height": 14.993588601959038
+        }
+      },
+      {
+        "id": "itm_1140",
+        "type": "text",
+        "content": "2,250.00 USD",
+        "fontFamily": "Inter",
+        "fontSize": 24,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 581.94921875,
+          "y": 709.515625,
+          "width": 164.05078125,
+          "height": 29.0390625
+        },
+        "boxPt": {
+          "x": 436.30066868702767,
+          "y": 531.9092693955921,
+          "width": 122.99263106108312,
+          "height": 21.769987825578806
+        }
+      },
+      {
+        "id": "itm_1141",
+        "type": "frame",
+        "name": "PDF payment",
+        "padding": 0,
+        "gap": 10,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 762.5546875,
+          "width": 698,
+          "height": 118.6474609375
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 571.6715635435218,
+          "width": 523.3065994962217,
+          "height": 88.94756089819401
+        }
+      },
+      {
+        "id": "itm_1142",
+        "type": "text",
+        "content": "HOW TO PAY",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand",
+        "boxPx": {
+          "x": 48,
+          "y": 762.5546875,
+          "width": 78.6328125,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 571.6715635435218,
+          "width": 58.95282194584382,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "itm_1143",
+        "type": "text",
+        "content": "Bank transfer · Net 30",
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 787.07421875,
+          "width": 147,
+          "height": 16.939453125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 590.0533517572908,
+          "width": 110.20926952141058,
+          "height": 12.69915956492097
+        }
+      },
+      {
+        "id": "itm_1144",
+        "type": "text",
+        "content": "Acme Studio LLC · Example Bank",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 814.013671875,
+          "width": 203.67724609375,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 610.2493056231913,
+          "width": 152.70150006887593,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "itm_1145",
+        "type": "text",
+        "content": "Account: DEMO-ACCOUNT-001 · SWIFT: DEMOBANK",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 839.7431640625,
+          "width": 330.9794921875,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 629.538176663026,
+          "width": 248.1429119765428,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "itm_1146",
+        "type": "text",
+        "content": "Please include payment reference INV-2026-042.",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 865.47265625,
+          "width": 308.12158203125,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 648.8270477028607,
+          "width": 231.00581278534318,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "itm_1147",
+        "type": "frame",
+        "name": "PDF notes",
+        "padding": 0,
+        "gap": 8,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 905.2021484375,
+          "width": 698,
+          "height": 38.2490234375
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 678.6114307640667,
+          "width": 523.3065994962217,
+          "height": 28.674506092428206
+        }
+      },
+      {
+        "id": "itm_1148",
+        "type": "text",
+        "content": "Notes",
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark",
+        "boxPx": {
+          "x": 48,
+          "y": 905.2021484375,
+          "width": 34.341796875,
+          "height": 14.51953125
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 678.6114307640667,
+          "width": 25.746832296914356,
+          "height": 10.884993912789403
+        }
+      },
+      {
+        "id": "itm_1149",
+        "type": "text",
+        "content": "Thank you for your partnership.",
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 48,
+          "y": 927.7216796875,
+          "width": 194.75244140625,
+          "height": 15.7294921875
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 695.4938601176397,
+          "width": 146.01036942104847,
+          "height": 11.792076738855187
+        }
+      },
+      {
+        "id": "itm_1150",
+        "type": "frame",
+        "name": "divider",
+        "fill": "$color-divider",
+        "padding": 0,
+        "gap": 0,
+        "explicitWidth": "fill_container",
+        "explicitHeight": 1,
+        "boxPx": {
+          "x": 48,
+          "y": 967.451171875,
+          "width": 698,
+          "height": 1
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 725.2782431788457,
+          "width": 523.3065994962217,
+          "height": 0.7496794300979519
+        }
+      },
+      {
+        "id": "itm_1151",
+        "type": "frame",
+        "name": "Document footer",
+        "padding": 0,
+        "gap": 12,
+        "explicitWidth": "fill_container",
+        "boxPx": {
+          "x": 48,
+          "y": 992.451171875,
+          "width": 698,
+          "height": 16
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 744.0202289312945,
+          "width": 523.3065994962217,
+          "height": 11.99487088156723
+        }
+      },
+      {
+        "id": "itm_1152",
+        "type": "text",
+        "content": "Acme Studio LLC · billing@acme.example",
+        "fontFamily": "Inter",
+        "fontSize": 11,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "explicitWidth": "fill_container",
+        "explicitHeight": 16,
+        "boxPx": {
+          "x": 48,
+          "y": 992.451171875,
+          "width": 630.7421875,
+          "height": 16
+        },
+        "boxPt": {
+          "x": 35.98670025188917,
+          "y": 744.0202289312945,
+          "width": 472.8818757871536,
+          "height": 11.99487088156723
+        }
+      },
+      {
+        "id": "itm_1153",
+        "type": "text",
+        "content": "Page 1 of 1",
+        "fontFamily": "Inter",
+        "fontSize": 11,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted",
+        "boxPx": {
+          "x": 690.7421875,
+          "y": 993.79638671875,
+          "width": 55.2578125,
+          "height": 13.3095703125
+        },
+        "boxPt": {
+          "x": 517.8652511020151,
+          "y": 745.0287088287163,
+          "width": 41.42804864609572,
+          "height": 9.97791108672362
+        }
+      }
+    ]
+  }
+}

@@ -79,13 +79,18 @@ Project Managers see data only for projects they are assigned to. Admins see all
 
 Reports aggregate tracked hours with totals per task, project, and user.
 
-### 5. Invoices (MVP: UI Data Only)
+### 5. Invoices
 
-Admins and Project Managers create invoice records from time report data:
+Admins and authorized Project Managers create invoices from completed billable time entries within their workspace and project permissions.
 
-- **Formula:** total tracked hours × configurable hourly rate, minus an optional discount.
-- Invoices are stored and displayed in the UI with their status (`draft` / `sent` / `paid`).
-- PDF/document generation is **deferred** to a later milestone.
+- Billed hours use the invoice's per-entry ceiling rounding step. Charges use the saved rate, currency and optional percentage discount.
+- Show time by chooses Time entry or Task on each invoice. New and historical invoices default to Time entry; editing restores the saved format and copying inherits it. Task groups retain individual inclusion controls in the editor, while saved details and PDFs show one line per included task. Switching formats preserves selected entries, rounded hours and charges.
+- Draft, Sent and Paid are manually selected statuses with reversible transitions. All business fields and included time entries can be edited in any status, with a preview and atomic save. Excluding tracked entries releases them for another invoice.
+- Sender, recipient, services and payment details are captured on each invoice. Admin Settings supplies reusable sender/payment defaults and an optional logo. Later settings edits preserve historical invoice details.
+- PDF downloads contain the saved reference, parties, services, selected charges, currency, discount, total and payment instructions, with readable multipage formatting.
+- Create from this invoice prepares an independent draft with a fresh reference and reviewed eligible entries.
+- Each user organizes accessible invoices in personal flat groups. Single and bulk moves affect only that user's organization. Group deletion preserves invoices.
+- Acceptance includes manual desktop and mobile testing as Admin and authorized PM, with recorded results and retesting of fixes.
 
 ### 6. Invite by Email
 
@@ -196,7 +201,6 @@ Both frontends communicate with the same backend API.
 The following are explicitly **out of scope for the MVP**:
 
 - Non-GitHub integrations (Jira, Trello, Asana, etc.)
-- PDF/document invoice generation
 - Mobile/desktop native applications
 - Budgeting and cost limits per project
 - Scheduling and capacity planning

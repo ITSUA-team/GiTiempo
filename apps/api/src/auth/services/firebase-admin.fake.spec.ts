@@ -278,4 +278,80 @@ describe('FakeFirebaseAdminService', () => {
     fake.setAlternativeProviders('user-1', []);
     await expect(fake.hasUsableAlternativeLogin('user-1')).resolves.toBe(false);
   });
+
+  it('confirms absence for identities missing from the fake user store', async () => {
+    await expect(fake.confirmUidAbsent('unknown-uid')).resolves.toEqual({
+      absent: true,
+      evidence: 'auth/user-not-found (confirmed by two consecutive lookups)',
+    });
+  });
+
+  it('refuses to confirm absence for observed or provisioned fake identities', async () => {
+    await fake.verifyIdToken('test:observed-uid:observed@example.com');
+    await fake.createUnclaimedUser({
+      uid: 'unclaimed-uid',
+      email: 'invitee@example.com',
+    });
+    const registered = await fake.createEmailPasswordUser({
+      uid: 'registered-uid',
+      email: 'owner@example.com',
+      password: 'long-enough-password',
+      displayName: 'Owner',
+    });
+
+    await expect(fake.confirmUidAbsent('observed-uid')).resolves.toEqual({
+      absent: false,
+      evidence: 'user-present',
+    });
+    await expect(fake.confirmUidAbsent('unclaimed-uid')).resolves.toEqual({
+      absent: false,
+      evidence: 'user-present',
+    });
+    await expect(fake.confirmUidAbsent(registered.uid)).resolves.toEqual({
+      absent: false,
+      evidence: 'user-present',
+    });
+  });
+
+  it('confirms absence again after the fake identity is deleted', async () => {
+    const registered = await fake.createEmailPasswordUser({
+      uid: 'deleted-uid',
+      email: 'owner@example.com',
+      password: 'long-enough-password',
+      displayName: 'Owner',
+    });
+    await fake.deleteUser(registered.uid);
+
+    await expect(fake.confirmUidAbsent(registered.uid)).resolves.toEqual({
+      absent: true,
+      evidence: 'auth/user-not-found (confirmed by two consecutive lookups)',
+    });
+  });
+
+  it('reports an uncertain provider outage instead of absence when one is simulated', async () => {
+    fake.setProviderLookupFailure('admin-uid', 'timeout');
+
+    await expect(fake.confirmUidAbsent('admin-uid')).resolves.toEqual({
+      absent: false,
+      evidence: 'provider-lookup-failed:timeout',
+    });
+  });
+
+  it('refuses absence when a late provider creation appears between lookups', async () => {
+    fake.setLateProviderCreation('late-uid');
+
+    await expect(fake.confirmUidAbsent('late-uid')).resolves.toEqual({
+      absent: false,
+      evidence: 'user-present-after-recheck',
+    });
+  });
+
+  it('refuses absence when the second confirmation lookup fails', async () => {
+    fake.setSecondLookupFailure('flaky-uid', 'transient-outage');
+
+    await expect(fake.confirmUidAbsent('flaky-uid')).resolves.toEqual({
+      absent: false,
+      evidence: 'provider-lookup-failed-on-recheck:transient-outage',
+    });
+  });
 });

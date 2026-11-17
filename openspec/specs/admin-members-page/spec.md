@@ -26,7 +26,7 @@ The admin Members page MUST provide an `Invite Member` dialog that creates a pen
 - **THEN** it shows email and role fields with `Send Invite` as the only footer action
 - **AND** the dialog footer does not show a `Cancel` dismissal button
 - **AND** invalid email or missing role shows field-level validation without sending a request
-- **AND** successful invite creation closes the dialog, shows success notification, and updates the pending invite count
+- **AND** successful invite creation closes the dialog and updates the pending invite list and count without a redundant success/info notification
 - **AND** backend errors keep the dialog open and show the rejection reason
 
 #### Scenario: Invite dialog dismissal uses popup close control
@@ -131,7 +131,7 @@ The Members page MUST provide an inline assignment expansion under non-admin mem
 - **GIVEN** the Members page renders member assignment expansion content
 - **WHEN** the admin submits assignment changes
 - **THEN** the expansion form emits a typed save payload
-- **AND** the Members page or focused composable performs auth checks, member/project API calls, success/error toast feedback, member refresh, and row collapse
+- **AND** the Members page or focused composable performs auth checks, member/project API calls, actionable error toast feedback, member refresh, and row collapse without redundant success/info notifications
 - **AND** the expansion form itself does not import admin API clients, auth stores, toast helpers, or confirmation helpers
 
 ### Requirement: Edit Member Inline Form
@@ -143,7 +143,7 @@ The Members page MUST provide an inline edit panel that updates a member's role.
 - **GIVEN** an admin selects Edit on a member row
 - **WHEN** the row expands
 - **THEN** the panel shows Name, Email, and editable Role fields in that order
-- **AND** saving a role change issues a member-role update, collapses on success, refreshes the member list, and shows success notification
+- **AND** saving a role change issues a member-role update, collapses on success, refreshes the member list without a redundant success/info notification
 - **AND** backend last-admin protection failures keep the panel open and surface the rejection
 
 #### Scenario: Members role edit expansion form emits save payload
@@ -151,7 +151,7 @@ The Members page MUST provide an inline edit panel that updates a member's role.
 - **GIVEN** the Members page renders role edit expansion content
 - **WHEN** the admin submits role changes
 - **THEN** the expansion form emits a typed save payload
-- **AND** the Members page or focused composable performs auth checks, member/project API calls, success/error toast feedback, member refresh, and row collapse
+- **AND** the Members page or focused composable performs auth checks, member/project API calls, actionable error toast feedback, member refresh, and row collapse without redundant success/info notifications
 - **AND** the expansion form itself does not import admin API clients, auth stores, toast helpers, or confirmation helpers
 
 ### Requirement: Remove Member Confirmation
@@ -163,7 +163,7 @@ The Members page MUST gate member removal behind a destructive confirmation dial
 - **GIVEN** an admin selects Remove on a member row
 - **WHEN** the action is invoked
 - **THEN** the page opens the shared confirmation dialog with a destructive confirm action
-- **AND** confirming issues a member-remove request, refreshes the member list on success, and shows success notification
+- **AND** confirming issues a member-remove request, refreshes the member list on success without a redundant success/info notification
 - **AND** cancelling sends no request
 - **AND** backend last-admin protection failures are surfaced without removing the member
 
@@ -183,7 +183,7 @@ The Members page MUST keep member-removal API orchestration outside the Members 
 - **GIVEN** the Members page receives a `remove-member` intent from the Members table
 - **WHEN** the page handles the intent
 - **THEN** it opens the shared destructive confirmation dialog using the selected member's display name or email
-- **AND** confirming issues the member-remove request, refreshes the member list on success, and shows success toast feedback
+- **AND** confirming issues the member-remove request, refreshes the member list on success without a redundant success/info notification
 - **AND** cancelling sends no member-remove request
 - **AND** backend last-admin protection failures or other API errors are surfaced through error toast feedback without removing the row from loaded data
 
@@ -230,7 +230,7 @@ The Admin Members page MUST provide accessible icon-only `Resend invite` and `Ca
 - **GIVEN** the admin selects `Cancel invite` for a pending invitation
 - **WHEN** the action is invoked
 - **THEN** the page opens the shared destructive confirmation dialog
-- **AND** confirming issues the cancel request, refreshes pending invite data, and shows success toast feedback
+- **AND** confirming issues the cancel request, refreshes pending invite data without a redundant success/info notification
 - **AND** cancelling sends no request
 
 #### Scenario: Cancel pending invite failure
@@ -244,3 +244,58 @@ The Admin Members page MUST provide accessible icon-only `Resend invite` and `Ca
 - **WHEN** row actions are visible
 - **THEN** each action is icon-only with a text tooltip
 - **AND** each action exposes an accessible label matching `Resend invite` or `Cancel invite`
+
+### Requirement: PM Invoice View Permission Toggle In Member Settings
+
+The member edit form SHALL render an "Allow viewing invoices" toggle (checkbox or switch) within the "Member settings" panel when the expanded member's role is `pm`. The toggle reflects the member's current `canViewInvoices` value. Only admins can see and change it.
+
+#### Scenario: Checkbox visible for PM member
+
+- **GIVEN** an admin expands a PM member's row in the members table
+- **WHEN** the member edit form renders
+- **THEN** an "Allow viewing invoices" checkbox is visible
+- **AND** the checkbox reflects the member's current `canViewInvoices` value
+
+#### Scenario: Checkbox hidden for admin or member role
+
+- **GIVEN** an admin expands an admin or member (non-PM) row
+- **WHEN** the member edit form renders
+- **THEN** the "Allow viewing invoices" checkbox is not rendered
+
+#### Scenario: Admin toggles invoice permission on
+
+- **GIVEN** the checkbox is visible and currently unchecked
+- **WHEN** the admin checks it
+- **THEN** the form emits an update event with `canViewInvoices: true`
+- **AND** the parent view calls `PATCH /members/:id/permissions`
+- **AND** the persisted permission control reflects success without a redundant success/info notification
+- **AND** the member list is refreshed
+
+#### Scenario: Admin toggles invoice permission off
+
+- **GIVEN** the checkbox is visible and currently checked
+- **WHEN** the admin unchecks it
+- **THEN** the form emits an update event with `canViewInvoices: false`
+- **AND** the parent view calls `PATCH /members/:id/permissions`
+- **AND** the persisted permission control reflects success without a redundant success/info notification
+
+#### Scenario: Permission update error shows feedback
+
+- **GIVEN** the admin toggles the checkbox
+- **WHEN** the `PATCH /members/:id/permissions` call fails
+- **THEN** an error toast is shown
+- **AND** the checkbox reverts to the previous value
+
+### Requirement: Member management follows the active workspace
+The Members page SHALL scope its member list, project assignment choices, pending invitations, counters and actions to the active workspace throughout a switch.
+
+#### Scenario: Switch with a member or invitation action open
+- **GIVEN** an admin viewing Members in A is editing an assignment or confirming an invitation action
+- **WHEN** the admin successfully switches to B and retains access to Members
+- **THEN** the page closes the old action and removes A's members, assignments, invitations and counters
+- **AND** the open page automatically displays B's members, assignment choices, invitations and counters within the admin's permissions
+
+#### Scenario: Member and invitation loads finish independently
+- **GIVEN** B's member list has loaded while its invitations are still loading
+- **WHEN** A's outstanding invitation response arrives or B's invitation request fails
+- **THEN** A's invitations and invitation actions remain unavailable, B's members remain visible, and invitation status reflects only B's request

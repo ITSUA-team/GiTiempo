@@ -51,7 +51,7 @@ The Add Project form MUST render the fields required for the chosen source and b
 - **WHEN** the user submits an empty project name for a manual project
 - **THEN** the form shows an inline validation error and sends no API request
 - **AND** valid submission disables duplicate submission while the request is in flight
-- **AND** successful creation navigates to the Projects list and shows a success toast
+- **AND** successful creation navigates to the updated Projects list without a redundant success/info notification
 - **AND** failed creation shows an inline error while keeping the form editable
 
 #### Scenario: A name an active project already holds is reported on the field
@@ -150,3 +150,24 @@ The Add Project page SHALL let an admin add one of the workspace organizations' 
 - **WHEN** the Source field is set to the GitHub import
 - **THEN** the page explains which of those is the case
 - **AND** it does not present the state as a failed request
+
+### Requirement: Project creation choices follow the active workspace
+The Add Project form SHALL invalidate workspace-owned selections on a successful workspace switch and SHALL offer only the new workspace's eligible managers and GitHub import choices.
+
+#### Scenario: Switch with a project manager selected
+- **GIVEN** an admin in A has selected a project manager in the Add Project form
+- **WHEN** the admin successfully switches to B and retains access to the form
+- **THEN** the old manager selection clears and the form automatically loads B's eligible managers
+- **AND** submitting in B cannot send A's selected manager ID
+
+#### Scenario: Switch while a GitHub board is selected or being scanned
+- **GIVEN** GitHub import is open in A and a board is selected or a repository scan is pending
+- **WHEN** the admin successfully switches to B and retains access to Add Project
+- **THEN** GitHub import stays open and clears A's organization, board, repository summary and import eligibility
+- **AND** the form resolves B's connection, organizations, boards and already-imported projects and repositories before offering a valid import
+- **AND** an outstanding response from A cannot select a board or enable an import in B
+
+#### Scenario: Destination has no GitHub connection
+- **GIVEN** the GitHub import form in A shows available boards
+- **WHEN** the admin switches to B where GitHub import is unavailable
+- **THEN** the form shows B's unavailable state and cannot submit an import from A

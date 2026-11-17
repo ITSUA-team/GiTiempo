@@ -1,0 +1,12 @@
+meta {
+  name: Download saved invoice PDF
+  type: http
+  seq: 4
+}
+get {
+  url: {{baseUrl}}/invoices/{{invoiceId}}/pdf
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}

@@ -65,6 +65,11 @@ onBeforeUnmount(() => {
       root: 'w-80',
     }"
   />
-  <ConfirmDialog />
+  <ConfirmDialog
+    :pt="{
+      root: 'w-[min(375px,calc(100vw-2rem))]',
+      footer: 'flex flex-row-reverse justify-between gap-2',
+    }"
+  />
   <RouterView />
 </template>

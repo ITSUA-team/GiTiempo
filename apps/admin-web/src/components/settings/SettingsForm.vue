@@ -19,17 +19,6 @@ import { getRoundingStepOptions } from '@/lib/rounding-step-options';
 import type { SettingsTimeZoneOption } from '@/lib/time-zones';
 import SettingsCard from './SettingsCard.vue';
 
-interface FutureSettingsField {
-	id: string;
-	label: string;
-	value: string;
-}
-
-interface FutureSettingsSection {
-	fields: FutureSettingsField[];
-	title: string;
-}
-
 const workspaceName = defineModel<string>('workspaceName', { required: true });
 const defaultHourlyRate = defineModel<number | null>('defaultHourlyRate', {
 	required: true,
@@ -61,39 +50,6 @@ const selectedTimeZoneOption = computed(
 		null,
 );
 
-const futureSettingsSections: FutureSettingsSection[] = [
-	{
-		fields: [
-			{
-				id: 'settings-invoice-prefix',
-				label: 'Invoice prefix',
-				value: 'INV-2026',
-			},
-			{
-				id: 'settings-payment-terms',
-				label: 'Payment terms',
-				value: 'Net 30',
-			},
-		],
-		title: 'Billing Defaults',
-	},
-	{
-		fields: [
-			{
-				id: 'settings-legal-entity',
-				label: 'Legal entity',
-				value: 'GiTiempo LLC',
-			},
-			{
-				id: 'settings-tax-id',
-				label: 'Tax ID',
-				value: '98-7654321',
-			},
-		],
-		title: 'Organization',
-	},
-];
-
 const emit = defineEmits<{
 	cancel: [];
 	save: [];
@@ -123,7 +79,7 @@ function submitWorkspaceForm(): void {
 </script>
 
 <template>
-  <div class="flex w-full max-w-[620px] flex-col gap-2">
+  <div class="flex w-full max-w-[620px] flex-col gap-6">
     <Form
       ref="workspaceForm"
       @submit="emit('save')"
@@ -282,38 +238,6 @@ function submitWorkspaceForm(): void {
               </Message>
             </div>
           </section>
-
-          <template
-            v-for="section in futureSettingsSections"
-            :key="section.title"
-          >
-            <div class="border-divider border-t" />
-
-            <section class="flex flex-col gap-3">
-              <h2 class="text-text-dark text-lg font-semibold">
-                {{ section.title }}
-              </h2>
-
-              <div
-                v-for="field in section.fields"
-                :key="field.id"
-                class="flex flex-col gap-1.5"
-              >
-                <label
-                  :for="field.id"
-                  class="text-text-dark text-[13px] font-medium"
-                >
-                  {{ field.label }}
-                </label>
-                <InputText
-                  :id="field.id"
-                  :model-value="field.value"
-                  class="h-[38px] w-full"
-                  disabled
-                />
-              </div>
-            </section>
-          </template>
         </div>
       </SettingsCard>
     </Form>

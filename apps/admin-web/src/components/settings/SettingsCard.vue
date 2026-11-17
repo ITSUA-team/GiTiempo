@@ -4,11 +4,13 @@ import { SurfaceCard } from '@gitiempo/web-shared';
 withDefaults(
   defineProps<{
     description?: string;
+    descriptionClass?: string;
     paddingClass?: string;
     title?: string;
   }>(),
   {
     description: undefined,
+    descriptionClass: 'text-sm',
     paddingClass: 'p-6',
     title: undefined,
   },
@@ -33,7 +35,8 @@ withDefaults(
         </h2>
         <p
           v-if="description"
-          class="text-text-muted text-sm leading-5"
+          class="text-text-muted leading-5"
+          :class="descriptionClass"
         >
           {{ description }}
         </p>

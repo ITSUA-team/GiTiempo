@@ -1,0 +1,3616 @@
+{
+  "entries": [
+    {
+      "nodeId": "i527_0634",
+      "expectedText": "A",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 22,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 38.9833303650935,
+        "width": 11.999959658375314,
+        "height": 19.95582217344724
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "status": "optional-logo-omitted"
+    },
+    {
+      "nodeId": "i527_0636",
+      "expectedText": "Acme Studio",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 20,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 80.97007556675062,
+        "y": 47.90480842678651,
+        "width": 92.4267789672544,
+        "height": 18.14165652131567
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Acme Studio LLC",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 51.149414054999966,
+        "x1": 159.603516035,
+        "bottom": 66.14941405499997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        15.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0638",
+      "expectedText": "INVOICE",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 28,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 472.1467958910579,
+        "y": 44.276477122523374,
+        "width": 87.14650385705289,
+        "height": 25.39831912984194
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "INVOICE",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 472.901094,
+        "top": 48.409179677,
+        "x1": 559.2800002710001,
+        "bottom": 69.409179677
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        21.0
+      ],
+      "actualColors": [
+        "#5D2B85"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0641",
+      "expectedText": "Invoice number",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 114.70095280498664,
+        "width": 65.93315235358942,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Invoice number",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 116.63964843300005,
+        "x1": 101.64990233500001,
+        "bottom": 125.63964843300005
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0642",
+      "expectedText": "INV-2026-042",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 134.58209987895145,
+        "width": 86.22985044080603,
+        "height": 14.513325217052538
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "INV-4",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 137.15917924399992,
+        "x1": 70.078125012,
+        "bottom": 149.15917924399992
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        12.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0644",
+      "expectedText": "Issue date",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 169.06251889168766,
+        "y": 114.70095280498664,
+        "width": 43.75775405384131,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Issue date",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 169.07,
+        "top": 116.63964843300005,
+        "x1": 212.756034768,
+        "bottom": 125.63964843300005
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0645",
+      "expectedText": "11 Nov 2026",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 169.06251889168766,
+        "y": 134.58209987895145,
+        "width": 60.94207700330604,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "11 Nov 2026",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 169.07,
+        "top": 136.84423783850002,
+        "x1": 229.834648271,
+        "bottom": 147.34423783850002
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Medium"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_dates_74",
+      "expectedText": "Due date",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 302.1383375314861,
+        "y": 114.70095280498664,
+        "width": 38.33690589578085,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Due date",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 302.14,
+        "top": 116.63964843300005,
+        "x1": 340.403183768,
+        "bottom": 125.63964843300005
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_dates_75",
+      "expectedText": "11 Dec 2026",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 302.1383375314861,
+        "y": 134.58209987895145,
+        "width": 60.42957109965365,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "11 Dec 2026",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 302.14,
+        "top": 136.84423783850002,
+        "x1": 362.59190427100003,
+        "bottom": 147.34423783850002
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Medium"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0647",
+      "expectedText": "Billing period",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 435.2141561712846,
+        "y": 114.70095280498664,
+        "width": 55.18810000787153,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Billing period",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 435.21,
+        "top": 116.63964843300005,
+        "x1": 490.506386797,
+        "bottom": 125.63964843300005
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0648",
+      "expectedText": "01–30 Nov 2026",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 435.2141561712846,
+        "y": 134.58209987895145,
+        "width": 81.9650691711272,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "01–30 Nov 2026",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 435.21,
+        "top": 136.84423783850002,
+        "x1": 517.005410271,
+        "bottom": 147.34423783850002
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Medium"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0651",
+      "expectedText": "FROM",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 167.08773141835485,
+        "width": 26.37062519678841,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "FROM",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 169.04882843300004,
+        "x1": 62.380371096000005,
+        "bottom": 178.04882843300004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#5D2B85"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0652",
+      "expectedText": "Acme Studio LLC",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 185.46951963212376,
+        "width": 99.36757320528966,
+        "height": 14.513325217052538
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Acme Studio LLC",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 188.0683592439999,
+        "x1": 134.882812628,
+        "bottom": 200.0683592439999
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        12.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0653",
+      "expectedText": "12 Studio Lane\nKyiv, Ukraine",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 207.47963915015583,
+        "width": 249.6577329974811,
+        "height": 29.987177203918076
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "12 Studio Lane, Kyiv, Ukraine",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 209.61547863575004,
+        "x1": 168.9342044155,
+        "bottom": 219.36547863575004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0654",
+      "expectedText": "billing@acme.example",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 244.96361065505343,
+        "width": 103.6506582572418,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "billing@acme.example",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 247.11547863575004,
+        "x1": 139.4699707665,
+        "bottom": 256.86547863575004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0655",
+      "expectedText": "Tax ID UA123456",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 264.2524816948881,
+        "width": 74.07321040617128,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Tax ID UA123456",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 266.255127433,
+        "x1": 108.96240247099999,
+        "bottom": 275.255127433
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0657",
+      "expectedText": "BILL TO",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 309.6355667506297,
+        "y": 167.08773141835485,
+        "width": 33.71556694741813,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "BILL TO",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 309.64,
+        "top": 169.04882843300004,
+        "x1": 343.086777442,
+        "bottom": 178.04882843300004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#5D2B85"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0658",
+      "expectedText": "Orion Labs Ltd.",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 309.6355667506297,
+        "y": 185.46951963212376,
+        "width": 87.8815837531486,
+        "height": 14.513325217052538
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Orion Labs Ltd.",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 309.64,
+        "top": 188.0683592439999,
+        "x1": 397.24351575599997,
+        "bottom": 200.0683592439999
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        12.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0659",
+      "expectedText": "45 Market Street\nLondon, UK",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 309.6355667506297,
+        "y": 207.47963915015583,
+        "width": 249.6577329974811,
+        "height": 29.987177203918076
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "45 Market Street, London, UK",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 309.64,
+        "top": 209.61547863575004,
+        "x1": 446.43516634375,
+        "bottom": 219.36547863575004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0660",
+      "expectedText": "accounts@orion.example",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 309.6355667506297,
+        "y": 244.96361065505343,
+        "width": 117.02816056950566,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "accounts@orion.example",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 309.64,
+        "top": 247.11547863575004,
+        "x1": 426.492417058,
+        "bottom": 256.86547863575004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0661",
+      "expectedText": "Tax ID GB654321",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 309.6355667506297,
+        "y": 264.2524816948881,
+        "width": 73.77009977172544,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Tax ID GB654321",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 309.64,
+        "top": 266.255127433,
+        "x1": 382.778183721,
+        "bottom": 275.255127433
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0664",
+      "expectedText": "Product design & development",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 18,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 293.1297819300284,
+        "width": 200.39566553841308,
+        "height": 16.327490869184103
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Product design & development",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 296.0895996495,
+        "x1": 235.67211905149998,
+        "bottom": 309.5895996495
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        13.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0665",
+      "expectedText": "Project Orion · November 2026",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 315.4547082399961,
+        "width": 143.6784675594301,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Project Orion · November 2026",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 317.63671863574996,
+        "x1": 179.28405746875,
+        "bottom": 327.38671863574996
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0667",
+      "expectedText": "Service / work description",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 44.983375314861455,
+        "y": 354.61008417742653,
+        "width": 313.38418136020147,
+        "height": 12.744550311665183
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Service / work description",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 45.0,
+        "top": 356.65136743299996,
+        "x1": 159.28418019199998,
+        "bottom": 365.65136743299996
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0668",
+      "expectedText": "Hours",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 367.36423173803524,
+        "y": 354.61008417742653,
+        "width": 40.48503778337531,
+        "height": 12.744550311665183
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Hours",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 367.28,
+        "top": 356.65136743299996,
+        "x1": 393.497773442,
+        "bottom": 365.65136743299996
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0669",
+      "expectedText": "Rate",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 416.84594458438283,
+        "y": 354.61008417742653,
+        "width": 56.97894206549118,
+        "height": 12.744550311665183
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Rate",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 416.78,
+        "top": 356.65136743299996,
+        "x1": 436.18625,
+        "bottom": 365.65136743299996
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0670",
+      "expectedText": "Amount",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 482.8215617128463,
+        "y": 354.61008417742653,
+        "width": 67.47506297229219,
+        "height": 12.744550311665183
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Amount",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 482.78,
+        "top": 356.65136743299996,
+        "x1": 517.105683605,
+        "bottom": 365.65136743299996
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0672",
+      "expectedText": "Dashboard UX · Design iteration",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 44.983375314861455,
+        "y": 389.8450173920303,
+        "width": 313.38418136020147,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Dashboard UX · Design iteration",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 45.0,
+        "top": 391.68383763574997,
+        "x1": 192.3830563315,
+        "bottom": 401.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0673",
+      "expectedText": "10",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 367.36423173803524,
+        "y": 389.8450173920303,
+        "width": 40.48503778337531,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "10",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 367.28,
+        "top": 391.68383763574997,
+        "x1": 377.39657714599997,
+        "bottom": 401.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0674",
+      "expectedText": "100.00",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 416.84594458438283,
+        "y": 389.8450173920303,
+        "width": 56.97894206549118,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "100.00",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 416.78,
+        "top": 391.68383763574997,
+        "x1": 447.16781738525,
+        "bottom": 401.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0675",
+      "expectedText": "1,000.00",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 482.8215617128463,
+        "y": 389.8450173920303,
+        "width": 67.47506297229219,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "1,000.00",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 482.78,
+        "top": 391.68383763574997,
+        "x1": 521.6324169994999,
+        "bottom": 401.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0677",
+      "expectedText": "Invoice editing · Implementation",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 44.983375314861455,
+        "y": 430.3277066173197,
+        "width": 313.38418136020147,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Invoice editing · Implementation",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 45.0,
+        "top": 432.18383763574997,
+        "x1": 191.35949748625,
+        "bottom": 441.93383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0678",
+      "expectedText": "8",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 367.36423173803524,
+        "y": 430.3277066173197,
+        "width": 40.48503778337531,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "8",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 367.28,
+        "top": 432.18383763574997,
+        "x1": 373.311860354,
+        "bottom": 441.93383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0679",
+      "expectedText": "100.00",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 416.84594458438283,
+        "y": 430.3277066173197,
+        "width": 56.97894206549118,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "100.00",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 416.78,
+        "top": 432.18383763574997,
+        "x1": 447.16781738525,
+        "bottom": 441.93383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0680",
+      "expectedText": "800.00",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 482.8215617128463,
+        "y": 430.3277066173197,
+        "width": 67.47506297229219,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "800.00",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 482.78,
+        "top": 432.18383763574997,
+        "x1": 515.2339794995,
+        "bottom": 441.93383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0682",
+      "expectedText": "Dashboard UX · Acceptance checks",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 44.983375314861455,
+        "y": 470.81039584260907,
+        "width": 313.38418136020147,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Dashboard UX · Acceptance checks",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 45.0,
+        "top": 472.68383763574997,
+        "x1": 211.30700721775,
+        "bottom": 482.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0683",
+      "expectedText": "7",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 367.36423173803524,
+        "y": 470.81039584260907,
+        "width": 40.48503778337531,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "7",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 367.28,
+        "top": 472.68383763574997,
+        "x1": 372.79770019775,
+        "bottom": 482.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0684",
+      "expectedText": "100.00",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 416.84594458438283,
+        "y": 470.81039584260907,
+        "width": 56.97894206549118,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "100.00",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 416.78,
+        "top": 472.68383763574997,
+        "x1": 447.16781738525,
+        "bottom": 482.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0685",
+      "expectedText": "700.00",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 482.8215617128463,
+        "y": 470.81039584260907,
+        "width": 67.47506297229219,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "700.00",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 482.78,
+        "top": 472.68383763574997,
+        "x1": 514.41513184325,
+        "bottom": 482.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0688",
+      "expectedText": "Subtotal · 25h",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 516.1660013635352,
+        "width": 443.12285441593195,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Subtotal · 25h",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 518.43383763575,
+        "x1": 99.79394554150001,
+        "bottom": 528.18383763575
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0689",
+      "expectedText": "2,500.00 USD",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 488.1062297307934,
+        "y": 516.9383761670052,
+        "width": 71.18707001731738,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "2,500.00 USD",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 489.440645,
+        "top": 518.5913088385,
+        "x1": 559.2799996484999,
+        "bottom": 529.0913088385
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Medium"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0691",
+      "expectedText": "Discount · 10%",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 539.4060636965717,
+        "width": 446.7770215089735,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Discount · 10%",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 541.68842763575,
+        "x1": 104.6594236875,
+        "bottom": 551.43842763575
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0692",
+      "expectedText": "−250.00 USD",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 491.760396823835,
+        "y": 540.1784385000417,
+        "width": 67.53290292427582,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "−250.00 USD",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 493.496064,
+        "top": 541.8458988385,
+        "x1": 559.2799996979999,
+        "bottom": 552.3458988385
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0695",
+      "expectedText": "TOTAL DUE",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 575.7801582326914,
+        "width": 391.3172933721662,
+        "height": 14.993588601959038
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "TOTAL DUE",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 578.2504878385,
+        "x1": 94.2473149115,
+        "bottom": 588.7504878385
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0696",
+      "expectedText": "2,250.00 USD",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 24,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 436.30066868702767,
+        "y": 572.3919586208816,
+        "width": 122.99263106108312,
+        "height": 21.769987825578806
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "2,250.00 USD",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 438.24582,
+        "top": 576.425194866,
+        "x1": 559.279999884,
+        "bottom": 594.425194866
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        18.0
+      ],
+      "actualColors": [
+        "#5D2B85"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0699",
+      "expectedText": "HOW TO PAY",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 612.1542527688113,
+        "width": 58.95282194584382,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Payment instructions",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 614.314843433,
+        "x1": 128.188476654,
+        "bottom": 623.314843433
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#5D2B85"
+      ],
+      "styleMatches": true,
+      "approvedTextOverride": "Payment instructions",
+      "overrideReason": "Explicit user request after original design acceptance"
+    },
+    {
+      "nodeId": "i527_0700",
+      "expectedText": "Bank transfer · Net 30",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 630.5360409825802,
+        "width": 110.20926952141058,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Bank transfer · Net 30",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 633.0194338384999,
+        "x1": 145.921874849,
+        "bottom": 643.5194338384999
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Medium"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0701",
+      "expectedText": "Acme Studio LLC · Example Bank",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 650.7319948484807,
+        "width": 152.70150006887593,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Acme Studio LLC · Example Bank",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 653.06655263575,
+        "x1": 188.48181132225002,
+        "bottom": 662.81655263575
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0702",
+      "expectedText": "Account: DEMO-ACCOUNT-001 · SWIFT: DEMOBANK",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 670.0208658883154,
+        "width": 248.1429119765428,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Account: DEMO-ACCOUNT-001 · SWIFT: DEMOBANK",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 672.36367163575,
+        "x1": 282.796874603,
+        "bottom": 682.11367163575
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0703",
+      "expectedText": "Please include payment reference INV-2026-042.",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 689.3097369281501,
+        "width": 231.00581278534318,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Please include the invoice reference.",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 691.66079063575,
+        "x1": 205.70141604974998,
+        "bottom": 701.41079063575
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0705",
+      "expectedText": "Notes",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 719.094119989356,
+        "width": 25.746832296914356,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Notes",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 721.300439433,
+        "x1": 61.66845703800001,
+        "bottom": 730.300439433
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0706",
+      "expectedText": "Thank you for your partnership.",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 735.976549342929,
+        "width": 146.01036942104847,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Thank you for your partnership.",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 738.3475586357499,
+        "x1": 181.6453856015,
+        "bottom": 748.0975586357499
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0709",
+      "expectedText": "Acme Studio LLC · billing@acme.example",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 11,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 784.5029181565839,
+        "width": 472.8818757871536,
+        "height": 11.99487088156723
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Acme Studio LLC · billing@acme.example",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 786.57973623025,
+        "x1": 197.6403807255,
+        "bottom": 794.82973623025
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        8.25
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "i527_0710",
+      "expectedText": "Page 1 of 1",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 11,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 517.8652511020151,
+        "y": 785.5113980540057,
+        "width": 41.42804864609572,
+        "height": 9.97791108672362
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Page 1 of 1",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 517.836641,
+        "top": 786.57973623025,
+        "x1": 559.28000038325,
+        "bottom": 794.82973623025
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        8.25
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    }
+  ],
+  "tasks": [
+    {
+      "nodeId": "itm_1076",
+      "expectedText": "A",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 22,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 38.9833303650935,
+        "width": 11.999959658375314,
+        "height": 19.95582217344724
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "status": "optional-logo-omitted"
+    },
+    {
+      "nodeId": "itm_1077",
+      "expectedText": "Acme Studio",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 20,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 80.97007556675062,
+        "y": 47.90480842678651,
+        "width": 92.4267789672544,
+        "height": 18.14165652131567
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Acme Studio LLC",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 51.149414054999966,
+        "x1": 159.603516035,
+        "bottom": 66.14941405499997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        15.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1078",
+      "expectedText": "INVOICE",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 28,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 472.1467958910579,
+        "y": 44.276477122523374,
+        "width": 87.14650385705289,
+        "height": 25.39831912984194
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "INVOICE",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 472.901094,
+        "top": 48.409179677,
+        "x1": 559.2800002710001,
+        "bottom": 69.409179677
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        21.0
+      ],
+      "actualColors": [
+        "#5D2B85"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1082",
+      "expectedText": "Invoice number",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 114.70095280498664,
+        "width": 65.93315235358942,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Invoice number",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 116.63964843300005,
+        "x1": 101.64990233500001,
+        "bottom": 125.63964843300005
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1083",
+      "expectedText": "INV-2026-042",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 134.58209987895145,
+        "width": 86.22985044080603,
+        "height": 14.513325217052538
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "INV-4",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 137.15917924399992,
+        "x1": 70.078125012,
+        "bottom": 149.15917924399992
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        12.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1085",
+      "expectedText": "Issue date",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 169.06251889168766,
+        "y": 114.70095280498664,
+        "width": 43.75775405384131,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Issue date",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 169.07,
+        "top": 116.63964843300005,
+        "x1": 212.756034768,
+        "bottom": 125.63964843300005
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1086",
+      "expectedText": "11 Nov 2026",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 169.06251889168766,
+        "y": 134.58209987895145,
+        "width": 60.94207700330604,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "11 Nov 2026",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 169.07,
+        "top": 136.84423783850002,
+        "x1": 229.834648271,
+        "bottom": 147.34423783850002
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Medium"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1088",
+      "expectedText": "Due date",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 302.1383375314861,
+        "y": 114.70095280498664,
+        "width": 38.33690589578085,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Due date",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 302.14,
+        "top": 116.63964843300005,
+        "x1": 340.403183768,
+        "bottom": 125.63964843300005
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1089",
+      "expectedText": "11 Dec 2026",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 302.1383375314861,
+        "y": 134.58209987895145,
+        "width": 60.42957109965365,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "11 Dec 2026",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 302.14,
+        "top": 136.84423783850002,
+        "x1": 362.59190427100003,
+        "bottom": 147.34423783850002
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Medium"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1091",
+      "expectedText": "Billing period",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 435.2141561712846,
+        "y": 114.70095280498664,
+        "width": 55.18810000787153,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Billing period",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 435.21,
+        "top": 116.63964843300005,
+        "x1": 490.506386797,
+        "bottom": 125.63964843300005
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1092",
+      "expectedText": "01–30 Nov 2026",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 435.2141561712846,
+        "y": 134.58209987895145,
+        "width": 81.9650691711272,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "01–30 Nov 2026",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 435.21,
+        "top": 136.84423783850002,
+        "x1": 517.005410271,
+        "bottom": 147.34423783850002
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Medium"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1095",
+      "expectedText": "FROM",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 167.08773141835485,
+        "width": 26.37062519678841,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "FROM",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 169.04882843300004,
+        "x1": 62.380371096000005,
+        "bottom": 178.04882843300004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#5D2B85"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1096",
+      "expectedText": "Acme Studio LLC",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 185.46951963212376,
+        "width": 99.36757320528966,
+        "height": 14.513325217052538
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Acme Studio LLC",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 188.0683592439999,
+        "x1": 134.882812628,
+        "bottom": 200.0683592439999
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        12.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1097",
+      "expectedText": "12 Studio Lane\nKyiv, Ukraine",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 207.47963915015583,
+        "width": 249.6577329974811,
+        "height": 29.987177203918076
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "12 Studio Lane, Kyiv, Ukraine",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 209.61547863575004,
+        "x1": 168.9342044155,
+        "bottom": 219.36547863575004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1098",
+      "expectedText": "billing@acme.example",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 244.96361065505343,
+        "width": 103.6506582572418,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "billing@acme.example",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 247.11547863575004,
+        "x1": 139.4699707665,
+        "bottom": 256.86547863575004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1099",
+      "expectedText": "Tax ID UA123456",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 264.2524816948881,
+        "width": 74.07321040617128,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Tax ID UA123456",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 266.255127433,
+        "x1": 108.96240247099999,
+        "bottom": 275.255127433
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1101",
+      "expectedText": "BILL TO",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 309.6355667506297,
+        "y": 167.08773141835485,
+        "width": 33.71556694741813,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "BILL TO",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 309.64,
+        "top": 169.04882843300004,
+        "x1": 343.086777442,
+        "bottom": 178.04882843300004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#5D2B85"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1102",
+      "expectedText": "Orion Labs Ltd.",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 16,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 309.6355667506297,
+        "y": 185.46951963212376,
+        "width": 87.8815837531486,
+        "height": 14.513325217052538
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Orion Labs Ltd.",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 309.64,
+        "top": 188.0683592439999,
+        "x1": 397.24351575599997,
+        "bottom": 200.0683592439999
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        12.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1103",
+      "expectedText": "45 Market Street\nLondon, UK",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 309.6355667506297,
+        "y": 207.47963915015583,
+        "width": 249.6577329974811,
+        "height": 29.987177203918076
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "45 Market Street, London, UK",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 309.64,
+        "top": 209.61547863575004,
+        "x1": 446.43516634375,
+        "bottom": 219.36547863575004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1104",
+      "expectedText": "accounts@orion.example",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 309.6355667506297,
+        "y": 244.96361065505343,
+        "width": 117.02816056950566,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "accounts@orion.example",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 309.64,
+        "top": 247.11547863575004,
+        "x1": 426.492417058,
+        "bottom": 256.86547863575004
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1105",
+      "expectedText": "Tax ID GB654321",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 309.6355667506297,
+        "y": 264.2524816948881,
+        "width": 73.77009977172544,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Tax ID GB654321",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 309.64,
+        "top": 266.255127433,
+        "x1": 382.778183721,
+        "bottom": 275.255127433
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1107",
+      "expectedText": "Product design & development",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 18,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 293.1297819300284,
+        "width": 200.39566553841308,
+        "height": 16.327490869184103
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Product design & development",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 296.0895996495,
+        "x1": 235.67211905149998,
+        "bottom": 309.5895996495
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        13.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1108",
+      "expectedText": "Project Orion · November 2026",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 315.4547082399961,
+        "width": 143.6784675594301,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Project Orion · November 2026",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 317.63671863574996,
+        "x1": 179.28405746875,
+        "bottom": 327.38671863574996
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1111",
+      "expectedText": "Task",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 44.983375314861455,
+        "y": 354.61008417742653,
+        "width": 313.38418136020147,
+        "height": 12.744550311665183
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Task",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 45.0,
+        "top": 356.65136743299996,
+        "x1": 65.518066404,
+        "bottom": 365.65136743299996
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1112",
+      "expectedText": "Hours",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 367.36423173803524,
+        "y": 354.61008417742653,
+        "width": 40.48503778337531,
+        "height": 12.744550311665183
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Hours",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 367.28,
+        "top": 356.65136743299996,
+        "x1": 393.497773442,
+        "bottom": 365.65136743299996
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1113",
+      "expectedText": "Rate",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 416.84594458438283,
+        "y": 354.61008417742653,
+        "width": 56.97894206549118,
+        "height": 12.744550311665183
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Rate",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 416.78,
+        "top": 356.65136743299996,
+        "x1": 436.18625,
+        "bottom": 365.65136743299996
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1114",
+      "expectedText": "Amount",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 482.8215617128463,
+        "y": 354.61008417742653,
+        "width": 67.47506297229219,
+        "height": 12.744550311665183
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Amount",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 482.78,
+        "top": 356.65136743299996,
+        "x1": 517.105683605,
+        "bottom": 365.65136743299996
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1116",
+      "expectedText": "Dashboard UX",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 44.983375314861455,
+        "y": 389.8450173920303,
+        "width": 313.38418136020147,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Dashboard UX",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 45.0,
+        "top": 391.68383763574997,
+        "x1": 111.93603492724999,
+        "bottom": 401.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1117",
+      "expectedText": "17",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 367.36423173803524,
+        "y": 389.8450173920303,
+        "width": 40.48503778337531,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "17",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 367.28,
+        "top": 391.68383763574997,
+        "x1": 376.7633984375,
+        "bottom": 401.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1118",
+      "expectedText": "100.00",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 416.84594458438283,
+        "y": 389.8450173920303,
+        "width": 56.97894206549118,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "100.00",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 416.78,
+        "top": 391.68383763574997,
+        "x1": 447.16781738525,
+        "bottom": 401.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1119",
+      "expectedText": "1,700.00",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 482.8215617128463,
+        "y": 389.8450173920303,
+        "width": 67.47506297229219,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "1,700.00",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 482.78,
+        "top": 391.68383763574997,
+        "x1": 520.91354492675,
+        "bottom": 401.43383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1121",
+      "expectedText": "Invoice editing",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 44.983375314861455,
+        "y": 430.3277066173197,
+        "width": 313.38418136020147,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Invoice editing",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 45.0,
+        "top": 432.18383763574997,
+        "x1": 112.03601064450001,
+        "bottom": 441.93383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1122",
+      "expectedText": "8",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 367.36423173803524,
+        "y": 430.3277066173197,
+        "width": 40.48503778337531,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "8",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 367.28,
+        "top": 432.18383763574997,
+        "x1": 373.311860354,
+        "bottom": 441.93383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1123",
+      "expectedText": "100.00",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 416.84594458438283,
+        "y": 430.3277066173197,
+        "width": 56.97894206549118,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "100.00",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 416.78,
+        "top": 432.18383763574997,
+        "x1": 447.16781738525,
+        "bottom": 441.93383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1124",
+      "expectedText": "800.00",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 482.8215617128463,
+        "y": 430.3277066173197,
+        "width": 67.47506297229219,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "800.00",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 482.78,
+        "top": 432.18383763574997,
+        "x1": 515.2339794995,
+        "bottom": 441.93383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1132",
+      "expectedText": "Subtotal · 25h",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 475.68331213824575,
+        "width": 443.12285441593195,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Subtotal · 25h",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 477.93383763574997,
+        "x1": 99.79394554150001,
+        "bottom": 487.68383763574997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1133",
+      "expectedText": "2,500.00 USD",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 488.1062297307934,
+        "y": 476.45568694171584,
+        "width": 71.18707001731738,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "2,500.00 USD",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 489.440645,
+        "top": 478.09130883849997,
+        "x1": 559.2799996484999,
+        "bottom": 488.59130883849997
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Medium"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1135",
+      "expectedText": "Discount · 10%",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 498.9233744712823,
+        "width": 446.7770215089735,
+        "height": 14.243909171861086
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Discount · 10%",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 501.18842763575,
+        "x1": 104.6594236875,
+        "bottom": 510.93842763575
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1136",
+      "expectedText": "−250.00 USD",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 491.760396823835,
+        "y": 499.69574927475236,
+        "width": 67.53290292427582,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "−250.00 USD",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 493.496064,
+        "top": 501.3458988385,
+        "x1": 559.2799996979999,
+        "bottom": 511.8458988385
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1139",
+      "expectedText": "TOTAL DUE",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 535.297469007402,
+        "width": 391.3172933721662,
+        "height": 14.993588601959038
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "TOTAL DUE",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 537.7504878385,
+        "x1": 94.2473149115,
+        "bottom": 548.2504878385
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1140",
+      "expectedText": "2,250.00 USD",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 24,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 436.30066868702767,
+        "y": 531.9092693955921,
+        "width": 122.99263106108312,
+        "height": 21.769987825578806
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "2,250.00 USD",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 438.24582,
+        "top": 535.925194866,
+        "x1": 559.279999884,
+        "bottom": 553.925194866
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        18.0
+      ],
+      "actualColors": [
+        "#5D2B85"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1142",
+      "expectedText": "HOW TO PAY",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-brand"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 571.6715635435218,
+        "width": 58.95282194584382,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Payment instructions",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 573.814843433,
+        "x1": 128.188476654,
+        "bottom": 582.814843433
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#5D2B85"
+      ],
+      "styleMatches": true,
+      "approvedTextOverride": "Payment instructions",
+      "overrideReason": "Explicit user request after original design acceptance"
+    },
+    {
+      "nodeId": "itm_1143",
+      "expectedText": "Bank transfer · Net 30",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 590.0533517572908,
+        "width": 110.20926952141058,
+        "height": 12.69915956492097
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Bank transfer · Net 30",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 592.5194338384999,
+        "x1": 145.921874849,
+        "bottom": 603.0194338384999
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Medium"
+      ],
+      "actualFontSizesPt": [
+        10.5
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1144",
+      "expectedText": "Acme Studio LLC · Example Bank",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 610.2493056231913,
+        "width": 152.70150006887593,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Acme Studio LLC · Example Bank",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 612.56655263575,
+        "x1": 188.48181132225002,
+        "bottom": 622.31655263575
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1145",
+      "expectedText": "Account: DEMO-ACCOUNT-001 · SWIFT: DEMOBANK",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 629.538176663026,
+        "width": 248.1429119765428,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Account: DEMO-ACCOUNT-001 · SWIFT: DEMOBANK",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 631.86367163575,
+        "x1": 282.796874603,
+        "bottom": 641.61367163575
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1146",
+      "expectedText": "Please include payment reference INV-2026-042.",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 648.8270477028607,
+        "width": 231.00581278534318,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Please include the invoice reference.",
+      "fixtureDifference": true,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 651.16079063575,
+        "x1": 205.70141604974998,
+        "bottom": 660.91079063575
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1148",
+      "expectedText": "Notes",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "fill": "$color-text-dark"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 678.6114307640667,
+        "width": 25.746832296914356,
+        "height": 10.884993912789403
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Notes",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 680.800439433,
+        "x1": 61.66845703800001,
+        "bottom": 689.800439433
+      },
+      "actualEmbeddedFonts": [
+        "Inter-SemiBold"
+      ],
+      "actualFontSizesPt": [
+        9.0
+      ],
+      "actualColors": [
+        "#1A1A1A"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1149",
+      "expectedText": "Thank you for your partnership.",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 13,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 695.4938601176397,
+        "width": 146.01036942104847,
+        "height": 11.792076738855187
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Thank you for your partnership.",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 697.8475586357499,
+        "x1": 181.6453856015,
+        "bottom": 707.5975586357499
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        9.75
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1152",
+      "expectedText": "Acme Studio LLC · billing@acme.example",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 11,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 35.98670025188917,
+        "y": 744.0202289312945,
+        "width": 472.8818757871536,
+        "height": 11.99487088156723
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Acme Studio LLC · billing@acme.example",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 36.0,
+        "top": 746.07973623025,
+        "x1": 197.6403807255,
+        "bottom": 754.32973623025
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        8.25
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    },
+    {
+      "nodeId": "itm_1153",
+      "expectedText": "Page 1 of 1",
+      "expectedStyle": {
+        "fontFamily": "Inter",
+        "fontSize": 11,
+        "fontWeight": "normal",
+        "fill": "$color-text-muted"
+      },
+      "expectedBoxPt": {
+        "x": 517.8652511020151,
+        "y": 745.0287088287163,
+        "width": 41.42804864609572,
+        "height": 9.97791108672362
+      },
+      "referencePositionBasis": "Inferred flex box using Inter ascent/descent; explicit dimensions exact. Not a captured Pencil rendering. Glyph boxes and layout boxes are different measures; no artificial y-delta is computed.",
+      "actualText": "Page 1 of 1",
+      "fixtureDifference": false,
+      "actualGlyphBoxPt": {
+        "x0": 517.836641,
+        "top": 746.07973623025,
+        "x1": 559.28000038325,
+        "bottom": 754.32973623025
+      },
+      "actualEmbeddedFonts": [
+        "Inter-Regular"
+      ],
+      "actualFontSizesPt": [
+        8.25
+      ],
+      "actualColors": [
+        "#666666"
+      ],
+      "styleMatches": true
+    }
+  ]
+}

@@ -197,6 +197,69 @@
       "when": 1793710037882,
       "tag": "0027_strange_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794307818591,
+      "tag": "0028_identity_recovery_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794314364993,
+      "tag": "0029_reservation_email_unique_excludes_resolved",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794322950965,
+      "tag": "0030_identity_recovery_audit_owner_ack_and_creation_outcome",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794384611653,
+      "tag": "0031_small_iron_fist",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794393575041,
+      "tag": "0032_invoice_management",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794393588506,
+      "tag": "0033_invoice_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794393653384,
+      "tag": "0034_invoice_reference_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794394067794,
+      "tag": "0035_invoice_historical_lines",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794430090153,
+      "tag": "0036_strange_gauntlet",
+      "breakpoints": true
     }
   ]
 }

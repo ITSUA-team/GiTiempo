@@ -87,7 +87,7 @@ function createWorkspaceSettingsFixture(
 function mountWithRealForm() {
   const pinia = createPinia();
   setActivePinia(pinia);
-  useAuthStore(pinia).accessToken = 'access-token';
+  useAuthStore(pinia).accessToken = `header.${btoa(JSON.stringify({ workspaceId: 'workspace-1', sub: 'admin-1', role: 'admin' }))}.signature`;
 
   return mount(AddProjectView, {
     attachTo: document.body,

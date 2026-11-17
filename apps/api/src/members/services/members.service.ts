@@ -40,10 +40,11 @@ export class MembersService {
 
   async resolveActiveMembershipForUser(
     userId: string,
+    db: Pick<DrizzleDB, 'select'> = this.db,
   ): Promise<ActiveMembership | null> {
     // Default login selection uses the earliest active membership to keep
     // first-session behavior deterministic without storing a preference.
-    const [row] = await this.db
+    const [row] = await db
       .select({
         id: workspaceMembers.id,
         userId: workspaceMembers.userId,

@@ -40,23 +40,27 @@ const NO_SKIPPED = {
 export interface AdminGithubBrowsingClient {
 	listBoardRepositories(
 		boardIds: string[],
+		signal?: AbortSignal,
 	): Promise<Record<string, BoardRepositorySummary>>;
 	listOrganizationProjects(
 		owners: string[],
+		signal?: AbortSignal,
 	): Promise<OrganizationProjectList>;
 }
 
 export const adminGithubBrowsingClient: AdminGithubBrowsingClient = {
-	async listOrganizationProjects(owners) {
+	async listOrganizationProjects(owners, signal) {
 		const apiClient = getAuthenticatedAppApiClient();
 		const items: GitHubProject[] = [];
 		let hasMore = false;
 
 		for (const owner of owners) {
+			signal?.throwIfAborted();
 			let pageToken: string | undefined = undefined;
 			let pagesLoaded = 0;
 
 			do {
+				signal?.throwIfAborted();
 				const search = new URLSearchParams({
 					ownerType: 'organization',
 					owner,
@@ -70,6 +74,7 @@ export const adminGithubBrowsingClient: AdminGithubBrowsingClient = {
 				const response = await apiClient.requestJson({
 					path: `/github/projects?${search.toString()}`,
 					responseSchema: githubProjectListResponseSchema,
+					signal,
 				});
 
 				for (const project of response.items) {
@@ -94,7 +99,7 @@ export const adminGithubBrowsingClient: AdminGithubBrowsingClient = {
 
 		return { hasMore, items };
 	},
-	async listBoardRepositories(boardIds) {
+	async listBoardRepositories(boardIds, signal) {
 		const apiClient = getAuthenticatedAppApiClient();
 		const entries = await Promise.all(
 			boardIds.slice(0, MAX_BOARDS).map(async (boardId) => {
@@ -107,6 +112,7 @@ export const adminGithubBrowsingClient: AdminGithubBrowsingClient = {
 
 				try {
 					do {
+						signal?.throwIfAborted();
 						const search = new URLSearchParams({
 							limit: String(ISSUE_PROBE_PAGE_SIZE),
 							state: 'all',
@@ -119,6 +125,7 @@ export const adminGithubBrowsingClient: AdminGithubBrowsingClient = {
 						const response = await apiClient.requestJson({
 							path: `/github/projects/${encodeURIComponent(boardId)}/issues?${search.toString()}`,
 							responseSchema: githubProjectIssueListResponseSchema,
+							signal,
 						});
 
 						totalItems += response.items.length;
@@ -148,6 +155,7 @@ export const adminGithubBrowsingClient: AdminGithubBrowsingClient = {
 						}
 					} while (pageToken !== undefined);
 				} catch (error) {
+					signal?.throwIfAborted();
 					return [
 						boardId,
 						{

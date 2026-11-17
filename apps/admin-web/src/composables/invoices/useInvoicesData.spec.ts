@@ -48,6 +48,7 @@ type InvoicesDataClient = Pick<AdminInvoicesClient, 'getInvoiceStats' | 'listInv
 type InvoicesDataOptions = {
   client: InvoicesDataClient;
   enabled: Ref<boolean>;
+  scope?: ReturnType<typeof createScope>;
   onError?: (message: string, error: unknown, action: string) => void;
   query?: Ref<Partial<InvoiceListQuery>>;
 };
@@ -250,6 +251,34 @@ describe('useInvoicesData', () => {
     });
     expect(getInvoiceStats).toHaveBeenCalledTimes(1);
     expect(data.invoices.value).toEqual(createListResponse());
+  });
+
+  it('retains data during a refresh within a group and clears it when the account or group changes', async () => {
+    const first = createListResponse();
+    first.meta.total = 15;
+    const scope = createScope();
+    const query = ref<Partial<InvoiceListQuery>>({ groupId: projectId });
+    const listInvoices = vi.fn<InvoicesDataClient['listInvoices']>()
+      .mockResolvedValueOnce(first)
+      .mockImplementation(() => new Promise(() => {}));
+    const data = mountInvoicesData({
+      scope, query, enabled: ref(true),
+      client: { listInvoices, getInvoiceStats: vi.fn().mockResolvedValue(createStatsResponse()) },
+    });
+    await flushPromises();
+    query.value = { groupId: projectId, search: 'client' };
+    await flushPromises();
+    expect(data.invoicesLoading.value).toBe(true);
+    expect(data.invoices.value).toEqual(first);
+    query.value = { groupId: 'ungrouped' };
+    await flushPromises();
+    expect(data.invoices.value).toBeUndefined();
+    query.value = { groupId: projectId, search: 'client' };
+    await flushPromises();
+    expect(data.invoices.value).toEqual(first);
+    scope.value = { ...scope.value, userId: 'someone-else' };
+    await flushPromises();
+    expect(data.invoices.value).toBeUndefined();
   });
 
   it('refetches both invoices and stats on demand', async () => {

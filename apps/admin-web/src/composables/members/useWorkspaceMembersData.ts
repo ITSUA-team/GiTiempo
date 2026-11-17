@@ -42,6 +42,17 @@ export function useWorkspaceMembersData({
   const loadError = ref<string | null>(null);
   const initialLoaded = ref(false);
 
+  let requestId = 0;
+
+  function resetMembersData(): void {
+    requestId += 1;
+    members.value = [];
+    projects.value = [];
+    loadError.value = null;
+    loading.value = false;
+    initialLoaded.value = false;
+  }
+
   async function loadMembersData({
     errorAction,
     setError = false,
@@ -56,25 +67,28 @@ export function useWorkspaceMembersData({
       loadError.value = null;
     }
 
+    const currentRequest = ++requestId;
     try {
       const [membersData, projectsData] = await Promise.all([
         membersClient.listMembers(),
         projectsClient.listProjects(),
       ]);
 
+      if (currentRequest !== requestId) return;
       members.value = membersData;
       projects.value = projectsData;
       if (setInitialLoaded) {
         initialLoaded.value = true;
       }
     } catch (error) {
+      if (currentRequest !== requestId) return;
       const message = getErrorMessage(error);
       if (setError) {
         loadError.value = message;
       }
       onError?.(message, error, errorAction);
     } finally {
-      loading.value = false;
+      if (currentRequest === requestId) loading.value = false;
     }
   }
 
@@ -83,6 +97,7 @@ export function useWorkspaceMembersData({
   }
 
   return {
+    resetMembersData,
     initialLoaded,
     loadError,
     loading,

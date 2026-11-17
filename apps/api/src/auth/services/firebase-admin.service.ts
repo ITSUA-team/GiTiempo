@@ -152,6 +152,36 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
     }
   }
 
+  async confirmUidAbsent(
+    uid: string,
+  ): Promise<{ absent: boolean; evidence: string }> {
+    const first = await this.probeUid(uid);
+    if (first === 'present') return { absent: false, evidence: 'user-present' };
+    if (first === 'error')
+      return { absent: false, evidence: 'provider-lookup-failed' };
+    const second = await this.probeUid(uid);
+    if (second === 'present')
+      return { absent: false, evidence: 'user-present-after-recheck' };
+    if (second === 'error')
+      return { absent: false, evidence: 'provider-lookup-failed-on-recheck' };
+    return {
+      absent: true,
+      evidence: 'auth/user-not-found (confirmed by two consecutive lookups)',
+    };
+  }
+
+  private async probeUid(
+    uid: string,
+  ): Promise<'present' | 'not-found' | 'error'> {
+    try {
+      await getAuth(this.getApp()).getUser(uid);
+      return 'present';
+    } catch (error) {
+      if (isFirebaseAuthError(error, 'auth/user-not-found')) return 'not-found';
+      return 'error';
+    }
+  }
+
   async getOrCreateInvitedUserByEmail(
     email: string,
   ): Promise<InvitedFirebaseUser> {

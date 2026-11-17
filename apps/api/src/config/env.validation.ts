@@ -78,6 +78,21 @@ export const envSchema = z
     JWT_REFRESH_TTL: z.string().min(1).default('7d'),
     JWT_ISSUER: z.string().min(1).default('gitiempo-api'),
     JWT_AUDIENCE: z.string().min(1).default('gitiempo-clients'),
+    // Age threshold that surfaces unbound registration reservations as
+    // observable; observation is read-only and never mutates reservations.
+    AUTH_AGED_RESERVATION_THRESHOLD: z.string().min(1).default('24h'),
+    // Comma-separated user IDs permitted to invoke the platform-operator
+    // identity-recovery endpoints. There is no platform-operator role, so the
+    // authenticated subject is checked against this allowlist.
+    PLATFORM_OPERATOR_USER_IDS: z
+      .string()
+      .default('')
+      .transform((val) =>
+        val
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      ),
 
     // --- Application URLs ---
     APP_URL: optionalUrl.default('http://localhost:3000'),

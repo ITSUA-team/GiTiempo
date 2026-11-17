@@ -1,0 +1,35 @@
+{
+  "sourceId": "062704e3-8890-4099-b22d-39b1431517c1",
+  "sourceRevisionBefore": 8,
+  "sourceRevisionAfter": 8,
+  "sourceUnchanged": true,
+  "copyId": "00970752-c4b1-4650-b4d5-ab70c2c63932",
+  "copyReference": "INV-7",
+  "sourceReference": "INV-4",
+  "sourceMode": "tasks",
+  "copyMode": "tasks",
+  "sourcePeriod": [
+    "2026-11-01",
+    "2026-11-30"
+  ],
+  "copyPeriod": [
+    "2026-12-01",
+    "2026-12-31"
+  ],
+  "sourceHours": 25,
+  "copyHours": 25,
+  "sourceAmount": 2250,
+  "copyAmount": 2250,
+  "sourceEntries": [
+    "7145dfb7-5235-4c8b-945f-99b65fb3d416",
+    "bcc73a65-62dc-44ed-9876-7ccccf9c8f83",
+    "7d786e29-1e5d-470d-a2dc-2554b8d4e718"
+  ],
+  "copyEntries": [
+    "02d47bbe-0f6b-456b-95ce-4964b6eb2ef7",
+    "ef076bad-c1d7-43be-be9a-c9d960b9c576",
+    "f45d3471-a583-440f-8db1-b8e53885a352"
+  ],
+  "independentEntryIds": true,
+  "qaCopyRemovedAfterVerificationToReleaseDecemberEntries": true
+}

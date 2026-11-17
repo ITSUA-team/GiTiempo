@@ -1,0 +1,31 @@
+{
+  "invoiceId": "062704e3-8890-4099-b22d-39b1431517c1",
+  "reference": "INV-4",
+  "revision": 2,
+  "projectId": "2555657b-08d0-41e4-83e0-24058d73e353",
+  "groupId": "e2f1f576-a3fc-4f5b-9b0e-4dd883aa098e",
+  "taskIds": [
+    "096d2659-fea8-4d39-a218-7662247c39b0",
+    "878bda21-4241-49cf-9fa4-2de8c367b747"
+  ],
+  "novemberEntryIds": [
+    "7145dfb7-5235-4c8b-945f-99b65fb3d416",
+    "bcc73a65-62dc-44ed-9876-7ccccf9c8f83",
+    "7d786e29-1e5d-470d-a2dc-2554b8d4e718",
+    "2bd824fb-dc44-4de8-8cdf-5706ef565881"
+  ],
+  "decemberEntryIds": [
+    "02d47bbe-0f6b-456b-95ce-4964b6eb2ef7",
+    "ef076bad-c1d7-43be-be9a-c9d960b9c576",
+    "f45d3471-a583-440f-8db1-b8e53885a352",
+    "f9253172-e947-45b2-a50c-a0932879994d"
+  ],
+  "includedHours": 25,
+  "totalAmount": 2250,
+  "mode": "tasks",
+  "fixtureDifferences": [
+    "Generated reference replaces INV-2026-042",
+    "Seed contributors replace Alex Morgan and Sam Taylor",
+    "Text-only optional logo is omitted; invoice name uses saved legal sender"
+  ]
+}

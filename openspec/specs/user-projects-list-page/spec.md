@@ -166,7 +166,7 @@ The Projects list page MUST use confirmation before deleting tasks and MUST trea
 - **WHEN** the user confirms the row `Delete` action
 - **AND** the backend returns `204 No Content`
 - **THEN** the task is removed from the grouped list
-- **AND** the page shows success feedback
+- **AND** the removed row communicates success without a redundant success/info notification
 
 #### Scenario: Delete conflict keeps task visible
 - **GIVEN** a task has related time entries
@@ -191,7 +191,7 @@ The Projects list page SHALL provide a task-specific direct timer action beside 
 - **WHEN** the member activates that task's direct timer action
 - **THEN** the app starts a fresh timer for that task without opening the task-picker dialog
 - **AND** the action uses task-specific tooltip and accessible label copy `Start timer for <task title>`
-- **AND** the app shows success feedback and refreshes the shared authoritative timer state
+- **AND** the app refreshes the shared authoritative timer state without a redundant success/info notification
 
 #### Scenario: Matching running task row stops the timer
 
@@ -202,7 +202,7 @@ The Projects list page SHALL provide a task-specific direct timer action beside 
 - **WHEN** the member activates the action
 - **THEN** the app verifies that the authoritative timer still belongs to that task
 - **AND** conditionally stops that exact authoritative timer without opening the task-picker dialog
-- **AND** shows success feedback and refreshes the shared authoritative timer state
+- **AND** refreshes the shared authoritative timer state without a redundant success/info notification
 
 #### Scenario: Another task already owns the running timer
 

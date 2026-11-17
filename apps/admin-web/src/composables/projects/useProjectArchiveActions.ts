@@ -7,6 +7,7 @@ import {
 } from '@/services/admin-projects-client';
 
 interface UseProjectArchiveActionsOptions {
+  getVisit?: () => number;
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminProjectsClient, 'updateProject'>;
   collapseProjectRow: (project: ProjectResponse) => void;
@@ -26,6 +27,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 export function useProjectArchiveActions({
+  getVisit = () => 0,
   accessToken,
   client = adminProjectsClient,
   collapseProjectRow,
@@ -35,6 +37,7 @@ export function useProjectArchiveActions({
   requireConfirmation,
 }: UseProjectArchiveActionsOptions) {
   async function archiveProject(project: ProjectResponse): Promise<void> {
+    const visit = getVisit();
     if (!accessToken.value) {
       return;
     }
@@ -43,9 +46,12 @@ export function useProjectArchiveActions({
       await client.updateProject(project.id, {
         isActive: false,
       });
+      if (visit !== getVisit()) return;
       collapseProjectRow(project);
       await refreshProjects();
+      if (visit !== getVisit()) return;
     } catch (error) {
+      if (visit !== getVisit()) return;
       onError(
         getErrorMessage(error, 'Failed to archive project'),
         error,
@@ -55,17 +61,19 @@ export function useProjectArchiveActions({
   }
 
   function handleArchive(project: ProjectResponse): void {
+    const visit = getVisit();
     requireConfirmation(
       `"${project.name}" will be archived and hidden from non-admin users.`,
       'Archive project?',
       'Archive',
       () => {
-        void archiveProject(project);
+        if (visit === getVisit()) void archiveProject(project);
       },
     );
   }
 
   async function handleUnarchive(project: ProjectResponse): Promise<void> {
+    const visit = getVisit();
     if (!accessToken.value) {
       return;
     }
@@ -74,12 +82,15 @@ export function useProjectArchiveActions({
       const updated = await client.updateProject(project.id, {
         isActive: true,
       });
+      if (visit !== getVisit()) return;
       if (updated.name !== project.name) {
         onRename(`${project.name} is now active as "${updated.name}", because another project already uses the original name.`);
       }
       collapseProjectRow(project);
       await refreshProjects();
+      if (visit !== getVisit()) return;
     } catch (error) {
+      if (visit !== getVisit()) return;
       onError(
         getErrorMessage(error, 'Failed to unarchive project'),
         error,

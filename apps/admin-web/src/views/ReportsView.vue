@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
 import type { TimeReportExportFormat } from '@gitiempo/shared';
 import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
@@ -39,6 +39,10 @@ const authStore = useAuthStore();
 const { errorToast, successToast } = useToasts();
 const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
+const canAccessReports = computed(() =>
+  Boolean(authStore.accessToken && scope.value.workspaceId && scope.value.userId) &&
+  (scope.value.role === 'admin' || scope.value.role === 'pm'),
+);
 
 const {
   dateRange,
@@ -56,7 +60,7 @@ const {
   rows,
   summary,
 } = useReportsData({
-  enabled: isAuthenticated,
+  enabled: canAccessReports,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -100,9 +104,26 @@ const savedReports = useSavedReports({
   }),
 });
 
-onMounted(() => {
-  void savedReports.refresh();
-});
+const presetVisit = ref(0);
+watch(
+  [
+    isAuthenticated,
+    () => scope.value.workspaceId,
+    () => scope.value.userId,
+    () => scope.value.role,
+  ],
+  () => {
+    presetVisit.value += 1;
+    savedReports.reset();
+    tableFilters.value.projectId = null;
+    tableFilters.value.memberId = null;
+    if (canAccessReports.value) {
+      void savedReports.refresh();
+    }
+  },
+  { immediate: true, flush: 'sync' },
+);
+onScopeDispose(savedReports.reset);
 
 /**
  * Clears the loaded preset and resets grouping, scope, and column filters.
@@ -116,18 +137,22 @@ function startNewReport(): void {
 }
 
 async function handleSaveReport(): Promise<void> {
+  if (!canAccessReports.value) return;
   await savedReports.save();
 }
 
 async function handleSaveReportAsNew(name: string): Promise<void> {
+  if (!canAccessReports.value) return;
   await savedReports.saveAsNew(name);
 }
 
 async function handleRenameReport(id: string, name: string): Promise<void> {
+  if (!canAccessReports.value) return;
   await savedReports.rename(id, name);
 }
 
 async function handleDeleteReport(id: string): Promise<void> {
+  if (!canAccessReports.value) return;
   await savedReports.remove(id);
 }
 const tableRows = computed(() =>
@@ -303,6 +328,7 @@ async function handleExport(format: TimeReportExportFormat): Promise<void> {
         />
       </Message>
       <SavedReportsBar
+        :key="presetVisit"
         :active-id="savedReports.activeId.value"
         :error="savedReports.error.value"
         :is-dirty="savedReports.isDirty.value"

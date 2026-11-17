@@ -1,0 +1,16 @@
+meta {
+  name: Remove invoice from personal group
+  type: http
+  seq: 6
+}
+post {
+  url: {{baseUrl}}/invoices/groups/move
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  { "invoiceIds": ["{{invoiceId}}"], "groupId": null }
+}

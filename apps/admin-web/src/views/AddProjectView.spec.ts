@@ -115,6 +115,7 @@ let formValues: Record<string, unknown> = {};
 
 const GitHubProjectFieldsStub = {
   name: 'GitHubProjectFieldsStub',
+  methods: { retire() {} },
   props: ['availability', 'disabled', 'modelValue', 'scanning'],
   emits: ['update:availability', 'update:modelValue', 'update:scanning'],
   template: `
@@ -143,7 +144,7 @@ function mountAddProjectView() {
   setActivePinia(pinia);
 
   const authStore = useAuthStore(pinia);
-  authStore.accessToken = 'access-token';
+  authStore.accessToken = `header.${btoa(JSON.stringify({ workspaceId: 'A', sub: 'admin', role: 'admin' }))}.signature`;
 
   return mount(AddProjectView, {
     global: {
@@ -229,6 +230,107 @@ async function switchToGitHub(wrapper: ReturnType<typeof mountAddProjectView>) {
 }
 
 describe('AddProjectView', () => {
+  it('retires GitHub fields synchronously and disables import after role loss', async () => {
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    await switchToGitHub(wrapper);
+    const child = wrapper.findComponent(GitHubProjectFieldsStub);
+    const retire = vi.spyOn(child.vm, 'retire');
+    useAuthStore().accessToken = `header.${btoa(JSON.stringify({ workspaceId: 'B', sub: 'admin', role: 'member' }))}.signature`;
+    expect(retire).toHaveBeenCalledOnce();
+    await flushPromises();
+    expect(wrapper.findComponent(GitHubProjectFieldsStub).exists()).toBe(false);
+    await wrapper.get('[data-testid="submit-project-form"]').trigger('click');
+    await flushPromises();
+    expect(testMocks.createProject).not.toHaveBeenCalled();
+    expect(testMocks.importGitHubProjects).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('refreshes manager options and clears the selected manager when workspace changes', async () => {
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    const form = wrapper.findComponent({ name: 'Form' });
+    const token = (workspaceId: string, exp = 1) => `header.${btoa(JSON.stringify({ workspaceId, sub: 'admin', role: 'admin', exp }))}.signature`;
+    useAuthStore().accessToken = token('A');
+    await flushPromises();
+    form.vm.setFieldValue('managerUserId', 'old-manager');
+    const calls = testMocks.listMembers.mock.calls.length;
+    useAuthStore().accessToken = token('A', 2);
+    await flushPromises();
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(calls);
+    useAuthStore().accessToken = token('B');
+    await flushPromises();
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(calls + 1);
+    await wrapper.get('[data-testid="submit-project-form"]').trigger('click');
+    await flushPromises();
+    expect(testMocks.assignMember).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('does not assign an old manager or navigate after creation completes in an old workspace', async () => {
+    let resolveCreation!: (value: typeof projectResponse) => void;
+    testMocks.createProject.mockReturnValueOnce(new Promise((resolve) => { resolveCreation = resolve; }));
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    await wrapper.get('[data-testid="submit-project-form"]').trigger('click');
+    useAuthStore().accessToken = `header.${btoa(JSON.stringify({ workspaceId: 'B', sub: 'admin', role: 'admin' }))}.signature`;
+    await flushPromises();
+    resolveCreation(projectResponse);
+    await flushPromises();
+    expect(testMocks.assignMember).not.toHaveBeenCalled();
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('finishes manager assignment after leaving within the same workspace', async () => {
+    let resolveCreation!: (value: typeof projectResponse) => void;
+    testMocks.createProject.mockReturnValueOnce(new Promise((resolve) => { resolveCreation = resolve; }));
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    wrapper.getComponent({ name: 'Form' }).vm.$emit('submit', {
+      valid: true,
+      values: { ...formValues, managerUserId: 'destination-manager' },
+    });
+    wrapper.unmount();
+    resolveCreation(projectResponse);
+    await flushPromises();
+    expect(testMocks.assignMember).toHaveBeenCalledWith(projectResponse.id, 'destination-manager');
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
+  });
+
+  it('stops manager assignment if the session changes after leaving the form', async () => {
+    let resolveCreation!: (value: typeof projectResponse) => void;
+    testMocks.createProject.mockReturnValueOnce(new Promise((resolve) => { resolveCreation = resolve; }));
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    wrapper.getComponent({ name: 'Form' }).vm.$emit('submit', {
+      valid: true,
+      values: { ...formValues, managerUserId: 'source-manager' },
+    });
+    wrapper.unmount();
+    const auth = useAuthStore();
+    const originalToken = auth.accessToken;
+    auth.accessToken = `header.${btoa(JSON.stringify({ workspaceId: 'B', sub: 'admin', role: 'admin' }))}.signature`;
+    auth.accessToken = originalToken;
+    resolveCreation(projectResponse);
+    await flushPromises();
+    expect(testMocks.assignMember).not.toHaveBeenCalled();
+    expect(testMocks.routerPush).not.toHaveBeenCalled();
+  });
+
+  it('does not load manager choices or settings with missing claims', async () => {
+    const wrapper = mountAddProjectView();
+    await flushPromises();
+    testMocks.listMembers.mockClear();
+    testMocks.getWorkspaceSettings.mockClear();
+    useAuthStore().accessToken = 'opaque-token';
+    await flushPromises();
+    expect(testMocks.listMembers).not.toHaveBeenCalled();
+    expect(testMocks.getWorkspaceSettings).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   beforeEach(() => {
     testMocks.assignMember.mockReset();
     testMocks.createProject.mockReset();

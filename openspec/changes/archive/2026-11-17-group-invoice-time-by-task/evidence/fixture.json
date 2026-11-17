@@ -1,0 +1,18 @@
+{
+  "invoiceId": "9160bebc-c770-47a2-b7f5-176f279221fe",
+  "reference": "INV-1",
+  "revision": 1,
+  "projectId": "8ad2cd04-ca19-44b0-b963-101800cbf07a",
+  "taskIds": [
+    "7c0e06e6-4e1d-41da-883c-a077abd81fab",
+    "7b76bcdf-db4d-4ce8-9244-9b0659cf8a65"
+  ],
+  "entryIds": [
+    "e74b2389-43a9-4a90-8a5f-3e0aff6ea4fb",
+    "0fb97e06-8871-460f-b9fc-36caff55e047",
+    "d327163c-30f0-41fd-b59b-a05b77768850",
+    "7379f6e0-46a0-4da7-b43b-6c2cc590b140"
+  ],
+  "totalHours": 25,
+  "totalAmount": 2250
+}
