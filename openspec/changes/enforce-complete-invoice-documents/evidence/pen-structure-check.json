@@ -1,0 +1,411 @@
+{
+  "date": "2026-11-17",
+  "source": "GITiempo.pen",
+  "sha256": "bf70aaa0eb443e3e4b2eb16b8bc54907db3cb854f8b31ef70f7ce2a7aa1515ea",
+  "nodeCount": 8691,
+  "originalNodeCount": 8297,
+  "referenceCount": 26,
+  "checks": [
+    {
+      "check": "All node IDs are unique",
+      "result": "PASS"
+    },
+    {
+      "check": "All 8297 original IDs are retained",
+      "result": "PASS"
+    },
+    {
+      "check": "All 26 existing references resolve",
+      "result": "PASS"
+    },
+    {
+      "check": "Document version, variables and file token unchanged",
+      "result": "PASS"
+    },
+    {
+      "check": "Unrelated root content unchanged",
+      "result": "PASS"
+    },
+    {
+      "check": "Settings and Access content unchanged; only canvas y shifted",
+      "result": "PASS"
+    },
+    {
+      "check": "All eight editor variants present",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0457: PDF semantic section order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0457: metadata order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0457: all 16 required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0457: optional labels unmarked",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0457: one primary action",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0457: discount after subtotal",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0457: Notes last",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0457: Invoice sender field order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0457: Invoice recipient field order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0633: PDF semantic section order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0633: metadata order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0633: all 16 required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0633: optional labels unmarked",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0633: one primary action",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0633: discount after subtotal",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0633: Notes last",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0633: Invoice sender field order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0633: Invoice recipient field order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0970: PDF semantic section order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0970: metadata order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0970: all 16 required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0970: optional labels unmarked",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0970: one primary action",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0970: discount after subtotal",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0970: Notes last",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0970: Invoice sender field order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_0970: Invoice recipient field order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_1142: PDF semantic section order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_1142: metadata order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_1142: all 16 required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_1142: optional labels unmarked",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_1142: one primary action",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_1142: discount after subtotal",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_1142: Notes last",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_1142: Invoice sender field order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_1142: Invoice recipient field order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_desktop: PDF semantic section order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_desktop: metadata order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_desktop: all 16 required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_desktop: optional labels unmarked",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_desktop: one primary action",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_desktop: discount after subtotal",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_desktop: Notes last",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_desktop: Invoice sender field order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_desktop: Invoice recipient field order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_desktop: PDF semantic section order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_desktop: metadata order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_desktop: all 16 required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_desktop: optional labels unmarked",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_desktop: one primary action",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_desktop: discount after subtotal",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_desktop: Notes last",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_desktop: Invoice sender field order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_desktop: Invoice recipient field order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_mobile: PDF semantic section order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_mobile: metadata order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_mobile: all 16 required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_mobile: optional labels unmarked",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_mobile: one primary action",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_mobile: discount after subtotal",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_mobile: Notes last",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_mobile: Invoice sender field order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_create_mobile: Invoice recipient field order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_mobile: PDF semantic section order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_mobile: metadata order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_mobile: all 16 required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_mobile: optional labels unmarked",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_mobile: one primary action",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_mobile: discount after subtotal",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_mobile: Notes last",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_mobile: Invoice sender field order",
+      "result": "PASS"
+    },
+    {
+      "check": "task_edit_mobile: Invoice recipient field order",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_dates_76: conditional required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_dates_76: contextual labels",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_dates_119: conditional required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_dates_119: contextual labels",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_dates_162: conditional required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_dates_162: contextual labels",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_dates_209: conditional required markers",
+      "result": "PASS"
+    },
+    {
+      "check": "i527_dates_209: contextual labels",
+      "result": "PASS"
+    },
+    {
+      "check": "Four desktop/mobile validation boards",
+      "result": "PASS"
+    },
+    {
+      "check": "Issue date invalid actual input examples at both widths",
+      "result": "PASS"
+    },
+    {
+      "check": "New text growth values use existing document conventions",
+      "result": "PASS"
+    },
+    {
+      "check": "Invoice canvas leaves 240px to Settings",
+      "result": "PASS"
+    }
+  ],
+  "localPreviewBounds": {
+    "createDesktop": [
+      1000,
+      2629
+    ],
+    "createMobile": [
+      375,
+      3576
+    ],
+    "taskCreateDesktop": [
+      1000,
+      2705
+    ],
+    "taskCreateMobile": [
+      375,
+      3583
+    ],
+    "validationDesktop": [
+      1000,
+      980
+    ],
+    "validationMobile": [
+      375,
+      1495
+    ],
+    "paymentDesktop": [
+      480,
+      1854
+    ],
+    "paymentMobile": [
+      375,
+      1854
+    ]
+  },
+  "limitations": [
+    "Native Pencil rendering unavailable due to plan quota; local CSS layout preview used. Font fallback, icon glyphs and native layout-engine differences are not pixel-parity evidence."
+  ]
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  completeInvoiceDocumentSchema,
   createInvoiceSchema,
   invoiceBillingProfileSchema,
   invoicePaymentSchema,
@@ -20,6 +21,7 @@ import {
   invoiceStatsResponseSchema,
   invoiceStatusSchema,
   invoiceTimeDisplayModeSchema,
+  projectInvoicePayment,
   updateInvoiceSchema,
 } from "./invoices.js";
 
@@ -1377,4 +1379,197 @@ it("accepts legacy payment fields and HTTPS payment links while rejecting unsafe
   for (const paymentUrl of ["javascript:alert(1)", "http://pay.example.com", "not a link"]) {
     expect(invoicePaymentSchema.safeParse({ ...payment, paymentUrl }).success).toBe(false);
   }
+});
+
+describe("completeInvoiceDocumentSchema", () => {
+  const document = () => ({
+    title: "April development",
+    sender: { name: "Sender Ltd", address: "1 Sender Street", email: "sender@example.com", taxId: "" },
+    recipient: { name: "Client Ltd", address: "2 Client Street", email: "client@example.com", taxId: "" },
+    services: "Software development",
+    payment: { method: "Bank transfer", beneficiary: "Sender Ltd", provider: "Example Bank", account: "Account 123", terms: "", instructions: "" },
+    issueDate: "2026-05-01",
+    dateFrom: "2026-04-01",
+    dateTo: "2026-04-30",
+    hourlyRate: 75,
+    currency: "USD",
+  });
+
+  function withValue(path: string, value: unknown): Record<string, unknown> {
+    const candidate: Record<string, unknown> = document();
+    const [section, field] = path.split(".");
+    if (field) (candidate[section!] as Record<string, unknown>)[field] = value;
+    else candidate[section!] = value;
+    return candidate;
+  }
+
+  it.each(["draft", "sent", "paid"])("accepts the same complete document in %s status", status => {
+    const result = completeInvoiceDocumentSchema.parse({ ...document(), status, projectId: null, revision: 3 });
+    expect(result.projectId).toBeNull();
+    expect(result).not.toHaveProperty("revision");
+    expect(result).not.toHaveProperty("status");
+  });
+
+  it.each([
+    "title", "sender.name", "sender.address", "sender.email", "recipient.name", "recipient.address", "recipient.email",
+    "services", "issueDate", "dateFrom", "dateTo", "hourlyRate", "currency", "payment.method", "payment.beneficiary", "payment.provider", "payment.account",
+  ])("requires %s on the resolved document", path => {
+    for (const value of [undefined, null, "", "   "]) {
+      const result = completeInvoiceDocumentSchema.safeParse(withValue(path, value));
+      expect(result.success, `${path}: ${String(value)}`).toBe(false);
+      expect(result.error?.issues.some(issue => issue.path.join(".") === path)).toBe(true);
+    }
+  });
+
+  it.each(["sender", "recipient", "payment"])("rejects a missing %s section", section => {
+    for (const value of [undefined, null]) {
+      const result = completeInvoiceDocumentSchema.safeParse(withValue(section, value));
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.path).toEqual([section]);
+    }
+  });
+
+  it("normalizes required text, emails and currency without changing source data", () => {
+    const input = document();
+    input.title = "  April development  ";
+    input.services = "  Software development  ";
+    input.sender.name = "  Sender Ltd  ";
+    input.sender.email = " sender@example.com ";
+    input.currency = "usd";
+    const result = completeInvoiceDocumentSchema.parse(input);
+    expect(result.title).toBe("April development");
+    expect(result.services).toBe("Software development");
+    expect(result.sender.name).toBe("Sender Ltd");
+    expect(result.sender.email).toBe("sender@example.com");
+    expect(result.currency).toBe("USD");
+    expect(input.sender.name).toBe("  Sender Ltd  ");
+  });
+
+  it.each([
+    ["sender.email", "sender.invalid"], ["recipient.email", "client@invalid"],
+    ["title", "a".repeat(256)], ["sender.name", "a".repeat(5001)], ["recipient.address", "a".repeat(5001)],
+    ["sender.taxId", "a".repeat(5001)], ["services", "a".repeat(5001)], ["payment.account", "a".repeat(5001)],
+    ["payment.instructions", "a".repeat(5001)], ["payment.swift", "a".repeat(5001)], ["notes", "a".repeat(5001)],
+    ["logo", "https://example.com/logo.svg"], ["issueDate", "2026-02-30"], ["dateFrom", "2026-13-01"],
+    ["dateTo", "2026-04-31"], ["dueDate", "2026-02-30"], ["currency", "US1"], ["currency", "EURO"],
+    ["hourlyRate", -0.01], ["hourlyRate", 100000000], ["hourlyRate", 1.001], ["hourlyRate", Number.POSITIVE_INFINITY],
+    ["discountPercent", -1], ["discountPercent", 100.01], ["discountPercent", 0.001],
+    ["roundingStepMinutes", 0], ["roundingStepMinutes", 61], ["roundingStepMinutes", 1.5],
+  ])("rejects invalid %s", (path, value) => {
+    const result = completeInvoiceDocumentSchema.safeParse(withValue(path as string, value));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.some(issue => issue.path.join(".") === path)).toBe(true);
+  });
+
+  it("rejects invalid relationships between otherwise valid dates", () => {
+    const result = completeInvoiceDocumentSchema.safeParse({ ...document(), dateTo: "2026-03-31", dueDate: "2026-04-30" });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map(issue => issue.path.join("."))).toEqual(expect.arrayContaining(["dateTo", "dueDate"]));
+  });
+
+  it("accepts optional omissions, equal dates, zero rate and no selected work in either mode", () => {
+    for (const timeDisplayMode of ["entries", "tasks"]) {
+      const result = completeInvoiceDocumentSchema.parse({
+        ...document(), timeDisplayMode, dateTo: "2026-04-01", dueDate: "2026-05-01", hourlyRate: 0,
+        timeEntryIds: [], logo: null, notes: null,
+      });
+      expect(result.timeEntryIds).toEqual([]);
+      expect(result.hourlyRate).toBe(0);
+      expect(result.payment).not.toHaveProperty("swift");
+      expect(result.payment).not.toHaveProperty("paymentUrl");
+      expect(result.discountPercent).toBe(0);
+    }
+  });
+
+  it("retains existing boundary values and allows an explicitly cleared deadline", () => {
+    const result = completeInvoiceDocumentSchema.parse({ ...document(), hourlyRate: 99999999.99, discountPercent: 100, roundingStepMinutes: 60, dueDate: null });
+    expect(result.dueDate).toBeNull();
+    expect(result.hourlyRate).toBe(99999999.99);
+  });
+
+  it("reports every missing Bank transfer detail independently", () => {
+    const input = document();
+    Object.assign(input.payment, { beneficiary: "", provider: "", account: "" });
+    const result = completeInvoiceDocumentSchema.safeParse(input);
+    expect(result.error?.issues.map(issue => issue.path.join("."))).toEqual(["payment.beneficiary", "payment.provider", "payment.account"]);
+  });
+
+  it("requires Card provider and HTTPS link without requiring bank details", () => {
+    const input = document();
+    const payment = { ...input.payment, method: "Card", beneficiary: "", provider: "", account: "", paymentUrl: "" };
+    const missing = completeInvoiceDocumentSchema.safeParse({ ...input, payment });
+    expect(missing.error?.issues.map(issue => issue.path.join("."))).toEqual(["payment.provider", "payment.paymentUrl"]);
+    expect(completeInvoiceDocumentSchema.safeParse({ ...input, payment: { ...payment, provider: "Stripe", paymentUrl: "https://pay.example.com/invoice" } }).success).toBe(true);
+    for (const paymentUrl of [undefined, null, " ", "http://pay.example.com", "javascript:alert(1)", "not a link"]) {
+      const invalid = completeInvoiceDocumentSchema.safeParse({ ...input, payment: { ...payment, provider: "Stripe", paymentUrl } });
+      expect(invalid.success).toBe(false);
+      expect(invalid.error?.issues.some(issue => issue.path.join(".") === "payment.paymentUrl")).toBe(true);
+    }
+  });
+
+  it.each(["Other", "Cash", "Custom settlement"])("requires existing Payment details for %s while instructions stay optional", method => {
+    const input = document();
+    const payment = { ...input.payment, method, beneficiary: "", provider: "", account: "", instructions: "Some instructions" };
+    const invalid = completeInvoiceDocumentSchema.safeParse({ ...input, payment });
+    expect(invalid.error?.issues.map(issue => issue.path.join("."))).toEqual(["payment.account"]);
+    const result = completeInvoiceDocumentSchema.parse({ ...input, payment: { ...payment, account: "Cash at reception", instructions: "" } });
+    expect(result.payment.method).toBe(method);
+    expect(result.payment.account).toBe("Cash at reception");
+  });
+
+  it("keeps partial requests, workspace defaults, historical responses and preview independent of completeness", () => {
+    const party = { name: "", address: "", email: "", taxId: "" };
+    const payment = { method: "Card", terms: "", beneficiary: "", provider: "", account: "", instructions: "" };
+    const profile = { sender: party, payment, logo: null, invoicePrefix: "INV" };
+    expect(invoiceBillingProfileSchema.safeParse(profile).success).toBe(true);
+    expect(invoiceDefaultsResponseSchema.safeParse({ billingProfile: profile, currency: "USD", defaultHourlyRate: null, timeRoundingStepMinutes: 1 }).success).toBe(true);
+    const legacy = { ...validInvoiceResponse, sender: null, recipient: null, services: null, payment: null };
+    expect(invoiceResponseSchema.safeParse(legacy).success).toBe(true);
+    const input = { title: "Preview", dateFrom: "2026-04-01", dateTo: "2026-04-30" };
+    expect(createInvoiceSchema.safeParse(input).success).toBe(true);
+    expect(updateInvoiceSchema.safeParse({ status: "sent" }).success).toBe(true);
+    expect(previewInvoiceSchema.safeParse(input).success).toBe(true);
+    expect(completeInvoiceDocumentSchema.safeParse(input).success).toBe(false);
+    expect(completeInvoiceDocumentSchema.safeParse(legacy).success).toBe(false);
+  });
+});
+
+describe("projectInvoicePayment", () => {
+  const payment = {
+    method: "Bank transfer", beneficiary: "Sender Ltd", provider: "Provider", account: "Account 123",
+    terms: "Net 30", instructions: "Quote invoice number", swift: "BANKBIC", paymentUrl: "https://pay.example.com/invoice",
+  };
+
+  it("projects Card details without mutating the locally retained bank fields", () => {
+    const local = { ...payment, method: " Card " };
+    expect(projectInvoicePayment(local)).toEqual({
+      method: "Card", beneficiary: "", provider: "Provider", account: "", terms: "Net 30",
+      instructions: "Quote invoice number", paymentUrl: payment.paymentUrl,
+    });
+    expect(local.account).toBe("Account 123");
+    expect(local.swift).toBe("BANKBIC");
+    expect(local.method).toBe(" Card ");
+  });
+
+  it("omits an invalid inactive Card URL while preserving shared and bank values", () => {
+    const local = { ...payment, paymentUrl: "invalid local edit" };
+    const projected = projectInvoicePayment(local);
+    expect(projected).toEqual({ method: "Bank transfer", beneficiary: "Sender Ltd", provider: "Provider", account: "Account 123", terms: "Net 30", instructions: "Quote invoice number", swift: "BANKBIC" });
+    expect(invoicePaymentSchema.safeParse(projected).success).toBe(true);
+    expect(invoicePaymentSchema.safeParse(local).success).toBe(false);
+    expect(local.paymentUrl).toBe("invalid local edit");
+    expect(projectInvoicePayment({ ...local, method: "Card" }).paymentUrl).toBe("invalid local edit");
+  });
+
+  it.each(["Other", "Cash"])("preserves %s method and Payment details but omits Card URL and Bank SWIFT", method => {
+    const projected = projectInvoicePayment({ ...payment, method });
+    expect(projected).toEqual({ method, beneficiary: "Sender Ltd", provider: "Provider", account: "Account 123", terms: "Net 30", instructions: "Quote invoice number" });
+  });
+});
+
+it("accepts field-addressed incomplete-document errors without legacy section errors", () => {
+  const error = { code: "invoice_document_incomplete", message: "Complete the invoice", details: { missingFields: [], fieldErrors: { issueDate: "Issue date is required" } } };
+  expect(invoiceDocumentIncompleteErrorSchema.parse(error).details.fieldErrors).toEqual({ issueDate: "Issue date is required" });
+  expect(invoiceDocumentIncompleteErrorSchema.safeParse({ ...error, details: { missingFields: [] } }).success).toBe(false);
+  expect(invoiceDocumentIncompleteErrorSchema.safeParse({ ...error, details: { missingFields: [], fieldErrors: {} } }).success).toBe(false);
 });

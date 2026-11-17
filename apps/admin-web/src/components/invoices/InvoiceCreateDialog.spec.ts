@@ -99,6 +99,11 @@ function createEntriesResponse(
 
 function createInvoiceResponse(): InvoiceResponse {
   return {
+    issueDate: '2026-05-01',
+    sender: { name: 'Sender', address: 'Sender address', email: 'sender@example.com', taxId: '' },
+    recipient: { name: 'Client', address: 'Client address', email: 'client@example.com', taxId: '' },
+    services: 'Software development',
+    payment: { method: 'Bank transfer', beneficiary: 'Sender', provider: 'Bank', account: '123456', terms: '', instructions: '' },
     timeDisplayMode: 'entries',
     id: invoiceId,
     workspaceId,
@@ -272,7 +277,28 @@ function getRateField(wrapper: MountedDialog) {
   return rateField;
 }
 
-async function enterDateRange(wrapper: MountedDialog): Promise<void> {
+async function completeBusinessFields(wrapper: MountedDialog): Promise<void> {
+  const values: Record<string, string> = {
+    'invoice-sender-name': 'Sender', 'invoice-sender-address': 'Sender address', 'invoice-sender-email': 'sender@example.com',
+    'invoice-recipient-name': 'Client', 'invoice-recipient-address': 'Client address', 'invoice-recipient-email': 'client@example.com',
+    'invoice-services': 'Software development',
+  };
+  for (const [id, value] of Object.entries(values)) {
+    const field = [...wrapper.findAllComponents(InputText), ...wrapper.findAllComponents(Textarea)].find(field => field.attributes('id') === id);
+    if (field && !field.props().modelValue) await field.setValue(value);
+  }
+  const method = getSelectByInputId(wrapper, 'invoice-payment-method');
+  if (!method.props('modelValue')) method.vm.$emit('update:modelValue', 'Bank transfer');
+  await flushPromises();
+  for (const [id, value] of Object.entries({ beneficiary: 'Sender', provider: 'Bank', account: '123456', paymentUrl: 'https://example.com/pay' })) {
+    const field = [...wrapper.findAllComponents(InputText), ...wrapper.findAllComponents(Textarea)].find(field => field.attributes('id') === `invoice-payment-${id}`);
+    if (field && !field.props().modelValue) await field.setValue(value);
+  }
+  await flushPromises();
+}
+
+async function completeDocumentForBillingPeriod(wrapper: MountedDialog): Promise<void> {
+  await completeBusinessFields(wrapper);
   await wrapper
     .findAllComponents(DatePicker).find(field => field.props('inputId') === 'invoice-create-date-range')!
     .vm.$emit('update:modelValue', [
@@ -322,6 +348,105 @@ describe('InvoiceCreateDialog', () => {
         removeListener: vi.fn(),
       })),
     );
+  });
+
+  it.each(['create', 'edit', 'copy'] as const)('rejects whitespace-only required document fields in %s mode', async mode => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice=createCreateInvoiceSpy();
+    const wrapper=await mountDialog({source:mode==='create'?undefined:createInvoiceResponse(),editing:mode==='edit',createInvoice});
+    if(mode==='create') { await wrapper.getComponent('#invoice-create-title').setValue('Complete title'); await completeDocumentForBillingPeriod(wrapper); }
+    const ids=['invoice-sender-name','invoice-sender-address','invoice-sender-email','invoice-recipient-name','invoice-recipient-address','invoice-recipient-email','invoice-services'];
+    for(const id of ids) await wrapper.getComponent('#'+id).setValue('   ');
+    await submitInvoice(wrapper);
+    expect(createInvoice).not.toHaveBeenCalled();
+    for(const id of ids) expect(document.getElementById(id)?.getAttribute('aria-invalid')).toBe('true');
+    await wrapper.getComponent('#invoice-sender-name').setValue('Corrected sender');
+    expect(document.getElementById('invoice-sender-name-error')).toBeNull();
+    expect(document.getElementById('invoice-recipient-email-error')).not.toBeNull();
+    expect(document.querySelector<HTMLTextAreaElement>('#invoice-services')?.value).toBe('   ');
+  });
+
+  it('focuses the first invalid document date and keeps other errors until corrected', async () => {
+    const createInvoice = createCreateInvoiceSpy();
+    const wrapper = await mountDialog({source:createInvoiceResponse(), editing:true, createInvoice});
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const issue = wrapper.findAllComponents(DatePicker).find(field => field.props('inputId') === 'invoice-issue-date')!;
+    issue.vm.$emit('update:modelValue', null);
+    await wrapper.getComponent('#invoice-recipient-email').setValue('');
+    await submitInvoice(wrapper);
+    expect(createInvoice).not.toHaveBeenCalled();
+    expect(document.activeElement?.id).toBe('invoice-issue-date');
+    expect(document.getElementById('invoice-issue-date')?.getAttribute('aria-invalid')).toBe('true');
+    expect(document.getElementById('invoice-issue-date')?.getAttribute('aria-required')).toBe('true');
+    issue.vm.$emit('update:modelValue', new Date(2026, 4, 1));
+    await flushPromises();
+    expect(document.getElementById('invoice-issue-date-error')).toBeNull();
+    expect(document.getElementById('invoice-recipient-email-error')).not.toBeNull();
+  });
+
+  it('follows document order in the DOM and exposes required controls', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const wrapper = await mountDialog({source:createInvoiceResponse(), editing:true});
+    const ids = ['invoice-issue-date', 'invoice-due-date', 'invoice-create-date-range', 'invoice-sender-name', 'invoice-sender-address', 'invoice-sender-email', 'invoice-sender-taxId', 'invoice-recipient-name', 'invoice-services', 'invoice-create-project', 'invoice-create-hourly-rate', 'invoice-create-discount', 'invoice-payment-method', 'invoice-payment-terms', 'invoice-payment-beneficiary', 'invoice-payment-provider', 'invoice-payment-account', 'invoice-payment-swift', 'invoice-payment-instructions', 'invoice-create-notes'];
+    for (let i=1; i<ids.length; i++) {
+      const previous=document.getElementById(ids[i-1]!)!;
+      const current=document.getElementById(ids[i]!)!;
+      expect(Boolean(previous.compareDocumentPosition(current) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    }
+    expect(bodyText()).not.toContain('(optional)');
+    expect(wrapper.getComponent('#invoice-sender-email').attributes('aria-required')).toBe('true');
+  });
+
+  it.each(['Bank transfer', 'Card', 'Other', 'Cash'])('requires the applicable %s fields and permits zero work and rate', async method => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse({entries:[], count:0, totalHours:0}));
+    const createInvoice = createCreateInvoiceSpy();
+    const source = {...createInvoiceResponse(), timeEntries:[], hourlyRate:0, payment:{method, terms:'', beneficiary:'', provider:'', account:'', instructions:''}};
+    const wrapper=await mountDialog({source, editing:true, createInvoice});
+    await submitInvoice(wrapper);
+    expect(createInvoice).not.toHaveBeenCalled();
+    const required = method === 'Bank transfer' ? ['beneficiary','provider','account'] : method === 'Card' ? ['provider','paymentUrl'] : ['account'];
+    for(const key of required) {
+      expect(document.getElementById('invoice-payment-'+key)?.getAttribute('aria-required')).toBe('true');
+      expect(document.getElementById('invoice-payment-'+key+'-error')).not.toBeNull();
+      await wrapper.getComponent('#invoice-payment-'+key).setValue(key==='paymentUrl'?'https://example.com/pay':'Details');
+    }
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({hourlyRate:0,timeEntryIds:[],payment:expect.objectContaining({method,instructions:''})}));
+  });
+
+  it('restores a malformed local Card URL and omits it when saving complete bank details', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice=createCreateInvoiceSpy();
+    const wrapper=await mountDialog({source:createInvoiceResponse(),editing:true,createInvoice});
+    const method=getSelectByInputId(wrapper,'invoice-payment-method');
+    method.vm.$emit('update:modelValue','Card'); await flushPromises();
+    await wrapper.getComponent('#invoice-payment-paymentUrl').setValue('javascript:bad');
+    await submitInvoice(wrapper); expect(createInvoice).not.toHaveBeenCalled();
+    method.vm.$emit('update:modelValue','Bank transfer'); await flushPromises();
+    expect(bodyText()).not.toContain('Switch to Card');
+    method.vm.$emit('update:modelValue','Card'); await flushPromises();
+    expect(document.querySelector<HTMLInputElement>('#invoice-payment-paymentUrl')?.value).toBe('javascript:bad');
+    expect(document.getElementById('invoice-payment-paymentUrl-error')).not.toBeNull();
+    method.vm.$emit('update:modelValue','Bank transfer'); await flushPromises();
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice.mock.calls[0]![0].payment).not.toHaveProperty('paymentUrl');
+  });
+
+  it('maps server field errors inline without dropping the draft and clears them on correction', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice=createCreateInvoiceSpy();
+    createInvoice.mockRejectedValueOnce(new ApiError('Complete document',{status:422,code:'invoice_document_incomplete',body:{details:{fieldErrors:{'sender.address':'Use the legal billing address.'}}}}));
+    const wrapper=await mountDialog({source:createInvoiceResponse(),editing:true,createInvoice});
+    await submitInvoice(wrapper);
+    expect(document.getElementById('invoice-sender-address-error')?.textContent).toContain('Use the legal billing address.');
+    expect(document.activeElement?.id).toBe('invoice-sender-address');
+    expect(wrapper.emitted('update:visible')).toBeUndefined();
+    expect(document.querySelector<HTMLInputElement>('#invoice-create-title')?.value).toBe('Website redesign');
+    await wrapper.getComponent('#invoice-sender-address').setValue('Legal address');
+    expect(document.getElementById('invoice-sender-address-error')).toBeNull();
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledTimes(2);
   });
 
   it('renders all eight form fields and the create actions when opened', async () => {
@@ -477,7 +602,7 @@ describe('InvoiceCreateDialog', () => {
     const wrapper = await mountDialog();
     expect(testMocks.listEligibleEntries).not.toHaveBeenCalled();
 
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(1);
     expect(testMocks.listEligibleEntries).toHaveBeenCalledWith({
@@ -504,7 +629,7 @@ describe('InvoiceCreateDialog', () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
 
     const wrapper = await mountDialog();
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
 
     const table = wrapper.findComponent(DataTable);
@@ -528,7 +653,7 @@ describe('InvoiceCreateDialog', () => {
     );
 
     const wrapper = await mountDialog();
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     expect(bodyText()).toContain(
       'Change the project or billing period to look for entries. You can still create an empty draft.',
@@ -542,7 +667,7 @@ describe('InvoiceCreateDialog', () => {
     );
 
     const wrapper = await mountDialog();
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     const errorBanner = document.querySelector(
       '[data-testid="invoice-create-preview-error"]',
@@ -573,7 +698,7 @@ describe('InvoiceCreateDialog', () => {
         source: mode === 'create' ? undefined : createInvoiceResponse(),
       });
       await wrapper.getComponent('#invoice-create-title').setValue('Website redesign');
-      await enterDateRange(wrapper);
+      await completeDocumentForBillingPeriod(wrapper);
       return { wrapper, createInvoice };
     }
 
@@ -638,7 +763,7 @@ describe('InvoiceCreateDialog', () => {
       expect(createInvoice).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps errors independent and allows clearing optional email addresses', async () => {
+    it('keeps required email errors independent until corrected', async () => {
       const { wrapper, createInvoice } = await mountValidDialog();
       const senderEmail = wrapper.getComponent('#invoice-sender-email');
       const recipientEmail = wrapper.getComponent('#invoice-recipient-email');
@@ -650,21 +775,21 @@ describe('InvoiceCreateDialog', () => {
       expect(document.getElementById('invoice-sender-email-error')).not.toBeNull();
       expect(document.getElementById('invoice-recipient-email-error')).not.toBeNull();
       expect(document.getElementById('invoice-services-error')).not.toBeNull();
-      await senderEmail.setValue('');
+      await senderEmail.setValue('sender@example.com');
       expect(document.getElementById('invoice-sender-email-error')).toBeNull();
       expect(document.getElementById('invoice-recipient-email-error')).not.toBeNull();
       expect(document.getElementById('invoice-services-error')).not.toBeNull();
       await submitInvoice(wrapper);
       expect(createInvoice).not.toHaveBeenCalled();
 
-      await recipientEmail.setValue('');
+      await recipientEmail.setValue('client@example.com');
       await wrapper.getComponent('#invoice-services').setValue('Consulting');
       await submitInvoice(wrapper);
 
       expect(createInvoice).toHaveBeenCalledTimes(1);
       expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({
-        sender: expect.objectContaining({ email: '' }),
-        recipient: expect.objectContaining({ email: '' }),
+        sender: expect.objectContaining({ email: 'sender@example.com' }),
+        recipient: expect.objectContaining({ email: 'client@example.com' }),
         services: 'Consulting',
       }));
     });
@@ -703,7 +828,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     // The preview only fires once the PM's required project is chosen.
     expect(testMocks.listEligibleEntries).not.toHaveBeenCalled();
@@ -728,7 +853,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     const currencySelect = getSelectByInputId(wrapper, 'invoice-create-currency');
 
@@ -755,7 +880,7 @@ describe('InvoiceCreateDialog', () => {
     );
   });
 
-  it('submits without a currency when the field is cleared to the workspace default', async () => {
+  it('requires currency correction after an explicit clear', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const createInvoice = createCreateInvoiceSpy();
     const wrapper = await mountDialog({
@@ -767,7 +892,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     expect(getCurrencyLabelElement().textContent).toBe('EUR');
 
     await getSelectByInputId(wrapper, 'invoice-create-currency').vm.$emit(
@@ -778,13 +903,9 @@ describe('InvoiceCreateDialog', () => {
     expect(getCurrencyLabelElement().textContent).toBe('Auto');
 
     await submitInvoice(wrapper);
-
-    // Clearing submits the workspace-default signal (undefined); an empty
-    // string would fail the 3-letter currency contract on the API boundary.
-    expect(createInvoice).toHaveBeenCalledTimes(1);
-    expect(createInvoice.mock.calls[0]?.[0]?.currency).toBeUndefined();
+    expect(createInvoice).not.toHaveBeenCalled();
+    expect(bodyText()).toContain('is required.');
   });
-
   it('pre-selects the workspace settings currency when the dialog opens', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const createInvoice = createCreateInvoiceSpy();
@@ -800,7 +921,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await submitInvoice(wrapper);
 
     expect(createInvoice).toHaveBeenCalledTimes(1);
@@ -862,7 +983,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     // The setting is cleared after being known; the auto-filled value must be
@@ -874,13 +995,9 @@ describe('InvoiceCreateDialog', () => {
     expect(getCurrencyLabelElement().textContent).toBe('Auto');
 
     await submitInvoice(wrapper);
-
-    expect(createInvoice).toHaveBeenCalledTimes(1);
-    expect(createInvoice).toHaveBeenCalledWith(
-      expect.objectContaining({ currency: undefined }),
-    );
+    expect(createInvoice).not.toHaveBeenCalled();
+    expect(bodyText()).toContain('is required.');
   });
-
   it('does not refill the currency from the preview default after the workspace setting is explicitly cleared', async () => {
     testMocks.listEligibleEntries
       .mockResolvedValueOnce(createEntriesResponse({ defaultCurrency: 'USD' }))
@@ -889,7 +1006,7 @@ describe('InvoiceCreateDialog', () => {
       workspaceCurrency: 'EUR',
     });
 
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     // The workspace currency is authoritative while known.
@@ -929,7 +1046,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await submitInvoice(wrapper);
 
     expect(createInvoice).toHaveBeenCalledTimes(1);
@@ -963,7 +1080,7 @@ describe('InvoiceCreateDialog', () => {
     );
     const wrapper = await mountDialog({ workspaceHourlyRate: 50 });
 
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(1);
@@ -979,7 +1096,7 @@ describe('InvoiceCreateDialog', () => {
     );
     const wrapper = await mountDialog();
 
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     expect(getRateField(wrapper).props('modelValue')).toBe(80);
@@ -1000,7 +1117,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     // The preview default (80) must not overwrite the explicitly-set zero rate.
@@ -1029,7 +1146,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     // The setting is cleared after being known; the auto-filled value must be
@@ -1040,13 +1157,9 @@ describe('InvoiceCreateDialog', () => {
     expect(getRateField(wrapper).props('modelValue')).toBeNull();
 
     await submitInvoice(wrapper);
-
-    expect(createInvoice).toHaveBeenCalledTimes(1);
-    expect(createInvoice).toHaveBeenCalledWith(
-      expect.objectContaining({ hourlyRate: undefined }),
-    );
+    expect(createInvoice).not.toHaveBeenCalled();
+    expect(bodyText()).toContain('is required.');
   });
-
   it('does not refill the rate from the preview default after the workspace setting is explicitly cleared', async () => {
     testMocks.listEligibleEntries
       .mockResolvedValueOnce(createEntriesResponse({ defaultHourlyRate: 80 }))
@@ -1055,7 +1168,7 @@ describe('InvoiceCreateDialog', () => {
       workspaceHourlyRate: 50,
     });
 
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     // The workspace rate is authoritative while known.
@@ -1093,7 +1206,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     await submitInvoice(wrapper);
 
@@ -1101,10 +1214,10 @@ describe('InvoiceCreateDialog', () => {
     expect(createInvoice).toHaveBeenCalledWith({
       timeDisplayMode: 'entries',
       issueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), dueDate: null,
-      sender: { name: '', address: '', email: '', taxId: '' },
-      recipient: { name: '', address: '', email: '', taxId: '' },
-      payment: { method: '', terms: '', beneficiary: '', provider: '', account: '', instructions: '' },
-      services: '', logo: null, groupId: null, timeEntryIds: [createTimeEntry().id],
+      sender: createInvoiceResponse().sender,
+      recipient: createInvoiceResponse().recipient,
+      payment: createInvoiceResponse().payment,
+      services: 'Software development', logo: null, groupId: null, timeEntryIds: [createTimeEntry().id],
       title: 'Website redesign',
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
@@ -1126,7 +1239,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     await submitInvoice(wrapper);
 
@@ -1134,10 +1247,10 @@ describe('InvoiceCreateDialog', () => {
     expect(createInvoice).toHaveBeenCalledWith({
       timeDisplayMode: 'entries',
       issueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), dueDate: null,
-      sender: { name: '', address: '', email: '', taxId: '' },
-      recipient: { name: '', address: '', email: '', taxId: '' },
-      payment: { method: '', terms: '', beneficiary: '', provider: '', account: '', instructions: '' },
-      services: '', logo: null, groupId: null, timeEntryIds: [createTimeEntry().id],
+      sender: createInvoiceResponse().sender,
+      recipient: createInvoiceResponse().recipient,
+      payment: createInvoiceResponse().payment,
+      services: 'Software development', logo: null, groupId: null, timeEntryIds: [createTimeEntry().id],
       title: 'Website redesign',
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
@@ -1160,7 +1273,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     await submitInvoice(wrapper);
 
@@ -1201,12 +1314,12 @@ describe('InvoiceCreateDialog', () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const createInvoice = createCreateInvoiceSpy();
     const source = createInvoiceResponse();
-    const party = { name: 'Company', email: '', taxId: '', address: 'Studio Lane\nKyiv' };
-    const payment = { method: '', terms: '', beneficiary: '', provider: '', instructions: '', account: 'Bank\nAccount' };
+    const party = { name: 'Company', email: 'company@example.com', taxId: '', address: 'Studio Lane\nKyiv' };
+    const payment = { method: 'Other', terms: '', beneficiary: '', provider: '', instructions: '', account: 'Bank\nAccount' };
     const wrapper = await mountDialog({ source: { ...source, sender: party, recipient: party, payment }, editing: true, createInvoice });
 
     for (const caption of ['Address', 'Payment details']) {
-      const fields = [...document.querySelectorAll('label')].filter(label => label.textContent?.trim() === caption);
+      const fields = [...document.querySelectorAll('label')].filter(label => label.textContent?.trim().replace(/ \*$/, '') === caption);
       expect(fields).toHaveLength(caption === 'Address' ? 2 : 1);
       for (const field of fields) {
         const input = (field.querySelector('textarea') ?? document.getElementById(field.htmlFor)) as HTMLTextAreaElement;
@@ -1234,7 +1347,7 @@ describe('InvoiceCreateDialog', () => {
     const createInvoice = createCreateInvoiceSpy();
     const wrapper = await mountDialog({ createInvoice });
     await wrapper.getComponent('#invoice-create-title').setValue('Keep my draft');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     const checkbox = wrapper.findAllComponents(Checkbox).find(field => field.props('value') === entry.id)!;
     checkbox.vm.$emit('update:modelValue', []);
     await flushPromises();
@@ -1277,7 +1390,7 @@ describe('InvoiceCreateDialog', () => {
     await discountField.vm.$emit('update:modelValue', 15);
     await flushPromises();
 
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     // The live estimate applies the discount: 2.5h at 80 − 15%.
     expect(bodyText()).toContain('170.00 USD');
@@ -1288,10 +1401,10 @@ describe('InvoiceCreateDialog', () => {
     expect(createInvoice).toHaveBeenCalledWith({
       timeDisplayMode: 'entries',
       issueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), dueDate: null,
-      sender: { name: '', address: '', email: '', taxId: '' },
-      recipient: { name: '', address: '', email: '', taxId: '' },
-      payment: { method: '', terms: '', beneficiary: '', provider: '', account: '', instructions: '' },
-      services: '', logo: null, groupId: null, timeEntryIds: [createTimeEntry().id],
+      sender: createInvoiceResponse().sender,
+      recipient: createInvoiceResponse().recipient,
+      payment: createInvoiceResponse().payment,
+      services: 'Software development', logo: null, groupId: null, timeEntryIds: [createTimeEntry().id],
       title: 'Website redesign',
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
@@ -1312,7 +1425,7 @@ describe('InvoiceCreateDialog', () => {
     // Before a date range exists there is no preview and no selected currency.
     expect(getCurrencyLabelElement().textContent).toBe('Auto');
 
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     // The dropdown follows the preview's workspace default, so the estimate
     // renders the preview currency instead of an unselected empty value.
@@ -1339,7 +1452,7 @@ describe('InvoiceCreateDialog', () => {
       );
 
     const wrapper = await mountDialog({ isAdmin: true });
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(1);
@@ -1355,7 +1468,7 @@ describe('InvoiceCreateDialog', () => {
     await flushPromises();
     await wrapper.setProps({ visible: true });
     await flushPromises();
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     await flushPromises();
 
@@ -1383,7 +1496,7 @@ describe('InvoiceCreateDialog', () => {
       );
 
     const wrapper = await mountDialog({ isAdmin: true });
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     // User explicitly overrides both defaults.
@@ -1423,7 +1536,7 @@ describe('InvoiceCreateDialog', () => {
     // No preview yet, so the field rests on the always-active 1-minute step.
     expect(getRoundingStepLabelElement().textContent).toBe('1 min');
 
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     expect(getRoundingStepLabelElement().textContent).toBe('5 min');
@@ -1439,7 +1552,7 @@ describe('InvoiceCreateDialog', () => {
       );
 
     const wrapper = await mountDialog({ isAdmin: true });
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     expect(getRoundingStepLabelElement().textContent).toBe('5 min');
@@ -1514,7 +1627,7 @@ describe('InvoiceCreateDialog', () => {
       );
 
     const wrapper = await mountDialog({ isAdmin: true });
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     expect(getRoundingStepLabelElement().textContent).toBe('5 min');
@@ -1568,7 +1681,7 @@ describe('InvoiceCreateDialog', () => {
     );
     await flushPromises();
 
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     expect(getRoundingStepLabelElement().textContent).toBe('5 min');
@@ -1617,7 +1730,7 @@ describe('InvoiceCreateDialog', () => {
       createEntriesResponse({ defaultRoundingStepMinutes: 5 }),
     );
     const wrapper = await mountDialog({ isAdmin: true });
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     await flushPromises();
 
@@ -1671,7 +1784,7 @@ describe('InvoiceCreateDialog', () => {
       );
 
     const wrapper = await mountDialog({ isAdmin: true });
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     await flushPromises();
 
@@ -1703,7 +1816,7 @@ describe('InvoiceCreateDialog', () => {
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     await getSelectByInputId(wrapper, 'invoice-create-rounding-step').vm.$emit(
       'update:modelValue',
@@ -1717,10 +1830,10 @@ describe('InvoiceCreateDialog', () => {
     expect(createInvoice).toHaveBeenCalledWith({
       timeDisplayMode: 'entries',
       issueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), dueDate: null,
-      sender: { name: '', address: '', email: '', taxId: '' },
-      recipient: { name: '', address: '', email: '', taxId: '' },
-      payment: { method: '', terms: '', beneficiary: '', provider: '', account: '', instructions: '' },
-      services: '', logo: null, groupId: null, timeEntryIds: [createTimeEntry().id],
+      sender: createInvoiceResponse().sender,
+      recipient: createInvoiceResponse().recipient,
+      payment: createInvoiceResponse().payment,
+      services: 'Software development', logo: null, groupId: null, timeEntryIds: [createTimeEntry().id],
       title: 'Website redesign',
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
@@ -1761,13 +1874,13 @@ describe('InvoiceCreateDialog', () => {
       isAdmin: true,
       createInvoice,
       workspaceRoundingStepMinutes: 15,
-      workspaceCurrency: 'USD',
+      workspaceCurrency: 'USD', workspaceHourlyRate: 80,
     });
 
     await wrapper
       .getComponent('#invoice-create-title')
       .setValue('Website redesign');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
 
     // The field still shows the temporary 1-minute default because the
     // preview has not arrived yet.
@@ -1792,7 +1905,7 @@ describe('InvoiceCreateDialog', () => {
       );
 
     const wrapper = await mountDialog({ isAdmin: true });
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
 
     await getSelectByInputId(wrapper, 'invoice-create-rounding-step').vm.$emit(
@@ -1809,7 +1922,7 @@ describe('InvoiceCreateDialog', () => {
     await flushPromises();
     await wrapper.setProps({ visible: true });
     await flushPromises();
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     await flushPromises();
 
@@ -1822,7 +1935,7 @@ describe('InvoiceCreateDialog', () => {
       entries: query.dateFrom === '2026-05-01' ? [may] : [april],
     }));
     const wrapper = await mountDialog();
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     const included = () => wrapper.findAllComponents(Checkbox).filter(field => !field.props('binary'));
     expect(included()[0]!.props('modelValue')).toEqual([april.id]);
@@ -1831,7 +1944,7 @@ describe('InvoiceCreateDialog', () => {
     wrapper.findAllComponents(DatePicker).find(field => field.props('inputId') === 'invoice-create-date-range')!.vm.$emit('update:modelValue', [new Date(2026, 4, 1), new Date(2026, 4, 31)]);
     await flushPromises();
     expect(included()[0]!.props('modelValue')).toEqual([may.id]);
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     expect(included()[0]!.props('modelValue')).toEqual([april.id]);
   });
@@ -1848,11 +1961,11 @@ describe('InvoiceCreateDialog', () => {
       return new Promise<EligibleEntriesResponse>(resolve => { finish = resolve; });
     });
     const wrapper = await mountDialog();
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     wrapper.findAllComponents(DatePicker).find(field => field.props('inputId') === 'invoice-create-date-range')!.vm.$emit('update:modelValue', [new Date(2026, 4, 1), new Date(2026, 4, 31)]);
     await flushPromises();
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     const included = () => wrapper.findAllComponents(Checkbox).filter(field => !field.props('binary'));
     expect(included()[0]!.props('modelValue')).toEqual([first.id]);
@@ -1875,18 +1988,20 @@ describe('InvoiceCreateDialog', () => {
     expect(included()[0]!.props('modelValue')).toEqual(entries.map(entry => entry.id));
   });
 
-  it('keeps a defaults error visible after successful calculation and lets the server supply untouched defaults', async () => {
+  it('keeps a defaults error visible while saving complete explicit billing fields', async () => {
     testMocks.getInvoiceDefaults.mockRejectedValue(new Error('Unavailable'));
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const createInvoice = createCreateInvoiceSpy();
     const wrapper = await mountDialog({createInvoice});
     await wrapper.getComponent('#invoice-create-title').setValue('Fallback');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     expect(bodyText()).toContain('Could not load billing settings');
     await submitInvoice(wrapper);
     const submitted = createInvoice.mock.calls[0]![0];
-    for (const key of ['sender', 'payment', 'logo']) expect(submitted).not.toHaveProperty(key);
+    expect(submitted.sender).toMatchObject({ name: 'Sender', email: 'sender@example.com' });
+    expect(submitted.payment?.method).toBe('Bank transfer');
+    expect(submitted).not.toHaveProperty('logo');
   });
 
   it('rejects unsafe logo content even when the file uses an accepted MIME type', async () => {
@@ -1900,14 +2015,14 @@ describe('InvoiceCreateDialog', () => {
     input.dispatchEvent(new Event('change'));
     await vi.waitFor(() => expect(bodyText()).toContain('Choose a valid PNG or static SVG logo'));
     await wrapper.getComponent('#invoice-create-title').setValue('Preserve saved logo');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await submitInvoice(wrapper);
     expect(createInvoice.mock.calls[0]![0]).not.toHaveProperty('logo');
   });
 
   it('shows the settings logo in a new invoice and includes it when saving', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
-    const logo = 'data:image/png;base64,aGVsbG8=';
+    const logo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB';
     testMocks.getInvoiceDefaults.mockResolvedValue({ billingProfile: {
       sender: { name: 'Sender', address: '', email: '', taxId: '' },
       payment: { method: 'Bank transfer', terms: '', beneficiary: '', provider: '', account: '', instructions: '' },
@@ -1917,17 +2032,17 @@ describe('InvoiceCreateDialog', () => {
     const wrapper = await mountDialog({ createInvoice });
     expect(document.querySelector('img[alt="Invoice sender logo"]')?.getAttribute('src')).toBe(logo);
     await wrapper.getComponent('#invoice-create-title').setValue('Invoice with logo');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     await submitInvoice(wrapper);
     expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({ logo }));
   });
 
   describe('logo when creating from a saved invoice', () => {
-    const workspaceLogo = 'data:image/png;base64,d29ya3NwYWNl';
-    const originalLogo = 'data:image/png;base64,c291cmNl';
-    const sender = { name: 'Original sender', email: '', address: '', taxId: '' };
-    const payment = { method: 'Original method', terms: '', beneficiary: '', provider: '', account: '', instructions: '' };
+    const workspaceLogo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB';
+    const originalLogo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAAAA';
+    const sender = { name: 'Original sender', email: 'sender@example.com', address: 'Address', taxId: '' };
+    const payment = { method: 'Original method', terms: '', beneficiary: '', provider: '', account: 'Payment details', instructions: '' };
     const source = { ...createInvoiceResponse(), logo: null, sender, payment };
     const billingProfile = {
       logo: workspaceLogo,
@@ -1996,7 +2111,7 @@ describe('InvoiceCreateDialog', () => {
     const createInvoice = createCreateInvoiceSpy();
     const wrapper = await mountDialog({ createInvoice });
     await wrapper.getComponent('#invoice-create-title').setValue('Reviewed invoice');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     const checkboxes = wrapper.findAllComponents(Checkbox).filter(field => !field.props('binary'));
     expect(checkboxes).toHaveLength(2);
@@ -2017,7 +2132,7 @@ describe('InvoiceCreateDialog', () => {
     const createInvoice=createCreateInvoiceSpy();
     const wrapper=await mountDialog({createInvoice});
     await wrapper.getComponent('#invoice-create-title').setValue('Reviewed invoice');
-    await enterDateRange(wrapper);await flushPromises();
+    await completeDocumentForBillingPeriod(wrapper);await flushPromises();
     expect(bodyText()).toContain('Subtotal');
     expect(bodyText()).toContain('200.00 USD');
     expect(bodyText()).toContain('180.00 USD');
@@ -2040,17 +2155,18 @@ describe('InvoiceCreateDialog', () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const source=createInvoiceResponse();
     const wrapper=await mountDialog({source,editing:true,initiallyVisible:true});
-    expect(wrapper.findAllComponents(InputText)[0]!.props('modelValue')).toBe(source.title);
+    expect(document.querySelector<HTMLInputElement>('#invoice-create-title')?.value).toBe(source.title);
     expect(getSelectByInputId(wrapper,'invoice-create-project').props('modelValue')).toBe(source.projectId);
   });
-  it('uses the reviewed workspace defaults for cleared edit billing fields',async()=>{
+  it('requires correction after clearing saved billing fields',async()=>{
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse({defaultHourlyRate:200,defaultCurrency:'EUR'}));
     const createInvoice=createCreateInvoiceSpy();
     const wrapper=await mountDialog({source:{...createInvoiceResponse(),hourlyRate:100,currency:'USD'},editing:true,createInvoice});
     wrapper.findAllComponents(InputNumber).find(field=>field.props('inputId')==='invoice-create-hourly-rate')!.vm.$emit('update:modelValue',null);
     getSelectByInputId(wrapper,'invoice-create-currency').vm.$emit('update:modelValue',null);await flushPromises();
     await submitInvoice(wrapper);
-    expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({hourlyRate:200,currency:'EUR'}));
+    expect(createInvoice).not.toHaveBeenCalled();
+    expect(bodyText()).toContain('is required.');
   });
   it.each(['resolve','reject'] as const)('ignores a delayed save %s after another scope opens',async(outcome)=>{
     let resolveSave!:(value:InvoiceResponse)=>void;
@@ -2058,7 +2174,7 @@ describe('InvoiceCreateDialog', () => {
     const createInvoice=vi.fn(()=>new Promise<InvoiceResponse>((resolve,reject)=>{resolveSave=resolve;rejectSave=reject;}));
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const wrapper=await mountDialog({createInvoice});
-    await wrapper.getComponent('#invoice-create-title').setValue('Old draft');await enterDateRange(wrapper);
+    await wrapper.getComponent('#invoice-create-title').setValue('Old draft');await completeDocumentForBillingPeriod(wrapper);
     await getSubmitButton(wrapper).trigger('click');await flushPromises();
     await wrapper.setProps({scope:{role:'admin',userId:'other',workspaceId:'99999999-9999-4999-8999-999999999999'}});await flushPromises();
     await wrapper.getComponent('#invoice-create-title').setValue('New draft');
@@ -2066,7 +2182,7 @@ describe('InvoiceCreateDialog', () => {
     await flushPromises();
     expect(wrapper.emitted('created')).toBeUndefined();
     expect(wrapper.emitted('update:visible')).toBeUndefined();
-    expect(wrapper.findAllComponents(InputText)[0]!.props('modelValue')).toBe('New draft');
+    expect(document.querySelector<HTMLInputElement>('#invoice-create-title')?.value).toBe('New draft');
     expect(bodyText()).not.toContain('Old failure');
   });
 
@@ -2088,7 +2204,7 @@ describe('InvoiceCreateDialog', () => {
     const createInvoice = vi.fn().mockRejectedValue(new ApiError('Entry was claimed. Review selection.', { code: 'invoice_entries_conflict', status: 409 }));
     const wrapper = await mountDialog({ createInvoice });
     await wrapper.getComponent('#invoice-create-title').setValue('Keep my draft');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await flushPromises();
     await wrapper.findAllComponents(Checkbox).find(field=>!field.props('binary'))!.vm.$emit('update:modelValue', []);
     await flushPromises();
@@ -2108,7 +2224,7 @@ describe('InvoiceCreateDialog', () => {
     }));
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const wrapper = await mountDialog();
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     expect(wrapper.findComponent(DataTable).exists()).toBe(false);
     const card = document.querySelector('#invoice-editor-entries article');
     expect(card?.textContent).toContain('Backend API');
@@ -2124,11 +2240,14 @@ describe('InvoiceCreateDialog', () => {
     const createInvoice = vi.fn().mockRejectedValueOnce(new ApiError('Review unavailable entries', {code: 'invoice_entry_conflict', status: 409})).mockResolvedValue(createInvoiceResponse());
     const wrapper = await mountDialog({createInvoice});
     await wrapper.getComponent('#invoice-create-title').setValue('Reviewed draft');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await submitInvoice(wrapper);
     expect(bodyText()).toContain('Changes were not saved');
     expect(getSubmitButton(wrapper).attributes('disabled')).toBeDefined();
     expect(bodyText()).toContain('Backend API · Backend API implementation · Unavailable');
+    const totals = document.getElementById('invoice-create-discount')!.closest('dl')!;
+    expect(totals.textContent).toContain('Discount (%)');
+    expect(totals.querySelectorAll('dd')).toHaveLength(0);
     await wrapper.findAllComponents(Button).find(button => button.props('label') === 'Review entries')!.trigger('click');
     expect(document.activeElement?.id).toBe('invoice-editor-entries');
     await wrapper.findAllComponents(Button).find(button => button.props('label') === 'Exclude entry')!.trigger('click');
@@ -2182,7 +2301,7 @@ describe('InvoiceCreateDialog', () => {
     const createInvoice = createCreateInvoiceSpy();
     const wrapper=await mountDialog({ createInvoice });
     await wrapper.getComponent('#invoice-create-title').setValue('Pending defaults');
-    await enterDateRange(wrapper);
+    await completeDocumentForBillingPeriod(wrapper);
     await submitInvoice(wrapper);
     expect(createInvoice).not.toHaveBeenCalled();
     const senderField=wrapper.findAllComponents(InputText).find(field=>field.element.closest('label')?.textContent?.includes('Sender / legal name'))!;
@@ -2192,7 +2311,7 @@ describe('InvoiceCreateDialog', () => {
     expect(senderField.props('modelValue')).toBe('Typed sender');
     expect(paymentField.props('modelValue')).toBe('Typed payment');
     await submitInvoice(wrapper);
-    expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({sender: expect.objectContaining({name:'Typed sender', address:'Address'})}));
+    expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({sender: expect.objectContaining({name:'Typed sender', address:'Sender address'})}));
   });
   it('refreshes eligibility and retries a failed calculation without losing the draft',async()=>{
     let fail=true;
@@ -2203,7 +2322,7 @@ describe('InvoiceCreateDialog', () => {
     });
     const wrapper=await mountDialog();
     await wrapper.getComponent('#invoice-create-title').setValue('Keep typed title');
-    await enterDateRange(wrapper);await flushPromises();
+    await completeDocumentForBillingPeriod(wrapper);await flushPromises();
     expect(getSubmitButton(wrapper).attributes('disabled')).toBeDefined();
     const calls=testMocks.listEligibleEntries.mock.calls.length;
     fail=false;
@@ -2245,8 +2364,10 @@ describe('InvoiceCreateDialog', () => {
     issue.vm.$emit('update:modelValue',new Date('2026-03-10T12:00:00'));
     due.vm.$emit('update:modelValue',new Date('2026-03-09T12:00:00'));
     await flushPromises();
-    expect(getSubmitButton(wrapper).attributes('disabled')).toBeDefined();
-    expect(bodyText()).toContain('Due date must be on or after the issue date.');
+    expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();
+    await submitInvoice(wrapper);
+    expect(createInvoice).not.toHaveBeenCalled();
+    expect(bodyText()).toContain('Due date must be on or after');
     due.vm.$emit('update:modelValue',new Date('2026-03-10T12:00:00'));
     await flushPromises();
     await submitInvoice(wrapper);
@@ -2263,10 +2384,10 @@ describe('InvoiceCreateDialog', () => {
     const createInvoice = createCreateInvoiceSpy();
     const wrapper = await mountDialog({createInvoice});
     await wrapper.getComponent('#invoice-create-title').setValue('Optional defaults');
-    await enterDateRange(wrapper);
     resolveDefaults({billingProfile:{sender:{name:'Studio',address:'',email:'',taxId:''},payment:{method,terms:'',beneficiary:'',provider:'',account:'',instructions:'',[key]:value},logo:null}});
     await flushPromises();
     expect(document.querySelector<HTMLInputElement>('#invoice-payment-' + key)?.value).toBe(value);
+    await completeDocumentForBillingPeriod(wrapper);
     await submitInvoice(wrapper);
     expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({payment:expect.objectContaining({[key]:value})}));
   });
@@ -2279,7 +2400,7 @@ describe('InvoiceCreateDialog', () => {
       const mode = wrapper.getComponent(SelectButton);
       expect(mode.props('modelValue')).toBe('entries');
       await wrapper.getComponent('#invoice-create-title').setValue('Task invoice');
-      await enterDateRange(wrapper);
+      await completeDocumentForBillingPeriod(wrapper);
       const reads = testMocks.listEligibleEntries.mock.calls.length;
       const calculations = testMocks.requestJson.mock.calls.length;
       expect(getSubmitButton(wrapper).attributes('disabled')).toBeUndefined();

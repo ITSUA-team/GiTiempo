@@ -157,13 +157,37 @@ const createdInvoiceId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9111';
 const pmProjectId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9077';
 const filterProjectId = '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9099';
 
+const completeBusinessFields = {
+  sender: {
+    name: 'Issuer',
+    address: 'Kyiv',
+    email: 'issuer@example.com',
+    taxId: '',
+  },
+  recipient: {
+    name: 'Client',
+    address: 'Berlin',
+    email: 'client@example.com',
+    taxId: '',
+  },
+  services: 'Development',
+  payment: {
+    method: 'Bank transfer',
+    beneficiary: 'Issuer',
+    provider: 'Bank',
+    account: 'ACCOUNT',
+    terms: '',
+    instructions: '',
+  },
+};
+
 const sampleInvoiceRow = {
   id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010',
   workspaceId: adminUser.workspaceId,
   projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005',
   title: 'Invoice 2026-04',
   revision: 1,
-  document: {},
+  document: completeBusinessFields,
   status: 'draft',
   dateFrom: '2026-04-01',
   dateTo: '2026-04-30',
@@ -218,6 +242,10 @@ function stageCreateDb(
       defaultHourlyRate: number | null;
       currency: string | null;
       timeRoundingStepMinutes: number;
+      billingProfile?: {
+        sender: typeof completeBusinessFields.sender;
+        payment: typeof completeBusinessFields.payment;
+      };
     }>;
     /** Rows for the requirePmProjectAccess/requireWorkspaceProject probe, which returns the project's rounding step. Omit when no project is involved; pass `[]` for an inaccessible project. */
     projectProbeRows?: Array<{
@@ -354,6 +382,57 @@ function stageUpdateDb(
 }
 
 describe('InvoicesService', () => {
+  it.each([
+    ['Pacific/Kiritimati', '2026-11-13'],
+    ['Pacific/Honolulu', '2026-11-11'],
+  ])(
+    'resolves historical detail and list Issue date in %s',
+    (workspaceTimeZone, expected) => {
+      const { service } = createService('admin');
+      const row = {
+        ...sampleInvoiceRow,
+        issueDate: undefined,
+        createdAt: new Date(
+          workspaceTimeZone === 'Pacific/Honolulu'
+            ? '2026-11-12T01:30:00Z'
+            : '2026-11-12T12:30:00Z',
+        ),
+        workspaceTimeZone,
+      };
+      expect(
+        priv<[unknown, unknown[]], InvoiceResponse>(
+          service,
+          'toInvoiceResponse',
+        )(row, []).issueDate,
+      ).toBe(expected);
+      expect(
+        priv<[unknown, number], InvoiceResponse>(service, 'toInvoiceListItem')(
+          row,
+          0,
+        ).issueDate,
+      ).toBe(expected);
+    },
+  );
+  it('validates historical PATCH payment dates against the workspace creation day', async () => {
+    const { service } = createService('admin');
+    const { updateSpy } = stageUpdateDb(service, {
+      initialRow: {
+        ...sampleInvoiceRow,
+        issueDate: undefined,
+        createdAt: new Date('2026-11-12T12:30:00Z'),
+        workspaceTimeZone: 'Pacific/Kiritimati',
+      },
+    });
+    await expect(
+      service.updateInvoice(adminUser, sampleInvoiceRow.id, {
+        dueDate: '2026-11-12',
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'invoice_invalid_payment_dates' },
+    });
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
   describe('time display mode', () => {
     it.each([undefined, 'entries', 'tasks'] as const)(
       'resolves saved mode %s without rewriting historical snapshots',
@@ -399,10 +478,11 @@ describe('InvoicesService', () => {
           ],
           detailRow: {
             ...sampleInvoiceRow,
-            document: { timeDisplayMode: mode },
+            document: { ...completeBusinessFields, timeDisplayMode: mode },
           },
         });
         const response = await service.createInvoice(adminUser, {
+          ...completeBusinessFields,
           title: 'Display',
           dateFrom: '2026-04-01',
           dateTo: '2026-04-30',
@@ -432,7 +512,11 @@ describe('InvoicesService', () => {
       const { updateSetSpy, updateSpy } = stageUpdateDb(service, {
         initialRow: {
           ...sampleInvoiceRow,
-          document: { timeEntries: snapshot, timeDisplayMode: 'entries' },
+          document: {
+            ...completeBusinessFields,
+            timeEntries: snapshot,
+            timeDisplayMode: 'entries',
+          },
         },
       });
       await service.updateInvoice(adminUser, sampleInvoiceRow.id, {
@@ -442,7 +526,11 @@ describe('InvoicesService', () => {
       expect(updateSpy).toHaveBeenCalledTimes(1);
       expect(updateSpy).toHaveBeenCalledWith(invoices);
       expect(updateSetSpy).toHaveBeenCalledWith({
-        document: { timeEntries: snapshot, timeDisplayMode: 'tasks' },
+        document: {
+          ...completeBusinessFields,
+          timeEntries: snapshot,
+          timeDisplayMode: 'tasks',
+        },
         revision: 2,
         updatedAt: expect.any(Date),
       });
@@ -453,14 +541,16 @@ describe('InvoicesService', () => {
       const { updateSetSpy } = stageUpdateDb(service, {
         initialRow: {
           ...sampleInvoiceRow,
-          document: { timeDisplayMode: 'tasks' },
+          document: { ...completeBusinessFields, timeDisplayMode: 'tasks' },
         },
       });
       await service.updateInvoice(adminUser, sampleInvoiceRow.id, {
         title: 'New title',
       });
       expect(updateSetSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ document: { timeDisplayMode: 'tasks' } }),
+        expect.objectContaining({
+          document: { ...completeBusinessFields, timeDisplayMode: 'tasks' },
+        }),
       );
     });
 
@@ -522,6 +612,7 @@ describe('InvoicesService', () => {
     const { service } = createService('member');
     await expect(
       service.createInvoice(memberUser, {
+        ...completeBusinessFields,
         title: 'Test',
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
@@ -566,6 +657,7 @@ describe('InvoicesService', () => {
     const { service } = createService('pm');
     await expect(
       service.createInvoice(pmUser, {
+        ...completeBusinessFields,
         title: 'Workspace-wide',
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
@@ -605,6 +697,7 @@ describe('InvoicesService', () => {
     const { service } = createService('pm', false);
     await expect(
       service.createInvoice(pmUser, {
+        ...completeBusinessFields,
         title: 'Denied',
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
@@ -1406,6 +1499,165 @@ describe('InvoicesService', () => {
     });
   });
 
+  describe('complete invoice document writes', () => {
+    const input = {
+      ...completeBusinessFields,
+      title: 'Complete draft',
+      dateFrom: '2026-04-01',
+      dateTo: '2026-04-30',
+      hourlyRate: 0,
+      currency: 'USD',
+      discountPercent: 0,
+      timeEntryIds: [],
+    };
+
+    it.each([
+      ['sender', { sender: null }],
+      [
+        'recipient.email',
+        { recipient: { ...completeBusinessFields.recipient, email: '' } },
+      ],
+      ['services', { services: '   ' }],
+      [
+        'payment.beneficiary',
+        { payment: { ...completeBusinessFields.payment, beneficiary: '' } },
+      ],
+      [
+        'payment.account',
+        { payment: { ...completeBusinessFields.payment, account: '' } },
+      ],
+      [
+        'payment.provider',
+        { payment: { ...completeBusinessFields.payment, provider: '' } },
+      ],
+      [
+        'payment.paymentUrl',
+        {
+          payment: {
+            ...completeBusinessFields.payment,
+            method: 'Card',
+            paymentUrl: '',
+          },
+        },
+      ],
+    ])(
+      'rejects missing %s before starting a create transaction',
+      async (path, override) => {
+        const { service } = createService('admin');
+        const { transactionSpy, insertSpy } = stageCreateDb(service, {
+          settings: [],
+        });
+        await expect(
+          service.createInvoice(adminUser, { ...input, ...override }),
+        ).rejects.toMatchObject({
+          status: 422,
+          response: {
+            code: 'invoice_document_incomplete',
+            details: { fieldErrors: { [path as string]: expect.any(String) } },
+          },
+        });
+        expect(transactionSpy).not.toHaveBeenCalled();
+        expect(insertSpy).not.toHaveBeenCalled();
+      },
+    );
+
+    it('resolves complete party/payment defaults before validation', async () => {
+      const { service } = createService('admin');
+      const { insertValuesSpy } = stageCreateDb(service, {
+        settings: [
+          {
+            defaultHourlyRate: 0,
+            currency: 'USD',
+            timeRoundingStepMinutes: 5,
+            billingProfile: {
+              sender: completeBusinessFields.sender,
+              payment: completeBusinessFields.payment,
+            },
+          },
+        ],
+      });
+      await service.createInvoice(adminUser, {
+        ...input,
+        sender: undefined,
+        payment: undefined,
+        hourlyRate: undefined,
+        currency: undefined,
+      });
+      expect(insertValuesSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          hourlyRate: 0,
+          document: expect.objectContaining({
+            sender: completeBusinessFields.sender,
+            payment: completeBusinessFields.payment,
+          }),
+        }),
+      );
+    });
+
+    it.each(['draft', 'sent', 'paid'] as const)(
+      'rejects incomplete historical %s status and unrelated edits before writes',
+      async (status) => {
+        for (const patch of [
+          { status },
+          { status: 'sent' as const },
+          { timeDisplayMode: 'tasks' as const },
+          { title: 'Renamed' },
+          { groupId: null },
+        ]) {
+          const { service } = createService('admin');
+          const { updateSpy } = stageUpdateDb(service, {
+            initialRow: { ...sampleInvoiceRow, status, document: {} },
+          });
+          await expect(
+            service.updateInvoice(adminUser, sampleInvoiceRow.id, patch),
+          ).rejects.toMatchObject({
+            status: 422,
+            response: { code: 'invoice_document_incomplete' },
+          });
+          expect(updateSpy).not.toHaveBeenCalled();
+        }
+      },
+    );
+
+    it('completes a historical document in one merged revision', async () => {
+      const { service } = createService('admin');
+      const { updateSetSpy } = stageUpdateDb(service, {
+        initialRow: {
+          ...sampleInvoiceRow,
+          document: { services: completeBusinessFields.services },
+        },
+      });
+      await service.updateInvoice(adminUser, sampleInvoiceRow.id, {
+        sender: completeBusinessFields.sender,
+        recipient: completeBusinessFields.recipient,
+        payment: completeBusinessFields.payment,
+      });
+      expect(updateSetSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: completeBusinessFields,
+          revision: 2,
+        }),
+      );
+    });
+
+    it('rejects clearing a required field before a group or invoice mutation', async () => {
+      const { service } = createService('admin');
+      const { updateSpy } = stageUpdateDb(service);
+      await expect(
+        service.updateInvoice(adminUser, sampleInvoiceRow.id, {
+          services: null,
+          groupId: null,
+        }),
+      ).rejects.toMatchObject({
+        status: 422,
+        response: {
+          details: { fieldErrors: { services: expect.any(String) } },
+        },
+      });
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+  });
+
   // ── Create flow (settings & transactions) ─────────────────────────────
 
   it('rejects creation when no rate is provided and no workspace default exists', async () => {
@@ -1414,6 +1666,7 @@ describe('InvoicesService', () => {
 
     const thrown = await service
       .createInvoice(adminUser, {
+        ...completeBusinessFields,
         title: 'No Rate',
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
@@ -1446,6 +1699,7 @@ describe('InvoicesService', () => {
 
     const thrown = await service
       .createInvoice(adminUser, {
+        ...completeBusinessFields,
         title: 'No Currency',
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
@@ -1481,6 +1735,7 @@ describe('InvoicesService', () => {
 
     const thrown = await service
       .createInvoice(adminUser, {
+        ...completeBusinessFields,
         title: 'Overflow Invoice',
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
@@ -1510,6 +1765,7 @@ describe('InvoicesService', () => {
     });
 
     const result = await service.createInvoice(adminUser, {
+      ...completeBusinessFields,
       title: 'From Settings',
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
@@ -1539,6 +1795,7 @@ describe('InvoicesService', () => {
     });
 
     await service.createInvoice(adminUser, {
+      ...completeBusinessFields,
       title: 'Explicit Values',
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
@@ -1575,6 +1832,7 @@ describe('InvoicesService', () => {
       });
 
     await service.createInvoice(adminUser, {
+      ...completeBusinessFields,
       title: 'Linked Entries',
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
@@ -1606,6 +1864,7 @@ describe('InvoicesService', () => {
     });
 
     const result = await service.createInvoice(pmUser, {
+      ...completeBusinessFields,
       title: 'Public Project',
       dateFrom: '2026-04-01',
       dateTo: '2026-04-30',
@@ -1652,6 +1911,7 @@ describe('InvoicesService', () => {
 
     await expect(
       service.createInvoice(pmUser, {
+        ...completeBusinessFields,
         title: 'Inactive Project',
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
@@ -1679,6 +1939,7 @@ describe('InvoicesService', () => {
 
     await expect(
       service.createInvoice(adminUser, {
+        ...completeBusinessFields,
         title: 'Unknown Project',
         dateFrom: '2026-04-01',
         dateTo: '2026-04-30',
