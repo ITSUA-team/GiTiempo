@@ -605,6 +605,18 @@ The backend data model MUST persist workspace-owned invoice records with a title
 - **WHEN** the rounding-step migration is applied
 - **THEN** existing invoice rows receive `rounding_step_minutes: 1`
 
+#### Scenario: Preserve the saved document
+
+- **GIVEN** two invoices are created concurrently in one workspace
+- **WHEN** they are persisted
+- **THEN** each has a distinct stable reference and its own saved party, optional logo, services, payment and line-item data sufficient to reproduce its saved charges independently of workspace defaults.
+
+#### Scenario: Migrate older invoices
+
+- **GIVEN** existing invoices predate references and party details
+- **WHEN** the migration runs
+- **THEN** each receives a unique stable reference while existing status, links, scope, amounts and audit history survive; unknown historical billing details remain unset instead of being fabricated from current defaults.
+
 ### Requirement: Time Entry Invoice Linkage Is Single
 
 The backend data model MUST link a time entry to an invoice through a nullable foreign key on the time entry row, and MUST ensure a completed time entry is linked to at most one invoice.
@@ -753,3 +765,33 @@ The backend data model MUST persist an optional `time_rounding_step_minutes` col
 - **GIVEN** a project row is stored
 - **WHEN** the backend records the `time_rounding_step_minutes` value
 - **THEN** the value is either null or an integer between 1 and 60 inclusive
+
+### Requirement: Personal Invoice Organization Storage
+
+The data model MUST persist flat groups per workspace and owner and at most one membership per workspace, owner and invoice. Membership MUST reference a group of that owner in that workspace.
+
+#### Scenario: Delete a personal group
+
+- **GIVEN** two users independently organize the same invoice
+- **WHEN** one deletes their group
+- **THEN** only its membership rows are removed, preserving the invoice, billed entries and the other user’s organization.
+
+### Requirement: Workspace Invoice Billing Profile
+
+The system MUST store the workspace invoice reference prefix, sender identity and contact details, optional legal and logo information, and default payment method, terms, beneficiary, provider, account details and instructions.
+
+#### Scenario: Update workspace defaults
+
+- **GIVEN** an invoice captured a billing profile
+- **WHEN** an administrator changes its payment instructions or logo
+- **THEN** the new workspace profile persists independently and the earlier invoice retains its saved values.
+
+### Requirement: Invoice document dates
+
+Invoices SHALL persist a date-only issue date and an optional date-only due date separately from creation audit timestamps and billing periods.
+
+#### Scenario: Backfill existing invoices
+
+- **WHEN** the migration runs on pre-existing invoices
+- **THEN** the issue date is backfilled deterministically from the creation timestamp and workspace timezone
+- **AND** Due date remains null and invoice IDs, status, financial totals and entry associations are preserved
