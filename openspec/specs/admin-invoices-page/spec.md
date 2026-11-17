@@ -83,7 +83,7 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 - **GIVEN** the user has entered a Date range (and a Project for PMs)
 - **WHEN** the preview loads from `GET /invoices/eligible-entries`
 - **THEN** the dialog shows the hours and amount for the included selection using the authoritative billing preview
-- **AND** a selectable section shows eligible time entries (Date, User, Duration, Description) in a scrollable table
+- **AND** the Time entry view shows selectable eligible entries with Date, User, Duration and Description, and the Task view groups those eligible entries
 - **AND** the Hourly rate field is pre-filled with `defaultHourlyRate` from the preview response when available
 - **AND** Currency is pre-selected with the workspace settings currency as soon as the dialog opens, and the preview `defaultCurrency` fills it only while the workspace settings currency is not yet loaded
 
@@ -140,7 +140,7 @@ The detail page MUST display the saved invoice and let an authorized user edit i
 
 - **GIVEN** an Admin or authorized PM opens an accessible invoice
 - **WHEN** the detail loads
-- **THEN** the page shows reference, status selector, personal group, sender, recipient, service description, project, period, rate, currency, rounding, included entries with dates, people, descriptions and billed time, subtotal, discount, total, payment details, notes and audit details
+- **THEN** the page shows reference, status selector, personal group, sender, recipient, service description, project, period, rate, currency, rounding, included work in the saved display mode (entry dates, people, descriptions and billed time in Time entry mode, or task names and summed billed time in Task mode), subtotal, discount, total, payment details, notes and audit details
 
 #### Scenario: Change status
 
@@ -388,11 +388,11 @@ The invoice create dialog MUST include a time rounding step field — a PrimeVue
 
 ### Requirement: Invoice Surfaces Display Rounded Per-Entry Duration
 
-The invoice detail page time-entries table and the create dialog eligible-entries preview MUST display the rounded billed duration per entry — the `roundedDurationSeconds` value from the response — not the original raw `durationSeconds`. The raw duration is retained in the response payload for transparency but is not the value rendered in the Duration column. The summary displays the saved rounding step.
+Whenever an editor or detail view displays an individual time entry, including a child row expanded in the editor, it MUST display its billed duration from `roundedDurationSeconds`. The response retains the raw duration. Task rows MUST sum the included entries’ rounded durations. The summary displays the saved rounding step.
 
 #### Scenario: Invoice detail time-entries table shows rounded duration
 
-- **GIVEN** an invoice was created with `roundingStepMinutes: 5`
+- **GIVEN** an invoice was created in Time entry mode with `roundingStepMinutes: 5`
 - **AND** a linked time entry has `durationSeconds: 360` and `roundedDurationSeconds: 600`
 - **WHEN** the admin or PM opens the invoice detail page
 - **THEN** the time-entries table Duration column for that entry renders the rounded duration (10 minutes)
@@ -401,13 +401,13 @@ The invoice detail page time-entries table and the create dialog eligible-entrie
 #### Scenario: Create dialog eligible-entries preview shows rounded duration
 
 - **GIVEN** the create dialog preview returns an entry with `durationSeconds: 360` and `roundedDurationSeconds: 600`
-- **WHEN** the user reviews the eligible time entries
+- **WHEN** the user reviews the individual eligible time entries
 - **THEN** the preview table Duration column for that entry renders the rounded duration (10 minutes)
 - **AND** the raw 6-minute duration is not rendered in the Duration column
 
 #### Scenario: Preview Duration column recalculates when the rounding step changes
 
-- **GIVEN** the create dialog preview shows an entry whose `roundedDurationSeconds` is 600 (10 minutes) under a 5-minute step
+- **GIVEN** the create dialog preview displays an individual entry whose `roundedDurationSeconds` is 600 (10 minutes) under a 5-minute step
 - **WHEN** the user changes the `Rounding step` dropdown to 30
 - **THEN** the eligible-entries preview re-fetches with `roundingStepMinutes=30`
 - **AND** the preview table Duration column for that entry re-renders with the new rounded duration (30 minutes) from the fresh response
@@ -556,3 +556,50 @@ Invoice editors SHALL adapt payment fields to the selected method. Bank transfer
 
 - **WHEN** an older invoice or a user-entered method is outside Bank transfer and Card
 - **THEN** the editor preserves its name and generic payment details without converting it to a built-in method
+
+### Requirement: Choose time display in the invoice editor
+
+Create and Edit SHALL place a labeled **Show time by** selector with **Time entry** and **Task** above the entry selection on desktop and mobile. Both views SHALL edit the same set of selected entry IDs. In Task mode users SHALL be able to expand each task, inspect its individual entries, and include or exclude any entry.
+
+#### Scenario: Start a new invoice or use an existing one
+
+- **WHEN** a user opens a new invoice, edits a saved invoice, or creates from another invoice
+- **THEN** the editor selects Time entry for a new invoice and uses the resolved saved mode for edit or copy
+- **AND** users can change the mode before saving
+
+#### Scenario: Review a partial task and switch views
+
+- **GIVEN** two 6-minute entries on one task use a 15-minute rounding step
+- **WHEN** both are selected in Task mode
+- **THEN** the task shows 2 of 2 included and 30 billed minutes
+- **WHEN** the user expands it, excludes one entry and switches between views
+- **THEN** the same entry stays excluded and the task shows 1 of 2 included and 15 billed minutes
+- **AND** both views show identical invoice totals for that selection
+
+#### Scenario: Select entries from an expanded task on desktop
+
+- **GIVEN** an expanded task has both included and excluded entries
+- **WHEN** the user activates its mixed-state header checkbox
+- **THEN** all entries in that task become included and entries in every other task retain their selection
+- **AND** clearing the checked header excludes only entries in that task
+
+#### Scenario: Keep excluded entries reachable
+
+- **WHEN** the user excludes every entry on a task
+- **THEN** its editor group remains expandable with zero included time so the user can restore entries
+- **AND** when every task is excluded the editor shows zero selected entries and zero charges and permits saving an empty invoice
+
+### Requirement: Render the saved time format on invoice details
+
+Invoice details SHALL show the saved format on desktop and mobile. In Task mode details SHALL show one row per included task with its saved name and summed billed duration, omitting individual entries’ people, dates and descriptions.
+
+#### Scenario: Reopen a saved invoice
+
+- **WHEN** an invoice saved in Task mode contains two entries on the same task from different people
+- **THEN** both screen sizes show one task row with their combined billed duration
+- **AND** tasks with zero included entries are absent
+
+#### Scenario: View an empty task-mode invoice
+
+- **WHEN** a saved invoice in Task mode has no included entries
+- **THEN** details show an empty work section and zero totals
