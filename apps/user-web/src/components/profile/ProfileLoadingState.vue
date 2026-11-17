@@ -9,7 +9,8 @@ import { SurfaceCard } from "@gitiempo/web-shared";
     class="flex max-w-[620px] flex-col gap-6"
     data-testid="profile-loading"
   >
-    <SurfaceCard border
+    <SurfaceCard
+      border
       body-class="flex flex-col gap-4"
       data-testid="profile-form-loading"
     >
@@ -56,7 +57,8 @@ import { SurfaceCard } from "@gitiempo/web-shared";
       </div>
     </SurfaceCard>
 
-    <SurfaceCard border
+    <SurfaceCard
+      border
       body-class="flex flex-col gap-4"
       data-testid="profile-github-loading"
     >

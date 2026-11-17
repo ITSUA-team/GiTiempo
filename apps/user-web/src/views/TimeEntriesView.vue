@@ -17,7 +17,7 @@ import { PlusIcon } from "@heroicons/vue/24/outline";
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
 import TimeEntriesFilters from "@/components/time-entries/TimeEntriesFilters.vue";
 import TimeEntriesLoadingState from "@/components/time-entries/TimeEntriesLoadingState.vue";
-import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
+import TimeEntryDialogConnection from "@/components/time-entries/TimeEntryDialogConnection.vue";
 import {
   toEntryTaskOption,
   isTaskLookupOption,
@@ -133,31 +133,6 @@ const directTimerActions = useTimeEntryDirectTimerActions({
 });
 
 const {
-  closeDialog,
-  dialogDescription,
-  dialogEndedAt,
-  dialogErrors,
-  dialogIsBillable,
-  dialogMode,
-  dialogNewTaskTitle,
-  dialogProjectId,
-  dialogRequestErrorMessage,
-  dialogSaveLabel,
-  dialogStartedAt,
-  dialogSubtitle,
-  dialogTasksErrorMessage,
-  dialogTaskSuggestions,
-  dialogTaskValue,
-  dialogTitle,
-  isDialogOpen,
-  isLoadingDialogTasks,
-  setDescription: setDialogDescription,
-  setEndedAt: setDialogEndedAt,
-  setIsBillable: setDialogIsBillable,
-  setNewTaskTitle: setDialogNewTaskTitle,
-  setStartedAt: setDialogStartedAt,
-} = dialog;
-const {
   currentPage,
   filterTaskSuggestions,
   pageSize,
@@ -183,24 +158,18 @@ const {
   pageState,
 } = display;
 const {
-  handleDialogTaskSearch,
-  canCreateDialogTask,
-  isDeletingDialogEntry,
-  isReconcilingDialogTarget,
-  isSavingDialogFlow,
   openCreateDialog: openCreateDialogWorkflow,
   openEditDialog: openEditDialogWorkflow,
   requestDeleteDialogEntry: requestDeleteDialogEntryWorkflow,
-  saveDialog,
-  setDialogProjectId,
-  setDialogTaskValue,
 } = dialogWorkflow;
 const {
+  hasConfirmedActiveTimer,
   isDirectStartBlockedByCurrentTimer,
   startingTimerEntryId,
   startTimerForEntry: startTimerForEntryWorkflow,
   stoppingTimerEntryId,
   stopTimerForEntry: stopTimerForEntryWorkflow,
+  verifyActiveTimerEntry,
 } = directTimerActions;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
 const selectedProjectFilterOption = computed(
@@ -289,7 +258,16 @@ const paginatorPageLinkSize = computed(() =>
 );
 const paginatorTemplate = "FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink";
 
-function openActiveTimerDialog(): void {
+async function openActiveTimerDialog(entryId: string): Promise<void> {
+  if (!isShowingPreviousEntries.value) {
+    const isStillActive = await verifyActiveTimerEntry(entryId);
+    if (isStillActive) {
+      topBarTimerDialogController.requestOpen();
+    }
+  }
+}
+
+function goToActiveTimer(): void {
   if (!isShowingPreviousEntries.value) {
     topBarTimerDialogController.requestOpen();
   }
@@ -404,13 +382,14 @@ onMounted(async () => {
           :group="group"
           :is-interaction-disabled="isShowingPreviousEntries"
           :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
-          :show-stop-first-guidance="isDirectStartBlockedByCurrentTimer"
+          :show-stop-first-guidance="hasConfirmedActiveTimer"
           :show-header="false"
           :starting-timer-entry-id="startingTimerEntryId"
           :stopping-timer-entry-id="stoppingTimerEntryId"
           @create-for-day="(day) => void openCreateDialog(day)"
           @edit-entry="(entry) => void openEditDialog(entry)"
-          @open-active-timer="openActiveTimerDialog"
+          @open-active-timer="(entryId) => void openActiveTimerDialog(entryId)"
+          @go-to-active-timer="goToActiveTimer"
           @start-timer="(entry) => void startTimerForEntry(entry)"
           @stop-timer="(entry) => void stopTimerForEntry(entry)"
         />
@@ -440,42 +419,13 @@ onMounted(async () => {
       </div>
     </template>
 
-    <TimeEntryDialog
-      :can-create-task="canCreateDialogTask"
-      :dialog-error-message="dialogRequestErrorMessage"
-      :ended-at="dialogEndedAt"
-      :errors="dialogErrors"
-      :is-deleting="isDeletingDialogEntry"
+    <TimeEntryDialogConnection
+      :dialog="dialog"
+      :workflow="dialogWorkflow"
       :is-loading-projects="isLoadingProjects"
-      :is-loading-tasks="isLoadingDialogTasks"
-      :is-open="isDialogOpen"
-      :is-reconciling-target="isReconcilingDialogTarget"
-      :is-saving="isSavingDialogFlow"
-      :mode="dialogMode"
-      :new-task-title="dialogNewTaskTitle"
-      :project-id="dialogProjectId"
       :projects="visibleProjects"
       :projects-error-message="projectsErrorMessage"
-      :save-label="dialogSaveLabel"
-      :started-at="dialogStartedAt"
-      :subtitle="dialogSubtitle"
-      :task-suggestions="dialogTaskSuggestions"
-      :task-value="dialogTaskValue"
-      :tasks-error-message="dialogTasksErrorMessage"
-      :title="dialogTitle"
-      :value-description="dialogDescription"
-      :value-is-billable="dialogIsBillable"
-      @close="closeDialog"
       @delete-entry="requestDeleteDialogEntry"
-      @save="void saveDialog()"
-      @task-search="handleDialogTaskSearch"
-      @update:description="setDialogDescription"
-      @update:ended-at="setDialogEndedAt"
-      @update:is-billable="setDialogIsBillable"
-      @update:new-task-title="setDialogNewTaskTitle"
-      @update:project-id="(value) => void setDialogProjectId(value)"
-      @update:started-at="setDialogStartedAt"
-      @update:task-value="setDialogTaskValue"
     />
   </section>
 </template>
