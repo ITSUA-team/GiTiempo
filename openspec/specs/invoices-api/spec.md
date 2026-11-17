@@ -62,7 +62,7 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 
 #### Scenario: Admin creates an invoice across a project and date range
 
-- **WHEN** an admin submits a valid create body scoped to a project and date range
+- **WHEN** an admin submits a valid create body scoped to a project and date range without specifying entry IDs
 - **THEN** the backend selects completed, billable time entries in that workspace, project, and date range that are not already linked to an invoice
 - **AND** creates the invoice with snapshot totals computed from the selected entries
 - **AND** links each selected entry to the invoice
@@ -156,6 +156,18 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 - **WHEN** the requester calls `POST /invoices`
 - **THEN** the system rejects the request as forbidden
 
+#### Scenario: Select a subset or create an empty draft
+
+- **GIVEN** several entries are eligible
+- **WHEN** an authorized caller creates an invoice with an explicit selection
+- **THEN** the API bills exactly those entries, including zero entries and zero totals for an empty selection, and assigns a new reference and draft status.
+
+#### Scenario: Resolve invoice-specific business details
+
+- **GIVEN** workspace invoice defaults exist
+- **WHEN** the caller creates an invoice with individual overrides
+- **THEN** the saved invoice contains the resolved sender, optional logo, payment details, recipient and service description; later default changes do not affect it.
+
 ### Requirement: Invoice Eligibility Excludes Ineligible Time Entries
 
 Invoice creation MUST select only time entries that are completed, billable, belong to the requested workspace, and fall within the requested project and date range, and MUST exclude running, non-billable, and already-invoiced entries. Date range boundaries (`dateFrom` inclusive, `dateTo` inclusive) are interpreted in the workspace's configured IANA timezone (`workspace_settings.time_zone`), not in UTC or the server's local timezone. This ensures that entries near midnight are attributed to the correct calendar day, including across daylight saving time transitions. The same timezone-aware boundaries apply to `previewEligibleEntries` and the `getInvoiceStats` current-month calculation.
@@ -200,13 +212,19 @@ Invoice creation MUST select eligible time entries, insert the invoice, and set 
 - **GIVEN** two invoice creation requests target the same eligible time entry at the same time
 - **WHEN** both requests attempt to link the entry
 - **THEN** exactly one request succeeds in linking the entry
-- **AND** the other request either excludes the entry because it is already linked or fails without creating a duplicate billing link
+- **AND** for legacy implicit selection the other request either excludes the entry because it is already linked or fails without creating a duplicate billing link
 
 #### Scenario: Failed association rolls back the invoice
 
 - **GIVEN** invoice creation inserts the invoice row but the entry-link update fails
 - **WHEN** the transaction aborts
 - **THEN** no invoice row remains and no time entry is linked to a partial invoice
+
+#### Scenario: An explicit claim loses a race
+
+- **GIVEN** two concurrent saves explicitly require the same available entry
+- **WHEN** one transaction claims it first
+- **THEN** the other fails atomically with a conflict and does not silently shorten its selection.
 
 ### Requirement: Invoice Details Can Be Read
 
@@ -247,74 +265,9 @@ The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and
 - **WHEN** the requester calls `GET /invoices/:id`
 - **THEN** the system rejects the request as forbidden
 
-### Requirement: Invoice Can Be Updated
-
-The backend MUST expose a protected `PATCH /invoices/:id` endpoint for `admin` and `pm` users that updates editable fields — status, notes, and other fields allowed by the shared update contract — without recalculating snapshot totals, changing the non-null `roundingStepMinutes` snapshot, or changing the linked time-entry set. The `roundingStepMinutes` snapshot is immutable after creation and cannot be changed by an update. PMs must also have `canViewInvoices = true` to access the endpoint.
-
-The `sent` status is a semantic marker: the backend does not send an email, generate a PDF, or notify external systems when an invoice transitions to `sent`. Email delivery and PDF generation are deferred to a future milestone. The UI labels this action "Mark as sent" to make the manual nature of the transition clear.
-
-#### Scenario: Admin updates invoice status
-
-- **WHEN** an admin submits a valid update changing the status from `draft` to `sent`
-- **THEN** the backend persists the new status and returns the updated invoice
-
-#### Scenario: PM updates status for an assigned project
-
-- **WHEN** a PM with `canViewInvoices = true` submits a valid update changing the status from `draft` to `sent` for an invoice scoped to a project they are assigned to
-- **THEN** the backend persists the new status and returns the updated invoice
-
-#### Scenario: Status transition from sent to paid
-
-- **GIVEN** an invoice with status `sent`
-- **WHEN** an admin or PM submits an update changing the status to `paid`
-- **THEN** the backend persists the new status and returns the updated invoice
-
-#### Scenario: Status transitions are one-way and irreversible
-
-- **GIVEN** an invoice with status `sent`
-- **WHEN** a user attempts to change the status back to `draft`
-- **THEN** the backend rejects with `409 Conflict`
-- **AND** the invoice status remains `sent`
-
-- **GIVEN** an invoice with status `paid`
-- **WHEN** a user attempts to change the status back to `draft` or `sent`
-- **THEN** the backend rejects with `409 Conflict`
-- **AND** the invoice status remains `paid`
-
-The allowed forward transitions are: `draft → sent`, `draft → paid`, and `sent → paid`. Once an invoice reaches `sent` or `paid`, it cannot return to `draft`, which prevents the re-billing bypass where a paid invoice could be reverted to `draft`, deleted, and re-created for the same time entries.
-
-#### Scenario: Update does not recompute totals
-
-- **GIVEN** an invoice was created with snapshot totals and a `roundingStepMinutes` of 5
-- **WHEN** an update request changes a non-total field
-- **THEN** the stored `total_hours`, `total_amount`, and `roundingStepMinutes` remain as originally captured
-
-#### Scenario: Rounding step snapshot is not mutable via update
-
-- **GIVEN** an invoice exists with a `roundingStepMinutes` snapshot of 5
-- **WHEN** an update request carries `roundingStepMinutes: 15`
-- **THEN** the backend rejects the request
-- **AND** the stored `roundingStepMinutes` snapshot remains 5
-
-#### Scenario: PM updates only assigned-project invoices
-
-- **WHEN** a PM with `canViewInvoices = true` submits an update for an invoice whose project is a private project the PM is not assigned to
-- **THEN** the backend rejects with `403 Forbidden`
-
-#### Scenario: PM cannot update a workspace-wide invoice
-
-- **WHEN** a PM with `canViewInvoices = true` submits an update for an invoice with no project scope
-- **THEN** the backend rejects with `403 Forbidden`
-
-#### Scenario: PM without invoice permission is denied update
-
-- **GIVEN** the requester is a PM with `canViewInvoices = false`
-- **WHEN** the requester calls `PATCH /invoices/:id`
-- **THEN** the system rejects the request as forbidden
-
 ### Requirement: Invoice Can Be Deleted By Admin Only
 
-The backend MUST expose a protected `DELETE /invoices/:id` endpoint restricted to `admin` users that removes the invoice. Only invoices in `draft` status can be deleted; `sent` or `paid` invoices are locked to prevent re-billing of already invoiced time entries. Combined with the one-way status transition enforcement, this ensures that once an invoice has been sent or paid, its linked time entries can never be re-billed through status reversion followed by deletion.
+DELETE /invoices/:id MUST be restricted to Admins and to invoices whose current status is draft, including invoices manually returned to draft. Deletion releases the linked entries.
 
 #### Scenario: Admin deletes a draft invoice
 
@@ -363,7 +316,7 @@ Deleting an invoice MUST unlink its time entries by clearing their invoice link,
 
 ### Requirement: Invoice Totals Use Snapshot Values
 
-The backend MUST compute invoice totals as the sum of tracked hours of selected entries multiplied by the invoice hourly rate, less the optional percentage discount, and MUST store `hourly_rate`, `currency`, `total_hours`, `total_amount`, and `rounding_step_minutes` as snapshot values at creation time. Because the snapshot rounding step is always a positive integer between 1 and 60, the backend MUST always apply per-entry ceiling rounding: each eligible time entry's duration is rounded up to the nearest multiple of the step (in seconds) before the rounded durations are summed. Per-entry rounding is always active — there is no raw-sum mode — and with the minimum step of 1 minute each entry is still rounded up to whole minutes. Original time-entry records MUST NOT be modified by the rounding computation.
+The backend MUST compute invoice totals as the sum of tracked hours of selected entries multiplied by the invoice hourly rate, less the optional percentage discount, and MUST store `hourly_rate`, `currency`, `total_hours`, `total_amount`, and `rounding_step_minutes` as snapshot values at creation time and on an explicit revision to billing inputs or entry selection. Because the snapshot rounding step is always a positive integer between 1 and 60, the backend MUST always apply per-entry ceiling rounding: each eligible time entry's duration is rounded up to the nearest multiple of the step (in seconds) before the rounded durations are summed. Per-entry rounding is always active — there is no raw-sum mode — and with the minimum step of 1 minute each entry is still rounded up to whole minutes. Original time-entry records MUST NOT be modified by the rounding computation.
 
 #### Scenario: Totals reflect the creation snapshot
 
@@ -564,7 +517,7 @@ The backend MUST expose a protected `GET /invoices/stats` endpoint for `admin` a
 
 ### Requirement: Invoice Defaults Endpoint For Admins And PMs
 
-The backend MUST provide a `GET /invoices/defaults` endpoint that returns the workspace-level invoice default fields (`currency`, `defaultHourlyRate`, `timeRoundingStepMinutes`) to both admin and PM users with `canViewInvoices = true`. Members and PMs without the permission are denied.
+The backend MUST provide a `GET /invoices/defaults` endpoint that returns the workspace-level invoice default fields (`currency`, `defaultHourlyRate`, `timeRoundingStepMinutes`, sender, optional logo and payment defaults) to both admin and PM users with `canViewInvoices = true`. Members and PMs without the permission are denied.
 
 #### Scenario: Admin retrieves invoice defaults
 
@@ -589,3 +542,190 @@ The backend MUST provide a `GET /invoices/defaults` endpoint that returns the wo
 - **GIVEN** the requester is a member (non-admin, non-PM)
 - **WHEN** the requester calls `GET /invoices/defaults`
 - **THEN** the system rejects the request as forbidden
+
+#### Scenario: Invoice defaults expose a billing-only projection
+
+- **GIVEN** a permitted PM cannot read Admin Settings
+- **WHEN** the PM opens the invoice editor
+- **THEN** invoice defaults are readable in the active workspace without exposing unrelated workspace settings or allowing the PM to modify defaults.
+
+### Requirement: Invoice Revisions And Status Selection
+
+The protected PATCH /invoices/:id MUST allow Admins and PMs with invoice access to change status, title, project/scope, billing period, hourly rate, currency, discount, rounding, sender, recipient, services, payment instructions, notes and selected entries in every status. A change of status alone MUST have no email, export or billing side effects. Server-assigned identity, audit fields and totals MUST remain server-controlled.
+
+#### Scenario: Admin updates invoice status
+
+- **WHEN** an admin submits a valid update changing the status from `draft` to `sent`
+- **THEN** the backend persists the new status and returns the updated invoice
+
+#### Scenario: PM updates status for an assigned project
+
+- **WHEN** a PM with `canViewInvoices = true` submits a valid update changing the status from `draft` to `sent` for an invoice scoped to a project they are assigned to
+- **THEN** the backend persists the new status and returns the updated invoice
+
+#### Scenario: Status transition from sent to paid
+
+- **GIVEN** an invoice with status `sent`
+- **WHEN** an admin or PM submits an update changing the status to `paid`
+- **THEN** the backend persists the new status and returns the updated invoice
+
+#### Scenario: Update does not recompute totals
+
+- **GIVEN** an invoice was created with snapshot totals and a `roundingStepMinutes` of 5
+- **WHEN** an update request changes a non-total field
+- **THEN** the stored `total_hours`, `total_amount`, and `roundingStepMinutes` remain as originally captured
+
+#### Scenario: PM updates only assigned-project invoices
+
+- **WHEN** a PM with `canViewInvoices = true` submits an update for an invoice whose project is a private project the PM is not assigned to
+- **THEN** the backend rejects with `403 Forbidden`
+
+#### Scenario: PM cannot update a workspace-wide invoice
+
+- **WHEN** a PM with `canViewInvoices = true` submits an update for an invoice with no project scope
+- **THEN** the backend rejects with `403 Forbidden`
+
+#### Scenario: PM without invoice permission is denied update
+
+- **GIVEN** the requester is a PM with `canViewInvoices = false`
+- **WHEN** the requester calls `PATCH /invoices/:id`
+- **THEN** the system rejects the request as forbidden
+
+#### Scenario: Select a previous status
+
+- **GIVEN** an authorized user opens a sent or paid invoice
+- **WHEN** the user selects any supported status, including sent to draft or paid to sent
+- **THEN** selecting the current value is a no-op; for a changed value the saved status is returned and subsequent detail, list, filter and status counts reflect it.
+
+#### Scenario: Revise charges atomically
+
+- **GIVEN** a draft, sent or paid invoice contains billed entries
+- **WHEN** a user changes billing inputs and submits a selection of retained and newly eligible entries
+- **THEN** one commit saves business fields, selected links, rounded hours and amount; excluded entries become unlinked and eligible again without changing tracked work.
+
+#### Scenario: Retain selections on partial update
+
+- **GIVEN** an invoice has linked entries
+- **WHEN** a valid update omits entry selection
+- **THEN** the current set remains selected; if any would be outside the new project or period the request fails so the caller can review the selection.
+
+#### Scenario: Reject stale or invalid revisions
+
+- **GIVEN** an editor has loaded an invoice revision
+- **WHEN** another writer saves first, an explicitly selected entry becomes unavailable, or validation or linking fails
+- **THEN** the rejected revision changes no fields, totals or links and a stale revision or conflicting claim returns a conflict suitable for review and retry.
+
+#### Scenario: Authorize both scopes
+
+- **GIVEN** a permitted PM can see an invoice
+- **WHEN** the PM changes its project to a workspace-wide or inaccessible scope or includes an entry from another workspace
+- **THEN** the API rejects the complete update without moving the invoice or claiming entries.
+
+### Requirement: Billing Revision Preview
+
+The API MUST support a read-only preview of an authorized create or edit selection with the proposed project, date range, rate, discount, currency and rounding. Preview and save MUST apply the same eligibility and arithmetic.
+
+#### Scenario: Review retained entries under a proposed period
+
+- **GIVEN** an accessible invoice owns some entries in the proposed period
+- **WHEN** its editor requests a preview
+- **THEN** entries billed to this invoice and eligible unbilled entries within the proposed scope are available; entries linked elsewhere are excluded, and subtotal, hours, discount and total reflect the proposed selection.
+
+### Requirement: Download Saved Invoice PDF
+
+The backend MUST offer an authorized PDF download from a consistent saved invoice revision, with the same workspace, role and project access as reading the invoice detail.
+
+#### Scenario: Export a saved revision
+
+- **GIVEN** an invoice has saved parties, billing terms, selected entries and payment instructions
+- **WHEN** a caller downloads it during an unsaved edit
+- **THEN** the document contains its reference, issued date, billing period, saved parties, optional logo, service descriptions, selected line quantities, rates, amounts, subtotal, currency, discount, total and payment instructions. Personal groups, excluded entries and unsaved edits are absent.
+
+#### Scenario: Export a long invoice
+
+- **GIVEN** the saved invoice has long descriptions and many entries
+- **WHEN** the PDF is generated
+- **THEN** descriptions wrap, rows and totals remain readable across pages, and absence of a logo does not prevent download.
+
+#### Scenario: Protect a direct download
+
+- **GIVEN** a caller lacks detail access
+- **WHEN** they request the PDF directly
+- **THEN** the API denies access before returning document bytes.
+
+#### Scenario: Complete missing historical fields before export
+
+- **GIVEN** a legacy invoice lacks issuer, recipient, services or payment information
+- **WHEN** an authorized caller requests its PDF
+- **THEN** the API identifies the missing information for correction before download; reading, editing and changing status remain available.
+
+### Requirement: Create From An Accessible Invoice
+
+The system MUST allow an authorized caller to reuse the saved business details and billing parameters of an accessible source to prepare an independent draft.
+
+#### Scenario: Review before creating
+
+- **GIVEN** a paid source belongs to an accessible project
+- **WHEN** the caller reviews a new period, destination group and eligible entries then saves
+- **THEN** normal creation rules assign a fresh reference and draft status, use reviewed fields and eligible entries only, and preserve the source and its links.
+
+### Requirement: Persist and export invoice dates and applicable payment details
+
+The API SHALL persist issueDate and nullable dueDate in the invoice revision. Date changes SHALL use the existing revision and authorization checks. PDF export SHALL use saved dates and the selected method's payment details.
+
+#### Scenario: Export the revised document
+
+- **WHEN** an authorized user exports an invoice with dates and Card payment details
+- **THEN** the PDF includes Issue date, Due date when set, provider, instructions and a clickable HTTPS payment link when supplied
+- **AND** bank-only details retained in the saved object are excluded from Card output
+
+#### Scenario: Preserve a historical invoice
+
+- **WHEN** an older invoice is migrated or exported
+- **THEN** its issue date is derived deterministically from creation in the workspace timezone, its due date remains null, and existing financial totals and linked entries are preserved
+
+### Requirement: Save and revise the invoice time format
+
+The API SHALL save the selected mode with the invoice revision. A mode-only update SHALL use the usual workspace, role, project access and revision checks. It SHALL preserve the saved billing inputs, entry links, snapshots and monetary totals.
+
+#### Scenario: Authorized revision or stale edit
+
+- **GIVEN** a PM can access an invoice and its source task has since been renamed
+- **WHEN** the PM submits only a new mode and the current expected revision
+- **THEN** the changed invoice uses its saved entry names, durations and totals without reselecting entries
+- **WHEN** another editor submits a mode change using the stale revision or a PM without project access attempts an update
+- **THEN** the API returns the applicable conflict or access error and preserves the saved revision
+
+#### Scenario: Copy for a new period
+
+- **GIVEN** the source invoice uses Task mode
+- **WHEN** the user creates from that invoice and reviews a different period
+- **THEN** the draft starts in Task mode and normal eligibility and selection rules determine its new entries
+- **AND** changing the new invoice's mode or selections leaves the source intact
+
+#### Scenario: Preview matches creation
+
+- **WHEN** identical entries and billing inputs are previewed and saved under either display mode
+- **THEN** both modes return the same selected entry IDs, billed hours, subtotal, discount and total
+- **AND** the same eligibility and duplicate-billing checks apply
+
+### Requirement: Export the saved invoice time format
+
+PDF export SHALL use the saved display mode. Time entry mode SHALL retain the individual service lines. Task mode SHALL show one service line per included task with its saved task name, summed billed hours, invoice rate and pre-discount amount. Entry dates, worker names and entry descriptions SHALL be omitted from the task lines. Task line amounts SHALL sum the cents already allocated to their entries by the invoice's cumulative proportional allocation in saved entry order.
+
+#### Scenario: Interleaved tasks share a fractional-cent subtotal
+
+- **GIVEN** three entries have equal billed duration, the saved order is A, B, A and the pre-discount subtotal is ten cents
+- **WHEN** the PDF is exported in Task mode
+- **THEN** the entry allocations of three, four and three cents produce six cents for task A and four for task B
+- **AND** the subtotal, discount and invoice total match the Time entry PDF
+
+#### Scenario: Readable export from the saved revision
+
+- **WHEN** a Task invoice with long task names or enough included tasks for multiple pages is downloaded during an unsaved edit
+- **THEN** the PDF wraps task names, paginates readable rows and totals, and uses only the saved revision
+
+#### Scenario: No included time
+
+- **WHEN** an otherwise exportable Task invoice has no selected entries
+- **THEN** its PDF contains no task lines and shows zero subtotal, discount amount and total
