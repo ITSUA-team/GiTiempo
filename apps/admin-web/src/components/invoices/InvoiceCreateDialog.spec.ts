@@ -563,6 +563,127 @@ describe('InvoiceCreateDialog', () => {
     expect(createInvoice).not.toHaveBeenCalled();
   });
 
+  describe.each(['create', 'edit', 'copy'] as const)('%s business-field validation', (mode) => {
+    async function mountValidDialog() {
+      testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+      const createInvoice = createCreateInvoiceSpy();
+      const wrapper = await mountDialog({
+        createInvoice,
+        editing: mode === 'edit',
+        source: mode === 'create' ? undefined : createInvoiceResponse(),
+      });
+      await wrapper.getComponent('#invoice-create-title').setValue('Website redesign');
+      await enterDateRange(wrapper);
+      return { wrapper, createInvoice };
+    }
+
+    it.each([
+      ['sender', 'test@invalid'],
+      ['sender', 'missing-domain'],
+      ['recipient', 'test@invalid'],
+      ['recipient', 'missing-domain'],
+    ])('shows an inline error for %s email %s and saves after correction', async (party, email) => {
+      const { wrapper, createInvoice } = await mountValidDialog();
+      const id = `invoice-${party}-email`;
+      const field = wrapper.getComponent(`#${id}`);
+      await field.setValue(email);
+
+      expect(document.getElementById(`${id}-error`)).toBeNull();
+      await submitInvoice(wrapper);
+
+      expect(createInvoice).not.toHaveBeenCalled();
+      expect(document.getElementById(id)?.getAttribute('aria-invalid')).toBe('true');
+      expect(document.getElementById(id)?.getAttribute('aria-describedby')).toBe(`${id}-error`);
+      expect(document.getElementById(`${id}-error`)?.textContent).toContain('Please enter a valid email address.');
+      expect(document.querySelector<HTMLInputElement>(`#${id}`)?.value).toBe(email);
+      expect(wrapper.emitted('update:visible')).toBeUndefined();
+
+      await field.setValue('billing@example.com');
+      expect(document.getElementById(id)?.getAttribute('aria-invalid')).toBeNull();
+      expect(document.getElementById(id)?.getAttribute('aria-describedby')).toBeNull();
+      expect(document.getElementById(`${id}-error`)).toBeNull();
+      await submitInvoice(wrapper);
+
+      expect(createInvoice).toHaveBeenCalledTimes(1);
+      expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({
+        [party]: expect.objectContaining({ email: 'billing@example.com' }),
+      }));
+    });
+
+    it.each([
+      'invoice-sender-name',
+      'invoice-sender-address',
+      'invoice-sender-taxId',
+      'invoice-recipient-name',
+      'invoice-recipient-address',
+      'invoice-recipient-taxId',
+      'invoice-services',
+    ])('identifies overlong %s without saving and accepts the length boundary', async (id) => {
+      const { wrapper, createInvoice } = await mountValidDialog();
+      const field = wrapper.getComponent(`#${id}`);
+      await field.setValue('x'.repeat(5001));
+      await submitInvoice(wrapper);
+
+      expect(createInvoice).not.toHaveBeenCalled();
+      expect(document.getElementById(id)?.getAttribute('aria-invalid')).toBe('true');
+      expect(document.getElementById(id)?.getAttribute('aria-describedby')).toBe(`${id}-error`);
+      expect(document.getElementById(`${id}-error`)?.textContent).toContain('Use 5000 characters or fewer.');
+      expect(document.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${id}`)?.value).toHaveLength(5001);
+
+      await field.setValue('x'.repeat(5000));
+      expect(document.getElementById(id)?.getAttribute('aria-invalid')).toBeNull();
+      expect(document.getElementById(`${id}-error`)).toBeNull();
+      await submitInvoice(wrapper);
+
+      expect(createInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps errors independent and allows clearing optional email addresses', async () => {
+      const { wrapper, createInvoice } = await mountValidDialog();
+      const senderEmail = wrapper.getComponent('#invoice-sender-email');
+      const recipientEmail = wrapper.getComponent('#invoice-recipient-email');
+      await senderEmail.setValue('missing-domain');
+      await recipientEmail.setValue('test@invalid');
+      await wrapper.getComponent('#invoice-services').setValue('x'.repeat(5001));
+      await submitInvoice(wrapper);
+
+      expect(document.getElementById('invoice-sender-email-error')).not.toBeNull();
+      expect(document.getElementById('invoice-recipient-email-error')).not.toBeNull();
+      expect(document.getElementById('invoice-services-error')).not.toBeNull();
+      await senderEmail.setValue('');
+      expect(document.getElementById('invoice-sender-email-error')).toBeNull();
+      expect(document.getElementById('invoice-recipient-email-error')).not.toBeNull();
+      expect(document.getElementById('invoice-services-error')).not.toBeNull();
+      await submitInvoice(wrapper);
+      expect(createInvoice).not.toHaveBeenCalled();
+
+      await recipientEmail.setValue('');
+      await wrapper.getComponent('#invoice-services').setValue('Consulting');
+      await submitInvoice(wrapper);
+
+      expect(createInvoice).toHaveBeenCalledTimes(1);
+      expect(createInvoice).toHaveBeenCalledWith(expect.objectContaining({
+        sender: expect.objectContaining({ email: '' }),
+        recipient: expect.objectContaining({ email: '' }),
+        services: 'Consulting',
+      }));
+    });
+  });
+
+  it('clears business-field validation feedback when the editor reopens', async () => {
+    const wrapper = await mountDialog();
+    await wrapper.getComponent('#invoice-sender-email').setValue('missing-domain');
+    await submitInvoice(wrapper);
+    expect(document.getElementById('invoice-sender-email-error')).not.toBeNull();
+
+    await wrapper.setProps({ visible: false });
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+
+    expect(document.getElementById('invoice-sender-email-error')).toBeNull();
+    expect(document.querySelector<HTMLInputElement>('#invoice-sender-email')?.value).toBe('');
+  });
+
   it('treats a whitespace-only title as empty and keeps the field error', async () => {
     const createInvoice = createCreateInvoiceSpy();
     const wrapper = await mountDialog({ isAdmin: true, createInvoice });

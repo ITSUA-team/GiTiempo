@@ -14,6 +14,10 @@ export const invoiceDatePickerPt = {
     ...giTiempoDatePickerPt.pcInputText,
     root: {
       ...giTiempoDatePickerPt.pcInputText.root,
+      class: [
+        giTiempoDatePickerPt.pcInputText.root.class,
+        'aria-invalid:border-[var(--p-inputtext-invalid-border-color)]',
+      ],
       style: { fontSize: '13px', fontWeight: 400, color: 'var(--color-text-dark)' },
     },
   },
