@@ -407,14 +407,6 @@ const selectedPeriodLabel = computed(() => {
         <span>{{ row.totalHours }}h</span><strong>{{ formatInvoiceAmount(row.totalAmount, row.currency) }}</strong>
       </div>
       <div class="flex justify-end gap-3">
-        <Button
-          label="Move to group"
-          :disabled="placeholderRows"
-          severity="secondary"
-          outlined
-          icon="pi pi-folder-open"
-          @click="emit('move-row', row.id)"
-        />
         <InvoiceListRowActions
           mobile
           :disabled="placeholderRows"
