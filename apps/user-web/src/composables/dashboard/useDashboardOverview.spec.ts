@@ -2,10 +2,11 @@ import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import type { TimeEntryListResponse, TimeEntryResponse } from "@gitiempo/shared";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, h } from "vue";
+import { defineComponent, h, ref, type Ref } from "vue";
 import { formatLocalTime } from "@gitiempo/web-shared/time";
 
 import { useDashboardOverview } from "./useDashboardOverview";
+import type { DashboardFocusPeriod } from "@/lib/dashboard-overview-helpers";
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
@@ -97,6 +98,7 @@ function createClientMock(): DashboardOverviewClient & {
 
 function mountDashboardOverview(options?: {
   client?: ReturnType<typeof createClientMock>;
+  focusPeriod?: Ref<DashboardFocusPeriod>;
   toast?: { add: ReturnType<typeof vi.fn> };
 }) {
   const pinia = createPinia();
@@ -115,6 +117,7 @@ function mountDashboardOverview(options?: {
     setup() {
       dashboardOverview = useDashboardOverview({
         client,
+        focusPeriod: options?.focusPeriod,
         toast: toast as never,
       });
 
@@ -665,6 +668,386 @@ describe("useDashboardOverview", () => {
         severity: "info",
         summary: "Timer status refreshed",
       }),
+    );
+  });
+
+  it("derives Top Focus from the selected period while Today and This Week stats stay on fixed windows", async () => {
+    const focusPeriod = ref<DashboardFocusPeriod>("week");
+    const client = createClientMock();
+    const dayProjectEntry = createEntry({
+      durationSeconds: 1800,
+      endedAt: "2026-04-21T10:00:00.000Z",
+      id: "entry-day-period",
+      project: { id: TEST_IDS.secondaryProject, name: "Day Focus Project" },
+      projectId: TEST_IDS.secondaryProject,
+      startedAt: "2026-04-21T09:30:00.000Z",
+      task: { id: TEST_IDS.secondaryTask, title: "Day period work" },
+      taskId: TEST_IDS.secondaryTask,
+    });
+
+    client.listOwnEntries.mockImplementation(async (input) => {
+      if (!input || !input.dateFrom) {
+        return createOwnEntriesResponse([]);
+      }
+
+      if (input.dateFrom === new Date(2026, 3, 20, 0, 0, 0, 0).toISOString()) {
+        return createOwnEntriesResponse(
+          [createEntry({ id: "entry-week-fixed", projectId: TEST_IDS.focusProject })],
+        );
+      }
+
+      if (input.dateFrom === new Date(2026, 3, 21, 0, 0, 0, 0).toISOString()) {
+        return createOwnEntriesResponse([dayProjectEntry]);
+      }
+
+      throw new Error(`unexpected listOwnEntries input: ${JSON.stringify(input)}`);
+    });
+
+    const mounted = mountDashboardOverview({ client, focusPeriod });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    await flushPromises();
+
+    focusPeriod.value = "day";
+
+    await flushPromises();
+
+    expect(client.listOwnEntries).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dateFrom: new Date(2026, 3, 21, 0, 0, 0, 0).toISOString(),
+        page: 1,
+      }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(dashboardOverview.dashboardStats.value[0]).toEqual({
+      description: "1 project tracked today",
+      label: "Today",
+      value: "1h",
+    });
+    expect(dashboardOverview.dashboardStats.value[1]).toEqual({
+      description: "1 entry tracked this week",
+      label: "This Week",
+      value: "1h",
+    });
+    expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Day Focus Project");
+    expect(dashboardOverview.weeklyFocus.value.task?.title).toBe("Day period work");
+    expect(dashboardOverview.focusPageState.value).toBe("ready");
+  });
+
+  it("loads every page of the Month focus period before deriving Top Focus", async () => {
+    const focusPeriod = ref<DashboardFocusPeriod>("month");
+    const monthWindowStart = new Date(2026, 3, 1, 0, 0, 0, 0).toISOString();
+    const client = createClientMock();
+
+    client.listOwnEntries.mockImplementation(async (input) => {
+      if (!input || !input.dateFrom) {
+        return createOwnEntriesResponse([]);
+      }
+
+      if (input.dateFrom === new Date(2026, 3, 20, 0, 0, 0, 0).toISOString()) {
+        return createOwnEntriesResponse([createEntry({ id: "entry-week-fixed" })]);
+      }
+
+      if (input.dateFrom === monthWindowStart && input.page === 1) {
+        return createOwnEntriesResponse(
+          [
+            createEntry({
+              durationSeconds: 3600,
+              id: "entry-month-page-1",
+              project: { id: TEST_IDS.focusProject, name: "Billing API" },
+              projectId: TEST_IDS.focusProject,
+              task: { id: TEST_IDS.focusTask, title: "Fix export column order" },
+              taskId: TEST_IDS.focusTask,
+            }),
+          ],
+          { limit: 100, page: 1, total: 2, totalPages: 2 },
+        );
+      }
+
+      if (input.dateFrom === monthWindowStart && input.page === 2) {
+        return createOwnEntriesResponse(
+          [
+            createEntry({
+              durationSeconds: 5400,
+              endedAt: "2026-04-21T11:00:00.000Z",
+              id: "entry-month-page-2",
+              project: { id: TEST_IDS.secondaryProject, name: "Admin Web" },
+              projectId: TEST_IDS.secondaryProject,
+              startedAt: "2026-04-21T09:30:00.000Z",
+              task: { id: TEST_IDS.secondaryTask, title: "Polish dashboard cards" },
+              taskId: TEST_IDS.secondaryTask,
+            }),
+          ],
+          { limit: 100, page: 2, total: 2, totalPages: 2 },
+        );
+      }
+
+      throw new Error(`unexpected listOwnEntries input: ${JSON.stringify(input)}`);
+    });
+
+    const mounted = mountDashboardOverview({ client, focusPeriod });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    await flushPromises();
+
+    expect(client.listOwnEntries).toHaveBeenCalledWith(
+      expect.objectContaining({ dateFrom: monthWindowStart, dateTo: new Date(2026, 4, 1, 0, 0, 0, 0).toISOString(), page: 2 }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Admin Web");
+    expect(dashboardOverview.weeklyFocus.value.task?.title).toBe("Polish dashboard cards");
+    expect(dashboardOverview.weeklyFocus.value.project?.shareLabel).toBe(
+      "60% of your tracked time this month",
+    );
+    expect(dashboardOverview.focusPageState.value).toBe("ready");
+  });
+
+  it("discards Day responses after the user quickly switches to Month", async () => {
+    const focusPeriod = ref<DashboardFocusPeriod>("week");
+    const dayWindowStart = new Date(2026, 3, 21, 0, 0, 0, 0).toISOString();
+    const monthWindowStart = new Date(2026, 3, 1, 0, 0, 0, 0).toISOString();
+    const client = createClientMock();
+    let resolveDayPage: ((response: TimeEntryListResponse) => void) | null = null;
+
+    client.listOwnEntries.mockImplementation(async (input) => {
+      if (!input || !input.dateFrom) {
+        return createOwnEntriesResponse([]);
+      }
+
+      if (input.dateFrom === new Date(2026, 3, 20, 0, 0, 0, 0).toISOString()) {
+        return createOwnEntriesResponse(
+          [createEntry({ id: "entry-week-fixed", projectId: TEST_IDS.focusProject })],
+        );
+      }
+
+      if (input.dateFrom === dayWindowStart && input.page === 1) {
+        return new Promise<TimeEntryListResponse>((resolve) => {
+          resolveDayPage = resolve;
+        });
+      }
+
+      if (input.dateFrom === monthWindowStart) {
+        return createOwnEntriesResponse(
+          [
+            createEntry({
+              durationSeconds: 7200,
+              id: "entry-month-final",
+              project: { id: TEST_IDS.focusProject, name: "Month Project" },
+              projectId: TEST_IDS.focusProject,
+              task: { id: TEST_IDS.focusTask, title: "Month task" },
+              taskId: TEST_IDS.focusTask,
+            }),
+          ],
+          { limit: 100, page: 1, total: 1, totalPages: 1 },
+        );
+      }
+
+      throw new Error(`unexpected listOwnEntries input: ${JSON.stringify(input)}`);
+    });
+
+    const mounted = mountDashboardOverview({ client, focusPeriod });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    await flushPromises();
+
+    focusPeriod.value = "day";
+
+    await flushPromises();
+
+    expect(resolveDayPage).not.toBeNull();
+
+    focusPeriod.value = "month";
+
+    await flushPromises();
+
+    resolveDayPage!(
+      createOwnEntriesResponse(
+        [
+          createEntry({
+            durationSeconds: 36000,
+            endedAt: "2026-04-21T16:00:00.000Z",
+            id: "entry-day-stale",
+            project: { id: TEST_IDS.secondaryProject, name: "Stale Day Project" },
+            projectId: TEST_IDS.secondaryProject,
+            startedAt: "2026-04-21T11:00:00.000Z",
+            task: { id: TEST_IDS.secondaryTask, title: "Stale day task" },
+            taskId: TEST_IDS.secondaryTask,
+          }),
+        ],
+        { limit: 100, page: 1, total: 2, totalPages: 2 },
+      ),
+    );
+
+    await flushPromises();
+
+    expect(client.listOwnEntries).toHaveBeenCalledWith(
+      expect.objectContaining({ dateFrom: dayWindowStart, page: 1 }),
+      expect.anything(),
+    );
+    expect(client.listOwnEntries).not.toHaveBeenCalledWith(
+      expect.objectContaining({ dateFrom: dayWindowStart, page: 2 }),
+      expect.anything(),
+    );
+    expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Month Project");
+    expect(dashboardOverview.weeklyFocus.value.task?.title).toBe("Month task");
+    expect(dashboardOverview.weeklyFocus.value.project?.title).not.toBe("Stale Day Project");
+    expect(dashboardOverview.focusPageState.value).toBe("ready");
+  });
+
+  it("shows the focus loading state without previous-period values during a period change", async () => {
+    const focusPeriod = ref<DashboardFocusPeriod>("week");
+    const monthWindowStart = new Date(2026, 3, 1, 0, 0, 0, 0).toISOString();
+    const client = createClientMock();
+
+    client.listOwnEntries.mockImplementation(async (input) => {
+      if (!input || !input.dateFrom) {
+        return createOwnEntriesResponse([]);
+      }
+
+      if (input.dateFrom === new Date(2026, 3, 20, 0, 0, 0, 0).toISOString()) {
+        return createOwnEntriesResponse([createEntry({ id: "entry-week-fixed" })]);
+      }
+
+      if (input.dateFrom === monthWindowStart) {
+        return new Promise<TimeEntryListResponse>(() => undefined);
+      }
+
+      throw new Error(`unexpected listOwnEntries input: ${JSON.stringify(input)}`);
+    });
+
+    const mounted = mountDashboardOverview({ client, focusPeriod });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    await flushPromises();
+
+    expect(dashboardOverview.focusLoading.value).toBe(false);
+    expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Project Orion");
+
+    focusPeriod.value = "month";
+
+    await flushPromises();
+
+    expect(dashboardOverview.focusLoading.value).toBe(true);
+    expect(dashboardOverview.focusPageState.value).toBe("loading");
+    expect(dashboardOverview.weeklyFocus.value.project).toBeNull();
+    expect(dashboardOverview.weeklyFocus.value.task).toBeNull();
+  });
+
+  it("shows the period empty state with no previous-period values", async () => {
+    const focusPeriod = ref<DashboardFocusPeriod>("week");
+    const client = createClientMock();
+
+    client.listOwnEntries.mockImplementation(async (input) => {
+      if (!input || !input.dateFrom) {
+        return createOwnEntriesResponse([]);
+      }
+
+      if (input.dateFrom === new Date(2026, 3, 20, 0, 0, 0, 0).toISOString()) {
+        return createOwnEntriesResponse([createEntry({ id: "entry-week-fixed" })]);
+      }
+
+      if (input.dateFrom === new Date(2026, 3, 21, 0, 0, 0, 0).toISOString()) {
+        return createOwnEntriesResponse([]);
+      }
+
+      throw new Error(`unexpected listOwnEntries input: ${JSON.stringify(input)}`);
+    });
+
+    const mounted = mountDashboardOverview({ client, focusPeriod });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    await flushPromises();
+
+    focusPeriod.value = "day";
+
+    await flushPromises();
+
+    expect(dashboardOverview.focusPageState.value).toBe("empty");
+    expect(dashboardOverview.weeklyFocus.value.project).toBeNull();
+    expect(dashboardOverview.weeklyFocus.value.task).toBeNull();
+  });
+
+  it("shows a period request error with scoped retry without a global toast", async () => {
+    const focusPeriod = ref<DashboardFocusPeriod>("week");
+    const monthWindowStart = new Date(2026, 3, 1, 0, 0, 0, 0).toISOString();
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+    let monthCallCount = 0;
+
+    client.listOwnEntries.mockImplementation(async (input) => {
+      if (!input || !input.dateFrom) {
+        return createOwnEntriesResponse([]);
+      }
+
+      if (input.dateFrom === new Date(2026, 3, 20, 0, 0, 0, 0).toISOString()) {
+        return createOwnEntriesResponse([createEntry({ id: "entry-week-fixed" })]);
+      }
+
+      if (input.dateFrom === monthWindowStart) {
+        monthCallCount += 1;
+
+        if (monthCallCount === 1) {
+          throw new Error("month fetch failed");
+        }
+
+        return createOwnEntriesResponse(
+          [
+            createEntry({
+              durationSeconds: 7200,
+              id: "entry-month-retried",
+              project: { id: TEST_IDS.focusProject, name: "Month Project" },
+              projectId: TEST_IDS.focusProject,
+              task: { id: TEST_IDS.focusTask, title: "Month task" },
+              taskId: TEST_IDS.focusTask,
+            }),
+          ],
+          { limit: 100, page: 1, total: 1, totalPages: 1 },
+        );
+      }
+
+      throw new Error(`unexpected listOwnEntries input: ${JSON.stringify(input)}`);
+    });
+
+    const mounted = mountDashboardOverview({ client, focusPeriod, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    await flushPromises();
+
+    focusPeriod.value = "month";
+
+    await flushPromises();
+
+    expect(dashboardOverview.focusPageState.value).toBe("request-error");
+    expect(dashboardOverview.focusRequestErrorMessage.value).toBe("month fetch failed");
+    expect(dashboardOverview.weeklyFocus.value.project).toBeNull();
+    expect(toast.add).not.toHaveBeenCalled();
+
+    await dashboardOverview.retryFocusLoad();
+    await flushPromises();
+
+    expect(monthCallCount).toBe(2);
+    expect(dashboardOverview.focusPageState.value).toBe("ready");
+    expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Month Project");
+    expect(dashboardOverview.weeklyFocus.value.project?.shareLabel).toBe(
+      "100% of your tracked time this month",
     );
   });
 });

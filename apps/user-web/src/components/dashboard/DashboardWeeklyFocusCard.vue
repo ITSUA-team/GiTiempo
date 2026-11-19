@@ -1,93 +1,295 @@
 <script setup lang="ts">
+import Button from "primevue/button";
 import ProgressBar from "primevue/progressbar";
-import Tag from "primevue/tag";
+import Select from "primevue/select";
+import Skeleton from "primevue/skeleton";
+import type { RouteLocationNamedRaw } from "vue-router";
 import { SectionHeader, SurfaceCard } from "@gitiempo/web-shared";
+import { computed } from "vue";
 
-import type { DashboardWeeklyFocus } from "@/composables/dashboard/useDashboardOverview";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
+import type { DashboardFocusPeriod, DashboardWeeklyFocus } from "@/lib/dashboard-overview-helpers";
 
-const props = defineProps<{
-  focus: DashboardWeeklyFocus;
+const PERIOD_OPTIONS: { label: string; value: DashboardFocusPeriod }[] = [
+  { label: "Day", value: "day" },
+  { label: "Week", value: "week" },
+  { label: "Month", value: "month" },
+];
+
+interface FocusPeriodCopy {
+  description: string;
+  navLabel: string;
+  projectEmptyLabel: string;
+  projectShareFallback: string;
+  taskEmptyLabel: string;
+  taskShareFallback: string;
+  title: string;
+}
+
+const FOCUS_PERIOD_COPY: Record<DashboardFocusPeriod, FocusPeriodCopy> = {
+  day: {
+    description: "Your strongest project and task based on today's tracked entries.",
+    navLabel: "View time entries for today",
+    projectEmptyLabel: "No tracked project focus for today yet.",
+    projectShareFallback: "Project share appears after your first current-day entry.",
+    taskEmptyLabel: "No tracked task focus for today yet.",
+    taskShareFallback: "Task repetition appears after your first current-day entry.",
+    title: "Top Focus Today",
+  },
+  week: {
+    description: "Your strongest project and task based on this week's tracked entries.",
+    navLabel: "View time entries for this week",
+    projectEmptyLabel: "No tracked project focus for this week yet.",
+    projectShareFallback: "Project share appears after your first current-week entry.",
+    taskEmptyLabel: "No tracked task focus for this week yet.",
+    taskShareFallback: "Task repetition appears after your first current-week entry.",
+    title: "Top Focus This Week",
+  },
+  month: {
+    description: "Your strongest project and task based on this month's tracked entries.",
+    navLabel: "View time entries for this month",
+    projectEmptyLabel: "No tracked project focus for this month yet.",
+    projectShareFallback: "Project share appears after your first current-month entry.",
+    taskEmptyLabel: "No tracked task focus for this month yet.",
+    taskShareFallback: "Task repetition appears after your first current-month entry.",
+    title: "Top Focus This Month",
+  },
+};
+
+const cardNavLinkClass =
+  "absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2";
+
+const props = withDefaults(
+  defineProps<{
+    errorMessage?: string | null;
+    focus: DashboardWeeklyFocus;
+    focusPeriod?: DashboardFocusPeriod;
+    loading?: boolean;
+    projectRoute?: RouteLocationNamedRaw | null;
+    sectionRoute?: RouteLocationNamedRaw | null;
+    taskRoute?: RouteLocationNamedRaw | null;
+  }>(),
+  {
+    errorMessage: null,
+    focusPeriod: "week",
+    loading: false,
+    projectRoute: null,
+    sectionRoute: null,
+    taskRoute: null,
+  },
+);
+
+const emit = defineEmits<{
+  activateProject: [];
+  activateSection: [];
+  activateTask: [];
+  retry: [];
+  "update:focusPeriod": [DashboardFocusPeriod];
 }>();
 
-function getFallbackDescription(label: string): string {
-  return label === "Top Project"
-    ? "No tracked project focus for the current week yet."
-    : "No tracked task focus for the current week yet.";
-}
+const copy = computed(() => FOCUS_PERIOD_COPY[props.focusPeriod]);
+const selectedFocusPeriod = computed({
+  get: () => props.focusPeriod,
+  set: (next) => emit("update:focusPeriod", next),
+});
+const projectNavLinkLabel = computed(() =>
+  props.focus.project
+    ? `View time entries for project ${props.focus.project.title}`
+    : copy.value.navLabel,
+);
+const sectionNavLinkLabel = computed(() => copy.value.navLabel);
+const taskNavLinkLabel = computed(() =>
+  props.focus.task
+    ? `View time entries for task ${props.focus.task.title}`
+    : copy.value.navLabel,
+);
 </script>
 
 <template>
-  <SurfaceCard
-    body-class="flex flex-col gap-4"
-    padding-class="p-6"
-  >
-    <SectionHeader
-      description="Your strongest project and task based on this week's tracked entries."
-      title="Top Focus This Week"
+  <div class="group relative z-0">
+    <SurfaceCard
+      body-class="relative flex flex-col gap-4"
+      class="group-hover:shadow-popover transition-shadow"
+      padding-class="p-6"
     >
-      <template #actions>
-        <Tag
-          rounded
-          severity="secondary"
-          value="This week"
-        />
-      </template>
-    </SectionHeader>
+      <SectionHeader
+        :description="copy.description"
+        :title="copy.title"
+      >
+        <template #actions>
+          <span
+            class="relative z-30"
+            data-testid="dashboard-focus-period-control"
+            @click.stop
+          >
+            <Select
+              v-model="selectedFocusPeriod"
+              :options="PERIOD_OPTIONS"
+              aria-label="Top Focus period"
+              data-testid="focus-period-select"
+              option-label="label"
+              option-value="value"
+            />
+          </span>
+        </template>
+      </SectionHeader>
 
-    <div class="grid min-w-0 gap-4 xl:grid-cols-2">
-      <div class="bg-app-bg flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-4">
-        <p class="text-text-muted text-xs font-semibold tracking-wide uppercase">
-          Top Project
-        </p>
-        <p class="text-text-dark text-xl font-semibold break-words sm:text-2xl">
-          {{ props.focus.project?.title ?? 'No tracked project yet' }}
-        </p>
-        <p class="text-text-muted text-[13px] break-words">
-          {{ props.focus.project?.description ?? getFallbackDescription('Top Project') }}
-        </p>
-        <ProgressBar
-          :show-value="false"
-          :value="props.focus.project?.sharePercent ?? 0"
-          :pt="{
-            root: 'bg-divider h-2 overflow-hidden rounded-full',
-            value: 'bg-brand rounded-full',
-          }"
-        />
-        <p class="text-text-muted text-xs break-words">
-          {{ props.focus.project?.shareLabel ?? 'Weekly share appears after your first current-week entry.' }}
-        </p>
-      </div>
-
-      <div class="bg-app-bg flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-4">
-        <p class="text-text-muted text-xs font-semibold tracking-wide uppercase">
-          Top Task
-        </p>
-        <div class="flex max-w-full min-w-0 items-start gap-1.5">
-          <p class="text-text-dark min-w-0 text-xl font-semibold break-words sm:text-2xl">
-            {{ props.focus.task?.title ?? 'No tracked task yet' }}
-          </p>
-          <TaskGitHubIssueLink
-            v-if="props.focus.task?.githubIssue"
-            :issue="props.focus.task.githubIssue"
-            test-id="dashboard-weekly-focus-task-github"
+      <div
+        v-if="props.loading"
+        class="bg-app-bg grid min-w-0 gap-4 rounded-lg p-4 xl:grid-cols-2"
+        data-testid="dashboard-focus-loading-state"
+      >
+        <div class="flex min-w-0 flex-col gap-3">
+          <Skeleton
+            border-radius="4px"
+            class="bg-divider h-3 w-24"
+          />
+          <Skeleton
+            border-radius="4px"
+            class="bg-divider h-7 w-3/4"
+          />
+          <Skeleton
+            border-radius="4px"
+            class="bg-divider h-4 w-full"
+          />
+          <Skeleton
+            border-radius="4px"
+            class="bg-divider h-2 w-full"
+          />
+          <Skeleton
+            border-radius="4px"
+            class="bg-divider h-3 w-1/2"
           />
         </div>
-        <p class="text-text-muted text-[13px] break-words">
-          {{ props.focus.task?.description ?? getFallbackDescription('Top Task') }}
-        </p>
-        <ProgressBar
-          :show-value="false"
-          :value="props.focus.task?.sharePercent ?? 0"
-          :pt="{
-            root: 'bg-divider h-2 overflow-hidden rounded-full',
-            value: 'bg-brand rounded-full',
-          }"
-        />
-        <p class="text-text-muted text-xs break-words">
-          {{ props.focus.task?.shareLabel ?? 'Task repetition appears after your first current-week entry.' }}
-        </p>
+        <div class="flex min-w-0 flex-col gap-3">
+          <Skeleton
+            border-radius="4px"
+            class="bg-divider h-3 w-20"
+          />
+          <Skeleton
+            border-radius="4px"
+            class="bg-divider h-7 w-2/3"
+          />
+          <Skeleton
+            border-radius="4px"
+            class="bg-divider h-4 w-full"
+          />
+          <Skeleton
+            border-radius="4px"
+            class="bg-divider h-2 w-full"
+          />
+          <Skeleton
+            border-radius="4px"
+            class="bg-divider h-3 w-1/2"
+          />
+        </div>
       </div>
-    </div>
-  </SurfaceCard>
+
+      <div
+        v-else-if="props.errorMessage"
+        class="bg-app-bg flex flex-col items-center justify-center gap-3 rounded-lg p-6 text-center"
+        data-testid="dashboard-focus-error-state"
+      >
+        <p class="text-text-muted text-sm">
+          {{ props.errorMessage }}
+        </p>
+        <Button
+          aria-label="Retry loading top focus"
+          data-testid="dashboard-focus-retry"
+          label="Retry"
+          severity="secondary"
+          variant="outlined"
+          @click="emit('retry')"
+        />
+      </div>
+
+      <div
+        v-else
+        class="grid min-w-0 gap-4 xl:grid-cols-2"
+      >
+        <div class="bg-app-bg relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-4">
+          <p class="text-text-muted text-xs font-semibold tracking-wide uppercase">
+            Top Project
+          </p>
+          <p class="text-text-dark text-xl font-semibold break-words sm:text-2xl">
+            {{ props.focus.project?.title ?? 'No tracked project yet' }}
+          </p>
+          <p class="text-text-muted text-[13px] break-words">
+            {{ props.focus.project?.description ?? copy.projectEmptyLabel }}
+          </p>
+          <ProgressBar
+            :show-value="false"
+            :value="props.focus.project?.sharePercent ?? 0"
+            :pt="{
+              root: 'bg-divider h-2 overflow-hidden rounded-full',
+              value: 'bg-brand rounded-full',
+            }"
+          />
+          <p class="text-text-muted text-xs break-words">
+            {{ props.focus.project?.shareLabel ?? copy.projectShareFallback }}
+          </p>
+          <RouterLink
+            v-if="props.projectRoute"
+            :aria-label="projectNavLinkLabel"
+            :class="cardNavLinkClass + ' z-20'"
+            :to="props.projectRoute"
+            data-testid="dashboard-focus-project-nav"
+            @keydown.space.prevent="emit('activateProject')"
+          />
+        </div>
+
+        <div class="bg-app-bg relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-4">
+          <p class="text-text-muted text-xs font-semibold tracking-wide uppercase">
+            Top Task
+          </p>
+          <div class="flex max-w-full min-w-0 items-start gap-1.5">
+            <p class="text-text-dark min-w-0 text-xl font-semibold break-words sm:text-2xl">
+              {{ props.focus.task?.title ?? 'No tracked task yet' }}
+            </p>
+            <span
+              v-if="props.focus.task?.githubIssue"
+              class="relative z-30 shrink-0"
+              @click.stop
+            >
+              <TaskGitHubIssueLink
+                :issue="props.focus.task.githubIssue"
+                test-id="dashboard-weekly-focus-task-github"
+              />
+            </span>
+          </div>
+          <p class="text-text-muted text-[13px] break-words">
+            {{ props.focus.task?.description ?? copy.taskEmptyLabel }}
+          </p>
+          <ProgressBar
+            :show-value="false"
+            :value="props.focus.task?.sharePercent ?? 0"
+            :pt="{
+              root: 'bg-divider h-2 overflow-hidden rounded-full',
+              value: 'bg-brand rounded-full',
+            }"
+          />
+          <p class="text-text-muted text-xs break-words">
+            {{ props.focus.task?.shareLabel ?? copy.taskShareFallback }}
+          </p>
+          <RouterLink
+            v-if="props.taskRoute"
+            :aria-label="taskNavLinkLabel"
+            :class="cardNavLinkClass + ' z-20'"
+            :to="props.taskRoute"
+            data-testid="dashboard-focus-task-nav"
+            @keydown.space.prevent="emit('activateTask')"
+          />
+        </div>
+      </div>
+    </SurfaceCard>
+
+    <RouterLink
+      v-if="props.sectionRoute"
+      :aria-label="sectionNavLinkLabel"
+      :class="cardNavLinkClass + ' z-10'"
+      :to="props.sectionRoute"
+      data-testid="dashboard-focus-section-nav"
+      @keydown.space.prevent="emit('activateSection')"
+    />
+  </div>
 </template>

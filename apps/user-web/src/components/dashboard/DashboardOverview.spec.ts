@@ -1,32 +1,67 @@
 import { mount, type VueWrapper } from "@vue/test-utils";
-import { computed, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DashboardOverview from "./DashboardOverview.vue";
+import { routeNames } from "@/constants/routes";
+import { getDashboardPeriodWindow } from "@/lib/dashboard-overview-helpers";
 
 const pageState = ref<"empty" | "loading" | "ready" | "request-error">("ready");
 const requestErrorMessage = ref<string | null>(null);
+const focusLoading = ref(false);
+const focusPageState = ref<"empty" | "loading" | "ready" | "request-error">("ready");
+const focusRequestErrorMessage = ref<string | null>(null);
+const focusPeriod = ref<"day" | "month" | "week">("week");
 const retryLoadOverview = vi.fn(async () => undefined);
-const routerPush = vi.fn(async () => undefined);
+const retryFocusLoad = vi.fn(async () => undefined);
+const routerPush = vi.fn(async (_route?: unknown) => undefined);
+const routerReplace = vi.fn(async (_route?: unknown) => undefined);
 const startTimerForEntry = vi.fn(async () => undefined);
 const stopTimerForEntry = vi.fn(async () => undefined);
+const routeMock = reactive<{ query: Record<string, unknown> }>({ query: {} });
 const wrappers: VueWrapper[] = [];
+
+const weeklyFocusFixture = {
+  project: {
+    description: "3h 45m tracked across 4 entries",
+    entryCount: 4,
+    label: "Top Project",
+    projectId: "project-nav-focus",
+    shareLabel: "42% of your tracked time this week",
+    sharePercent: 42,
+    title: "Admin Web",
+  },
+  task: {
+    description: "Project Orion • 2h 10m tracked",
+    entryCount: 3,
+    label: "Top Task",
+    shareLabel: "3 entries contributed to this focus",
+    sharePercent: 24,
+    taskId: "task-nav-focus",
+    title: "Improve reports filters",
+  },
+} as { project: Record<string, unknown> & { projectId?: string; title: string } | null; task: Record<string, unknown> & { taskId?: string; title: string } | null };
 
 vi.mock("vue-router", async () => {
   const actual = await vi.importActual("vue-router");
 
   return {
     ...actual,
-    useRouter: () => ({ push: routerPush }),
+    useRoute: () => routeMock,
+    useRouter: () => ({ push: routerPush, replace: routerReplace }),
   };
 });
 
 vi.mock("@/composables/dashboard/useDashboardOverview", () => ({
-  useDashboardOverview: () => ({
+  useDashboardOverview: (_options: unknown) => ({
     dashboardStats: computed(() => [
       { description: "1 project tracked today", label: "Today", value: "6h 40m" },
       { description: "4 entries tracked this week", label: "This Week", value: "28h 15m" },
       { description: "2 projects received tracked time", label: "Projects This Week", value: "2" },
     ]),
+    focusPeriod,
+    focusLoading,
+    focusPageState,
+    focusRequestErrorMessage,
     pageState,
     recentEntryRows: computed(() => [
       {
@@ -60,40 +95,60 @@ vi.mock("@/composables/dashboard/useDashboardOverview", () => ({
     ]),
     isDirectStartBlockedByCurrentTimer: computed(() => false),
     requestErrorMessage,
+    retryFocusLoad,
     retryLoadOverview,
     startingTimerEntryId: ref<string | null>(null),
     startTimerForEntry,
     stoppingTimerEntryId: ref<string | null>(null),
     stopTimerForEntry,
-    weeklyFocus: computed(() => ({
-      project: {
-        description: "3h 45m tracked across 4 entries",
-        entryCount: 4,
-        label: "Top Project",
-        shareLabel: "42% of your tracked time this week",
-        sharePercent: 42,
-        title: "Admin Web",
-      },
-      task: {
-        description: "Project Orion • 2h 10m tracked",
-        entryCount: 3,
-        label: "Top Task",
-        shareLabel: "3 entries contributed to this focus",
-        sharePercent: 24,
-        title: "Improve reports filters",
-      },
-    })),
+    weeklyFocus: computed(() => weeklyFocusFixture),
   }),
 }));
+
+function periodWindow(period: "day" | "month" | "week") {
+  return getDashboardPeriodWindow(period, Date.now());
+}
+
+function parseRoute(deeplink: unknown) {
+  return JSON.parse(deeplink as string) as {
+    name: string;
+    query: Record<string, string>;
+  };
+}
 
 describe("DashboardOverview", () => {
   beforeEach(() => {
     pageState.value = "ready";
     requestErrorMessage.value = null;
+    focusLoading.value = false;
+    focusPageState.value = "ready";
+    focusRequestErrorMessage.value = null;
+    focusPeriod.value = "week";
     retryLoadOverview.mockClear();
+    retryFocusLoad.mockClear();
     routerPush.mockClear();
+    routerReplace.mockClear();
     startTimerForEntry.mockClear();
     stopTimerForEntry.mockClear();
+    routeMock.query = {};
+    weeklyFocusFixture.project = null === weeklyFocusFixture.project ? null : {
+      description: "3h 45m tracked across 4 entries",
+      entryCount: 4,
+      label: "Top Project",
+      projectId: "project-nav-focus",
+      shareLabel: "42% of your tracked time this week",
+      sharePercent: 42,
+      title: "Admin Web",
+    };
+    weeklyFocusFixture.task = null === weeklyFocusFixture.task ? null : {
+      description: "Project Orion • 2h 10m tracked",
+      entryCount: 3,
+      label: "Top Task",
+      shareLabel: "3 entries contributed to this focus",
+      sharePercent: 24,
+      taskId: "task-nav-focus",
+      title: "Improve reports filters",
+    };
   });
 
   afterEach(() => {
@@ -131,6 +186,10 @@ describe("DashboardOverview", () => {
             props: ["value"],
             template: '<div>{{ value }}</div>',
           },
+          RouterLink: {
+            props: ["to"],
+            template: '<a :data-route="JSON.stringify(to)"><slot /></a>',
+          },
           Skeleton: { template: "<div />" },
           StatCard: {
             props: ["label", "value", "description"],
@@ -156,12 +215,13 @@ describe("DashboardOverview", () => {
             props: [
               "entries",
               "isStartTimerDisabled",
+              "sectionRoute",
               "startingTimerEntryId",
               "stoppingTimerEntryId",
             ],
-            emits: ["startTimer", "stopTimer", "view-all"],
+            emits: ["activate", "startTimer", "stopTimer", "view-all"],
             template: `
-              <section data-testid="dashboard-recent-entries-card">
+              <section data-testid="dashboard-recent-entries-card" :data-section-route="JSON.stringify(sectionRoute)">
                 <h2>Recent Time Entries</h2>
                 <div v-for="entry in entries" :key="entry.id">
                   <span>{{ entry.projectName }}</span>
@@ -170,18 +230,32 @@ describe("DashboardOverview", () => {
                 </div>
                 <button data-testid="dashboard-recent-stop" type="button" @click="$emit('stopTimer', entries[0].timerEntry)">Stop timer</button>
                 <button data-testid="dashboard-recent-start" type="button" @click="$emit('startTimer', entries[1].timerEntry)">Start timer</button>
+                <button data-testid="dashboard-recent-activate" type="button" @click="$emit('activate')">Activate</button>
                 <button data-testid="dashboard-recent-view-all" type="button" @click="$emit('view-all')">View all</button>
               </section>
             `,
           },
           DashboardWeeklyFocusCard: {
-            props: ["focus"],
+            props: ["focus", "focusPeriod", "loading", "errorMessage", "projectRoute", "sectionRoute", "taskRoute"],
+            emits: ["activateProject", "activateSection", "activateTask", "retry", "update:focusPeriod"],
             template: `
-              <section data-testid="dashboard-weekly-focus-card">
-                <h2>Top Focus This Week</h2>
+              <section
+                data-testid="dashboard-weekly-focus-card"
+                :data-focus-period="focusPeriod"
+                :data-loading="loading"
+                :data-error-message="errorMessage"
+                :data-section-route="JSON.stringify(sectionRoute)"
+              >
+                <h2>Top Focus</h2>
                 <div>{{ focus.project?.title }}</div>
-                <div>{{ focus.task?.title }}</div>
                 <div>{{ focus.project?.sharePercent }}</div>
+                <div>{{ focus.task?.title }}</div>
+                <button data-testid="dashboard-focus-retry" type="button" @click="$emit('retry')">Retry</button>
+                <button data-testid="dashboard-focus-period-day" type="button" @click="$emit('update:focusPeriod', 'day')">Day</button>
+                <button data-testid="dashboard-focus-period-month" type="button" @click="$emit('update:focusPeriod', 'month')">Month</button>
+                <button data-testid="dashboard-focus-activate-section" type="button" @click="$emit('activateSection')">Section</button>
+                <button data-testid="dashboard-focus-activate-project" type="button" @click="$emit('activateProject')">Project</button>
+                <button data-testid="dashboard-focus-activate-task" type="button" @click="$emit('activateTask')">Task</button>
               </section>
             `,
           },
@@ -204,7 +278,6 @@ describe("DashboardOverview", () => {
       expect(wrapper.text()).toContain("Admin Web");
       expect(wrapper.text()).toContain("Improve reports filters");
       expect(wrapper.text()).toContain("42");
-      expect(wrapper.text()).toContain("Top Focus This Week");
       expect(wrapper.text()).toContain("Recent Time Entries");
       expect(wrapper.text()).toContain("View all");
 
@@ -214,7 +287,7 @@ describe("DashboardOverview", () => {
 
       expect(stopTimerForEntry).toHaveBeenCalledWith(expect.objectContaining({ id: "entry-1" }));
       expect(startTimerForEntry).toHaveBeenCalledWith(expect.objectContaining({ id: "entry-2" }));
-      expect(routerPush).toHaveBeenCalledWith({ name: "time-entries" });
+      expect(routerPush).toHaveBeenCalledWith({ name: routeNames.timeEntries });
     },
     20_000,
   );
@@ -254,6 +327,239 @@ describe("DashboardOverview", () => {
 
     await emptyWrapper.get("button").trigger("click");
 
-    expect(routerPush).toHaveBeenCalledWith({ name: "time-entries" });
+    expect(routerPush).toHaveBeenCalledWith({ name: routeNames.timeEntries });
+  });
+
+  describe("card navigation destinations", () => {
+    it("navigates the Today card to the current-day Time Entries window", async () => {
+      const wrapper = mountOverview();
+      const todayWindow = periodWindow("day");
+      const link = wrapper
+        .findAll('[data-testid="dashboard-stat-card-nav"]')
+        .find((link) => link.attributes("aria-label") === "View time entries for today")!;
+
+      const routeTarget = parseRoute(link.attributes("data-route"));
+
+      expect(routeTarget).toEqual({
+        name: routeNames.timeEntries,
+        query: { dateFrom: todayWindow.dateFrom, dateTo: todayWindow.dateTo },
+      });
+
+      await link.trigger("keydown", { key: " " });
+
+      expect(routerPush).toHaveBeenCalledTimes(1);
+
+      expect(routerPush).toHaveBeenCalledTimes(1);
+      expect(routerPush).toHaveBeenCalledWith({
+        name: routeNames.timeEntries,
+        query: { dateFrom: todayWindow.dateFrom, dateTo: todayWindow.dateTo },
+      });
+    });
+
+    it("navigates the This Week and Projects This Week cards to the current week without a project filter", async () => {
+      const wrapper = mountOverview();
+      const weekWindow = periodWindow("week");
+      const thisWeekLink = wrapper
+        .findAll('[data-testid="dashboard-stat-card-nav"]')
+        .find((link) => link.attributes("aria-label") === "View time entries for this week")!;
+      const projectsLink = wrapper
+        .findAll('[data-testid="dashboard-stat-card-nav"]')
+        .find((link) =>
+          link.attributes("aria-label") === "View time entries for projects tracked this week")!;
+
+      expect(parseRoute(thisWeekLink.attributes("data-route"))).toEqual({
+        name: routeNames.timeEntries,
+        query: { dateFrom: weekWindow.dateFrom, dateTo: weekWindow.dateTo },
+      });
+      expect(parseRoute(projectsLink.attributes("data-route"))).toEqual(parseRoute(thisWeekLink.attributes("data-route")));
+
+      await projectsLink.trigger("keydown", { key: " " });
+
+      expect(routerPush).toHaveBeenCalledTimes(1);
+      expect(routerPush).toHaveBeenCalledWith({
+        name: routeNames.timeEntries,
+        query: { dateFrom: weekWindow.dateFrom, dateTo: weekWindow.dateTo },
+      });
+    });
+
+    it("navigates the Top Focus section, project, and task cards with selected-period scoping", async () => {
+      const wrapper = mountOverview();
+
+      const sectionRoute = parseRoute(
+        wrapper.get('[data-testid="dashboard-weekly-focus-card"]').attributes("data-section-route")!,
+      );
+      const weekWindow = periodWindow("week");
+      expect(sectionRoute).toEqual({
+        name: routeNames.timeEntries,
+        query: { dateFrom: weekWindow.dateFrom, dateTo: weekWindow.dateTo },
+      });
+
+      await wrapper.get('[data-testid="dashboard-focus-activate-section"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-focus-activate-project"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-focus-activate-task"]').trigger("click");
+
+      expect(routerPush).toHaveBeenNthCalledWith(1, sectionRoute);
+      expect(routerPush).toHaveBeenNthCalledWith(2, {
+        ...sectionRoute,
+        query: { ...sectionRoute.query, projectId: "project-nav-focus" },
+      });
+      expect(routerPush).toHaveBeenNthCalledWith(3, {
+        ...sectionRoute,
+        query: { ...sectionRoute.query, taskId: "task-nav-focus" },
+      });
+      expect((routerPush.mock.calls[2]?.[0] as { query: Record<string, unknown> }).query).not.toHaveProperty("search");
+    });
+
+    it("navigates empty Top Project and Top Task cards to period-only Time Entries", async () => {
+      weeklyFocusFixture.project = null;
+      weeklyFocusFixture.task = null;
+
+      const wrapper = mountOverview();
+      const weekWindow = periodWindow("week");
+
+      await wrapper.get('[data-testid="dashboard-focus-activate-project"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-focus-activate-task"]').trigger("click");
+
+      expect(routerPush).toHaveBeenNthCalledWith(1, {
+        name: routeNames.timeEntries,
+        query: { dateFrom: weekWindow.dateFrom, dateTo: weekWindow.dateTo },
+      });
+      expect(routerPush).toHaveBeenNthCalledWith(2, {
+        name: routeNames.timeEntries,
+        query: { dateFrom: weekWindow.dateFrom, dateTo: weekWindow.dateTo },
+      });
+      expect((routerPush.mock.calls[0]?.[0] as { query: Record<string, unknown> }).query).not.toHaveProperty("projectId");
+      expect((routerPush.mock.calls[1]?.[0] as { query: Record<string, unknown> }).query).not.toHaveProperty("taskId");
+    });
+
+    it("navigates the Recent Time Entries card to unfiltered Time Entries", async () => {
+      const wrapper = mountOverview();
+      const recentCard = wrapper.get('[data-testid="dashboard-recent-entries-card"]');
+
+      expect(parseRoute(recentCard.attributes("data-section-route")!)).toEqual({
+        name: routeNames.timeEntries,
+        query: {},
+      });
+
+      await recentCard.get('[data-testid="dashboard-recent-activate"]').trigger("click");
+
+      expect(routerPush).toHaveBeenCalledWith({
+        name: routeNames.timeEntries,
+        query: {},
+      });
+    });
+
+    it("keeps nested timer and view-all controls isolated from card navigation", async () => {
+      const wrapper = mountOverview();
+
+      await wrapper.get('[data-testid="dashboard-recent-stop"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-start"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-view-all"]').trigger("click");
+
+      expect(stopTimerForEntry).toHaveBeenCalledTimes(1);
+      expect(startTimerForEntry).toHaveBeenCalledTimes(1);
+      expect(routerPush).toHaveBeenCalledTimes(1);
+      expect(routerPush).toHaveBeenCalledWith({ name: routeNames.timeEntries });
+    });
+  });
+
+  describe("focus period selector", () => {
+    it("defaults to Week and canonicalizes the URL when there is no focusPeriod", () => {
+      const wrapper = mountOverview();
+
+      expect(
+        wrapper.get('[data-testid="dashboard-weekly-focus-card"]').attributes("data-focus-period"),
+      ).toBe("week");
+      expect(routerReplace).toHaveBeenCalledTimes(1);
+      expect(routerReplace).toHaveBeenCalledWith({ query: { focusPeriod: "week" } });
+      expect(routerPush).not.toHaveBeenCalled();
+    });
+
+    it("updates the URL without creating a history entry when the period changes", async () => {
+      const wrapper = mountOverview();
+      const statRoutes = wrapper
+        .findAll('[data-testid="dashboard-stat-card-nav"]')
+        .map((link) => link.attributes("data-route"));
+
+      await wrapper.get('[data-testid="dashboard-focus-period-day"]').trigger("click");
+
+      expect(routerReplace).toHaveBeenCalledTimes(2);
+      expect(routerReplace).toHaveBeenLastCalledWith({ query: { focusPeriod: "day" } });
+      expect(routerPush).not.toHaveBeenCalled();
+      expect(
+        wrapper.get('[data-testid="dashboard-weekly-focus-card"]').attributes("data-focus-period"),
+      ).toBe("day");
+
+      await wrapper.get('[data-testid="dashboard-focus-period-month"]').trigger("click");
+
+      expect(routerReplace).toHaveBeenLastCalledWith({ query: { focusPeriod: "month" } });
+      expect(routerPush).not.toHaveBeenCalled();
+
+      const statRoutesAfter = wrapper
+        .findAll('[data-testid="dashboard-stat-card-nav"]')
+        .map((link) => link.attributes("data-route"));
+
+      expect(statRoutesAfter).toEqual(statRoutes);
+    });
+
+    it("falls back to Week when the URL contains an invalid focusPeriod", () => {
+      routeMock.query = { focusPeriod: "year" };
+
+      const wrapper = mountOverview();
+
+      expect(
+        wrapper.get('[data-testid="dashboard-weekly-focus-card"]').attributes("data-focus-period"),
+      ).toBe("week");
+      expect(routerReplace).toHaveBeenCalledWith({ query: { focusPeriod: "week" } });
+      expect(routerPush).not.toHaveBeenCalled();
+    });
+
+    it("restores the period from URL-driven history navigation without extra replaces", async () => {
+      const wrapper = mountOverview();
+
+      expect(routerReplace).toHaveBeenCalledTimes(1);
+
+      routeMock.query = { focusPeriod: "month" };
+      await wrapper.vm.$nextTick();
+
+      expect(
+        wrapper.get('[data-testid="dashboard-weekly-focus-card"]').attributes("data-focus-period"),
+      ).toBe("month");
+      expect(routerReplace).toHaveBeenCalledTimes(1);
+
+      routeMock.query = { focusPeriod: "day" };
+      await wrapper.vm.$nextTick();
+
+      expect(
+        wrapper.get('[data-testid="dashboard-weekly-focus-card"]').attributes("data-focus-period"),
+      ).toBe("day");
+      expect(routerReplace).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("weekly focus loading, error, and retry wiring", () => {
+    it("passes the focus loading state through to the focus card instead of focus content", () => {
+      focusLoading.value = true;
+      focusPageState.value = "loading";
+
+      const wrapper = mountOverview();
+      const card = wrapper.get('[data-testid="dashboard-weekly-focus-card"]');
+
+      expect(card.attributes("data-loading")).toBe("true");
+    });
+
+    it("passes the focus request error through to the focus card and retries on demand", async () => {
+      focusPageState.value = "request-error";
+      focusRequestErrorMessage.value = "Unable to load top focus entries";
+
+      const wrapper = mountOverview();
+      const card = wrapper.get('[data-testid="dashboard-weekly-focus-card"]');
+
+      expect(card.attributes("data-error-message")).toBe("Unable to load top focus entries");
+
+      await wrapper.get('[data-testid="dashboard-focus-retry"]').trigger("click");
+
+      expect(retryFocusLoad).toHaveBeenCalledTimes(1);
+    });
   });
 });
