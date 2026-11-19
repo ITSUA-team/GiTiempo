@@ -903,6 +903,48 @@ describe('InvoiceDetailView', () => {
     expect(wrapper.getComponent(InvoiceCreateDialog).props('visible')).toBe(false);
   });
 
+  it('keeps invalid invoice emails inline without submitting or toasting, then saves corrected values', async () => {
+    const wrapper = mountInvoiceDetailView('admin', true);
+    await flushPromises();
+    await wrapper.findAll('button').find(button => button.text() === 'Edit invoice')!.trigger('click');
+    await flushPromises();
+    const editor = wrapper.getComponent(InvoiceCreateDialog);
+    const senderEmail = editor.getComponent('#invoice-sender-email');
+    const recipientEmail = editor.getComponent('#invoice-recipient-email');
+
+    await senderEmail.setValue('test@invalid');
+    await recipientEmail.setValue('missing-domain');
+    await editor.get('[data-testid="invoice-create-submit"]').trigger('click');
+    await flushPromises();
+
+    for (const id of ['invoice-sender-email', 'invoice-recipient-email']) {
+      expect(editor.get('#' + id).attributes('aria-invalid')).toBe('true');
+      expect(editor.get('#' + id + '-error').text()).toBe('Please enter a valid email address.');
+    }
+    expect(testMocks.updateInvoice).not.toHaveBeenCalled();
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
+    expect(editor.props('visible')).toBe(true);
+
+    await senderEmail.setValue('sender@example.com');
+    await recipientEmail.setValue('');
+    await flushPromises();
+
+    for (const id of ['invoice-sender-email', 'invoice-recipient-email']) {
+      expect(editor.get('#' + id).attributes('aria-invalid')).toBeUndefined();
+      expect(editor.find('#' + id + '-error').exists()).toBe(false);
+    }
+    await editor.get('[data-testid="invoice-create-submit"]').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.updateInvoice).toHaveBeenCalledExactlyOnceWith(
+      invoiceId,
+      expect.objectContaining({ sender: expect.objectContaining({ email: 'sender@example.com' }) }),
+    );
+    expect(testMocks.errorToast).not.toHaveBeenCalled();
+    expect(editor.props('visible')).toBe(false);
+    wrapper.unmount();
+  });
+
   it('closes a draft on route changes and prevents submitting it into the next invoice',async()=>{
     const wrapper=mountInvoiceDetailView();await flushPromises();
     await wrapper.findAll('button').find(button=>button.text()==='Edit invoice')!.trigger('click');

@@ -195,6 +195,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
     focusPageState,
     focusPeriod,
     focusRequestErrorMessage,
+    hasConfirmedActiveTimer: directTimerActions.hasConfirmedActiveTimer,
     isDirectStartBlockedByCurrentTimer: directTimerActions.isDirectStartBlockedByCurrentTimer,
     pageState,
     recentEntryRows,
@@ -205,6 +206,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
     startTimerForEntry: directTimerActions.startTimerForEntry,
     stoppingTimerEntryId: directTimerActions.stoppingTimerEntryId,
     stopTimerForEntry: directTimerActions.stopTimerForEntry,
+    verifyActiveTimerEntry: directTimerActions.verifyActiveTimerEntry,
     weeklyFocus,
   };
 }
