@@ -1,4 +1,5 @@
-import { computeInvoiceAmount } from '@gitiempo/shared';
+import { computeInvoiceAmount, projectInvoicePayment } from '@gitiempo/shared';
+import { requireCompleteInvoiceDocument } from './invoice-document-validation';
 import { prepareInvoiceLogo } from './invoice-logo';
 import { renderInvoicePdf } from './invoice-pdf';
 import {
@@ -67,7 +68,7 @@ interface InvoiceDetailRow {
   projectId: string | null;
   title: string;
   status: InvoiceStatus;
-  issueDate?: string;
+  issueDate: string;
   dueDate?: string | null;
   dateFrom: string;
   dateTo: string;
@@ -1028,7 +1029,10 @@ export class InvoicesService {
     await prepareInvoiceLogo(
       input.logo === undefined ? settings?.billingProfile?.logo : input.logo,
     );
-    const hourlyRate = input.hourlyRate ?? settings?.defaultHourlyRate ?? null;
+    const hourlyRate =
+      input.hourlyRate === undefined
+        ? (settings?.defaultHourlyRate ?? null)
+        : input.hourlyRate;
     if (hourlyRate === null) {
       throw new DomainError(
         'invoice_rate_required',
@@ -1036,7 +1040,10 @@ export class InvoicesService {
         422,
       );
     }
-    const currency = input.currency ?? settings?.currency ?? null;
+    const currency =
+      input.currency === undefined
+        ? (settings?.currency ?? null)
+        : input.currency;
     if (currency === null) {
       throw new DomainError(
         'invoice_currency_required',
@@ -1047,8 +1054,9 @@ export class InvoicesService {
     const discountPercent = input.discountPercent;
     const timeZone = settings?.timeZone ?? 'UTC';
     const issueDate =
-      input.issueDate ??
-      new Intl.DateTimeFormat('sv-SE', { timeZone }).format(new Date());
+      input.issueDate === undefined
+        ? new Intl.DateTimeFormat('sv-SE', { timeZone }).format(new Date())
+        : input.issueDate;
     if (input.dueDate && input.dueDate < issueDate) {
       throw new DomainError(
         'invoice_invalid_payment_dates',
@@ -1065,6 +1073,23 @@ export class InvoicesService {
       settings?.timeRoundingStepMinutes ??
       1;
 
+    const documentFields = requireCompleteInvoiceDocument({
+      ...input,
+      sender:
+        input.sender === undefined
+          ? settings?.billingProfile?.sender
+          : input.sender,
+      payment:
+        input.payment === undefined
+          ? settings?.billingProfile?.payment
+          : input.payment,
+      logo:
+        input.logo === undefined ? settings?.billingProfile?.logo : input.logo,
+      hourlyRate,
+      currency,
+      issueDate,
+      roundingStepMinutes,
+    });
     return this.db.transaction(async (tx) => {
       // Lock eligible time entries: completed, billable, not already invoiced,
       // within the requested workspace/project/date range.
@@ -1162,10 +1187,10 @@ export class InvoicesService {
           status: 'draft',
           document: {
             timeDisplayMode: input.timeDisplayMode ?? 'entries',
-            sender: input.sender ?? settings?.billingProfile?.sender,
-            recipient: input.recipient,
-            payment: input.payment ?? settings?.billingProfile?.payment,
-            services: input.services,
+            sender: documentFields.sender,
+            recipient: documentFields.recipient,
+            payment: projectInvoicePayment(documentFields.payment),
+            services: documentFields.services,
             logo:
               input.logo === undefined
                 ? settings?.billingProfile?.logo
@@ -1232,6 +1257,7 @@ export class InvoicesService {
         logo: saved.logo,
         timeEntries: saved.timeEntries,
       };
+      requireCompleteInvoiceDocument({ ...saved, ...document });
       await tx
         .update(invoices)
         .set({ document })
@@ -1333,13 +1359,6 @@ export class InvoicesService {
           409,
         );
       }
-      if (
-        Object.keys(input).every((key) =>
-          ['status', 'expectedRevision'].includes(key),
-        ) &&
-        input.status === invoice.status
-      )
-        return this.readInvoiceDetail(tx, id, user.workspaceId);
       await prepareInvoiceLogo(input.logo);
       const snapshot = invoice.document?.timeEntries as
         | InvoiceTimeEntrySummary[]
@@ -1366,9 +1385,7 @@ export class InvoicesService {
             input[field] !== undefined && input[field] !== invoice[field],
         );
       const issueDate =
-        input.issueDate ??
-        invoice.issueDate ??
-        invoice.createdAt.toISOString().slice(0, 10);
+        input.issueDate === undefined ? invoice.issueDate : input.issueDate;
       const dueDate =
         input.dueDate === undefined ? invoice.dueDate : input.dueDate;
       if (dueDate && dueDate < issueDate) {
@@ -1410,6 +1427,24 @@ export class InvoicesService {
         document.payment = this.resolvePayment(
           input.payment,
           invoice.reference,
+        );
+      requireCompleteInvoiceDocument({
+        ...invoice,
+        ...updates,
+        ...document,
+        issueDate,
+        dueDate,
+      });
+      if (
+        Object.keys(input).every((key) =>
+          ['status', 'expectedRevision'].includes(key),
+        ) &&
+        input.status === invoice.status
+      )
+        return this.readInvoiceDetail(tx, id, user.workspaceId);
+      if (document.payment)
+        document.payment = projectInvoicePayment(
+          document.payment as NonNullable<InvoiceResponse['payment']>,
         );
       updates.document = document;
       let selectedSnapshots: InvoiceTimeEntrySummary[] = [];
@@ -1803,7 +1838,7 @@ export class InvoicesService {
       projectId: row.projectId,
       title: row.title,
       status: row.status as InvoiceResponse['status'],
-      issueDate: row.issueDate ?? row.createdAt.toISOString().slice(0, 10),
+      issueDate: row.issueDate,
       dueDate: row.dueDate ?? null,
       dateFrom: row.dateFrom,
       dateTo: row.dateTo,
@@ -1845,7 +1880,7 @@ export class InvoicesService {
       projectId: row.projectId,
       title: row.title,
       status: row.status as InvoiceResponse['status'],
-      issueDate: row.issueDate ?? row.createdAt.toISOString().slice(0, 10),
+      issueDate: row.issueDate,
       dueDate: row.dueDate ?? null,
       dateFrom: row.dateFrom,
       dateTo: row.dateTo,

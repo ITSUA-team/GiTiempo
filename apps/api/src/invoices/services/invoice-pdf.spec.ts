@@ -20,16 +20,16 @@ const entry: InvoiceResponse['timeEntries'][number] = {
 };
 const sender = {
   name: 'Acme',
-  address: '',
+  address: 'Kyiv',
   email: 'acme@example.org',
   taxId: '',
 };
 const payment = {
   method: 'Bank transfer',
   terms: '',
-  beneficiary: '',
-  provider: '',
-  account: '',
+  beneficiary: 'Acme',
+  provider: 'Bank',
+  account: 'ACCOUNT',
   instructions: '',
 };
 const invoice: InvoiceResponse = {
@@ -62,9 +62,12 @@ const invoice: InvoiceResponse = {
   createdByName: 'Admin',
 };
 
-async function renderedPages(overrides: Partial<InvoiceResponse> = {}) {
+async function renderedPages(
+  overrides: Partial<InvoiceResponse> = {},
+  timeZone = 'UTC',
+) {
   const printer = vi.spyOn(PdfPrinter.prototype, 'createPdfKitDocument');
-  const output = await renderInvoicePdf({ ...invoice, ...overrides });
+  const output = await renderInvoicePdf({ ...invoice, ...overrides }, timeZone);
   expect(output.subarray(0, 5).toString()).toBe('%PDF-');
   // Read the actual line layout from the embedded PDFKit document so this
   // regression can run on CI without a separate native PDF extractor.
@@ -107,6 +110,68 @@ async function renderedServiceRows(overrides: Partial<InvoiceResponse>) {
       ),
   };
 }
+
+describe('invoice PDF complete document policy', () => {
+  it.each([
+    ['sender.address', { sender: { ...sender, address: '' } }],
+    ['recipient.email', { recipient: { ...sender, email: '' } }],
+    ['services', { services: '   ' }],
+    ['payment.account', { payment: { ...payment, account: '' } }],
+    [
+      'payment.paymentUrl',
+      { payment: { ...payment, method: 'Card', paymentUrl: '' } },
+    ],
+  ])(
+    'rejects incomplete saved %s before PDF rendering',
+    async (path, override) => {
+      const printer = vi.spyOn(PdfPrinter.prototype, 'createPdfKitDocument');
+      await expect(
+        renderInvoicePdf({ ...invoice, ...override }),
+      ).rejects.toMatchObject({
+        status: 422,
+        response: {
+          code: 'invoice_document_incomplete',
+          details: { fieldErrors: { [path as string]: expect.any(String) } },
+        },
+      });
+      expect(printer).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    payment,
+    {
+      ...payment,
+      method: 'Card',
+      beneficiary: '',
+      account: '',
+      paymentUrl: 'https://pay.example.com/invoice',
+    },
+    {
+      ...payment,
+      method: 'Custom payment',
+      beneficiary: '',
+      provider: '',
+      account: 'Contact accounts team',
+    },
+  ])(
+    'exports complete zero-entry Draft with applicable $method details and optional fields omitted',
+    async (method) => {
+      const text = (
+        await renderedPages({
+          status: 'draft',
+          payment: method,
+          timeEntries: [],
+          timeEntryCount: 0,
+          totalHours: 0,
+          totalAmount: 0,
+        })
+      ).join('\n');
+      expect(text).toContain('0.00 USD');
+      expect(text).toContain(method.method);
+    },
+  );
+});
 
 describe('invoice PDF time display', () => {
   it('matches the approved task PDF labels, Inter typography and table geometry', async () => {
@@ -546,6 +611,24 @@ describe('invoice PNG logos', () => {
 });
 
 describe('invoice dates and payment methods', () => {
+  it.each([
+    ['Pacific/Kiritimati', '13 Nov 2026'],
+    ['Pacific/Honolulu', '11 Nov 2026'],
+  ])('uses the historical creation day in %s', async (zone, expected) => {
+    const text = (
+      await renderedPages(
+        {
+          issueDate: undefined,
+          createdAt:
+            zone === 'Pacific/Honolulu'
+              ? '2026-11-12T01:30:00Z'
+              : '2026-11-12T12:30:00Z',
+        },
+        zone,
+      )
+    ).join('\n');
+    expect(text).toContain(expected);
+  });
   it('formats a single-day billing period as one date in both modes', async () => {
     for (const timeDisplayMode of ['entries', 'tasks'] as const) {
       const text = (
@@ -600,16 +683,21 @@ describe('invoice dates and payment methods', () => {
     expect(text).toContain('TESTBIC');
     expect(text).not.toContain('https://pay.example.com/old');
   });
-  it('omits unsafe payment links in persisted documents', async () => {
-    const text = (
-      await renderedPages({
+  it('rejects unsafe payment links in persisted documents', async () => {
+    await expect(
+      renderedPages({
         payment: {
           ...payment,
           method: 'Card',
           paymentUrl: 'javascript:alert(1)',
         },
-      })
-    ).join('\n');
-    expect(text).not.toContain('javascript:');
+      }),
+    ).rejects.toMatchObject({
+      status: 422,
+      response: {
+        code: 'invoice_document_incomplete',
+        details: { fieldErrors: { 'payment.paymentUrl': expect.any(String) } },
+      },
+    });
   });
 });

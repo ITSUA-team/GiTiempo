@@ -52,6 +52,12 @@ export type InvoiceParty = z.infer<typeof invoicePartySchema>;
 export type InvoicePayment = z.infer<typeof invoicePaymentSchema>;
 export type InvoiceBillingProfile = z.infer<typeof invoiceBillingProfileSchema>;
 
+export function requiredInvoicePaymentDetails(method: string): readonly (keyof InvoicePayment)[] {
+  if (method === "Bank transfer") return ["beneficiary", "provider", "account"];
+  if (method === "Card") return ["provider", "paymentUrl"];
+  return ["account"];
+}
+
 export const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
 export const invoiceTimeDisplayModeSchema = z.enum(["entries", "tasks"]);
 export type InvoiceTimeDisplayMode = z.infer<typeof invoiceTimeDisplayModeSchema>;
@@ -202,6 +208,63 @@ export const createInvoiceSchema = z
     path: ["dateTo"],
   });
 
+const requiredBillingText = billingText.min(1, "This field is required");
+const completeInvoicePartySchema = invoicePartySchema.extend({
+  name: requiredBillingText,
+  address: requiredBillingText,
+  email: z.string().trim().min(1, "Email is required").pipe(z.email()),
+});
+const completeInvoicePaymentSchema = invoicePaymentSchema.extend({
+  method: requiredBillingText,
+}).superRefine((payment, context) => {
+  for (const field of requiredInvoicePaymentDetails(payment.method)) {
+    if (!payment[field]?.trim()) {
+      context.addIssue({ code: "custom", path: [field], message: "This field is required" });
+    }
+  }
+});
+
+export function projectInvoicePayment(payment: InvoicePayment): InvoicePayment {
+  const projected: InvoicePayment = {
+    method: payment.method.trim(),
+    terms: payment.terms,
+    beneficiary: payment.beneficiary,
+    provider: payment.provider,
+    account: payment.account,
+    instructions: payment.instructions,
+  };
+
+  if (projected.method === "Card") {
+    projected.beneficiary = "";
+    projected.account = "";
+    if (payment.paymentUrl !== undefined) projected.paymentUrl = payment.paymentUrl;
+  } else if (projected.method === "Bank transfer" && payment.swift !== undefined) {
+    projected.swift = payment.swift;
+  }
+
+  return projected;
+}
+
+export const completeInvoiceDocumentSchema = z.object({
+  ...createInvoiceSchema.shape,
+  sender: completeInvoicePartySchema,
+  recipient: completeInvoicePartySchema,
+  payment: completeInvoicePaymentSchema,
+  services: requiredBillingText,
+  issueDate: dateSchema,
+  projectId: z.uuid().nullable().optional(),
+  hourlyRate: createInvoiceSchema.shape.hourlyRate.unwrap(),
+  currency: createInvoiceSchema.shape.currency.unwrap(),
+}).refine(isValidPaymentDates, {
+  message: "Due date must be on or after the issue date",
+  path: ["dueDate"],
+}).refine(isValidInvoiceDateRange, {
+  message: "dateTo must be later than or equal to dateFrom",
+  path: ["dateTo"],
+});
+
+export type CompleteInvoiceDocument = z.infer<typeof completeInvoiceDocumentSchema>;
+
 export const updateInvoiceSchema = z.object(createInvoiceSchema.shape).partial().extend({
   discountPercent: z.number().min(0).max(100).multipleOf(0.01).optional(),
   status: invoiceStatusSchema.optional(),
@@ -303,7 +366,10 @@ export type PreviewInvoiceResponse = z.infer<typeof previewInvoiceResponseSchema
 export const invoiceDocumentIncompleteErrorSchema = z.object({
   code: z.literal("invoice_document_incomplete"),
   message: z.string(),
-  details: z.object({ missingFields: z.array(z.enum(["sender", "recipient", "services", "payment"])).min(1) }),
+  details: z.object({
+    missingFields: z.array(z.enum(["sender", "recipient", "services", "payment"])),
+    fieldErrors: z.record(z.string(), z.string()).optional(),
+  }).refine(details => details.missingFields.length > 0 || Object.keys(details.fieldErrors ?? {}).length > 0),
 });
 export type InvoiceDocumentIncompleteError = z.infer<typeof invoiceDocumentIncompleteErrorSchema>;
 
