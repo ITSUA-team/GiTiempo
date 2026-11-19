@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AutoComplete from "primevue/autocomplete";
+import AutoComplete, { type AutoCompleteCompleteEvent } from "primevue/autocomplete";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Textarea from "primevue/textarea";
@@ -35,10 +35,6 @@ interface ProjectOptionGroup {
 }
 type TaskPickerOption = TaskResponse | InlineNewTaskOption;
 type TaskAutoCompleteValue = TaskPickerOption | string | null;
-
-interface AutoCompleteCompleteEvent {
-  query: string;
-}
 
 const props = defineProps<{
   createTaskErrorMessage: string | null;
@@ -304,14 +300,15 @@ function buildProjectGroups(
 }
 
 function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
+  const query = event.originalEvent.type === "input" ? event.query : "";
   const projects = filterAutocompleteOptions(
     props.projectOptions,
-    event.query,
+    query,
     (project) => project.name,
   );
   const boards = filterAutocompleteOptions(
     githubProjectPickerOptions.value,
-    event.query,
+    query,
     (board) => board.name,
   );
   projectSuggestions.value = buildProjectGroups(projects, boards);
