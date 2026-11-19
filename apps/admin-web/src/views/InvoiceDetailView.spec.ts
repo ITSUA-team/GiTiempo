@@ -3,7 +3,6 @@ import { createPinia, setActivePinia } from 'pinia';
 import { reactive } from 'vue';
 import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
-import InputText from 'primevue/inputtext';
 import InvoiceCreateDialog from '@/components/invoices/InvoiceCreateDialog.vue';
 import PrimeVue from 'primevue/config';
 import type * as VueRouter from 'vue-router';
@@ -139,6 +138,11 @@ function createInvoice(
   overrides: Partial<InvoiceResponse> = {},
 ): InvoiceResponse {
   return {
+    issueDate: '2026-05-01',
+    sender: { name: 'Sender', address: 'Sender address', email: 'sender@example.com', taxId: '' },
+    recipient: { name: 'Client', address: 'Client address', email: 'client@example.com', taxId: '' },
+    services: 'Software development',
+    payment: { method: 'Bank transfer', beneficiary: 'Sender', provider: 'Bank', account: '123456', terms: '', instructions: '' },
     timeDisplayMode: 'entries',
     createdAt: '2026-05-01T10:00:00.000Z',
     createdBy: userId,
@@ -574,6 +578,23 @@ describe('InvoiceDetailView', () => {
     ).toBe(false);
   });
 
+  it('identifies invalid PDF fields even when no billing section is missing', async () => {
+    const body = {
+      code: 'invoice_document_incomplete', message: 'Complete invoice document',
+      details: {missingFields: [], fieldErrors: {dueDate: 'Due date must not precede issue date.', 'sender.email': 'Enter a valid email address.'}},
+    };
+    testMocks.request.mockRejectedValueOnce(new ApiError(body.message, {status: 422, code: body.code, body}));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    await wrapper.findAll('button').find(button => button.text() === 'Download PDF')!.trigger('click');
+    await flushPromises();
+    const alert = wrapper.get('[role="alert"]');
+    expect(alert.text()).toContain('Due date: Due date must not precede issue date.');
+    expect(alert.text()).toContain('Sender email: Enter a valid email address.');
+    expect(alert.text()).toContain('Edit billing information');
+    expect(alert.text()).not.toContain('exporting: .');
+  });
+
   it('offers a retry on generation failure and an edit action for missing billing sections', async () => {
     const body = {
       code: 'invoice_document_incomplete',
@@ -872,11 +893,11 @@ describe('InvoiceDetailView', () => {
     const wrapper=mountInvoiceDetailView('pm',true);await flushPromises();
     await wrapper.findAll('button').find(button=>button.text()==='Edit invoice')!.trigger('click');await flushPromises();
     const editor=wrapper.findComponent(InvoiceCreateDialog);
-    expect(editor.findAllComponents(InputText)[0]!.props('modelValue')).toBe('April 2026 — Backend');
+    expect(editor.get<HTMLInputElement>('#invoice-create-title').element.value).toBe('April 2026 — Backend');
     await editor.findComponent('#invoice-create-title').setValue('Unsaved title');
     testMocks.getInvoice.mockResolvedValue(createInvoice({revision:8,status:'sent',title:'Remote title',notes:'Saved remotely',groupId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'}));
     await editor.find('[data-testid="invoice-create-submit"]').trigger('click');await flushPromises();
-    expect(editor.findAllComponents(InputText)[0]!.props('modelValue')).toBe('Unsaved title');
+    expect(editor.get<HTMLInputElement>('#invoice-create-title').element.value).toBe('Unsaved title');
     await editor.findAll('button').find(button=>button.text()==='Refresh latest revision')!.trigger('click');await flushPromises();
     expect(editor.text()).toContain('Saved: Remote title');
     expect(editor.text()).toContain('Your edit: Unsaved title');
@@ -897,7 +918,7 @@ describe('InvoiceDetailView', () => {
     auth.accessToken = token('workspace-a', 2);
     await flushPromises();
     expect(editor.props('visible')).toBe(true);
-    expect(editor.findAllComponents(InputText)[0]!.props('modelValue')).toBe('Local edit');
+    expect(editor.get<HTMLInputElement>('#invoice-create-title').element.value).toBe('Local edit');
     auth.accessToken = token('workspace-b', 3);
     await flushPromises();
     expect(wrapper.getComponent(InvoiceCreateDialog).props('visible')).toBe(false);
@@ -925,8 +946,8 @@ describe('InvoiceDetailView', () => {
     expect(testMocks.errorToast).not.toHaveBeenCalled();
     expect(editor.props('visible')).toBe(true);
 
-    await senderEmail.setValue('sender@example.com');
-    await recipientEmail.setValue('');
+    await senderEmail.setValue('corrected@example.com');
+    await recipientEmail.setValue('client@example.com');
     await flushPromises();
 
     for (const id of ['invoice-sender-email', 'invoice-recipient-email']) {
@@ -938,11 +959,40 @@ describe('InvoiceDetailView', () => {
 
     expect(testMocks.updateInvoice).toHaveBeenCalledExactlyOnceWith(
       invoiceId,
-      expect.objectContaining({ sender: expect.objectContaining({ email: 'sender@example.com' }) }),
+      expect.objectContaining({ sender: expect.objectContaining({ email: 'corrected@example.com' }) }),
     );
     expect(testMocks.errorToast).not.toHaveBeenCalled();
     expect(editor.props('visible')).toBe(false);
     wrapper.unmount();
+  });
+
+  it.each(['draft', 'sent', 'paid'] as const)('keeps a legacy %s status and offers correction before any status write', async status => {
+    testMocks.getInvoice.mockResolvedValue(createInvoice({status, recipient: null, services: ''}));
+    const wrapper = mountInvoiceDetailView('admin', true);
+    await flushPromises();
+    const select = wrapper.findAllComponents(Select).find(field => field.props('inputId') === 'detail-status')!;
+    select.vm.$emit('update:modelValue', status === 'paid' ? 'draft' : 'paid');
+    await flushPromises();
+    expect(testMocks.updateInvoice).not.toHaveBeenCalled();
+    expect(wrapper.get('[data-testid="invoice-status-document-error"]').text()).toContain('Recipient email');
+    expect(wrapper.findAllComponents(Select).find(field => field.props('inputId') === 'detail-status')!.props('modelValue')).toBe(status);
+    await wrapper.findAll('button').find(button => button.text() === 'Complete invoice details')!.trigger('click');
+    await flushPromises();
+    const editor = wrapper.getComponent(InvoiceCreateDialog);
+    expect(editor.props('visible')).toBe(true);
+    expect(editor.get<HTMLInputElement>('#invoice-recipient-name').element.value).toBe('');
+    await editor.get('[data-testid="invoice-create-submit"]').trigger('click');
+    await flushPromises();
+    expect(testMocks.updateInvoice).not.toHaveBeenCalled();
+    expect(editor.get('#invoice-recipient-email').attributes('aria-invalid')).toBe('true');
+    for (const [id, value] of Object.entries({name:'New client', address:'Client street', email:'new@example.com'})) {
+      await editor.getComponent('#invoice-recipient-' + id).setValue(value);
+    }
+    await editor.getComponent('#invoice-services').setValue('Consulting');
+    await editor.get('[data-testid="invoice-create-submit"]').trigger('click');
+    await flushPromises();
+    expect(testMocks.updateInvoice).toHaveBeenCalledWith(invoiceId, expect.objectContaining({recipient: expect.objectContaining({email:'new@example.com'}), services:'Consulting'}));
+    expect(testMocks.updateInvoice.mock.calls[0]![1]).not.toHaveProperty('status');
   });
 
   it('closes a draft on route changes and prevents submitting it into the next invoice',async()=>{
@@ -985,7 +1035,7 @@ describe('InvoiceDetailView', () => {
   it('stays on the source after a failed copy and opens the returned invoice on a successful retry', async () => {
     const copy = createInvoice({ id: '77777777-7777-4777-8777-777777777777', reference: 'INV-2' });
     testMocks.createInvoice.mockRejectedValueOnce(new Error('Save failed')).mockResolvedValueOnce(copy);
-    testMocks.getInvoice.mockResolvedValue(createInvoice({ logo: 'data:image/png;base64,AAAA' }));
+    testMocks.getInvoice.mockResolvedValue(createInvoice({ logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB' }));
     const wrapper = mountInvoiceDetailView('admin', true);
     await flushPromises();
     await wrapper.findAll('button').find(button => button.text() === 'Create from this invoice')!.trigger('click');

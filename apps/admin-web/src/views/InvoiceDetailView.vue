@@ -30,6 +30,7 @@ import { adminProjectsClient } from '@/services/admin-projects-client';
 import { adminInvoicesClient } from '@/services/admin-invoices-client';
 import Skeleton from 'primevue/skeleton';
 
+import { invoiceDocumentErrors, invoiceFieldLabel, invoiceServerFieldErrors } from '@/lib/invoice-validation';
 import { reconcileInvoiceDraft } from '@/lib/invoice-edit';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
@@ -148,6 +149,8 @@ function swallowReportedError(): void {
   // notifyInvoiceActionError; the rethrown promise only needs to be silenced.
 }
 
+const statusDocumentErrors = ref<Record<string, string>>({});
+const statusRevision = ref(0);
 const editorOpen = ref(false);
 const revisionConflict = ref(false);
 const editorInvoiceId = ref('');
@@ -157,6 +160,7 @@ watch(
   () => {
     editorGeneration++;
     editorOpen.value = false;
+    statusDocumentErrors.value = {};
     copyOpen.value = false;
     revisionConflict.value = false;
   },
@@ -304,9 +308,13 @@ async function downloadPdf() {
       error instanceof ApiError ? error.body : null,
     );
     if (incomplete.success) {
+      const fields = Object.entries(incomplete.data.details.fieldErrors ?? {})
+        .map(([path, message]) => `${invoiceFieldLabel(path)}: ${message}`);
       exportError.value = {
-        message: 'The invoice is saved. Complete these billing sections before exporting: ' +
-          incomplete.data.details.missingFields.join(', ') + '.',
+        message: fields.length
+          ? 'The invoice is saved. Complete these fields before exporting: ' + fields.join(' ')
+          : 'The invoice is saved. Complete these billing sections before exporting: ' +
+            incomplete.data.details.missingFields.join(', ') + '.',
         editLabel: 'Edit billing information',
       };
     } else if (error instanceof ApiError && error.code === 'invoice_logo_invalid') {
@@ -354,6 +362,7 @@ function openEditor(isEdit: boolean) {
 async function handleInvoiceSaved(saved: InvoiceResponse) {
   if (!editorOpen.value || editorInvoiceId.value !== invoiceId.value) return;
   if (editing.value) {
+    statusDocumentErrors.value = {};
     await refetch();
     return;
   }
@@ -361,9 +370,19 @@ async function handleInvoiceSaved(saved: InvoiceResponse) {
 }
 
 function runUpdate(data: UpdateInvoiceInput): void {
+  if (!invoice.value) return;
+  statusRevision.value++;
+  statusDocumentErrors.value = invoiceDocumentErrors(invoice.value);
+  if (Object.keys(statusDocumentErrors.value).length) return;
+  const requestScope = JSON.stringify(scope.value);
+  const requestInvoiceId = invoiceId.value;
   updateMutation
-    .updateInvoice({ data, invoiceId: invoiceId.value })
-    .catch(swallowReportedError);
+    .updateInvoice({ data, invoiceId: requestInvoiceId })
+    .catch(error => {
+      if (requestInvoiceId === invoiceId.value && requestScope === JSON.stringify(scope.value)) {
+        statusDocumentErrors.value = invoiceServerFieldErrors(error);
+      }
+    });
 }
 
 function confirmDelete(): void {
@@ -431,6 +450,7 @@ function goBack(): void {
     <template v-else-if="invoice">
       <InvoiceDetailHeader
         :invoice="invoice"
+        :status-revision="statusRevision"
         :groups="detailGroups"
         :groups-loading="groupsQuery.isFetching.value && !groupsQuery.data.value"
         :groups-failed="groupsQuery.isError.value"
@@ -451,6 +471,31 @@ function goBack(): void {
           (status) => runUpdate({ status, expectedRevision: invoice?.revision })
         "
       />
+      <SurfaceCard
+        v-if="Object.keys(statusDocumentErrors).length"
+        role="alert"
+        border
+        padding-class="p-4"
+        body-class="flex flex-col items-start gap-3"
+        data-testid="invoice-status-document-error"
+      >
+        <h2 class="text-text-dark text-lg font-semibold">
+          Complete the invoice before changing status
+        </h2>
+        <ul class="text-destructive list-disc pl-5 text-sm">
+          <li
+            v-for="(message, path) in statusDocumentErrors"
+            :key="path"
+          >
+            {{ invoiceFieldLabel(path) }}: {{ message }}
+          </li>
+        </ul>
+        <Button
+          label="Complete invoice details"
+          class="h-[38px]"
+          @click="openEditor(true)"
+        />
+      </SurfaceCard>
       <SurfaceCard
         v-if="exportError"
         role="alert"
