@@ -194,12 +194,13 @@ describe("TopBarTimerTaskDialog", () => {
     expect(autoCompletes[0]?.props("minLength")).toBe(0);
     expect(autoCompletes[1]?.props("dropdownMode")).toBe("blank");
     expect(autoCompletes[1]?.props("minLength")).toBe(0);
+    expect(autoCompletes[0]?.attributes("data-append-to")).toBe("self");
+    expect(autoCompletes[1]?.attributes("data-append-to")).toBe("body");
     for (const autoComplete of autoCompletes) {
       expect(autoComplete.classes()).toContain("w-full");
       expect(autoComplete.classes()).toContain("max-w-full");
       expect(autoComplete.classes()).toContain("min-w-0");
       expect(autoComplete.attributes("data-dropdown")).toBe("true");
-      expect(autoComplete.attributes("data-append-to")).toBe("self");
       expect(autoComplete.attributes("data-fluid")).toBe("true");
       expect(autoComplete.attributes("data-force-selection")).toBe("true");
     }
@@ -336,6 +337,25 @@ describe("TopBarTimerTaskDialog", () => {
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("keeps the Task list outside the scrollable dialog and contains its scrolling", async () => {
+    const wrapper = mountDialog({}, { useRealAutoComplete: true });
+
+    try {
+      const input = wrapper.get<HTMLInputElement>("#top-bar-timer-task");
+      input.element.focus();
+      await nextTick();
+
+      const overlay = document.getElementById(input.attributes("aria-controls") ?? "");
+      expect(overlay).not.toBeNull();
+      expect(wrapper.element.contains(overlay)).toBe(false);
+      const listContainer = overlay?.querySelector('[data-pc-section="listcontainer"]');
+      expect(listContainer?.classList.contains("overscroll-y-contain")).toBe(true);
+      expect(listContainer?.querySelector('[role="option"]:last-child')?.textContent).toBe("New task");
+    } finally {
+      wrapper.unmount();
     }
   });
 
@@ -657,12 +677,13 @@ describe("TopBarTimerTaskDialog", () => {
     expect(findButtonByLabel(wrapper, "Cancel")).toBeUndefined();
     expect(wrapper.findAll("select")).toHaveLength(0);
     expect(predictiveFields).toHaveLength(2);
+    expect(predictiveFields[0]?.attributes("data-append-to")).toBe("self");
+    expect(predictiveFields[1]?.attributes("data-append-to")).toBe("body");
     for (const predictiveField of predictiveFields) {
       expect(predictiveField.classes()).toContain("min-w-0");
       expect(predictiveField.classes()).toContain("max-w-full");
       expect(predictiveField.classes()).toContain("w-full");
       expect(predictiveField.attributes("data-dropdown")).toBe("true");
-      expect(predictiveField.attributes("data-append-to")).toBe("self");
       expect(predictiveField.attributes("data-fluid")).toBe("true");
       expect(predictiveField.attributes("data-force-selection")).toBe("true");
     }
