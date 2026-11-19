@@ -1,7 +1,8 @@
 import { mount } from "@vue/test-utils";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
+import PrimeVue from "primevue/config";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
 import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
@@ -58,8 +59,9 @@ const alertTask = {
 
 type DialogProps = Partial<InstanceType<typeof TopBarTimerTaskDialog>["$props"]>;
 
-function mountDialog(overrides: DialogProps = {}) {
+function mountDialog(overrides: DialogProps = {}, { useRealAutoComplete = false } = {}) {
   return mount(TopBarTimerTaskDialog, {
+    attachTo: useRealAutoComplete ? document.body : undefined,
     props: {
       createTaskErrorMessage: null,
       createTaskTitle: "Write release checklist",
@@ -94,8 +96,9 @@ function mountDialog(overrides: DialogProps = {}) {
       ...overrides,
     },
     global: {
+      plugins: useRealAutoComplete ? [[PrimeVue, { unstyled: true }]] : [],
       stubs: {
-        AutoComplete: {
+        AutoComplete: useRealAutoComplete ? false : {
           name: "AutoComplete",
           props: [
             "appendTo",
@@ -122,7 +125,7 @@ function mountDialog(overrides: DialogProps = {}) {
             },
           },
           template:
-            '<input :class="$attrs.class" :data-append-to="appendTo ?? \'\'" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-loading="String(loading !== undefined && loading !== false)" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+            '<input :class="$attrs.class" :data-append-to="appendTo ?? \'\'" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-loading="String(loading !== undefined && loading !== false)" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { originalEvent: $event, query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         Button: {
           props: ["disabled", "fluid", "label", "loading", "severity", "size", "variant"],
@@ -140,7 +143,7 @@ function mountDialog(overrides: DialogProps = {}) {
           template:
             '<div v-if="$attrs.visible !== false" data-testid="timer-task-dialog" :data-block-scroll="String(blockScroll)" :data-closable="String(closable)" :data-content-class="pt.content" :data-root-class="pt.root"><slot name="header" /><button v-if="closable" data-testid="timer-task-dialog-close" type="button" @click="$emit(\'update:visible\', false)">Close</button><slot /></div>',
         },
-        InputText: {
+        InputText: useRealAutoComplete ? false : {
           props: ["modelValue", "disabled", "invalid"],
           emits: ["update:modelValue"],
           template:
@@ -304,6 +307,38 @@ describe("TopBarTimerTaskDialog", () => {
     expect(findButtonByLabel(runningWrapper, "Stop timer")?.attributes("data-loading")).toBe("false");
   });
 
+  it("shows all projects on focus and only filters after typing", async () => {
+    const wrapper = mountDialog(
+      {
+        projectOptions: [projectOrion, internalOpsProject],
+        githubProjectOptions: [{ id: "PVT_board", title: "Ops roadmap" }],
+      },
+      { useRealAutoComplete: true },
+    );
+
+    try {
+      const input = wrapper.get<HTMLInputElement>("#top-bar-timer-project");
+      const optionLabels = () => wrapper
+        .findAll('[role="option"][aria-label]')
+        .map((option) => option.text());
+
+      expect(input.element.value).toBe("Project Orion");
+      input.element.focus();
+      await nextTick();
+      expect(input.attributes("aria-expanded")).toBe("true");
+      expect(optionLabels()).toEqual(["Project Orion", "Internal Ops", "Ops roadmap"]);
+
+      vi.useFakeTimers();
+      input.element.value = "ops";
+      await input.trigger("input");
+      await vi.runOnlyPendingTimersAsync();
+      expect(optionLabels()).toEqual(["Internal Ops", "Ops roadmap"]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("filters predictive search suggestions by typed text", async () => {
     const wrapper = mountDialog({
       projectOptions: [projectOrion, internalOpsProject],
@@ -311,7 +346,10 @@ describe("TopBarTimerTaskDialog", () => {
     });
     const autoCompletes = wrapper.findAllComponents({ name: "AutoComplete" });
 
-    await autoCompletes[0]?.vm.$emit("complete", { query: "ops" });
+    await autoCompletes[0]?.vm.$emit("complete", {
+      originalEvent: new Event("input"),
+      query: "ops",
+    });
     await autoCompletes[1]?.vm.$emit("complete", { query: "alert" });
     await nextTick();
 
