@@ -26,6 +26,7 @@ import { previewInvoiceResponseSchema } from '@gitiempo/shared';
 import { ref } from 'vue';
 
 import { createTestQueryPlugin } from '@/test/query-client';
+import { reconcileInvoiceDraft } from '@/lib/invoice-edit';
 
 const testMocks = vi.hoisted(() => ({
   listEligibleEntries: vi.fn(),
@@ -433,6 +434,87 @@ describe('InvoiceCreateDialog', () => {
     expect(createInvoice.mock.calls[0]![0].payment).not.toHaveProperty('paymentUrl');
   });
 
+  it('keeps hidden local bank details when reviewing a conflicted Card draft', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const source = createInvoiceResponse();
+    const createInvoice = createCreateInvoiceSpy();
+    createInvoice.mockRejectedValueOnce(new ApiError('Invoice changed', {status: 409, code: 'invoice_update_conflict'}));
+    const wrapper = await mountDialog({source, editing: true, createInvoice});
+    await wrapper.setProps({reviewRevision: async getDraft => reconcileInvoiceDraft(source, getDraft(), {...source, notes: 'Saved elsewhere'})});
+    await wrapper.getComponent('#invoice-payment-beneficiary').setValue('Local beneficiary');
+    await wrapper.getComponent('#invoice-payment-account').setValue('Local bank account');
+    await wrapper.getComponent('#invoice-payment-swift').setValue('LOCALBIC');
+    const method = getSelectByInputId(wrapper, 'invoice-payment-method');
+    method.vm.$emit('update:modelValue', 'Card');
+    await flushPromises();
+    await wrapper.getComponent('#invoice-payment-provider').setValue('Local card provider');
+    await wrapper.getComponent('#invoice-payment-paymentUrl').setValue('https://example.com/pay');
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledTimes(1);
+    expect(createInvoice.mock.calls[0]![0].payment).toMatchObject({method: 'Card', beneficiary: '', account: ''});
+    await wrapper.setProps({revisionConflict: true});
+    await wrapper.findAllComponents(Button).find(button => button.props('label') === 'Refresh latest revision')!.trigger('click');
+    await flushPromises();
+    method.vm.$emit('update:modelValue', 'Bank transfer');
+    await flushPromises();
+    expect(document.querySelector<HTMLInputElement>('#invoice-payment-beneficiary')?.value).toBe('Local beneficiary');
+    expect(document.querySelector<HTMLTextAreaElement>('#invoice-payment-account')?.value).toBe('Local bank account');
+    expect(document.querySelector<HTMLInputElement>('#invoice-payment-swift')?.value).toBe('LOCALBIC');
+  });
+
+  it('retries the same rate after reducing the entry selection that caused total overflow', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    createInvoice.mockRejectedValueOnce(new ApiError('Total exceeds supported amount', {status: 422, code: 'invoice_total_overflow'}));
+    const wrapper = await mountDialog({source: createInvoiceResponse(), editing: true, createInvoice});
+    await submitInvoice(wrapper);
+    expect(bodyText()).toContain('Total exceeds supported amount');
+    const checkbox = wrapper.findAllComponents(Checkbox).find(field => field.props('value') === createTimeEntry().id)!;
+    checkbox.vm.$emit('update:modelValue', []);
+    await flushPromises();
+    expect(bodyText()).not.toContain('Total exceeds supported amount');
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledTimes(2);
+    expect(createInvoice.mock.calls[1]![0]).toMatchObject({hourlyRate: 80, timeEntryIds: []});
+  });
+
+  it('retries when refreshed work durations change without changing the rate or selected IDs', async () => {
+    const entry = createTimeEntry();
+    testMocks.listEligibleEntries.mockResolvedValueOnce(createEntriesResponse()).mockResolvedValue(
+      createEntriesResponse({entries: [{...entry, durationSeconds: 3600, roundedDurationSeconds: 3600}], totalHours: 1}),
+    );
+    const createInvoice = createCreateInvoiceSpy();
+    createInvoice.mockRejectedValueOnce(new ApiError('Total exceeds supported amount', {status: 422, code: 'invoice_total_overflow'}));
+    const wrapper = await mountDialog({source: createInvoiceResponse(), editing: true, createInvoice});
+    const calculationsBefore = testMocks.requestJson.mock.calls.length;
+    await submitInvoice(wrapper);
+    await flushPromises();
+    expect(testMocks.listEligibleEntries).toHaveBeenCalledTimes(2);
+    expect(testMocks.requestJson.mock.calls.length).toBeGreaterThan(calculationsBefore);
+    expect(bodyText()).not.toContain('Total exceeds supported amount');
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledTimes(2);
+    expect(createInvoice.mock.calls[1]![0]).toMatchObject({hourlyRate: 80, timeEntryIds: [entry.id]});
+  });
+
+  it('clears a due-date server error when its issue-date dependency changes', async () => {
+    testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
+    const createInvoice = createCreateInvoiceSpy();
+    createInvoice.mockRejectedValueOnce(new ApiError('Invalid dates', {status: 422, code: 'invoice_document_incomplete', body: {details: {fieldErrors: {dueDate: 'Review the issue date.'}}}}));
+    const wrapper = await mountDialog({source: {...createInvoiceResponse(), dueDate: '2026-05-10'}, editing: true, createInvoice});
+    await submitInvoice(wrapper);
+    expect(bodyText()).toContain('Review the issue date.');
+    const issue = wrapper.findAllComponents(DatePicker).find(field => field.props('inputId') === 'invoice-issue-date')!;
+    issue.vm.$emit('update:modelValue', new Date(2026, 4, 2));
+    await flushPromises();
+    expect(bodyText()).not.toContain('Review the issue date.');
+    issue.vm.$emit('update:modelValue', new Date(2026, 4, 1));
+    await flushPromises();
+    expect(bodyText()).not.toContain('Review the issue date.');
+    await submitInvoice(wrapper);
+    expect(createInvoice).toHaveBeenCalledTimes(2);
+  });
+
   it('maps server field errors inline without dropping the draft and clears them on correction', async () => {
     testMocks.listEligibleEntries.mockResolvedValue(createEntriesResponse());
     const createInvoice=createCreateInvoiceSpy();
@@ -444,6 +526,8 @@ describe('InvoiceCreateDialog', () => {
     expect(wrapper.emitted('update:visible')).toBeUndefined();
     expect(document.querySelector<HTMLInputElement>('#invoice-create-title')?.value).toBe('Website redesign');
     await wrapper.getComponent('#invoice-sender-address').setValue('Legal address');
+    expect(document.getElementById('invoice-sender-address-error')).toBeNull();
+    await wrapper.getComponent('#invoice-sender-address').setValue('Sender address');
     expect(document.getElementById('invoice-sender-address-error')).toBeNull();
     await submitInvoice(wrapper);
     expect(createInvoice).toHaveBeenCalledTimes(2);

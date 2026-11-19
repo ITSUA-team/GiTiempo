@@ -68,8 +68,7 @@ interface InvoiceDetailRow {
   projectId: string | null;
   title: string;
   status: InvoiceStatus;
-  issueDate?: string;
-  workspaceTimeZone?: string | null;
+  issueDate: string;
   dueDate?: string | null;
   dateFrom: string;
   dateTo: string;
@@ -102,12 +101,7 @@ interface LinkedTimeEntryRow {
 
 // Shared column selections so list, detail, and transaction reads stay in
 // sync with the response mapping in one place.
-const workspaceTimeZone = sql<
-  string | null
->`(select settings.time_zone from workspace_settings settings where settings.workspace_id = invoices.workspace_id)`;
-
 const invoiceSummarySelection = {
-  workspaceTimeZone,
   reference: invoices.reference,
   revision: invoices.revision,
   id: invoices.id,
@@ -1263,6 +1257,7 @@ export class InvoicesService {
         logo: saved.logo,
         timeEntries: saved.timeEntries,
       };
+      requireCompleteInvoiceDocument({ ...saved, ...document });
       await tx
         .update(invoices)
         .set({ document })
@@ -1327,7 +1322,7 @@ export class InvoicesService {
       throw new ForbiddenException('Project required');
     return this.db.transaction(async (tx) => {
       const [invoice] = await tx
-        .select({ ...invoiceRowSelection, workspaceTimeZone })
+        .select(invoiceRowSelection)
         .from(invoices)
         .where(
           and(eq(invoices.id, id), eq(invoices.workspaceId, user.workspaceId)),
@@ -1390,12 +1385,7 @@ export class InvoicesService {
             input[field] !== undefined && input[field] !== invoice[field],
         );
       const issueDate =
-        input.issueDate === undefined
-          ? (invoice.issueDate ??
-            new Intl.DateTimeFormat('sv-SE', {
-              timeZone: invoice.workspaceTimeZone ?? 'UTC',
-            }).format(invoice.createdAt))
-          : input.issueDate;
+        input.issueDate === undefined ? invoice.issueDate : input.issueDate;
       const dueDate =
         input.dueDate === undefined ? invoice.dueDate : input.dueDate;
       if (dueDate && dueDate < issueDate) {
@@ -1848,11 +1838,7 @@ export class InvoicesService {
       projectId: row.projectId,
       title: row.title,
       status: row.status as InvoiceResponse['status'],
-      issueDate:
-        row.issueDate ??
-        new Intl.DateTimeFormat('sv-SE', {
-          timeZone: row.workspaceTimeZone ?? 'UTC',
-        }).format(row.createdAt),
+      issueDate: row.issueDate,
       dueDate: row.dueDate ?? null,
       dateFrom: row.dateFrom,
       dateTo: row.dateTo,
@@ -1894,11 +1880,7 @@ export class InvoicesService {
       projectId: row.projectId,
       title: row.title,
       status: row.status as InvoiceResponse['status'],
-      issueDate:
-        row.issueDate ??
-        new Intl.DateTimeFormat('sv-SE', {
-          timeZone: row.workspaceTimeZone ?? 'UTC',
-        }).format(row.createdAt),
+      issueDate: row.issueDate,
       dueDate: row.dueDate ?? null,
       dateFrom: row.dateFrom,
       dateTo: row.dateTo,

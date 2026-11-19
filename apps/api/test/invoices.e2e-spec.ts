@@ -4443,6 +4443,104 @@ describe('Invoices (e2e)', () => {
       await db.delete(timeEntries).where(eq(timeEntries.id, entry.id));
     }
   });
+  it('rolls back creation when reference expansion exceeds payment instructions limits', async () => {
+    const [original] = await db
+      .select()
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, workspaceId));
+    const [entry] = await db
+      .insert(timeEntries)
+      .values({
+        workspaceId,
+        taskId: probeTaskId,
+        userId: bobUserId,
+        source: 'manual',
+        isBillable: true,
+        startedAt: new Date('2095-01-07T10:00:00Z'),
+        endedAt: new Date('2095-01-07T11:00:00Z'),
+        durationSeconds: 3600,
+      })
+      .returning({ id: timeEntries.id });
+    const title = 'Reference expansion rollback';
+    try {
+      await db
+        .update(workspaceSettings)
+        .set({
+          billingProfile: {
+            sender: completeDocument.sender,
+            payment: completeDocument.payment,
+            logo: null,
+            invoicePrefix: 'P'.repeat(40),
+          },
+        })
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+      const placeholder = '{{invoiceReference}}';
+      const payload = {
+        ...completeDocument,
+        title,
+        projectId: probeProjectId,
+        dateFrom: '2095-01-01',
+        dateTo: '2095-01-31',
+        hourlyRate: 10,
+        currency: 'USD',
+        timeEntryIds: [entry.id],
+        payment: {
+          ...completeDocument.payment,
+          instructions: 'x'.repeat(5000 - placeholder.length) + placeholder,
+        },
+      };
+      const rejected = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send(payload);
+      expect(rejected.status).toBe(422);
+      expect(rejected.body).toMatchObject({
+        code: 'invoice_document_incomplete',
+        details: {
+          fieldErrors: { 'payment.instructions': expect.any(String) },
+        },
+      });
+      expect(
+        await db
+          .select()
+          .from(invoices)
+          .where(
+            and(
+              eq(invoices.workspaceId, workspaceId),
+              eq(invoices.title, title),
+            ),
+          ),
+      ).toEqual([]);
+      const [unchangedEntry] = await db
+        .select({ invoiceId: timeEntries.invoiceId })
+        .from(timeEntries)
+        .where(eq(timeEntries.id, entry.id));
+      expect(unchangedEntry.invoiceId).toBeNull();
+      const retried = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          ...payload,
+          payment: { ...payload.payment, instructions: 'Use ' + placeholder },
+        });
+      expect(retried.status).toBe(201);
+      expect(retried.body.payment.instructions).toBe(
+        'Use ' + retried.body.reference,
+      );
+      expect(retried.body.timeEntryCount).toBe(1);
+    } finally {
+      await db
+        .delete(invoices)
+        .where(
+          and(eq(invoices.workspaceId, workspaceId), eq(invoices.title, title)),
+        );
+      await db.delete(timeEntries).where(eq(timeEntries.id, entry.id));
+      await db
+        .update(workspaceSettings)
+        .set({ billingProfile: original.billingProfile })
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+    }
+  });
   it('limits defaults access and preserves historical billing identity after Admin replacement', async () => {
     const [original] = await db
       .select()

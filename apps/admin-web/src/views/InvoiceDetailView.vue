@@ -308,9 +308,13 @@ async function downloadPdf() {
       error instanceof ApiError ? error.body : null,
     );
     if (incomplete.success) {
+      const fields = Object.entries(incomplete.data.details.fieldErrors ?? {})
+        .map(([path, message]) => `${invoiceFieldLabel(path)}: ${message}`);
       exportError.value = {
-        message: 'The invoice is saved. Complete these billing sections before exporting: ' +
-          incomplete.data.details.missingFields.join(', ') + '.',
+        message: fields.length
+          ? 'The invoice is saved. Complete these fields before exporting: ' + fields.join(' ')
+          : 'The invoice is saved. Complete these billing sections before exporting: ' +
+            incomplete.data.details.missingFields.join(', ') + '.',
         editLabel: 'Edit billing information',
       };
     } else if (error instanceof ApiError && error.code === 'invoice_logo_invalid') {

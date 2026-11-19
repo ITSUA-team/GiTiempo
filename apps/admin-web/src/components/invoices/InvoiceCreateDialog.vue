@@ -489,16 +489,36 @@ const documentCandidate = computed(() => ({
   issueDate: calendarDate(issueDate.value),
   dueDate: dueDate.value && !calendarDate(dueDate.value) ? 'invalid' : calendarDate(dueDate.value) ?? null,
 }));
-function fieldValue(path: string): string {
-  return JSON.stringify(path.split('.').reduce<unknown>((value, key) =>
+function serverErrorFingerprint(path: string): string {
+  const document = documentCandidate.value;
+  const value = path.split('.').reduce<unknown>((value, key) =>
     value && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined,
-  documentCandidate.value)) ?? '';
+  document);
+  if (path === 'hourlyRate') {
+    const selectedIds = new Set(selectedEntries.value);
+    return JSON.stringify([value, document.dateFrom, document.dateTo, document.projectId,
+      document.timeEntryIds, document.currency, document.discountPercent, roundingStepMinutes.value,
+      preview.value?.entries.filter(entry => selectedIds.has(entry.id))
+        .map(entry => [entry.id, entry.durationSeconds])]);
+  }
+  if (path === 'issueDate' || path === 'dueDate') {
+    return JSON.stringify([document.issueDate, document.dueDate]);
+  }
+  if (path === 'dateFrom' || path === 'dateTo') {
+    return JSON.stringify([document.dateFrom, document.dateTo]);
+  }
+  return JSON.stringify(value) ?? '';
 }
+watch([documentCandidate, roundingStepMinutes, () => preview.value?.entries], () => {
+  for (const [path, error] of Object.entries(serverErrors.value)) {
+    if (error.value !== serverErrorFingerprint(path)) delete serverErrors.value[path];
+  }
+}, {flush: 'sync'});
 const businessFieldErrors = computed(() => {
   const errors = invoiceDocumentErrors(documentCandidate.value);
   if (!props.isAdmin && !selectedProjectId.value) errors.projectId = 'Select a project.';
   for (const [path, error] of Object.entries(serverErrors.value)) {
-    if (error.value === fieldValue(path)) errors[path] = error.message;
+    if (error.value === serverErrorFingerprint(path)) errors[path] = error.message;
   }
   return errors;
 });
@@ -573,7 +593,7 @@ async function calculatePreview() {
   }}
   finally {if (generation === calculationGeneration) calculating.value=false;}
 }
-watch([previewQuery,hourlyRate,currency,discountPercent,roundingStepMinutes,selectedEntries],()=>void calculatePreview(),{deep:true});
+watch([previewQuery,preview,hourlyRate,currency,discountPercent,roundingStepMinutes,selectedEntries],()=>void calculatePreview());
 async function retryCalculation() {
  const generation=lifecycleGeneration;
  await refreshEligibility();
@@ -627,7 +647,7 @@ async function reviewLatestRevision() {
   reviewPending.value = true;
   const generation = lifecycleGeneration;
   try {
-    const {draft, conflicts, savedLogo} = await props.reviewRevision(currentDraft);
+    const {draft, conflicts, savedLogo} = await props.reviewRevision(() => ({...currentDraft(), payment: {...payment.value}}));
     if (generation !== lifecycleGeneration || !props.visible) return;
     title.value = draft.title;
     issueDate.value = new Date((draft.issueDate ?? props.source?.createdAt.slice(0, 10) ?? getLocalDateKey(new Date())) + 'T12:00:00');
@@ -689,7 +709,7 @@ async function handleCreate(): Promise<void> {
     if(generation!==lifecycleGeneration || !props.visible)return;
     void refreshEligibility();
     const fields = invoiceServerFieldErrors(error);
-    serverErrors.value = Object.fromEntries(Object.entries(fields).map(([path, message]) => [path, { message, value: fieldValue(path) }]));
+    serverErrors.value = Object.fromEntries(Object.entries(fields).map(([path, message]) => [path, { message, value: serverErrorFingerprint(path) }]));
     saveError.value = Object.keys(fields).length ? '' : error instanceof Error ? error.message : 'Changes were not saved. Review entries and retry.';
     if (Object.keys(fields).length) { submitting.value = false; await focusFirstError(); }
   } finally {

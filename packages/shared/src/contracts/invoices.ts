@@ -52,6 +52,12 @@ export type InvoiceParty = z.infer<typeof invoicePartySchema>;
 export type InvoicePayment = z.infer<typeof invoicePaymentSchema>;
 export type InvoiceBillingProfile = z.infer<typeof invoiceBillingProfileSchema>;
 
+export function requiredInvoicePaymentDetails(method: string): readonly (keyof InvoicePayment)[] {
+  if (method === "Bank transfer") return ["beneficiary", "provider", "account"];
+  if (method === "Card") return ["provider", "paymentUrl"];
+  return ["account"];
+}
+
 export const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
 export const invoiceTimeDisplayModeSchema = z.enum(["entries", "tasks"]);
 export type InvoiceTimeDisplayMode = z.infer<typeof invoiceTimeDisplayModeSchema>;
@@ -211,13 +217,7 @@ const completeInvoicePartySchema = invoicePartySchema.extend({
 const completeInvoicePaymentSchema = invoicePaymentSchema.extend({
   method: requiredBillingText,
 }).superRefine((payment, context) => {
-  const requiredFields = payment.method === "Bank transfer"
-    ? ["beneficiary", "provider", "account"] as const
-    : payment.method === "Card"
-      ? ["provider", "paymentUrl"] as const
-      : ["account"] as const;
-
-  for (const field of requiredFields) {
+  for (const field of requiredInvoicePaymentDetails(payment.method)) {
     if (!payment[field]?.trim()) {
       context.addIssue({ code: "custom", path: [field], message: "This field is required" });
     }

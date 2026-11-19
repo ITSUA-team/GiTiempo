@@ -35,6 +35,7 @@ import {
   ApiOperation,
   ApiTags,
   ApiUnprocessableEntityResponse,
+  type ApiResponseOptions,
 } from '@nestjs/swagger';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
@@ -49,6 +50,27 @@ import { InvoiceResponseDto } from '../dto/invoice-response.dto';
 import { InvoiceStatsResponseDto } from '../dto/invoice-stats-response.dto';
 import { UpdateInvoiceRequestDto } from '../dto/update-invoice-request.dto';
 import { InvoicesService } from '../services/invoices.service';
+
+const invoiceWriteErrorResponse: ApiResponseOptions = {
+  description:
+    'Document validation and billing domain errors. Incomplete documents include details.fieldErrors by control dot path and details.missingFields by billing section.',
+  schema: {
+    anyOf: [
+      { $ref: getSchemaPath(InvoiceDocumentIncompleteDto) },
+      { $ref: getSchemaPath(InvoiceLogoInvalidDto) },
+      {
+        type: 'object',
+        required: ['statusCode', 'code', 'error', 'message'],
+        properties: {
+          statusCode: { type: 'integer', enum: [422] },
+          code: { type: 'string' },
+          error: { type: 'string', enum: ['DomainError'] },
+          message: { type: 'string' },
+        },
+      },
+    ],
+  },
+};
 
 @ApiTags('invoices')
 @ApiBearerAuth()
@@ -78,11 +100,8 @@ export class InvoicesController {
       'Creates a complete Draft after resolving omitted workspace defaults. Sender and recipient names, addresses and emails, services, issue date, billing period, rate and currency are required. Bank transfer requires beneficiary, bank/provider and account; Card requires provider and an HTTPS payment URL; Other/custom methods require payment details in account. Zero entries and a zero rate are allowed.',
   })
   @ApiCreatedResponse({ type: InvoiceResponseDto })
-  @ApiUnprocessableEntityResponse({
-    type: InvoiceDocumentIncompleteDto,
-    description:
-      'Resolved document is incomplete or invalid. details.fieldErrors identifies controls by dot path; details.missingFields retains billing section names.',
-  })
+  @ApiExtraModels(InvoiceDocumentIncompleteDto, InvoiceLogoInvalidDto)
+  @ApiUnprocessableEntityResponse(invoiceWriteErrorResponse)
   @ApiForbiddenResponse({ description: 'Admin or PM role required' })
   @ZodSerializerDto(InvoiceResponseDto)
   createInvoice(
@@ -240,11 +259,8 @@ export class InvoicesController {
       'Validates the complete document after merging this patch with the locked saved invoice. The same conditional payment requirements as creation apply to every document and status update, including an unchanged status. Incomplete historical invoices remain readable but must be completed before saving. Failed validation commits no document, entry or group changes.',
   })
   @ApiOkResponse({ type: InvoiceResponseDto })
-  @ApiUnprocessableEntityResponse({
-    type: InvoiceDocumentIncompleteDto,
-    description:
-      'Merged document is incomplete or invalid. details.fieldErrors identifies controls by dot path; details.missingFields retains billing section names.',
-  })
+  @ApiExtraModels(InvoiceDocumentIncompleteDto, InvoiceLogoInvalidDto)
+  @ApiUnprocessableEntityResponse(invoiceWriteErrorResponse)
   @ApiForbiddenResponse({ description: 'Admin or PM role required' })
   @ApiNotFoundResponse({ description: 'Invoice not found' })
   @ZodSerializerDto(InvoiceResponseDto)

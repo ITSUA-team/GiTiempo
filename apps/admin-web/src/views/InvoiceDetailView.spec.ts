@@ -578,6 +578,23 @@ describe('InvoiceDetailView', () => {
     ).toBe(false);
   });
 
+  it('identifies invalid PDF fields even when no billing section is missing', async () => {
+    const body = {
+      code: 'invoice_document_incomplete', message: 'Complete invoice document',
+      details: {missingFields: [], fieldErrors: {dueDate: 'Due date must not precede issue date.', 'sender.email': 'Enter a valid email address.'}},
+    };
+    testMocks.request.mockRejectedValueOnce(new ApiError(body.message, {status: 422, code: body.code, body}));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+    await wrapper.findAll('button').find(button => button.text() === 'Download PDF')!.trigger('click');
+    await flushPromises();
+    const alert = wrapper.get('[role="alert"]');
+    expect(alert.text()).toContain('Due date: Due date must not precede issue date.');
+    expect(alert.text()).toContain('Sender email: Enter a valid email address.');
+    expect(alert.text()).toContain('Edit billing information');
+    expect(alert.text()).not.toContain('exporting: .');
+  });
+
   it('offers a retry on generation failure and an edit action for missing billing sections', async () => {
     const body = {
       code: 'invoice_document_incomplete',

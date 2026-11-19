@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { invoiceSelectPt } from './invoice-field-pt';
 import { computed } from 'vue';
-import { invoicePaymentSchema, type InvoicePayment } from '@gitiempo/shared';
+import { invoicePaymentSchema, requiredInvoicePaymentDetails, type InvoicePayment } from '@gitiempo/shared';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import Select from 'primevue/select';
@@ -23,12 +23,8 @@ const validation = computed(() => {
   return parsed.success ? {} : Object.fromEntries(parsed.error.issues.map(issue => ['payment.' + issue.path.join('.'), issue.message]));
 });
 const hiddenErrors = computed(() => Object.entries({ ...props.errors, ...validation.value }).filter(([key]) => key.startsWith('payment.') && key !== 'payment.method' && !fields.value.some(field => 'payment.' + field.key === key)));
-function required(key: string) {
-  if (!props.requireComplete) return false;
-  if (key === 'method') return true;
-  if (payment.value.method === 'Card') return key === 'provider' || key === 'paymentUrl';
-  if (payment.value.method === 'Bank transfer') return ['beneficiary', 'provider', 'account'].includes(key);
-  return key === 'account';
+function required(key: keyof InvoicePayment) {
+  return props.requireComplete && (key === 'method' || requiredInvoicePaymentDetails(payment.value.method).includes(key));
 }
 function error(key: string) {
   return props.errors['payment.' + key] ?? validation.value['payment.' + key];

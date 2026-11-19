@@ -3834,11 +3834,47 @@
             "description": "Admin or PM role required"
           },
           "422": {
-            "description": "Resolved document is incomplete or invalid. details.fieldErrors identifies controls by dot path; details.missingFields retains billing section names.",
+            "description": "Document validation and billing domain errors. Incomplete documents include details.fieldErrors by control dot path and details.missingFields by billing section.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceDocumentIncompleteDto"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvoiceDocumentIncompleteDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvoiceLogoInvalidDto"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "statusCode",
+                        "code",
+                        "error",
+                        "message"
+                      ],
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            422
+                          ]
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "error": {
+                          "type": "string",
+                          "enum": [
+                            "DomainError"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -4335,11 +4371,47 @@
             "description": "Invoice not found"
           },
           "422": {
-            "description": "Merged document is incomplete or invalid. details.fieldErrors identifies controls by dot path; details.missingFields retains billing section names.",
+            "description": "Document validation and billing domain errors. Incomplete documents include details.fieldErrors by control dot path and details.missingFields by billing section.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceDocumentIncompleteDto"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvoiceDocumentIncompleteDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvoiceLogoInvalidDto"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "statusCode",
+                        "code",
+                        "error",
+                        "message"
+                      ],
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            422
+                          ]
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "error": {
+                          "type": "string",
+                          "enum": [
+                            "DomainError"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -10044,6 +10116,69 @@
           "meta"
         ]
       },
+      "InvoiceDocumentIncompleteDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "invoice_document_incomplete"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "missingFields": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "sender",
+                    "recipient",
+                    "services",
+                    "payment"
+                  ]
+                }
+              },
+              "fieldErrors": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "missingFields"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "details"
+        ]
+      },
+      "InvoiceLogoInvalidDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "invoice_logo_invalid"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
       "CreateInvoiceRequestDto": {
         "type": "object",
         "properties": {
@@ -10691,51 +10826,6 @@
           "project",
           "createdAt",
           "updatedAt"
-        ]
-      },
-      "InvoiceDocumentIncompleteDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "enum": [
-              "invoice_document_incomplete"
-            ]
-          },
-          "message": {
-            "type": "string"
-          },
-          "details": {
-            "type": "object",
-            "properties": {
-              "missingFields": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "enum": [
-                    "sender",
-                    "recipient",
-                    "services",
-                    "payment"
-                  ]
-                }
-              },
-              "fieldErrors": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              }
-            },
-            "required": [
-              "missingFields"
-            ]
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "details"
         ]
       },
       "InvoiceStatsResponseDto": {
@@ -11554,24 +11644,6 @@
           "groupId"
         ],
         "additionalProperties": false
-      },
-      "InvoiceLogoInvalidDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "enum": [
-              "invoice_logo_invalid"
-            ]
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ]
       },
       "UpdateInvoiceRequestDto": {
         "type": "object",

@@ -1,5 +1,7 @@
 # Implementation verification
 
+Historical implementation evidence follows. For the current review fixes on `fix/537-complete-invoice-documents`, see [review-fix verification](review-fixes-verification.md); its source fingerprint and checks supersede the original implementation snapshot below.
+
 Date: 2026-11-17. Branch `spec/537-complete-invoice-documents`, base `30e90c09`. Implementation is uncommitted; no PR or commit was requested for this implementation turn.
 
 Implementation SHA-256: `69ebf749a4e2bbe272d1389afe416aa83dfa90253f7da18170c702adf376e30e`. Computed from `git diff HEAD -- apps packages docs/ui/pages-admin.md`, followed by the path and contents of the two new product helpers (`apps/admin-web/src/lib/invoice-validation.ts` and `apps/api/src/invoices/services/invoice-document-validation.ts`). Evidence and task tracking are excluded.

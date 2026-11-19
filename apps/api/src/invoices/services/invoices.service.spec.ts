@@ -189,6 +189,7 @@ const sampleInvoiceRow = {
   revision: 1,
   document: completeBusinessFields,
   status: 'draft',
+  issueDate: '2026-04-30',
   dateFrom: '2026-04-01',
   dateTo: '2026-04-30',
   hourlyRate: 75,
@@ -383,44 +384,38 @@ function stageUpdateDb(
 
 describe('InvoicesService', () => {
   it.each([
-    ['Pacific/Kiritimati', '2026-11-13'],
-    ['Pacific/Honolulu', '2026-11-11'],
+    ['2026-11-13', '2026-11-12T12:30:00Z'],
+    ['2026-11-11', '2026-11-12T01:30:00Z'],
   ])(
-    'resolves historical detail and list Issue date in %s',
-    (workspaceTimeZone, expected) => {
+    'preserves migrated Issue date %s in detail and list',
+    (issueDate, createdAt) => {
       const { service } = createService('admin');
       const row = {
         ...sampleInvoiceRow,
-        issueDate: undefined,
-        createdAt: new Date(
-          workspaceTimeZone === 'Pacific/Honolulu'
-            ? '2026-11-12T01:30:00Z'
-            : '2026-11-12T12:30:00Z',
-        ),
-        workspaceTimeZone,
+        issueDate,
+        createdAt: new Date(createdAt),
       };
       expect(
         priv<[unknown, unknown[]], InvoiceResponse>(
           service,
           'toInvoiceResponse',
         )(row, []).issueDate,
-      ).toBe(expected);
+      ).toBe(issueDate);
       expect(
         priv<[unknown, number], InvoiceResponse>(service, 'toInvoiceListItem')(
           row,
           0,
         ).issueDate,
-      ).toBe(expected);
+      ).toBe(issueDate);
     },
   );
-  it('validates historical PATCH payment dates against the workspace creation day', async () => {
+  it('validates historical PATCH payment dates against the migrated Issue date', async () => {
     const { service } = createService('admin');
     const { updateSpy } = stageUpdateDb(service, {
       initialRow: {
         ...sampleInvoiceRow,
-        issueDate: undefined,
+        issueDate: '2026-11-13',
         createdAt: new Date('2026-11-12T12:30:00Z'),
-        workspaceTimeZone: 'Pacific/Kiritimati',
       },
     });
     await expect(
@@ -1560,6 +1555,36 @@ describe('InvoicesService', () => {
         expect(insertSpy).not.toHaveBeenCalled();
       },
     );
+
+    it('rejects instructions that exceed the limit after reference expansion', async () => {
+      const { service } = createService('admin');
+      const placeholder = '{{invoiceReference}}';
+      const payment = {
+        ...completeBusinessFields.payment,
+        instructions: 'x'.repeat(5000 - placeholder.length) + placeholder,
+      };
+      const { transactionSpy, updateSetSpy } = stageCreateDb(service, {
+        settings: [],
+        detailRow: {
+          ...sampleInvoiceRow,
+          reference: 'P'.repeat(40) + '-123',
+          document: { ...completeBusinessFields, payment },
+        },
+      });
+      await expect(
+        service.createInvoice(adminUser, { ...input, payment }),
+      ).rejects.toMatchObject({
+        status: 422,
+        response: {
+          code: 'invoice_document_incomplete',
+          details: {
+            fieldErrors: { 'payment.instructions': expect.any(String) },
+          },
+        },
+      });
+      expect(transactionSpy).toHaveBeenCalledOnce();
+      expect(updateSetSpy).not.toHaveBeenCalled();
+    });
 
     it('resolves complete party/payment defaults before validation', async () => {
       const { service } = createService('admin');

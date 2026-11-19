@@ -9,6 +9,26 @@ import type { InvoicePayment } from '@gitiempo/shared';
 describe('InvoicePaymentFields', () => {
   beforeEach(() => vi.stubGlobal('matchMedia', vi.fn(() => ({matches:false,addEventListener:vi.fn(),removeEventListener:vi.fn(),addListener:vi.fn(),removeListener:vi.fn()}))));
   afterEach(() => vi.unstubAllGlobals());
+  it.each<[string, string[]]>([
+    ['Bank transfer', ['beneficiary', 'provider', 'account']],
+    ['Card', ['provider', 'paymentUrl']],
+    ['Other', ['account']],
+    ['Cash', ['account']],
+  ])('marks only applicable details as required for %s', (method, requiredFields) => {
+    const wrapper = mount(InvoicePaymentFields, {
+      props: {
+        modelValue: { method, terms: '', beneficiary: '', provider: '', account: '', instructions: '' },
+        requireComplete: true,
+      },
+      global: { plugins: [PrimeVue] },
+    });
+    expect(wrapper.get('#invoice-payment-method').attributes('aria-required')).toBe('true');
+    for (const input of wrapper.findAll('input[id^="invoice-payment-"], textarea[id^="invoice-payment-"]')) {
+      const key = input.element.id.replace('invoice-payment-', '');
+      expect(input.attributes('aria-required'), key).toBe(String(requiredFields.includes(key)));
+    }
+    wrapper.unmount();
+  });
   it('adapts controls while retaining bank details when switching back from Card', async () => {
     const payment = reactive<InvoicePayment>({method:'Bank transfer',terms:'Net 30',beneficiary:'Studio',provider:'Bank',account:'UA123',instructions:'Use reference',swift:'SWIFT123'});
     const wrapper = mount(InvoicePaymentFields, { props:{modelValue:payment}, global:{plugins:[PrimeVue]} });
