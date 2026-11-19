@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { invoiceDatePickerPt, invoiceSelectPt } from './invoice-field-pt';
-import { computed, ref, watch, type Ref } from 'vue';
+import { computed, nextTick, ref, watch, type Ref } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { createInvoiceSchema, invoiceLogoSchema, invoicePartySchema, invoicePaymentSchema, type InvoicePayment } from '@gitiempo/shared';
+import { invoiceLogoSchema, projectInvoicePayment, type InvoicePayment } from '@gitiempo/shared';
 import { adminInvoicesKeys } from '@/lib/query-keys';
 import type {
   PreviewInvoiceResponse,
@@ -41,6 +41,7 @@ import SplitButton from 'primevue/splitbutton';
 import { ApiError } from '@gitiempo/web-shared/http';
 import { formatInvoiceAmount } from '@/lib/format-currency';
 import type { AdminServerStateScope } from '@/lib/query-keys';
+import { invoiceDocumentErrors, invoiceServerFieldErrors } from '@/lib/invoice-validation';
 import { getRoundingStepOptions } from '@/lib/rounding-step-options';
 
 /**
@@ -271,6 +272,7 @@ watch([preview, entriesScope], ([value, scope]) => {
     }
   }
 });
+const serverErrors = ref<Record<string, {message: string; value: string}>>({});
 // Reset on any visibility change, before the pre-fill watcher below so a
 // reopened dialog starts blank and then receives the preview defaults again.
 watch(
@@ -298,6 +300,7 @@ watch(
     roundingStepMinutes.value = 1;
     notes.value = '';
     saveError.value = '';
+    serverErrors.value = {};
     defaultsError.value = logoError.value = calculationError.value = reviewMessage.value = '';
     submitting.value = false;
     defaultsPending.value = logoPending.value = false;
@@ -476,57 +479,63 @@ const currencyOptions = computed(() =>
   getSettingsCurrencyOptions(props.workspaceCurrency),
 );
 
-const hasTitle = computed(() => title.value.trim().length > 0);
-const hasDateRange = computed(() => {
-  const dates = dateRange.value;
-  return Boolean(dates?.[0] && dates[1]);
-});
-
-const titleError = computed(
-  () => validationTriggered.value && !hasTitle.value,
-);
-const dateRangeError = computed(
-  () => validationTriggered.value && !hasDateRange.value,
-);
-const projectError = computed(
-  () =>
-    validationTriggered.value && !props.isAdmin && !selectedProjectId.value,
-);
-
-const documentDatesValid = computed(() => Boolean(issueDate.value) && (!dueDate.value || getLocalDateKey(dueDate.value) >= getLocalDateKey(issueDate.value!)));
-const paymentValid = computed(() => invoicePaymentSchema.safeParse(payment.value).success);
-const businessFieldErrors = computed(() => {
-  const errors: Record<string, string> = {};
-  for (const { id, party } of partySections.value) {
-    const result = invoicePartySchema.safeParse(party);
-    if (result.success) continue;
-    for (const issue of result.error.issues) {
-      errors[`${id}.${issue.path.join('.')}`] = issue.code === 'invalid_format'
-        ? 'Please enter a valid email address.'
-        : issue.code === 'too_big'
-          ? `Use ${issue.maximum} characters or fewer.`
-          : issue.message;
-    }
+const formElement = ref<HTMLElement>();
+const hasDateRange = computed(() => Boolean(dateRange.value?.[0] && dateRange.value[1]));
+function calendarDate(value: Date | null | undefined): string | undefined {
+  return value && Number.isFinite(value.getTime()) ? getLocalDateKey(value) : undefined;
+}
+const documentCandidate = computed(() => ({
+  ...currentDraft(), hourlyRate: hourlyRate.value, currency: currency.value,
+  issueDate: calendarDate(issueDate.value),
+  dueDate: dueDate.value && !calendarDate(dueDate.value) ? 'invalid' : calendarDate(dueDate.value) ?? null,
+}));
+function serverErrorFingerprint(path: string): string {
+  const document = documentCandidate.value;
+  const value = path.split('.').reduce<unknown>((value, key) =>
+    value && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined,
+  document);
+  if (path === 'hourlyRate') {
+    const selectedIds = new Set(selectedEntries.value);
+    return JSON.stringify([value, document.dateFrom, document.dateTo, document.projectId,
+      document.timeEntryIds, document.currency, document.discountPercent, roundingStepMinutes.value,
+      preview.value?.entries.filter(entry => selectedIds.has(entry.id))
+        .map(entry => [entry.id, entry.durationSeconds])]);
   }
-  const result = createInvoiceSchema.shape.services.safeParse(services.value);
-  if (!result.success) {
-    errors.services = result.error.issues.map(issue => issue.code === 'too_big'
-      ? `Use ${issue.maximum} characters or fewer.`
-      : issue.message).join(' ');
+  if (path === 'issueDate' || path === 'dueDate') {
+    return JSON.stringify([document.issueDate, document.dueDate]);
+  }
+  if (path === 'dateFrom' || path === 'dateTo') {
+    return JSON.stringify([document.dateFrom, document.dateTo]);
+  }
+  return JSON.stringify(value) ?? '';
+}
+watch([documentCandidate, roundingStepMinutes, () => preview.value?.entries], () => {
+  for (const [path, error] of Object.entries(serverErrors.value)) {
+    if (error.value !== serverErrorFingerprint(path)) delete serverErrors.value[path];
+  }
+}, {flush: 'sync'});
+const businessFieldErrors = computed(() => {
+  const errors = invoiceDocumentErrors(documentCandidate.value);
+  if (!props.isAdmin && !selectedProjectId.value) errors.projectId = 'Select a project.';
+  for (const [path, error] of Object.entries(serverErrors.value)) {
+    if (error.value === serverErrorFingerprint(path)) errors[path] = error.message;
   }
   return errors;
 });
-
 function fieldError(path: string): string | undefined {
   return validationTriggered.value ? businessFieldErrors.value[path] : undefined;
 }
-
-const canSubmit = computed(
-  () =>
-    documentDatesValid.value && paymentValid.value && !Object.keys(businessFieldErrors.value).length && hasTitle.value &&
-    hasDateRange.value &&
-    (props.isAdmin || Boolean(selectedProjectId.value)),
-);
+const visibleFieldErrors = computed(() => validationTriggered.value ? businessFieldErrors.value : {});
+const titleError = computed(() => Boolean(fieldError('title')));
+const dateRangeError = computed(() => Boolean(fieldError('dateFrom') || fieldError('dateTo')));
+const projectError = computed(() => Boolean(fieldError('projectId')));
+const canSubmit = computed(() => !Object.keys(businessFieldErrors.value).length);
+async function focusFirstError() {
+  await nextTick();
+  const input = formElement.value?.querySelector<HTMLElement>('input[aria-invalid="true"], textarea[aria-invalid="true"], [role="combobox"][aria-invalid="true"]');
+  input?.scrollIntoView?.({ block: 'center' });
+  input?.focus();
+}
 
 const entriesState = computed(() => {
   if (!previewQuery.value) return 'initial';
@@ -544,8 +553,14 @@ const unavailable = computed(() => {
   });
 });
 
+const visibleTotals = computed(() =>
+  (entriesState.value === 'ready' || entriesState.value === 'empty') && !unavailable.value.length
+    ? calculatedPreview.value
+    : null,
+);
+
 const submitBlocked = computed(() =>
-  !documentDatesValid.value || !paymentValid.value || isCreating.value || defaultsPending.value || logoPending.value || props.revisionConflict ||
+  isCreating.value || defaultsPending.value || logoPending.value || props.revisionConflict ||
   (canSubmit.value && (
     calculating.value || !calculatedPreview.value || !preview.value ||
     previewError.value || unavailable.value.length > 0
@@ -578,7 +593,7 @@ async function calculatePreview() {
   }}
   finally {if (generation === calculationGeneration) calculating.value=false;}
 }
-watch([previewQuery,hourlyRate,currency,discountPercent,roundingStepMinutes,selectedEntries],()=>void calculatePreview(),{deep:true});
+watch([previewQuery,preview,hourlyRate,currency,discountPercent,roundingStepMinutes,selectedEntries],()=>void calculatePreview());
 async function retryCalculation() {
  const generation=lifecycleGeneration;
  await refreshEligibility();
@@ -609,16 +624,16 @@ function handleVisibleChange(nextVisible: boolean): void {
 
 function currentDraft(): CreateInvoiceInput {
     return {
-      issueDate: getLocalDateKey(issueDate.value!), dueDate: dueDate.value ? getLocalDateKey(dueDate.value) : null,
-      sender: sender.value, recipient: recipient.value, payment: payment.value, services: services.value,
+      issueDate: calendarDate(issueDate.value), dueDate: calendarDate(dueDate.value) ?? null,
+      sender: { ...sender.value, email: sender.value.email.trim() }, recipient: { ...recipient.value, email: recipient.value.email.trim() }, payment: projectInvoicePayment(payment.value), services: services.value,
       logo: logo.value, timeEntryIds: selectedEntries.value, groupId: group.value,
       timeDisplayMode: timeDisplayMode.value,
       title: title.value.trim(),
-      dateFrom: getLocalDateKey(dateRange.value![0]!),
-      dateTo: getLocalDateKey(dateRange.value![1]!),
+      dateFrom: calendarDate(dateRange.value?.[0]) ?? '',
+      dateTo: calendarDate(dateRange.value?.[1]) ?? '',
       projectId: selectedProjectId.value || undefined,
-      hourlyRate: hourlyRate.value ?? (props.editing ? preview.value?.defaultHourlyRate ?? undefined : undefined),
-      currency: currency.value.trim().toUpperCase() || (props.editing ? preview.value?.defaultCurrency ?? undefined : undefined),
+      hourlyRate: hourlyRate.value ?? undefined,
+      currency: currency.value.trim().toUpperCase() || undefined,
       discountPercent: discountPercent.value ?? 0,
       notes: notes.value.trim() || null,
       ...(roundingStepTouched.value
@@ -632,7 +647,7 @@ async function reviewLatestRevision() {
   reviewPending.value = true;
   const generation = lifecycleGeneration;
   try {
-    const {draft, conflicts, savedLogo} = await props.reviewRevision(currentDraft);
+    const {draft, conflicts, savedLogo} = await props.reviewRevision(() => ({...currentDraft(), payment: {...payment.value}}));
     if (generation !== lifecycleGeneration || !props.visible) return;
     title.value = draft.title;
     issueDate.value = new Date((draft.issueDate ?? props.source?.createdAt.slice(0, 10) ?? getLocalDateKey(new Date())) + 'T12:00:00');
@@ -676,13 +691,10 @@ function useReviewedLogo() {
 
 async function handleCreate(): Promise<void> {
   validationTriggered.value = true;
-  if (!canSubmit.value || submitBlocked.value) return;
+  if (!canSubmit.value) { await focusFirstError(); return; }
+  if (submitBlocked.value) return;
   const generation = lifecycleGeneration;
   const draft = currentDraft();
-  if (!props.source && defaultsError.value) {
-    if (!Object.values(sender.value).some(Boolean)) delete draft.sender;
-    if (!Object.values(payment.value).some(Boolean)) delete draft.payment;
-  }
   if (!props.editing && defaultsError.value && !props.source?.logo && logo.value === null && !logoVersion) {
     delete draft.logo;
   }
@@ -696,7 +708,10 @@ async function handleCreate(): Promise<void> {
   } catch (error) {
     if(generation!==lifecycleGeneration || !props.visible)return;
     void refreshEligibility();
-    saveError.value = error instanceof Error ? error.message : 'Changes were not saved. Review entries and retry.';
+    const fields = invoiceServerFieldErrors(error);
+    serverErrors.value = Object.fromEntries(Object.entries(fields).map(([path, message]) => [path, { message, value: serverErrorFingerprint(path) }]));
+    saveError.value = Object.keys(fields).length ? '' : error instanceof Error ? error.message : 'Changes were not saved. Review entries and retry.';
+    if (Object.keys(fields).length) { submitting.value = false; await focusFirstError(); }
   } finally {
     if (generation === lifecycleGeneration) submitting.value = false;
   }
@@ -715,6 +730,7 @@ async function handleCreate(): Promise<void> {
     @update:visible="handleVisibleChange"
   >
     <div
+      ref="formElement"
       class="flex flex-col gap-4"
       :inert="isCreating || undefined"
       :aria-busy="isCreating"
@@ -738,69 +754,13 @@ async function handleCreate(): Promise<void> {
         <h2 class="text-text-dark text-lg font-semibold">
           Invoice information
         </h2>
-        <div class="flex flex-col gap-1.5">
-          <label
-            for="invoice-create-title"
-            class="text-text-dark text-[13px] font-medium"
-          >Invoice title</label>
-          <InputText
-            id="invoice-create-title"
-            v-model="title"
-            maxlength="255"
-            placeholder="Invoice title"
-            :invalid="titleError"
-            class="text-text-dark h-[38px] w-full text-[13px] font-normal"
-          />
-          <Message
-            v-if="titleError"
-            severity="error"
-            size="small"
-            variant="simple"
-          >
-            Title is required.
-          </Message>
-        </div>
 
         <InvoiceDocumentDates
           v-model:issue-date="issueDate"
           v-model:due-date="dueDate"
+          :validation-triggered="validationTriggered"
+          :errors="visibleFieldErrors"
         />
-        <InvoiceGroupSelect
-          v-model="group"
-          input-id="invoice-group"
-          label="Personal group"
-          :groups="groupsQuery.data.value?.groups ?? []"
-          :loading="groupsQuery.isLoading.value"
-          :failed="Boolean(groupsQuery.error.value)"
-          @retry="groupsQuery.refetch()"
-        />
-        <div class="flex flex-col gap-1.5">
-          <label
-            for="invoice-create-project"
-            class="text-text-dark text-[13px] font-medium"
-          >Project</label>
-          <Select
-            v-model="selectedProjectId"
-            input-id="invoice-create-project"
-            :options="projectOptions"
-            option-label="name"
-            option-value="id"
-            placeholder="Select a project"
-            show-clear
-            :invalid="projectError"
-            class="w-full"
-            :pt="invoiceSelectPt"
-          />
-          <Message
-            v-if="projectError"
-            severity="error"
-            size="small"
-            variant="simple"
-          >
-            Select a project.
-          </Message>
-        </div>
-
 
         <div
           data-testid="invoice-create-row-dates"
@@ -810,7 +770,7 @@ async function handleCreate(): Promise<void> {
             <label
               for="invoice-create-date-range"
               class="text-text-dark text-[13px] font-medium"
-            >Billing period</label>
+            >Billing period *</label>
             <DatePicker
               :ref="datePicker.datePickerRef"
               v-model="dateRange"
@@ -818,12 +778,14 @@ async function handleCreate(): Promise<void> {
               date-format="dd M yy"
               icon-display="input"
               :invalid="dateRangeError"
+              aria-required="true"
+              :aria-describedby="dateRangeError ? 'invoice-period-error' : undefined"
               :manual-input="false"
               selection-mode="range"
               show-button-bar
               show-icon
               class="w-full"
-              :pt="invoiceDatePickerPt"
+              :pt="{...invoiceDatePickerPt, pcInputText: {...invoiceDatePickerPt.pcInputText, root: {...invoiceDatePickerPt.pcInputText.root, 'aria-required': true, 'aria-describedby': dateRangeError ? 'invoice-period-error' : undefined}}}"
               @show="datePicker.handleShow"
             >
               <template #buttonbar>
@@ -835,182 +797,52 @@ async function handleCreate(): Promise<void> {
             </DatePicker>
             <Message
               v-if="dateRangeError"
+              id="invoice-period-error"
               severity="error"
               size="small"
               variant="simple"
             >
-              Date range is required.
+              {{ fieldError('dateFrom') || fieldError('dateTo') }}
             </Message>
           </div>
         </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label
-            for="invoice-services"
-            class="text-text-dark text-[13px] font-medium"
-          >Services / what is being billed</label>
-          <Textarea
-            id="invoice-services"
-            v-model="services"
-            :invalid="Boolean(fieldError('services'))"
-            :aria-describedby="fieldError('services') ? 'invoice-services-error' : undefined"
-            class="text-text-dark h-[70px] w-full text-[13px] font-normal"
-          />
-          <Message
-            v-if="fieldError('services')"
-            id="invoice-services-error"
-            severity="error"
-            size="small"
-            variant="simple"
-          >
-            {{ fieldError('services') }}
-          </Message>
-        </div>
-        <div
-          data-testid="invoice-create-row-pricing"
-          class="flex flex-col gap-4 sm:flex-row sm:gap-3"
-        >
-          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
+        <div class="border-divider grid gap-3 border-t pt-3 sm:grid-cols-2">
+          <div class="flex flex-col gap-1.5">
             <label
-              for="invoice-create-hourly-rate"
+              for="invoice-create-title"
               class="text-text-dark text-[13px] font-medium"
-            >Hourly rate</label>
-            <InputNumber
-              input-id="invoice-create-hourly-rate"
-              placeholder="From settings"
-              :max="99999999.99"
-              :max-fraction-digits="2"
-              :min="0"
-              :model-value="hourlyRate"
-              input-class="h-[38px] w-full text-[13px] font-normal text-text-dark"
-              class="w-full"
-              @update:model-value="handleRateUpdate"
+            >Invoice title *</label>
+            <InputText
+              id="invoice-create-title"
+              v-model="title"
+              maxlength="255"
+              placeholder="Invoice title"
+              :invalid="titleError"
+              aria-required="true"
+              :aria-describedby="titleError ? 'invoice-title-error' : undefined"
+              class="text-text-dark h-[38px] w-full text-[13px] font-normal"
             />
+            <Message
+              v-if="titleError"
+              id="invoice-title-error"
+              severity="error"
+              size="small"
+              variant="simple"
+            >
+              {{ fieldError('title') }}
+            </Message>
           </div>
-          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
-            <label
-              for="invoice-create-currency"
-              class="text-text-dark text-[13px] font-medium"
-            >Currency</label>
-            <Select
-              input-id="invoice-create-currency"
-              :model-value="currency"
-              :options="currencyOptions"
-              option-label="label"
-              option-value="value"
-              placeholder="Auto"
-              show-clear
-              class="w-full"
-              :pt="invoiceSelectPt"
-              @update:model-value="handleCurrencyUpdate"
-            />
-          </div>
-          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
-            <label
-              for="invoice-create-discount"
-              class="text-text-dark text-[13px] font-medium"
-            >Discount (%)</label>
-            <InputNumber
-              input-id="invoice-create-discount"
-              suffix="%"
-              :max="100"
-              :max-fraction-digits="2"
-              :min="0"
-              :model-value="discountPercent"
-              input-class="h-[38px] w-full text-[13px] font-normal text-text-dark"
-              class="w-full"
-              @update:model-value="handleDiscountUpdate"
-            />
-          </div>
-          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
-            <label
-              for="invoice-create-rounding-step"
-              class="text-text-dark text-[13px] font-medium"
-            >Rounding</label>
-            <Select
-              input-id="invoice-create-rounding-step"
-              :model-value="roundingStepMinutes"
-              :options="ROUNDING_STEP_OPTIONS"
-              option-label="label"
-              option-value="value"
-              class="w-full"
-              :pt="invoiceSelectPt"
-              @update:model-value="handleRoundingStepUpdate"
-            />
-          </div>
-        </div>
-      </SurfaceCard>
-      <SurfaceCard
-        v-if="unavailable.length"
-        role="alert"
-        border
-        padding-class="p-5"
-        body-class="flex flex-col items-start gap-4"
-      >
-        <h2 class="text-text-dark text-lg font-semibold">
-          Changes were not saved
-        </h2>
-        <p class="text-text-muted text-sm">
-          {{ unavailable.length === 1 ? 'One selected time entry is' : unavailable.length + ' selected time entries are' }} no longer available. Review the highlighted {{ unavailable.length === 1 ? 'entry' : 'entries' }} and retry.
-        </p>
-        <Button
-          label="Review entries"
-          icon="pi pi-list-check"
-          class="h-[38px]"
-          @click="reviewEntries"
-        />
-      </SurfaceCard>
-      <Message
-        v-if="saveError || calculationError || revisionConflict"
-        severity="error"
-      >
-        {{ [revisionConflict && 'This invoice changed. Refresh the latest revision, review your edits, and retry.', saveError, calculationError].filter(Boolean).join(' ') }}
-        <Button
-          v-if="revisionConflict"
-          label="Refresh latest revision"
-          :loading="reviewPending"
-          variant="text"
-          @click="reviewLatestRevision"
-        />
-        <Button
-          v-if="calculationFailed"
-          label="Refresh entries and retry"
-          variant="text"
-          :loading="calculating"
-          @click="retryCalculation"
-        />
-      </Message>
-      <Message
-        v-for="message in [defaultsError, logoError].filter(Boolean)"
-        :key="message"
-        severity="error"
-      >
-        {{ message }}
-      </Message>
-      <Message
-        v-if="reviewMessage"
-        severity="info"
-        class="whitespace-pre-line"
-      >
-        {{ reviewMessage }}
-        <div
-          v-if="reviewedSavedLogo !== undefined"
-          class="mt-2 flex flex-wrap items-center gap-2"
-        >
-          <span>{{ reviewedSavedLogo ? 'Latest saved logo' : 'The latest saved revision has no logo.' }}</span>
-          <img
-            v-if="reviewedSavedLogo"
-            :src="reviewedSavedLogo"
-            alt="Latest saved invoice logo"
-            class="max-h-12 max-w-32 object-contain"
-          >
-          <Button
-            label="Use saved logo"
-            variant="text"
-            @click="useReviewedLogo"
+          <InvoiceGroupSelect
+            v-model="group"
+            input-id="invoice-group"
+            label="Personal group"
+            :groups="groupsQuery.data.value?.groups ?? []"
+            :loading="groupsQuery.isLoading.value"
+            :failed="Boolean(groupsQuery.error.value)"
+            @retry="groupsQuery.refetch()"
           />
         </div>
-      </Message>
+      </SurfaceCard>
       <div class="grid items-start gap-4 sm:grid-cols-2">
         <SurfaceCard
           v-for="{ id, party, label } in partySections"
@@ -1055,11 +887,12 @@ async function handleCreate(): Promise<void> {
             :key="key"
             class="text-text-dark flex flex-col gap-1.5 text-[13px] font-medium"
           >
-            {{ {name: label === 'From' ? 'Sender / legal name' : 'Recipient / company', address: 'Address', email: 'Email', taxId: 'Tax ID (optional)'}[key] }}
+            {{ {name: label === 'From' ? 'Sender / legal name' : 'Recipient / company', address: 'Address', email: 'Email', taxId: 'Tax ID'}[key] }}{{ key === 'taxId' ? '' : ' *' }}
             <Textarea
               v-if="key === 'address'"
               :id="`invoice-${id}-${key}`"
               v-model="party[key]"
+              :aria-required="true"
               :invalid="Boolean(fieldError(`${id}.${key}`))"
               :aria-describedby="fieldError(`${id}.${key}`) ? `invoice-${id}-${key}-error` : undefined"
               rows="1"
@@ -1069,6 +902,7 @@ async function handleCreate(): Promise<void> {
               v-else
               :id="`invoice-${id}-${key}`"
               v-model="party[key]"
+              :aria-required="key !== 'taxId'"
               :invalid="Boolean(fieldError(`${id}.${key}`))"
               :aria-describedby="fieldError(`${id}.${key}`) ? `invoice-${id}-${key}-error` : undefined"
               class="text-text-dark h-[38px] w-full text-[13px] font-normal"
@@ -1091,23 +925,228 @@ async function handleCreate(): Promise<void> {
         body-class="flex flex-col gap-3"
       >
         <h2 class="text-text-dark text-lg font-semibold">
-          How to pay
+          Services and pricing
         </h2>
-        <InvoicePaymentFields v-model="payment" />
-        <label
-          for="invoice-create-notes"
-          class="text-text-dark flex flex-col gap-1.5 text-[13px] font-medium"
-        >
-          Notes (optional)
+        <div class="flex flex-col gap-1.5">
+          <label
+            for="invoice-services"
+            class="text-text-dark text-[13px] font-medium"
+          >Services / what is being billed *</label>
           <Textarea
-            id="invoice-create-notes"
-            v-model="notes"
-            maxlength="5000"
-            placeholder="Add notes..."
+            id="invoice-services"
+            v-model="services"
+            aria-required="true"
+            :invalid="Boolean(fieldError('services'))"
+            :aria-describedby="fieldError('services') ? 'invoice-services-error' : undefined"
             class="text-text-dark h-[70px] w-full text-[13px] font-normal"
           />
-        </label>
+          <Message
+            v-if="fieldError('services')"
+            id="invoice-services-error"
+            severity="error"
+            size="small"
+            variant="simple"
+          >
+            {{ fieldError('services') }}
+          </Message>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label
+            for="invoice-create-project"
+            class="text-text-dark text-[13px] font-medium"
+          >Project{{ isAdmin ? '' : ' *' }}</label>
+          <Select
+            v-model="selectedProjectId"
+            input-id="invoice-create-project"
+            :options="projectOptions"
+            option-label="name"
+            option-value="id"
+            placeholder="Select a project"
+            show-clear
+            :invalid="projectError"
+            :aria-required="!isAdmin"
+            :aria-describedby="projectError ? 'invoice-project-error' : undefined"
+            class="w-full"
+            :pt="{...invoiceSelectPt, label: {...invoiceSelectPt.label, 'aria-required': !isAdmin}}"
+          />
+          <Message
+            v-if="projectError"
+            id="invoice-project-error"
+            severity="error"
+            size="small"
+            variant="simple"
+          >
+            Select a project.
+          </Message>
+        </div>
+        <div
+          data-testid="invoice-create-row-pricing"
+          class="flex flex-col gap-4 sm:flex-row sm:gap-3"
+        >
+          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
+            <label
+              for="invoice-create-hourly-rate"
+              class="text-text-dark text-[13px] font-medium"
+            >Hourly rate *</label>
+            <InputNumber
+              input-id="invoice-create-hourly-rate"
+              :pt="{pcInputText: {root: {'aria-required': true, 'aria-describedby': fieldError('hourlyRate') ? 'invoice-rate-error' : undefined}}}"
+              aria-required="true"
+              :invalid="Boolean(fieldError('hourlyRate'))"
+              :aria-describedby="fieldError('hourlyRate') ? 'invoice-rate-error' : undefined"
+              placeholder="From settings"
+              :max="99999999.99"
+              :max-fraction-digits="2"
+              :min="0"
+              :model-value="hourlyRate"
+              input-class="h-[38px] w-full text-[13px] font-normal text-text-dark"
+              class="w-full"
+              @update:model-value="handleRateUpdate"
+            />
+            <Message
+              v-if="fieldError('hourlyRate')"
+              id="invoice-rate-error"
+              severity="error"
+              size="small"
+              variant="simple"
+            >
+              {{ fieldError('hourlyRate') }}
+            </Message>
+          </div>
+          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
+            <label
+              for="invoice-create-currency"
+              class="text-text-dark text-[13px] font-medium"
+            >Currency *</label>
+            <Select
+              input-id="invoice-create-currency"
+              aria-label="Currency"
+              aria-required="true"
+              :invalid="Boolean(fieldError('currency'))"
+              :aria-describedby="fieldError('currency') ? 'invoice-currency-error' : undefined"
+              :model-value="currency"
+              :options="currencyOptions"
+              option-label="label"
+              option-value="value"
+              placeholder="Auto"
+              show-clear
+              class="w-full"
+              :pt="{...invoiceSelectPt, label: {...invoiceSelectPt.label, 'aria-required': true}}"
+              @update:model-value="handleCurrencyUpdate"
+            />
+            <Message
+              v-if="fieldError('currency')"
+              id="invoice-currency-error"
+              severity="error"
+              size="small"
+              variant="simple"
+            >
+              {{ fieldError('currency') }}
+            </Message>
+          </div>
+
+          <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
+            <label
+              for="invoice-create-rounding-step"
+              class="text-text-dark text-[13px] font-medium"
+            >Rounding</label>
+            <Select
+              input-id="invoice-create-rounding-step"
+              aria-label="Rounding"
+              :invalid="Boolean(fieldError('roundingStepMinutes'))"
+              :aria-describedby="fieldError('roundingStepMinutes') ? 'invoice-rounding-error' : undefined"
+              :model-value="roundingStepMinutes"
+              :options="ROUNDING_STEP_OPTIONS"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+              :pt="invoiceSelectPt"
+              @update:model-value="handleRoundingStepUpdate"
+            />
+            <Message
+              v-if="fieldError('roundingStepMinutes')"
+              id="invoice-rounding-error"
+              severity="error"
+              size="small"
+              variant="simple"
+            >
+              {{ fieldError('roundingStepMinutes') }}
+            </Message>
+          </div>
+        </div>
       </SurfaceCard>
+      <SurfaceCard
+        v-if="unavailable.length"
+        role="alert"
+        border
+        padding-class="p-5"
+        body-class="flex flex-col items-start gap-4"
+      >
+        <h2 class="text-text-dark text-lg font-semibold">
+          Changes were not saved
+        </h2>
+        <p class="text-text-muted text-sm">
+          {{ unavailable.length === 1 ? 'One selected time entry is' : unavailable.length + ' selected time entries are' }} no longer available. Review the highlighted {{ unavailable.length === 1 ? 'entry' : 'entries' }} and retry.
+        </p>
+        <Button
+          label="Review entries"
+          icon="pi pi-list-check"
+          class="h-[38px]"
+          @click="reviewEntries"
+        />
+      </SurfaceCard>
+      <Message
+        v-if="saveError || calculationError || revisionConflict"
+        severity="error"
+      >
+        {{ [revisionConflict && 'This invoice changed. Refresh the latest revision, review your edits, and retry.', saveError, calculationError].filter(Boolean).join(' ') }}
+        <Button
+          v-if="revisionConflict"
+          label="Refresh latest revision"
+          :loading="reviewPending"
+          variant="text"
+          @click="reviewLatestRevision"
+        />
+        <Button
+          v-if="calculationFailed"
+          label="Refresh entries and retry"
+          variant="text"
+          :loading="calculating"
+          @click="retryCalculation"
+        />
+      </Message>
+      <Message
+        v-for="message in [defaultsError, logoError, fieldError('logo')].filter(Boolean)"
+        :key="message"
+        severity="error"
+      >
+        {{ message }}
+      </Message>
+      <Message
+        v-if="reviewMessage"
+        severity="info"
+        class="whitespace-pre-line"
+      >
+        {{ reviewMessage }}
+        <div
+          v-if="reviewedSavedLogo !== undefined"
+          class="mt-2 flex flex-wrap items-center gap-2"
+        >
+          <span>{{ reviewedSavedLogo ? 'Latest saved logo' : 'The latest saved revision has no logo.' }}</span>
+          <img
+            v-if="reviewedSavedLogo"
+            :src="reviewedSavedLogo"
+            alt="Latest saved invoice logo"
+            class="max-h-12 max-w-32 object-contain"
+          >
+          <Button
+            label="Use saved logo"
+            variant="text"
+            @click="useReviewedLogo"
+          />
+        </div>
+      </Message>
+
       <InvoiceEditorEntries
         v-model="selectedEntries"
         v-model:time-display-mode="timeDisplayMode"
@@ -1124,30 +1163,114 @@ async function handleCreate(): Promise<void> {
         Calculating totals…
       </p>
       <SurfaceCard
-        v-if="calculatedPreview && entriesState === 'ready' && !unavailable.length"
         border
         padding-class="p-4"
       >
         <dl class="text-text-dark grid grid-cols-[1fr_auto] gap-x-3 gap-y-2.5 text-[13px]">
-          <dt><span class="sr-only">Subtotal · </span>{{ selectedEntries.length }} {{ selectedEntries.length === 1 ? 'entry' : 'entries' }} · {{ calculatedPreview.totalHours }}h</dt>
-          <dd class="text-right">
-            {{ formatInvoiceAmount(calculatedPreview.subtotal,calculatedPreview.currency) }}
+          <dt v-if="visibleTotals">
+            <span class="sr-only">Subtotal · </span>{{ selectedEntries.length }} {{ selectedEntries.length === 1 ? 'entry' : 'entries' }} · {{ visibleTotals.totalHours }}h
+          </dt>
+          <dd
+            v-if="visibleTotals"
+            class="text-right"
+          >
+            {{ formatInvoiceAmount(visibleTotals.subtotal,visibleTotals.currency) }}
           </dd>
-          <dt>Discount · {{ discountPercent ?? 0 }}%</dt>
-          <dd class="text-right">
-            {{ (calculatedPreview.discountAmount ? '−' : '') + formatInvoiceAmount(calculatedPreview.discountAmount, calculatedPreview.currency) }}
+          <dt class="col-span-2">
+            <div class="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1">
+              <label
+                for="invoice-create-discount"
+                class="text-text-dark text-[13px] font-medium"
+              >Discount (%)</label>
+              <InputNumber
+                input-id="invoice-create-discount"
+                :invalid="Boolean(fieldError('discountPercent'))"
+                :aria-describedby="fieldError('discountPercent') ? 'invoice-discount-error' : undefined"
+                suffix="%"
+                :max="100"
+                :max-fraction-digits="2"
+                :min="0"
+                :model-value="discountPercent"
+                input-class="h-[38px] w-full text-[13px] font-normal text-text-dark"
+                class="w-full"
+                @update:model-value="handleDiscountUpdate"
+              />
+              <Message
+                v-if="fieldError('discountPercent')"
+                id="invoice-discount-error"
+                severity="error"
+                size="small"
+                variant="simple"
+              >
+                {{ fieldError('discountPercent') }}
+              </Message>
+            </div>
+          </dt>
+          <dt v-if="visibleTotals">
+            Discount · {{ discountPercent ?? 0 }}%
+          </dt>
+          <dd
+            v-if="visibleTotals"
+            class="text-right"
+          >
+            {{ (visibleTotals.discountAmount ? '−' : '') + formatInvoiceAmount(visibleTotals.discountAmount, visibleTotals.currency) }}
           </dd>
           <dt
+            v-if="visibleTotals"
             class="border-divider col-span-2 border-t"
             aria-hidden="true"
           />
-          <dt class="text-base font-semibold">
+          <dt
+            v-if="visibleTotals"
+            class="text-base font-semibold"
+          >
             Total
           </dt>
-          <dd class="text-brand text-right text-lg font-semibold sm:text-2xl">
-            {{ formatInvoiceAmount(calculatedPreview.totalAmount,calculatedPreview.currency) }}
+          <dd
+            v-if="visibleTotals"
+            class="text-brand text-right text-lg font-semibold sm:text-2xl"
+          >
+            {{ formatInvoiceAmount(visibleTotals.totalAmount,visibleTotals.currency) }}
           </dd>
         </dl>
+      </SurfaceCard>
+      <SurfaceCard
+        border
+        padding-class="p-4"
+        body-class="flex flex-col gap-3"
+      >
+        <h2 class="text-text-dark text-lg font-semibold">
+          How to pay
+        </h2>
+        <InvoicePaymentFields
+          v-model="payment"
+          require-complete
+          :errors="visibleFieldErrors"
+        />
+        <label
+          for="invoice-create-notes"
+          class="text-text-dark flex flex-col gap-1.5 text-[13px] font-medium"
+        >
+          Notes
+          <Textarea
+            id="invoice-create-notes"
+            v-model="notes"
+            :invalid="Boolean(fieldError('notes'))"
+            :aria-describedby="fieldError('notes') ? 'invoice-notes-error' : undefined"
+            maxlength="5000"
+            placeholder="Add notes..."
+            class="text-text-dark h-[70px] w-full text-[13px] font-normal"
+          />
+        </label>
+        <Message
+          v-if="fieldError('notes')"
+          id="invoice-notes-error"
+          severity="error"
+          size="small"
+          variant="simple"
+        >
+          {{ fieldError('notes') }}
+        </Message>
       </SurfaceCard>
     </div>
     <template #footer>
