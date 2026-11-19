@@ -4,14 +4,18 @@ import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { giTiempoSelfAppendedAutoCompleteDropdownPt } from "@gitiempo/web-config/theme";
+import {
+  composeGiTiempoAutoCompletePt,
+  giTiempoDropdownAutoCompletePt,
+  giTiempoSelfAppendedAutoCompleteDropdownPt,
+} from "@gitiempo/web-config/theme";
 import {
   AppDialog,
   filterAutocompleteOptions,
   InlineRequestMessage,
   useIsMobileViewport,
 } from "@gitiempo/web-shared";
-import { computed, shallowRef, watch } from "vue";
+import { computed, shallowRef, useTemplateRef, watch } from "vue";
 
 import {
   createInlineNewTaskOption,
@@ -150,6 +154,12 @@ const isGitHubProjectSelected = computed(
   () => props.selectedGitHubProjectId !== null,
 );
 const taskSuggestions = shallowRef<TaskPickerOption[]>([]);
+const taskField = useTemplateRef<HTMLDivElement>("taskField");
+const taskOverlayStyle = shallowRef<{ width: string }>();
+const taskAutoCompletePt = composeGiTiempoAutoCompletePt({
+  ...giTiempoDropdownAutoCompletePt,
+  listContainer: { class: "overscroll-y-contain" },
+});
 const isNewTaskSelected = computed(
   () => canCreateTask.value && isInlineNewTaskId(props.selectedTaskId),
 );
@@ -312,6 +322,13 @@ function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
     (board) => board.name,
   );
   projectSuggestions.value = buildProjectGroups(projects, boards);
+}
+
+function sizeTaskOverlay(): void {
+  if (taskField.value) {
+    // PrimeVue measures just the input when the overlay is appended to the body.
+    taskOverlayStyle.value = { width: `${taskField.value.offsetWidth}px` };
+  }
 }
 
 function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
@@ -502,9 +519,12 @@ watch(
           >
             Task
           </label>
-          <div class="relative">
+          <div
+            ref="taskField"
+            class="relative"
+          >
             <AutoComplete
-              append-to="self"
+              append-to="body"
               class="w-full max-w-full min-w-0"
               complete-on-focus
               data-key="id"
@@ -515,12 +535,15 @@ watch(
               input-id="top-bar-timer-task"
               :min-length="0"
               option-label="title"
+              scroll-height="min(14rem, calc(50dvh - 1.5rem))"
               :disabled="isTaskAutoCompleteDisabled"
               :loading="props.isLoadingTasks"
               :model-value="mobileTaskModel"
+              :overlay-style="taskOverlayStyle"
               placeholder="Search tasks"
-              :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
+              :pt="taskAutoCompletePt"
               :suggestions="taskSuggestions"
+              @before-show="sizeTaskOverlay"
               @complete="handleTaskComplete"
               @update:model-value="handleMobileTaskUpdate"
             />
