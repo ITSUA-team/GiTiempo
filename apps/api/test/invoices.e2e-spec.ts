@@ -426,6 +426,65 @@ describe('Invoices (e2e)', () => {
       },
     );
 
+    it.each(['sender', 'payment'] as const)(
+      'rejects explicit null %s despite a valid billing profile without inserting a row',
+      async (field) => {
+        const settingsScope = eq(workspaceSettings.workspaceId, workspaceId);
+        const [original] = await db
+          .select({ billingProfile: workspaceSettings.billingProfile })
+          .from(workspaceSettings)
+          .where(settingsScope);
+        const title = `Explicit null ${field} with billing defaults`;
+        const invoiceScope = and(
+          eq(invoices.workspaceId, workspaceId),
+          eq(invoices.title, title),
+        );
+
+        try {
+          await request(app.getHttpServer())
+            .patch('/workspace/settings')
+            .set('Authorization', bearer(adminToken))
+            .send({
+              billingProfile: {
+                sender: completeDocument.sender,
+                payment: completeDocument.payment,
+                logo: null,
+                invoicePrefix: 'NULL-OVERRIDE',
+              },
+            })
+            .expect(200);
+
+          const result = await request(app.getHttpServer())
+            .post('/invoices')
+            .set('Authorization', bearer(adminToken))
+            .send({
+              ...completeInput,
+              title,
+              projectId: publicProjectId,
+              [field]: null,
+            });
+
+          expect(result.status).toBe(422);
+          expect(result.body).toMatchObject({
+            code: 'invoice_document_incomplete',
+            details: { fieldErrors: { [field]: expect.any(String) } },
+          });
+          expect(
+            await db
+              .select({ id: invoices.id })
+              .from(invoices)
+              .where(invoiceScope),
+          ).toEqual([]);
+        } finally {
+          await db
+            .update(workspaceSettings)
+            .set({ billingProfile: original.billingProfile })
+            .where(settingsScope);
+          await db.delete(invoices).where(invoiceScope);
+        }
+      },
+    );
+
     it.each([
       completeDocument.payment,
       {
