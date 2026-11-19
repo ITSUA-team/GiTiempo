@@ -131,30 +131,25 @@ defineExpose({ focusViewAll });
           data-testid="dashboard-recent-entry-mobile-card"
           :tone="entry.isHighlighted ? 'highlighted' : 'default'"
         >
-          <span
-            class="relative z-20 block"
-            @click.stop
-          >
-            <RecordEntryTaskCell
-              :description="entry.description"
-              :entry-id="entry.timerEntry.id"
-              :github-issue="entry.githubIssue"
-              :is-interactive="true"
-              :is-running="entry.timerEntry.endedAt === null"
-              :is-start-disabled="isDirectStartDisabled()"
-              :is-start-pending="isStartTimerPending(entry)"
-              :is-stop-disabled="isStopTimerDisabled()"
-              :is-stop-pending="isStopTimerPending(entry)"
-              :show-stop-first-guidance="props.showStopFirstGuidance === true"
-              :task-title="entry.taskTitle"
-              test-id-prefix="dashboard-recent-entry-mobile"
-              variant="mobile"
-              @open="handleEntryTaskOpen(entry)"
-              @go-to-active-timer="emit('goToActiveTimer')"
-              @start-timer="() => handleStartTimer(entry)"
-              @stop-timer="() => handleStopTimer(entry)"
-            />
-          </span>
+          <RecordEntryTaskCell
+            :description="entry.description"
+            :entry-id="entry.timerEntry.id"
+            :github-issue="entry.githubIssue"
+            :is-interactive="true"
+            :is-running="entry.timerEntry.endedAt === null"
+            :is-start-disabled="isDirectStartDisabled()"
+            :is-start-pending="isStartTimerPending(entry)"
+            :is-stop-disabled="isStopTimerDisabled()"
+            :is-stop-pending="isStopTimerPending(entry)"
+            :show-stop-first-guidance="props.showStopFirstGuidance === true"
+            :task-title="entry.taskTitle"
+            test-id-prefix="dashboard-recent-entry-mobile"
+            variant="mobile"
+            @open="handleEntryTaskOpen(entry)"
+            @go-to-active-timer="emit('goToActiveTimer')"
+            @start-timer="() => handleStartTimer(entry)"
+            @stop-timer="() => handleStopTimer(entry)"
+          />
 
           <TimeEntryMetadata
             :project-name="entry.projectName"
@@ -182,30 +177,25 @@ defineExpose({ focusViewAll });
       >
         <Column :pt="managementTableColumnPt">
           <template #body="{ data: entry }">
-            <div
-              class="relative z-20"
-              @click.stop
-            >
-              <RecordEntryTaskCell
-                :description="entry.description"
-                :entry-id="entry.timerEntry.id"
-                :github-issue="entry.githubIssue"
-                :is-interactive="true"
-                :is-running="entry.timerEntry.endedAt === null"
-                :is-start-disabled="isDirectStartDisabled()"
-                :is-start-pending="isStartTimerPending(entry)"
-                :is-stop-disabled="isStopTimerDisabled()"
-                :is-stop-pending="isStopTimerPending(entry)"
-                :show-stop-first-guidance="props.showStopFirstGuidance === true"
-                :task-title="entry.taskTitle"
-                test-id-prefix="dashboard-recent-entry"
-                variant="desktop"
-                @open="handleEntryTaskOpen(entry)"
-                @go-to-active-timer="emit('goToActiveTimer')"
-                @start-timer="() => handleStartTimer(entry)"
-                @stop-timer="() => handleStopTimer(entry)"
-              />
-            </div>
+            <RecordEntryTaskCell
+              :description="entry.description"
+              :entry-id="entry.timerEntry.id"
+              :github-issue="entry.githubIssue"
+              :is-interactive="true"
+              :is-running="entry.timerEntry.endedAt === null"
+              :is-start-disabled="isDirectStartDisabled()"
+              :is-start-pending="isStartTimerPending(entry)"
+              :is-stop-disabled="isStopTimerDisabled()"
+              :is-stop-pending="isStopTimerPending(entry)"
+              :show-stop-first-guidance="props.showStopFirstGuidance === true"
+              :task-title="entry.taskTitle"
+              test-id-prefix="dashboard-recent-entry"
+              variant="desktop"
+              @open="handleEntryTaskOpen(entry)"
+              @go-to-active-timer="emit('goToActiveTimer')"
+              @start-timer="() => handleStartTimer(entry)"
+              @stop-timer="() => handleStopTimer(entry)"
+            />
           </template>
         </Column>
 

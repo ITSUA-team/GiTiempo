@@ -83,6 +83,15 @@ function mountCard(
         Skeleton: {
           template: '<div data-testid="skeleton" />',
         },
+        DashboardFocusSkeleton: {
+          template:
+            '<div><div data-testid="skeleton" /><div data-testid="skeleton" /></div>',
+        },
+        InlineRequestMessage: {
+          props: ["title", "message"],
+          template:
+            '<div role="alert"><p>{{ title }}</p><p v-if="message">{{ message }}</p></div>',
+        },
         SectionHeader: {
           props: ["title", "description"],
           template: "<header><h2>{{ title }}</h2><p>{{ description }}</p><slot /><slot name='actions' /></header>",
@@ -195,6 +204,7 @@ describe("DashboardWeeklyFocusCard", () => {
       });
 
       expect(wrapper.find('[data-testid="dashboard-focus-error-state"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="dashboard-focus-error-state"] [role="alert"]').exists()).toBe(true);
       expect(wrapper.text()).toContain("Could not reach the server");
       expect(wrapper.text()).not.toContain("No tracked project focus for this week yet.");
       expect(wrapper.text()).not.toContain("Project Orion");
@@ -340,6 +350,7 @@ describe("DashboardWeeklyFocusCard", () => {
         expect(classes).toContain("focus-visible:ring-2");
         expect(classes).toContain("focus-visible:ring-brand");
         expect(classes).toContain("focus-visible:outline-none");
+        expect(classes).toContain("focus-visible:ring-inset");
       }
     });
 

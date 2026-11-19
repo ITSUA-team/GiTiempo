@@ -1469,6 +1469,30 @@ describe("TimeEntriesView", () => {
     });
   });
 
+  it("resolves a URL task filter label from the project task list when no entries match", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse(
+        [],
+        { limit: 20, page: 1, total: 0, totalPages: 0 },
+      ),
+    });
+    const { wrapper } = await mountView(client, {
+      initialUrl:
+        `/time-entries?projectId=${TEST_IDS.projectOrion}` +
+        `&taskId=${TEST_IDS.taskReports}`,
+    });
+
+    await flushPromises();
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="filter-task-autocomplete"]').attributes("data-model-id"),
+    ).toBe(TEST_IDS.taskReports);
+    expect(
+      wrapper.get('[data-testid="filter-task-autocomplete"]').attributes("data-model-title"),
+    ).toBe("Improve reports filters");
+  });
+
   it("drops a URL task filter without a resolvable project", async () => {
     const unknownTaskId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2999";
     const client = createClientMock();

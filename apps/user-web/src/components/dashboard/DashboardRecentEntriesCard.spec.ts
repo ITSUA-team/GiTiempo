@@ -538,6 +538,26 @@ describe("DashboardRecentEntriesCard", () => {
       expect(wrapper.emitted("startTimer")).toEqual([[expect.objectContaining({ id: "entry-2" })]]);
       expect(wrapper.emitted("activate")).toBeUndefined();
     });
+
+    it("does not wrap the task cell in a z-20 click barrier that blocks card navigation", () => {
+      const entries = [
+        createRecentEntryRow({
+          description: "Fix billing rounding",
+          id: "entry-1",
+        }),
+      ];
+      const wrapper = mountNavCard(entries);
+      const table = wrapper.get('[data-testid="dashboard-recent-entries-table"]');
+
+      const descriptionCell = table.get(".text-text-muted.text-xs");
+      const cellContainer = descriptionCell.element.parentElement as HTMLElement;
+
+      expect(cellContainer.className.split(" ")).not.toContain("z-20");
+      expect(cellContainer.className.split(" ")).not.toContain("relative");
+
+      const cellRoot = cellContainer.parentElement as HTMLElement;
+      expect(cellRoot.className.split(" ")).toEqual(expect.arrayContaining(["flex", "min-w-0"]));
+    });
   });
 
   it("opens the entry editor from a completed entry's task title", async () => {

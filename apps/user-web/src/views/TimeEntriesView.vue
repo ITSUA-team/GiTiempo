@@ -186,6 +186,7 @@ const {
   verifyActiveTimerEntry,
 } = directTimerActions;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
+const resolvedTaskLabels = ref(new Map<string, string>());
 const selectedProjectFilterOption = computed(
   () =>
     visibleProjects.value.find((project) => project.id === selectedProjectId.value) ??
@@ -198,10 +199,19 @@ const resolvedSelectedTaskFilter = computed<TaskLookupValue>(() => {
     return value;
   }
 
-  return (
-    filteredEntryTaskOptions.value.find((option) => option.id === value.id) ??
-    value
+  const fromEntries = filteredEntryTaskOptions.value.find(
+    (option) => option.id === value.id,
   );
+  if (fromEntries) {
+    return fromEntries;
+  }
+
+  const resolvedTitle = resolvedTaskLabels.value.get(value.id);
+  if (resolvedTitle) {
+    return { ...value, title: resolvedTitle };
+  }
+
+  return value;
 });
 const filteredEntryTaskOptions = computed<TaskLookupOption[]>(() => {
   const optionsByTaskId = new Map<string, TaskLookupOption>();
@@ -313,10 +323,19 @@ async function clearUnresolvableTaskFilter(
       taskFilter.projectId,
     );
 
-    if (
-      resolvedSelectedTaskFilter.value === taskFilter &&
-      !projectTaskOptions.some((option) => option.id === taskFilter.id)
-    ) {
+    const currentFilter = selectedTaskFilter.value;
+    if (!isTaskLookupOption(currentFilter) || currentFilter.id !== taskFilter.id) {
+      return;
+    }
+
+    const matchedTask = projectTaskOptions.find(
+      (option) => option.id === taskFilter.id,
+    );
+    if (matchedTask) {
+      const nextLabels = new Map(resolvedTaskLabels.value);
+      nextLabels.set(taskFilter.id, matchedTask.title);
+      resolvedTaskLabels.value = nextLabels;
+    } else {
       filters.setTaskValue(null);
     }
   } catch {

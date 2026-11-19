@@ -2,11 +2,11 @@
 import Button from "primevue/button";
 import ProgressBar from "primevue/progressbar";
 import Select from "primevue/select";
-import Skeleton from "primevue/skeleton";
 import type { RouteLocationNamedRaw } from "vue-router";
-import { SectionHeader, SurfaceCard } from "@gitiempo/web-shared";
+import { InlineRequestMessage, SectionHeader, SurfaceCard } from "@gitiempo/web-shared";
 import { computed } from "vue";
 
+import DashboardFocusSkeleton from "./DashboardFocusSkeleton.vue";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 import type { DashboardFocusPeriod, DashboardWeeklyFocus } from "@/lib/dashboard-overview-helpers";
 
@@ -57,7 +57,7 @@ const FOCUS_PERIOD_COPY: Record<DashboardFocusPeriod, FocusPeriodCopy> = {
 };
 
 const cardNavLinkClass =
-  "absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2";
+  "absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
 
 const props = withDefaults(
   defineProps<{
@@ -136,53 +136,9 @@ const taskNavLinkLabel = computed(() =>
 
       <div
         v-if="props.loading"
-        class="bg-app-bg grid min-w-0 gap-4 rounded-lg p-4 xl:grid-cols-2"
         data-testid="dashboard-focus-loading-state"
       >
-        <div class="flex min-w-0 flex-col gap-3">
-          <Skeleton
-            border-radius="4px"
-            class="bg-divider h-3 w-24"
-          />
-          <Skeleton
-            border-radius="4px"
-            class="bg-divider h-7 w-3/4"
-          />
-          <Skeleton
-            border-radius="4px"
-            class="bg-divider h-4 w-full"
-          />
-          <Skeleton
-            border-radius="4px"
-            class="bg-divider h-2 w-full"
-          />
-          <Skeleton
-            border-radius="4px"
-            class="bg-divider h-3 w-1/2"
-          />
-        </div>
-        <div class="flex min-w-0 flex-col gap-3">
-          <Skeleton
-            border-radius="4px"
-            class="bg-divider h-3 w-20"
-          />
-          <Skeleton
-            border-radius="4px"
-            class="bg-divider h-7 w-2/3"
-          />
-          <Skeleton
-            border-radius="4px"
-            class="bg-divider h-4 w-full"
-          />
-          <Skeleton
-            border-radius="4px"
-            class="bg-divider h-2 w-full"
-          />
-          <Skeleton
-            border-radius="4px"
-            class="bg-divider h-3 w-1/2"
-          />
-        </div>
+        <DashboardFocusSkeleton />
       </div>
 
       <div
@@ -190,17 +146,23 @@ const taskNavLinkLabel = computed(() =>
         class="bg-app-bg flex flex-col items-center justify-center gap-3 rounded-lg p-6 text-center"
         data-testid="dashboard-focus-error-state"
       >
-        <p class="text-text-muted text-sm">
-          {{ props.errorMessage }}
-        </p>
-        <Button
-          aria-label="Retry loading top focus"
-          data-testid="dashboard-focus-retry"
-          label="Retry"
-          severity="secondary"
-          variant="outlined"
-          @click="emit('retry')"
+        <InlineRequestMessage
+          title="Could not load top focus"
+          :message="props.errorMessage"
         />
+        <span
+          class="relative z-30"
+          @click.stop
+        >
+          <Button
+            aria-label="Retry loading top focus"
+            data-testid="dashboard-focus-retry"
+            label="Retry"
+            severity="secondary"
+            variant="outlined"
+            @click="emit('retry')"
+          />
+        </span>
       </div>
 
       <div
