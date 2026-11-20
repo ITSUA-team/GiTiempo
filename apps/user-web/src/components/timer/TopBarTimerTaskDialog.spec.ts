@@ -602,8 +602,9 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.text()).toContain(
       "Stop the running timer before starting or changing tasks in this workspace.",
     );
-    expect(wrapper.get('[data-testid="top-bar-timer-dialog-workspace-label"]').text()).toBe(
-      "Running in Workspace Alpha",
+    const crossWorkspaceState = wrapper.get('[data-testid="top-bar-timer-cross-workspace-state"]');
+    expect(crossWorkspaceState.text().replace(/\s+/g, " ")).toContain(
+      "Running in Workspace Alpha. GiTiempo tracks one timer at a time.",
     );
     expect(wrapper.findAllComponents({ name: "AutoComplete" })).toHaveLength(0);
     expect(wrapper.find("textarea").exists()).toBe(false);

@@ -1,6 +1,6 @@
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, defineComponent, ref, shallowRef } from "vue";
+import { computed, defineComponent, nextTick, ref, shallowRef } from "vue";
 import PrimeVue from "primevue/config";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 import type { SyncedGitHubIssue } from "@gitiempo/shared";
@@ -400,19 +400,24 @@ describe("TopBarTimer", () => {
     );
   });
 
-  it("renders cross-workspace context in the mobile timer strip", () => {
+  it("renders cross-workspace context on a separate line in the mobile timer strip", async () => {
     mockMatchMedia(true);
     composableState.isTimerRunning.value = true;
     composableState.primaryActionLabel.value = "Stop";
-    composableState.isCrossWorkspaceTimer = computed(() => true);
-    composableState.timerWorkspaceContextLabel.value = "Running in Workspace Alpha";
 
     const wrapper = mountTopBarTimer();
     const metadata = wrapper.get('[data-testid="top-bar-timer-mobile-metadata"]');
+    const elapsedRow = wrapper.get('[data-testid="top-bar-timer-elapsed"]').element.parentElement;
+    const originalElapsedRow = elapsedRow?.textContent;
+    const workspaceLabel = "Running in Workspace Alpha with a very long name";
+    composableState.isCrossWorkspaceTimer = computed(() => true);
+    composableState.timerWorkspaceContextLabel.value = workspaceLabel;
+    await nextTick();
 
     expect(wrapper.get('[data-testid="top-bar-timer-mobile-workspace-label"]').text()).toBe(
-      "Running in Workspace Alpha",
+      workspaceLabel,
     );
+    expect(elapsedRow?.textContent).toBe(originalElapsedRow);
     expect(metadata.text()).toContain("Project Orion");
     expect(metadata.text()).toContain("Improve reports filters");
     expect(metadata.text()).toContain("01:00:00");

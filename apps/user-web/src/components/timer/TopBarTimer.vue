@@ -151,7 +151,7 @@ watch(
 
   <section
     v-else
-    class="border-divider bg-surface-primary flex w-full min-w-0 items-center gap-3 border-t px-4 py-3"
+    class="border-divider bg-surface-primary grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 border-t px-4 py-3"
     data-layout="mobile"
     data-testid="top-bar-timer"
   >
@@ -160,7 +160,7 @@ watch(
       type="button"
       :aria-label="timerOpenerAriaLabel"
       :class="[
-        'ring-divider bg-surface-primary text-brand focus-visible:outline-brand z-10 flex h-[38px] w-[132px] shrink-0 items-center justify-center gap-[5px] rounded-sm px-2.5 text-xs leading-[14px] font-semibold ring-1 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2',
+        'ring-divider bg-surface-primary text-brand focus-visible:outline-brand z-10 flex h-[38px] w-[132px] items-center justify-center gap-[5px] rounded-sm px-2.5 text-xs leading-[14px] font-semibold ring-1 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2',
         isTimerOpenerDisabled ? 'cursor-not-allowed opacity-70' : 'hover:bg-app-bg cursor-pointer',
       ]"
       data-testid="top-bar-timer-mobile-opener"
@@ -188,18 +188,11 @@ watch(
     </Button>
 
     <div
-      class="flex min-w-0 flex-1 flex-col items-start justify-start gap-0 text-left"
+      class="flex min-w-0 flex-col items-start justify-start gap-0 text-left"
       data-testid="top-bar-timer-mobile-metadata"
     >
       <span class="text-text-muted flex w-full min-w-0 items-center gap-2 text-[11px] leading-none font-medium">
         <span class="truncate">{{ timerProjectLabel }}</span>
-        <span
-          v-if="timerWorkspaceContextLabel"
-          class="text-brand shrink-0"
-          data-testid="top-bar-timer-mobile-workspace-label"
-        >
-          {{ timerWorkspaceContextLabel }}
-        </span>
         <span
           v-if="showsElapsedTime"
           aria-hidden="true"
@@ -222,6 +215,14 @@ watch(
         />
       </span>
     </div>
+    <span
+      v-if="timerWorkspaceContextLabel"
+      :title="timerWorkspaceContextLabel"
+      class="text-brand col-start-2 mt-1 truncate text-[11px] leading-none font-medium"
+      data-testid="top-bar-timer-mobile-workspace-label"
+    >
+      {{ timerWorkspaceContextLabel }}
+    </span>
   </section>
 
   <TopBarTimerTaskDialog

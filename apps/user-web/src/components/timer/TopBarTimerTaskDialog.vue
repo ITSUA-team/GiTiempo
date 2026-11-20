@@ -467,9 +467,9 @@ watch(
             class="text-brand font-semibold"
             data-testid="top-bar-timer-dialog-workspace-label"
           >
-            {{ props.timerWorkspaceContextLabel ?? "Running in another workspace" }}
+            {{ props.timerWorkspaceContextLabel ?? "Running in another workspace" }}.
           </span>
-          . GiTiempo tracks one timer at a time. Stop this timer, then choose a visible project and task in the active workspace.
+          GiTiempo tracks one timer at a time. Stop this timer, then choose a visible project and task in the active workspace.
         </p>
       </div>
 
