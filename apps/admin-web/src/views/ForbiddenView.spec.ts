@@ -140,14 +140,26 @@ describe("ForbiddenView", () => {
     vi.unstubAllEnvs();
   });
 
-  it("always keeps dashboard recovery as the primary action", async () => {
-    const { wrapper } = await mountForbiddenView(WorkspaceRoles.Member);
+  it("returns a member with one workspace to the user dashboard", async () => {
+    const { wrapper } = await mountForbiddenView(WorkspaceRoles.Member, [
+      {
+        isCurrent: true,
+        role: WorkspaceRoles.Member,
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        workspaceName: "Workspace Alpha",
+      },
+    ]);
+    const primaryAction = wrapper.get('[data-testid="primary-action"]');
 
-    expect(wrapper.get('[data-testid="primary-action"]').text()).toBe(
-      "Back to dashboard",
-    );
+    expect(primaryAction.text()).toBe("Back to dashboard");
     expect(wrapper.find('[data-testid="secondary-action"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="copy"]').text()).toContain("dashboard");
+
+    await primaryAction.trigger("click");
+
+    expect(testMocks.navigateToExternalHref).toHaveBeenCalledExactlyOnceWith(
+      "https://user.example.test/",
+    );
   });
 
   it("shows the switch action only when another workspace membership is available", async () => {
@@ -272,8 +284,8 @@ describe("ForbiddenView", () => {
     );
   });
 
-  it("routes the primary action back to the dashboard", async () => {
-    const { router, wrapper } = await mountForbiddenView(WorkspaceRoles.Admin);
+  it.each([WorkspaceRoles.Admin, WorkspaceRoles.PM])("returns %s to the admin dashboard", async (role) => {
+    const { router, wrapper } = await mountForbiddenView(role);
     const routeReady = waitForRoute(
       router,
       () => router.currentRoute.value.name === routeNames.dashboard,
@@ -283,5 +295,6 @@ describe("ForbiddenView", () => {
     await routeReady;
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+    expect(testMocks.navigateToExternalHref).not.toHaveBeenCalled();
   });
 });
