@@ -80,30 +80,28 @@ function handleStopTimer(): void {
 
 <template>
   <div :class="containerClass">
-    <span class="relative z-20 shrink-0">
-      <TimerActionButton
-        v-if="!props.isRunning"
-        action="start"
-        :disabled="props.isStartDisabled"
-        :target="{ id: props.entryId, title: props.taskTitle }"
-        :is-loading="props.isStartPending"
-        :show-stop-first-guidance="props.showStopFirstGuidance"
-        :test-id-prefix="props.testIdPrefix"
-        @trigger="handleStartTimer"
-      />
-      <TimerActionButton
-        v-else
-        action="stop"
-        :disabled="props.isStopDisabled"
-        :target="{ id: props.entryId, title: props.taskTitle }"
-        :is-loading="props.isStopPending"
-        :test-id-prefix="props.testIdPrefix"
-        @trigger="handleStopTimer"
-      />
-    </span>
+    <TimerActionButton
+      v-if="!props.isRunning"
+      action="start"
+      :disabled="props.isStartDisabled"
+      :target="{ id: props.entryId, title: props.taskTitle }"
+      :is-loading="props.isStartPending"
+      :show-stop-first-guidance="props.showStopFirstGuidance"
+      :test-id-prefix="props.testIdPrefix"
+      @trigger="handleStartTimer"
+    />
+    <TimerActionButton
+      v-else
+      action="stop"
+      :disabled="props.isStopDisabled"
+      :target="{ id: props.entryId, title: props.taskTitle }"
+      :is-loading="props.isStopPending"
+      :test-id-prefix="props.testIdPrefix"
+      @trigger="handleStopTimer"
+    />
 
     <div :class="titleColumnClass">
-      <div class="relative z-20 flex max-w-full min-w-0 items-center gap-1">
+      <div class="flex max-w-full min-w-0 items-center gap-1">
         <TaskNameLink
           :clickable="props.isInteractive"
           :label="props.taskTitle"

@@ -60,6 +60,7 @@ function createClientMock(
     deleteTask: vi.fn(),
     ensureGitHubIssueTask: vi.fn(),
     getCurrentTimer: vi.fn(),
+    getTask: vi.fn(),
     listOwnEntries: vi.fn(),
     listGitHubOwners: vi.fn(),
     listGitHubProjectIssues: vi.fn(),

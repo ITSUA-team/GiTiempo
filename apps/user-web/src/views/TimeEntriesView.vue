@@ -9,7 +9,9 @@ import {
   filterAutocompleteOptions,
   useIsMobileViewport,
 } from "@gitiempo/web-shared";
-import { computed, onMounted, ref, watch } from "vue";
+import { isApiErrorStatus } from "@gitiempo/web-shared/http";
+import { skipToken, useQuery } from "@tanstack/vue-query";
+import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { useRoute } from "vue-router";
@@ -23,6 +25,7 @@ import TimeEntryDialogConnection from "@/components/time-entries/TimeEntryDialog
 import {
   toEntryTaskOption,
   isTaskLookupOption,
+  toTaskLookupOption,
   type TaskLookupOption,
   type TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
@@ -42,6 +45,8 @@ import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMu
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
+import { getScopeKey, userProjectsKeys } from "@/lib/query-keys";
+import { USER_LIST_QUERY_POLICY } from "@/lib/query-policy";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { useAuthStore } from "@/stores/auth";
 
@@ -186,32 +191,92 @@ const {
   verifyActiveTimerEntry,
 } = directTimerActions;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
-const resolvedTaskLabels = ref(new Map<string, string>());
+const pendingSelectedTask = shallowRef<{
+  accessScope: ProjectResponse["accessScope"];
+  scopeKey: string;
+  task: TaskLookupOption;
+}>();
 const selectedProjectFilterOption = computed(
   () =>
     visibleProjects.value.find((project) => project.id === selectedProjectId.value) ??
     null,
 );
+const selectedTaskOption = computed(() => {
+  const task = selectedTaskFilter.value;
+
+  return isTaskLookupOption(task) ? task : null;
+});
+const taskIdWithoutProject = computed(() => {
+  const task = selectedTaskOption.value;
+
+  return task && !selectedProjectId.value && !task.projectId ? task.id : null;
+});
+const taskWithoutProjectQuery = useQuery(
+  computed(() => {
+    const taskId = taskIdWithoutProject.value;
+
+    return {
+      ...USER_LIST_QUERY_POLICY,
+      enabled: isAuthenticated.value,
+      queryKey: [...userProjectsKeys.all(scope.value), "task", taskId],
+      queryFn: taskId
+        ? ({ signal }: { signal: AbortSignal }) => client.getTask(taskId, { signal })
+        : skipToken,
+    };
+  }),
+);
+const selectedTaskProjectId = computed(
+  () => selectedProjectId.value ||
+    selectedTaskOption.value?.projectId ||
+    taskWithoutProjectQuery.data.value?.projectId ||
+    null,
+);
+const selectedTaskProject = computed(
+  () => visibleProjects.value.find((project) => project.id === selectedTaskProjectId.value),
+);
+const selectedProjectTasksQuery = useQuery(
+  computed(() => {
+    const project = selectedTaskProject.value;
+
+    return {
+      ...USER_LIST_QUERY_POLICY,
+      enabled: isAuthenticated.value,
+      queryKey: userProjectsKeys.projectTasks(scope.value, project?.id, project?.accessScope),
+      queryFn: project && selectedTaskOption.value
+        ? () => client.listProjectTasks(project.id)
+        : skipToken,
+    };
+  }),
+);
+const confirmedSelectedTask = computed(() =>
+  selectedProjectTasksQuery.data.value?.find(
+    (task) =>
+      task.id === selectedTaskOption.value?.id &&
+      task.projectId === selectedTaskProjectId.value,
+  ),
+);
 const resolvedSelectedTaskFilter = computed<TaskLookupValue>(() => {
-  const value = selectedTaskFilter.value;
-
-  if (!(isTaskLookupOption(value) && value.title.length === 0)) {
-    return value;
+  if (!selectedTaskOption.value) {
+    return selectedTaskFilter.value;
   }
 
-  const fromEntries = filteredEntryTaskOptions.value.find(
-    (option) => option.id === value.id,
-  );
-  if (fromEntries) {
-    return fromEntries;
+  if (confirmedSelectedTask.value) {
+    return toTaskLookupOption(confirmedSelectedTask.value);
   }
 
-  const resolvedTitle = resolvedTaskLabels.value.get(value.id);
-  if (resolvedTitle) {
-    return { ...value, title: resolvedTitle };
+  const pending = pendingSelectedTask.value;
+
+  if (
+    selectedProjectTasksQuery.isPending.value &&
+    pending?.task === selectedTaskOption.value &&
+    pending.task.projectId === selectedTaskProject.value?.id &&
+    pending.accessScope === selectedTaskProject.value.accessScope &&
+    pending.scopeKey === getScopeKey(scope.value)
+  ) {
+    return pending.task;
   }
 
-  return value;
+  return null;
 });
 const filteredEntryTaskOptions = computed<TaskLookupOption[]>(() => {
   const optionsByTaskId = new Map<string, TaskLookupOption>();
@@ -252,6 +317,12 @@ function setSelectedProjectFilterValue(
 }
 
 function setSelectedTaskFilter(value: TaskLookupValue): void {
+  const project = isTaskLookupOption(value)
+    ? visibleProjects.value.find(({ id }) => id === value.projectId)
+    : undefined;
+  pendingSelectedTask.value = project && isTaskLookupOption(value)
+    ? { accessScope: project.accessScope, scopeKey: getScopeKey(scope.value), task: value }
+    : undefined;
   filters.setTaskValue(value);
 }
 
@@ -268,80 +339,50 @@ watch(visibleProjects, (nextProjects) => {
   filterTaskSuggestions.value = filterTaskSuggestions.value.filter((task) =>
     nextProjectIds.has(task.projectId),
   );
-
-  revalidateEntryFilters(nextProjectIds);
 });
-watch([resolvedSelectedTaskFilter, hasLoadedEntries], () => {
-  void revalidateEntryFilters(
-    new Set(visibleProjects.value.map((project) => project.id)),
-  );
-});
-
-async function revalidateEntryFilters(
-  visibleProjectIds: Set<string>,
-): Promise<void> {
-  if (projectsErrorMessage.value !== null || isLoadingProjects.value) {
-    return;
-  }
-
-  const selectedProjectIdValue = selectedProjectId.value;
-
-  if (selectedProjectIdValue && !visibleProjectIds.has(selectedProjectIdValue)) {
-    filters.setProjectValue(null);
-    return;
-  }
-
-  const taskFilter = resolvedSelectedTaskFilter.value;
-
-  if (!isTaskLookupOption(taskFilter)) {
-    return;
-  }
-
-  if (taskFilter.projectId.length === 0) {
-    if (taskFilter.title.length === 0 && hasLoadedEntries.value) {
-      filters.setTaskValue(null);
-    }
-
-    return;
-  }
-
-  if (!visibleProjectIds.has(taskFilter.projectId)) {
-    filters.setTaskValue(null);
-    return;
-  }
-
-  if (taskFilter.title.length === 0) {
-    await clearUnresolvableTaskFilter(taskFilter);
-  }
-}
-
-async function clearUnresolvableTaskFilter(
-  taskFilter: TaskLookupOption,
-): Promise<void> {
-  try {
-    const { taskOptions: projectTaskOptions } = await taskOptions.loadProjectTaskOptions(
-      taskFilter.projectId,
-    );
-
-    const currentFilter = selectedTaskFilter.value;
-    if (!isTaskLookupOption(currentFilter) || currentFilter.id !== taskFilter.id) {
+watch(
+  [
+    isAuthenticated,
+    isLoadingProjects,
+    projectsErrorMessage,
+    selectedProjectId,
+    selectedProjectFilterOption,
+    selectedTaskOption,
+    selectedTaskProjectId,
+    selectedTaskProject,
+    taskWithoutProjectQuery.error,
+    selectedProjectTasksQuery.error,
+    selectedProjectTasksQuery.isSuccess,
+    selectedProjectTasksQuery.isFetching,
+    confirmedSelectedTask,
+  ],
+  () => {
+    if (!isAuthenticated.value || projectsErrorMessage.value || isLoadingProjects.value) {
       return;
     }
 
-    const matchedTask = projectTaskOptions.find(
-      (option) => option.id === taskFilter.id,
-    );
-    if (matchedTask) {
-      const nextLabels = new Map(resolvedTaskLabels.value);
-      nextLabels.set(taskFilter.id, matchedTask.title);
-      resolvedTaskLabels.value = nextLabels;
-    } else {
+    if (selectedProjectId.value && !selectedProjectFilterOption.value) {
+      filters.setProjectValue(null);
+      return;
+    }
+
+    if (!selectedTaskOption.value) {
+      return;
+    }
+
+    const taskProjectUnavailable = selectedTaskProjectId.value && !selectedTaskProject.value;
+    const taskLookupRejected =
+      (taskIdWithoutProject.value && isApiErrorStatus(taskWithoutProjectQuery.error.value, [403, 404])) ||
+      isApiErrorStatus(selectedProjectTasksQuery.error.value, [403, 404]);
+    const taskMissingFromProject = selectedProjectTasksQuery.isSuccess.value &&
+      !selectedProjectTasksQuery.isFetching.value && !confirmedSelectedTask.value;
+
+    if (taskProjectUnavailable || taskLookupRejected || taskMissingFromProject) {
       filters.setTaskValue(null);
     }
-  } catch {
-    // The filter stays active until the project task list can confirm it.
-  }
-}
+  },
+  { immediate: true },
+);
 
 async function setPage(page: number): Promise<void> {
   filters.setPage(page);

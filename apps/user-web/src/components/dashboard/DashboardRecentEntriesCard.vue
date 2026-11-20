@@ -97,6 +97,7 @@ defineExpose({ focusViewAll });
     <SurfaceCard
       body-class="flex flex-col gap-4"
       class="group-hover:shadow-popover transition-shadow"
+      :class="{ '[&_a]:relative [&_a]:z-20 [&_button]:relative [&_button]:z-20': props.sectionRoute }"
       padding-class="p-6"
     >
       <SectionHeader
@@ -104,20 +105,15 @@ defineExpose({ focusViewAll });
         title="Recent Time Entries"
       >
         <template #actions>
-          <span
-            class="relative z-20"
+          <Button
+            ref="viewAllButtonRef"
+            class="text-brand"
             data-testid="dashboard-recent-entries-view-all-control"
-            @click.stop
-          >
-            <Button
-              ref="viewAllButtonRef"
-              class="text-brand"
-              label="View all"
-              size="small"
-              variant="text"
-              @click="emit('viewAll')"
-            />
-          </span>
+            label="View all"
+            size="small"
+            variant="text"
+            @click="emit('viewAll')"
+          />
         </template>
       </SectionHeader>
 

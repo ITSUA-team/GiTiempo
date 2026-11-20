@@ -87,6 +87,7 @@ function createOwnEntriesResponse(
 function createClientMock(): TimeEntriesClientMock {
   const clientMock = {
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    getTask: vi.fn(),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
     startTimer: vi.fn(async () => createEntry({ endedAt: null, id: TEST_IDS.startedEntry })),
     stopTimer: vi.fn(async () => createEntry()),

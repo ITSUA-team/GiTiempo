@@ -58,7 +58,7 @@ function mountCard(
           template:
             '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
-        ProgressBar: { template: "<div />" },
+        ProgressBar: { template: '<div role="progressbar" />' },
         RouterLink: {
           props: ["to"],
           template: '<a :data-route="JSON.stringify(to)"><slot /></a>',
@@ -135,6 +135,17 @@ describe("DashboardWeeklyFocusCard", () => {
     });
 
     expect(wrapper.find('[data-testid="dashboard-weekly-focus-task-github"]').exists()).toBe(false);
+  });
+
+  it("labels each focus progress bar with its visible tile label", () => {
+    const wrapper = mountCard({ focus: createFocus() });
+    const labels = wrapper.findAll('[role="progressbar"]').map((progressBar) => {
+      const labelId = progressBar.attributes("aria-labelledby");
+
+      return wrapper.get(`[id="${labelId}"]`).text();
+    });
+
+    expect(labels).toEqual(["Top Project", "Top Task"]);
   });
 
   it("keeps weekly focus content safe for narrow mobile widths", () => {

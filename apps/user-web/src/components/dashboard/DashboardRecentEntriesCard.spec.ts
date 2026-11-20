@@ -518,7 +518,7 @@ describe("DashboardRecentEntriesCard", () => {
       await wrapper.get('[data-testid="dashboard-recent-entry-stop-timer-entry-1"]').trigger("click");
       await wrapper.get('[data-testid="dashboard-recent-entry-start-timer-entry-2"]').trigger("click");
       await wrapper.get('[data-testid="dashboard-recent-entry-github-entry-1"]').trigger("click");
-      await wrapper.get('[data-testid="dashboard-recent-entries-view-all-control"] button').trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-entries-view-all-control"]').trigger("click");
 
       expect(wrapper.emitted("stopTimer")).toEqual([[expect.objectContaining({ id: "entry-1" })]]);
       expect(wrapper.emitted("startTimer")).toEqual([[expect.objectContaining({ id: "entry-2" })]]);
@@ -539,24 +539,16 @@ describe("DashboardRecentEntriesCard", () => {
       expect(wrapper.emitted("activate")).toBeUndefined();
     });
 
-    it("does not wrap the task cell in a z-20 click barrier that blocks card navigation", () => {
-      const entries = [
-        createRecentEntryRow({
-          description: "Fix billing rounding",
-          id: "entry-1",
-        }),
-      ];
-      const wrapper = mountNavCard(entries);
-      const table = wrapper.get('[data-testid="dashboard-recent-entries-table"]');
-
-      const descriptionCell = table.get(".text-text-muted.text-xs");
-      const cellContainer = descriptionCell.element.parentElement as HTMLElement;
-
-      expect(cellContainer.className.split(" ")).not.toContain("z-20");
-      expect(cellContainer.className.split(" ")).not.toContain("relative");
-
-      const cellRoot = cellContainer.parentElement as HTMLElement;
-      expect(cellRoot.className.split(" ")).toEqual(expect.arrayContaining(["flex", "min-w-0"]));
+    it.each([false, true])("keeps static row content below the overlay (mobile: %s)", (mobile) => {
+      mockMatchMedia(mobile);
+      const wrapper = mountNavCard([
+        createRecentEntryRow({ description: "Long description beneath a short title", taskTitle: "Fix" }),
+      ]);
+      const prefix = mobile ? "dashboard-recent-entry-mobile" : "dashboard-recent-entry";
+      const title = wrapper.get(`[data-testid="${prefix}-edit-entry-1"]`);
+      expect(title.element.closest(".z-20")).toBeNull();
+      const timer = wrapper.get(`[data-testid="${prefix}-start-timer-entry-1"]`);
+      expect(timer.element.closest(".z-20")).toBeNull();
     });
   });
 

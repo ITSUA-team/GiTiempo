@@ -254,9 +254,7 @@ export function useTimeEntryFilters(options: UseTimeEntryFiltersOptions = {}) {
     const searchValue =
       typeof appliedTaskFilter.value === 'string'
         ? appliedTaskFilter.value.trim()
-        : isTaskLookupOption(appliedTaskFilter.value)
-          ? appliedTaskFilter.value.title
-          : '';
+        : '';
 
     return {
       dateFrom: startDate ? startOfLocalDay(startDate).toISOString() : undefined,

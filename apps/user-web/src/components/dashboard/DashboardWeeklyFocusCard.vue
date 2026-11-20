@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import Button from "primevue/button";
-import ProgressBar from "primevue/progressbar";
 import Select from "primevue/select";
 import type { RouteLocationNamedRaw } from "vue-router";
 import { InlineRequestMessage, SectionHeader, SurfaceCard } from "@gitiempo/web-shared";
 import { computed } from "vue";
 
 import DashboardFocusSkeleton from "./DashboardFocusSkeleton.vue";
+import FocusMetricTile from "./FocusMetricTile.vue";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 import type { DashboardFocusPeriod, DashboardWeeklyFocus } from "@/lib/dashboard-overview-helpers";
 
@@ -169,45 +169,30 @@ const taskNavLinkLabel = computed(() =>
         v-else
         class="grid min-w-0 gap-4 xl:grid-cols-2"
       >
-        <div class="bg-app-bg relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-4">
-          <p class="text-text-muted text-xs font-semibold tracking-wide uppercase">
-            Top Project
-          </p>
-          <p class="text-text-dark text-xl font-semibold break-words sm:text-2xl">
-            {{ props.focus.project?.title ?? 'No tracked project yet' }}
-          </p>
-          <p class="text-text-muted text-[13px] break-words">
-            {{ props.focus.project?.description ?? copy.projectEmptyLabel }}
-          </p>
-          <ProgressBar
-            :show-value="false"
-            :value="props.focus.project?.sharePercent ?? 0"
-            :pt="{
-              root: 'bg-divider h-2 overflow-hidden rounded-full',
-              value: 'bg-brand rounded-full',
-            }"
-          />
-          <p class="text-text-muted text-xs break-words">
-            {{ props.focus.project?.shareLabel ?? copy.projectShareFallback }}
-          </p>
-          <RouterLink
-            v-if="props.projectRoute"
-            :aria-label="projectNavLinkLabel"
-            :class="cardNavLinkClass + ' z-20'"
-            :to="props.projectRoute"
-            data-testid="dashboard-focus-project-nav"
-            @keydown.space.prevent="emit('activateProject')"
-          />
-        </div>
+        <FocusMetricTile
+          label="Top Project"
+          link-test-id="dashboard-focus-project-nav"
+          :caption="props.focus.project?.shareLabel ?? copy.projectShareFallback"
+          :description="props.focus.project?.description ?? copy.projectEmptyLabel"
+          :link-label="projectNavLinkLabel"
+          :percentage="props.focus.project?.sharePercent ?? 0"
+          :route="props.projectRoute"
+          :title="props.focus.project?.title ?? 'No tracked project yet'"
+          @activate="emit('activateProject')"
+        />
 
-        <div class="bg-app-bg relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-4">
-          <p class="text-text-muted text-xs font-semibold tracking-wide uppercase">
-            Top Task
-          </p>
-          <div class="flex max-w-full min-w-0 items-start gap-1.5">
-            <p class="text-text-dark min-w-0 text-xl font-semibold break-words sm:text-2xl">
-              {{ props.focus.task?.title ?? 'No tracked task yet' }}
-            </p>
+        <FocusMetricTile
+          label="Top Task"
+          link-test-id="dashboard-focus-task-nav"
+          :caption="props.focus.task?.shareLabel ?? copy.taskShareFallback"
+          :description="props.focus.task?.description ?? copy.taskEmptyLabel"
+          :link-label="taskNavLinkLabel"
+          :percentage="props.focus.task?.sharePercent ?? 0"
+          :route="props.taskRoute"
+          :title="props.focus.task?.title ?? 'No tracked task yet'"
+          @activate="emit('activateTask')"
+        >
+          <template #title-action>
             <span
               v-if="props.focus.task?.githubIssue"
               class="relative z-30 shrink-0"
@@ -218,30 +203,8 @@ const taskNavLinkLabel = computed(() =>
                 test-id="dashboard-weekly-focus-task-github"
               />
             </span>
-          </div>
-          <p class="text-text-muted text-[13px] break-words">
-            {{ props.focus.task?.description ?? copy.taskEmptyLabel }}
-          </p>
-          <ProgressBar
-            :show-value="false"
-            :value="props.focus.task?.sharePercent ?? 0"
-            :pt="{
-              root: 'bg-divider h-2 overflow-hidden rounded-full',
-              value: 'bg-brand rounded-full',
-            }"
-          />
-          <p class="text-text-muted text-xs break-words">
-            {{ props.focus.task?.shareLabel ?? copy.taskShareFallback }}
-          </p>
-          <RouterLink
-            v-if="props.taskRoute"
-            :aria-label="taskNavLinkLabel"
-            :class="cardNavLinkClass + ' z-20'"
-            :to="props.taskRoute"
-            data-testid="dashboard-focus-task-nav"
-            @keydown.space.prevent="emit('activateTask')"
-          />
-        </div>
+          </template>
+        </FocusMetricTile>
       </div>
     </SurfaceCard>
 

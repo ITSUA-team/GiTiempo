@@ -223,6 +223,7 @@ function createClientMock(options: {
   deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient["deleteTask"]>>;
   ensureGitHubIssueTask: ReturnType<typeof vi.fn<TimeEntriesClient["ensureGitHubIssueTask"]>>;
   getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
+  getTask: ReturnType<typeof vi.fn<TimeEntriesClient["getTask"]>>;
   listProjectGitHubIssues: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectGitHubIssues"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
   listProjectTimeEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTimeEntries"]>>;
@@ -268,6 +269,15 @@ function createClientMock(options: {
     deleteTask: vi.fn(async () => undefined),
     ensureGitHubIssueTask: vi.fn(async () => createTask()),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    getTask: vi.fn(async (taskId) => {
+      const task = Object.values(tasksByProject).flat().find((item) => item.id === taskId);
+
+      if (!task) {
+        throw new ApiError("Task not found", { status: 404 });
+      }
+
+      return task;
+    }),
     listGitHubOwners: vi.fn(),
     listGitHubProjectIssues: vi.fn(),
     listGitHubProjects: vi.fn(),
@@ -1246,7 +1256,7 @@ describe("TimeEntriesView", () => {
       limit: 20,
       page: 2,
       projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
-      search: "Ship admin polish",
+      search: undefined,
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
   });
@@ -1493,6 +1503,109 @@ describe("TimeEntriesView", () => {
     ).toBe("Improve reports filters");
   });
 
+  it("keeps an exact task-only link active when the selected period has no matching entries", async () => {
+    const client = createClientMock({ entriesResponse: createEntryListResponse([]) });
+    const { router, wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?taskId=${TEST_IDS.taskReports}`,
+    });
+
+    await flushPromises();
+
+    const taskFilter = wrapper.get('[data-testid="filter-task-autocomplete"]');
+    expect(taskFilter.attributes("data-model-title")).toBe("Improve reports filters");
+    expect(router.currentRoute.value.query).toEqual({ taskId: TEST_IDS.taskReports });
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(1);
+    expect(client.listOwnEntries.mock.calls[0]?.[0]).toMatchObject({
+      projectId: undefined,
+      search: undefined,
+      taskId: TEST_IDS.taskReports,
+    });
+  });
+
+  it("keeps a task-only filter active after a transient task lookup error", async () => {
+    const client = createClientMock({ entriesResponse: createEntryListResponse([]) });
+    client.getTask.mockRejectedValue(new ApiError("Service unavailable", { status: 503 }));
+    const { router } = await mountView(client, {
+      initialUrl: `/time-entries?taskId=${TEST_IDS.taskReports}`,
+    });
+
+    await flushPromises();
+
+    expect(router.currentRoute.value.query).toEqual({ taskId: TEST_IDS.taskReports });
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(1);
+    expect(client.listOwnEntries.mock.calls[0]?.[0]?.taskId).toBe(TEST_IDS.taskReports);
+  });
+
+  it("does not reuse a resolved task title when the next URL names a different project", async () => {
+    const client = createClientMock({ entriesResponse: createEntryListResponse([]) });
+    const { router, wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?projectId=${TEST_IDS.projectOrion}&taskId=${TEST_IDS.taskReports}`,
+    });
+    const taskFilter = wrapper.get('[data-testid="filter-task-autocomplete"]');
+
+    await flushPromises();
+    expect(taskFilter.attributes("data-model-title")).toBe("Improve reports filters");
+
+    await router.push({
+      name: routeNames.timeEntries,
+      query: { projectId: TEST_IDS.projectAdmin, taskId: TEST_IDS.taskReports },
+    });
+    await flushPromises();
+
+    expect(taskFilter.attributes("data-model-title")).toBe("");
+    expect(router.currentRoute.value.query).toEqual({ projectId: TEST_IDS.projectAdmin });
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.projectAdmin);
+  });
+
+  it("revalidates a task with a resolved label when project access narrows", async () => {
+    const client = createClientMock({ entriesResponse: createEntryListResponse([]) });
+    const { queryClient, router, wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?projectId=${TEST_IDS.projectOrion}&taskId=${TEST_IDS.taskReports}`,
+    });
+    const taskFilter = wrapper.get('[data-testid="filter-task-autocomplete"]');
+
+    await flushPromises();
+    expect(taskFilter.attributes("data-model-title")).toBe("Improve reports filters");
+
+    client.listProjectTasks.mockResolvedValueOnce([]);
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [createProject({ accessScope: "own-time" })],
+    );
+    await flushPromises();
+
+    expect(taskFilter.attributes("data-model-title")).toBe("");
+    expect(router.currentRoute.value.query).toEqual({ projectId: TEST_IDS.projectOrion });
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows a selected task immediately and applies only its ID after a rename", async () => {
+    const client = createClientMock();
+    let resolveTasks!: (tasks: TaskResponse[]) => void;
+    client.listProjectTasks.mockReturnValueOnce(
+      new Promise((resolve) => { resolveTasks = resolve; }),
+    );
+    const { wrapper } = await mountView(client);
+    const taskFilter = wrapper.get('[data-testid="filter-task-autocomplete"]');
+
+    await flushPromises();
+    await wrapper.get('[data-testid="filter-task-select"]').trigger("click");
+    expect(taskFilter.attributes("data-model-title")).toBe("Ship admin polish");
+
+    resolveTasks([createTask({
+      id: TEST_IDS.taskAdmin,
+      projectId: TEST_IDS.projectAdmin,
+      title: "Ship renamed admin task",
+    })]);
+    await flushPromises();
+
+    expect(taskFilter.attributes("data-model-title")).toBe("Ship renamed admin task");
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toMatchObject({
+      search: undefined,
+      taskId: TEST_IDS.taskAdmin,
+    });
+  });
+
   it("drops a URL task filter without a resolvable project", async () => {
     const unknownTaskId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2999";
     const client = createClientMock();
@@ -1608,7 +1721,7 @@ describe("TimeEntriesView", () => {
       limit: 20,
       page: 1,
       projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
-      search: "Ship admin polish",
+      search: undefined,
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
     expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
@@ -1633,7 +1746,7 @@ describe("TimeEntriesView", () => {
       limit: 20,
       page: 1,
       projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
-      search: "Ship admin polish",
+      search: undefined,
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
 
@@ -1646,7 +1759,7 @@ describe("TimeEntriesView", () => {
       limit: 20,
       page: 1,
       projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
-      search: "Ship admin polish",
+      search: undefined,
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
     expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");

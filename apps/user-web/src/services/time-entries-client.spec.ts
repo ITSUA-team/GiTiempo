@@ -164,6 +164,32 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
+  it("loads a visible task by ID independently of a time-entry list", async () => {
+    const taskId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001";
+    const responseBody = {
+      ...taskResponseMetadata,
+      createdAt: "2026-04-20T12:00:00.000Z",
+      defaultBillableForTimeEntries: false,
+      githubIssue: null,
+      id: taskId,
+      isActive: true,
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      status: "open",
+      title: "Improve reports filters",
+      updatedAt: "2026-04-20T12:00:00.000Z",
+      workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+    };
+    const fetchFn = vi.fn(async () => jsonResponse(responseBody));
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+    const { signal } = new AbortController();
+
+    await expect(client.getTask(taskId, { signal })).resolves.toMatchObject(responseBody);
+    expect(fetchFn).toHaveBeenCalledWith(
+      `/tasks/${taskId}`,
+      expect.objectContaining({ headers: { Authorization: "Bearer access-token" }, method: "GET", signal }),
+    );
+  });
+
   it("loads project tasks from the selected project path", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse([
