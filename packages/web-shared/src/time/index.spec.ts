@@ -18,6 +18,7 @@ import {
   formatUtcTime,
   formatUtcWeekday,
   getLocalIsoWeekRange,
+  getLocalMonthRange,
   getLocalDateKey,
   getUtcDateKey,
   hasValidDate,
@@ -29,6 +30,8 @@ import {
   parseDateInput,
   startOfLocalDay,
   startOfLocalIsoWeek,
+  startOfLocalMonth,
+  nextLocalMonthStart,
   startOfLocalDayIso,
   startOfUtcDay,
   startOfUtcIsoWeek,
@@ -116,6 +119,37 @@ describe('shared date-time helpers', () => {
     expect(getLocalIsoWeekRange(date)).toEqual({
       dateFrom: new Date(2026, 4, 11, 0, 0, 0, 0).toISOString(),
       dateTo: date.toISOString(),
+    });
+  });
+
+  it('calculates local month boundaries as Date values', () => {
+    const midMonth = new Date(2026, 3, 15, 14, 30, 0, 0);
+
+    expect(startOfLocalMonth(midMonth)).toEqual(
+      new Date(2026, 3, 1, 0, 0, 0, 0),
+    );
+    expect(nextLocalMonthStart(midMonth)).toEqual(
+      new Date(2026, 4, 1, 0, 0, 0, 0),
+    );
+  });
+
+  it('calculates local month boundaries across year-end', () => {
+    const decemberDate = new Date(2026, 11, 31, 23, 59, 0, 0);
+
+    expect(startOfLocalMonth(decemberDate)).toEqual(
+      new Date(2026, 11, 1, 0, 0, 0, 0),
+    );
+    expect(nextLocalMonthStart(decemberDate)).toEqual(
+      new Date(2027, 0, 1, 0, 0, 0, 0),
+    );
+  });
+
+  it('calculates local DatePicker-style month range with exclusive end', () => {
+    const date = new Date(2026, 5, 15, 12, 30, 0);
+
+    expect(getLocalMonthRange(date)).toEqual({
+      dateFrom: new Date(2026, 5, 1, 0, 0, 0, 0).toISOString(),
+      dateTo: new Date(2026, 6, 1, 0, 0, 0, 0).toISOString(),
     });
   });
 

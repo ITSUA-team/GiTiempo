@@ -94,9 +94,53 @@ function createGlobalMountOptions() {
         emits: ["click"],
         template: '<button type="button" @click="$emit(\'click\')"><slot />{{ label }}</button>',
       },
+      RouterLink: {
+        props: ["to"],
+        template: '<a :data-route="JSON.stringify(to)"><slot /></a>',
+      },
       SurfaceCard: { template: "<section><slot /></section>" },
     },
   };
+}
+
+const NAVIGATION_ROUTE = {
+  name: "time-entries",
+  query: {},
+} as const;
+
+function mountNavCard(entries?: DashboardRecentEntryRow[]) {
+  return mount(DashboardRecentEntriesCard, {
+    props: {
+      entries: entries ?? [
+        createRecentEntryRow({
+          githubIssue: {
+            githubRepo: "octo/repo",
+            issueNumber: 184,
+          },
+          id: "entry-1",
+          isHighlighted: true,
+          timerEntry: {
+            endedAt: null,
+            id: "entry-1",
+          },
+        }),
+        createRecentEntryRow({
+          durationLabel: "00:40:00",
+          id: "entry-2",
+          projectName: "Project Orion",
+          taskTitle: "Improve reports filters",
+          timerEntry: {
+            id: "entry-2",
+            task: { title: "Improve reports filters" },
+            taskId: "task-2",
+          },
+          timeRangeLabel: "10:20 - Running",
+        }),
+      ],
+      sectionRoute: NAVIGATION_ROUTE,
+    },
+    global: createGlobalMountOptions(),
+  });
 }
 
 function getMobileCardElementByText(card: Element, selector: string, text: string): Element {
@@ -437,6 +481,75 @@ describe("DashboardRecentEntriesCard", () => {
     await startTimerButton.trigger("click");
 
     expect(wrapper.emitted("startTimer")).toBeUndefined();
+  });
+
+  describe("card navigation", () => {
+    it("renders an accessible full-card navigation overlay linking to Time Entries", () => {
+      const wrapper = mountNavCard();
+      const overlay = wrapper.get('[data-testid="dashboard-recent-entries-nav"]');
+
+      expect(JSON.parse(overlay.attributes("data-route")!)).toEqual(NAVIGATION_ROUTE);
+      expect(overlay.attributes("aria-label")).toBe("View all time entries");
+      expect(overlay.attributes("class")!.split(" ")).toEqual(
+        expect.arrayContaining(["focus-visible:ring-2", "focus-visible:ring-brand", "focus-visible:outline-none"]),
+      );
+    });
+
+    it("omits the navigation overlay when no destination is provided", () => {
+      const wrapper = mount(DashboardRecentEntriesCard, {
+        props: { entries: [createRecentEntryRow({ id: "entry-1" })] },
+        global: createGlobalMountOptions(),
+      });
+
+      expect(wrapper.find('[data-testid="dashboard-recent-entries-nav"]').exists()).toBe(false);
+    });
+
+    it("activates card navigation on Space", async () => {
+      const wrapper = mountNavCard();
+
+      await wrapper.get('[data-testid="dashboard-recent-entries-nav"]').trigger("keydown", { key: " " });
+
+      expect(wrapper.emitted("activate")).toEqual([[]]);
+    });
+
+    it("does not trigger card navigation from timer, view-all, or github controls", async () => {
+      const wrapper = mountNavCard();
+
+      await wrapper.get('[data-testid="dashboard-recent-entry-stop-timer-entry-1"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-entry-start-timer-entry-2"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-entry-github-entry-1"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-entries-view-all-control"]').trigger("click");
+
+      expect(wrapper.emitted("stopTimer")).toEqual([[expect.objectContaining({ id: "entry-1" })]]);
+      expect(wrapper.emitted("startTimer")).toEqual([[expect.objectContaining({ id: "entry-2" })]]);
+      expect(wrapper.emitted("viewAll")).toEqual([[]]);
+      expect(wrapper.emitted("activate")).toBeUndefined();
+    });
+
+    it("does not trigger card navigation from mobile timer or github controls", async () => {
+      mockMatchMedia(true);
+      const wrapper = mountNavCard();
+
+      await wrapper.get('[data-testid="dashboard-recent-entry-mobile-stop-timer-entry-1"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-entry-mobile-start-timer-entry-2"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-entry-mobile-github-entry-1"]').trigger("click");
+
+      expect(wrapper.emitted("stopTimer")).toEqual([[expect.objectContaining({ id: "entry-1" })]]);
+      expect(wrapper.emitted("startTimer")).toEqual([[expect.objectContaining({ id: "entry-2" })]]);
+      expect(wrapper.emitted("activate")).toBeUndefined();
+    });
+
+    it.each([false, true])("keeps static row content below the overlay (mobile: %s)", (mobile) => {
+      mockMatchMedia(mobile);
+      const wrapper = mountNavCard([
+        createRecentEntryRow({ description: "Long description beneath a short title", taskTitle: "Fix" }),
+      ]);
+      const prefix = mobile ? "dashboard-recent-entry-mobile" : "dashboard-recent-entry";
+      const title = wrapper.get(`[data-testid="${prefix}-edit-entry-1"]`);
+      expect(title.element.closest(".z-20")).toBeNull();
+      const timer = wrapper.get(`[data-testid="${prefix}-start-timer-entry-1"]`);
+      expect(timer.element.closest(".z-20")).toBeNull();
+    });
   });
 
   it("opens the entry editor from a completed entry's task title", async () => {

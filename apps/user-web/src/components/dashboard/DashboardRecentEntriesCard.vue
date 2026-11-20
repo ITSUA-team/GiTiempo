@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import Button from "primevue/button";
 import Column from "primevue/column";
+import type { RouteLocationNamedRaw } from "vue-router";
 import {
   ManagementTableShell,
   MobileRecordCard,
@@ -24,12 +25,14 @@ import TimeEntryMetadata from "../records/TimeEntryMetadata.vue";
 const props = defineProps<{
   entries: DashboardRecentEntryRow[];
   isStartTimerDisabled?: boolean;
+  sectionRoute?: RouteLocationNamedRaw | null;
   showStopFirstGuidance?: boolean;
   startingTimerEntryId?: string | null;
   stoppingTimerEntryId?: string | null;
 }>();
 
 const emit = defineEmits<{
+  activate: [];
   editEntry: [entry: TimeEntryResponse];
   goToActiveTimer: [];
   openActiveTimer: [entryId: string];
@@ -90,82 +93,40 @@ defineExpose({ focusViewAll });
 </script>
 
 <template>
-  <SurfaceCard
-    body-class="flex flex-col gap-4"
-    padding-class="p-6"
-  >
-    <SectionHeader
-      description="Last 10 entries across your projects."
-      title="Recent Time Entries"
+  <div class="group relative z-0">
+    <SurfaceCard
+      body-class="flex flex-col gap-4"
+      class="group-hover:shadow-popover transition-shadow"
+      :class="{ '[&_a]:relative [&_a]:z-20 [&_button]:relative [&_button]:z-20': props.sectionRoute }"
+      padding-class="p-6"
     >
-      <template #actions>
-        <Button
-          ref="viewAllButtonRef"
-          class="text-brand"
-          label="View all"
-          size="small"
-          variant="text"
-          @click="emit('viewAll')"
-        />
-      </template>
-    </SectionHeader>
-
-    <div
-      v-if="isMobileViewport"
-      class="flex flex-col gap-3"
-    >
-      <MobileRecordCard
-        v-for="entry in props.entries"
-        :key="entry.id"
-        data-testid="dashboard-recent-entry-mobile-card"
-        :tone="entry.isHighlighted ? 'highlighted' : 'default'"
+      <SectionHeader
+        description="Last 10 entries across your projects."
+        title="Recent Time Entries"
       >
-        <RecordEntryTaskCell
-          :description="entry.description"
-          :entry-id="entry.timerEntry.id"
-          :github-issue="entry.githubIssue"
-          :is-interactive="true"
-          :is-running="entry.timerEntry.endedAt === null"
-          :is-start-disabled="isDirectStartDisabled()"
-          :is-start-pending="isStartTimerPending(entry)"
-          :is-stop-disabled="isStopTimerDisabled()"
-          :is-stop-pending="isStopTimerPending(entry)"
-          :show-stop-first-guidance="props.showStopFirstGuidance === true"
-          :task-title="entry.taskTitle"
-          test-id-prefix="dashboard-recent-entry-mobile"
-          variant="mobile"
-          @open="handleEntryTaskOpen(entry)"
-          @go-to-active-timer="emit('goToActiveTimer')"
-          @start-timer="() => handleStartTimer(entry)"
-          @stop-timer="() => handleStopTimer(entry)"
-        />
+        <template #actions>
+          <Button
+            ref="viewAllButtonRef"
+            class="text-brand"
+            data-testid="dashboard-recent-entries-view-all-control"
+            label="View all"
+            size="small"
+            variant="text"
+            @click="emit('viewAll')"
+          />
+        </template>
+      </SectionHeader>
 
-        <TimeEntryMetadata
-          :project-name="entry.projectName"
-          :duration-label="entry.durationLabel"
-          :time-range-label="entry.timeRangeLabel"
-          truncate-range
-        />
-      </MobileRecordCard>
-    </div>
-
-    <ManagementTableShell
-      v-else
-      :body-row-class="RECORD_ENTRY_BODY_ROW_CLASS"
-      :columns="columns"
-      data-testid="dashboard-recent-entries-table"
-      data-key="id"
-      :loading="false"
-      :row-class="(entry) => getRecordEntryRowClass((entry as DashboardRecentEntryRow).isHighlighted)"
-      :show-header="false"
-      shell-class="border-divider overflow-x-auto rounded-[6px] border"
-      single-scroll
-      table-class="min-w-[740px] w-full table-fixed border-collapse"
-      table-container-class="overflow-visible rounded-none border-none"
-      :value="props.entries"
-    >
-      <Column :pt="managementTableColumnPt">
-        <template #body="{ data: entry }">
+      <div
+        v-if="isMobileViewport"
+        class="flex flex-col gap-3"
+      >
+        <MobileRecordCard
+          v-for="entry in props.entries"
+          :key="entry.id"
+          data-testid="dashboard-recent-entry-mobile-card"
+          :tone="entry.isHighlighted ? 'highlighted' : 'default'"
+        >
           <RecordEntryTaskCell
             :description="entry.description"
             :entry-id="entry.timerEntry.id"
@@ -178,48 +139,104 @@ defineExpose({ focusViewAll });
             :is-stop-pending="isStopTimerPending(entry)"
             :show-stop-first-guidance="props.showStopFirstGuidance === true"
             :task-title="entry.taskTitle"
-            test-id-prefix="dashboard-recent-entry"
-            variant="desktop"
+            test-id-prefix="dashboard-recent-entry-mobile"
+            variant="mobile"
             @open="handleEntryTaskOpen(entry)"
             @go-to-active-timer="emit('goToActiveTimer')"
             @start-timer="() => handleStartTimer(entry)"
             @stop-timer="() => handleStopTimer(entry)"
           />
-        </template>
-      </Column>
 
-      <Column
-        style="width: 180px"
-        :pt="managementTableColumnPt"
-      >
-        <template #body="{ data: entry }">
-          <p class="text-text-muted truncate text-[13px] font-normal">
-            {{ entry.projectName }}
-          </p>
-        </template>
-      </Column>
+          <TimeEntryMetadata
+            :project-name="entry.projectName"
+            :duration-label="entry.durationLabel"
+            :time-range-label="entry.timeRangeLabel"
+            truncate-range
+          />
+        </MobileRecordCard>
+      </div>
 
-      <Column
-        style="width: 100px"
-        :pt="managementTableColumnPt"
+      <ManagementTableShell
+        v-else
+        :body-row-class="RECORD_ENTRY_BODY_ROW_CLASS"
+        :columns="columns"
+        data-testid="dashboard-recent-entries-table"
+        data-key="id"
+        :loading="false"
+        :row-class="(entry) => getRecordEntryRowClass((entry as DashboardRecentEntryRow).isHighlighted)"
+        :show-header="false"
+        shell-class="border-divider overflow-x-auto rounded-[6px] border"
+        single-scroll
+        table-class="min-w-[740px] w-full table-fixed border-collapse"
+        table-container-class="overflow-visible rounded-none border-none"
+        :value="props.entries"
       >
-        <template #body="{ data: entry }">
-          <p class="text-text-muted whitespace-nowrap text-[13px] font-normal">
-            {{ entry.timeRangeLabel }}
-          </p>
-        </template>
-      </Column>
+        <Column :pt="managementTableColumnPt">
+          <template #body="{ data: entry }">
+            <RecordEntryTaskCell
+              :description="entry.description"
+              :entry-id="entry.timerEntry.id"
+              :github-issue="entry.githubIssue"
+              :is-interactive="true"
+              :is-running="entry.timerEntry.endedAt === null"
+              :is-start-disabled="isDirectStartDisabled()"
+              :is-start-pending="isStartTimerPending(entry)"
+              :is-stop-disabled="isStopTimerDisabled()"
+              :is-stop-pending="isStopTimerPending(entry)"
+              :show-stop-first-guidance="props.showStopFirstGuidance === true"
+              :task-title="entry.taskTitle"
+              test-id-prefix="dashboard-recent-entry"
+              variant="desktop"
+              @open="handleEntryTaskOpen(entry)"
+              @go-to-active-timer="emit('goToActiveTimer')"
+              @start-timer="() => handleStartTimer(entry)"
+              @stop-timer="() => handleStopTimer(entry)"
+            />
+          </template>
+        </Column>
 
-      <Column
-        style="width: 80px"
-        :pt="managementTableColumnPt"
-      >
-        <template #body="{ data: entry }">
-          <p class="text-text-dark text-right text-[13px] font-semibold tabular-nums">
-            {{ entry.durationLabel }}
-          </p>
-        </template>
-      </Column>
-    </ManagementTableShell>
-  </SurfaceCard>
+        <Column
+          style="width: 180px"
+          :pt="managementTableColumnPt"
+        >
+          <template #body="{ data: entry }">
+            <p class="text-text-muted truncate text-[13px] font-normal">
+              {{ entry.projectName }}
+            </p>
+          </template>
+        </Column>
+
+        <Column
+          style="width: 100px"
+          :pt="managementTableColumnPt"
+        >
+          <template #body="{ data: entry }">
+            <p class="text-text-muted whitespace-nowrap text-[13px] font-normal">
+              {{ entry.timeRangeLabel }}
+            </p>
+          </template>
+        </Column>
+
+        <Column
+          style="width: 80px"
+          :pt="managementTableColumnPt"
+        >
+          <template #body="{ data: entry }">
+            <p class="text-text-dark text-right text-[13px] font-semibold tabular-nums">
+              {{ entry.durationLabel }}
+            </p>
+          </template>
+        </Column>
+      </ManagementTableShell>
+    </SurfaceCard>
+
+    <RouterLink
+      v-if="props.sectionRoute"
+      aria-label="View all time entries"
+      class="focus-visible:ring-brand absolute inset-0 z-10 rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      data-testid="dashboard-recent-entries-nav"
+      :to="props.sectionRoute"
+      @keydown.space.prevent="emit('activate')"
+    />
+  </div>
 </template>

@@ -3,16 +3,21 @@ import { ChartBarSquareIcon, ExclamationTriangleIcon } from "@heroicons/vue/24/o
 import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
 import Button from "primevue/button";
 import { getErrorMessage, StatCard, SurfaceCard } from "@gitiempo/web-shared";
-import { computed, nextTick, ref, watch } from "vue";
+import type { RouteLocationNamedRaw } from "vue-router";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 import DashboardOverviewLoading from "@/components/dashboard/DashboardOverviewLoading.vue";
 import DashboardRecentEntriesCard from "@/components/dashboard/DashboardRecentEntriesCard.vue";
 import DashboardWeeklyFocusCard from "@/components/dashboard/DashboardWeeklyFocusCard.vue";
 import TimeEntryDialogConnection from "@/components/time-entries/TimeEntryDialogConnection.vue";
 import { useDashboardOverview } from "@/composables/dashboard/useDashboardOverview";
+import {
+  parseFocusPeriodQuery,
+  useDashboardCardNavigation,
+} from "@/composables/dashboard/useDashboardCardNavigation";
 import { useVisibleProjectsQuery } from "@/composables/query";
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryDialogWorkflow } from "@/composables/time-entries/useTimeEntryDialogWorkflow";
@@ -20,11 +25,13 @@ import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMu
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
+import { routeNames } from "@/constants/routes";
+import type { DashboardFocusPeriod } from "@/lib/dashboard-overview-helpers";
 import { userProjectsKeys } from "@/lib/query-keys";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
-import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const client = createDefaultTimeEntriesClient();
@@ -47,6 +54,34 @@ const projectsErrorMessage = computed(() =>
     ? getErrorMessage(visibleProjectsQuery.error.value)
     : null,
 );
+
+function navigate(routeLocation: RouteLocationNamedRaw): void {
+  void router.push(routeLocation);
+}
+
+function replaceQueryFocusPeriod(focusPeriod: DashboardFocusPeriod): void {
+  void router
+    .replace({ query: { ...route.query, focusPeriod } })
+    .catch(() => undefined);
+}
+
+const focusPeriod = ref<DashboardFocusPeriod>("week");
+const nowMs = ref(Date.now());
+
+let nowIntervalHandle: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+  nowIntervalHandle = setInterval(() => {
+    nowMs.value = Date.now();
+  }, 1000);
+});
+
+onBeforeUnmount(() => {
+  if (nowIntervalHandle) {
+    clearInterval(nowIntervalHandle);
+    nowIntervalHandle = null;
+  }
+});
 
 async function ensureProjectsLoaded(force = false): Promise<ProjectResponse[]> {
   if (!force && visibleProjects.value.length > 0) {
@@ -98,11 +133,14 @@ const {
 const { requestOpen: openActiveTimer } = topBarTimerDialogController;
 const {
   dashboardStats,
+  focusLoading,
+  focusRequestErrorMessage,
   hasConfirmedActiveTimer,
   isDirectStartBlockedByCurrentTimer,
   pageState,
   recentEntryRows,
   requestErrorMessage,
+  retryFocusLoad,
   retryLoadOverview,
   startingTimerEntryId,
   startTimerForEntry,
@@ -110,7 +148,56 @@ const {
   stopTimerForEntry,
   verifyActiveTimerEntry,
   weeklyFocus,
-} = useDashboardOverview();
+} = useDashboardOverview({ focusPeriod, now: () => nowMs.value });
+
+const {
+  focusRoute: focusSectionRoute,
+  projectsThisWeekRoute,
+  recentEntriesRoute,
+  thisWeekRoute,
+  todayRoute,
+  topProjectRoute,
+  topTaskRoute,
+} = useDashboardCardNavigation({ focusPeriod, nowMs, weeklyFocus });
+
+// Keyed by the stat labels produced by buildDashboardStats in
+// dashboard-overview-helpers; if labels change there, update them here too.
+const statCardRoutes = computed<Record<string, RouteLocationNamedRaw>>(() => ({
+  "Projects This Week": projectsThisWeekRoute.value,
+  "This Week": thisWeekRoute.value,
+  Today: todayRoute.value,
+}));
+
+const statCardNavLabels: Record<string, string> = {
+  "Projects This Week": "View time entries for projects tracked this week",
+  "This Week": "View time entries for this week",
+  Today: "View time entries for today",
+};
+
+watch(
+  () => route.query.focusPeriod,
+  (rawValue) => {
+    const parsed = parseFocusPeriodQuery(rawValue);
+
+    if (parsed) {
+      focusPeriod.value = parsed;
+      return;
+    }
+
+    focusPeriod.value = "week";
+    replaceQueryFocusPeriod("week");
+  },
+  { immediate: true },
+);
+
+function handleFocusPeriodChange(next: DashboardFocusPeriod): void {
+  if (focusPeriod.value === next) {
+    return;
+  }
+
+  focusPeriod.value = next;
+  replaceQueryFocusPeriod(next);
+}
 
 function openTimeEntries(): void {
   void router.push({ name: routeNames.timeEntries });
@@ -225,24 +312,52 @@ watch(isDialogOpen, (open) => {
         class="grid gap-4 xl:grid-cols-3"
         data-testid="dashboard-stats-row"
       >
-        <StatCard
+        <div
           v-for="stat in dashboardStats"
           :key="stat.label"
-          :description="stat.description"
-          :label="stat.label"
-          :value="stat.value"
-        />
+          class="group relative z-0 flex"
+          data-testid="dashboard-stat-card"
+        >
+          <StatCard
+            class="group-hover:shadow-popover transition-shadow"
+            :description="stat.description"
+            :label="stat.label"
+            :value="stat.value"
+          />
+          <RouterLink
+            :aria-label="statCardNavLabels[stat.label]"
+            :to="statCardRoutes[stat.label]"
+            class="focus-visible:ring-brand absolute inset-0 z-10 rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            data-testid="dashboard-stat-card-nav"
+            @keydown.space.prevent="navigate(statCardRoutes[stat.label])"
+          />
+        </div>
       </div>
 
-      <DashboardWeeklyFocusCard :focus="weeklyFocus" />
+      <DashboardWeeklyFocusCard
+        :error-message="focusRequestErrorMessage"
+        :focus="weeklyFocus"
+        :focus-period="focusPeriod"
+        :loading="focusLoading"
+        :project-route="topProjectRoute"
+        :section-route="focusSectionRoute"
+        :task-route="topTaskRoute"
+        @activate-project="navigate(topProjectRoute)"
+        @activate-section="navigate(focusSectionRoute)"
+        @activate-task="navigate(topTaskRoute)"
+        @retry="void retryFocusLoad()"
+        @update:focus-period="handleFocusPeriodChange"
+      />
 
       <DashboardRecentEntriesCard
         ref="recentEntriesCardRef"
         :entries="recentEntryRows"
         :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
+        :section-route="recentEntriesRoute"
         :show-stop-first-guidance="hasConfirmedActiveTimer"
         :starting-timer-entry-id="startingTimerEntryId"
         :stopping-timer-entry-id="stoppingTimerEntryId"
+        @activate="navigate(recentEntriesRoute)"
         @edit-entry="(entry) => openEditDialog(entry)"
         @open-active-timer="(entryId) => void handleOpenActiveTimer(entryId)"
         @go-to-active-timer="openActiveTimer"

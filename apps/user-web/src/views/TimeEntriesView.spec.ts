@@ -1,7 +1,8 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick, readonly, shallowRef } from "vue";
+import { defineComponent, nextTick, readonly, shallowRef } from "vue";
+import { createMemoryHistory, createRouter, type Router } from "vue-router";
 import type {
   ProjectResponse,
   TaskResponse,
@@ -18,8 +19,10 @@ import {
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
 import { TIME_ENTRY_NEW_TASK_ID } from "@/composables/time-entries/time-entry-task-lookup";
 import { topBarTimerDialogControllerKey } from "@/composables/timer/useTopBarTimerDialogController";
+import { nextLocalDay, startOfLocalDay } from "@gitiempo/web-shared/time";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
+import { routeNames } from "@/constants/routes";
 import {
   createTestQueryClient,
   createTestQueryPlugin,
@@ -66,6 +69,23 @@ const TEST_IDS = {
 } as const;
 
 const mountedWrappers: VueWrapper[] = [];
+
+function createViewRouter(initialUrl?: string): Router {
+  const RouteStub = defineComponent({ template: "<div />" });
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: "/", name: routeNames.dashboard, component: RouteStub },
+      { path: "/time-entries", name: routeNames.timeEntries, component: RouteStub },
+    ],
+  });
+
+  if (initialUrl !== undefined) {
+    void router.push(initialUrl);
+  }
+
+  return router;
+}
 
 function createTopBarTimerDialogControllerMock() {
   const openRequestId = shallowRef(0);
@@ -203,6 +223,7 @@ function createClientMock(options: {
   deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient["deleteTask"]>>;
   ensureGitHubIssueTask: ReturnType<typeof vi.fn<TimeEntriesClient["ensureGitHubIssueTask"]>>;
   getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
+  getTask: ReturnType<typeof vi.fn<TimeEntriesClient["getTask"]>>;
   listProjectGitHubIssues: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectGitHubIssues"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
   listProjectTimeEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTimeEntries"]>>;
@@ -248,6 +269,15 @@ function createClientMock(options: {
     deleteTask: vi.fn(async () => undefined),
     ensureGitHubIssueTask: vi.fn(async () => createTask()),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    getTask: vi.fn(async (taskId) => {
+      const task = Object.values(tasksByProject).flat().find((item) => item.id === taskId);
+
+      if (!task) {
+        throw new ApiError("Task not found", { status: 404 });
+      }
+
+      return task;
+    }),
     listGitHubOwners: vi.fn(),
     listGitHubProjectIssues: vi.fn(),
     listGitHubProjects: vi.fn(),
@@ -283,6 +313,7 @@ function createClientMock(options: {
 async function mountView(
   client = createClientMock(),
   options: {
+    initialUrl?: string;
     pinia?: ReturnType<typeof createPinia>;
     queryClient?: ReturnType<typeof createTestQueryClient>;
     topBarTimerDialogController?: ReturnType<typeof createTopBarTimerDialogControllerMock>;
@@ -297,9 +328,25 @@ async function mountView(
   useAuthStore().accessToken = "access-token";
   clientRef.current = client;
 
+  const wasFakeTimers = vi.isFakeTimers();
+  const systemTimeMs = Date.now();
+
+  if (wasFakeTimers) {
+    vi.useRealTimers();
+    vi.setSystemTime(new Date(systemTimeMs));
+  }
+
+  const router = createViewRouter(options.initialUrl ?? "/");
+  await router.isReady();
+
+  if (wasFakeTimers) {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(systemTimeMs));
+  }
+
   const wrapper = mount(TimeEntriesView, {
     global: {
-      plugins: [pinia, createTestQueryPlugin(queryClient)],
+      plugins: [pinia, createTestQueryPlugin(queryClient), router],
       provide: {
         [topBarTimerDialogControllerKey]: topBarTimerDialogController,
       },
@@ -324,6 +371,7 @@ async function mountView(
               :data-dropdown-mode="dropdownMode ?? ''"
               :data-min-length="String(minLength)"
               :data-model-id="typeof modelValue === 'object' && modelValue ? modelValue.id : ''"
+              :data-model-title="typeof modelValue === 'object' && modelValue ? String(modelValue.title ?? modelValue.name ?? '') : ''"
               :data-model-value="typeof modelValue === 'string' ? modelValue : ''"
               :data-testid="inputId === 'time-entries-project-filter' ? 'project-filter-autocomplete' : inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'"
             >
@@ -428,10 +476,18 @@ async function mountView(
         },
         Paginator: {
           emits: ["page"],
-          props: ["pageLinkSize", "template", "disabled"],
+          props: [
+            "first",
+            "pageLinkSize",
+            "rows",
+            "template",
+            "disabled",
+          ],
           template: `
             <button
+              :data-first="first ?? 0"
               :data-page-link-size="pageLinkSize ?? ''"
+              :data-rows="rows ?? 0"
               :data-template="template ?? ''"
               :disabled="disabled"
               data-testid="paginator-page-2"
@@ -605,7 +661,7 @@ async function mountView(
 
   mountedWrappers.push(wrapper);
 
-  return { client, pinia, queryClient, topBarTimerDialogController, wrapper };
+  return { client, pinia, queryClient, router, topBarTimerDialogController, wrapper };
 }
 
 describe("TimeEntriesView", () => {
@@ -1200,9 +1256,370 @@ describe("TimeEntriesView", () => {
       limit: 20,
       page: 2,
       projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
-      search: "Ship admin polish",
+      search: undefined,
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
+  });
+
+  it("hydrates filters from the URL and reflects them in every control", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse(
+        [createEntry()],
+        { limit: 20, page: 3, total: 45, totalPages: 3 },
+      ),
+    });
+    const urlFilterParams = new URLSearchParams({
+      dateFrom: startOfLocalDay(new Date(2026, 3, 1)).toISOString(),
+      dateTo: nextLocalDay(new Date(2026, 3, 21)).toISOString(),
+      page: "3",
+      projectId: TEST_IDS.projectOrion,
+      taskId: TEST_IDS.taskReports,
+    }).toString();
+    const { router, wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?${urlFilterParams}`,
+    });
+
+    await flushPromises();
+
+    const entryQueries = client.listOwnEntries.mock.calls.map((call) => call[0]);
+
+    expect(entryQueries).toHaveLength(1);
+    expect(entryQueries[0]).toEqual({
+      dateFrom: startOfLocalDay(new Date(2026, 3, 1)).toISOString(),
+      dateTo: nextLocalDay(new Date(2026, 3, 21)).toISOString(),
+      limit: 20,
+      page: 3,
+      projectId: TEST_IDS.projectOrion,
+      search: undefined,
+      taskId: TEST_IDS.taskReports,
+    });
+    expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe(
+      "2026-04-01 - 2026-04-21",
+    );
+    expect(
+      wrapper.get('[data-testid="project-filter-autocomplete"]').attributes("data-model-id"),
+    ).toBe(TEST_IDS.projectOrion);
+    expect(
+      wrapper.get('[data-testid="project-filter-autocomplete"]').attributes("data-model-title"),
+    ).toBe("Project Orion");
+    expect(
+      wrapper.get('[data-testid="filter-task-autocomplete"]').attributes("data-model-id"),
+    ).toBe(TEST_IDS.taskReports);
+    expect(
+      wrapper.get('[data-testid="filter-task-autocomplete"]').attributes("data-model-title"),
+    ).toBe("Improve reports filters");
+    expect(
+      wrapper.get('[data-testid="paginator-page-2"]').attributes("data-first"),
+    ).toBe("40");
+    expect(
+      wrapper.get('[data-testid="paginator-page-2"]').attributes("data-rows"),
+    ).toBe("20");
+    expect(router.currentRoute.value.query).toEqual({
+      dateFrom: startOfLocalDay(new Date(2026, 3, 1)).toISOString(),
+      dateTo: nextLocalDay(new Date(2026, 3, 21)).toISOString(),
+      page: "3",
+      projectId: TEST_IDS.projectOrion,
+      taskId: TEST_IDS.taskReports,
+    });
+  });
+
+  it("clears URL project and task filters whose projects are no longer visible", async () => {
+    const client = createClientMock({
+      visibleProjects: [createProject()],
+    });
+    const { router, wrapper } = await mountView(client, {
+      initialUrl:
+        `/time-entries?projectId=${TEST_IDS.projectAdmin}` +
+        `&taskId=${TEST_IDS.taskAdmin}&page=2`,
+    });
+
+    await flushPromises();
+
+    const entryQueries = client.listOwnEntries.mock.calls.map((call) => call[0]);
+
+    expect(entryQueries[0]?.projectId).toBe(TEST_IDS.projectAdmin);
+    expect(entryQueries[0]?.taskId).toBe(TEST_IDS.taskAdmin);
+    expect(entryQueries.at(-1)?.projectId).toBeUndefined();
+    expect(entryQueries.at(-1)?.taskId).toBeUndefined();
+    expect(entryQueries.at(-1)?.page).toBe(1);
+    expect(
+      wrapper.get('[data-testid="project-filter-autocomplete"]').attributes("data-model-id"),
+    ).toBe("");
+    expect(
+      wrapper.get('[data-testid="filter-task-autocomplete"]').attributes("data-model-id"),
+    ).toBe("");
+    expect(router.currentRoute.value.query).toEqual({});
+  });
+
+  it("restores filters when navigating back to a previously filtered history entry", async () => {
+    const client = createClientMock();
+    const { router, wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?projectId=${TEST_IDS.projectOrion}`,
+    });
+
+    await flushPromises();
+
+    await router.push(`/time-entries?projectId=${TEST_IDS.projectAdmin}`);
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="project-filter-autocomplete"]').attributes("data-model-id"),
+    ).toBe(TEST_IDS.projectAdmin);
+
+    await router.back();
+    await flushPromises();
+
+    expect(router.currentRoute.value.query).toEqual({
+      projectId: TEST_IDS.projectOrion,
+    });
+    expect(
+      wrapper.get('[data-testid="project-filter-autocomplete"]').attributes("data-model-id"),
+    ).toBe(TEST_IDS.projectOrion);
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toMatchObject({
+      projectId: TEST_IDS.projectOrion,
+      page: 1,
+    });
+  });
+
+  it("clears filters when navigating back to an unfiltered history entry", async () => {
+    const client = createClientMock();
+    const { router, wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?projectId=${TEST_IDS.projectOrion}`,
+    });
+
+    await flushPromises();
+
+    await router.push(`/time-entries`);
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="project-filter-autocomplete"]').attributes("data-model-id"),
+    ).toBe("");
+
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]?.projectId).toBeUndefined();
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toMatchObject({
+      page: 1,
+    });
+    expect(router.currentRoute.value.query).toEqual({});
+  });
+
+  it("rehydrates filters when the URL query changes for the current time-entries route", async () => {
+    const client = createClientMock();
+    const { router, wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    await router.push(`/time-entries?projectId=${TEST_IDS.projectOrion}&taskId=${TEST_IDS.taskReports}`);
+    await flushPromises();
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="project-filter-autocomplete"]').attributes("data-model-id"),
+    ).toBe(TEST_IDS.projectOrion);
+    expect(
+      wrapper.get('[data-testid="filter-task-autocomplete"]').attributes("data-model-id"),
+    ).toBe(TEST_IDS.taskReports);
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toMatchObject({
+      projectId: TEST_IDS.projectOrion,
+      taskId: TEST_IDS.taskReports,
+    });
+    expect(router.currentRoute.value.query).toEqual({
+      projectId: TEST_IDS.projectOrion,
+      taskId: TEST_IDS.taskReports,
+    });
+  });
+
+  it("does not reload entries when navigating away and back with unchanged filters", async () => {
+    const client = createClientMock();
+    const { router, wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?projectId=${TEST_IDS.projectOrion}`,
+    });
+
+    await flushPromises();
+
+    const callsBefore = client.listOwnEntries.mock.calls.length;
+
+    await router.push("/");
+    await flushPromises();
+    await router.back();
+    await flushPromises();
+
+    expect(client.listOwnEntries.mock.calls.length).toBe(callsBefore);
+    expect(
+      wrapper.get('[data-testid="project-filter-autocomplete"]').attributes("data-model-id"),
+    ).toBe(TEST_IDS.projectOrion);
+  });
+
+  it("drops a URL task filter whose task is not in the selected project", async () => {
+    const unknownTaskId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2999";
+    const client = createClientMock();
+    const { wrapper } = await mountView(client, {
+      initialUrl:
+        `/time-entries?projectId=${TEST_IDS.projectOrion}` +
+        `&taskId=${unknownTaskId}`,
+    });
+
+    await flushPromises();
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="project-filter-autocomplete"]').attributes("data-model-id"),
+    ).toBe(TEST_IDS.projectOrion);
+    expect(
+      wrapper.get('[data-testid="filter-task-autocomplete"]').attributes("data-model-id"),
+    ).toBe("");
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toMatchObject({
+      projectId: TEST_IDS.projectOrion,
+      page: 1,
+    });
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]?.taskId).toBeUndefined();
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toMatchObject({
+      projectId: TEST_IDS.projectOrion,
+      page: 1,
+    });
+  });
+
+  it("resolves a URL task filter label from the project task list when no entries match", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse(
+        [],
+        { limit: 20, page: 1, total: 0, totalPages: 0 },
+      ),
+    });
+    const { wrapper } = await mountView(client, {
+      initialUrl:
+        `/time-entries?projectId=${TEST_IDS.projectOrion}` +
+        `&taskId=${TEST_IDS.taskReports}`,
+    });
+
+    await flushPromises();
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="filter-task-autocomplete"]').attributes("data-model-id"),
+    ).toBe(TEST_IDS.taskReports);
+    expect(
+      wrapper.get('[data-testid="filter-task-autocomplete"]').attributes("data-model-title"),
+    ).toBe("Improve reports filters");
+  });
+
+  it("keeps an exact task-only link active when the selected period has no matching entries", async () => {
+    const client = createClientMock({ entriesResponse: createEntryListResponse([]) });
+    const { router, wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?taskId=${TEST_IDS.taskReports}`,
+    });
+
+    await flushPromises();
+
+    const taskFilter = wrapper.get('[data-testid="filter-task-autocomplete"]');
+    expect(taskFilter.attributes("data-model-title")).toBe("Improve reports filters");
+    expect(router.currentRoute.value.query).toEqual({ taskId: TEST_IDS.taskReports });
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(1);
+    expect(client.listOwnEntries.mock.calls[0]?.[0]).toMatchObject({
+      projectId: undefined,
+      search: undefined,
+      taskId: TEST_IDS.taskReports,
+    });
+  });
+
+  it("keeps a task-only filter active after a transient task lookup error", async () => {
+    const client = createClientMock({ entriesResponse: createEntryListResponse([]) });
+    client.getTask.mockRejectedValue(new ApiError("Service unavailable", { status: 503 }));
+    const { router } = await mountView(client, {
+      initialUrl: `/time-entries?taskId=${TEST_IDS.taskReports}`,
+    });
+
+    await flushPromises();
+
+    expect(router.currentRoute.value.query).toEqual({ taskId: TEST_IDS.taskReports });
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(1);
+    expect(client.listOwnEntries.mock.calls[0]?.[0]?.taskId).toBe(TEST_IDS.taskReports);
+  });
+
+  it("does not reuse a resolved task title when the next URL names a different project", async () => {
+    const client = createClientMock({ entriesResponse: createEntryListResponse([]) });
+    const { router, wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?projectId=${TEST_IDS.projectOrion}&taskId=${TEST_IDS.taskReports}`,
+    });
+    const taskFilter = wrapper.get('[data-testid="filter-task-autocomplete"]');
+
+    await flushPromises();
+    expect(taskFilter.attributes("data-model-title")).toBe("Improve reports filters");
+
+    await router.push({
+      name: routeNames.timeEntries,
+      query: { projectId: TEST_IDS.projectAdmin, taskId: TEST_IDS.taskReports },
+    });
+    await flushPromises();
+
+    expect(taskFilter.attributes("data-model-title")).toBe("");
+    expect(router.currentRoute.value.query).toEqual({ projectId: TEST_IDS.projectAdmin });
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.projectAdmin);
+  });
+
+  it("revalidates a task with a resolved label when project access narrows", async () => {
+    const client = createClientMock({ entriesResponse: createEntryListResponse([]) });
+    const { queryClient, router, wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?projectId=${TEST_IDS.projectOrion}&taskId=${TEST_IDS.taskReports}`,
+    });
+    const taskFilter = wrapper.get('[data-testid="filter-task-autocomplete"]');
+
+    await flushPromises();
+    expect(taskFilter.attributes("data-model-title")).toBe("Improve reports filters");
+
+    client.listProjectTasks.mockResolvedValueOnce([]);
+    queryClient.setQueryData(
+      userProjectsKeys.visibleProjects({ userId: null, workspaceId: null }),
+      [createProject({ accessScope: "own-time" })],
+    );
+    await flushPromises();
+
+    expect(taskFilter.attributes("data-model-title")).toBe("");
+    expect(router.currentRoute.value.query).toEqual({ projectId: TEST_IDS.projectOrion });
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows a selected task immediately and applies only its ID after a rename", async () => {
+    const client = createClientMock();
+    let resolveTasks!: (tasks: TaskResponse[]) => void;
+    client.listProjectTasks.mockReturnValueOnce(
+      new Promise((resolve) => { resolveTasks = resolve; }),
+    );
+    const { wrapper } = await mountView(client);
+    const taskFilter = wrapper.get('[data-testid="filter-task-autocomplete"]');
+
+    await flushPromises();
+    await wrapper.get('[data-testid="filter-task-select"]').trigger("click");
+    expect(taskFilter.attributes("data-model-title")).toBe("Ship admin polish");
+
+    resolveTasks([createTask({
+      id: TEST_IDS.taskAdmin,
+      projectId: TEST_IDS.projectAdmin,
+      title: "Ship renamed admin task",
+    })]);
+    await flushPromises();
+
+    expect(taskFilter.attributes("data-model-title")).toBe("Ship renamed admin task");
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toMatchObject({
+      search: undefined,
+      taskId: TEST_IDS.taskAdmin,
+    });
+  });
+
+  it("drops a URL task filter without a resolvable project", async () => {
+    const unknownTaskId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2999";
+    const client = createClientMock();
+    const { wrapper } = await mountView(client, {
+      initialUrl: `/time-entries?taskId=${unknownTaskId}`,
+    });
+
+    await flushPromises();
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="filter-task-autocomplete"]').attributes("data-model-id"),
+    ).toBe("");
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]?.taskId).toBeUndefined();
   });
 
   it("applies the shared date range input and dropdown panel styling", async () => {
@@ -1304,7 +1721,7 @@ describe("TimeEntriesView", () => {
       limit: 20,
       page: 1,
       projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
-      search: "Ship admin polish",
+      search: undefined,
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
     expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
@@ -1329,7 +1746,7 @@ describe("TimeEntriesView", () => {
       limit: 20,
       page: 1,
       projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
-      search: "Ship admin polish",
+      search: undefined,
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
 
@@ -1342,7 +1759,7 @@ describe("TimeEntriesView", () => {
       limit: 20,
       page: 1,
       projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
-      search: "Ship admin polish",
+      search: undefined,
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
     expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");

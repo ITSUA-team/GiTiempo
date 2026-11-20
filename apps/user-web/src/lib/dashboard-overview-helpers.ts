@@ -3,8 +3,10 @@ import {
   addLocalDays,
   formatCompactDuration,
   nextLocalDay,
+  nextLocalMonthStart,
   startOfLocalDay,
   startOfLocalIsoWeek,
+  startOfLocalMonth,
 } from '@gitiempo/web-shared/time';
 
 import {
@@ -26,8 +28,10 @@ export interface DashboardFocusItem {
   entryCount: number;
   githubIssue: SyncedGitHubIssue | null;
   label: string;
+  projectId?: string;
   shareLabel: string;
   sharePercent: number;
+  taskId?: string;
   title: string;
 }
 
@@ -60,17 +64,54 @@ interface FocusAccumulator {
   descriptionLabel?: string;
   entryCount: number;
   githubIssue: SyncedGitHubIssue | null;
+  id: string;
   label: string;
   seconds: number;
   title: string;
 }
 
-export function getDashboardWeekWindow(nowMs: number): {
+export interface DashboardFocusWindow {
   dateFrom: string;
   dateTo: string;
-} {
+}
+
+export type DashboardFocusPeriod = 'day' | 'week' | 'month';
+
+function toFocusPeriodLabel(period: DashboardFocusPeriod): string {
+  switch (period) {
+    case 'day':
+      return 'today';
+    case 'month':
+      return 'this month';
+    default:
+      return 'this week';
+  }
+}
+
+export function getDashboardPeriodWindow(
+  period: DashboardFocusPeriod,
+  nowMs: number,
+): DashboardFocusWindow {
   const nowDate = new Date(nowMs);
-  const weekStart = startOfLocalIsoWeek(nowDate);
+
+  switch (period) {
+    case 'day':
+      return {
+        dateFrom: startOfLocalDay(nowDate).toISOString(),
+        dateTo: nextLocalDay(nowDate).toISOString(),
+      };
+    case 'month':
+      return {
+        dateFrom: startOfLocalMonth(nowDate).toISOString(),
+        dateTo: nextLocalMonthStart(nowDate).toISOString(),
+      };
+    default:
+      return getDashboardWeekWindow(nowMs);
+  }
+}
+
+export function getDashboardWeekWindow(nowMs: number): DashboardFocusWindow {
+  const weekStart = startOfLocalIsoWeek(new Date(nowMs));
 
   return {
     dateFrom: weekStart.toISOString(),
@@ -148,10 +189,12 @@ export function buildDashboardStats(
 export function buildDashboardWeeklyFocus(
   entries: TimeEntryResponse[],
   nowMs: number,
+  period: DashboardFocusPeriod = 'week',
 ): DashboardWeeklyFocus {
-  const nowDate = new Date(nowMs);
-  const weekStartMs = startOfLocalIsoWeek(nowDate).getTime();
-  const nextWeekStartMs = addLocalDays(startOfLocalIsoWeek(nowDate), 7).getTime();
+  const focusWindow = getDashboardPeriodWindow(period, nowMs);
+  const windowStartMs = Date.parse(focusWindow.dateFrom);
+  const windowEndMs = Date.parse(focusWindow.dateTo);
+  const periodLabel = toFocusPeriodLabel(period);
   const projectMap = new Map<string, FocusAccumulator>();
   const taskMap = new Map<string, FocusAccumulator>();
   let totalTrackedSeconds = 0;
@@ -159,8 +202,8 @@ export function buildDashboardWeeklyFocus(
   for (const entry of entries) {
     const trackedSeconds = getEntryTrackedSecondsWithinRange(
       entry,
-      weekStartMs,
-      nextWeekStartMs,
+      windowStartMs,
+      windowEndMs,
       nowMs,
     );
 
@@ -173,6 +216,7 @@ export function buildDashboardWeeklyFocus(
     const projectStats = projectMap.get(entry.project.id) ?? {
       entryCount: 0,
       githubIssue: null,
+      id: entry.project.id,
       label: 'Top Project',
       seconds: 0,
       title: entry.project.name,
@@ -185,6 +229,7 @@ export function buildDashboardWeeklyFocus(
       descriptionLabel: entry.project.name,
       entryCount: 0,
       githubIssue: entry.githubIssue,
+      id: entry.task.id,
       label: 'Top Task',
       seconds: 0,
       title: entry.task.title,
@@ -204,7 +249,8 @@ export function buildDashboardWeeklyFocus(
           entryCount: topProject.entryCount,
           githubIssue: topProject.githubIssue,
           label: topProject.label,
-          shareLabel: `${toSharePercent(topProject.seconds, totalTrackedSeconds)}% of your tracked time this week`,
+          projectId: topProject.id,
+          shareLabel: `${toSharePercent(topProject.seconds, totalTrackedSeconds)}% of your tracked time ${periodLabel}`,
           sharePercent: toSharePercent(topProject.seconds, totalTrackedSeconds),
           title: topProject.title,
         }
@@ -217,6 +263,7 @@ export function buildDashboardWeeklyFocus(
           label: topTask.label,
           shareLabel: `${toEntryLabel(topTask.entryCount)} contributed to this focus`,
           sharePercent: toSharePercent(topTask.seconds, totalTrackedSeconds),
+          taskId: topTask.id,
           title: topTask.title,
         }
       : null,
