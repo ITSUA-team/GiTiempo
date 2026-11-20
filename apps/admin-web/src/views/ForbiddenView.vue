@@ -27,15 +27,21 @@ const secondaryActionLabel = computed(() =>
 const recoveryCopy =
   "Your current admin role cannot open this page. Switch workspace or return to the dashboard.";
 
-function goToDashboard(): void {
-  void router.push({ name: routeNames.dashboard });
-}
+async function goToDashboard(): Promise<void> {
+  const dashboard = { name: routeNames.dashboard };
+  const allowedRoles = router.resolve(dashboard).meta.allowedRoles;
 
-function getRequiredUserWorkspaceHref(): string {
-  return getCounterpartWorkspaceAppHref({
-    configuredUrl: appEnv.userAppUrl,
-    fallbackPath: "/",
-  });
+  if (hasAllowedRole(allowedRoles, authStore.profile?.role)) {
+    await router.push(dashboard);
+    return;
+  }
+
+  navigateToExternalHref(
+    getCounterpartWorkspaceAppHref({
+      configuredUrl: appEnv.userAppUrl,
+      fallbackPath: "/",
+    }),
+  );
 }
 
 onMounted(() => {
@@ -69,17 +75,7 @@ async function handleWorkspaceSwitch(workspaceId: string): Promise<void> {
 
     workspaceSwitchDialogVisible.value = false;
 
-    const nextRole = authStore.profile?.role ?? null;
-    const canAccessDashboard = hasAllowedRole(
-      router.resolve({ name: routeNames.dashboard }).meta.allowedRoles,
-      nextRole,
-    );
-
-    if (canAccessDashboard) {
-      await router.push({ name: routeNames.dashboard });
-    } else {
-      navigateToExternalHref(getRequiredUserWorkspaceHref());
-    }
+    await goToDashboard();
 
     if (!switchResult.membershipsReloaded) {
       infoToast(
@@ -96,10 +92,6 @@ async function handleWorkspaceSwitch(workspaceId: string): Promise<void> {
     });
   }
 }
-
-function handlePrimaryAction(): void {
-  goToDashboard();
-}
 </script>
 
 <template>
@@ -110,7 +102,7 @@ function handlePrimaryAction(): void {
     primary-action-label="Back to dashboard"
     :secondary-action-label="secondaryActionLabel"
     title="You do not have access"
-    @primary-action="handlePrimaryAction"
+    @primary-action="goToDashboard"
     @secondary-action="openWorkspaceSwitchDialog"
   />
 
