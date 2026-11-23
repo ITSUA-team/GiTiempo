@@ -2958,6 +2958,7 @@
     },
     "/time-entries/timer/start": {
       "post": {
+        "description": "Active workspace members can track active open tasks in active public projects without a project assignment, including GitHub-linked tasks.",
         "operationId": "TimeEntriesController_startTimer",
         "parameters": [],
         "requestBody": {
@@ -2977,16 +2978,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TimeEntryResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "An ordinary member is not assigned to the saved GitHub task project",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GitHubTrackingErrorResponseDto"
                 }
               }
             }
@@ -3014,7 +3005,7 @@
     },
     "/time-entries/timer/start-from-github": {
       "post": {
-        "description": "Verifies repository and issue through the workspace GitHub App installation. Requires an existing mapped project and ordinary-member assignment, including public projects. Rechecks membership, installation, organization policy and project access before task/time writes. Uses GitHub canonical metadata; never creates projects or assignments and needs no personal GitHub connection.",
+        "description": "Verifies repository and issue through the workspace GitHub App installation. Requires an existing mapped project. Public projects are available to active workspace members. Private projects require existing project access. Rechecks membership, installation, organization policy and project access before task/time writes. Uses GitHub canonical metadata; never creates projects or assignments and needs no personal GitHub connection.",
         "operationId": "TimeEntriesController_startTimerFromGitHub",
         "parameters": [],
         "requestBody": {
@@ -3105,14 +3096,34 @@
               }
             }
           },
+          "403": {
+            "description": "Project assignment, GitHub App access or permissions, or organization policy denies tracking for the managed target",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubTrackingErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Project or task not available"
           },
           "409": {
-            "description": "Timer already running"
+            "description": "Timer already running, or the managed target requires an installation or has a missing or ambiguous project mapping"
           },
           "422": {
             "description": "Project or task inactive"
+          },
+          "503": {
+            "description": "GitHub provider unavailable for the managed target",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubTrackingErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8563,6 +8574,33 @@
         ],
         "additionalProperties": false
       },
+      "StartTimerFromGitHubDto": {
+        "type": "object",
+        "properties": {
+          "githubProjectId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "githubRepo": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$"
+          },
+          "issueNumber": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "githubRepo",
+          "issueNumber"
+        ],
+        "additionalProperties": false
+      },
       "GitHubTrackingErrorResponseDto": {
         "type": "object",
         "properties": {
@@ -8592,33 +8630,6 @@
           "error",
           "message"
         ]
-      },
-      "StartTimerFromGitHubDto": {
-        "type": "object",
-        "properties": {
-          "githubProjectId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "githubRepo": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 200,
-            "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$"
-          },
-          "issueNumber": {
-            "type": "integer",
-            "exclusiveMinimum": true,
-            "maximum": 9007199254740991,
-            "minimum": 0
-          }
-        },
-        "required": [
-          "githubRepo",
-          "issueNumber"
-        ],
-        "additionalProperties": false
       },
       "StartTimerFromGitHubReferenceDto": {
         "type": "object",

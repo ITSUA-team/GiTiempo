@@ -68,10 +68,14 @@ export function useProjectEditActions({
     const isMutationCurrent = () => eligible && canEdit();
     const isViewCurrent = () => isMutationCurrent() && visit === getVisit();
 
-    const { memberIdsToAdd, memberIdsToRemove } = diffProjectMemberAssignments({
-      nextMemberIds: input.memberIds,
-      project,
-    });
+    const nextMemberIds =
+      input.visibility === 'private'
+        ? input.memberIds
+        : project.members.map((member) => member.userId);
+    const { memberIdsToAdd, memberIdsToRemove } =
+      input.visibility === 'private'
+        ? diffProjectMemberAssignments({ nextMemberIds, project })
+        : { memberIdsToAdd: [], memberIdsToRemove: [] };
 
     const currentManagerUserId =
       project.members.find((m) => m.role === WorkspaceRoles.PM)?.userId ?? null;
@@ -81,7 +85,7 @@ export function useProjectEditActions({
     const managerToAdd =
       managerChanged &&
       nextManagerUserId !== null &&
-      !input.memberIds.includes(nextManagerUserId)
+      !nextMemberIds.includes(nextManagerUserId)
         ? nextManagerUserId
         : null;
     const managerToRemove =

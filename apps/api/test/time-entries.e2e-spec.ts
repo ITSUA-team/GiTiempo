@@ -211,7 +211,7 @@ describe('Time entries (e2e)', () => {
     await app.close();
   });
 
-  it('denies saved public GitHub tasks after disconnect without changing history or creating a timer', async () => {
+  it('starts saved public GitHub tasks after disconnect without changing history', async () => {
     const { taskId } = await createSavedGitHubTask('public', false);
     const historyId = await createStoredEntry(
       memberUserId,
@@ -230,25 +230,24 @@ describe('Time entries (e2e)', () => {
       .delete('/github/connection')
       .set('Authorization', bearer(memberToken));
     expect(disconnected.status).toBe(200);
-    const denied = await request(app.getHttpServer())
+    const started = await request(app.getHttpServer())
       .post('/time-entries/timer/start')
       .set('Authorization', bearer(memberToken))
       .send({ taskId });
-    expect(denied.status).toBe(403);
-    expect(denied.body.code).toBe('project_assignment_required');
-    expect(denied.body.message).toBe(
-      'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
+    expect(started.status).toBe(201);
+    expect(started.body).toMatchObject({ taskId, source: 'web' });
+    const entries = await db
+      .select({ id: timeEntries.id })
+      .from(timeEntries)
+      .where(eq(timeEntries.taskId, taskId));
+    expect(entries.map((entry) => entry.id).sort()).toEqual(
+      [historyId, started.body.id].sort(),
     );
-    expect(
-      await db
-        .select({ id: timeEntries.id })
-        .from(timeEntries)
-        .where(eq(timeEntries.taskId, taskId)),
-    ).toEqual([{ id: historyId }]);
     const current = await request(app.getHttpServer())
       .get('/time-entries/current')
       .set('Authorization', bearer(memberToken));
-    expect(current.body.timeEntry).toBeNull();
+    expect(current.body.timeEntry?.id).toBe(started.body.id);
+    expect(githubInstallations.prepareIssue).not.toHaveBeenCalled();
     const [connection] = await db
       .select()
       .from(githubConnections)
@@ -334,17 +333,20 @@ describe('Time entries (e2e)', () => {
       });
       expect(stopped.body.endedAt).toBeTruthy();
       expect(stopped.body.durationSeconds).toBeGreaterThanOrEqual(0);
-      const stale = await request(app.getHttpServer())
+      const restarted = await request(app.getHttpServer())
         .post('/time-entries/timer/start')
         .set('Authorization', bearer(memberToken))
         .send({ taskId });
-      expect(stale.status).toBe(visibility === 'private' ? 404 : 403);
-      expect(
-        await db
-          .select({ id: timeEntries.id })
-          .from(timeEntries)
-          .where(eq(timeEntries.taskId, taskId)),
-      ).toEqual([{ id: started.body.id }]);
+      expect(restarted.status).toBe(visibility === 'private' ? 404 : 201);
+      const entries = await db
+        .select({ id: timeEntries.id })
+        .from(timeEntries)
+        .where(eq(timeEntries.taskId, taskId));
+      const expectedIds = [started.body.id];
+      if (visibility === 'public') expectedIds.push(restarted.body.id);
+      expect(entries.map((entry) => entry.id).sort()).toEqual(
+        expectedIds.sort(),
+      );
     },
   );
 
@@ -360,7 +362,7 @@ describe('Time entries (e2e)', () => {
     },
   );
 
-  it('denies a connected unassigned member but allows a manual task in the same public GitHub project', async () => {
+  it('allows an unassigned member to start both linked and manual tasks in the same public project', async () => {
     const { projectId, taskId } = await createSavedGitHubTask('public', false);
     await db.insert(githubConnections).values({
       userId: memberUserId,
@@ -369,12 +371,18 @@ describe('Time entries (e2e)', () => {
       accessTokenEncrypted: 'fixture-access',
       refreshTokenEncrypted: 'fixture-refresh',
     });
-    const denied = await request(app.getHttpServer())
+    const linked = await request(app.getHttpServer())
       .post('/time-entries/timer/start')
       .set('Authorization', bearer(memberToken))
       .send({ taskId });
-    expect(denied.status).toBe(403);
-    expect(denied.body.code).toBe('project_assignment_required');
+    expect(linked.status).toBe(201);
+    expect(linked.body.taskId).toBe(taskId);
+
+    const stopped = await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(memberToken))
+      .send({ expectedTimerId: linked.body.id });
+    expect(stopped.status).toBe(200);
     const manualTaskId = await createTask(
       projectId,
       'Manual task in GitHub project',
@@ -1739,30 +1747,138 @@ describe('Time entries (e2e)', () => {
     expect(assignment).toBeUndefined();
   });
 
-  it('rejects an unassigned member for a public mapped GitHub issue', async () => {
-    const suffix = randomUUID().slice(0, 8);
-    const githubRepo = `gitiempo-test/public-${suffix}`;
+  it('allows a public managed GitHub start and reference repeat without assignment', async () => {
+    const githubRepo = `gitiempo-test/public-${randomUUID().slice(0, 8)}`;
     const [project] = await db
       .insert(projects)
-      .values({
-        workspaceId,
-        name: `gitiempo-test/Public ${suffix}`,
-        visibility: 'public',
-      })
+      .values({ workspaceId, name: githubRepo, visibility: 'public' })
       .returning({ id: projects.id });
     if (!project) throw new Error('Expected public fixture project');
     await createGitHubRepositoryRef(githubRepo, project.id);
 
+    const issueNumber = 322;
+    const context = {
+      githubRepo,
+      issueNumber,
+      issueTitle: 'Browser title',
+      issueUrl: `https://github.com/${githubRepo}/issues/${issueNumber}`,
+    };
+    const auth = bearer(otherMemberToken);
+    const capability = await request(app.getHttpServer())
+      .post('/time-entries/timer/capability')
+      .set('Authorization', auth)
+      .send(context);
+    expect(capability.status).toBe(200);
+    expect(capability.body).toEqual({
+      canStartTracking: true,
+      accessScope: 'project',
+      reason: null,
+    });
+    expect(
+      await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.projectId, project.id)),
+    ).toEqual([]);
+
     const started = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github')
-      .set('Authorization', bearer(otherMemberToken))
-      .send({ githubRepo, issueNumber: 322 });
+      .set('Authorization', auth)
+      .send({ githubRepo, issueNumber });
+    expect(started.status).toBe(201);
+    expect(started.body).toMatchObject({
+      projectId: project.id,
+      source: 'extension',
+    });
 
-    expect(started.status).toBe(403);
-    expect(started.body.code).toBe('project_assignment_required');
-    expect(started.body.message).toBe(
-      'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
-    );
+    const conflicting = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github-reference')
+      .set('Authorization', auth)
+      .send(context);
+    expect(conflicting.status).toBe(409);
+
+    const stopped = await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', auth)
+      .send({ expectedTimerId: started.body.id });
+    expect(stopped.status).toBe(200);
+
+    const repeated = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github-reference')
+      .set('Authorization', auth)
+      .send(context);
+    expect(repeated.status).toBe(201);
+    expect(repeated.body.taskId).toBe(started.body.taskId);
+    expect(
+      await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.projectId, project.id)),
+    ).toEqual([{ id: started.body.taskId }]);
+    expect(
+      await db
+        .select()
+        .from(projectAssignments)
+        .where(eq(projectAssignments.projectId, project.id)),
+    ).toEqual([]);
+  });
+
+  it('rechecks public-to-private access between GitHub capability and start', async () => {
+    const githubRepo = `gitiempo-test/public-${randomUUID().slice(0, 8)}`;
+    const [project] = await db
+      .insert(projects)
+      .values({ workspaceId, name: githubRepo, visibility: 'public' })
+      .returning({ id: projects.id });
+    if (!project) throw new Error('Expected public fixture project');
+    await createGitHubRepositoryRef(githubRepo, project.id);
+
+    const issueNumber = 323;
+    const context = {
+      githubRepo,
+      issueNumber,
+      issueTitle: 'Browser title',
+      issueUrl: `https://github.com/${githubRepo}/issues/${issueNumber}`,
+    };
+    const auth = bearer(otherMemberToken);
+    const capability = await request(app.getHttpServer())
+      .post('/time-entries/timer/capability')
+      .set('Authorization', auth)
+      .send(context);
+    expect(capability.status).toBe(200);
+    expect(capability.body.canStartTracking).toBe(true);
+
+    await db
+      .update(projects)
+      .set({ visibility: 'private' })
+      .where(eq(projects.id, project.id));
+
+    const denied = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github-reference')
+      .set('Authorization', auth)
+      .send(context);
+    expect(denied.status).toBe(403);
+    expect(denied.body.code).toBe('project_assignment_required');
+
+    expect(
+      await db.select().from(tasks).where(eq(tasks.projectId, project.id)),
+    ).toEqual([]);
+    expect(
+      await db
+        .select()
+        .from(taskExternalRefs)
+        .where(eq(taskExternalRefs.projectId, project.id)),
+    ).toEqual([]);
+    const current = await request(app.getHttpServer())
+      .get('/time-entries/current')
+      .set('Authorization', auth);
+    expect(current.status).toBe(200);
+    expect(current.body.timeEntry).toBeNull();
+    expect(
+      await db
+        .select()
+        .from(projectAssignments)
+        .where(eq(projectAssignments.projectId, project.id)),
+    ).toEqual([]);
   });
 
   it('allows assigned users to reuse existing GitHub refs', async () => {
