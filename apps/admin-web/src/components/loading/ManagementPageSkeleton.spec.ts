@@ -48,6 +48,26 @@ describe('ManagementPageSkeleton', () => {
     expect(wrapper.find('.hidden.sm\\:block').exists()).toBe(true);
   });
 
+  it.each([
+    ['members', ['152px', '220px', '184px']],
+    ['projects', ['172px', '220px', '136px', '144px']],
+  ] as const)('aligns the %s loading columns across the desktop table', (variant, widths) => {
+    const wrapper = mountSkeleton(variant);
+    const table = wrapper.get<HTMLElement>('.hidden.sm\\:block').element;
+
+    expect(table.classList.contains('overflow-x-auto')).toBe(true);
+    expect(table.children).toHaveLength(8);
+
+    for (const row of table.children) {
+      const cells = Array.from(row.children) as HTMLElement[];
+
+      expect(row.classList.contains('min-w-[860px]')).toBe(true);
+      expect(cells.map((cell) => cell.style.width)).toEqual(['', ...widths]);
+      expect(cells[0]?.style.flexGrow).toBe('1');
+      expect(cells.slice(1).map((cell) => cell.style.flexShrink)).toEqual(widths.map(() => '0'));
+    }
+  });
+
   it('renders three stat card skeletons for invoices loading state', () => {
     const wrapper = mountSkeleton('invoices');
 
