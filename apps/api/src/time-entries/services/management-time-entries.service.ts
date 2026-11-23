@@ -6,7 +6,19 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, asc, count, eq, exists, inArray, ne, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  exists,
+  gt,
+  inArray,
+  lt,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
@@ -27,6 +39,15 @@ import type {
 } from '../dto/management-time-entries.dto';
 import { timeEntries } from '../schemas/time-entries.schema';
 import { calculateDurationSeconds } from '../time-entry-duration';
+import {
+  allowsTrackingFromOwnTime,
+  hasImplicitTrackingAccess,
+  implicitTrackingMemberCondition,
+  ownTaskTimeCondition,
+  taskTrackingBlockReason,
+  trackableTaskCondition,
+  trackingAssignmentCondition,
+} from '../tracking-access';
 import { TimeEntriesService } from './time-entries.service';
 
 type Transaction = Parameters<Parameters<DrizzleDB['transaction']>[0]>[0];
@@ -228,7 +249,24 @@ export class ManagementTimeEntriesService {
       );
       const task = await this.lockTask(tx, project, input.taskId);
       if (!task) throw new NotFoundException('Task not found');
-      await this.requireEligibleOwner(tx, project, task, input.userId, owner);
+      const access = await this.lockTrackingAccess(
+        tx,
+        project,
+        input.userId,
+        owner,
+      );
+      const hasOwnTime =
+        access === 'own-time' &&
+        (await this.lockOwnTime(
+          tx,
+          ownTaskTimeCondition(project.workspaceId, input.userId, task.id),
+        ));
+      this.assertEligibleOwner(
+        project,
+        task,
+        owner,
+        access === 'project' || hasOwnTime,
+      );
 
       const startedAt = new Date(input.startedAt);
       const endedAt = new Date(input.endedAt);
@@ -287,21 +325,37 @@ export class ManagementTimeEntriesService {
         projectId,
         role,
       );
-      const entry = await this.requireEditableEntry(
+      const access = owner
+        ? await this.lockTrackingAccess(
+            tx,
+            project,
+            owner.userId,
+            owner.membership,
+          )
+        : undefined;
+      const evidence =
+        access === 'own-time' && owner && input.taskId !== undefined
+          ? ownTaskTimeCondition(
+              project.workspaceId,
+              owner.userId,
+              input.taskId,
+            )
+          : undefined;
+      const { entry, hasOwnTime } = await this.requireEditableEntry(
         tx,
         project,
         entryId,
         input.taskId,
+        evidence,
       );
       if (input.taskId !== undefined && input.taskId !== entry.taskId) {
         const destination = await this.lockTask(tx, project, input.taskId);
         if (!destination) throw new NotFoundException('Task not found');
-        await this.requireEligibleOwner(
-          tx,
+        this.assertEligibleOwner(
           project,
           destination,
-          entry.userId,
-          owner,
+          owner?.membership,
+          access === 'project' || hasOwnTime,
         );
       }
 
@@ -342,7 +396,7 @@ export class ManagementTimeEntriesService {
   ): Promise<void> {
     await this.db.transaction(async (tx) => {
       const project = await this.requireProject(tx, actor, projectId);
-      const entry = await this.requireEditableEntry(tx, project, entryId);
+      const { entry } = await this.requireEditableEntry(tx, project, entryId);
       await tx.delete(timeEntries).where(eq(timeEntries.id, entry.id));
     });
     void this.usersActivity.touchLastActive(actor.sub);
@@ -405,11 +459,23 @@ export class ManagementTimeEntriesService {
     project: Project,
     entryId: string,
     destinationTaskId?: string,
+    evidence?: SQL,
   ) {
+    const destinationScope =
+      destinationTaskId === undefined
+        ? undefined
+        : exists(this.projectTaskIds(tx, project, destinationTaskId));
+    const eligibleEvidence = evidence && and(evidence, destinationScope);
+    // Lock proof before or after the edited row by ID, matching invoice writes.
+    const earlierProof =
+      Boolean(eligibleEvidence) &&
+      (await this.lockOwnTime(
+        tx,
+        and(eligibleEvidence, lt(timeEntries.id, entryId)),
+      ));
     const [entry] = await tx
       .select({
         id: timeEntries.id,
-        userId: timeEntries.userId,
         taskId: timeEntries.taskId,
         startedAt: timeEntries.startedAt,
         endedAt: timeEntries.endedAt,
@@ -421,9 +487,7 @@ export class ManagementTimeEntriesService {
           eq(timeEntries.id, entryId),
           eq(timeEntries.workspaceId, project.workspaceId),
           inArray(timeEntries.taskId, this.projectTaskIds(tx, project)),
-          destinationTaskId === undefined
-            ? undefined
-            : exists(this.projectTaskIds(tx, project, destinationTaskId)),
+          destinationScope,
         ),
       )
       .for('update');
@@ -442,71 +506,96 @@ export class ManagementTimeEntriesService {
         HttpStatus.CONFLICT,
       );
     }
-    return { ...entry, endedAt: entry.endedAt };
+    return {
+      entry: { ...entry, endedAt: entry.endedAt },
+      hasOwnTime:
+        earlierProof ||
+        (Boolean(eligibleEvidence) &&
+          destinationTaskId !== entry.taskId &&
+          (await this.lockOwnTime(
+            tx,
+            and(eligibleEvidence, gt(timeEntries.id, entryId)),
+          ))),
+    };
   }
 
-  private async requireEligibleOwner(
+  private async lockOwnTime(tx: Transaction, condition: SQL | undefined) {
+    const [entry] = await tx
+      .select({ id: timeEntries.id })
+      .from(timeEntries)
+      .where(condition)
+      .orderBy(asc(timeEntries.id))
+      .limit(1)
+      // Retasks explicitly lock FOR UPDATE. Closing a task may still stop its timer.
+      .for('key share');
+    return entry !== undefined;
+  }
+
+  private async lockTrackingAccess(
     tx: Transaction,
     project: Project,
-    task: Task,
     ownerId: string,
     owner: Membership | undefined,
   ) {
+    if (!owner || !project.isActive) return undefined;
     if (
-      !owner ||
-      !project.isActive ||
-      !task.isActive ||
-      task.status === 'closed'
-    ) {
+      hasImplicitTrackingAccess(owner.role, project.visibility) ||
+      (await this.lockAssignment(tx, project, ownerId))
+    )
+      return 'project';
+    return allowsTrackingFromOwnTime(project.trackingMode)
+      ? 'own-time'
+      : undefined;
+  }
+
+  private assertEligibleOwner(
+    project: Project,
+    task: Task,
+    owner: Membership | undefined,
+    canTrack: boolean,
+  ) {
+    if (!owner || !project.isActive || taskTrackingBlockReason(task)) {
       throw new UnprocessableEntityException(
         'Owner or work is ineligible for time tracking',
       );
     }
-    if (owner.role === 'admin' || project.visibility === 'public') return;
-    if (await this.lockAssignment(tx, project, ownerId)) return;
-
-    if (project.trackingMode === 'external-reference') {
-      const [evidence] = await tx
-        .select({ id: timeEntries.id })
-        .from(timeEntries)
-        .where(this.ownTaskTime(project, ownerId, task.id))
-        .orderBy(asc(timeEntries.id))
-        .limit(1)
-        .for('share');
-      if (evidence) return;
+    if (!canTrack) {
+      throw new UnprocessableEntityException(
+        'Owner cannot track time on this task',
+      );
     }
-    throw new UnprocessableEntityException(
-      'Owner cannot track time on this task',
-    );
   }
 
   private eligibleTaskCondition(tx: Transaction, project: Project) {
     return and(
       eq(tasks.workspaceId, project.workspaceId),
       eq(tasks.projectId, project.id),
-      eq(tasks.isActive, true),
-      ne(tasks.status, 'closed'),
+      trackableTaskCondition(),
       project.isActive ? undefined : sql`false`,
-      project.visibility === 'public'
+      hasImplicitTrackingAccess('member', project.visibility)
         ? undefined
         : or(
-            eq(workspaceMembers.role, 'admin'),
+            implicitTrackingMemberCondition(),
             exists(
               tx
                 .select({ id: projectAssignments.id })
                 .from(projectAssignments)
                 .where(
-                  this.assignmentCondition(project, workspaceMembers.userId),
+                  trackingAssignmentCondition(
+                    project.workspaceId,
+                    project.id,
+                    workspaceMembers.userId,
+                  ),
                 ),
             ),
-            project.trackingMode === 'external-reference'
+            allowsTrackingFromOwnTime(project.trackingMode)
               ? exists(
                   tx
                     .select({ id: timeEntries.id })
                     .from(timeEntries)
                     .where(
-                      this.ownTaskTime(
-                        project,
+                      ownTaskTimeCondition(
+                        project.workspaceId,
                         workspaceMembers.userId,
                         tasks.id,
                       ),
@@ -514,29 +603,6 @@ export class ManagementTimeEntriesService {
                 )
               : undefined,
           ),
-    );
-  }
-
-  private ownTaskTime(
-    project: Project,
-    userId: string | typeof workspaceMembers.userId,
-    taskId: string | typeof tasks.id,
-  ) {
-    return and(
-      eq(timeEntries.workspaceId, project.workspaceId),
-      eq(timeEntries.userId, userId),
-      eq(timeEntries.taskId, taskId),
-    );
-  }
-
-  private assignmentCondition(
-    project: Project,
-    userId: string | typeof workspaceMembers.userId,
-  ) {
-    return and(
-      eq(projectAssignments.workspaceId, project.workspaceId),
-      eq(projectAssignments.projectId, project.id),
-      eq(projectAssignments.userId, userId),
     );
   }
 
@@ -548,7 +614,9 @@ export class ManagementTimeEntriesService {
     const [assignment] = await tx
       .select({ id: projectAssignments.id })
       .from(projectAssignments)
-      .where(this.assignmentCondition(project, userId))
+      .where(
+        trackingAssignmentCondition(project.workspaceId, project.id, userId),
+      )
       .for('share');
     return assignment;
   }
@@ -591,7 +659,10 @@ export class ManagementTimeEntriesService {
         ),
       );
     if (!owner) return undefined;
-    return this.lockMembership(tx, workspaceId, owner.userId);
+    return {
+      userId: owner.userId,
+      membership: await this.lockMembership(tx, workspaceId, owner.userId),
+    };
   }
 
   private async lockTask(tx: Transaction, project: Project, taskId: string) {

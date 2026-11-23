@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { and, eq, inArray } from 'drizzle-orm';
+import type { Pool } from 'pg';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { AppModule } from '../src/app.module';
-import { DRIZZLE } from '../src/db/db.constants';
+import { DRIZZLE, PG_POOL } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import {
   invoices,
@@ -290,7 +291,7 @@ describe('Managed time entries (e2e)', () => {
   async function insertEntry(
     overrides: Partial<typeof timeEntries.$inferInsert> = {},
   ) {
-    const id = randomUUID();
+    const id = overrides.id ?? randomUUID();
     await db.insert(timeEntries).values({
       id,
       workspaceId,
@@ -302,6 +303,46 @@ describe('Managed time entries (e2e)', () => {
       ...overrides,
     });
     return id;
+  }
+
+  async function queueOnEntry(
+    entryId: string,
+    first: request.Test,
+    second: request.Test,
+  ) {
+    const pool = app.get<Pool>(PG_POOL);
+    const lock = await pool.connect();
+    const pending: Promise<request.Response>[] = [];
+    const waitForRequests = (count: number) =>
+      vi.waitFor(
+        async () => {
+          const { rows } = await pool.query<{ count: number }>(`
+        SELECT count(*)::int AS count
+        FROM pg_stat_activity
+        WHERE datname = current_database() AND pid <> pg_backend_pid()
+          AND wait_event_type = 'Lock' AND query LIKE '%"time_entries"%'
+      `);
+          expect(rows[0]?.count).toBe(count);
+        },
+        { interval: 10, timeout: 5000 },
+      );
+
+    try {
+      await lock.query('BEGIN');
+      await lock.query('SELECT id FROM time_entries WHERE id = $1 FOR UPDATE', [
+        entryId,
+      ]);
+      pending.push(first.then((response) => response));
+      await waitForRequests(1);
+      pending.push(second.then((response) => response));
+      await waitForRequests(2);
+      await lock.query('COMMIT');
+      return await Promise.all(pending);
+    } finally {
+      await lock.query('ROLLBACK');
+      lock.release();
+      await Promise.allSettled(pending);
+    }
   }
 
   it('authorizes lookups and direct requests by current workspace role and assignment', async () => {
@@ -724,11 +765,16 @@ describe('Managed time entries (e2e)', () => {
     }
   });
 
-  it.each(['edit', 'delete'] as const)(
-    'serializes invoice attachment with administrative %s',
-    async (operation) => {
+  it.each([
+    ['edit', 'invoice'],
+    ['edit', 'management'],
+    ['delete', 'invoice'],
+    ['delete', 'management'],
+  ] as const)(
+    'serializes invoice attachment with administrative %s when %s locks the entry first',
+    async (operation, first) => {
       const id = await insertEntry({ isBillable: true });
-      const title = `Time management ${operation} race`;
+      const title = `Time management ${operation} race, ${first} first`;
       const invoiceRequest = request(app.getHttpServer())
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
@@ -770,7 +816,10 @@ describe('Managed time entries (e2e)', () => {
               pmToken,
             )
           : remove(publicProject, id, pmToken);
-      const [invoice, result] = await Promise.all([invoiceRequest, mutation]);
+      const [invoice, result] =
+        first === 'invoice'
+          ? await queueOnEntry(id, invoiceRequest, mutation)
+          : (await queueOnEntry(id, mutation, invoiceRequest)).reverse();
       const final = await read(id);
       const savedInvoices = await db
         .select({ id: invoices.id, totalHours: invoices.totalHours })
@@ -778,7 +827,8 @@ describe('Managed time entries (e2e)', () => {
         .where(
           and(eq(invoices.projectId, publicProject), eq(invoices.title, title)),
         );
-      if (result.status === 409) {
+      if (first === 'invoice') {
+        expect(result.status).toBe(409);
         expect(result.body.code).toBe('time_entry_invoiced');
         expect(invoice.status).toBe(201);
         expect(invoice.body.totalHours).toBe(1);
@@ -805,4 +855,70 @@ describe('Managed time entries (e2e)', () => {
       }
     },
   );
+
+  it('locks competing task moves in ID order and rechecks exact-task participation', async () => {
+    const lowerTask = randomUUID();
+    const higherTask = randomUUID();
+    await db.insert(tasks).values([
+      {
+        id: lowerTask,
+        workspaceId,
+        projectId: externalProject,
+        title: 'Move source',
+      },
+      {
+        id: higherTask,
+        workspaceId,
+        projectId: externalProject,
+        title: 'Move destination',
+      },
+    ]);
+    const [lowerId, higherId] = [randomUUID(), randomUUID()].sort();
+    const source = await insertEntry({ id: lowerId, taskId: lowerTask });
+    const target = await insertEntry({ id: higherId, taskId: higherTask });
+    const [move, reverse] = await queueOnEntry(
+      source,
+      patch(externalProject, source, { taskId: higherTask }, pmToken),
+      patch(externalProject, target, { taskId: lowerTask }),
+    );
+    expect(move.status).toBe(200);
+    expect(reverse.status).toBe(422);
+    expect(await read(source)).toMatchObject({ taskId: higherTask });
+    expect(await read(target)).toMatchObject({ taskId: higherTask });
+  });
+
+  it('uses another participation record when the first proof disappears during a move', async () => {
+    const fromTask = randomUUID();
+    const toTask = randomUUID();
+    await db.insert(tasks).values([
+      {
+        id: fromTask,
+        workspaceId,
+        projectId: externalProject,
+        title: 'Alternate proof source',
+      },
+      {
+        id: toTask,
+        workspaceId,
+        projectId: externalProject,
+        title: 'Alternate proof destination',
+      },
+    ]);
+    const [firstId, alternateId, sourceId] = [
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+    ].sort();
+    const firstProof = await insertEntry({ id: firstId, taskId: toTask });
+    await insertEntry({ id: alternateId, taskId: toTask });
+    const source = await insertEntry({ id: sourceId, taskId: fromTask });
+    const [deletion, move] = await queueOnEntry(
+      firstProof,
+      remove(externalProject, firstProof, pmToken),
+      patch(externalProject, source, { taskId: toTask }),
+    );
+    expect(deletion.status).toBe(204);
+    expect(move.status).toBe(200);
+    expect(await read(source)).toMatchObject({ taskId: toTask });
+  });
 });

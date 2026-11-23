@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import {
   createManagedTimeEntrySchema,
@@ -91,6 +92,9 @@ describe('management time-entry contracts', () => {
       description: null,
     });
     expect(updateManagedTimeEntrySchema.safeParse({}).success).toBe(false);
+    expect(
+      z.toJSONSchema(updateManagedTimeEntrySchema, { io: 'input' }),
+    ).toHaveProperty('minProperties', 1);
     expect(
       updateManagedTimeEntrySchema.safeParse({ startedAt, endedAt: startedAt })
         .success,

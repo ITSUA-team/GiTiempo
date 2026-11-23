@@ -1,6 +1,7 @@
 import { WorkspaceRoles, type TimeEntryResponse } from '@gitiempo/shared';
-import type * as SharedUi from '@gitiempo/web-shared';
+import * as SharedUi from '@gitiempo/web-shared';
 import { ApiError } from '@gitiempo/web-shared/http';
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import PrimeVue from 'primevue/config';
@@ -11,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, ref } from 'vue';
 
 import ManagedEntryDialog from '@/components/time-entries/ManagedEntryDialog.vue';
+import { adminDashboardKeys, reportsKeys } from '@/lib/query-keys';
 import { useAuthStore } from '@/stores/auth';
 import TimeEntriesView from './TimeEntriesView.vue';
 
@@ -47,6 +49,7 @@ const editable: TimeEntryResponse = {
 };
 const running = { ...editable, id: 'running', task: { id: 'running-task', title: 'Running task' }, endedAt: null, durationSeconds: null };
 const invoiced = { ...editable, id: 'invoiced', task: { id: 'invoiced-task', title: 'Invoiced task' }, invoiceId: 'invoice' };
+const otherEditable = { ...editable, id: 'other', task: { id: 'other-task', title: 'Other editable task' } };
 
 function response(items: TimeEntryResponse[] = [], total = items.length, page = 1) {
   return { items, meta: { page, limit: 20, total, totalPages: Math.ceil(total / 20) } };
@@ -64,14 +67,15 @@ function render() {
   const pinia = createPinia();
   const auth = useAuthStore(pinia);
   auth.accessToken = token('workspace');
+  const queryClient = new QueryClient();
   const wrapper = mount(TimeEntriesView, {
     global: {
       directives: { tooltip: {} },
-      plugins: [pinia, PrimeVue, ConfirmationService],
-      stubs: { AppDialog: dialogStub },
+      plugins: [pinia, PrimeVue, ConfirmationService, [VueQueryPlugin, { queryClient }]],
+      stubs: { AppDialog: dialogStub, Teleport: true },
     },
   });
-  return { wrapper, auth };
+  return { wrapper, auth, queryClient };
 }
 
 beforeEach(() => {
@@ -110,16 +114,22 @@ describe('Time Entries', () => {
 
   it.each([false, true])('updates one entry in place after saving (mobile: %s)', async viewport => {
     mobile.value = viewport;
+    mocks.list.mockResolvedValue(response([editable, otherEditable]));
     const { wrapper } = render();
     await flushPromises();
     const rowSelector = viewport ? 'article' : 'tbody tr';
     const rowsBefore = wrapper.findAll(rowSelector).map(row => row.element);
+    const otherEditButton = wrapper.get('button[aria-label="Edit time entry for Other editable task"]');
     await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
     await flushPromises();
     await wrapper.get('#managed-entry-description').setValue('Corrected note');
-    mocks.update.mockResolvedValue({ ...editable, description: 'Saved note' });
+    let resolveUpdate!: (value: TimeEntryResponse) => void;
+    mocks.update.mockReturnValue(new Promise<TimeEntryResponse>(resolve => { resolveUpdate = resolve; }));
 
     await wrapper.get('form').trigger('submit');
+    expect(otherEditButton.attributes('disabled')).toBeUndefined();
+    expect(wrapper.get('button[aria-label="Edit time entry for Historical task"]').attributes('disabled')).toBeDefined();
+    resolveUpdate({ ...editable, description: 'Saved note' });
     await flushPromises();
 
     expect(wrapper.get(rowSelector).text()).toContain('Saved note');
@@ -130,6 +140,30 @@ describe('Time Entries', () => {
       expect(row.element).toBe(rowsBefore[index]);
     });
     wrapper.unmount();
+  });
+
+  it('invalidates reports and dashboard in the mutation scope even if the workspace changed while saving', async () => {
+    const { wrapper, auth, queryClient } = render();
+    const scope = { workspaceId: 'workspace', userId: 'actor', role: WorkspaceRoles.PM };
+    const originalKeys = [reportsKeys.all(scope), adminDashboardKeys.all(scope)];
+    const otherKey = reportsKeys.all({ ...scope, workspaceId: 'another-workspace' });
+    for (const key of [...originalKeys, otherKey]) queryClient.setQueryData(key, { hours: 1 });
+    await flushPromises();
+
+    await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
+    let resolveUpdate!: (value: TimeEntryResponse) => void;
+    mocks.update.mockReturnValue(new Promise<TimeEntryResponse>(resolve => { resolveUpdate = resolve; }));
+    wrapper.getComponent(ManagedEntryDialog).vm.$emit('update', { isBillable: true });
+    mocks.projects.mockResolvedValue([]);
+    auth.accessToken = token('another-workspace');
+    resolveUpdate({ ...editable, isBillable: true });
+    await flushPromises();
+
+    for (const key of originalKeys) expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(otherKey)?.isInvalidated).toBe(false);
+    expect(wrapper.findComponent(ManagedEntryDialog).exists()).toBe(false);
+    wrapper.unmount();
+    queryClient.clear();
   });
 
   it('keeps the table mounted while reconciling an edit that changes the sort order', async () => {
@@ -188,6 +222,71 @@ describe('Time Entries', () => {
     wrapper.unmount();
   });
 
+  it('keeps an edit draft and the selected project when the record disappeared but access remains', async () => {
+    const { wrapper } = render();
+    await flushPromises();
+    await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('#managed-entry-description').setValue('Keep my draft');
+    mocks.update.mockRejectedValueOnce(new ApiError('Time entry not found', { status: 404 }));
+    mocks.projects.mockResolvedValue([beta, alpha]);
+    mocks.list.mockResolvedValue(response([]));
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.getComponent(ManagedEntryDialog).text()).toContain('Time entry not found');
+    expect(wrapper.get<HTMLTextAreaElement>('#managed-entry-description').element.value).toBe('Keep my draft');
+    expect(wrapper.get('button[aria-pressed="true"]').text()).toBe(alpha.name);
+    expect(wrapper.text()).toContain('No time entries yet');
+    expect(mocks.projects).toHaveBeenCalledTimes(2);
+    expect(mocks.list).toHaveBeenLastCalledWith(alpha.id, 1, expect.anything());
+    wrapper.unmount();
+  });
+
+  it('clears the editor and protected rows when a missing project is no longer manageable', async () => {
+    const { wrapper } = render();
+    await flushPromises();
+    await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
+    await flushPromises();
+    mocks.update.mockRejectedValueOnce(new ApiError('Project not found', { status: 404 }));
+    mocks.projects.mockResolvedValue([beta]);
+    mocks.list.mockResolvedValue(response([]));
+    wrapper.getComponent(ManagedEntryDialog).vm.$emit('update', { description: 'Retained only with access' });
+    await flushPromises();
+
+    expect(wrapper.findComponent(ManagedEntryDialog).exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Historical task');
+    expect(wrapper.get('button[aria-pressed="true"]').text()).toBe(beta.name);
+    expect(mocks.list).toHaveBeenLastCalledWith(beta.id, 1, expect.anything());
+    wrapper.unmount();
+  });
+
+  it('refreshes eligible tasks after a 422, preserving the original historical task and draft', async () => {
+    const closed = { id: 'closed', title: 'Now closed', defaultBillableForTimeEntries: false };
+    const available = { id: 'available', title: 'Still eligible', defaultBillableForTimeEntries: false };
+    mocks.tasks.mockResolvedValueOnce([closed, available]).mockResolvedValue([available]);
+    mocks.update.mockRejectedValueOnce(new ApiError('Task is ineligible', { status: 422 }));
+    const { wrapper } = render();
+    await flushPromises();
+    await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
+    await flushPromises();
+    const dialog = wrapper.getComponent(ManagedEntryDialog);
+    const task = dialog.getComponent(Select);
+    task.vm.$emit('update:modelValue', closed.id);
+    await dialog.get('#managed-entry-description').setValue('Keep the description');
+    await dialog.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(dialog.text()).toContain('Task is ineligible');
+    expect(dialog.get<HTMLTextAreaElement>('#managed-entry-description').element.value).toBe('Keep the description');
+    expect(task.props('modelValue')).toBeUndefined();
+    expect((task.props('options') ?? []).map(option => option.id)).toEqual([editable.taskId, available.id]);
+    expect(mocks.tasks).toHaveBeenCalledTimes(2);
+    await dialog.get('form').trigger('submit');
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
+  });
+
   it('creates completed time for a selected member and applies the task billability default', async () => {
     const task = { id: 'new-task', title: 'Eligible task', defaultBillableForTimeEntries: true };
     const startedAt = editable.startedAt;
@@ -238,6 +337,43 @@ describe('Time Entries', () => {
 
     expect(mocks.list).toHaveBeenLastCalledWith(alpha.id, 1, expect.objectContaining({ userId: past.id, search: 'historic' }));
     expect(wrapper.text()).toContain('No matching time entries');
+    wrapper.unmount();
+  });
+
+  it('commits complete date ranges on Confirm and restores the applied range on Cancel', async () => {
+    const { wrapper } = render();
+    await flushPromises();
+    const picker = wrapper.getComponent(DatePicker);
+    const start = new Date(2026, 3, 17);
+    const end = new Date(2026, 3, 20);
+    await wrapper.get('input[aria-label="Filter by date range"]').trigger('focus');
+    await flushPromises();
+    picker.vm.$emit('show');
+    picker.vm.$emit('update:modelValue', [start, null]);
+    await flushPromises();
+    expect(mocks.list).toHaveBeenCalledTimes(1);
+    picker.vm.$emit('update:modelValue', [start, end]);
+    await flushPromises();
+    expect(mocks.list).toHaveBeenCalledTimes(1);
+    await wrapper.getComponent(SharedUi.DatePickerButtonBar).get('[data-testid="date-picker-confirm"]').trigger('click');
+    await flushPromises();
+    expect(mocks.list).toHaveBeenLastCalledWith(alpha.id, 1, expect.objectContaining({
+      dateFrom: start.toISOString(), dateTo: new Date(2026, 3, 21).toISOString(),
+    }));
+
+    await wrapper.get('input[aria-label="Filter by date range"]').trigger('focus');
+    await flushPromises();
+    picker.vm.$emit('show');
+    picker.vm.$emit('update:modelValue', [new Date(2026, 3, 23), null]);
+    await flushPromises();
+    await wrapper.getComponent(SharedUi.DatePickerButtonBar).get('[data-testid="date-picker-cancel"]').trigger('click');
+    await flushPromises();
+    expect(picker.props('modelValue')).toEqual([start, end]);
+    expect(mocks.list).toHaveBeenCalledTimes(2);
+
+    picker.vm.$emit('update:modelValue', null);
+    await flushPromises();
+    expect(mocks.list).toHaveBeenLastCalledWith(alpha.id, 1, expect.objectContaining({ dateFrom: undefined, dateTo: undefined }));
     wrapper.unmount();
   });
 

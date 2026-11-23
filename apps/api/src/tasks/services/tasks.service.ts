@@ -31,6 +31,10 @@ import { GithubService } from '../../github/services/github.service';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
+import {
+  ownTaskTimeCondition,
+  taskTrackingBlockReason,
+} from '../../time-entries/tracking-access';
 import { taskExternalRefs } from '../schemas/task-external-refs.schema';
 import { taskRowSelection, tasks } from '../schemas/tasks.schema';
 import { GithubTaskMaterializationService } from './github-task-materialization.service';
@@ -421,13 +425,7 @@ export class TasksService {
       const [ownEntry] = await db
         .select({ id: timeEntries.id })
         .from(timeEntries)
-        .where(
-          and(
-            eq(timeEntries.workspaceId, user.workspaceId),
-            eq(timeEntries.userId, user.sub),
-            eq(timeEntries.taskId, task.id),
-          ),
-        )
+        .where(ownTaskTimeCondition(user.workspaceId, user.sub, task.id))
         .limit(1);
       if (!ownEntry) throw new NotFoundException('Task not found');
     }
@@ -458,13 +456,7 @@ export class TasksService {
       const [ownEntry] = await db
         .select({ id: timeEntries.id })
         .from(timeEntries)
-        .where(
-          and(
-            eq(timeEntries.workspaceId, user.workspaceId),
-            eq(timeEntries.userId, user.sub),
-            eq(timeEntries.taskId, task.id),
-          ),
-        )
+        .where(ownTaskTimeCondition(user.workspaceId, user.sub, task.id))
         .limit(1);
       if (!ownEntry) throw new NotFoundException('Task not found');
     }
@@ -622,12 +614,8 @@ export class TasksService {
     if (!project.isActive) {
       throw new UnprocessableEntityException('Project is inactive');
     }
-    if (!task.isActive) {
-      throw new UnprocessableEntityException('Task is inactive');
-    }
-    if (task.status === 'closed') {
-      throw new UnprocessableEntityException('Task is closed');
-    }
+    const blockReason = taskTrackingBlockReason(task);
+    if (blockReason) throw new UnprocessableEntityException(blockReason);
   }
 
   private handleTimeEntryReferenceConflict(error: unknown): void {

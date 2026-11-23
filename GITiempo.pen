@@ -109182,10 +109182,10 @@
                                   "fill": "$color-brand",
                                   "textGrowth": "fixed-width-height",
                                   "width": "fill_container",
-                                  "height": 19,
+                                  "height": 23,
                                   "content": "Orion",
                                   "fontFamily": "Inter",
-                                  "fontSize": 13,
+                                  "fontSize": 16,
                                   "fontWeight": "500"
                                 }
                               ]
@@ -109221,10 +109221,10 @@
                                   "fill": "$color-text-dark",
                                   "textGrowth": "fixed-width-height",
                                   "width": "fill_container",
-                                  "height": 19,
+                                  "height": 23,
                                   "content": "Atlas",
                                   "fontFamily": "Inter",
-                                  "fontSize": 13,
+                                  "fontSize": 16,
                                   "fontWeight": "500"
                                 }
                               ]
@@ -109260,10 +109260,10 @@
                                   "fill": "$color-text-dark",
                                   "textGrowth": "fixed-width-height",
                                   "width": "fill_container",
-                                  "height": 19,
+                                  "height": 23,
                                   "content": "Studio website",
                                   "fontFamily": "Inter",
-                                  "fontSize": 13,
+                                  "fontSize": 16,
                                   "fontWeight": "500"
                                 }
                               ]
@@ -109299,10 +109299,10 @@
                                   "fill": "$color-text-dark",
                                   "textGrowth": "fixed-width-height",
                                   "width": "fill_container",
-                                  "height": 19,
+                                  "height": 23,
                                   "content": "Internal tools",
                                   "fontFamily": "Inter",
-                                  "fontSize": 13,
+                                  "fontSize": 16,
                                   "fontWeight": "500"
                                 }
                               ]
@@ -109382,18 +109382,13 @@
                                   "id": "te471_370",
                                   "name": "New time entry",
                                   "context": "Create a completed entry for an eligible member and task in the selected project.",
-                                  "width": 148,
+                                  "width": 38,
                                   "height": 38,
                                   "fill": "$color-brand",
-                                  "cornerRadius": "$radius-sm",
+                                  "cornerRadius": 6,
                                   "stroke": "$color-brand",
                                   "strokeWidth": 1,
                                   "strokeAlignment": "inner",
-                                  "gap": 8,
-                                  "padding": [
-                                    0,
-                                    12
-                                  ],
                                   "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
@@ -109405,15 +109400,6 @@
                                       "height": 16,
                                       "icon": "plus",
                                       "library": "lucide",
-                                      "fill": "#FFFFFF"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "te471_372",
-                                      "content": "New time entry",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "600",
                                       "fill": "#FFFFFF"
                                     }
                                   ]
@@ -109903,8 +109889,8 @@
                                               "name": "lock-keyhole",
                                               "icon": "lock-keyhole",
                                               "library": "lucide",
-                                              "width": 16,
-                                              "height": 16,
+                                              "width": 20,
+                                              "height": 20,
                                               "fill": "$color-text-muted"
                                             }
                                           ],
@@ -110130,8 +110116,8 @@
                                               "name": "pencil",
                                               "icon": "pencil",
                                               "library": "lucide",
-                                              "width": 16,
-                                              "height": 16,
+                                              "width": 20,
+                                              "height": 20,
                                               "fill": "$color-brand"
                                             }
                                           ],
@@ -110152,8 +110138,8 @@
                                               "name": "trash-2",
                                               "icon": "trash-2",
                                               "library": "lucide",
-                                              "width": 16,
-                                              "height": 16,
+                                              "width": 20,
+                                              "height": 20,
                                               "fill": "$color-destructive"
                                             }
                                           ],
@@ -110379,8 +110365,8 @@
                                               "name": "pencil",
                                               "icon": "pencil",
                                               "library": "lucide",
-                                              "width": 16,
-                                              "height": 16,
+                                              "width": 20,
+                                              "height": 20,
                                               "fill": "$color-brand"
                                             }
                                           ],
@@ -110401,8 +110387,8 @@
                                               "name": "trash-2",
                                               "icon": "trash-2",
                                               "library": "lucide",
-                                              "width": 16,
-                                              "height": 16,
+                                              "width": 20,
+                                              "height": 20,
                                               "fill": "$color-destructive"
                                             }
                                           ],
@@ -110637,8 +110623,8 @@
                                               "name": "lock-keyhole",
                                               "icon": "lock-keyhole",
                                               "library": "lucide",
-                                              "width": 16,
-                                              "height": 16,
+                                              "width": 20,
+                                              "height": 20,
                                               "fill": "$color-text-muted"
                                             }
                                           ],
@@ -110864,8 +110850,8 @@
                                               "name": "pencil",
                                               "icon": "pencil",
                                               "library": "lucide",
-                                              "width": 16,
-                                              "height": 16,
+                                              "width": 20,
+                                              "height": 20,
                                               "fill": "$color-brand"
                                             }
                                           ],
@@ -110886,8 +110872,8 @@
                                               "name": "trash-2",
                                               "icon": "trash-2",
                                               "library": "lucide",
-                                              "width": 16,
-                                              "height": 16,
+                                              "width": 20,
+                                              "height": 20,
                                               "fill": "$color-destructive"
                                             }
                                           ],
@@ -111138,18 +111124,13 @@
                   "id": "te471_1558",
                   "name": "New time entry",
                   "context": "Create a completed entry for an eligible member and task in the selected project.",
-                  "width": 148,
+                  "width": 38,
                   "height": 38,
                   "fill": "$color-brand",
-                  "cornerRadius": "$radius-sm",
+                  "cornerRadius": 6,
                   "stroke": "$color-brand",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 8,
-                  "padding": [
-                    0,
-                    12
-                  ],
                   "justifyContent": "center",
                   "alignItems": "center",
                   "children": [
@@ -111161,15 +111142,6 @@
                       "height": 16,
                       "icon": "plus",
                       "library": "lucide",
-                      "fill": "#FFFFFF"
-                    },
-                    {
-                      "type": "text",
-                      "id": "te471_1560",
-                      "content": "New time entry",
-                      "fontFamily": "Inter",
-                      "fontSize": 13,
-                      "fontWeight": "600",
                       "fill": "#FFFFFF"
                     }
                   ]
@@ -111405,8 +111377,8 @@
                           "name": "lock-keyhole",
                           "icon": "lock-keyhole",
                           "library": "lucide",
-                          "width": 16,
-                          "height": 16,
+                          "width": 20,
+                          "height": 20,
                           "fill": "$color-text-muted"
                         }
                       ],
@@ -111546,8 +111518,8 @@
                           "name": "pencil",
                           "icon": "pencil",
                           "library": "lucide",
-                          "width": 16,
-                          "height": 16,
+                          "width": 20,
+                          "height": 20,
                           "fill": "$color-brand"
                         }
                       ],
@@ -111568,8 +111540,8 @@
                           "name": "trash-2",
                           "icon": "trash-2",
                           "library": "lucide",
-                          "width": 16,
-                          "height": 16,
+                          "width": 20,
+                          "height": 20,
                           "fill": "$color-destructive"
                         }
                       ],

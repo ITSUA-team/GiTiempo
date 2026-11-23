@@ -54,10 +54,11 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
   let loadedQuery: typeof entryQuery.value | undefined;
   let pendingQuery: typeof entryQuery.value | undefined;
 
-  async function loadProjects() {
+  async function loadProjects(recheckAccess = false) {
     const request = ++projectRequest;
+    const selected = projectId.value;
     const current = () => request === projectRequest;
-    loadingProjects.value = Boolean(scope.value);
+    loadingProjects.value = Boolean(scope.value) && !recheckAccess;
     projectError.value = '';
     if (!scope.value) return;
     try {
@@ -66,7 +67,10 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
       projects.value = items;
       if (!items.some(item => item.id === projectId.value)) projectId.value = items[0]?.id;
     } catch (error) {
-      if (current()) projectError.value = getErrorMessage(error, 'Unable to load projects.');
+      if (!current()) return;
+      if (recheckAccess && selected !== projectId.value) return;
+      if (recheckAccess) clearProjects();
+      projectError.value = getErrorMessage(error, 'Unable to load projects.');
     } finally {
       if (current()) loadingProjects.value = false;
     }
@@ -85,6 +89,10 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
   function retryProjects() {
     recheckedProjectId = undefined;
     return loadProjects();
+  }
+
+  function recheckProjectAccess() {
+    return loadProjects(true);
   }
 
   function handleReadFailure(error: unknown, target: Ref<string>, fallback: string) {
@@ -235,6 +243,6 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
     projects, project, projectId, members, memberId, search, dates, page, list,
     loadingProjects, loadingEntries, projectError, entriesError, memberError,
     eligibleMembers, eligibleMembersError, loadEligibleMembers, loadMembers,
-    retryProjects, reloadScope, refresh, refreshEntries, applyUpdatedEntry,
+    retryProjects, reloadScope, recheckProjectAccess, refresh, refreshEntries, applyUpdatedEntry,
   };
 }

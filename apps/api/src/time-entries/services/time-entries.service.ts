@@ -69,6 +69,13 @@ import { UsersActivityService } from '../../users/services/users-activity.servic
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { calculateDurationSeconds } from '../time-entry-duration';
 import {
+  allowsTrackingFromOwnTime,
+  hasImplicitTrackingAccess,
+  ownTaskTimeCondition,
+  taskTrackingBlockReason,
+  trackingAssignmentCondition,
+} from '../tracking-access';
+import {
   timeEntries,
   timeEntryRowSelection,
 } from '../schemas/time-entries.schema';
@@ -459,17 +466,15 @@ export class TimeEntriesService {
         if (!project) throw new NotFoundException('Project not found');
         if (!project.isActive)
           throw new UnprocessableEntityException('Project is inactive');
-        if (
-          !this.hasImplicitProjectAccess(membership.role, project.visibility)
-        ) {
+        if (!hasImplicitTrackingAccess(membership.role, project.visibility)) {
           const [assignment] = await tx
             .select({ id: projectAssignments.id })
             .from(projectAssignments)
             .where(
-              and(
-                eq(projectAssignments.workspaceId, user.workspaceId),
-                eq(projectAssignments.projectId, project.id),
-                eq(projectAssignments.userId, user.sub),
+              trackingAssignmentCondition(
+                user.workspaceId,
+                project.id,
+                user.sub,
               ),
             )
             .for('update');
@@ -867,34 +872,24 @@ export class TimeEntriesService {
     }
 
     const hasOwnExternalTaskEntry =
-      project.trackingMode === 'external-reference' &&
+      allowsTrackingFromOwnTime(project.trackingMode) &&
       (
         await db
           .select({ id: timeEntries.id })
           .from(timeEntries)
-          .where(
-            and(
-              eq(timeEntries.workspaceId, user.workspaceId),
-              eq(timeEntries.userId, user.sub),
-              eq(timeEntries.taskId, taskId),
-            ),
-          )
+          .where(ownTaskTimeCondition(user.workspaceId, user.sub, taskId))
           .limit(1)
       )[0] !== undefined;
 
     if (
-      !this.hasImplicitProjectAccess(membership.role, project.visibility) &&
+      !hasImplicitTrackingAccess(membership.role, project.visibility) &&
       !hasOwnExternalTaskEntry
     ) {
       const [assignment] = await db
         .select({ id: projectAssignments.id })
         .from(projectAssignments)
         .where(
-          and(
-            eq(projectAssignments.workspaceId, user.workspaceId),
-            eq(projectAssignments.projectId, project.id),
-            eq(projectAssignments.userId, user.sub),
-          ),
+          trackingAssignmentCondition(user.workspaceId, project.id, user.sub),
         )
         .for('update');
       if (!assignment) throw new NotFoundException('Project not found');
@@ -906,12 +901,8 @@ export class TimeEntriesService {
       project.id,
       taskId,
     );
-    if (!task.isActive) {
-      throw new UnprocessableEntityException('Task is inactive');
-    }
-    if (task.status === 'closed') {
-      throw new UnprocessableEntityException('Task is closed');
-    }
+    const blockReason = taskTrackingBlockReason(task);
+    if (blockReason) throw new UnprocessableEntityException(blockReason);
     return task;
   }
 
@@ -1181,7 +1172,7 @@ export class TimeEntriesService {
       )
       .limit(1);
 
-    return task === undefined || (task.isActive && task.status !== 'closed');
+    return task === undefined || !taskTrackingBlockReason(task);
   }
 
   private async hasFullProjectAccess(
@@ -1190,15 +1181,8 @@ export class TimeEntriesService {
     visibility: 'public' | 'private',
     role: 'admin' | 'pm' | 'member',
   ): Promise<boolean> {
-    if (this.hasImplicitProjectAccess(role, visibility)) return true;
+    if (hasImplicitTrackingAccess(role, visibility)) return true;
     return this.hasProjectAssignment(user, projectId);
-  }
-
-  private hasImplicitProjectAccess(
-    role: 'admin' | 'pm' | 'member',
-    visibility: 'public' | 'private',
-  ): boolean {
-    return role === 'admin' || visibility === 'public';
   }
 
   private async hasProjectAssignment(
@@ -1208,13 +1192,7 @@ export class TimeEntriesService {
     const [assignment] = await this.db
       .select({ id: projectAssignments.id })
       .from(projectAssignments)
-      .where(
-        and(
-          eq(projectAssignments.workspaceId, user.workspaceId),
-          eq(projectAssignments.projectId, projectId),
-          eq(projectAssignments.userId, user.sub),
-        ),
-      )
+      .where(trackingAssignmentCondition(user.workspaceId, projectId, user.sub))
       .limit(1);
     return assignment !== undefined;
   }

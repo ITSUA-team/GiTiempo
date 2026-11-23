@@ -28,3 +28,14 @@ The plus button displayed only the icon and kept the accessible name **New time 
 ## In-place edits
 
 Chrome verified a description edit against the local API at 1280 × 800 and 375 × 812. The saved description appeared in the same table row or mobile card. The existing rows and cards stayed mounted, and saving made no request for the project entry list. The desktop project sidebar measured 312 px after the width change.
+
+## Review follow-up
+
+- Chrome at 1280 × 800 verified the 312 px project sidebar, 16 px project names, 20 px edit icon, and accessible 38 × 38 px icon-only create button. Canceling a date selection sent no list request. Confirming a complete range sent one request with both bounds, and clearing the filter restored excluded records.
+- Saving a description preserved the original DOM nodes for the edited and neighboring rows, produced no mutations in the neighboring row, and made no entry list request.
+- When another operation deleted the record before Save, the editor showed the 404 message and kept the draft and selected project. Closing a destination task before Save returned 422. The editor kept the draft and original task option while removing the unavailable destination.
+- At 375 × 812, the assigned PM saw cards and only the assigned projects. The icon-only create button opened the editor and the page fit the viewport. Confirm applied the date range with one request. Canceling a subsequent selection kept the applied range and sent no request.
+- The desktop and mobile Pen frames use the icon-only create control and 20 px action icons. The desktop project's names use 16 px text. The plain JSON document parsed successfully after the updates.
+- The exported managed PATCH schema requires at least one property and documents the 400 response for invalid input.
+- All 509 API e2e tests passed on isolated PostgreSQL 17. The regression tests force both lock orders for invoice attachment versus management PATCH and DELETE, exercise reciprocal task moves, and verify another participation record is used when the first is deleted while a move waits.
+- All 20 focused Admin UI and client tests passed, including invalidation of Reports and Dashboard in the workspace where the change was saved.

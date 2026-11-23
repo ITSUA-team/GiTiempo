@@ -236,7 +236,7 @@ All routes below require an active Admin or PM membership in the session workspa
 | GET | `/management/projects/:projectId/time-entry-tasks` | `userId`, `page`, `limit` | Tasks the selected owner can currently track, with `id`, `title` and `defaultBillableForTimeEntries`. |
 | GET | `/management/projects/:projectId/time-entries` | `page`, `limit`, optional `userId`, `search`, `dateFrom` and `dateTo` | Individual records, including running and invoiced time. |
 | POST | `/management/projects/:projectId/time-entries` | `userId` plus the manual-entry fields | 201 with a completed entry owned by the selected user. |
-| PATCH | `/management/projects/:projectId/time-entries/:entryId` | Any supported personal time-entry patch fields | 200 with the updated entry. Owner and project are fixed. |
+| PATCH | `/management/projects/:projectId/time-entries/:entryId` | At least one of `taskId`, `startedAt`, `endedAt`, `description` and `isBillable` | 200 with the updated entry. An empty update returns 400. Owner and project are fixed. |
 | DELETE | `/management/projects/:projectId/time-entries/:entryId` | None | 204. |
 
 Lists return `items` and `meta` with `page`, `limit`, `total` and `totalPages`. Entry search matches partial task titles case-insensitively. The date filters apply to the start time, with an inclusive lower bound and exclusive upper bound.

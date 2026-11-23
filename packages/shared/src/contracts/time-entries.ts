@@ -208,7 +208,9 @@ export const createManagedTimeEntrySchema = createManualTimeEntrySchema.safeExte
   userId: z.uuid(),
 });
 
-export const updateManagedTimeEntrySchema = updateTimeEntrySchema;
+export const updateManagedTimeEntrySchema = updateTimeEntrySchema.meta({
+  minProperties: 1,
+});
 
 export const managedTimeEntryConflictSchema = z.object({
   statusCode: z.literal(409),

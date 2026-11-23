@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -133,6 +134,7 @@ export class ManagementTimeEntriesController {
     summary: 'Update a completed unlinked entry in the managed project',
   })
   @ApiOkResponse({ type: TimeEntryResponseDto })
+  @ApiBadRequestResponse({ description: 'Invalid or empty time entry update' })
   @ApiNotFoundResponse({ description: 'Project, entry or task not found' })
   @ApiUnprocessableEntityResponse({
     description: 'Owner or destination work is ineligible',

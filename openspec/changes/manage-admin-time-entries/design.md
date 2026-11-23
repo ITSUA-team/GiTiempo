@@ -35,7 +35,8 @@ Follow `apps/admin-web/AGENTS.md`, `docs/ui/INDEX.md` and the **Admin · Time En
 
 - Open the first manageable project in display order. If none exists, show an empty project state. Changing project clears the old rows and member selection, resets pagination and closes the previous editor. Key queries by workspace, actor, project and filters. Discard stale responses when scope changes.
 - On create, preselect the current project, select an eligible owner, then load that owner's tasks. Reset dependent fields when the owner changes. On edit, display the fixed owner and project and keep the original task visible even when it is no longer a valid destination. Prefill the interval, description and billable flag. On delete, ask for confirmation.
-- Show the lock reason in each affected row or card. On a server conflict, show its message, keep the form contents available for review, and refetch the affected list. If management access was lost, clear protected data and reload the allowed projects. Keep empty filter results distinct from an empty project list and a failed request.
+- Show the lock reason in each affected row or card. On a server conflict, show its message, keep the form contents available for review, and refetch the affected list. On an eligibility rejection, reload the owner's tasks and keep the rest of the draft. On 404, verify that the selected project is still manageable before discarding its data. If management access was lost, clear protected data and reload the allowed projects. Keep empty filter results distinct from an empty project list and a failed request.
+- Apply a date range only when confirmed. Keep the editor's pending state local to the action. After a successful mutation, invalidate Reports and dashboard data in the workspace where the mutation ran while keeping the in-place update for the selected entry.
 
 ## Delivery and verification
 

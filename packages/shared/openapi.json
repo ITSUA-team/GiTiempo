@@ -3869,6 +3869,9 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid or empty time entry update"
+          },
           "401": {
             "description": "Authentication required"
           },
@@ -9502,6 +9505,7 @@
             "type": "boolean"
           }
         },
+        "minProperties": 1,
         "additionalProperties": false
       },
       "ManagedTimeEntryConflictDto": {

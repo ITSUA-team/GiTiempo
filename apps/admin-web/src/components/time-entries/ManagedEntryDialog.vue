@@ -30,6 +30,7 @@ const props = defineProps<{
   busy: boolean;
   locked: boolean;
   error: string;
+  taskRefresh: number;
 }>();
 
 const emit = defineEmits<{
@@ -76,10 +77,17 @@ async function loadTasks() {
   tasks.value = [];
   tasksError.value = '';
   tasksLoading.value = Boolean(selectedUser && props.project.isActive);
-  if (!selectedUser || !props.project.isActive) return;
+  if (!selectedUser || !props.project.isActive) {
+    taskId.value = entry?.taskId;
+    return;
+  }
   try {
     const result = await props.client.tasks(props.project.id, selectedUser, current);
-    if (current()) tasks.value = result;
+    if (!current()) return;
+    tasks.value = result;
+    if (taskId.value !== entry?.taskId && !result.some(task => task.id === taskId.value)) {
+      taskId.value = undefined;
+    }
   } catch (error) {
     if (!current()) return;
     if (isApiErrorStatus(error, [401, 403, 404])) emit('scopeLost');
@@ -101,6 +109,7 @@ watch(() => props.members, (members) => {
     userId.value = undefined;
   }
 });
+watch([() => props.taskRefresh, () => props.project.isActive], () => { void loadTasks(); });
 onBeforeUnmount(() => { taskRequest += 1; });
 void loadTasks();
 
@@ -112,9 +121,9 @@ function selectTask(value: string) {
 }
 
 function submit() {
-  if (props.busy || props.locked) return;
+  if (props.busy || props.locked || (tasksLoading.value && taskId.value !== entry?.taskId)) return;
   validation.value = '';
-  if (!userId.value || !taskId.value) {
+  if (!userId.value || !taskId.value || !displayedTasks.value.some(task => task.id === taskId.value)) {
     validation.value = 'Select a member and a task.';
     return;
   }
@@ -218,7 +227,7 @@ function submit() {
           placeholder="Select a task"
           empty-message="No eligible tasks"
           :loading="tasksLoading"
-          :disabled="!userId || busy || locked"
+          :disabled="!userId || tasksLoading || busy || locked"
           fluid
           filter
           @update:model-value="selectTask"
@@ -333,7 +342,7 @@ function submit() {
         type="submit"
         form="managed-entry-form"
         class="w-full sm:w-auto"
-        :disabled="locked"
+        :disabled="locked || (tasksLoading && taskId !== entry?.taskId)"
         :loading="busy"
       />
     </template>
