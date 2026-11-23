@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useQueryClient } from '@tanstack/vue-query';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import type { InvoiceGroupsResponse } from '@gitiempo/shared';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
@@ -123,9 +123,13 @@ function confirmDelete(group = selectedPersonal.value) {
       busy.value = true;
       try {
         await adminInvoicesClient.deleteGroup(group.id);
+        if (requestGeneration === generation && group.id === current.value) {
+          select(null);
+          // Let the parent switch its list query before refreshing active queries.
+          await nextTick();
+        }
         await invalidateQueryKeys(queryClient, adminMutationInvalidationKeys.afterInvoiceGroupMutation(requestScope));
         if (requestGeneration !== generation) return;
-        if (group.id === current.value) select(null);
         emit('changed');
       } catch (cause) {
         if (requestGeneration === generation) deleteError.value = getErrorMessage(cause);
