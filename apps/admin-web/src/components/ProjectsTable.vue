@@ -11,8 +11,8 @@ import {
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteStrings,
+  getManagementTableColumnStyle,
   managementTableFilterMultiSelectPt,
-  type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
@@ -32,6 +32,7 @@ import {
   adminTableMinWidthClass,
 } from '@/lib/admin-table-classes';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
+import { projectsTableColumns } from '@/lib/management-table-columns';
 import type {
   ProjectHoursFilter,
   ProjectsTableExpandedRows,
@@ -114,13 +115,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
   emit('update:expandedRows', value);
 }
 
-const columns: ManagementTableColumn[] = [
-  { key: 'project', label: 'Project', width: 'fill' },
-  { key: 'source', label: 'Source', width: 140 },
-  { key: 'members', label: 'Assigned members', width: 220 },
-  { key: 'hours', label: 'Hours', width: 120 },
-  { key: 'visibility', label: 'Visibility', width: 120 },
-];
+const columns = Object.values(projectsTableColumns);
 
 </script>
 
@@ -427,7 +422,10 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[140px] pr-3">
+        <div
+          class="pr-3"
+          :style="getManagementTableColumnStyle(projectsTableColumns.source)"
+        >
           <Select
             :model-value="filters.source"
             :options="sourceFilterOptions"
@@ -441,7 +439,10 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[220px] pr-3">
+        <div
+          class="pr-3"
+          :style="getManagementTableColumnStyle(projectsTableColumns.members)"
+        >
           <MultiSelect
             :model-value="filters.memberIds"
             :options="memberFilterOptions"
@@ -457,7 +458,10 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[120px] pr-3 text-right">
+        <div
+          class="pr-3 text-right"
+          :style="getManagementTableColumnStyle(projectsTableColumns.hours)"
+        >
           <Select
             :model-value="filters.hours"
             :options="hoursFilterOptions"
@@ -469,7 +473,10 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[120px] pr-3">
+        <div
+          class="pr-3"
+          :style="getManagementTableColumnStyle(projectsTableColumns.visibility)"
+        >
           <Select
             :model-value="filters.visibility"
             :options="visibilityFilterOptions"
@@ -519,7 +526,7 @@ const columns: ManagementTableColumn[] = [
     </Column>
 
     <Column
-      style="width: 140px"
+      :style="getManagementTableColumnStyle(projectsTableColumns.source)"
       :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
@@ -540,7 +547,7 @@ const columns: ManagementTableColumn[] = [
     </Column>
 
     <Column
-      style="width: 220px"
+      :style="getManagementTableColumnStyle(projectsTableColumns.members)"
       :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
@@ -549,7 +556,7 @@ const columns: ManagementTableColumn[] = [
     </Column>
 
     <Column
-      style="width: 120px"
+      :style="getManagementTableColumnStyle(projectsTableColumns.hours)"
       :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
@@ -558,7 +565,7 @@ const columns: ManagementTableColumn[] = [
     </Column>
 
     <Column
-      style="width: 120px"
+      :style="getManagementTableColumnStyle(projectsTableColumns.visibility)"
       :pt="adminTableColumnPt"
     >
       <template #body="{ data }">

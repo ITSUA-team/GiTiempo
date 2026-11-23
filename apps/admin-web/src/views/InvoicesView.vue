@@ -308,6 +308,7 @@ function handleCreateSuccess(): void {
         />
         <SurfaceCard
           class="invoice-list-panel min-w-0"
+          body-class="@container/invoice-list"
           padding-class="p-0 sm:p-4"
         >
           <InvoicesTable

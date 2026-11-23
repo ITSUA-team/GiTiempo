@@ -14,9 +14,9 @@ import {
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteStrings,
+  getManagementTableColumnStyle,
   managementTableFilterMultiSelectPt,
 } from '@gitiempo/web-shared';
-import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
@@ -35,6 +35,7 @@ import {
   adminTableMinWidthClass,
 } from '@/lib/admin-table-classes';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
+import { membersTableColumns } from '@/lib/management-table-columns';
 import type {
   MemberLastActiveFilter,
   MembersTableExpandedRows,
@@ -115,12 +116,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
   emit('update:expandedRows', value);
 }
 
-const columns: ManagementTableColumn[] = [
-  { key: 'member', label: 'Member', width: 'fill' },
-  { key: 'role', label: 'Role', width: 120 },
-  { key: 'projects', label: 'Projects Assigned', width: 220 },
-  { key: 'lastActive', label: 'Last Active', width: 140 },
-];
+const columns = Object.values(membersTableColumns);
 
 
 function getRoleClass(role: WorkspaceRole): string {
@@ -429,7 +425,10 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[120px] pr-3">
+        <div
+          class="pr-3"
+          :style="getManagementTableColumnStyle(membersTableColumns.role)"
+        >
           <Select
             :model-value="filters.role"
             :options="roleFilterOptions"
@@ -443,7 +442,10 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[220px] pr-3">
+        <div
+          class="pr-3"
+          :style="getManagementTableColumnStyle(membersTableColumns.projects)"
+        >
           <MultiSelect
             :model-value="filters.projectIds"
             :options="projectFilterOptions"
@@ -459,7 +461,10 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[140px] pr-3">
+        <div
+          class="pr-3"
+          :style="getManagementTableColumnStyle(membersTableColumns.lastActive)"
+        >
           <Select
             :model-value="filters.lastActive"
             :options="lastActiveFilterOptions"
@@ -546,7 +551,7 @@ function getRoleClass(role: WorkspaceRole): string {
 
     <!-- Role -->
     <Column
-      style="width: 120px"
+      :style="getManagementTableColumnStyle(membersTableColumns.role)"
       :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
@@ -561,7 +566,7 @@ function getRoleClass(role: WorkspaceRole): string {
 
     <!-- Projects Assigned -->
     <Column
-      style="width: 220px"
+      :style="getManagementTableColumnStyle(membersTableColumns.projects)"
       :pt="adminTableColumnPt"
     >
       <template #body="{ data }">
@@ -573,7 +578,7 @@ function getRoleClass(role: WorkspaceRole): string {
 
     <!-- Last Active -->
     <Column
-      style="width: 140px"
+      :style="getManagementTableColumnStyle(membersTableColumns.lastActive)"
       :pt="adminTableColumnPt"
     >
       <template #body="{ data }">

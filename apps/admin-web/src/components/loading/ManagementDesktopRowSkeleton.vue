@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { getManagementTableColumnStyle } from '@gitiempo/web-shared';
 import Skeleton from 'primevue/skeleton';
+
+import { adminTableMinWidthClass } from '@/lib/admin-table-classes';
+import { membersTableColumns, projectsTableColumns } from '@/lib/management-table-columns';
 
 type ManagementPageSkeletonVariant = 'members' | 'projects' | 'reports' | 'invoices';
 type ManagementSkeletonVariant = ManagementPageSkeletonVariant | 'pendingInvites';
@@ -10,9 +14,15 @@ defineProps<{
 </script>
 
 <template>
-  <div class="border-divider flex h-[56px] items-center gap-3 border-b px-3 last:border-b-0">
+  <div
+    class="border-divider flex h-[56px] items-center border-b last:border-b-0"
+    :class="variant === 'members' || variant === 'projects' ? adminTableMinWidthClass : 'gap-3 px-3'"
+  >
     <template v-if="variant === 'members'">
-      <div class="flex flex-1 items-center gap-3">
+      <div
+        class="flex items-center gap-3 pr-3 pl-6"
+        :style="getManagementTableColumnStyle(membersTableColumns.member)"
+      >
         <Skeleton
           width="2rem"
           height="2rem"
@@ -31,40 +41,32 @@ defineProps<{
           />
         </div>
       </div>
-      <div class="w-[120px]">
+      <div
+        class="px-3"
+        :style="getManagementTableColumnStyle(membersTableColumns.role)"
+      >
         <Skeleton
           width="4rem"
           height="0.8rem"
           border-radius="4px"
         />
       </div>
-      <div class="w-[160px]">
+      <div
+        class="px-3"
+        :style="getManagementTableColumnStyle(membersTableColumns.projects)"
+      >
         <Skeleton
           width="5rem"
           height="0.8rem"
           border-radius="4px"
         />
       </div>
-      <div class="w-[140px]">
+      <div
+        class="pr-6 pl-3"
+        :style="getManagementTableColumnStyle(membersTableColumns.lastActive)"
+      >
         <Skeleton
           width="5.5rem"
-          height="0.8rem"
-          border-radius="4px"
-        />
-      </div>
-      <div class="flex w-[200px] justify-end gap-2">
-        <Skeleton
-          width="4rem"
-          height="0.8rem"
-          border-radius="4px"
-        />
-        <Skeleton
-          width="2.5rem"
-          height="0.8rem"
-          border-radius="4px"
-        />
-        <Skeleton
-          width="3rem"
           height="0.8rem"
           border-radius="4px"
         />
@@ -72,51 +74,54 @@ defineProps<{
     </template>
 
     <template v-else-if="variant === 'projects'">
-      <div class="flex flex-1 items-center">
+      <div
+        class="pr-3 pl-6"
+        :style="getManagementTableColumnStyle(projectsTableColumns.project)"
+      >
         <Skeleton
           width="60%"
           height="0.875rem"
           border-radius="4px"
         />
       </div>
-      <div class="w-[140px]">
+      <div
+        class="px-3"
+        :style="getManagementTableColumnStyle(projectsTableColumns.source)"
+      >
         <Skeleton
           width="70%"
           height="0.8rem"
           border-radius="4px"
         />
       </div>
-      <div class="w-[220px]">
+      <div
+        class="px-3"
+        :style="getManagementTableColumnStyle(projectsTableColumns.members)"
+      >
         <Skeleton
           width="50%"
           height="0.8rem"
           border-radius="4px"
         />
       </div>
-      <div class="w-[120px]">
+      <div
+        class="px-3"
+        :style="getManagementTableColumnStyle(projectsTableColumns.hours)"
+      >
         <Skeleton
           width="40%"
           height="0.8rem"
           border-radius="4px"
         />
       </div>
-      <div class="w-[120px]">
+      <div
+        class="pr-6 pl-3"
+        :style="getManagementTableColumnStyle(projectsTableColumns.visibility)"
+      >
         <Skeleton
           width="3.5rem"
           height="1.4rem"
           border-radius="6px"
-        />
-      </div>
-      <div class="flex w-[150px] justify-end gap-2">
-        <Skeleton
-          width="2.5rem"
-          height="0.8rem"
-          border-radius="4px"
-        />
-        <Skeleton
-          width="3.5rem"
-          height="0.8rem"
-          border-radius="4px"
         />
       </div>
     </template>

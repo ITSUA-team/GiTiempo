@@ -228,14 +228,15 @@ const selectedPeriodLabel = computed(() => {
     />
   </div>
 
-  <div class="mb-3 grid min-w-0 grid-cols-1 gap-3 sm:mb-4 sm:grid-cols-3 sm:gap-2.5">
+  <div class="mb-3 grid min-w-0 grid-cols-1 gap-3 sm:mb-4 @min-[50rem]/invoice-list:grid-cols-3 @min-[50rem]/invoice-list:gap-2.5">
     <div class="flex min-w-0 flex-col gap-1.5">
       <label
+        id="invoice-project-filter-label"
         for="invoice-project-filter"
-        class="text-text-dark text-[13px] font-medium sm:sr-only"
+        class="text-text-dark text-[13px] font-medium @min-[50rem]/invoice-list:sr-only"
       >Project</label>
       <Select
-        id="invoice-project-filter"
+        label-id="invoice-project-filter"
         :model-value="filters.projectId"
         :options="filterOptions.projects"
         option-label="name"
@@ -243,26 +244,27 @@ const selectedPeriodLabel = computed(() => {
         placeholder="All projects"
         show-clear
         :pt="giTiempoSelectPt"
-        aria-label="Filter invoices by project"
+        aria-labelledby="invoice-project-filter-label"
         data-testid="invoices-table-project-filter"
         :title="selectedProjectName"
         @update:model-value="updateProjectFilter"
       />
     </div>
 
-    <div class="flex min-w-0 flex-col gap-1.5">
+    <div class="@container/invoice-period flex min-w-0 flex-col gap-1.5">
       <label
         for="invoice-period-filter"
-        class="text-text-dark text-[13px] font-medium sm:sr-only"
+        class="text-text-dark text-[13px] font-medium @min-[50rem]/invoice-list:sr-only"
       >Period</label>
       <DatePicker
         :ref="periodPicker.datePickerRef"
         input-id="invoice-period-filter"
         :model-value="localDateRange"
         aria-label="Filter invoices by period"
-        date-format="M d"
+        date-format="M d, yy"
         data-testid="invoices-table-period-filter"
         icon-display="input"
+        input-class="@max-[18rem]/invoice-period:text-xs"
         :manual-input="false"
         placeholder="Date range"
         :pt="giTiempoDatePickerPt"
@@ -285,11 +287,12 @@ const selectedPeriodLabel = computed(() => {
 
     <div class="flex min-w-0 flex-col gap-1.5">
       <label
+        id="invoice-status-filter-label"
         for="invoice-status-filter"
-        class="text-text-dark text-[13px] font-medium sm:sr-only"
+        class="text-text-dark text-[13px] font-medium @min-[50rem]/invoice-list:sr-only"
       >Status</label>
       <Select
-        id="invoice-status-filter"
+        label-id="invoice-status-filter"
         :model-value="filters.status"
         :options="filterOptions.statuses"
         option-label="label"
@@ -297,7 +300,7 @@ const selectedPeriodLabel = computed(() => {
         placeholder="All statuses"
         show-clear
         :pt="giTiempoFieldWidthSelectPt"
-        aria-label="Filter invoices by status"
+        aria-labelledby="invoice-status-filter-label"
         data-testid="invoices-table-status-filter"
         @update:model-value="updateStatusFilter"
       />
